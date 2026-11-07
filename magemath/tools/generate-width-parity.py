@@ -11,15 +11,20 @@ use std::hint::black_box;
 fn equal(a:f32,b:f32)->bool {a.to_bits()==b.to_bits() || a.is_nan()&&b.is_nan()}
 '''
 for width in (4, 16):
-    if width == 16:
-        S += '#[cfg(feature="w512")]\n'
-    S += f'''#[attune(_scalar_t,_v3_t,_neon_t,_wasm128_t,_v4x_t(cfg(avx512)),define(f32x8,f32x{width}))]
-fn width{width}(tier:&str) {{
-let t=Token::from_context();
-'''
+    calls = []
     for mode in ('portable', 'relaxed', 'unfused'):
         for row in ROWS:
             name = row['name']
+            helper = f'{mode}_{name}_width{width}'
+            calls.append(f'attuned!({helper}(tier),[_v3,_neon,_wasm128,_scalar,_v4x(cfg(avx512))],using(t));')
+            if width == 16:
+                S += '#[cfg(feature="w512")]\n'
+            # Separate frames keep unoptimized parity tests within the ordinary
+            # test-thread stack; inputs and assertions remain unchanged.
+            S += f'''#[attune(_scalar_t,_v3_t,_neon_t,_wasm128_t,_v4x_t(cfg(avx512)),define(f32x8,f32x{width}),inline(never))]
+fn {helper}(tier:&str) {{
+let t=Token::from_context();
+'''
             arg = ',2.4' if row['exponent'] else ''
             # Checked functions exercise exceptional rails; unchecked calls have
             # finite positive normal operands, also within exp's safe interval.
@@ -42,7 +47,13 @@ for i in 0..chunk.len(){{let expected=want[index*{width}+i];assert!(equal(kernel
 }}
 }}
 '''
-    S += '}\n'
+            S += '}\n'
+    if width == 16:
+        S += '#[cfg(feature="w512")]\n'
+    S += f'''#[attune(_scalar_t,_v3_t,_neon_t,_wasm128_t,_v4x_t(cfg(avx512)),define(f32x8,f32x{width}))]
+fn width{width}(tier:&str) {{
+let t=Token::from_context();
+''' + '\n'.join(calls) + '\n}\n'
 S += '''#[test]
 fn same_mode_widths(){
 let mut supported=vec!["scalar"];

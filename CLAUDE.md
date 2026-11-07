@@ -1304,6 +1304,13 @@ Documented accuracy limits, left unfixed because every fix measured slower on ev
   and the complement of equality for all generic float widths, including signalling
   NaNs; the documented x86 behavior change is recorded in the changelog.
 
+- **Draft Magemath debug width-parity stack overflow (2026-11-07):** the
+  generated test put 105 operation checks in each width function. Split them
+  into non-inlined per-operation feature-context helpers; all 210 input and
+  assertion blocks remain identical. The all-feature debug library, integration
+  and example suite passes with the default test-thread stack. Generator:
+  `magemath/tools/generate-width-parity.py`; test: `width_parity`.
+
 - **Draft generic power policy bypassed acceleration (2026-11-06):** ordinary
   `scalar::powf_with` reused the reference policy evaluator and therefore called
   software CORE power even when `runtime-dispatch` accelerated ordinary `powf`.

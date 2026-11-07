@@ -10,9 +10,10 @@ fn equal(a: f32, b: f32) -> bool {
     _neon_t,
     _wasm128_t,
     _v4x_t(cfg(avx512)),
-    define(f32x8, f32x4)
+    define(f32x8, f32x4),
+    inline(never)
 )]
-fn width4(tier: &str) {
+fn portable_log2_lowp_width4(tier: &str) {
     let t = Token::from_context();
     {
         let data = [
@@ -75,6 +76,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn portable_log2_lowp_unchecked_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 4 + 3).map(|i| data[i % data.len()]).collect();
@@ -120,6 +133,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn portable_exp2_lowp_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -181,6 +206,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn portable_exp2_lowp_unchecked_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 4 + 3).map(|i| data[i % data.len()]).collect();
@@ -226,6 +263,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn portable_ln_lowp_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -287,6 +336,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn portable_ln_lowp_unchecked_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 4 + 3).map(|i| data[i % data.len()]).collect();
@@ -332,6 +393,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn portable_exp_lowp_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -393,6 +466,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn portable_exp_lowp_unchecked_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 4 + 3).map(|i| data[i % data.len()]).collect();
@@ -438,6 +523,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn portable_log10_lowp_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -499,6 +596,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn portable_log10_lowp_unchecked_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 4 + 3).map(|i| data[i % data.len()]).collect();
@@ -544,6 +653,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn portable_pow_lowp_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -605,6 +726,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn portable_pow_lowp_unchecked_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 4 + 3).map(|i| data[i % data.len()]).collect();
@@ -651,6 +784,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn portable_log2_midp_unchecked_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 4 + 3).map(|i| data[i % data.len()]).collect();
@@ -696,6 +841,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn portable_log2_midp_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -757,6 +914,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn portable_log2_midp_precise_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -818,6 +987,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn portable_exp2_midp_unchecked_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 4 + 3).map(|i| data[i % data.len()]).collect();
@@ -863,6 +1044,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn portable_exp2_midp_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -924,6 +1117,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn portable_exp2_midp_precise_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -985,6 +1190,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn portable_ln_midp_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -1046,6 +1263,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn portable_ln_midp_unchecked_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 4 + 3).map(|i| data[i % data.len()]).collect();
@@ -1091,6 +1320,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn portable_ln_midp_precise_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -1152,6 +1393,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn portable_exp_midp_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -1213,6 +1466,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn portable_exp_midp_unchecked_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 4 + 3).map(|i| data[i % data.len()]).collect();
@@ -1258,6 +1523,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn portable_exp_midp_precise_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -1319,6 +1596,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn portable_sigmoid_midp_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -1380,6 +1669,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn portable_silu_midp_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -1441,6 +1742,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn portable_log10_midp_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -1502,6 +1815,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn portable_log10_midp_unchecked_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 4 + 3).map(|i| data[i % data.len()]).collect();
@@ -1547,6 +1872,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn portable_log10_midp_precise_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -1608,6 +1945,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn portable_pow_midp_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -1669,6 +2018,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn portable_pow_midp_unchecked_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 4 + 3).map(|i| data[i % data.len()]).collect();
@@ -1715,6 +2076,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn portable_pow_midp_precise_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -1776,6 +2149,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn portable_cbrt_lowp_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -1837,6 +2222,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn portable_cbrt_midp_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -1898,6 +2295,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn portable_cbrt_midp_precise_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -1959,6 +2368,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn relaxed_log2_lowp_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -2020,6 +2441,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn relaxed_log2_lowp_unchecked_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 4 + 3).map(|i| data[i % data.len()]).collect();
@@ -2065,6 +2498,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn relaxed_exp2_lowp_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -2126,6 +2571,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn relaxed_exp2_lowp_unchecked_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 4 + 3).map(|i| data[i % data.len()]).collect();
@@ -2171,6 +2628,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn relaxed_ln_lowp_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -2232,6 +2701,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn relaxed_ln_lowp_unchecked_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 4 + 3).map(|i| data[i % data.len()]).collect();
@@ -2277,6 +2758,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn relaxed_exp_lowp_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -2338,6 +2831,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn relaxed_exp_lowp_unchecked_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 4 + 3).map(|i| data[i % data.len()]).collect();
@@ -2383,6 +2888,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn relaxed_log10_lowp_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -2444,6 +2961,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn relaxed_log10_lowp_unchecked_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 4 + 3).map(|i| data[i % data.len()]).collect();
@@ -2489,6 +3018,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn relaxed_pow_lowp_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -2550,6 +3091,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn relaxed_pow_lowp_unchecked_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 4 + 3).map(|i| data[i % data.len()]).collect();
@@ -2596,6 +3149,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn relaxed_log2_midp_unchecked_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 4 + 3).map(|i| data[i % data.len()]).collect();
@@ -2641,6 +3206,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn relaxed_log2_midp_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -2702,6 +3279,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn relaxed_log2_midp_precise_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -2763,6 +3352,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn relaxed_exp2_midp_unchecked_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 4 + 3).map(|i| data[i % data.len()]).collect();
@@ -2808,6 +3409,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn relaxed_exp2_midp_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -2869,6 +3482,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn relaxed_exp2_midp_precise_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -2930,6 +3555,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn relaxed_ln_midp_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -2991,6 +3628,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn relaxed_ln_midp_unchecked_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 4 + 3).map(|i| data[i % data.len()]).collect();
@@ -3036,6 +3685,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn relaxed_ln_midp_precise_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -3097,6 +3758,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn relaxed_exp_midp_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -3158,6 +3831,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn relaxed_exp_midp_unchecked_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 4 + 3).map(|i| data[i % data.len()]).collect();
@@ -3203,6 +3888,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn relaxed_exp_midp_precise_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -3264,6 +3961,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn relaxed_sigmoid_midp_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -3325,6 +4034,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn relaxed_silu_midp_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -3386,6 +4107,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn relaxed_log10_midp_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -3447,6 +4180,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn relaxed_log10_midp_unchecked_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 4 + 3).map(|i| data[i % data.len()]).collect();
@@ -3492,6 +4237,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn relaxed_log10_midp_precise_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -3553,6 +4310,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn relaxed_pow_midp_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -3614,6 +4383,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn relaxed_pow_midp_unchecked_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 4 + 3).map(|i| data[i % data.len()]).collect();
@@ -3660,6 +4441,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn relaxed_pow_midp_precise_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -3721,6 +4514,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn relaxed_cbrt_lowp_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -3782,6 +4587,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn relaxed_cbrt_midp_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -3843,6 +4660,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn relaxed_cbrt_midp_precise_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -3904,6 +4733,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn unfused_log2_lowp_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -3965,6 +4806,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn unfused_log2_lowp_unchecked_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 4 + 3).map(|i| data[i % data.len()]).collect();
@@ -4010,6 +4863,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn unfused_exp2_lowp_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -4071,6 +4936,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn unfused_exp2_lowp_unchecked_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 4 + 3).map(|i| data[i % data.len()]).collect();
@@ -4116,6 +4993,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn unfused_ln_lowp_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -4177,6 +5066,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn unfused_ln_lowp_unchecked_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 4 + 3).map(|i| data[i % data.len()]).collect();
@@ -4222,6 +5123,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn unfused_exp_lowp_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -4283,6 +5196,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn unfused_exp_lowp_unchecked_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 4 + 3).map(|i| data[i % data.len()]).collect();
@@ -4328,6 +5253,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn unfused_log10_lowp_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -4389,6 +5326,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn unfused_log10_lowp_unchecked_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 4 + 3).map(|i| data[i % data.len()]).collect();
@@ -4434,6 +5383,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn unfused_pow_lowp_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -4495,6 +5456,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn unfused_pow_lowp_unchecked_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 4 + 3).map(|i| data[i % data.len()]).collect();
@@ -4541,6 +5514,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn unfused_log2_midp_unchecked_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 4 + 3).map(|i| data[i % data.len()]).collect();
@@ -4586,6 +5571,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn unfused_log2_midp_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -4647,6 +5644,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn unfused_log2_midp_precise_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -4708,6 +5717,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn unfused_exp2_midp_unchecked_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 4 + 3).map(|i| data[i % data.len()]).collect();
@@ -4753,6 +5774,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn unfused_exp2_midp_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -4814,6 +5847,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn unfused_exp2_midp_precise_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -4875,6 +5920,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn unfused_ln_midp_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -4936,6 +5993,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn unfused_ln_midp_unchecked_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 4 + 3).map(|i| data[i % data.len()]).collect();
@@ -4981,6 +6050,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn unfused_ln_midp_precise_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -5042,6 +6123,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn unfused_exp_midp_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -5103,6 +6196,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn unfused_exp_midp_unchecked_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 4 + 3).map(|i| data[i % data.len()]).collect();
@@ -5148,6 +6253,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn unfused_exp_midp_precise_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -5209,6 +6326,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn unfused_sigmoid_midp_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -5270,6 +6399,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn unfused_silu_midp_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -5331,6 +6472,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn unfused_log10_midp_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -5392,6 +6545,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn unfused_log10_midp_unchecked_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 4 + 3).map(|i| data[i % data.len()]).collect();
@@ -5437,6 +6602,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn unfused_log10_midp_precise_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -5498,6 +6675,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn unfused_pow_midp_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -5559,6 +6748,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn unfused_pow_midp_unchecked_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 4 + 3).map(|i| data[i % data.len()]).collect();
@@ -5605,6 +6806,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn unfused_pow_midp_precise_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -5666,6 +6879,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn unfused_cbrt_lowp_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -5727,6 +6952,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn unfused_cbrt_midp_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -5788,6 +7025,18 @@ fn width4(tier: &str) {
             }
         }
     }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4),
+    inline(never)
+)]
+fn unfused_cbrt_midp_precise_width4(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -5850,6 +7099,542 @@ fn width4(tier: &str) {
         }
     }
 }
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x4)
+)]
+fn width4(tier: &str) {
+    let t = Token::from_context();
+    attuned!(
+        portable_log2_lowp_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_log2_lowp_unchecked_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_exp2_lowp_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_exp2_lowp_unchecked_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_ln_lowp_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_ln_lowp_unchecked_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_exp_lowp_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_exp_lowp_unchecked_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_log10_lowp_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_log10_lowp_unchecked_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_pow_lowp_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_pow_lowp_unchecked_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_log2_midp_unchecked_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_log2_midp_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_log2_midp_precise_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_exp2_midp_unchecked_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_exp2_midp_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_exp2_midp_precise_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_ln_midp_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_ln_midp_unchecked_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_ln_midp_precise_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_exp_midp_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_exp_midp_unchecked_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_exp_midp_precise_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_sigmoid_midp_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_silu_midp_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_log10_midp_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_log10_midp_unchecked_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_log10_midp_precise_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_pow_midp_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_pow_midp_unchecked_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_pow_midp_precise_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_cbrt_lowp_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_cbrt_midp_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_cbrt_midp_precise_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_log2_lowp_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_log2_lowp_unchecked_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_exp2_lowp_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_exp2_lowp_unchecked_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_ln_lowp_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_ln_lowp_unchecked_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_exp_lowp_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_exp_lowp_unchecked_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_log10_lowp_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_log10_lowp_unchecked_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_pow_lowp_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_pow_lowp_unchecked_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_log2_midp_unchecked_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_log2_midp_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_log2_midp_precise_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_exp2_midp_unchecked_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_exp2_midp_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_exp2_midp_precise_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_ln_midp_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_ln_midp_unchecked_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_ln_midp_precise_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_exp_midp_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_exp_midp_unchecked_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_exp_midp_precise_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_sigmoid_midp_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_silu_midp_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_log10_midp_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_log10_midp_unchecked_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_log10_midp_precise_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_pow_midp_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_pow_midp_unchecked_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_pow_midp_precise_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_cbrt_lowp_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_cbrt_midp_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_cbrt_midp_precise_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_log2_lowp_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_log2_lowp_unchecked_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_exp2_lowp_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_exp2_lowp_unchecked_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_ln_lowp_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_ln_lowp_unchecked_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_exp_lowp_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_exp_lowp_unchecked_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_log10_lowp_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_log10_lowp_unchecked_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_pow_lowp_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_pow_lowp_unchecked_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_log2_midp_unchecked_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_log2_midp_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_log2_midp_precise_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_exp2_midp_unchecked_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_exp2_midp_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_exp2_midp_precise_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_ln_midp_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_ln_midp_unchecked_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_ln_midp_precise_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_exp_midp_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_exp_midp_unchecked_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_exp_midp_precise_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_sigmoid_midp_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_silu_midp_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_log10_midp_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_log10_midp_unchecked_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_log10_midp_precise_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_pow_midp_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_pow_midp_unchecked_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_pow_midp_precise_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_cbrt_lowp_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_cbrt_midp_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_cbrt_midp_precise_width4(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+}
 #[cfg(feature = "w512")]
 #[attune(
     _scalar_t,
@@ -5857,9 +7642,10 @@ fn width4(tier: &str) {
     _neon_t,
     _wasm128_t,
     _v4x_t(cfg(avx512)),
-    define(f32x8, f32x16)
+    define(f32x8, f32x16),
+    inline(never)
 )]
-fn width16(tier: &str) {
+fn portable_log2_lowp_width16(tier: &str) {
     let t = Token::from_context();
     {
         let data = [
@@ -5922,6 +7708,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn portable_log2_lowp_unchecked_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 16 + 3).map(|i| data[i % data.len()]).collect();
@@ -5967,6 +7766,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn portable_exp2_lowp_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -6028,6 +7840,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn portable_exp2_lowp_unchecked_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 16 + 3).map(|i| data[i % data.len()]).collect();
@@ -6073,6 +7898,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn portable_ln_lowp_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -6134,6 +7972,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn portable_ln_lowp_unchecked_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 16 + 3).map(|i| data[i % data.len()]).collect();
@@ -6179,6 +8030,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn portable_exp_lowp_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -6240,6 +8104,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn portable_exp_lowp_unchecked_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 16 + 3).map(|i| data[i % data.len()]).collect();
@@ -6285,6 +8162,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn portable_log10_lowp_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -6346,6 +8236,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn portable_log10_lowp_unchecked_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 16 + 3).map(|i| data[i % data.len()]).collect();
@@ -6391,6 +8294,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn portable_pow_lowp_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -6452,6 +8368,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn portable_pow_lowp_unchecked_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 16 + 3).map(|i| data[i % data.len()]).collect();
@@ -6498,6 +8427,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn portable_log2_midp_unchecked_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 16 + 3).map(|i| data[i % data.len()]).collect();
@@ -6543,6 +8485,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn portable_log2_midp_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -6604,6 +8559,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn portable_log2_midp_precise_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -6665,6 +8633,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn portable_exp2_midp_unchecked_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 16 + 3).map(|i| data[i % data.len()]).collect();
@@ -6710,6 +8691,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn portable_exp2_midp_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -6771,6 +8765,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn portable_exp2_midp_precise_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -6832,6 +8839,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn portable_ln_midp_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -6893,6 +8913,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn portable_ln_midp_unchecked_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 16 + 3).map(|i| data[i % data.len()]).collect();
@@ -6938,6 +8971,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn portable_ln_midp_precise_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -6999,6 +9045,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn portable_exp_midp_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -7060,6 +9119,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn portable_exp_midp_unchecked_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 16 + 3).map(|i| data[i % data.len()]).collect();
@@ -7105,6 +9177,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn portable_exp_midp_precise_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -7166,6 +9251,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn portable_sigmoid_midp_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -7227,6 +9325,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn portable_silu_midp_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -7288,6 +9399,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn portable_log10_midp_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -7349,6 +9473,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn portable_log10_midp_unchecked_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 16 + 3).map(|i| data[i % data.len()]).collect();
@@ -7394,6 +9531,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn portable_log10_midp_precise_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -7455,6 +9605,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn portable_pow_midp_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -7516,6 +9679,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn portable_pow_midp_unchecked_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 16 + 3).map(|i| data[i % data.len()]).collect();
@@ -7562,6 +9738,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn portable_pow_midp_precise_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -7624,6 +9813,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn portable_cbrt_lowp_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -7685,6 +9887,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn portable_cbrt_midp_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -7746,6 +9961,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn portable_cbrt_midp_precise_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -7807,6 +10035,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn relaxed_log2_lowp_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -7868,6 +10109,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn relaxed_log2_lowp_unchecked_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 16 + 3).map(|i| data[i % data.len()]).collect();
@@ -7913,6 +10167,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn relaxed_exp2_lowp_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -7974,6 +10241,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn relaxed_exp2_lowp_unchecked_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 16 + 3).map(|i| data[i % data.len()]).collect();
@@ -8019,6 +10299,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn relaxed_ln_lowp_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -8080,6 +10373,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn relaxed_ln_lowp_unchecked_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 16 + 3).map(|i| data[i % data.len()]).collect();
@@ -8125,6 +10431,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn relaxed_exp_lowp_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -8186,6 +10505,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn relaxed_exp_lowp_unchecked_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 16 + 3).map(|i| data[i % data.len()]).collect();
@@ -8231,6 +10563,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn relaxed_log10_lowp_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -8292,6 +10637,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn relaxed_log10_lowp_unchecked_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 16 + 3).map(|i| data[i % data.len()]).collect();
@@ -8337,6 +10695,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn relaxed_pow_lowp_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -8398,6 +10769,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn relaxed_pow_lowp_unchecked_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 16 + 3).map(|i| data[i % data.len()]).collect();
@@ -8444,6 +10828,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn relaxed_log2_midp_unchecked_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 16 + 3).map(|i| data[i % data.len()]).collect();
@@ -8489,6 +10886,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn relaxed_log2_midp_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -8550,6 +10960,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn relaxed_log2_midp_precise_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -8611,6 +11034,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn relaxed_exp2_midp_unchecked_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 16 + 3).map(|i| data[i % data.len()]).collect();
@@ -8656,6 +11092,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn relaxed_exp2_midp_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -8717,6 +11166,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn relaxed_exp2_midp_precise_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -8778,6 +11240,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn relaxed_ln_midp_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -8839,6 +11314,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn relaxed_ln_midp_unchecked_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 16 + 3).map(|i| data[i % data.len()]).collect();
@@ -8884,6 +11372,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn relaxed_ln_midp_precise_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -8945,6 +11446,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn relaxed_exp_midp_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -9006,6 +11520,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn relaxed_exp_midp_unchecked_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 16 + 3).map(|i| data[i % data.len()]).collect();
@@ -9051,6 +11578,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn relaxed_exp_midp_precise_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -9112,6 +11652,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn relaxed_sigmoid_midp_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -9173,6 +11726,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn relaxed_silu_midp_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -9234,6 +11800,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn relaxed_log10_midp_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -9295,6 +11874,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn relaxed_log10_midp_unchecked_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 16 + 3).map(|i| data[i % data.len()]).collect();
@@ -9340,6 +11932,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn relaxed_log10_midp_precise_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -9401,6 +12006,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn relaxed_pow_midp_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -9462,6 +12080,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn relaxed_pow_midp_unchecked_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 16 + 3).map(|i| data[i % data.len()]).collect();
@@ -9508,6 +12139,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn relaxed_pow_midp_precise_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -9569,6 +12213,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn relaxed_cbrt_lowp_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -9630,6 +12287,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn relaxed_cbrt_midp_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -9691,6 +12361,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn relaxed_cbrt_midp_precise_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -9752,6 +12435,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn unfused_log2_lowp_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -9813,6 +12509,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn unfused_log2_lowp_unchecked_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 16 + 3).map(|i| data[i % data.len()]).collect();
@@ -9858,6 +12567,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn unfused_exp2_lowp_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -9919,6 +12641,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn unfused_exp2_lowp_unchecked_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 16 + 3).map(|i| data[i % data.len()]).collect();
@@ -9964,6 +12699,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn unfused_ln_lowp_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -10025,6 +12773,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn unfused_ln_lowp_unchecked_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 16 + 3).map(|i| data[i % data.len()]).collect();
@@ -10070,6 +12831,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn unfused_exp_lowp_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -10131,6 +12905,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn unfused_exp_lowp_unchecked_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 16 + 3).map(|i| data[i % data.len()]).collect();
@@ -10176,6 +12963,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn unfused_log10_lowp_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -10237,6 +13037,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn unfused_log10_lowp_unchecked_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 16 + 3).map(|i| data[i % data.len()]).collect();
@@ -10282,6 +13095,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn unfused_pow_lowp_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -10343,6 +13169,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn unfused_pow_lowp_unchecked_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 16 + 3).map(|i| data[i % data.len()]).collect();
@@ -10389,6 +13228,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn unfused_log2_midp_unchecked_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 16 + 3).map(|i| data[i % data.len()]).collect();
@@ -10434,6 +13286,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn unfused_log2_midp_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -10495,6 +13360,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn unfused_log2_midp_precise_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -10556,6 +13434,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn unfused_exp2_midp_unchecked_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 16 + 3).map(|i| data[i % data.len()]).collect();
@@ -10601,6 +13492,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn unfused_exp2_midp_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -10662,6 +13566,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn unfused_exp2_midp_precise_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -10723,6 +13640,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn unfused_ln_midp_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -10784,6 +13714,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn unfused_ln_midp_unchecked_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 16 + 3).map(|i| data[i % data.len()]).collect();
@@ -10829,6 +13772,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn unfused_ln_midp_precise_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -10890,6 +13846,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn unfused_exp_midp_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -10951,6 +13920,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn unfused_exp_midp_unchecked_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 16 + 3).map(|i| data[i % data.len()]).collect();
@@ -10996,6 +13978,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn unfused_exp_midp_precise_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -11057,6 +14052,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn unfused_sigmoid_midp_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -11118,6 +14126,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn unfused_silu_midp_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -11179,6 +14200,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn unfused_log10_midp_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -11240,6 +14274,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn unfused_log10_midp_unchecked_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 16 + 3).map(|i| data[i % data.len()]).collect();
@@ -11285,6 +14332,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn unfused_log10_midp_precise_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -11346,6 +14406,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn unfused_pow_midp_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -11407,6 +14480,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn unfused_pow_midp_unchecked_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [0.125, 0.25, 0.5, 0.75, 1.0, 1.25, 2.0, 4.0];
         let input: Vec<f32> = (0..2 * 16 + 3).map(|i| data[i % data.len()]).collect();
@@ -11453,6 +14539,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn unfused_pow_midp_precise_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -11514,6 +14613,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn unfused_cbrt_lowp_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -11575,6 +14687,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn unfused_cbrt_midp_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -11636,6 +14761,19 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16),
+    inline(never)
+)]
+fn unfused_cbrt_midp_precise_width16(tier: &str) {
+    let t = Token::from_context();
     {
         let data = [
             0.0,
@@ -11697,6 +14835,543 @@ fn width16(tier: &str) {
             }
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8, f32x16)
+)]
+fn width16(tier: &str) {
+    let t = Token::from_context();
+    attuned!(
+        portable_log2_lowp_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_log2_lowp_unchecked_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_exp2_lowp_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_exp2_lowp_unchecked_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_ln_lowp_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_ln_lowp_unchecked_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_exp_lowp_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_exp_lowp_unchecked_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_log10_lowp_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_log10_lowp_unchecked_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_pow_lowp_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_pow_lowp_unchecked_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_log2_midp_unchecked_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_log2_midp_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_log2_midp_precise_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_exp2_midp_unchecked_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_exp2_midp_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_exp2_midp_precise_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_ln_midp_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_ln_midp_unchecked_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_ln_midp_precise_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_exp_midp_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_exp_midp_unchecked_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_exp_midp_precise_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_sigmoid_midp_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_silu_midp_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_log10_midp_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_log10_midp_unchecked_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_log10_midp_precise_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_pow_midp_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_pow_midp_unchecked_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_pow_midp_precise_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_cbrt_lowp_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_cbrt_midp_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        portable_cbrt_midp_precise_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_log2_lowp_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_log2_lowp_unchecked_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_exp2_lowp_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_exp2_lowp_unchecked_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_ln_lowp_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_ln_lowp_unchecked_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_exp_lowp_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_exp_lowp_unchecked_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_log10_lowp_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_log10_lowp_unchecked_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_pow_lowp_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_pow_lowp_unchecked_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_log2_midp_unchecked_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_log2_midp_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_log2_midp_precise_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_exp2_midp_unchecked_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_exp2_midp_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_exp2_midp_precise_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_ln_midp_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_ln_midp_unchecked_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_ln_midp_precise_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_exp_midp_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_exp_midp_unchecked_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_exp_midp_precise_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_sigmoid_midp_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_silu_midp_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_log10_midp_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_log10_midp_unchecked_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_log10_midp_precise_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_pow_midp_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_pow_midp_unchecked_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_pow_midp_precise_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_cbrt_lowp_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_cbrt_midp_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        relaxed_cbrt_midp_precise_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_log2_lowp_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_log2_lowp_unchecked_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_exp2_lowp_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_exp2_lowp_unchecked_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_ln_lowp_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_ln_lowp_unchecked_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_exp_lowp_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_exp_lowp_unchecked_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_log10_lowp_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_log10_lowp_unchecked_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_pow_lowp_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_pow_lowp_unchecked_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_log2_midp_unchecked_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_log2_midp_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_log2_midp_precise_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_exp2_midp_unchecked_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_exp2_midp_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_exp2_midp_precise_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_ln_midp_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_ln_midp_unchecked_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_ln_midp_precise_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_exp_midp_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_exp_midp_unchecked_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_exp_midp_precise_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_sigmoid_midp_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_silu_midp_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_log10_midp_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_log10_midp_unchecked_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_log10_midp_precise_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_pow_midp_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_pow_midp_unchecked_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_pow_midp_precise_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_cbrt_lowp_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_cbrt_midp_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        unfused_cbrt_midp_precise_width16(tier),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
 }
 #[test]
 fn same_mode_widths() {
