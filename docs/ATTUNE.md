@@ -1,16 +1,16 @@
-# Unified macros in 0.9.31-beta.2
+# Unified macros in 0.9.31
 
 `#[attune]` defines feature bodies, proof wrappers, and dispatchers. `attuned!`
 calls a family using the enclosing feature context or proof; `reattune!` permits
 runtime reselection. Existing `arcane`, `rite`, `autoversion`, `magetypes`, and
-`incant!` spellings remain supported and are not newly deprecated in this beta.
+`incant!` spellings remain supported and are not newly deprecated in this release.
 
-Use matching beta versions of archmage and magetypes. The archmage dependency
+Use matching versions of archmage and magetypes. The archmage dependency
 pins archmage-macros exactly because generated code refers to archmage APIs.
 Magetypes retains its existing token-taking constructors, including `_t` names;
 `_t(token, ...)` stays token-first, and the short names have not become
 tokenless. The `use(...)` constructor mode and adaptive-alias experiments are
-not part of this beta.
+not part of this release.
 
 ## Start with the common forms
 
@@ -508,7 +508,7 @@ exist; CPU detection and target-feature contexts still determine which can run.
 
 Imports do not construct a token or change constructor signatures. Prefer
 `define(f32x8)` when the body needs a specific vector alias; use
-`Token::from_context()` and `_t(token, ...)` to construct vectors in this beta.
+`Token::from_context()` and `_t(token, ...)` to construct vectors in this release.
 
 ## Migrating from the legacy attributes
 
@@ -591,7 +591,7 @@ visibility. If the original dispatcher takes an explicit `ScalarToken`,
 preserve that dispatcher argument too; the tokenless example above does not.
 
 The migration is manual: no source converter and no replacement-deprecation
-machinery ship in this beta. A family can also be migrated incrementally, one
+machinery ship in this release. A family can also be migrated incrementally, one
 call at a time, by pointing a call-site dictionary at the legacy names:
 
 ```rust
@@ -664,10 +664,10 @@ guide's reproducibility limits match the corpus: finite syntax products, no
 claim of arbitrary signatures, and x86/AArch64 execution for the runnable
 examples with WASM covered by the raw expansion matrix.
 
-Remaining gaps, recorded rather than dropped:
+Release checklist (original beta review; retained for context):
 
-- The owner's README review and final publication approval.
-- Full remote CI on the final release commit.
+- The owner authorized the stable release on 2026-11-07.
+- The tagged release workflow runs the full CI matrix before publication.
 - No source converter or legacy deprecation warnings ship in this beta.
 - The site includes the simplified [Path of Attunement](site/content/attunement/_index.md)
   and a complete reference generated from this guide. Verify the deployed pages
@@ -681,5 +681,6 @@ Remaining gaps, recorded rather than dropped:
 The [precise semver guard](../xtask/check_semver.py) is integrated in local and
 release CI (`94d828e2`); run `just attune-beta-semver` to compare against 0.9.30.
 Its [validation record](../benchmarks/attune_beta_validation_2026-10-10.md)
-explains the single replaced lint. Full remote CI and the owner's README review
-and publication approval remain release gates.
+explains the single replaced lint. The stable candidate also passed explicit semver comparisons against 0.9.30
+and beta.2; see [downstream compatibility](DOWNSTREAM-COMPATIBILITY.md).
+The release workflow gates publication on its full CI matrix and package checks.

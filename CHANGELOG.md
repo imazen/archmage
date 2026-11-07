@@ -1,5 +1,6 @@
 # Changelog
 
+Stable `0.9.31` includes both published betas and the follow-up fixes below.
 The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 `0.9.31-beta.2` entries changes since `0.9.31-beta.1`. The earlier
 `0.9.31-beta` version was prepared but never published.
@@ -12,6 +13,13 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 
 - Remove `guaranteed()` from `SimdToken` trait — use `compiled_with()` instead (deprecated since 0.6.0, zero callers)
 - Remove width traits `Has128BitSimd`, `Has256BitSimd`, `Has512BitSimd` — use concrete tokens or tier traits (`HasX64V2`, `HasX64V4`) instead (deprecated since 0.9.9; `Has256BitSimd` only enables AVX, not AVX2/FMA)
+
+### [0.9.31] - 2026-11-07
+
+#### Changed
+
+- Graduate the unified macros from beta to stable. Existing macro names and constructor signatures remain supported; the matching macro dependency is pinned to `=0.9.31`.
+- Clarify automatic architecture gating, default dispatch, V4 versus V4x, per-tier vector widths, and migration of suffixed callers (9199c31e).
 
 ### [0.9.31-beta.2] - 2026-10-25
 
@@ -55,6 +63,12 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 - Deprecate `incant!` passthrough mode (`with token`) — zero downstream uses; `#[rite]` multi-tier or direct `IntoConcreteToken` dispatch are better alternatives
 - Require `scalar` or `default` in explicit `incant!` tier lists (currently auto-appended with a deprecation warning)
 - Require explicit `tier(cfg(feature))` syntax — remove implicit `cfg_feature` auto-gating on v4/v4x
+
+### [0.9.31] - 2026-11-07
+
+#### Changed
+
+- Graduate the beta macro implementation unchanged to stable. See the beta entries below for the new `attune` family, macro-hygiene fixes, and migration details. Rewritten call macros must remain imported in the caller's scope.
 
 ### [0.9.31-beta.2] - 2026-10-25
 
@@ -120,12 +134,6 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 
 ### [Unreleased]
 
-#### Changed
-
-- Float negation now flips exactly the sign bit on every backend. On x86, `-(+0.0)` now returns `-0.0`; NaN signs flip while payloads and signalling bits are preserved instead of passing through subtraction (#135).
-
-- Float `simd_ne` now uses unordered inequality on every backend, matching Rust `!=`. NaN lanes on x86 V3 and delegated V4/V4x widths now return true masks instead of false; integer comparisons are unchanged (#130).
-
 #### QUEUED BREAKING CHANGES
 
 - Planned: `mul_add`/`mul_sub` become the fused, single-rounding operations, matching `f32::mul_add`. Step one is in this release: `mul_add_relaxed`/`mul_sub_relaxed` (the previous `mul_add`: fused where the hardware fuses, multiply then add on the scalar backend and strict WASM, the engine's madd with relaxed SIMD) and `mul_add_fused`/`mul_sub_fused` (the same operation as `mul_add_portable`/`mul_sub_portable`, which stay), with `mul_add`/`mul_sub` deprecated pointing at both (#138). After the deprecation has shipped through a full release (0.10), `mul_add`/`mul_sub` return undeprecated as the fused forms (0.11). Calls still on `mul_add` then round once everywhere, at software-FMA cost on the scalar backend without FMA hardware and on strict WASM. Neither form is fastest everywhere: separate multiply-add is faster for single-accumulator reductions, fused for Horner chains (`benchmarks/fused_vs_separate_2026-10-25.md`).
@@ -134,6 +142,16 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 - Remove the six no-op `*_midp_precise` aliases (`exp2`/`exp`/`ln`/`log2`/`log10`/`pow` — each is literally `self.*_midp()`); `cbrt_midp_precise` stays, it does real denormal/zero handling. With the reciprocal tiers settling on `_portable` as the precise tier, a `_precise` suffix that does nothing is a naming lie.
 - Planned: make `w512` non-default in magetypes; users who need 512-bit types would add `features = ["w512"]`. This patch keeps the existing default features.
 - Remove `cast::Upcast` and `cast::Downcast`, and with them the `cast` module, which holds nothing else. Both are deprecated in 0.9.30 and were never implemented (b1b2ff67).
+
+### [0.9.31] - 2026-11-07
+
+#### Changed
+
+- Float negation now flips exactly the sign bit on every backend. On x86, `-(+0.0)` now returns `-0.0`; NaN signs flip while payloads and signalling bits are preserved instead of passing through subtraction (c50ee7e4; #135).
+
+- Float `simd_ne` now uses unordered inequality on every backend, matching Rust `!=`. NaN lanes on x86 V3 and delegated V4/V4x widths now return true masks instead of false; integer comparisons are unchanged (4478ac5b; #130).
+
+- Graduate the beta vector APIs and explicit fused/relaxed multiply-add names to stable. Existing `mul_add`/`mul_sub` remain deprecated with their previous behavior; default features and constructor signatures are unchanged.
 
 ### [0.9.31-beta.2] - 2026-10-25
 
@@ -214,6 +232,14 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 #### QUEUED BREAKING CHANGES
 
 (none)
+
+### [0.9.31] - 2026-11-07
+
+#### Changed
+
+- Update package and website installation examples to stable 0.9.31.
+- Validate semver against both 0.9.30 and beta.2, and verify 34 downstream consumer graphs compile candidate Archmage, including 27 compiling candidate Magetypes. See `docs/DOWNSTREAM-COMPATIBILITY.md` for compile-only scope and exclusions (54156c9e).
+- Enforce exact inequality and negation contracts on native ARM and WASM as well as x86 (8794ff94).
 
 ### [0.9.31-beta.2] - 2026-10-25
 

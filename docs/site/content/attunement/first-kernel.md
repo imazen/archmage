@@ -10,13 +10,13 @@ its CPU-specific implementations. Put the whole loop in that function.
 *Legacy equivalent:* `#[autoversion(v3, neon, wasm128, scalar)]` provides the
 same dispatcher role; generated variant names and visibility differ.
 
-## Install the beta
+## Install
 
-This guide uses the 0.9.31-beta.2 API. Select the prerelease explicitly:
+This guide uses the stable 0.9.31 API:
 
 ```toml
 [dependencies]
-archmage = "=0.9.31-beta.2"
+archmage = "=0.9.31"
 ```
 
 ## Write and call a kernel

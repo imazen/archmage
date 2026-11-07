@@ -23,9 +23,9 @@ different obligations. See the [testing guide](https://imazen.github.io/archmage
 
 MIT OR Apache-2.0.
 
-## Unified macro beta
+## Unified macros
 
-The `0.9.31` betas (currently `0.9.31-beta.2`) add `#[attune]`, `attuned!`, and
+Version `0.9.31` adds `#[attune]`, `attuned!`, and
 `reattune!` through the archmage crate. Legacy attributes remain supported. Use the matching archmage
 version; its exact dependency pin keeps generated code and runtime APIs paired.
-See the [beta guide](https://github.com/imazen/archmage/blob/main/docs/ATTUNE.md).
+See the [unified macro guide](https://github.com/imazen/archmage/blob/main/docs/ATTUNE.md).

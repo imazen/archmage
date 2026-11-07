@@ -1774,7 +1774,7 @@ fn generate_all() -> Result<()> {
         format!(
             r#"+++
 title = "Attunement Reference"
-description = "All beta forms, call rules, and legacy mappings"
+description = "Unified macro forms, call rules, and legacy mappings"
 weight = 4
 +++
 

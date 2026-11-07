@@ -4,12 +4,12 @@ description = "Use Magetypes inside an attuned kernel and handle its tail"
 weight = 3
 +++
 
-Use matching beta versions so both crates use the same token types:
+Use matching versions so both crates use the same token types:
 
 ```toml
 [dependencies]
-archmage = "=0.9.31-beta.2"
-magetypes = "=0.9.31-beta.2"
+archmage = "=0.9.31"
+magetypes = "=0.9.31"
 ```
 
 `define(f32x8)` gives each generated body an eight-lane vector alias specialized
@@ -48,7 +48,7 @@ for len in [0, 3, 8, 11] {
 `Token` is a placeholder that the generated family replaces with its concrete
 tier. `from_context()` uses the enclosing feature guarantee without another CPU
 probe. Magetypes' `_t(token, ...)` constructors still require that proof in this
-beta; short constructor names have not become token-free.
+release; short constructor names have not become token-free.
 
 The slice partition gives you complete eight-element arrays and a remaining
 slice. Process both. `f32x8` always has eight logical lanes here, including on the

@@ -1,6 +1,6 @@
 +++
 title = "Attunement Reference"
-description = "All beta forms, call rules, and legacy mappings"
+description = "Unified macro forms, call rules, and legacy mappings"
 weight = 4
 +++
 
@@ -9,14 +9,14 @@ weight = 4
 `#[attune]` defines feature bodies, proof wrappers, and dispatchers. `attuned!`
 calls a family using the enclosing feature context or proof; `reattune!` permits
 runtime reselection. Existing `arcane`, `rite`, `autoversion`, `magetypes`, and
-`incant!` spellings remain supported and are not newly deprecated in this beta.
+`incant!` spellings remain supported and are not newly deprecated in this release.
 
-Use matching beta versions of archmage and magetypes. The archmage dependency
+Use matching versions of archmage and magetypes. The archmage dependency
 pins archmage-macros exactly because generated code refers to archmage APIs.
 Magetypes retains its existing token-taking constructors, including `_t` names;
 `_t(token, ...)` stays token-first, and the short names have not become
 tokenless. The `use(...)` constructor mode and adaptive-alias experiments are
-not part of this beta.
+not part of this release.
 
 ## Start with the common forms
 
@@ -514,7 +514,7 @@ exist; CPU detection and target-feature contexts still determine which can run.
 
 Imports do not construct a token or change constructor signatures. Prefer
 `define(f32x8)` when the body needs a specific vector alias; use
-`Token::from_context()` and `_t(token, ...)` to construct vectors in this beta.
+`Token::from_context()` and `_t(token, ...)` to construct vectors in this release.
 
 ## Migrating from the legacy attributes
 
@@ -597,7 +597,7 @@ visibility. If the original dispatcher takes an explicit `ScalarToken`,
 preserve that dispatcher argument too; the tokenless example above does not.
 
 The migration is manual: no source converter and no replacement-deprecation
-machinery ship in this beta. A family can also be migrated incrementally, one
+machinery ship in this release. A family can also be migrated incrementally, one
 call at a time, by pointing a call-site dictionary at the legacy names:
 
 ```rust
