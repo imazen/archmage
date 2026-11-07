@@ -90,9 +90,10 @@ impl<T: F32x4Convert> f32x4<T> {
 
         // floor(x) <= 127 keeps the bit trick (n+127)<<23 in range; at 127.99
         // the result stays below f32::MAX despite the polynomial's error.
-        let x = self
-            .max(splat_f32::<T>(self.1, -126.0))
-            .min(splat_f32::<T>(self.1, 127.99));
+        // x86 min/max select the second operand on NaN; NEON and
+        // WASM propagate NaN. Put the value second at both clamps.
+        let x = splat_f32::<T>(self.1, -126.0).max(self);
+        let x = splat_f32::<T>(self.1, 127.99).min(x);
         let xi = x.floor();
         let xf = x - xi;
 
@@ -105,7 +106,12 @@ impl<T: F32x4Convert> f32x4<T> {
         let result = poly * scale_bits.bitcast_to_f32();
         // min/max NaN selection differs across backends. Classify the
         // original input, leaving the ordinary polynomial unchanged.
-        Self::blend(self.simd_ne(self), splat_f32::<T>(self.1, f32::NAN), result)
+        if core::any::TypeId::of::<T>() == core::any::TypeId::of::<archmage::ScalarToken>() {
+            // Smaller scalar vectors ignore a single NaN in min/max.
+            Self::blend(self.simd_ne(self), splat_f32::<T>(self.1, f32::NAN), result)
+        } else {
+            result
+        }
     }
 
     /// Low-precision base-2 exponential, no edge case handling.
@@ -279,7 +285,8 @@ impl<T: F32x4Convert> f32x4<T> {
         let overflow_limit = splat_f32::<T>(self.1, 128.0);
 
         // Clamp to prevent overflow in intermediate calculations
-        let clamped = self.max(underflow_limit).min(overflow_limit);
+        let clamped = underflow_limit.max(self);
+        let clamped = overflow_limit.min(clamped);
         let result = clamped.exp2_midp_unchecked();
 
         // Handle edge cases: large negative → 0, large positive → inf
@@ -292,7 +299,12 @@ impl<T: F32x4Convert> f32x4<T> {
         let result = Self::blend(is_overflow, inf, result);
         // Also covers NaNs produced by callers (e.g. checked pow on
         // a negative base). NaN payload and sign are unspecified.
-        Self::blend(self.simd_ne(self), splat_f32::<T>(self.1, f32::NAN), result)
+        if core::any::TypeId::of::<T>() == core::any::TypeId::of::<archmage::ScalarToken>() {
+            // Smaller scalar vectors ignore a single NaN in min/max.
+            Self::blend(self.simd_ne(self), splat_f32::<T>(self.1, f32::NAN), result)
+        } else {
+            result
+        }
     }
 
     /// Same as [`exp2_midp`](Self::exp2_midp), which covers every input:
