@@ -1,0 +1,1 @@
+Byte-exact Zenmath src from reviewed pre-gamma commit 9f466de6581a0837bf2fa1af8ce3538b929e31e6. Only the package manifest is adapted for this standalone paired consumer. Do not format this source snapshot.

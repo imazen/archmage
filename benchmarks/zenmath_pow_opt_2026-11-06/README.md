@@ -1,54 +1,61 @@
-# Power policy and gamma optimization study
+# Power routing, gamma and feature study
 
-Unpublished study based on draft 4ccaf1cf. Production changes remain unpushed.
-The initial benchmark covers exponent-spread positive bases (about 2^-60 to
-2^60), linear-uniform C0 sRGB gamma bases, and negative/integer/special controls.
-These differ from historical corpora; comparisons use identical inputs within
-this study, never ratios inferred from old reports. Boundary/log-spaced and
-whole-transfer coverage is being added before the final matrix.
+Generic power policies now use the selected arithmetic context; the independent
+reference remains the original CORE implementation. A compact positive-normal
+classifier and certified gamma specializations improve selected workloads.
+Std still wins general power; whole-transfer wins depend on corpus and call
+boundary. [Results and paired intervals](RESULTS.md) include the losses.
 
-The independently frozen baseline contains 79 Rust files byte-identical to
-4ccaf1cf, with renamed unpublished package manifests only. Run
-`python3 validate-baseline.py` before builds. It supplies old scalar, selected
-scalar, whole-loop scalar feature context and packed policy controls. Current
-reference, current selected policy and std controls have distinct labels.
-`std` is a timing control, never the correct-rounding oracle.
+This draft also separates additive math families and makes Magemath a superset
+of all 35 deprecated Magetypes methods at widths four/eight and optional sixteen.
+See [families](../../magemath/docs/FEATURES.md),
+[migration contracts](../../magemath/docs/MIGRATION.md) and
+[54 measured cold builds](../../magemath/docs/BUILD-COST.md). No Zenmath–Magetypes
+dependency edge is introduced. Normal currently shares precise arithmetic.
 
-Actual const-generic policies include correct, MIDP/LOWP Full and
-PositiveNormalPrecondition, each fused/separate where valid. Uniform gamma
-exponents are separate const-generic loop instantiations using exact f32 bits.
-Whole-loop V3/NEON/WASM scalar contexts distinguish feature-boundary overhead
-from polynomial work. Packed precondition tails use valid (1,0) filler.
+| Evidence stage | Effective clean coverage |
+|---|---:|
+| Original native policies / staged transfer / feedback | 112 groups, 5,728 cases |
+| Original strict WASM policies | 60 groups, 2,980 cases |
+| Final gamma native and NEON, separately | 28 groups, 236 cases each |
+| Final targeted strict WASM | 3 groups, 153 cases |
+| Final admitted-domain exact-bit gates | 22 cells, 1,108,465,743 comparisons |
+| Family cold consumer builds | 18 configurations × 3 replicates |
 
-Initial perf profiles found software f64 FMA in the generic correct policy and
-software f32 FMA in fused MIDP. Routing fix 329fdc54 keeps the reference policy
-non-dispatch while ordinary policies select the ordinary correct core. A shared
-positive-normal entry avoids the longer special classifier without changing
-polynomial steps or the accurate fallback. Quiet paired data and all limitations
-will be retained, including unresolved direct-context differences and std wins.
+Original dirty groups and targeted replacements are retained. Only the exact
+clean replacement union supports conclusions. Native/NEON gamma source is
+production `4da80e0a`; earlier routing/policy stages remain separately identified.
+The baseline has 79 Rust files from `4ccaf1cf`; the gamma baseline has 64 Zenmath
+Rust files from `9f466de6`. Manifest changes rename only unpublished packages.
+`just validate-baseline` checks both frozen copies.
 
-Use fresh target directories after source transport. `freeze.py` refuses an
-existing snapshot and copies binaries outside Cargo before further builds.
-Raw data/binaries/profiles go to /mnt/v/output/archmage/zenmath-pow-opt-2026-11-06/
-and the corresponding NAS mirror. No large generated data belongs in git.
+The original matrix includes all nine correct/MIDP/LOWP, Full/precondition,
+fused/separate policies, whole-loop scalar feature contexts, ordinary scalar,
+packed, historical, exponent-spread, boundary, log-bit, uniform and special
+controls. Positive exponent-spread bases range roughly from 2^-60 to 2^60.
+Historical bases are [0.01,4.01). No historical C timing is used for a speed ratio.
+Gamma fixed and runtime-y controls are distinct. Inactive/tail precondition
+lanes receive valid (1,0) fillers. Adapters assert their block contracts.
 
-The current driver also covers cutoff/base neighbors and logarithmically
-spaced positive f32 bit codes. A historical corpus control uses bases in
-[0.01,4.01) and the exact f32 exponent 2.4, matching that input definition only.
-`transfer` measures C0 whole-transfer work separately: inactive lanes receive
-valid (1,0) before eager power, then a shared postpass selects the linear branch.
-Fused and separate encoding composition are separate groups for every power
-candidate. This includes preprocessing/postprocessing memory passes; it is not a
-single fused pixel loop. `linear-srgb =0.6.12` scalar/slice rational functions
-are whole-transfer controls with their own approximation contracts and natural
-compile-time composition. Source comparisons against local 8900ffc8 are recorded
-in `linear-srgb-provenance.json`; no sibling repository is changed.
+C0 controls use linear-srgb's actual continuous constants, not textbook sRGB.
+The original staged transfer includes preprocessing/postprocessing memory passes;
+the final C0 control is a scalar single-pass composition. Fused/separate original
+composition is labeled. `linear-srgb =0.6.12` rational functions are separate
+whole-transfer controls; exact source comparison is in
+[linear-srgb-provenance.json](linear-srgb-provenance.json).
 
-The initial native policy stage has four effective clean groups after replacing
-one rejected dirty group. Correct rescue/reference behavior remains bit checked.
-Linked native policy extraction found zero calls in all eight examined bodies;
-Fused MIDP/LOWP use 10/7 scalar FMA instructions, separate variants use none.
-Ordinary callers still pay a feature boundary per value. LOWP separate explicit
-precondition retains its inline reference path because paired intervals did not
-establish a native-context benefit. This is a design tie-break, not a universal
-fastest-policy claim. Std still wins many scalar correct controls.
+Native allocations occur outside timed iteration. WASM `matrix_kernel`
+allocates case vectors, inputs and outputs per host invocation; targeted calls
+amortize that work across 256 repeats. Original large WASM sizes use
+`max(1,262144/n)` repeats. Within-platform comparisons include matched wrapper
+costs; absolute native/WASM numbers include different wrappers.
+
+[Accuracy](ACCURACY.md), [linked codegen](CODEGEN.md),
+[validation](VALIDATION.md) and [artifact identities](ARTIFACTS.md) explain the
+scope and reproduction commands. Raw results, exact binaries, source snapshots,
+locks and failed attempts live outside git in the archive. `freeze.py` refuses
+existing destinations and atomically preserves each actual executable before
+subsequent builds. Run `just final-audit <archive-root>` for strict inventory,
+replacement, source, binary, chunk-digest and cold-build checks.
+
+Draft only: no push, release or publication.

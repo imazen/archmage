@@ -17,6 +17,12 @@ for folder in [
     "archmage-macros/src",
     "magetypes/src",
     "zenmath/src",
+    "zenmath/tools",
+    "zenmath/docs",
+    "magemath/tools",
+    "magemath/docs",
+    "benchmarks/zenmath_pow_opt_2026-11-06/gamma-validation/src",
+    "benchmarks/zenmath_pow_opt_2026-11-06/feature-consumer/src",
     "magemath/src",
     "zenmath/tests",
     "magemath/tests",
@@ -24,6 +30,7 @@ for folder in [
     "benchmarks/zenmath_pow_opt_2026-11-06/analysis/src",
     "benchmarks/zenmath_pow_opt_2026-11-06/src",
     "benchmarks/zenmath_pow_opt_2026-11-06/baseline/zenmath/src",
+    "benchmarks/zenmath_pow_opt_2026-11-06/baseline/zenmath-before-gamma/src",
     "benchmarks/zenmath_pow_opt_2026-11-06/baseline/magemath/src",
 ]:
     files.extend(p for p in (root / folder).rglob("*") if p.is_file())
@@ -38,8 +45,11 @@ for folder in [
     "magemath",
     "benchmarks/zenmath_pow_opt_2026-11-06",
     "benchmarks/zenmath_pow_opt_2026-11-06/compile-consumer",
+    "benchmarks/zenmath_pow_opt_2026-11-06/gamma-validation",
+    "benchmarks/zenmath_pow_opt_2026-11-06/feature-consumer",
     "benchmarks/zenmath_pow_opt_2026-11-06/analysis",
     "benchmarks/zenmath_pow_opt_2026-11-06/baseline/zenmath",
+    "benchmarks/zenmath_pow_opt_2026-11-06/baseline/zenmath-before-gamma",
     "benchmarks/zenmath_pow_opt_2026-11-06/baseline/magemath",
 ]:
     for n in ["Cargo.toml", "Cargo.lock"]:
@@ -51,6 +61,10 @@ for pattern in ["*.py", "*.sh", "justfile"]:
     files.extend(study.glob(pattern))
 for relative in ["token-registry.toml", "magemath/README.md", "magemath/docs/POW_BEHAVIOR.md", "benchmarks/zenmath_pow_opt_2026-11-06/baseline/magemath/README.md", "benchmarks/zenmath_pow_opt_2026-11-06/baseline/magemath/docs/POW_BEHAVIOR.md"]:
     files.append(root / relative)
+# Validation metadata supplements the exact build closure.
+for relative in ["baseline/PROVENANCE.json","baseline/zenmath-before-gamma/PROVENANCE.json","baseline/zenmath-before-gamma/PROVENANCE.md","linear-srgb-provenance.json"]:
+    p=study/relative
+    if p.exists():files.append(p)
 files = sorted(set(files))
 manifest = "".join(
     hashlib.sha256(p.read_bytes()).hexdigest() + "  " + str(p.relative_to(root)) + "\n"

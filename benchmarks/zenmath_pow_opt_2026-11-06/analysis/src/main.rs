@@ -16,28 +16,63 @@ fn main() {
             Some(Throughput::Elements(n)) => n as f64,
             _ => panic!("missing throughput"),
         };
-        let mut pairs = vec![
-            (
-                "old-ordinary/correct".to_owned(),
-                "ordinary/correct".to_owned(),
-            ),
-            ("std/control".to_owned(), "ordinary/correct".to_owned()),
-            ("std/control".to_owned(), "current/correct".to_owned()),
-        ];
-        for b in &g.benchmarks {
-            if let Some(policy) = b.name.strip_prefix("current/") {
-                pairs.push((format!("old-scalar/{policy}"), b.name.clone()));
+        let gamma = g.benchmarks.iter().any(|b| b.name == "before/ordinary");
+        let pairs = if gamma {
+            let mut pairs = vec![
+                ("before/ordinary".to_owned(), "current/ordinary".to_owned()),
+                ("std".to_owned(), "current/ordinary".to_owned()),
+                (
+                    "before/policy-correct".to_owned(),
+                    "current/policy-correct".to_owned(),
+                ),
+            ];
+            if g.group_name.starts_with("dynamic/") {
+                pairs.extend([
+                    ("before/context".to_owned(), "current/context".to_owned()),
+                    ("std/context".to_owned(), "current/context".to_owned()),
+                    ("before/packed4".to_owned(), "current/packed4".to_owned()),
+                    ("std".to_owned(), "current/packed4".to_owned()),
+                    (
+                        "before/slice-context".to_owned(),
+                        "current/slice-context".to_owned(),
+                    ),
+                    (
+                        "std/slice-context".to_owned(),
+                        "current/slice-context".to_owned(),
+                    ),
+                ]);
             }
-            if let Some(rest) = b.name.strip_prefix("packed-") {
-                pairs.push((format!("old-packed-{rest}"), b.name.clone()));
-            }
-            if let Some(rest) = b.name.strip_prefix("direct-") {
-                pairs.push((format!("old-direct-{rest}"), b.name.clone()));
-                if let Some((tier, _)) = rest.split_once('/') {
-                    pairs.push((format!("std-context-{tier}/control"), b.name.clone()));
+            pairs
+        } else {
+            let mut pairs = vec![
+                (
+                    "old-ordinary/correct".to_owned(),
+                    "ordinary/correct".to_owned(),
+                ),
+                ("std/control".to_owned(), "ordinary/correct".to_owned()),
+                ("std/control".to_owned(), "current/correct".to_owned()),
+            ];
+            for b in &g.benchmarks {
+                if let Some(policy) = b.name.strip_prefix("current/") {
+                    pairs.push((format!("old-scalar/{policy}"), b.name.clone()));
+                    pairs.push((format!("reference/{policy}"), b.name.clone()));
+                    pairs.push((
+                        format!("old-scalar/{policy}"),
+                        format!("reference/{policy}"),
+                    ));
+                }
+                if let Some(rest) = b.name.strip_prefix("packed-") {
+                    pairs.push((format!("old-packed-{rest}"), b.name.clone()));
+                }
+                if let Some(rest) = b.name.strip_prefix("direct-") {
+                    pairs.push((format!("old-direct-{rest}"), b.name.clone()));
+                    if let Some((tier, _)) = rest.split_once('/') {
+                        pairs.push((format!("std-context-{tier}/control"), b.name.clone()));
+                    }
                 }
             }
-        }
+            pairs
+        };
         for (b, c) in pairs {
             let Some(ib) = g.benchmarks.iter().position(|x| x.name == b) else {
                 panic!("missing pair {b}")
