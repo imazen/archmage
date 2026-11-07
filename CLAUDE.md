@@ -1284,6 +1284,12 @@ Documented accuracy limits, left unfixed because every fix measured slower on ev
 
 ### Resolved (each with its regression coverage)
 
+- **Float inequality NaN masks (#130):** x86 float `simd_ne` now uses the
+  unordered predicate like Rust and the other backends. The generator and
+  generated scalar parity include NaNs. `float_inequality` checks exact masks
+  and the complement of equality for all float widths, including signalling
+  NaNs; the documented x86 behavior change is recorded in the changelog.
+
 - **Warnings in macro output and on untested targets (2026-10-23):** body
   rewrites spliced dispatch calls, so named `incant`/`attuned`/`reattune`
   imports went unused; rewritten calls now go through the caller's path as
@@ -1521,7 +1527,7 @@ Run `cargo xtask parity` to verify.
 
 The canonical tables are in `docs/site/content/magetypes/isa-quirks.md`; update them with the `isa_quirks` tests in `magetypes/tests/doc_examples.rs`. They distinguish enforced portable contracts from current backend/width differences. Do not infer a universal floating-point error bound from one benchmark or carry legacy architecture-specific API differences over to the generic surface.
 
-- Open semantic follow-ups: x86 V3 `simd_ne` is ordered while native V4 is unordered; x86 negation loses the sign of positive zero; scalar f32x16 min/max differs from smaller scalar vectors on NaNs. Review fixes and codegen separately before changing published behavior.
+- Open semantic follow-ups: x86 negation loses the sign of positive zero; scalar f32x16 min/max differs from smaller scalar vectors on NaNs. Review fixes and codegen separately before changing published behavior.
 - Runtime byte shifts, `msub_adjacent`, and W512 i16/u16 reference casts are deferred until a concrete caller justifies them. Value casts and terminal byte reductions remain supported.
 
 ### Known Platform Detection Issues

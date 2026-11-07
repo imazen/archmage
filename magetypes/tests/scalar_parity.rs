@@ -953,7 +953,7 @@ fn simd_ge() {
 
 #[test]
 fn simd_ne() {
-    run_binary_finite("f32x4::simd_ne", |as_, bs, an, bn| {
+    run_binary("f32x4::simd_ne", |as_, bs, an, bn| {
         (as_.simd_ne(bs).to_array(), an.simd_ne(bn).to_array())
     }, super::assert_f32_exact);
 }
@@ -1445,7 +1445,7 @@ fn simd_ge() {
 
 #[test]
 fn simd_ne() {
-    run_binary_finite("f32x8::simd_ne", |as_, bs, an, bn| {
+    run_binary("f32x8::simd_ne", |as_, bs, an, bn| {
         (as_.simd_ne(bs).to_array(), an.simd_ne(bn).to_array())
     }, super::assert_f32_exact);
 }
@@ -1937,7 +1937,7 @@ fn simd_ge() {
 
 #[test]
 fn simd_ne() {
-    run_binary_finite("f64x2::simd_ne", |as_, bs, an, bn| {
+    run_binary("f64x2::simd_ne", |as_, bs, an, bn| {
         (as_.simd_ne(bs).to_array(), an.simd_ne(bn).to_array())
     }, super::assert_f64_exact);
 }
@@ -2357,7 +2357,7 @@ fn simd_ge() {
 
 #[test]
 fn simd_ne() {
-    run_binary_finite("f64x4::simd_ne", |as_, bs, an, bn| {
+    run_binary("f64x4::simd_ne", |as_, bs, an, bn| {
         (as_.simd_ne(bs).to_array(), an.simd_ne(bn).to_array())
     }, super::assert_f64_exact);
 }

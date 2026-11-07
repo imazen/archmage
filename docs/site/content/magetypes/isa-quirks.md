@@ -144,7 +144,6 @@ recommendations to depend on unusual NaN behavior.
 |---|---|---|---|---|---|
 | `min(NaN, 1)` and `max(NaN, 1)` | `1` | `1` | `NaN` | `1` | `1` |
 | `min(1, NaN)` and `max(1, NaN)` | `NaN` | `NaN` | `NaN` | `1` | `NaN` |
-| `simd_ne(NaN, 1)` and `simd_ne(NaN, NaN)` | false mask (ordered comparison) | true mask (unordered comparison) | true mask | true mask | true mask |
 | Negate `+0.0` | `+0.0` | `+0.0` | `-0.0` | `-0.0` | `-0.0` |
 | Negate `-0.0` | `+0.0` | `+0.0` | `+0.0` | `+0.0` | `+0.0` |
 
@@ -155,11 +154,12 @@ selects the second operand when the comparison is false. Rust's numeric min/max
 ignore a single NaN and do not promise which equal signed zero is returned.
 [The scalar contract is documented by Rust](https://doc.rust-lang.org/std/primitive.f32.html#method.min).
 
-For an unordered not-equal mask, invert `simd_eq`; do not assume `simd_ne` currently
-has identical NaN behavior on every tier. If NaNs or signed zeros matter to min/max
-or negation, handle them explicitly. Follow-up candidates are an unordered x86
-comparison predicate and sign-bit XOR negation; both need their own semantic and
-codegen review rather than silently changing a published operation here.
+Float `simd_ne` is unordered on every backend, matching Rust's `!=`:
+a lane is true when either operand is NaN. Its mask is the bitwise inverse
+of `simd_eq`, including NaN lanes. This changes the earlier ordered result
+on x86 V3 and the V4/V4x widths that delegate to it.
+If NaNs or signed zeros matter to min/max or negation, handle those remaining
+differences explicitly. Sign-bit XOR negation remains a separate follow-up.
 
 ## Fused arithmetic and reductions
 

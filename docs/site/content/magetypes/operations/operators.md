@@ -36,7 +36,7 @@ assert_eq!(positive([-1.0, 2.0, 0.0, 3.0, -4.0, 5.0, 6.0, 7.0]),
            [0.0, 2.0, 0.0, 3.0, 0.0, 5.0, 6.0, 7.0]);
 ```
 
-Do not assume all boolean identities hold for NaNs: current `simd_ne` semantics
-vary. Do not infer bit-identical results from replacing multiply-plus-add with
+Float `simd_ne` matches Rust `!=` on every backend, including NaNs, and its
+mask complements `simd_eq`. Do not infer bit-identical results from replacing multiply-plus-add with
 `mul_add`. The [ISA tables](@/magetypes/isa-quirks.md) specify these differences
 and the fixups the library does apply.

@@ -729,12 +729,11 @@ fn gen_float_type_tests(code: &mut String, elem: &str, lanes: usize) {
         "#});
     }
 
-    // simd_ne — skip NaN inputs (ordered vs unordered comparison semantics differ
-    // between scalar != operator and hardware cmpneqps)
+    // simd_ne is unordered on every backend, including NaN operands.
     code.push_str(&formatdoc! {r#"
             #[test]
             fn simd_ne() {{
-                run_binary_finite("{type_name}::simd_ne", |as_, bs, an, bn| {{
+                run_binary("{type_name}::simd_ne", |as_, bs, an, bn| {{
                     (as_.simd_ne(bs).to_array(), an.simd_ne(bn).to_array())
                 }}, super::{assert_exact});
             }}

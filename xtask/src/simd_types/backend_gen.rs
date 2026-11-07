@@ -1739,7 +1739,7 @@ fn generate_x86_float_impl(ty: &FloatVecType, token: &str) -> String {
 
             {arcane}
             fn simd_ne(self, a: {inner}, b: {inner}) -> {inner} {{
-                {cmp}::<_CMP_NEQ_OQ>(a, b)
+                {cmp}::<_CMP_NEQ_UQ>(a, b)
             }}
 
             {arcane}

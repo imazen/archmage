@@ -163,7 +163,7 @@ impl F32x4Backend for X64V3Token {
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn simd_ne(self, a: __m128, b: __m128) -> __m128 {
-        _mm_cmp_ps::<_CMP_NEQ_OQ>(a, b)
+        _mm_cmp_ps::<_CMP_NEQ_UQ>(a, b)
     }
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
@@ -462,7 +462,7 @@ impl F32x8Backend for X64V3Token {
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn simd_ne(self, a: __m256, b: __m256) -> __m256 {
-        _mm256_cmp_ps::<_CMP_NEQ_OQ>(a, b)
+        _mm256_cmp_ps::<_CMP_NEQ_UQ>(a, b)
     }
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
@@ -801,7 +801,7 @@ impl F64x2Backend for X64V3Token {
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn simd_ne(self, a: __m128d, b: __m128d) -> __m128d {
-        _mm_cmp_pd::<_CMP_NEQ_OQ>(a, b)
+        _mm_cmp_pd::<_CMP_NEQ_UQ>(a, b)
     }
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
@@ -1042,7 +1042,7 @@ impl F64x4Backend for X64V3Token {
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn simd_ne(self, a: __m256d, b: __m256d) -> __m256d {
-        _mm256_cmp_pd::<_CMP_NEQ_OQ>(a, b)
+        _mm256_cmp_pd::<_CMP_NEQ_UQ>(a, b)
     }
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
