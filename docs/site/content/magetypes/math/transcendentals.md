@@ -3,6 +3,11 @@ title = "Transcendentals: Domains and Fixups"
 weight = 1
 +++
 
+The unpublished math draft deprecates these Magetypes methods while retaining
+their behavior. Zenmath owns scalar/intrinsic math and Magemath owns vector
+math; replacement coverage and rounding contracts must be checked before
+migrating. The example below deliberately exercises the retained legacy API.
+
 ## Real call chain: gamma decoding in linear-srgb
 
 The following complete chain is taken from `zen/linear-srgb` at
@@ -10,7 +15,8 @@ The following complete chain is taken from `zen/linear-srgb` at
 [`gamma_to_linear_slice` → `incant!` → `gamma_to_linear_slice_tier`](https://github.com/imazen/linear-srgb/blob/6bae33ee657d0cc29eaae6fd869894ec78a41b1c/src/simd.rs#L1313),
 then `pow_midp` for full vectors and the
 [scalar tail helper](https://github.com/imazen/linear-srgb/blob/6bae33ee657d0cc29eaae6fd869894ec78a41b1c/src/scalar.rs#L300).
-Only the scalar helper's name/path is changed to make this excerpt standalone.
+The scalar helper's name/path is adapted to make this excerpt standalone, and
+a local deprecation allowance keeps the historical vector call testable.
 This example requires the default `w512` feature; `avx512` enables its native V4
 variant. The other tiers polyfill the same logical 16-lane shape.
 
@@ -27,6 +33,7 @@ fn gamma_to_linear_scalar(encoded: f32, gamma: f32) -> f32 {
     }
 }
 
+#[allow(deprecated)]
 #[archmage::magetypes(define(f32x16), v4(cfg(avx512)), v3, neon, wasm128, scalar)]
 fn gamma_to_linear_slice_tier(token: Token, values: &mut [f32], gamma: f32) {
     let (chunks, remainder) = values.as_chunks_mut::<16>();
