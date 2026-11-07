@@ -102,7 +102,10 @@ impl<T: F32x4Convert> f32x4<T> {
 
         let xi_i32 = xi.to_i32_round();
         let scale_bits = (xi_i32 + splat_i32::<T>(self.1, 127)).shl_const::<23>();
-        poly * scale_bits.bitcast_to_f32()
+        let result = poly * scale_bits.bitcast_to_f32();
+        // min/max NaN selection differs across backends. Classify the
+        // original input, leaving the ordinary polynomial unchanged.
+        Self::blend(self.simd_ne(self), splat_f32::<T>(self.1, f32::NAN), result)
     }
 
     /// Low-precision base-2 exponential, no edge case handling.
@@ -286,7 +289,10 @@ impl<T: F32x4Convert> f32x4<T> {
         let zero = splat_f32::<T>(self.1, 0.0);
         let inf = splat_f32::<T>(self.1, f32::INFINITY);
         let result = Self::blend(is_underflow, zero, result);
-        Self::blend(is_overflow, inf, result)
+        let result = Self::blend(is_overflow, inf, result);
+        // Also covers NaNs produced by callers (e.g. checked pow on
+        // a negative base). NaN payload and sign are unspecified.
+        Self::blend(self.simd_ne(self), splat_f32::<T>(self.1, f32::NAN), result)
     }
 
     /// Same as [`exp2_midp`](Self::exp2_midp), which covers every input:
