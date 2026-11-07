@@ -1,0 +1,13 @@
+{
+  "source_manifest_sha256": "32c98d40f72d6402262a2512085d16850e327058e99c1bf9f5e5e2f86a74979b",
+  "binary_sha256": "4d0356aa7336a1db26a95a3cb5b765c83b92d784a7208820b26c5f7aaaaf25f5",
+  "source_archive_sha256": "8bafaed8f013c29c020f9a0e889fd240c90940d4c8b482cad52eaa8f2878c7b7",
+  "global_proof_sha256": "b4fd00f360e7dd9933f568f84347106c914c0e20fee6e7b7a15c53faa2d9a1d4",
+  "piece_proof_sha256": "61c8db77e2bdf9fe3594ee9a6d9c5c50e08f8255743eacf261d2b9597313a843",
+  "output_sha256": "8ad45f0e0bb5e2baa512bb2944bf431d889f56767d21ba3f036833df1f471633",
+  "constants": 902,
+  "global_bytes": 560,
+  "piece_bytes": 6656,
+  "total_bytes": 7216,
+  "checked": "every selected bit equals frozen proof AND archived compiled generated Rust"
+}

@@ -114,12 +114,14 @@ for name, args in [
 ]:
     call = "x,y" if name == "powf" else "x"
     body = (
-        f"crate::core_math::powf_with_math(Token::from_context(),{call})"
+        f"crate::gamma::try_gamma({call}).unwrap_or_else(||crate::core_math::powf_with_math(Token::from_context(),{call}))"
         if name == "powf"
         else f"crate::core_math::{name}_in_context({call})"
     )
     gate = 'any(feature="correct-rounding",feature="normal",feature="configurable")' if name=="powf" else 'any(feature="correct-rounding",feature="normal")'
     s += f"\n#[cfg({gate})]\n/// Full scalar CORE-MATH algorithm in a feature context; scalar fallback remains software.\n#[archmage::attune(_v3,_v3_t,_neon,_neon_t,_wasm128,_wasm128_t,_scalar,_scalar_t,_v4x(cfg(avx512)),_v4x_t(cfg(avx512)))]\npub fn {name}({args})->f32{{{body}}}\n"
+# Private core-only entries avoid a second candidate guard after ordinary selection.
+s += '\n#[cfg(all(feature="runtime-dispatch",target_arch="x86_64",any(feature="correct-rounding",feature="normal",feature="configurable")))]\n#[archmage::attune(_v3_t)]\npub(crate) fn powf_core(x:f32,y:f32)->f32{crate::core_math::powf_with_math(Token::from_context(),x,y)}\n'
 (root / "src/simd/scalar-transcendentals.rs").write_text(s)
 primitive_source += '\n#[cfg(feature="correct-rounding")]\npub use super::__scalar_transcendentals::*;\n'
 (root / "src/simd/scalar.rs").write_text(primitive_source)

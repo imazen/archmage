@@ -70,7 +70,10 @@ fn evaluate<const P: u64>(math: impl FloatMath, x: f32, y: f32) -> f32 {
     crate::__pow_policy::evaluate::<P>(
         x,
         y,
-        |x, y| crate::core_math::powf_with_math(math, x, y),
+        |x, y| {
+            crate::gamma::try_gamma(x, y)
+                .unwrap_or_else(|| crate::core_math::powf_with_math(math, x, y))
+        },
         exponent,
         exponential,
         formula,

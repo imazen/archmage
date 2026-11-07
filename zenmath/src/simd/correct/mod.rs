@@ -87,6 +87,9 @@ pub(crate) fn exp<T: Backend<N>, const N: usize>(t: T, x: [f32; N]) -> [f32; N] 
 
 #[inline(always)]
 pub(crate) fn pow<T: Backend<N>, const N: usize>(t: T, x: [f32; N], y: [f32; N]) -> [f32; N] {
+    if let Some(result) = super::gamma::candidate(t, x, y) {
+        return result;
+    }
     use powf_tables::*;
     // f32 integers above 2^24 are even. Inspect exponent/fraction bits so
     // negative nonintegers keep the complete scalar domain/special path.

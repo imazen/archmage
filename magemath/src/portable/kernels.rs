@@ -47,3 +47,6 @@
 //! behavior.
 
 crate::surface::kernels_surface!(crate::bodies::Fused);
+
+#[cfg(feature = "configurable")]
+crate::width_surfaces::extra_kernels!(Fused);

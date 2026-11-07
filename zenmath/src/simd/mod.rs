@@ -26,6 +26,12 @@ mod correct;
     feature = "normal",
     feature = "configurable"
 ))]
+mod gamma;
+#[cfg(any(
+    feature = "correct-rounding",
+    feature = "normal",
+    feature = "configurable"
+))]
 mod packed;
 #[cfg(any(
     feature = "correct-rounding",

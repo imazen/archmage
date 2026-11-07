@@ -5,3 +5,6 @@
 //! for callers already in that feature context.
 
 crate::surface::array_surface!();
+
+#[cfg(feature = "configurable")]
+crate::width_surfaces::extra_arrays!();

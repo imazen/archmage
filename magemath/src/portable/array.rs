@@ -25,3 +25,6 @@ pub fn pow_f32x8_with<const P: u64>(a: [f32; 8], b: [f32; 8]) -> [f32; 8] {
     let token = Token::from_context();
     crate::pow_policy::array::<_, P>(token, a, b)
 }
+
+#[cfg(feature = "configurable")]
+crate::width_surfaces::extra_arrays!();

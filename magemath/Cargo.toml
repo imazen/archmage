@@ -25,11 +25,12 @@ configurable = ["zenmath/configurable"]
 # guarantees. The kernels themselves are `no_std`.
 std = ["magetypes/std", "archmage/std", "zenmath/std"]
 # Native AVX-512 tier (`+v4x` dispatch arm). Pulls magetypes' 512-bit backends.
-avx512 = ["magetypes/avx512", "archmage/avx512", "zenmath/avx512"]
+w512 = ["magetypes/w512"]
+avx512 = ["w512","magetypes/avx512", "archmage/avx512", "zenmath/avx512"]
 
 [dependencies]
-# f32x8 and its backends. 512-bit types (`w512`) are left off: magemath does not
-# use them, and they were 9% of magetypes' `cargo check` time (docs/DESIGN.md).
+# Widths four and eight compile by default. Width sixteen is opt-in through
+# w512 (also enabled by avx512), matching Magetypes width availability.
 magetypes = { version = "0.9.31-beta.2", path = "../magetypes", default-features = false }
 archmage = { version = "0.9.31-beta.2", path = "..", default-features = false }
 
@@ -82,4 +83,12 @@ required-features=["correct-rounding"]
 
 [[test]]
 name="reference"
+required-features=["configurable"]
+
+[[test]]
+name="legacy_superset"
+required-features=["configurable"]
+
+[[test]]
+name="width_parity"
 required-features=["configurable"]

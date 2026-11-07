@@ -1,0 +1,80 @@
+# Certified gamma power specialization
+
+Power retains the existing nearest-even, gradual-underflow result contract.
+Only the exact f32 exponent bit patterns `0x4019999a` and `0x3ed55555` are
+eligible. The respective positive input bit ranges are
+`0x3db71074..=0x3f800000` and `0x3b475041..=0x3f800000`.
+Everything else continues the existing full-range CORE implementation.
+
+The private scalar candidate uses sixteen dyadic centers and a degree-five
+Estrin graph in binary64. Packed candidates use the approved global degree
+thirteen/decode and degree fifteen/encode graphs through Zenmath's private
+intrinsic backend. Both use separate multiply/add rounding. Uniform-exponent
+packed calls select the candidate only when every lane is admitted, avoiding
+scalar rescue work for mixed-range blocks. Other blocks continue the original
+packed CORE path. The private polynomial still masks invalid lanes to a valid
+filler before reduction, and certificate-rejected lanes use the original
+reference power independently.
+Magemath's precise adapters delegate to this shared intrinsic implementation.
+
+For each admitted exponent band and center, the offline directed MPFR proof
+accounts for coefficient rounding, table rounding, analytic truncation and the
+exact evaluation graph. The selected error pad is added/subtracted in binary64;
+each endpoint is widened by one adjacent binary64 value. A value is accepted
+only when both endpoints round to the same f32 bits. The helper returns `None`
+on rejection; no power rescue calls back into that helper. The independent
+`scalar::reference::powf` remains the original CORE algorithm.
+
+The ordinary scalar facade checks the candidate before runtime CPU selection
+on x86 and portable targets. NEON keeps the check inside its existing proof
+context after measured general-input overhead from the outer check. Explicit
+proof calls check inside the context. A private x86 core-only entry avoids
+repeating the guard after ordinary selection. Accurate policy rescue
+shares the candidate; the reference policy remains independent. Cargo family
+unification does not change these result bits.
+
+The source and proof originate in gamma study commit
+`1e6cc8e336ffb76727235d98c2aea988f4132bdd`. Its
+[global bound](../../benchmarks/zenmath_gamma_opt_2026-11-06/BOUND.md),
+[piecewise bound](../../benchmarks/zenmath_gamma_opt_2026-11-06/PIECEWISE-BOUND.md)
+and [vector bound](../../benchmarks/zenmath_gamma_opt_2026-11-06/VECTOR-BOUND.md)
+explain the certificate. `gamma-tables.json` identifies the frozen source,
+binary and proof hashes. `tools/extract-gamma-finalists.py` checks every
+selected literal against both proof records and archived compiled Rust.
+The extraction manifest output hash names its raw, pre-format table file;
+the production source adds feature gates and rustfmt formatting. The auditor
+compares all 902 literal bits, not that raw text hash.
+Normal regeneration uses the resulting 902 bit literals in
+`tools/gamma-bits.json`; no floating-point literal is hand rounded.
+
+The admitted domains contain 29,945,741 decode and 70,823,872 encode values.
+Production native V3 scalar/packed-four, V4x packed-eight, NEON scalar/packed
+and strict SIMD128 WASM scalar/packed paths pass direct exact-bit comparison
+for every admitted value, with the same raw little-endian XXH3 output hashes
+as the frozen study. Eight-input NEON/WASM adapters comprise two four-input
+blocks; they are not eight-wide hardware registers. The validation harness
+also retains fixed-chunk digests and a separately labeled ordered aggregate.
+This bounded two-exponent gate is not a full binary-power proof over 2^64 pairs.
+
+Performance remains selective. The frozen experimental C0 decode/bits/64
+composition lost to std (1.1443833 versus 0.9674650 ns/value; paired all-round
+95% difference interval +0.1694829..+0.1840226 ns/value), although fixed-power
+measurements won. Production guard, dynamic-exponent and whole-transfer measurements are retained
+in the power study, separately from those experimental ratios. General scalar ARM differences overlap zero after guard placement. The final
+once-buffer NEON decode control is 9.2024 versus std 10.7912 ns/value
+(paired all-round 95% difference interval -2.4957..-0.6820); encode's interval
+includes zero. General power still loses to std. The native historical-input
+once-buffer control regresses by 0.6851 ns/value against its pre-gamma version
+(interval +0.1365..+1.2328). The production C0 decode/bits/64 NEON control also
+loses narrowly to std (interval +0.0017..+0.0158). These are selective gamma
+improvements. The earlier outlined NEON candidate was rejected; all diagnostic
+stages remain archived.
+
+The production generator emits named Estrin stages for both selected degrees.
+This is the same pair/carry/square graph as the proof, with each coefficient
+used in the same operation. It avoids coefficient array-map helper calls and
+an addressable vector scratch array found in the first linked implementation.
+The final staged and unrolled measurements remain separately identified;
+array-call and once-buffer slice controls include their actual ABI and copy
+costs. See the power study for final paired results rather than treating the
+first guard-only packed overhead figures as the final kernel's cost.

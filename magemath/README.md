@@ -2,8 +2,9 @@
 
 Vector and fixed-array math on `magetypes`, with portable and relaxed surfaces.
 
-**Status: draft, unpublished.** `f32x8` only; `f32x4`, `f32x16` and f64 wait on a
-caller.
+**Status: draft, unpublished.** Approximation families support `f32x4` and
+`f32x8`, plus `f32x16` with `w512`. f64 vector transcendentals remain outside
+this implementation. See [the migration inventory](docs/MIGRATION.md).
 
 ```rust
 use magemath::portable::{array, slice};
@@ -113,3 +114,7 @@ the precise unsuffixed functions, `normal` exposes `magemath::normal::{array,sli
 using the same precise implementation today, and `configurable` exposes named
 approximations and power policies. Disabling defaults leaves primitives until a
 family is selected. See [the family and dependency mapping](docs/FEATURES.md).
+
+The [transcendental migration inventory](docs/MIGRATION.md) covers all 35
+legacy names at widths four/eight and optional sixteen, including exact legacy
+and existing portable/relaxed/unfused contract choices.

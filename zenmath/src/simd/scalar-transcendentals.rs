@@ -73,5 +73,20 @@ pub fn log2f(x: f32) -> f32 {
     _v4x_t(cfg(avx512))
 )]
 pub fn powf(x: f32, y: f32) -> f32 {
+    crate::gamma::try_gamma(x, y)
+        .unwrap_or_else(|| crate::core_math::powf_with_math(Token::from_context(), x, y))
+}
+
+#[cfg(all(
+    feature = "runtime-dispatch",
+    target_arch = "x86_64",
+    any(
+        feature = "correct-rounding",
+        feature = "normal",
+        feature = "configurable"
+    )
+))]
+#[archmage::attune(_v3_t)]
+pub(crate) fn powf_core(x: f32, y: f32) -> f32 {
     crate::core_math::powf_with_math(Token::from_context(), x, y)
 }

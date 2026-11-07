@@ -41,7 +41,9 @@
 //!
 //! ## Status
 //!
-//! Draft, unpublished. `f32x8` only; `f32x4`, `f32x16` and f64 wait on a caller.
+//! Draft, unpublished. Approximation families support `f32x4` and `f32x8`,
+//! plus `f32x16` with `w512`. See `docs/MIGRATION.md` for legacy contracts.
+//! f64 transcendentals are not provided.
 
 #![no_std]
 #![forbid(unsafe_code)]
@@ -88,3 +90,12 @@ struct PowBehaviorDoctests;
 pub mod normal {
     pub use crate::correct::{array, slice};
 }
+
+/// Compatibility kernels preserving legacy backend rounding and specials.
+#[cfg(feature = "configurable")]
+pub mod legacy;
+#[cfg(feature = "configurable")]
+mod legacy_impl;
+
+#[cfg(feature = "configurable")]
+mod width_surfaces;

@@ -44,3 +44,6 @@ pub fn pow_f32_with<const P: u64>(data: &mut [f32], exponents: &[f32]) {
         tail.copy_from_slice(&out[..tail.len()]);
     }
 }
+
+#[cfg(feature = "configurable")]
+crate::width_surfaces::extra_slices!();

@@ -19,3 +19,26 @@ codegen binary output:
 
 profile-controls output:
     bash profile-controls.sh {{output}}
+
+# Artifact inventory is mandatory; no missing platform is silently omitted.
+final-audit root="/mnt/v/output/archmage/zenmath-pow-opt-2026-11-06":
+    python3 audit.py {{root}}
+
+gamma-codegen binary output:
+    python3 codegen-gamma.py {{binary}} {{output}}
+
+family-build-cost output:
+    python3 family-build-cost.py {{output}}
+
+gamma-timing output:
+    cargo run --locked --release --bin gamma-timing -- {{output}}
+
+# All three platforms are mandatory; no partial report fallback.
+report-tables root output:
+    python3 report-tables.py {{root}} {{output}}
+
+final-focused:
+    cd ../.. && bash benchmarks/zenmath_pow_opt_2026-11-06/final-focused.sh
+
+archive-manifest mode root:
+    python3 verify-archive.py {{mode}} {{root}}

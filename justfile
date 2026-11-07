@@ -686,3 +686,17 @@ zenmath-dispatch-unification:
     cargo rustc --manifest-path benchmarks/zenmath_dispatch_2026-11-06/compile-consumer/Cargo.toml --release --features unified-std -- --emit=llvm-ir
     cargo run --manifest-path benchmarks/zenmath_dispatch_2026-11-06/compile-consumer/Cargo.toml --release --features unified-std
     python3 benchmarks/zenmath_dispatch_2026-11-06/check-unification.py benchmarks/zenmath_dispatch_2026-11-06/compile-consumer/target/release/deps/zenmath_compile_consumer-*.ll
+
+# Regenerate wrappers from canonical Magemath arithmetic; no deprecated source input.
+magemath-generate:
+    python3 magemath/tools/generate-legacy.py
+    python3 magemath/tools/generate-legacy-parity.py
+    python3 magemath/tools/generate-width-parity.py
+    cargo fmt -p magemath
+
+magemath-superset-check tiers:
+    LEGACY_REQUIRE_TIERS={{tiers}} cargo test -p magemath --all-features --release --test legacy_superset --test width_parity -- --nocapture
+
+zenmath-gamma-generate:
+    python3 zenmath/tools/generate-gamma-tables.py
+    cargo fmt -p zenmath

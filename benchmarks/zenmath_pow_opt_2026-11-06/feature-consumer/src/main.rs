@@ -54,6 +54,43 @@ fn main() {
             "configurable={:?}",
             x.map(|v| bits(zenmath::scalar::powf_with::<P>(v, 2.4)))
         );
+        const MID: u64 = B::MIDP.to_u64();
+        const LOW: u64 = B::LOWP.to_u64();
+        const MS: u64 = B::MIDP
+            .consistency(zenmath::PowConsistency::PortableSeparate)
+            .to_u64();
+        const LS: u64 = B::LOWP
+            .consistency(zenmath::PowConsistency::PortableSeparate)
+            .to_u64();
+        const LP: u64 = B::LOWP.range(R::PositiveNormalPrecondition).to_u64();
+        const MPS: u64 = B::MIDP
+            .consistency(zenmath::PowConsistency::PortableSeparate)
+            .range(R::PositiveNormalPrecondition)
+            .to_u64();
+        const LPS: u64 = B::LOWP
+            .consistency(zenmath::PowConsistency::PortableSeparate)
+            .range(R::PositiveNormalPrecondition)
+            .to_u64();
+        let mut policies = Vec::new();
+        for x in black_box([0.0030412826, 0.1, 0.5, 0.99]) {
+            for y in black_box([2.4, (1.0_f64 / 2.4) as f32]) {
+                policies.extend(
+                    [
+                        zenmath::scalar::powf_with::<0>(x, y),
+                        zenmath::scalar::powf_with::<MID>(x, y),
+                        zenmath::scalar::powf_with::<LOW>(x, y),
+                        zenmath::scalar::powf_with::<MS>(x, y),
+                        zenmath::scalar::powf_with::<LS>(x, y),
+                        zenmath::scalar::powf_with::<P>(x, y),
+                        zenmath::scalar::powf_with::<LP>(x, y),
+                        zenmath::scalar::powf_with::<MPS>(x, y),
+                        zenmath::scalar::powf_with::<LPS>(x, y),
+                    ]
+                    .map(bits),
+                );
+            }
+        }
+        println!("policies={policies:?}");
         #[cfg(feature = "vector")]
         println!(
             "vector-configurable={:?}",
