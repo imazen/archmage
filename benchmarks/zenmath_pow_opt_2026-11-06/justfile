@@ -1,0 +1,21 @@
+check tier:
+    cargo fmt --check
+    cargo clippy --all-targets -- -D warnings
+    POW_EXPECT_TIER={{tier}} cargo test --release --lib
+profile domain case passes:
+    perf record -g -o perf.data -- target/release/profile {{domain}} {{case}} {{passes}}
+
+validate-baseline:
+    python3 validate-baseline.py
+analyze input output:
+    cargo run --manifest-path analysis/Cargo.toml --release -- {{input}} {{output}}
+
+# Scoped formatting leaves the byte-frozen old implementations untouched.
+format:
+    cargo fmt -p zenmath-pow-opt-study
+
+codegen binary output:
+    python3 codegen.py {{binary}} {{output}}
+
+profile-controls output:
+    bash profile-controls.sh {{output}}

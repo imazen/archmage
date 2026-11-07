@@ -15,7 +15,11 @@ include = [
 ]
 
 [features]
-default = ["std"]
+default = ["std", "correct-rounding", "normal", "configurable"]
+# Additive API families. Normal currently shares precise implementations.
+correct-rounding = ["zenmath/correct-rounding"]
+normal = ["zenmath/normal"]
+configurable = ["zenmath/configurable"]
 # Runtime CPU detection for the dispatchers. Without it `summon()` only sees
 # compile-time target features, so a no_std build dispatches to what the build
 # guarantees. The kernels themselves are `no_std`.
@@ -30,7 +34,7 @@ magetypes = { version = "0.9.31-beta.2", path = "../magetypes", default-features
 archmage = { version = "0.9.31-beta.2", path = "..", default-features = false }
 
 # Accurate fallback for exceptional or rounding-ambiguous CORE-MATH lanes.
-zenmath = { version = "0.9.31-beta.2", path = "../zenmath", features = ["archmage"] }
+zenmath = { version = "0.9.31-beta.2", path = "../zenmath", default-features = false, features = ["archmage"] }
 
 [dev-dependencies]
 # Token-disable permutations in tests/dispatch.rs.
@@ -43,3 +47,39 @@ zenbench = "0.1.10"
 [[bench]]
 name = "portable_cost"
 harness = false
+
+[[test]]
+name="core_exhaustive"
+required-features=["correct-rounding"]
+
+[[test]]
+name="core_math"
+required-features=["correct-rounding"]
+
+[[test]]
+name="dispatch"
+required-features=["configurable"]
+
+[[test]]
+name="exhaustive"
+required-features=["configurable"]
+
+[[test]]
+name="golden"
+required-features=["configurable"]
+
+[[test]]
+name="parity"
+required-features=["configurable"]
+
+[[test]]
+name="pow_policy"
+required-features=["configurable"]
+
+[[test]]
+name="pow_sign"
+required-features=["correct-rounding"]
+
+[[test]]
+name="reference"
+required-features=["configurable"]

@@ -4,8 +4,11 @@
 //! Built on CORE-MATH revision 660067dfd3e751c8f07acc31c899ff410aa7206e.
 //! Per-function upstream MIT notices are retained in the adjacent table modules.
 use super::packed::{Backend, V};
+#[cfg(any(feature = "correct-rounding", feature = "normal"))]
 mod expf_tables;
+#[cfg(any(feature = "correct-rounding", feature = "normal"))]
 mod log2f_tables;
+#[cfg(any(feature = "correct-rounding", feature = "normal"))]
 mod logf_tables;
 mod powf_tables;
 
@@ -18,6 +21,7 @@ fn c<T: Backend<N>, const N: usize>(t: T, a: f64) -> V<T, N> {
     V::splat_t(t, a)
 }
 
+#[cfg(any(feature = "correct-rounding", feature = "normal"))]
 #[inline(always)]
 pub(crate) fn log<T: Backend<N>, const TWO: bool, const N: usize>(t: T, x: [f32; N]) -> [f32; N] {
     let bits = x.map(f32::to_bits);
@@ -55,6 +59,7 @@ pub(crate) fn log<T: Backend<N>, const TWO: bool, const N: usize>(t: T, x: [f32;
     finish::<1, N>(x, [if TWO { 2.0 } else { 0.0 }; N], lo, needs)
 }
 
+#[cfg(any(feature = "correct-rounding", feature = "normal"))]
 #[inline(always)]
 pub(crate) fn exp<T: Backend<N>, const N: usize>(t: T, x: [f32; N]) -> [f32; N] {
     use expf_tables::*;
@@ -163,6 +168,7 @@ pub(crate) fn pow<T: Backend<N>, const N: usize>(t: T, x: [f32; N], y: [f32; N])
 }
 
 // Keep scalar calls off the common path, with one combined lane test.
+#[cfg(any(feature = "correct-rounding", feature = "normal"))]
 #[inline(always)]
 fn finish<const OP: u8, const N: usize>(
     x: [f32; N],
@@ -176,6 +182,7 @@ fn finish<const OP: u8, const N: usize>(
         out
     }
 }
+#[cfg(any(feature = "correct-rounding", feature = "normal"))]
 #[cold]
 #[inline(never)]
 fn rescue<const OP: u8, const N: usize>(

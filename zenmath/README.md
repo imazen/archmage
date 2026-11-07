@@ -51,3 +51,14 @@ share scalar/packed behavior; the near-one-ULP prototype is not a supported pres
 See [the power behavior guide](../magemath/docs/POW_BEHAVIOR.md) for modes, precedence and packed entry points.
 
 The [acceleration record](docs/ACCELERATION.md) lists exact ordinary names, proof APIs, measured policy limits and independent reference access.
+
+## Math family features
+
+Defaults retain the existing precise and configurable APIs through
+`correct-rounding`, `normal`, and `configurable`. With defaults disabled, only
+primitives remain until a family is selected. `normal` exposes explicit
+`zenmath::normal` names and currently shares the precise CORE-MATH implementation.
+Feature unification changes availability, never the bits of an existing API.
+Configurable Full power keeps its private accurate rescue core even when the
+public precise family is disabled. Backend features remain independent.
+See [the family and dependency mapping](../magemath/docs/FEATURES.md).

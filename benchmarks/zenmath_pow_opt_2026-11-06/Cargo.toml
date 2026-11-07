@@ -1,0 +1,28 @@
+[package]
+name = "zenmath-pow-opt-study"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.89"
+publish = false
+[workspace]
+[features]
+default = ["runtime"]
+wasm-host = ["zenbench/wasm"]
+runtime = ["zenmath/runtime-dispatch", "oldzenmath/runtime-dispatch"]
+avx512 = ["archmage/avx512", "magemath/avx512", "zenmath/avx512"]
+[dependencies]
+zenmath = { path = "../../zenmath", default-features = false, features = ["correct-rounding", "configurable"] }
+magemath = { path = "../../magemath", default-features = false, features = ["std", "correct-rounding", "configurable"] }
+archmage = { path = "../..", default-features = false, features = ["std"] }
+oldzenmath = {package="zenmath-pow-baseline",path="baseline/zenmath",default-features=false}
+oldmagemath = {package="magemath-pow-baseline",path="baseline/magemath",default-features=false,features=["std"]}
+linear-srgb = { version = "=0.6.12", default-features = false, features = ["std"] }
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+zenbench = { version = "=0.1.11", default-features = false }
+[profile.release]
+lto = "thin"
+debug = 1
+
+[[bin]]
+name="wasm-host"
+required-features=["wasm-host"]

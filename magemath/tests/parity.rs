@@ -6,6 +6,8 @@
 //! gets no tolerance either. Only NaN results are compared loosely, by NaN-ness,
 //! because payload and sign are unspecified.
 
+#![allow(deprecated)] // Intentionally compare against the legacy Magetypes API.
+
 mod common;
 
 use archmage::prelude::*;

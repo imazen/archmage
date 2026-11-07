@@ -74,8 +74,10 @@ mod core_math;
 
 // Same-workspace implementation bridge used by magemath to share precedence.
 #[doc(hidden)]
+#[cfg(feature = "configurable")]
 #[path = "pow_policy.rs"]
 pub mod __pow_policy;
+#[cfg(feature = "configurable")]
 pub use __pow_policy::{
     PowBehavior, PowConsistency, PowInfinity, PowNaN, PowOutput, PowPrecision, PowRange, PowSign,
     SubnormalInputs, SubnormalOutputs,
@@ -84,3 +86,7 @@ pub use __pow_policy::{
 /// Intrinsic-only accurate array/slice math, with explicit feature proofs.
 #[cfg(feature = "archmage")]
 pub mod simd;
+
+/// Standard-style transcendental API; currently shares the precise implementation.
+#[cfg(feature = "normal")]
+pub mod normal;

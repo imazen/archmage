@@ -13,5 +13,5 @@ avx512 = ["runtime-dispatch", "zenmath/avx512", "archmage/avx512"]
 # Deliberately unify Archmage std while Zenmath runtime-dispatch stays off.
 unified-std = ["accelerated", "dep:archmage", "archmage/std"]
 [dependencies]
-zenmath = { path = "../../../zenmath", default-features = false }
+zenmath = { path = "../../../zenmath", default-features = false, features = ["correct-rounding"] }
 archmage = { path = "../../..", version = "0.9.31-beta.2", default-features = false, optional = true }

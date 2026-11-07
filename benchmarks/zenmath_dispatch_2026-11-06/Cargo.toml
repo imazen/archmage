@@ -11,7 +11,7 @@ avx512 = ["zenmath/avx512", "archmage/avx512"]
 native-bench = ["dep:zenbench"]
 wasm-host = ["native-bench", "zenbench/wasm"]
 [dependencies]
-zenmath = { path = "../../zenmath", default-features = false, features = ["runtime-dispatch"] }
+zenmath = { path = "../../zenmath", default-features = false, features = ["runtime-dispatch", "correct-rounding"] }
 archmage = { path = "../..", version = "0.9.31-beta.2", default-features = false, features = ["std"] }
 [target.'cfg(not(target_arch="wasm32"))'.dependencies]
 zenbench = { version = "=0.1.11", default-features = false, optional = true }

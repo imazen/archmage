@@ -9,9 +9,29 @@
 //! `runtime-dispatch` feature is enabled, regardless of unified Archmage features.
 //! Assumes nearest-even rounding and gradual underflow; NaN payloads unspecified.
 #![allow(clippy::missing_safety_doc)]
+#[cfg(any(
+    feature = "correct-rounding",
+    feature = "normal",
+    feature = "configurable"
+))]
 mod context;
+#[cfg(any(
+    feature = "correct-rounding",
+    feature = "normal",
+    feature = "configurable"
+))]
 mod correct;
+#[cfg(any(
+    feature = "correct-rounding",
+    feature = "normal",
+    feature = "configurable"
+))]
 mod packed;
+#[cfg(any(
+    feature = "correct-rounding",
+    feature = "normal",
+    feature = "configurable"
+))]
 mod soft_fma;
 
 /// Selection is outside every packed loop. This guard is deliberately owned by
@@ -37,8 +57,41 @@ fn available<T: archmage::SimdToken>() -> Option<T> {
     }
 }
 
-pub mod array;
-pub mod slice;
+#[cfg(any(
+    feature = "correct-rounding",
+    feature = "normal",
+    feature = "configurable"
+))]
+#[doc(hidden)]
+#[path = "array.rs"]
+pub mod __array;
+#[cfg(any(
+    feature = "correct-rounding",
+    feature = "normal",
+    feature = "configurable"
+))]
+#[doc(hidden)]
+#[path = "scalar-transcendentals.rs"]
+pub mod __scalar_transcendentals;
+#[cfg(any(
+    feature = "correct-rounding",
+    feature = "normal",
+    feature = "configurable"
+))]
+#[doc(hidden)]
+#[path = "slice.rs"]
+pub mod __slice;
+#[cfg(feature = "correct-rounding")]
+pub use __array as array;
+#[cfg(feature = "correct-rounding")]
+pub use __slice as slice;
 
 /// Scalar hardware primitives and whole-algorithm feature contexts.
 pub mod scalar;
+
+#[cfg(all(
+    feature = "runtime-dispatch",
+    feature = "configurable",
+    any(target_arch = "x86_64", target_arch = "aarch64")
+))]
+pub(crate) mod policy;

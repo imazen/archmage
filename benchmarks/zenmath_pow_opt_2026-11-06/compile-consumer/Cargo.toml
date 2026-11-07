@@ -1,0 +1,16 @@
+[package]
+name="zenmath-pow-consumer"
+version="0.0.0"
+edition="2024"
+publish=false
+[workspace]
+[features]
+default=[]
+archmage=["zenmath/archmage"]
+runtime-dispatch=["zenmath/runtime-dispatch"]
+unified-std=["archmage","dep:archmage"]
+[dependencies]
+zenmath={path="../../../zenmath",default-features=false,features=["configurable"]}
+archmage={path="../../..",optional=true,default-features=false,features=["std"]}
+[profile.release]
+lto="thin"

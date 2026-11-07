@@ -33,103 +33,132 @@ macro_rules! kernels_surface {
             "Round to nearest, ties to even. Not `f32::round`, which ties away from zero."
         );
 
+        #[cfg(feature = "configurable")]
         $crate::surface::kernel!($step, log2_lowp, "`log2`, lowp, per lane.");
+        #[cfg(feature = "configurable")]
         $crate::surface::kernel!(
             $step,
             log2_lowp_unchecked,
             "[`log2_lowp`] for positive finite `x`."
         );
+        #[cfg(feature = "configurable")]
         $crate::surface::kernel!($step, exp2_lowp, "`2^x`, lowp, per lane.");
+        #[cfg(feature = "configurable")]
         $crate::surface::kernel!(
             $step,
             exp2_lowp_unchecked,
             "[`exp2_lowp`] for `x` in [-126, 127.99]."
         );
+        #[cfg(feature = "configurable")]
         $crate::surface::kernel!($step, ln_lowp, "`ln`, lowp, per lane.");
+        #[cfg(feature = "configurable")]
         $crate::surface::kernel!(
             $step,
             ln_lowp_unchecked,
             "[`ln_lowp`] for positive finite `x`."
         );
+        #[cfg(feature = "configurable")]
         $crate::surface::kernel!($step, exp_lowp, "`e^x`, lowp, per lane.");
+        #[cfg(feature = "configurable")]
         $crate::surface::kernel!(
             $step,
             exp_lowp_unchecked,
             "[`exp_lowp`] for `x · log2(e)` in [-126, 127.99]."
         );
+        #[cfg(feature = "configurable")]
         $crate::surface::kernel!($step, log10_lowp, "`log10`, lowp, per lane.");
+        #[cfg(feature = "configurable")]
         $crate::surface::kernel!(
             $step,
             log10_lowp_unchecked,
             "[`log10_lowp`] for positive finite `x`."
         );
+        #[cfg(feature = "configurable")]
         $crate::surface::kernel!(
             $step,
             pow_lowp,
             "`x^n`, lowp, per lane, with one exponent for all lanes.",
             n
         );
+        #[cfg(feature = "configurable")]
         $crate::surface::kernel!(
             $step,
             pow_lowp_unchecked,
             "[`pow_lowp`] for positive finite `x` with `log2(x) · n` in [-126, 127.99].",
             n
         );
+        #[cfg(feature = "configurable")]
         $crate::surface::kernel!($step, cbrt_lowp, "Cube root, lowp, per lane.");
 
+        #[cfg(feature = "configurable")]
         $crate::surface::kernel!($step, log2_midp, "`log2`, midp, per lane.");
+        #[cfg(feature = "configurable")]
         $crate::surface::kernel!(
             $step,
             log2_midp_unchecked,
             "[`log2_midp`] for positive finite `x`."
         );
+        #[cfg(feature = "configurable")]
         $crate::surface::kernel!($step, exp2_midp, "`2^x`, midp, per lane.");
+        #[cfg(feature = "configurable")]
         $crate::surface::kernel!(
             $step,
             exp2_midp_unchecked,
             "[`exp2_midp`] for `x` in [-126, 128)."
         );
+        #[cfg(feature = "configurable")]
         $crate::surface::kernel!($step, ln_midp, "`ln`, midp, per lane.");
+        #[cfg(feature = "configurable")]
         $crate::surface::kernel!(
             $step,
             ln_midp_unchecked,
             "[`ln_midp`] for positive finite `x`."
         );
+        #[cfg(feature = "configurable")]
         $crate::surface::kernel!($step, exp_midp, "`e^x`, midp, per lane.");
+        #[cfg(feature = "configurable")]
         $crate::surface::kernel!(
             $step,
             exp_midp_unchecked,
             "[`exp_midp`] for `x · log2(e)` in [-126, 128)."
         );
+        #[cfg(feature = "configurable")]
         $crate::surface::kernel!($step, log10_midp, "`log10`, midp, per lane.");
+        #[cfg(feature = "configurable")]
         $crate::surface::kernel!(
             $step,
             log10_midp_unchecked,
             "[`log10_midp`] for positive finite `x`."
         );
+        #[cfg(feature = "configurable")]
         $crate::surface::kernel!(
             $step,
             pow_midp,
             "`x^n`, midp, per lane, with one exponent for all lanes.",
             n
         );
+        #[cfg(feature = "configurable")]
         $crate::surface::kernel!(
             $step,
             pow_midp_unchecked,
             "[`pow_midp`] for positive finite `x` with `log2(x) · n` in [-126, 128).",
             n
         );
+        #[cfg(feature = "configurable")]
         $crate::surface::kernel!($step, cbrt_midp, "Cube root, midp, per lane.");
+        #[cfg(feature = "configurable")]
         $crate::surface::kernel!(
             $step,
             cbrt_midp_precise,
             "Cube root, midp, over the whole f32 range, per lane."
         );
+        #[cfg(feature = "configurable")]
         $crate::surface::kernel!(
             $step,
             sigmoid_midp,
             "Logistic sigmoid `1 / (1 + e^-x)`, midp, per lane."
         );
+        #[cfg(feature = "configurable")]
         $crate::surface::kernel!($step, silu_midp, "SiLU `x · sigmoid(x)`, midp, per lane.");
     };
 }
@@ -173,23 +202,40 @@ macro_rules! slice_surface {
         $crate::surface::slice_op!(ceil_f32, ceil);
         $crate::surface::slice_op!(roundeven_f32, roundeven);
 
+        #[cfg(feature = "configurable")]
         $crate::surface::slice_op!(log2_lowp_f32, log2_lowp);
+        #[cfg(feature = "configurable")]
         $crate::surface::slice_op!(exp2_lowp_f32, exp2_lowp);
+        #[cfg(feature = "configurable")]
         $crate::surface::slice_op!(ln_lowp_f32, ln_lowp);
+        #[cfg(feature = "configurable")]
         $crate::surface::slice_op!(exp_lowp_f32, exp_lowp);
+        #[cfg(feature = "configurable")]
         $crate::surface::slice_op!(log10_lowp_f32, log10_lowp);
+        #[cfg(feature = "configurable")]
         $crate::surface::slice_op!(pow_lowp_f32, pow_lowp, n);
+        #[cfg(feature = "configurable")]
         $crate::surface::slice_op!(cbrt_lowp_f32, cbrt_lowp);
 
+        #[cfg(feature = "configurable")]
         $crate::surface::slice_op!(log2_midp_f32, log2_midp);
+        #[cfg(feature = "configurable")]
         $crate::surface::slice_op!(exp2_midp_f32, exp2_midp);
+        #[cfg(feature = "configurable")]
         $crate::surface::slice_op!(ln_midp_f32, ln_midp);
+        #[cfg(feature = "configurable")]
         $crate::surface::slice_op!(exp_midp_f32, exp_midp);
+        #[cfg(feature = "configurable")]
         $crate::surface::slice_op!(log10_midp_f32, log10_midp);
+        #[cfg(feature = "configurable")]
         $crate::surface::slice_op!(pow_midp_f32, pow_midp, n);
+        #[cfg(feature = "configurable")]
         $crate::surface::slice_op!(cbrt_midp_f32, cbrt_midp);
+        #[cfg(feature = "configurable")]
         $crate::surface::slice_op!(cbrt_midp_precise_f32, cbrt_midp_precise);
+        #[cfg(feature = "configurable")]
         $crate::surface::slice_op!(sigmoid_midp_f32, sigmoid_midp);
+        #[cfg(feature = "configurable")]
         $crate::surface::slice_op!(silu_midp_f32, silu_midp);
     };
 }
@@ -219,23 +265,40 @@ macro_rules! array_surface {
         $crate::surface::array_op!(ceil_f32x8, ceil);
         $crate::surface::array_op!(roundeven_f32x8, roundeven);
 
+        #[cfg(feature = "configurable")]
         $crate::surface::array_op!(log2_lowp_f32x8, log2_lowp);
+        #[cfg(feature = "configurable")]
         $crate::surface::array_op!(exp2_lowp_f32x8, exp2_lowp);
+        #[cfg(feature = "configurable")]
         $crate::surface::array_op!(ln_lowp_f32x8, ln_lowp);
+        #[cfg(feature = "configurable")]
         $crate::surface::array_op!(exp_lowp_f32x8, exp_lowp);
+        #[cfg(feature = "configurable")]
         $crate::surface::array_op!(log10_lowp_f32x8, log10_lowp);
+        #[cfg(feature = "configurable")]
         $crate::surface::array_op!(pow_lowp_f32x8, pow_lowp, n);
+        #[cfg(feature = "configurable")]
         $crate::surface::array_op!(cbrt_lowp_f32x8, cbrt_lowp);
 
+        #[cfg(feature = "configurable")]
         $crate::surface::array_op!(log2_midp_f32x8, log2_midp);
+        #[cfg(feature = "configurable")]
         $crate::surface::array_op!(exp2_midp_f32x8, exp2_midp);
+        #[cfg(feature = "configurable")]
         $crate::surface::array_op!(ln_midp_f32x8, ln_midp);
+        #[cfg(feature = "configurable")]
         $crate::surface::array_op!(exp_midp_f32x8, exp_midp);
+        #[cfg(feature = "configurable")]
         $crate::surface::array_op!(log10_midp_f32x8, log10_midp);
+        #[cfg(feature = "configurable")]
         $crate::surface::array_op!(pow_midp_f32x8, pow_midp, n);
+        #[cfg(feature = "configurable")]
         $crate::surface::array_op!(cbrt_midp_f32x8, cbrt_midp);
+        #[cfg(feature = "configurable")]
         $crate::surface::array_op!(cbrt_midp_precise_f32x8, cbrt_midp_precise);
+        #[cfg(feature = "configurable")]
         $crate::surface::array_op!(sigmoid_midp_f32x8, sigmoid_midp);
+        #[cfg(feature = "configurable")]
         $crate::surface::array_op!(silu_midp_f32x8, silu_midp);
     };
 }

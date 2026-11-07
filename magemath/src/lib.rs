@@ -51,6 +51,11 @@
 #![allow(clippy::missing_safety_doc)]
 
 mod bodies;
+#[cfg(any(
+    feature = "correct-rounding",
+    feature = "normal",
+    feature = "configurable"
+))]
 mod correct;
 mod surface;
 
@@ -64,7 +69,9 @@ pub mod unfused;
 #[cfg(doctest)]
 struct ReadmeDoctests;
 
+#[cfg(feature = "configurable")]
 mod pow_policy;
+#[cfg(feature = "configurable")]
 pub use zenmath::{
     PowBehavior, PowConsistency, PowInfinity, PowNaN, PowOutput, PowPrecision, PowRange, PowSign,
     SubnormalInputs, SubnormalOutputs,
@@ -74,3 +81,10 @@ pub use zenmath::{
 #[doc=include_str!("../docs/POW_BEHAVIOR.md")]
 #[cfg(doctest)]
 struct PowBehaviorDoctests;
+
+/// Standard-style vector APIs; currently share the precise CORE-MATH bodies.
+/// Normal is an availability choice, not an accuracy downgrade.
+#[cfg(feature = "normal")]
+pub mod normal {
+    pub use crate::correct::{array, slice};
+}

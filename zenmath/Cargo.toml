@@ -16,7 +16,11 @@ include = [
 
 [features]
 # `no_std` scalar core with no dependencies.
-default = []
+default = ["correct-rounding", "normal", "configurable"]
+# Availability only: arithmetic/precision stays with the named API or policy.
+correct-rounding = []
+normal = []
+configurable = []
 # With compile-time x86 FMA or AArch64 NEON, fmaf uses hardware mul_add.
 # Otherwise it stays in software, even with std, to preserve subnormal rounding.
 std = []
@@ -33,3 +37,19 @@ exact = []
 
 [dependencies]
 archmage = { version = "0.9.31-beta.2", path = "..", default-features = false, optional = true }
+
+[[test]]
+name="scalar"
+required-features=["configurable"]
+
+[[test]]
+name="core_math"
+required-features=["correct-rounding"]
+
+[[test]]
+name="pow_policy"
+required-features=["configurable"]
+
+[[test]]
+name="acceleration"
+required-features=["archmage","correct-rounding","configurable"]

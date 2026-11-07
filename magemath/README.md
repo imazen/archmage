@@ -105,3 +105,11 @@ A tier your CPU lacks fails the run rather than vanishing from it. Name it in
 Existing power calls keep their results. Correctly rounded, Midp and Lowp policies
 share scalar/packed behavior; the near-one-ULP prototype is not a supported preset.
 See [power behavior](docs/POW_BEHAVIOR.md) for mode order, preconditions and examples.
+
+## Math family features
+
+Default features preserve the existing APIs and bits. `correct-rounding` exposes
+the precise unsuffixed functions, `normal` exposes `magemath::normal::{array,slice}`
+using the same precise implementation today, and `configurable` exposes named
+approximations and power policies. Disabling defaults leaves primitives until a
+family is selected. See [the family and dependency mapping](docs/FEATURES.md).

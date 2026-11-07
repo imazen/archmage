@@ -1,0 +1,8 @@
+[package]
+name = "zenmath-pow-analysis"
+version = "0.0.0"
+edition = "2024"
+publish = false
+[workspace]
+[dependencies]
+zenbench = {version="=0.1.11", default-features=false}
