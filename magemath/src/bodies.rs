@@ -15,10 +15,13 @@
 //!   by ISA (`docs/site/content/magetypes/isa-quirks.md`).
 
 use magetypes::simd::backends::F32x8Convert;
-use magetypes::simd::generic::{f32x8, i32x8};
+use magetypes::simd::generic::f32x8;
+#[cfg(feature = "configurable")]
+use magetypes::simd::generic::i32x8;
 
 /// One polynomial step, `a * b + c`.
 pub(crate) trait Step {
+    #[cfg(feature = "configurable")]
     fn madd<T: F32x8Convert>(a: f32x8<T>, b: f32x8<T>, c: f32x8<T>) -> f32x8<T>;
 }
 
@@ -27,6 +30,7 @@ pub(crate) struct Fused;
 
 impl Step for Fused {
     #[inline(always)]
+    #[cfg(feature = "configurable")]
     fn madd<T: F32x8Convert>(a: f32x8<T>, b: f32x8<T>, c: f32x8<T>) -> f32x8<T> {
         a.mul_add_fused(b, c)
     }
@@ -37,6 +41,7 @@ pub(crate) struct Unfused;
 
 impl Step for Unfused {
     #[inline(always)]
+    #[cfg(feature = "configurable")]
     fn madd<T: F32x8Convert>(a: f32x8<T>, b: f32x8<T>, c: f32x8<T>) -> f32x8<T> {
         a * b + c
     }
@@ -48,21 +53,25 @@ pub(crate) struct Relaxed;
 
 impl Step for Relaxed {
     #[inline(always)]
+    #[cfg(feature = "configurable")]
     fn madd<T: F32x8Convert>(a: f32x8<T>, b: f32x8<T>, c: f32x8<T>) -> f32x8<T> {
         a.mul_add_relaxed(b, c)
     }
 }
 
+#[cfg(feature = "configurable")]
 #[inline(always)]
 fn splat_f32<T: F32x8Convert>(token: T, v: f32) -> f32x8<T> {
     f32x8::splat_t(token, v)
 }
 
+#[cfg(feature = "configurable")]
 #[inline(always)]
 fn splat_i32<T: F32x8Convert>(token: T, v: i32) -> i32x8<T> {
     i32x8::splat_t(token, v)
 }
 
+#[cfg(feature = "configurable")]
 /// 0 → −inf, negative or NaN → NaN, +inf → +inf.
 #[inline(always)]
 fn log_specials<T: F32x8Convert>(token: T, x: f32x8<T>, r: f32x8<T>) -> f32x8<T> {
@@ -98,6 +107,7 @@ pub(crate) fn roundeven<S: Step, T: F32x8Convert>(_token: T, x: f32x8<T>) -> f32
 
 // ====== lowp ======
 
+#[cfg(feature = "configurable")]
 #[inline(always)]
 pub(crate) fn log2_lowp_unchecked<S: Step, T: F32x8Convert>(token: T, x: f32x8<T>) -> f32x8<T> {
     const OFFSET: i32 = 0x3f2a_aaab;
@@ -119,11 +129,13 @@ pub(crate) fn log2_lowp_unchecked<S: Step, T: F32x8Convert>(token: T, x: f32x8<T
     yp / yq + exp_shifted.to_f32()
 }
 
+#[cfg(feature = "configurable")]
 #[inline(always)]
 pub(crate) fn log2_lowp<S: Step, T: F32x8Convert>(token: T, x: f32x8<T>) -> f32x8<T> {
     log_specials(token, x, log2_lowp_unchecked::<S, T>(token, x))
 }
 
+#[cfg(feature = "configurable")]
 #[inline(always)]
 pub(crate) fn exp2_lowp_unchecked<S: Step, T: F32x8Convert>(token: T, x: f32x8<T>) -> f32x8<T> {
     const C1: f32 = core::f32::consts::LN_2;
@@ -141,6 +153,7 @@ pub(crate) fn exp2_lowp_unchecked<S: Step, T: F32x8Convert>(token: T, x: f32x8<T
     poly * scale
 }
 
+#[cfg(feature = "configurable")]
 #[inline(always)]
 pub(crate) fn exp2_lowp<S: Step, T: F32x8Convert>(token: T, x: f32x8<T>) -> f32x8<T> {
     let lo = splat_f32(token, -126.0);
@@ -151,38 +164,45 @@ pub(crate) fn exp2_lowp<S: Step, T: F32x8Convert>(token: T, x: f32x8<T>) -> f32x
     exp2_lowp_unchecked::<S, T>(token, clamped)
 }
 
+#[cfg(feature = "configurable")]
 #[inline(always)]
 pub(crate) fn ln_lowp_unchecked<S: Step, T: F32x8Convert>(token: T, x: f32x8<T>) -> f32x8<T> {
     log2_lowp_unchecked::<S, T>(token, x) * splat_f32(token, core::f32::consts::LN_2)
 }
 
+#[cfg(feature = "configurable")]
 #[inline(always)]
 pub(crate) fn ln_lowp<S: Step, T: F32x8Convert>(token: T, x: f32x8<T>) -> f32x8<T> {
     log2_lowp::<S, T>(token, x) * splat_f32(token, core::f32::consts::LN_2)
 }
 
+#[cfg(feature = "configurable")]
 #[inline(always)]
 pub(crate) fn exp_lowp_unchecked<S: Step, T: F32x8Convert>(token: T, x: f32x8<T>) -> f32x8<T> {
     exp2_lowp_unchecked::<S, T>(token, x * splat_f32(token, core::f32::consts::LOG2_E))
 }
 
+#[cfg(feature = "configurable")]
 #[inline(always)]
 pub(crate) fn exp_lowp<S: Step, T: F32x8Convert>(token: T, x: f32x8<T>) -> f32x8<T> {
     exp2_lowp::<S, T>(token, x * splat_f32(token, core::f32::consts::LOG2_E))
 }
 
+#[cfg(feature = "configurable")]
 #[inline(always)]
 pub(crate) fn log10_lowp_unchecked<S: Step, T: F32x8Convert>(token: T, x: f32x8<T>) -> f32x8<T> {
     log2_lowp_unchecked::<S, T>(token, x)
         * splat_f32(token, core::f32::consts::LN_2 / core::f32::consts::LN_10)
 }
 
+#[cfg(feature = "configurable")]
 #[inline(always)]
 pub(crate) fn log10_lowp<S: Step, T: F32x8Convert>(token: T, x: f32x8<T>) -> f32x8<T> {
     log2_lowp::<S, T>(token, x)
         * splat_f32(token, core::f32::consts::LN_2 / core::f32::consts::LN_10)
 }
 
+#[cfg(feature = "configurable")]
 #[inline(always)]
 pub(crate) fn pow_lowp_unchecked<S: Step, T: F32x8Convert>(
     token: T,
@@ -195,6 +215,7 @@ pub(crate) fn pow_lowp_unchecked<S: Step, T: F32x8Convert>(
     )
 }
 
+#[cfg(feature = "configurable")]
 #[inline(always)]
 pub(crate) fn pow_lowp<S: Step, T: F32x8Convert>(token: T, x: f32x8<T>, n: f32) -> f32x8<T> {
     let zero = splat_f32(token, 0.0);
@@ -202,6 +223,7 @@ pub(crate) fn pow_lowp<S: Step, T: F32x8Convert>(token: T, x: f32x8<T>, n: f32) 
     f32x8::blend(x.simd_eq(zero), zero, r)
 }
 
+#[cfg(feature = "configurable")]
 #[inline(always)]
 // TODO(math migration): move this legacy cube-root body here with bit parity.
 #[allow(deprecated)] // Temporary delegate until its implementation moves from Magetypes.
@@ -213,6 +235,7 @@ pub(crate) fn cbrt_lowp<S: Step, T: F32x8Convert>(_token: T, x: f32x8<T>) -> f32
 
 // ====== midp ======
 
+#[cfg(feature = "configurable")]
 #[inline(always)]
 pub(crate) fn log2_midp_unchecked<S: Step, T: F32x8Convert>(token: T, x: f32x8<T>) -> f32x8<T> {
     const SQRT2_OVER_2: i32 = 0x3f35_04f3;
@@ -236,11 +259,13 @@ pub(crate) fn log2_midp_unchecked<S: Step, T: F32x8Convert>(token: T, x: f32x8<T
     S::madd(poly, y, n)
 }
 
+#[cfg(feature = "configurable")]
 #[inline(always)]
 pub(crate) fn log2_midp<S: Step, T: F32x8Convert>(token: T, x: f32x8<T>) -> f32x8<T> {
     log_specials(token, x, log2_midp_unchecked::<S, T>(token, x))
 }
 
+#[cfg(feature = "configurable")]
 #[inline(always)]
 pub(crate) fn exp2_midp_unchecked<S: Step, T: F32x8Convert>(token: T, x: f32x8<T>) -> f32x8<T> {
     const C1: f32 = core::f32::consts::LN_2;
@@ -264,6 +289,7 @@ pub(crate) fn exp2_midp_unchecked<S: Step, T: F32x8Convert>(token: T, x: f32x8<T
     poly * scale
 }
 
+#[cfg(feature = "configurable")]
 #[inline(always)]
 pub(crate) fn exp2_midp<S: Step, T: F32x8Convert>(token: T, x: f32x8<T>) -> f32x8<T> {
     // No clamp before the polynomial: the blends below replace every lane a clamp
@@ -282,38 +308,45 @@ pub(crate) fn exp2_midp<S: Step, T: F32x8Convert>(token: T, x: f32x8<T>) -> f32x
     )
 }
 
+#[cfg(feature = "configurable")]
 #[inline(always)]
 pub(crate) fn ln_midp_unchecked<S: Step, T: F32x8Convert>(token: T, x: f32x8<T>) -> f32x8<T> {
     log2_midp_unchecked::<S, T>(token, x) * splat_f32(token, core::f32::consts::LN_2)
 }
 
+#[cfg(feature = "configurable")]
 #[inline(always)]
 pub(crate) fn ln_midp<S: Step, T: F32x8Convert>(token: T, x: f32x8<T>) -> f32x8<T> {
     log2_midp::<S, T>(token, x) * splat_f32(token, core::f32::consts::LN_2)
 }
 
+#[cfg(feature = "configurable")]
 #[inline(always)]
 pub(crate) fn exp_midp_unchecked<S: Step, T: F32x8Convert>(token: T, x: f32x8<T>) -> f32x8<T> {
     exp2_midp_unchecked::<S, T>(token, x * splat_f32(token, core::f32::consts::LOG2_E))
 }
 
+#[cfg(feature = "configurable")]
 #[inline(always)]
 pub(crate) fn exp_midp<S: Step, T: F32x8Convert>(token: T, x: f32x8<T>) -> f32x8<T> {
     exp2_midp::<S, T>(token, x * splat_f32(token, core::f32::consts::LOG2_E))
 }
 
+#[cfg(feature = "configurable")]
 #[inline(always)]
 pub(crate) fn log10_midp_unchecked<S: Step, T: F32x8Convert>(token: T, x: f32x8<T>) -> f32x8<T> {
     log2_midp_unchecked::<S, T>(token, x)
         * splat_f32(token, core::f32::consts::LN_2 / core::f32::consts::LN_10)
 }
 
+#[cfg(feature = "configurable")]
 #[inline(always)]
 pub(crate) fn log10_midp<S: Step, T: F32x8Convert>(token: T, x: f32x8<T>) -> f32x8<T> {
     log2_midp::<S, T>(token, x)
         * splat_f32(token, core::f32::consts::LN_2 / core::f32::consts::LN_10)
 }
 
+#[cfg(feature = "configurable")]
 #[inline(always)]
 pub(crate) fn pow_midp_unchecked<S: Step, T: F32x8Convert>(
     token: T,
@@ -326,11 +359,13 @@ pub(crate) fn pow_midp_unchecked<S: Step, T: F32x8Convert>(
     )
 }
 
+#[cfg(feature = "configurable")]
 #[inline(always)]
 pub(crate) fn pow_midp<S: Step, T: F32x8Convert>(token: T, x: f32x8<T>, n: f32) -> f32x8<T> {
     exp2_midp::<S, T>(token, log2_midp::<S, T>(token, x) * splat_f32(token, n))
 }
 
+#[cfg(feature = "configurable")]
 #[inline(always)]
 // TODO(math migration): move this legacy cube-root body here with bit parity.
 #[allow(deprecated)] // Temporary delegate until its implementation moves from Magetypes.
@@ -339,6 +374,7 @@ pub(crate) fn cbrt_midp<S: Step, T: F32x8Convert>(_token: T, x: f32x8<T>) -> f32
     x.cbrt_midp()
 }
 
+#[cfg(feature = "configurable")]
 #[inline(always)]
 // TODO(math migration): move this legacy cube-root body here with bit parity.
 #[allow(deprecated)] // Temporary delegate until its implementation moves from Magetypes.
@@ -347,6 +383,7 @@ pub(crate) fn cbrt_midp_precise<S: Step, T: F32x8Convert>(_token: T, x: f32x8<T>
     x.cbrt_midp_precise()
 }
 
+#[cfg(feature = "configurable")]
 #[inline(always)]
 pub(crate) fn sigmoid_midp<S: Step, T: F32x8Convert>(token: T, x: f32x8<T>) -> f32x8<T> {
     // The sign of a zero `-x` cannot reach the result: exp(±0) is exactly 1.
@@ -354,6 +391,7 @@ pub(crate) fn sigmoid_midp<S: Step, T: F32x8Convert>(token: T, x: f32x8<T>) -> f
     one / (exp_midp::<S, T>(token, -x) + one)
 }
 
+#[cfg(feature = "configurable")]
 #[inline(always)]
 pub(crate) fn silu_midp<S: Step, T: F32x8Convert>(token: T, x: f32x8<T>) -> f32x8<T> {
     x * sigmoid_midp::<S, T>(token, x)

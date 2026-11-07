@@ -11,8 +11,8 @@ wasm-host = ["zenbench/wasm"]
 runtime = ["zenmath/runtime-dispatch", "oldzenmath/runtime-dispatch"]
 avx512 = ["archmage/avx512", "magemath/avx512", "zenmath/avx512"]
 [dependencies]
-zenmath = { path = "../../zenmath", default-features = false }
-magemath = { path = "../../magemath", default-features = false, features = ["std"] }
+zenmath = { path = "../../zenmath", default-features = false, features = ["correct-rounding", "configurable"] }
+magemath = { path = "../../magemath", default-features = false, features = ["std", "correct-rounding", "configurable"] }
 archmage = { path = "../..", default-features = false, features = ["std"] }
 oldzenmath = {package="zenmath-pow-baseline",path="baseline/zenmath",default-features=false}
 oldmagemath = {package="magemath-pow-baseline",path="baseline/magemath",default-features=false,features=["std"]}

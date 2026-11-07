@@ -381,3 +381,11 @@ pub(crate) fn evaluate<const P: u64>(
     };
     finish::<P>(p, out)
 }
+
+// The policy bridge retains its independent precise implementation for Full
+// rescue without requiring the public correct-rounding API feature.
+#[doc(hidden)]
+#[inline(always)]
+pub fn correct_powf(x: f32, y: f32) -> f32 {
+    crate::scalar::selected_powf(x, y)
+}

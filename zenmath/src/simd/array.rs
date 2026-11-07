@@ -1,6 +1,7 @@
 //! Accurate array operations. Selection occurs once per public call.
 use archmage::prelude::*;
 
+#[cfg(any(feature = "correct-rounding", feature = "normal"))]
 /// Correctly rounded exp; NaN payloads unspecified.
 #[archmage::attune(
     _v3,
@@ -19,6 +20,7 @@ pub fn exp_f32x4(x: [f32; 4]) -> [f32; 4] {
     super::correct::exp(token, x)
 }
 
+#[cfg(any(feature = "correct-rounding", feature = "normal"))]
 /// Select exp once for this array. Runtime probes require `runtime-dispatch`.
 #[inline]
 pub fn exp_f32x4(x: [f32; 4]) -> [f32; 4] {
@@ -37,6 +39,7 @@ pub fn exp_f32x4(x: [f32; 4]) -> [f32; 4] {
     exp_f32x4_scalar_t(ScalarToken, x)
 }
 
+#[cfg(any(feature = "correct-rounding", feature = "normal"))]
 /// Correctly rounded ln; NaN payloads unspecified.
 #[archmage::attune(
     _v3,
@@ -55,6 +58,7 @@ pub fn ln_f32x4(x: [f32; 4]) -> [f32; 4] {
     super::correct::log::<_, false, 4>(token, x)
 }
 
+#[cfg(any(feature = "correct-rounding", feature = "normal"))]
 /// Select ln once for this array. Runtime probes require `runtime-dispatch`.
 #[inline]
 pub fn ln_f32x4(x: [f32; 4]) -> [f32; 4] {
@@ -73,6 +77,7 @@ pub fn ln_f32x4(x: [f32; 4]) -> [f32; 4] {
     ln_f32x4_scalar_t(ScalarToken, x)
 }
 
+#[cfg(any(feature = "correct-rounding", feature = "normal"))]
 /// Correctly rounded log2; NaN payloads unspecified.
 #[archmage::attune(
     _v3,
@@ -91,6 +96,7 @@ pub fn log2_f32x4(x: [f32; 4]) -> [f32; 4] {
     super::correct::log::<_, true, 4>(token, x)
 }
 
+#[cfg(any(feature = "correct-rounding", feature = "normal"))]
 /// Select log2 once for this array. Runtime probes require `runtime-dispatch`.
 #[inline]
 pub fn log2_f32x4(x: [f32; 4]) -> [f32; 4] {
@@ -145,18 +151,21 @@ pub fn pow_f32x4(x: [f32; 4], y: [f32; 4]) -> [f32; 4] {
     pow_f32x4_scalar_t(ScalarToken, x, y)
 }
 
+#[cfg(any(feature = "correct-rounding", feature = "normal"))]
 /// Eight f32 inputs with eight native AVX-512 binary64 intermediates.
 #[archmage::attune(_v4x(cfg(avx512)), _v4x_t(cfg(avx512)))]
 pub fn exp_f32x8(x: [f32; 8]) -> [f32; 8] {
     super::correct::exp(Token::from_context(), x)
 }
 
+#[cfg(any(feature = "correct-rounding", feature = "normal"))]
 /// Eight f32 inputs with eight native AVX-512 binary64 intermediates.
 #[archmage::attune(_v4x(cfg(avx512)), _v4x_t(cfg(avx512)))]
 pub fn ln_f32x8(x: [f32; 8]) -> [f32; 8] {
     super::correct::log::<_, false, 8>(Token::from_context(), x)
 }
 
+#[cfg(any(feature = "correct-rounding", feature = "normal"))]
 /// Eight f32 inputs with eight native AVX-512 binary64 intermediates.
 #[archmage::attune(_v4x(cfg(avx512)), _v4x_t(cfg(avx512)))]
 pub fn log2_f32x8(x: [f32; 8]) -> [f32; 8] {

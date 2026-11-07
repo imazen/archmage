@@ -84,7 +84,7 @@ fn native<const P: u64>(x: f32, y: f32) -> f32 {
 pub(crate) fn select<const P: u64>(x: f32, y: f32) -> f32 {
     // Correct policies share ordinary correct-core selection.
     if P & 3 == 0 {
-        return crate::__pow_policy::evaluate_with_core::<P>(x, y, crate::scalar::powf);
+        return crate::__pow_policy::evaluate_with_core::<P>(x, y, crate::scalar::selected_powf);
     }
     // On x86 this already inlines without software FMA, and the native
     // boundary had no clear benefit. NEON instead benefits from native floor.
@@ -100,5 +100,5 @@ pub(crate) fn select<const P: u64>(x: f32, y: f32) -> f32 {
     if let Some(t) = super::available::<NeonToken>() {
         return native_neon_t::<P>(t, x, y);
     }
-    crate::__pow_policy::evaluate_with_core::<P>(x, y, crate::scalar::powf)
+    crate::__pow_policy::evaluate_with_core::<P>(x, y, crate::scalar::selected_powf)
 }

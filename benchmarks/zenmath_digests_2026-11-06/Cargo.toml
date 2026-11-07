@@ -11,7 +11,7 @@ default = ["avx512"]
 avx512 = ["archmage/avx512", "zenmath/avx512"]
 
 [dependencies]
-zenmath = { path = "../../zenmath", default-features = false, features = ["archmage"] }
+zenmath = { path = "../../zenmath", default-features = false, features = ["archmage", "correct-rounding"] }
 archmage = { path = "../..", default-features = false, features = ["std"] }
 zenhash = { git = "https://github.com/imazen/zenhash", rev = "4c4a993ba4207f2f28529ce0406be8650d270118", default-features = false, features = ["xxh3", "std"] }
 

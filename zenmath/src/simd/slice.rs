@@ -1,6 +1,7 @@
 //! Accurate slice operations. Selection occurs once per public call.
 use archmage::prelude::*;
 
+#[cfg(any(feature = "correct-rounding", feature = "normal"))]
 /// Correctly rounded exp; NaN payloads unspecified.
 #[archmage::attune(
     _v3,
@@ -29,6 +30,7 @@ pub fn exp_f32(data: &mut [f32]) {
     }
 }
 
+#[cfg(any(feature = "correct-rounding", feature = "normal"))]
 /// Select exp once for this slice. Runtime probes require `runtime-dispatch`.
 #[inline]
 pub fn exp_f32(data: &mut [f32]) {
@@ -47,6 +49,7 @@ pub fn exp_f32(data: &mut [f32]) {
     exp_f32_scalar_t(ScalarToken, data)
 }
 
+#[cfg(any(feature = "correct-rounding", feature = "normal"))]
 /// Correctly rounded ln; NaN payloads unspecified.
 #[archmage::attune(
     _v3,
@@ -75,6 +78,7 @@ pub fn ln_f32(data: &mut [f32]) {
     }
 }
 
+#[cfg(any(feature = "correct-rounding", feature = "normal"))]
 /// Select ln once for this slice. Runtime probes require `runtime-dispatch`.
 #[inline]
 pub fn ln_f32(data: &mut [f32]) {
@@ -93,6 +97,7 @@ pub fn ln_f32(data: &mut [f32]) {
     ln_f32_scalar_t(ScalarToken, data)
 }
 
+#[cfg(any(feature = "correct-rounding", feature = "normal"))]
 /// Correctly rounded log2; NaN payloads unspecified.
 #[archmage::attune(
     _v3,
@@ -121,6 +126,7 @@ pub fn log2_f32(data: &mut [f32]) {
     }
 }
 
+#[cfg(any(feature = "correct-rounding", feature = "normal"))]
 /// Select log2 once for this slice. Runtime probes require `runtime-dispatch`.
 #[inline]
 pub fn log2_f32(data: &mut [f32]) {
@@ -193,6 +199,7 @@ pub fn pow_f32(data: &mut [f32], exponents: &[f32]) {
     pow_f32_scalar_t(ScalarToken, data, exponents)
 }
 
+#[cfg(any(feature = "correct-rounding", feature = "normal"))]
 /// Whole buffer using eight native AVX-512 binary64 intermediates.
 #[archmage::attune(_v4x(cfg(avx512)), _v4x_t(cfg(avx512)))]
 pub fn exp_f32_wide(data: &mut [f32]) {
@@ -210,6 +217,7 @@ pub fn exp_f32_wide(data: &mut [f32]) {
     }
 }
 
+#[cfg(any(feature = "correct-rounding", feature = "normal"))]
 /// Whole buffer using eight native AVX-512 binary64 intermediates.
 #[archmage::attune(_v4x(cfg(avx512)), _v4x_t(cfg(avx512)))]
 pub fn ln_f32_wide(data: &mut [f32]) {
@@ -227,6 +235,7 @@ pub fn ln_f32_wide(data: &mut [f32]) {
     }
 }
 
+#[cfg(any(feature = "correct-rounding", feature = "normal"))]
 /// Whole buffer using eight native AVX-512 binary64 intermediates.
 #[archmage::attune(_v4x(cfg(avx512)), _v4x_t(cfg(avx512)))]
 pub fn log2_f32_wide(data: &mut [f32]) {

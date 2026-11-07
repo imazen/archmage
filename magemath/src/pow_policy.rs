@@ -75,7 +75,7 @@ fn approximate<S: crate::bodies::Step, T: F32x8Convert, const P: u64>(
         } else if shared::working_input(p[i]) && (-126.0..=127.5).contains(&z[i]) {
             shared::mathematical_sign(p[i], out[i])
         } else {
-            zenmath::scalar::powf(p[i].x, p[i].y)
+            shared::correct_powf(p[i].x, p[i].y)
         }
     })
 }
