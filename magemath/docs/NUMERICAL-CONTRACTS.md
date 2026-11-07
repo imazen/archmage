@@ -17,6 +17,13 @@ results**. An implementation is eligible when every result it can produce is in
 that set. Faster hardware does not change the set. A narrower input domain can
 make a cheap instruction eligible without relaxing the result at all.
 
+Some requirements also relate multiple evaluations: monotonicity compares
+different inputs, and reproducibility compares targets or repeated calls.
+Formally the contract contains an input domain, allowed results per input, and
+relations across evaluations. Membership in the same two-answer set does not
+prove two targets choose the same answer. Fixed implementation choices and
+cross-target identity therefore need tests beyond per-call set membership.
+
 This model also covers conversions, comparisons, masks, shuffles, reductions,
 quantized dot products and approximate reciprocals. These operations share a
 contract vocabulary; they need not share every field or one enormous enum.
