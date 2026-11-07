@@ -696,3 +696,7 @@ magemath-generate:
 
 magemath-superset-check tiers:
     LEGACY_REQUIRE_TIERS={{tiers}} cargo test -p magemath --all-features --release --test legacy_superset --test width_parity -- --nocapture
+
+zenmath-gamma-generate:
+    python3 zenmath/tools/generate-gamma-tables.py
+    cargo fmt -p zenmath

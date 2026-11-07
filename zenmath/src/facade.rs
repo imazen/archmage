@@ -117,23 +117,23 @@ mod selected {
         use archmage::SimdToken;
         #[cfg(target_arch = "x86_64")]
         if let Some(t) = archmage::X64V3Token::summon() {
-            return crate::simd::__scalar_transcendentals::powf_v3_t(t, x, y);
+            return crate::simd::__scalar_transcendentals::powf_core_v3_t(t, x, y);
         }
         #[cfg(target_arch = "aarch64")]
         if let Some(t) = archmage::NeonToken::summon() {
-            return crate::simd::__scalar_transcendentals::powf_neon_t(t, x, y);
+            return crate::simd::__scalar_transcendentals::powf_core_neon_t(t, x, y);
         }
         crate::reference::powf(x, y)
     }
 }
 #[cfg(all(feature = "runtime-dispatch", target_arch = "x86_64"))]
 pub use selected::fma;
-#[cfg(all(
-    feature = "correct-rounding",
-    feature = "runtime-dispatch",
-    any(target_arch = "x86_64", target_arch = "aarch64")
-))]
-pub use selected::powf;
+/// Correctly rounded power, including certified fixed-exponent candidates.
+#[cfg(feature = "correct-rounding")]
+#[inline(always)]
+pub fn powf(x: f32, y: f32) -> f32 {
+    selected_powf(x, y)
+}
 #[cfg(all(
     feature = "runtime-dispatch",
     any(target_arch = "x86_64", target_arch = "wasm32")
@@ -171,9 +171,16 @@ pub fn powf_with<const P: u64>(x: f32, y: f32) -> f32 {
 }
 
 // Private ordinary correct core, also used when only policy/normal APIs exist.
-#[cfg(any(feature = "normal", feature = "configurable"))]
+#[cfg(any(
+    feature = "correct-rounding",
+    feature = "normal",
+    feature = "configurable"
+))]
 #[inline(always)]
 pub(crate) fn selected_powf(x: f32, y: f32) -> f32 {
+    if let Some(value) = crate::gamma::try_gamma(x, y) {
+        return value;
+    }
     #[cfg(all(
         feature = "runtime-dispatch",
         any(target_arch = "x86_64", target_arch = "aarch64")

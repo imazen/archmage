@@ -72,6 +72,19 @@ pub mod exact;
 
 mod core_math;
 
+#[cfg(any(
+    feature = "correct-rounding",
+    feature = "normal",
+    feature = "configurable"
+))]
+mod gamma;
+#[cfg(any(
+    feature = "correct-rounding",
+    feature = "normal",
+    feature = "configurable"
+))]
+mod gamma_tables;
+
 // Same-workspace implementation bridge used by magemath to share precedence.
 #[doc(hidden)]
 #[cfg(feature = "configurable")]
