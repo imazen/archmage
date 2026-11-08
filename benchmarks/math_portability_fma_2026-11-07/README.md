@@ -147,6 +147,7 @@ counted separately from fusion. This covers 14 canonical operations;
 aliases share their bodies, and cbrt has no relaxed multiply-add. MPFR error
 samples are independent. For scalar x4, sampled midp upper errors include
 exp2 1.203032 ULP, exp 45.090223 ULP, pow 69.409022 ULP and log10 1.650535 ULP.
+Pow samples use a fixed f32 exponent 2.4, not an exhaustive two-input domain.
 These are sample bounds, not full-domain maxima; activation error bounds were
 not established. Lowp errors near zero-valued log results can span many ULP.
 
@@ -155,6 +156,18 @@ the corrected graph, scalar x4/64/ordinary log2_lowp R=1.058579,
 CI [1.053992, 1.063363], and ln_lowp R=1.045564,
 CI [1.040506, 1.050613]. Some exp/pow cells improve, but those cannot offset
 failures. No default fusion policy is accepted by this PR.
+
+Clean strict-WASM exp2_lowp x4/64 ordinary streams measured
+exceptional/main R=0.996822, CI [0.988783, 1.004746], PASS;
+fixed-fused/corrected R=16.990741, CI [16.888446, 17.083618], FAIL.
+These 50-pair steady-state cells have an explicitly primed private cache.
+
+In the clean fusing-WASM FMA study, f64x2/64 ordinary streams measured
+array software/current R=4.560124, CI [4.534955, 4.584591], and whole-buffer
+hardware/current R=0.449247, CI [0.445549, 0.452979]. The analogous f32x4
+hardware/current cell is INCONCLUSIVE: R=1.021352,
+CI [1.011460, 1.033228]. These controls show useful granularity differences;
+no aggregate optimization claim or production FMA change follows.
 
 ## Correctness and validation
 
@@ -198,20 +211,23 @@ latency is also unproven; fresh-process counters include startup.
 ## Cold build and resource diagnostics
 
 Three alternating fresh linked-consumer builds per source, same lockfile and
-compiler, candidate `22f5b2dd`; the worker was shared. No runtime speed gate is
-inferred from build times.
+compiler, candidate `85b59484`; source and consumer paths are remapped equally.
+The consumer links the 14 canonical float32 operations and scalar f64 fused
+arithmetic. The worker was shared. No runtime or build-time speed claim follows.
+Earlier unremapped, f32-only and rejected-std-candidate runs remain separate.
 
 | Pair | Main seconds / bytes | Candidate seconds / bytes |
 |---|---:|---:|
-| 0 | 4.66 / 470080 | 4.62 / 471392 |
-| 1 | 4.71 / 470080 | 4.71 / 471392 |
-| 2 | 4.63 / 470080 | 4.62 / 471392 |
+| 0 | 6.35 / 475128 | 6.34 / 476456 |
+| 1 | 8.10 / 475128 | 7.66 / 476456 |
+| 2 | 9.89 / 475128 | 7.43 / 476456 |
 
-Maximum RSS in KiB, main: 353796/353812/354240; candidate:
-354688/354688/354792. Size includes the complete linked consumer.
+Maximum RSS in KiB, main: 352012/352956/350540; candidate:
+353228/353380/349660. Size includes the complete linked consumer.
 
-`run-heavy` resource lines: final CI+semver 267s, peak RSS 0.74GiB,
-min available 19836MiB, peak load 6.10; build+all-cell analysis+cold builds 153s,
+`run-heavy` resource lines: final scope CI+semver 268s, peak RSS 0.73GiB,
+min available 21681MiB, peak load 14.57; final cold builds 47s, peak RSS 0.34GiB,
+min available 21880MiB, peak load 14.57. Earlier build+all-cell analysis+cold builds 153s,
 peak RSS1.37GiB, min available 19836MiB, peak load 6.10; NEON FMA 323s,
 peak RSS 0.03GiB, min available 14880MiB, peak load 0.86; combined workload 68s,
 peak RSS 0.01GiB, min available 14886MiB, peak load 0.46. Caps were explicit;
