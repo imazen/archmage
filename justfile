@@ -634,3 +634,7 @@ powf-replacement-matrix-analyze directory cells *runs:
 
 powf-replacement-codegen-audit assembly output *options:
     python3 -B benchmarks/powf_module_2026-11-07/codegen_audit.py "{{assembly}}" "{{output}}" {{options}}
+
+wasmtime-ci-installer-check:
+    bash -n xtask/install-wasmtime-ci.sh
+    python3 -B xtask/test_wasmtime_installer.py

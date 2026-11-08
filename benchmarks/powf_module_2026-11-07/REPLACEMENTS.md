@@ -272,3 +272,15 @@ Explicit no_std power tests and i686 std/no_std checks pass (8 s, peak RSS
 (6 s, peak RSS below the wrapper's 0.01 GiB display resolution). M6 study
 clippy passes (11 s, BSD peak RSS 0.37 GiB, reclaimable-page proxy minimum
 8,163 MiB, peak load 1.63). No benchmark runs overlapped M6 builds.
+
+CI transport follow-up: the initial const-comparison head passed all 53
+substantive jobs except WASM, which never started because the pinned Wasmtime
+archive download returned HTTP 504 twice; the complete-matrix gate correctly
+failed too. The immutable release-asset API delivers the same v48.0.1 archive
+with published SHA-256
+`4c2e31b68ad99e0a519f225a261fda099eb15f056d4a24fdb3c2a46517bde1df`.
+The CI installer now uses that route with bounded retries and checks the
+archive digest before extraction. A wrong-byte HTTP-success control fails
+before installation. The installed v48.0.1 passes strict, fusing and nonfusing
+unit/full-payload tests (24 s, peak RSS 0.10 GiB, minimum available 24,220 MiB,
+peak load 12.30). No compiled library source or test expectation changes.
