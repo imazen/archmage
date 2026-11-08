@@ -85,6 +85,7 @@ mod rounding_tests {
         check16_scalar(archmage::ScalarToken);
     }
     #[test]
+    #[cfg(any(target_arch = "x86_64", target_arch = "aarch64", target_arch = "wasm32"))]
     fn explicit_native_mixed_lanes() {
         #[cfg(target_arch = "x86_64")]
         {
