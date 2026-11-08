@@ -20,6 +20,15 @@ Explicit NEON selection and full NaN/subnormal families pass on M6 (7 s,
 BSD peak RSS 0.53 GiB, minimum reclaimable-page proxy 7,816 MiB, peak load 1.72;
 monitored 3 GiB process-tree guard, not a Linux cgroup cap).
 
+Rebuilt post-review executables replay all 26,857 input pairs against the
+preserved actual outputs. Both scalar/native output files match byte for byte
+across all eight methods on Intel and M6, including rejection stages. Both
+also verify every ordinary replacement cell again. Intel build/replay: 55 s,
+peak RSS 0.95 GiB, minimum available 23,423 MiB, peak load 13.09. M6: 25 s,
+BSD wrapper peak RSS 0.01 GiB, minimum reclaimable-page proxy 7,365 MiB,
+peak load 1.63, monitored 3 GiB guard. The BSD wrapper statistic is not the
+whole-build process-tree peak. Frozen timing executables remain unchanged.
+
 CI release-page downloads encountered HTTP 503/504 before running checks.
 The Linux x86_64 installers now use immutable release asset API URLs and verify
 the upstream archive SHA-256 before extraction. Wasmtime remains 48.0.1 and
@@ -281,8 +290,17 @@ with pinned original source and notices outside the production dependency graph.
 
 Missing performance coverage still includes complete admitted AMD/Intel and
 WASM replacement matrices, native first-use and physical below-V3/std fallback
-costs. Intel's recorded pilot has no samples after an admission timeout. The
+costs. Intel's original pilot has no samples after an admission timeout. The
 owner-approved M6 run is exploratory; it does not fill strict placement coverage.
+
+Intel was rechecked after the earlier admission owner finished. Its first
+scope attempt refused before sampling because the user scope lacked cpuset
+delegation. A supported system-manager scope then verified a 2 GiB memory cap
+and confinement to performance CPU 5. The identical reference collected all
+50 pilot pairs, but 34 were dirty: 29 reported one heavy process and five
+reported two. Placement was `enforced_uniform`, and `unreliable=true`.
+No full Intel matrix follows that failed pilot; neither refusal nor dirty
+rounds are replaced. These observations supply no Intel speed claim.
 
 Final local verification of the completed implementation/study source passed
 all 19 CI stages, both semver checks, all 24 warning configurations, unchanged
