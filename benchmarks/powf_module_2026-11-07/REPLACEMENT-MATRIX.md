@@ -61,3 +61,19 @@ No `target-cpu=native`. Archive source/compiler/flags, all rounds and failures,
 reference executables outside Cargo output, instruction probes and resource
 summaries. Raw results live in `powf-replacements-2026-11-08`, separate from the
 original prevalidated-control study and its immutable evidence.
+
+## Recorded orchestration amendments
+
+After the original Neoverse-N1 run stopped at cell 155, the unmeasured suffix
+may run once in a new directory with the identical executable and cell list.
+The invalid cell remains invalid, with every sample retained; it is never
+retried or removed from the mandatory denominator. The continuation records
+its parent manifest and original cell indices. Promotion requirements stay fixed.
+
+The owner authorized a separate exploratory Apple M6 comparison after strict
+placement refused before timing. This uses explicit unrestricted CPU placement,
+50 interleaved rounds and the common admission/resource gates. The OS schedules
+its asymmetric core classes. Every result is labeled exploratory and cannot
+satisfy the strict promotion gate, even when resource flags are clean. Dirty
+cells remain reported and the exploratory run proceeds through unmeasured cells
+without retrying them. The original strict refusal is retained separately.

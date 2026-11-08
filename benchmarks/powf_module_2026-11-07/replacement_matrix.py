@@ -12,6 +12,8 @@ p=argparse.ArgumentParser(description=__doc__)
 p.add_argument('binary',type=Path)
 p.add_argument('directory',type=Path)
 p.add_argument('--pilot',action='store_true')
+p.add_argument('--exploratory',action='store_true',help='explicit scheduler-controlled study; never promotion evidence')
+p.add_argument('--continue-unmeasured',type=Path,help='retain prior failed cell; measure only its previously unmeasured suffix')
 a=p.parse_args()
 a.directory.mkdir(parents=True,exist_ok=False)
 binary=a.binary.resolve()
@@ -21,12 +23,24 @@ assert len(cells)==672
 if a.pilot:
     native='neon' if any('/neon/' in c for c in cells) else 'v3'
     cells=[f'replacement/x4/{native}/64/stream/2/4019999a/literal-n/unorm8']
-manifest={'binary':str(binary),'sha256':hashlib.sha256(binary.read_bytes()).hexdigest(),'cells':cells,'pairs':50,'pilot':a.pilot}
+start=0
+if a.continue_unmeasured:
+    assert not a.pilot and not a.exploratory
+    prior=json.loads((a.continue_unmeasured/'MATRIX.json').read_text())
+    progress=json.loads((a.continue_unmeasured/'progress.json').read_text())
+    assert prior['sha256']==hashlib.sha256(binary.read_bytes()).hexdigest()
+    assert prior['cells']==cells and progress['stage']=='inadmissible'
+    start=progress['index']+1
+    assert 0<start<len(cells)
+policy=os.environ.get('ZENBENCH_CPU_POLICY','auto')
+assert (policy=='unrestricted')==a.exploratory, 'unrestricted requires explicit exploratory labeling'
+manifest={'binary':str(binary),'sha256':hashlib.sha256(binary.read_bytes()).hexdigest(),'cells':cells,'pairs':50,'pilot':a.pilot,'exploratory':a.exploratory,'promotion_eligible':not a.exploratory,'cpu_policy':policy,'start_index':start,'prior_run':str(a.continue_unmeasured.resolve())if a.continue_unmeasured else None}
 (a.directory/'MATRIX.json').write_text(json.dumps(manifest,indent=2)+'\n')
 for index,cell in enumerate(cells):
+    if index<start:continue
     output=(a.directory/f'{index:03d}.json').resolve()
     log=a.directory/f'{index:03d}.log'
-    progress={'pid':os.getpid(),'binary_sha256':manifest['sha256'],'stage':'running','index':index,'required':len(cells),'cell':cell,'last_check':datetime.now(timezone.utc).isoformat()}
+    progress={'pid':os.getpid(),'binary_sha256':manifest['sha256'],'exploratory':a.exploratory,'stage':'running','index':index,'required':len(cells),'cell':cell,'last_check':datetime.now(timezone.utc).isoformat()}
     (a.directory/'progress.json').write_text(json.dumps(progress,indent=2)+'\n')
     child_env={k:v for k,v in os.environ.items() if k not in ['POWF_LIST','POWF_VERIFY_ONLY']}
     child_env.update(POWF_FILTER=cell,POWF_RESULT=str(output))
@@ -52,4 +66,4 @@ for index,cell in enumerate(cells):
     progress['last_check']=datetime.now(timezone.utc).isoformat()
     (a.directory/'progress.json').write_text(json.dumps(progress,indent=2)+'\n')
     print(json.dumps(progress),flush=True)
-    if progress['stage']!='complete':raise SystemExit('stopped: preserved all evidence, no favorable rerun')
+    if progress['stage']!='complete' and not(a.exploratory and progress['stage']=='inadmissible'):raise SystemExit('stopped: preserved all evidence, no favorable rerun')

@@ -40,3 +40,15 @@ required-features = ["wasm-host"]
 [[bin]]
 name = "replacement"
 path = "src/bin/replacement.rs"
+
+[[bin]]
+name = "replacement_codegen"
+path = "src/bin/replacement_codegen.rs"
+
+[lib]
+path = "src/lib.rs"
+crate-type = ["rlib", "staticlib"]
+
+[[bin]]
+name = "replacement_eval"
+path = "src/bin/replacement_eval.rs"
