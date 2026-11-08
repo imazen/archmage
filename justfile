@@ -617,6 +617,16 @@ powf-replacement-codegen:
 powf-replacement-accuracy inputs output *options:
     python3 -B benchmarks/powf_module_2026-11-07/replacement_accuracy.py benchmarks/powf_module_2026-11-07/target/release/replacement_eval "{{inputs}}" "{{output}}" {{options}}
 
+# Check a later build against preserved actual outputs without changing its oracle.
+powf-replacement-replay inputs before output:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    for tier in scalar native; do
+        test ! -e "{{output}}.$tier.actual"
+        benchmarks/powf_module_2026-11-07/target/release/replacement_eval "$tier" < "{{inputs}}" > "{{output}}.$tier.actual"
+        cmp "{{before}}.$tier.actual" "{{output}}.$tier.actual"
+    done
+
 powf-replacement-search-build source directory:
     python3 -B benchmarks/powf_module_2026-11-07/error_search.py build "{{source}}" benchmarks/powf_module_2026-11-07/target/release/libarchmage_powf_study.a "{{directory}}"
 
