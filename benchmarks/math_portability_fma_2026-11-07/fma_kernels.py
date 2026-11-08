@@ -72,8 +72,10 @@ fn register_{name}(suite:&mut zenbench::Suite,context:&str,size:usize,chain:bool
     suite.group(id,|g| {{
         g.config().min_rounds(50).max_rounds(50).auto_rounds(false).warmup_time(std::time::Duration::from_millis(10)).max_time(std::time::Duration::from_millis(100)).max_wall_time(std::time::Duration::from_secs(60));
 '''
-        for arm,label in enumerate(('current_fused','array_software','whole_buffer_hardware')):
-            scalar_x86=(f'bencher.iter(||dispatch_{name}(std::hint::black_box(&input),std::hint::black_box(&mut output),chain));' if arm==2 else f'bencher.iter(||kernel_{name}_scalar::<{arm}>(archmage::ScalarToken,std::hint::black_box(&input),std::hint::black_box(&mut output),chain));')
+        for arm,label in enumerate(('current_fused','array_software','whole_buffer_hardware','std_delegate')):
+            kernel_arm=min(arm,2)
+            if arm==3: s+='if std::env::var_os("STUDY_STD_DELEGATE").is_some() {\n'
+            scalar_x86=(f'bencher.iter(||dispatch_{name}(std::hint::black_box(&input),std::hint::black_box(&mut output),chain));' if arm==2 else f'bencher.iter(||kernel_{name}_scalar::<{kernel_arm}>(archmage::ScalarToken,std::hint::black_box(&input),std::hint::black_box(&mut output),chain));')
             s+=f'''
         let input=source.clone(); let context=context.to_string();
         g.bench("{label}",move |bencher| {{ let mut output=vec![[0.0;{n}];input.len()];
@@ -82,20 +84,21 @@ fn register_{name}(suite:&mut zenbench::Suite,context:&str,size:usize,chain:bool
                     #[cfg(target_arch="x86_64")]
                     {{{scalar_x86}}}
                     #[cfg(not(target_arch="x86_64"))]
-                    bencher.iter(||kernel_{name}_scalar::<{arm}>(archmage::ScalarToken,std::hint::black_box(&input),std::hint::black_box(&mut output),chain));
+                    bencher.iter(||kernel_{name}_scalar::<{kernel_arm}>(archmage::ScalarToken,std::hint::black_box(&input),std::hint::black_box(&mut output),chain));
                 }},
                 #[cfg(target_arch="x86_64")]
-                "scalar-v3" => {{let t=archmage::X64V3Token::summon().expect("required v3");bencher.iter(||scalar_v3_{name}::<{arm}>(t,std::hint::black_box(&input),std::hint::black_box(&mut output),chain));}},
+                "scalar-v3" => {{let t=archmage::X64V3Token::summon().expect("required v3");bencher.iter(||scalar_v3_{name}::<{kernel_arm}>(t,std::hint::black_box(&input),std::hint::black_box(&mut output),chain));}},
                 #[cfg(target_arch="x86_64")]
-                "v3" => {{let t=archmage::X64V3Token::summon().expect("required v3");bencher.iter(||kernel_{name}_v3::<{arm}>(t,std::hint::black_box(&input),std::hint::black_box(&mut output),chain));}},
+                "v3" => {{let t=archmage::X64V3Token::summon().expect("required v3");bencher.iter(||kernel_{name}_v3::<{kernel_arm}>(t,std::hint::black_box(&input),std::hint::black_box(&mut output),chain));}},
                 #[cfg(target_arch="x86_64")]
-                "baseline-v3" => {{let t=archmage::X64V3Token::summon().expect("required v3");bencher.iter(||core_{name}::<_,{arm}>(t,std::hint::black_box(&input),std::hint::black_box(&mut output),chain));}},
+                "baseline-v3" => {{let t=archmage::X64V3Token::summon().expect("required v3");bencher.iter(||core_{name}::<_,{kernel_arm}>(t,std::hint::black_box(&input),std::hint::black_box(&mut output),chain));}},
                 #[cfg(target_arch="aarch64")]
-                "neon" => {{let t=archmage::NeonToken::summon().expect("required neon");bencher.iter(||kernel_{name}_neon::<{arm}>(t,std::hint::black_box(&input),std::hint::black_box(&mut output),chain));}},
+                "neon" => {{let t=archmage::NeonToken::summon().expect("required neon");bencher.iter(||kernel_{name}_neon::<{kernel_arm}>(t,std::hint::black_box(&input),std::hint::black_box(&mut output),chain));}},
                 _=>panic!("unsupported context {{context}}"),
             }} std::hint::black_box(output);
         }});
 '''
+            if arm==3: s+='}\n'
         # Shadow context moves a String after first arm; use unique local name.
         s=s.replace('let context=context.to_string();','let arm_context=context.to_string();').replace('match context.as_str()','match arm_context.as_str()').replace('unsupported context {context}','unsupported context {arm_context}')
         s+='});\n}\n'

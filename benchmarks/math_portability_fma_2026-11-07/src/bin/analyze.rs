@@ -11,7 +11,9 @@ fn main() {
             let admitted = !packet.unreliable
                 && group.samples.len() >= 50
                 && group.samples.iter().all(|r| r.gate_clean == Some(true));
-            for (baseline, candidate) in [(0, 1), (0, 2), (1, 2)] {
+            for (baseline, candidate) in (0..group.benchmarks.len())
+                .flat_map(|b| ((b + 1)..group.benchmarks.len()).map(move |c| (b, c)))
+            {
                 let ratios: Vec<f64> = group
                     .samples
                     .iter()

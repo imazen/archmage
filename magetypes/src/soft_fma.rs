@@ -5,8 +5,7 @@
 //!   `neon`) use Rust's `mul_add`;
 //! - other x86_64 std builds check archmage's cached V3 token once per call
 //!   for f64 and send each lane through the FMA instruction when the CPU has
-//!   it; below full V3, x86_64 std delegates to safe std `mul_add`,
-//!   whose compiler/runtime owns its narrower feature dispatch;
+//!   it (the one runtime check in vector arithmetic; see `fma_lanes`);
 //! - no_std builds use a token only when the target features prove it at
 //!   compile time (V3 or NEON); archmage cannot detect at run time without
 //!   std, and its `summon` would otherwise still load a cache to answer None;
@@ -98,15 +97,11 @@ token_or_software_fma! {
     }
 
     /// `a[i] * b[i] + c[i]` rounded once, per lane. On x86_64 with std this is
-    /// a cached full-V3 check (archmage's `summon`, once per call). The paired
-    /// helper on full-V3 CPUs previously measured 0.09-0.43x the software time.
-    /// Its arguments/returns use float registers, two lanes per call, avoiding
-    /// the memory ABI of arrays or SIMD values.
-    /// Below V3, safe std `mul_add` owns hardware/software selection. This
-    /// adds no feature detector to magetypes and needs no full-V3 proof for
-    /// FMA-only processors. The cost of this route, including its no-FMA
-    /// software fallback, is not yet established on quiet hardware.
-    /// Without std the token path is compiled only when
+    /// a cached runtime check (archmage's `summon`, once per call) that sends
+    /// every lane through the FMA instruction: on CPUs with FMA that measured
+    /// 0.09-0.43x the software path's time, and about 1.0x without. Lanes pass
+    /// in float registers, two per call; an array or SIMD-vector argument would
+    /// go through memory. Without std the token path is compiled only when
     /// the target features prove FMA, where `summon` folds to `Some` (archmage
     /// cannot detect at run time without std). Results equal the software
     /// path's bit for bit.
@@ -137,17 +132,7 @@ token_or_software_fma! {
             }
             return out;
         }
-        // Keep the paired full-V3 helper above. Below V3, this safe standard
-        // operation owns feature selection, including FMA-only processors;
-        // magetypes introduces no narrower feature proof or hidden detector.
-        #[cfg(all(not(miri), feature = "std", target_arch = "x86_64"))]
-        {
-            core::array::from_fn(|i| a[i].mul_add(b[i], c[i]))
-        }
-        #[cfg(not(all(not(miri), feature = "std", target_arch = "x86_64")))]
-        {
-            f64_soft::fma_soft_lanes(a, b, c)
-        }
+        f64_soft::fma_soft_lanes(a, b, c)
     }
 }
 
@@ -259,8 +244,8 @@ mod hw {
     }
 }
 
-/// Keep software where it can be selected, and in tests on every platform.
-/// Baseline x86_64 std now delegates its below-V3 fallback to std.
+/// [`token_or_software_fma`] plus test builds, which exercise the software
+/// path everywhere.
 macro_rules! software_fma_or_test {
     ($($item:item)*) => {$(
         #[cfg(any(test, not(all(
@@ -268,8 +253,7 @@ macro_rules! software_fma_or_test {
             feature = "std",
             any(
                 all(target_arch = "aarch64", target_feature = "neon"),
-                target_arch = "x86_64",
-                all(target_arch = "x86", target_feature = "fma")
+                all(any(target_arch = "x86", target_arch = "x86_64"), target_feature = "fma")
             )
         ))))]
         $item
@@ -356,7 +340,7 @@ fn round_to_odd(sum: f64, error: f64, apply: bool) -> f64 {
 }
 
 software_fma_or_test! {
-    /// The f64 software path, where selected by this crate and in tests.
+    /// The f64 software path: unused where the build guarantees hardware FMA.
     mod f64_soft {
         use super::two_sum;
 

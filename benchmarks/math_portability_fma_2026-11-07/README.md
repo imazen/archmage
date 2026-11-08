@@ -5,8 +5,9 @@ real NEON scalar callers. It needs an explicit correctness/cost decision before
 landing. Quiet AMD and Intel timings and a complete WASM timing matrix are still
 missing; busy-host results cannot fill those gaps. The fixed-fused polynomial
 candidate is experimental and is not the library default. The separate x86_64
-std f64 fallback candidate has correct FMA-only execution but unmeasured
-no-FMA and hardware-path costs; it also remains unpromoted.
+std f64 fallback prototype has correct FMA-only execution but unmeasured
+no-FMA and hardware-path costs. It is benchmark-only: its intended assembly
+changes require an approved codegen expectation before integration.
 
 ## Change and contracts
 
@@ -15,8 +16,8 @@ The exceptional-value change affects only generic `exp2_lowp` and checked
 put the input second in both min/max operations; ScalarToken uses `f32::clamp`.
 NaN inputs return NaN on every backend, with payload/sign unspecified. The
 existing relaxed polynomial, coefficients, overflow/underflow masks, public
-signatures and dependencies remain unchanged. A separate f64 std fallback
-change is described below; it does not change polynomial rounding.
+signatures and dependencies remain unchanged. Production FMA remains on main's implementation; the separate safe std-delegation
+prototype below is an experiment. It does not change polynomial rounding.
 
 Exp aliases and sigmoid/SiLU inherit NaN classification. Checked pow now
 preserves internal NaNs from negative bases, NaN exponents and invalid
@@ -35,8 +36,8 @@ This is not an exhaustive binary-pow or full-f32-domain accuracy claim.
 
 Baseline: `6bfd83d744e41259ec758054631dcb0928fc4ea1` (0.9.31).
 The core-clamp body is frozen at `22f5b2dd91b2`. The later x86_64 std f64
-fallback candidate `68320dbd` is excluded by cfg on the measured NEON/WASM
-paths; it has not passed the x86 performance gate. Rust 1.99.1 (`58cf8f9c3`), LLVM 23.1.1,
+fallback prototype `68320dbd` was excluded by cfg on the measured NEON/WASM
+paths. It has not passed x86 performance or codegen review and is not integrated. Rust 1.99.1 (`58cf8f9c3`), LLVM 23.1.1,
 release, one codegen unit, thin LTO, baseline distribution target settings;
 no `target-cpu=native`. See [MATRIX.md](MATRIX.md) for all mandatory axes and
 controls, including the combined workload, cached dispatch and first use.
@@ -102,28 +103,36 @@ Existing fused primitives already use native FMA on supported tokens, cached
 WASM fusion probes and the baseline x86 f64 V3 helper. F32 scalar dispatch is
 not unconditionally replaced by software or by per-call hardware detection.
 
-The f64 std candidate preserves the full-V3 paired helper and delegates below
+The f64 std prototype preserves the full-V3 paired helper and delegates below
 V3 to safe `f64::mul_add`. Rust 1.99.1's compiler-builtins selected
-`fma_with_fma` under Haswell with AVX2 disabled; the executed bytes decode to
+`fma_with_fma` under Haswell with AVX2 disabled; executed bytes decode to
 `vfmadd213sd` plus return. Independent exact-rational fixtures pass under that
 model, no-FMA Nehalem, full V3 and no_std. Emulation establishes correctness
 and the selected path, never speed.
 
-The safe standard operation owns its complete hardware/software selection;
-no FMA bit authorizes an all-V3 helper. A manually added secondary detector
-was rejected by the unchanged structural guard. The final candidate adds no
-feature detector or proof API in magetypes. It also delegates the no-FMA case
-to std software, whose cost may differ from the prior vectorized array path.
-Those costs and isolated first-use costs on FMA-only hardware are unmeasured:
-hold this candidate independently of the measured NaN tradeoff. F32 dispatch,
-no_std, i686, NEON and WASM paths retain their implementations.
+The safe standard operation owns complete feature selection; no FMA bit
+would authorize an all-V3 helper. A manually added secondary detector was
+rejected by the unchanged structural guard. Direct std delegation passes that
+guard and all numerical checks, but changes six x86 scalar-f64 wrapper probes
+(baseline and V3 callers at widths 2/4/8). ARM and WASM assembly remain identical.
+The x2 baseline wrapper changes from 210 to 65 expanded normalized instructions
+and 80 to 40 stack bytes, but standard-library work is outside those counts.
+These are not retired-instruction or speed measurements.
+
+Full CI rejected that intentional change at its final assembly-equality gate.
+No codegen exception was added. The candidate and complete before/after assembly
+are preserved; `STUDY_STD_DELEGATE=1` exposes its safe primitive in the standalone
+FMA experiment. Production FMA is unchanged from main. Quiet hardware/no-FMA
+costs and isolated FMA-only first-use latency remain unknown. Approval of a
+reviewed codegen expectation and the performance bounds are separate gates;
+neither is inferred from numerical parity.
 
 The real NEON FMA study completed all 256 predeclared cells, 50 pairs each,
 with every admission check clean. It compares current fused, copied exact array
 software and once-per-buffer hardware controls, covering f32 1/4/8/16 and
 f64 1/2/4/8, scalar/NEON callers, both lengths/shapes and four distributions.
 These are measurements of existing paths and experimental call granularity;
-these NEON paths are unaffected by the x86-only fallback change. For example, real NEON scalar
+these production paths remain unchanged from main. For example, real NEON scalar
 f32x4/64 ordinary streams measured whole-buffer hardware/current R=0.941664,
 CI [0.934024, 0.949027], while array software/current R=8.039430,
 CI [7.978791, 8.095745]. The corresponding f64x4 hardware/current ratio was
@@ -171,7 +180,7 @@ failures. No default fusion policy is accepted by this PR.
 Native NEON completed 13/14 canonical operations plus combined, 1,344/1,440
 cells admitted. The original 96 log10_lowp cells remain invalid. All 256 native
 FMA cells are admitted. There are no clean current AMD/Intel comparisons;
-common admission checks refused, so the new std f64 fallback's hardware and
+common admission checks refused, so the std f64 prototype's hardware and
 no-FMA costs remain unknown.
 
 Of 784 steady-state cells per WASM mode, strict admitted 112 (64 FMA and 48

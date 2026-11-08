@@ -408,9 +408,9 @@ pub fn fmaf(a: f32, b: f32, c: f32) -> f32 {
 }
 
 /// Correctly rounded fused multiply-add.
-/// On x86_64 with std, uses the cached V3 helper or the safe std primitive,
-/// which owns its feature selection. Other configurations use build-proven
-/// hardware or software; see `soft_fma`. NaN payload/sign are unspecified.
+/// On x86_64 with std, uses a cached full-V3 helper where available. Other
+/// cases use build-proven hardware or software; see `soft_fma`.
+/// NaN payload/sign are unspecified; assumes round-to-nearest and gradual underflow.
 #[inline(always)]
 pub fn fma(a: f64, b: f64, c: f64) -> f64 {
     crate::soft_fma::fma_lanes([a], [b], [c])[0]

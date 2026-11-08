@@ -96,3 +96,9 @@ independently; an insufficient first-use count does not imply host contention.
 The combined ordinary workload uses positive values so that all eight
 operations, including pow, receive valid inputs. Individual exp/activation
 cells separately exercise alternating signs.
+
+The supplemental `STUDY_STD_DELEGATE=1` FMA arm invokes safe scalar std
+`mul_add` from the selected caller context, with no private feature detector.
+It is absent from the original three-arm studies. A forced no-V3 FMA host
+can exercise its FMA-only route; no-FMA timing still requires real hardware.
+The independent rational fixtures check this std operation too.

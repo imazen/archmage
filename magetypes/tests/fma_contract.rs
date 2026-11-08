@@ -84,6 +84,10 @@ fn scalar_and_software_contract() {
     for [a, b, c, expected] in fixtures::F32.map(|row| row.map(f32::from_bits)) {
         same!(magetypes::nostd_math::fmaf(a, b, c), expected);
         same!(magetypes::nostd_math::fmaf_soft(a, b, c), expected);
+        same!(
+            std::hint::black_box(a).mul_add(std::hint::black_box(b), std::hint::black_box(c)),
+            expected
+        );
         use magetypes::simd::f32x1 as V;
         same!(V(a).mul_add_portable(V(b), V(c)).0, expected);
         same!(V(a).mul_sub_portable(V(b), V(-c)).0, expected);

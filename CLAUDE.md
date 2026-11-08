@@ -1230,13 +1230,14 @@ fn process(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
   reviewable; fixed-fused polynomial rounding remains experimental. Full
   cell evidence is in `benchmarks/math_portability_fma_2026-11-07/README.md`.
 
-- **Below-V3 std f64 candidate (2026-11-07, performance unconfirmed):**
-  The paired V3 helper remains; below V3, safe std `f64::mul_add` owns feature
-  selection. Rust 1.99.1 executed its FMA3 builtin with AVX2 disabled and passed
-  the independent fixtures. The no-FMA case now uses std's software fallback;
-  no quiet speed or isolated first-use result is available. Hold this
-  separately from the measured exp-clamp tradeoff. No structural guard or
-  proof API was weakened (68320dbd).
+- **Below-V3 std f64 prototype (2026-11-07, not integrated):** safe std
+  `f64::mul_add` executed FMA3 with AVX2 disabled and passed the independent
+  fixtures. Production candidate 68320dbd changed six x86 scalar-f64 codegen
+  probes, so the unchanged assembly gate rejected it; quiet hardware/no-FMA
+  costs are also missing. The optional std-delegate benchmark arm and the
+  preserved candidate remain reviewable. Production FMA stays on main's
+  implementation until the codegen expectation and costs are accepted.
+  No structural guard, proof API or codegen exception was weakened.
 
 - **Portable FMA rounding and Miri (2026-10-12, fixed locally; CI pending):**
   The all-target f32 round-to-odd fallback fixes the independent subnormal
