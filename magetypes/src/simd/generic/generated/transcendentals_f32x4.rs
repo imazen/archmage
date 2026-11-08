@@ -96,8 +96,7 @@ impl<T: F32x4Convert> f32x4<T> {
         let upper = splat_f32::<T>(self.1, 127.99);
         let x = if core::any::TypeId::of::<T>() == core::any::TypeId::of::<archmage::ScalarToken>()
         {
-            let x = Self::blend(self.simd_lt(lower), lower, self);
-            Self::blend(self.simd_gt(upper), upper, x)
+            Self::from_array_t(self.1, self.to_array().map(|x| x.clamp(-126.0, 127.99)))
         } else {
             upper.min(lower.max(self))
         };
@@ -286,8 +285,7 @@ impl<T: F32x4Convert> f32x4<T> {
         // Clamp to prevent overflow in intermediate calculations
         let clamped =
             if core::any::TypeId::of::<T>() == core::any::TypeId::of::<archmage::ScalarToken>() {
-                let x = Self::blend(self.simd_lt(underflow_limit), underflow_limit, self);
-                Self::blend(self.simd_gt(overflow_limit), overflow_limit, x)
+                Self::from_array_t(self.1, self.to_array().map(|x| x.clamp(-126.0, 128.0)))
             } else {
                 overflow_limit.min(underflow_limit.max(self))
             };
