@@ -124,9 +124,10 @@ On identical accepted Gamma pairs excluding base zero and exponent zero:
 | pow_lowp / unchecked | 93411.466 | 93408.852 |
 | std f32 power | 0.502 | 0.502 |
 
-Zero rails are a separate semantic difference, not silently removed failures:
-checked midp/lowp can differ at admitted zero inputs, and unchecked midp has
-large zero-rail errors. The raw report retains the full accepted corpus and
+Zero-rail rows remain in the full semantic comparison. Checked midp/lowp can
+differ at admitted zero inputs. Unchecked midp promises no edge-case handling;
+its large zero-rail errors do not establish an accuracy-guarantee violation.
+The raw report retains the full accepted corpus and
 separate zero-rail-free summaries for every method and domain. Across nonzero
 accepted inputs, native V3 midp matches the canonical graph in this corpus;
 scalar midp follows its existing separate-rounding graph. The const design
