@@ -24,13 +24,18 @@ done
 exit 2
 ''')
 curl.chmod(0o755)
-destination = case / 'install'
-env = dict(os.environ, PATH=str(fake) + os.pathsep + os.environ['PATH'],
-           WASMTIME_CI_HOME=str(destination))
-with (case / 'rejection.log').open('w') as log:
-    run = subprocess.run(['bash', str(root / 'xtask/install-wasmtime-ci.sh')],
-                         env=env, stdout=log, stderr=subprocess.STDOUT)
-assert run.returncode != 0, 'wrong bytes passed the integrity check'
-assert not (destination / 'bin/wasmtime').exists(), 'wrong bytes reached installation'
-assert 'FAILED' in (case / 'rejection.log').read_text()
-print('wrong-archive integrity control passed:', case / 'rejection.log')
+for tool, home_var, script in [
+    ('wasmtime', 'WASMTIME_CI_HOME', 'install-wasmtime-ci.sh'),
+    ('cargo-semver-checks', 'SEMVER_CI_HOME', 'install-semver-ci.sh'),
+]:
+    destination = case / tool
+    env = dict(os.environ, PATH=str(fake) + os.pathsep + os.environ['PATH'])
+    env[home_var] = str(destination)
+    rejection = case / (tool + '-rejection.log')
+    with rejection.open('w') as log:
+        run = subprocess.run(['bash', str(root / 'xtask' / script)],
+                             env=env, stdout=log, stderr=subprocess.STDOUT)
+    assert run.returncode != 0, 'wrong bytes passed the integrity check'
+    assert not (destination / 'bin' / tool).exists(), 'wrong bytes reached installation'
+    assert 'FAILED' in rejection.read_text()
+    print('wrong-archive integrity control passed:', rejection)

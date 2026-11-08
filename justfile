@@ -637,4 +637,5 @@ powf-replacement-codegen-audit assembly output *options:
 
 wasmtime-ci-installer-check:
     bash -n xtask/install-wasmtime-ci.sh
+    bash -n xtask/install-semver-ci.sh
     python3 -B xtask/test_wasmtime_installer.py

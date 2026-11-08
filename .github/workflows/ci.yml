@@ -1161,9 +1161,11 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Install semver checker
-        uses: taiki-e/install-action@v2
-        with:
-          tool: cargo-semver-checks@0.51.0
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 -B xtask/test_wasmtime_installer.py
+          bash xtask/install-semver-ci.sh
 
       - name: Check semver and concrete target features
         run: python3 -B xtask/check_semver.py ${{ matrix.crate }}
