@@ -4,6 +4,11 @@ Separate multiply/add is a viable numerical choice for a backend-dependent
 legacy quality family on the bounded Gamma domain. It cannot implement the
 BitExact contract. Use native FMA when available: the Apple M6 experiment
 finds separate arithmetic slower in every resource-clean NEON cell.
+If both rounding graphs satisfy a selected BackendDependent contract,
+`mul_add_relaxed` can express that choice directly: strict WASM separates,
+relaxed WASM follows its engine, and native FMA-capable tiers fuse. A fusion
+correction probe is needed for BitExact, not simply to admit either graph.
+Whole-operation dispatch is still an independent policy decision.
 No production graph, existing fixture, accuracy threshold or default changes.
 The [preset specification](../../docs/POWF.md#proposed-quality-and-portability-presets)
 states range, validation and execution explicitly; new FAST/HIGHP options

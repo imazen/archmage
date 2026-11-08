@@ -116,6 +116,16 @@ scalar backend; `ONE_ULP` would be an additional quantitative guarantee that
 requires evidence beyond finite startup screening. Direct std delegation
 cannot satisfy BitExact merely by passing startup samples.
 
+When a BackendDependent quality/range contract admits both rounding graphs,
+its Horner steps can use `mul_add_relaxed`. Strict WASM then uses separate
+arithmetic and relaxed WASM may fuse according to its engine. That mode need
+not pay a fusion-correction probe/branch merely to force one rounding choice.
+BitExact retains its probe and exact fallback. Whole-operation Automatic/Caller
+selection remains independent; the const portability choice should remove the
+unused arithmetic-policy path during monomorphization. Hardware FMA is preferred
+where supported: the measured M6 NEON separate graphs cost more than the fused
+graphs. These BackendDependent combinations remain experimental.
+
 Validation defaults to `Checked` in every restricted preset. A separately
 named `AssumeValid` override could remove input checks, with the same numerical
 preconditions and zero rules. Invalid inputs would have unspecified numerical
