@@ -1,0 +1,160 @@
+#!/usr/bin/env python3
+"""Independent rational mirror for the bounded fused powf expression graph.
+
+No candidate library or std/libm pow result supplies expected bits. FMA reuses
+the exact-rational IEEE oracle in fma_vectors.py. Existing expectations are
+checked, never rewritten implicitly. MPFR accuracy studies remain separate.
+"""
+import argparse
+from fractions import Fraction
+from functools import lru_cache
+import math
+from pathlib import Path
+import random
+import struct
+import fma_vectors as fm
+
+ROOT = Path(__file__).resolve().parents[1]
+OUTPUT = ROOT / 'magetypes/src/powf/test_vectors.rs'
+ONE, INF = 0x3f800000, 0x7f800000
+
+
+def bits(value):
+    return struct.unpack('<I', struct.pack('<f', value))[0]
+
+
+def value(raw):
+    return struct.unpack('<f', struct.pack('<I', raw))[0]
+
+
+@lru_cache(maxsize=65536)
+def fma(a, b, c):
+    return fm.expected((a, b, c), 23, 8)
+
+
+def add(a, b):
+    return fma(a, ONE, b)
+
+
+def sub(a, b):
+    return add(a, b ^ 0x80000000)
+
+
+def mul(a, b):
+    return fma(a, b, (a ^ b) & 0x80000000)
+
+
+def divide(a, b):
+    q = Fraction.from_float(value(a)) / Fraction.from_float(value(b))
+    sign = 0x80000000 if q < 0 else 0
+    if not q:
+        return (a ^ b) & 0x80000000
+    q = abs(q)
+    e = q.numerator.bit_length() - q.denominator.bit_length()
+    if q < fm.power(e):
+        e -= 1
+    quantum = max(e, -126) - 23
+    scaled = q / fm.power(quantum)
+    n, r = divmod(scaled.numerator, scaled.denominator)
+    n += 2 * r > scaled.denominator or (2 * r == scaled.denominator and n & 1)
+    if n >= 1 << 24:
+        n >>= 1
+        quantum += 1
+    exponent = quantum + 23
+    if exponent > 127:
+        return sign | INF
+    if n < 1 << 23:
+        return sign | n
+    return sign | ((exponent + 127) << 23) | (n - (1 << 23))
+
+
+def horner(x, coefficients):
+    p = bits(coefficients[-1])
+    for c in reversed(coefficients[:-1]):
+        p = fma(p, x, bits(c))
+    return p
+
+
+def mirror(base, exponent, zero=False, gamma=False):
+    """Return (result bits, error code), codes match the documented stages."""
+    magnitude = exponent & 0x7fffffff
+    if magnitude >= INF or (magnitude != 0 and magnitude < 0x00800000):
+        return 0, 1
+    b, n = value(base), value(exponent)
+    if gamma and not 0 <= n <= 4:
+        return 0, 1
+    if gamma and base != 0 and not 2 ** -16 <= b <= 2 ** 16:
+        return 0, 2
+    if base & 0x80000000 or (base & INF) == INF or base < 0x00800000:
+        if zero and base == 0 and n >= 0:
+            return ONE if n == 0 else 0, 0
+        return 0, 2
+    adjusted = (base + ONE - 0x3f3504f3) & 0xffffffff
+    signed = adjusted - 0x100000000 if adjusted & 0x80000000 else adjusted
+    whole = (signed >> 23) - 127
+    mantissa = (adjusted & 0x7fffff) + 0x3f3504f3
+    y = divide(sub(mantissa, ONE), add(mantissa, ONE))
+    p = horner(mul(y, y), [2.88539, .96180076, .57697445, .43441197])
+    t = mul(fma(p, y, bits(float(whole))), exponent)
+    if not -126 <= value(t) <= 127.5:
+        return 0, 3
+    xi = min(round(value(t)), 127)
+    p = horner(sub(t, bits(float(xi))), [1, math.log(2), .24022646, .055504545, .009618055, .00133337, .00015447])
+    return mul(p, (xi + 127) << 23), 0
+
+
+def cases():
+    bases = [0, 0x80000000, 1, 0x007fffff, 0x00800000, 0x00800001,
+             ONE - 1, ONE, ONE + 1, 0x3f3504f3, 0x3fb504f3,
+             bits(2.), bits(4.), *[bits(2. ** e) + delta for e in [-16, 16] for delta in [-1, 0, 1]], 0x7f7ffffe, 0x7f7fffff,
+             INF, 0xff800000, 0x7fc00000, 0x7f800001, 0xffc01234, 0xbf800000]
+    exponents = [0, 0x80000000, 1, 0x007fffff, INF, 0x7fc00000,
+                 *map(bits, [1., -1., .5, 2., 2.4, 1 / 2.4, .1593017578125,
+                            1 / .1593017578125, 78.84375, 1 / 78.84375, -126., 127.5]),
+                 bits(-126.) + 1, bits(127.5) + 1, bits(4.) - 1, bits(4.), bits(4.) + 1]
+    rows = [(b, n) for b in bases for n in exponents]
+    rng = random.Random(0x504f5746)
+    rows += [(rng.randrange(0x00800000, INF), bits(rng.choice([.5, 1 / 2.4, 2.4, 78.84375]))) for _ in range(128)]
+    return rows
+
+
+def gamma_range_certificate():
+    offset = ONE - 0x3f3504f3
+    assert ((bits(2. ** -16) + offset) >> 23) - 127 == -16
+    assert ((bits(2. ** 16) + offset) >> 23) - 127 == 16
+    low, high = 0x3f3504f3, 0x3fb504f2
+    numerator = max(abs(value(sub(low, ONE))), abs(value(sub(high, ONE))))
+    y_bound = divide(bits(numerator), add(low, ONE))
+    assert value(y_bound) < .25
+    polynomial_bound = horner(mul(y_bound, y_bound), [2.88539, .96180076, .57697445, .43441197])
+    assert value(polynomial_bound) < 2.96
+    log_bound = fma(polynomial_bound, y_bound, bits(16.))
+    assert value(log_bound) < 17.
+    argument_bound = mul(log_bound, bits(4.))
+    assert value(argument_bound) < 68.
+    return argument_bound
+
+
+def render():
+    gamma_range_certificate()
+    output = ['// Generated by xtask/powf_vectors.py with independent rational RNE arithmetic.',
+              '// [base bits, exponent bits, result bits, rejection stage, domain profile].',
+              '#[rustfmt::skip]', f'pub static POWF: [[u32; 5]; {3 * len(cases())}] = [']
+    for domain in [0, 1, 2]:
+        for b, n in cases():
+            result, error = mirror(b, n, domain != 0, domain == 2)
+            output.append(f'    [0x{b:08x}, 0x{n:08x}, 0x{result:08x}, {error}, {domain}],')
+    output.append('];')
+    return '\n'.join(output) + '\n'
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--check', action='store_true')
+    args = parser.parse_args()
+    contents = render()
+    if args.check:
+        if OUTPUT.read_text() != contents:
+            raise SystemExit('Powf fixtures differ; inspect the contract before regeneration')
+    else:
+        OUTPUT.write_text(contents)

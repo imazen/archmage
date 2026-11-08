@@ -340,6 +340,26 @@ impl<T: F32x4Backend> f32x4<T> {
         self.mul_sub_relaxed(a, b)
     }
 
+    /// Bounded, bit-consistent power in the default positive-normal domain.
+    /// See [`crate::powf`] for rejection, rounding and accuracy contracts.
+    #[inline(always)]
+    pub fn try_powf(self, exponent: f32) -> Result<Self, crate::powf::PowfError> {
+        self.try_powf_with(exponent, crate::powf::PowfOptions::default())
+    }
+
+    /// Bounded power with explicit domain and execution selection.
+    /// Any rejected lane rejects the whole vector. Automatic selection
+    /// may enter a more capable backend for the complete power graph.
+    #[inline(always)]
+    pub fn try_powf_with(
+        self,
+        exponent: f32,
+        options: crate::powf::PowfOptions,
+    ) -> Result<Self, crate::powf::PowfError> {
+        crate::powf::try_powf_token_with(self.1, self.to_array(), exponent, options)
+            .map(|result| Self::from_array_t(self.1, result))
+    }
+
     // ====== Comparisons ======
 
     /// Lane-wise equality (returns mask).

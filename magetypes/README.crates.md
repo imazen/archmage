@@ -332,3 +332,5 @@ MIT OR Apache-2.0
 [imageflow-dotnet]: https://github.com/imazen/imageflow-dotnet
 [imageflow-node]: https://github.com/imazen/imageflow-node
 [imageflow-go]: https://github.com/imazen/imageflow-go
+
+Bounded, bit-consistent f32 power is described in the [powf contract](../docs/POWF.md).

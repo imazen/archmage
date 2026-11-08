@@ -12,6 +12,7 @@ import random
 
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / 'magetypes/tests/common/fma_vectors.rs'
+PROBE_OUTPUT = ROOT / 'magetypes/src/powf/std_probe_vectors.rs'
 
 
 def power(exponent):
@@ -128,8 +129,17 @@ if __name__ == '__main__':
     parser.add_argument('--check', action='store_true')
     args = parser.parse_args()
     contents = render()
+    probe = contents.split('#[rustfmt::skip]\npub const F64:', 1)[0]
     if args.check:
         if OUTPUT.read_text() != contents:
             raise SystemExit('FMA fixtures differ; review before regenerating expectations')
+        if PROBE_OUTPUT.read_text() != probe:
+            raise SystemExit('Runtime FMA screen differs from the independent corpus')
+        # The bounded-power graph uses this oracle for every fused step.
+        # Keep its independent corpus synchronized under the existing CI gate.
+        import powf_vectors
+        if powf_vectors.OUTPUT.read_text() != powf_vectors.render():
+            raise SystemExit('Bounded powf graph fixtures differ')
     else:
         OUTPUT.write_text(contents)
+        PROBE_OUTPUT.write_text(probe)

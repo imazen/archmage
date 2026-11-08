@@ -12,15 +12,17 @@
 #   pub modules                                 2
 #   pub types (struct/enum/trait/alias)         1
 #   free functions                             29
-#   trait roster entries (type × trait)        14
+#   inherent methods                            5
+#   trait roster entries (type × trait)        19
 #
 # per-module pub lines:
 #   (root)                            2
 #   bypass_adversarial                1
 #   nostd_math                       21
+#   powf                              5
 #   simd                              8
 
-## items (25 lines)
+## items (30 lines)
 
 pub fn nostd_math::cbrt_lowp_f32(f32) -> f32
 pub fn nostd_math::cbrt_midp_f32(f32) -> f32
@@ -43,14 +45,24 @@ pub fn nostd_math::roundevenf(f32) -> f32
 pub fn nostd_math::roundf(f32) -> f32
 pub fn nostd_math::sqrt(f64) -> f64
 pub fn nostd_math::sqrtf(f32) -> f32
+pub fn powf::PowfDomain::assert_fields_are_eq(&self)
+pub fn powf::PowfError::assert_fields_are_eq(&self)
+pub fn powf::PowfErrorKind::assert_fields_are_eq(&self)
+pub fn powf::PowfExecution::assert_fields_are_eq(&self)
+pub fn powf::PowfOptions::assert_fields_are_eq(&self)
 pub fn simd::i8x1::assert_fields_are_eq(&self) [also: simd::i16x1, simd::i32x1, simd::i64x1, simd::u16x1, simd::u32x1, simd::u64x1, simd::u8x1]
 pub mod bypass_adversarial
 pub mod nostd_math
 pub struct bypass_adversarial::BypassAdversarialProofs
 
-## trait impls (11 types)
+## trait impls (16 types)
 
 bypass_adversarial::BypassAdversarialProofs: Clone, Copy, Debug, TrivialClone
+powf::PowfDomain: TrivialClone
+powf::PowfError: TrivialClone
+powf::PowfErrorKind: TrivialClone
+powf::PowfExecution: TrivialClone
+powf::PowfOptions: TrivialClone
 simd::f32x1: TrivialClone
 simd::f64x1: TrivialClone
 simd::i16x1: TrivialClone
