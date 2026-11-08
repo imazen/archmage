@@ -24,6 +24,39 @@ fn expected_kind(code: u32) -> PowfErrorKind {
     }
 }
 
+// Runtime dispatch exists only in the test harness. Every arm instantiates
+// one literal options integer all the way through the public API.
+macro_rules! const_options {
+    ($options:expr, |$flags:ident| $body:expr) => {{
+        match ($options.domain, $options.execution) {
+            (PowfDomain::PositiveNormal, PowfExecution::Automatic) => {
+                const $flags: u32 = 0;
+                $body
+            }
+            (PowfDomain::NonNegativeNormal, PowfExecution::Automatic) => {
+                const $flags: u32 = 1;
+                $body
+            }
+            (PowfDomain::Gamma, PowfExecution::Automatic) => {
+                const $flags: u32 = 2;
+                $body
+            }
+            (PowfDomain::PositiveNormal, PowfExecution::Caller) => {
+                const $flags: u32 = 4;
+                $body
+            }
+            (PowfDomain::NonNegativeNormal, PowfExecution::Caller) => {
+                const $flags: u32 = 5;
+                $body
+            }
+            (PowfDomain::Gamma, PowfExecution::Caller) => {
+                const $flags: u32 = 6;
+                $body
+            }
+        }
+    }};
+}
+
 macro_rules! check {
     ($token:expr) => {{
         let token = $token;
@@ -31,7 +64,7 @@ macro_rules! check {
             let input = [0.0, 1.0, 4.0, 16.0];
             assert_eq!(
                 crate::simd::generic::f32x4::from_array_t(token, input)
-                    .try_powf_with(0.5, options(domain))
+                    .try_powf_runtime(0.5, options(domain))
                     .unwrap()
                     .to_array()
                     .map(f32::to_bits),
@@ -83,8 +116,18 @@ macro_rules! check {
                                 row[2]
                             });
                             assert_eq!(
+                                const_options!(opts, |FLAGS| {
+                                    crate::simd::generic::$ty::from_array_t(token, input)
+                                        .try_powf_with::<FLAGS>(exponent)
+                                })
+                                .unwrap()
+                                .to_array()
+                                .map(f32::to_bits),
+                                expected
+                            );
+                            assert_eq!(
                                 crate::simd::generic::$ty::from_array_t(token, input)
-                                    .try_powf_with(exponent, opts)
+                                    .try_powf_runtime(exponent, opts)
                                     .unwrap()
                                     .to_array()
                                     .map(f32::to_bits),
@@ -106,7 +149,24 @@ macro_rules! check {
             macro_rules! width {
                 ($ty:ident, $width:literal) => {{
                     let result = crate::simd::generic::$ty::from_array_t(token, [b; $width])
-                        .try_powf_with(n, options);
+                        .try_powf_runtime(n, options);
+                    for execution in [PowfExecution::Caller, PowfExecution::Automatic] {
+                        let opts = PowfOptions {
+                            execution,
+                            ..options
+                        };
+                        let constant =
+                            const_options!(opts, |FLAGS| crate::simd::generic::$ty::from_array_t(
+                                token,
+                                [b; $width]
+                            )
+                            .try_powf_with::<FLAGS>(n));
+                        assert_eq!(
+                            constant.map(|v| v.to_array().map(f32::to_bits)),
+                            result.map(|v| v.to_array().map(f32::to_bits)),
+                            "const flags base={base:08x} exponent={exponent:08x}"
+                        );
+                    }
                     if error == 0 {
                         assert_eq!(
                             result.unwrap().to_array().map(f32::to_bits),
@@ -142,10 +202,23 @@ fn scalar_array_and_auto_have_identical_graph() {
                 execution,
                 ..options(allow_zero)
             };
-            let result = try_powf_with(b, n, options);
+            let result = try_powf_runtime(b, n, options);
+            let constant = const_options!(options, |FLAGS| try_powf_with::<FLAGS>(b, n));
+            assert_eq!(constant.map(f32::to_bits), result.map(f32::to_bits));
+            assert_eq!(
+                const_options!(options, |FLAGS| crate::simd::scalar::f32x1(b)
+                    .try_powf_with::<FLAGS>(n))
+                .map(|v| v.0.to_bits()),
+                result.map(f32::to_bits)
+            );
+            assert_eq!(
+                const_options!(options, |FLAGS| try_powf_array_with::<FLAGS, 1>([b], n))
+                    .map(|v| v.map(f32::to_bits)),
+                result.map(|v| [v.to_bits()])
+            );
             assert_eq!(
                 crate::simd::scalar::f32x1(b)
-                    .try_powf_with(n, options)
+                    .try_powf_runtime(n, options)
                     .map(|v| v.0.to_bits()),
                 result.map(f32::to_bits),
             );
@@ -156,7 +229,7 @@ fn scalar_array_and_auto_have_identical_graph() {
                     "base={base:08x}, exponent={exponent:08x}"
                 );
                 assert_eq!(
-                    try_powf_array_with([b; 4], n, options)
+                    try_powf_array_runtime([b; 4], n, options)
                         .unwrap()
                         .map(f32::to_bits),
                     [expected; 4]
@@ -179,38 +252,38 @@ fn mixed_lanes_reject_atomically_with_exact_mask() {
     let options = options(0);
     let input = [2.0, f32::NAN, f32::from_bits(1), -1.0];
     assert_eq!(
-        try_powf_array_with(input, 2.4, options).unwrap_err(),
+        try_powf_array_runtime(input, 2.4, options).unwrap_err(),
         PowfError {
             kind: PowfErrorKind::InvalidBase,
             lane_mask: 0b1110
         }
     );
     assert_eq!(
-        try_powf_array_with([2.0, 4.0, f32::MAX, f32::MIN_POSITIVE], 2.0, options).unwrap_err(),
+        try_powf_array_runtime([2.0, 4.0, f32::MAX, f32::MIN_POSITIVE], 2.0, options).unwrap_err(),
         PowfError {
             kind: PowfErrorKind::OutsideApproximationRange,
             lane_mask: 0b1100
         }
     );
     assert_eq!(
-        try_powf_array_with([2.0; 4], f32::NAN, options).unwrap_err(),
+        try_powf_array_runtime([2.0; 4], f32::NAN, options).unwrap_err(),
         PowfError {
             kind: PowfErrorKind::InvalidExponent,
             lane_mask: 0b1111
         }
     );
     assert_eq!(
-        try_powf_array_with([1.0; 3], 1.0, options)
+        try_powf_array_runtime([1.0; 3], 1.0, options)
             .unwrap_err()
             .kind,
         PowfErrorKind::UnsupportedWidth
     );
     assert_eq!(
-        try_powf_array_with([], 1.0, options).unwrap_err().kind,
+        try_powf_array_runtime([], 1.0, options).unwrap_err().kind,
         PowfErrorKind::UnsupportedWidth
     );
     assert_eq!(
-        try_powf_array_with([1.0; 32], 1.0, options).unwrap_err(),
+        try_powf_array_runtime([1.0; 32], 1.0, options).unwrap_err(),
         PowfError {
             kind: PowfErrorKind::UnsupportedWidth,
             lane_mask: 0
@@ -261,9 +334,32 @@ macro_rules! payloads {
                             let lane = payload as usize % $n;
                             let mut input = [1.0; $n];
                             input[lane] = nan;
+                            let opts = options($domain);
+                            let constant = const_options!(opts, |FLAGS| {
+                                crate::simd::generic::$ty::from_array_t(token, input)
+                                    .try_powf_with::<FLAGS>(2.4)
+                            });
+                            assert_eq!(
+                                constant.unwrap_err(),
+                                PowfError {
+                                    kind: PowfErrorKind::InvalidBase,
+                                    lane_mask: 1 << lane
+                                }
+                            );
+                            let constant = const_options!(opts, |FLAGS| {
+                                crate::simd::generic::$ty::from_array_t(token, [1.0; $n])
+                                    .try_powf_with::<FLAGS>(nan)
+                            });
+                            assert_eq!(
+                                constant.unwrap_err(),
+                                PowfError {
+                                    kind: PowfErrorKind::InvalidExponent,
+                                    lane_mask: ((1_u32 << $n) - 1) as u16
+                                }
+                            );
                             assert_eq!(
                                 crate::simd::generic::$ty::from_array_t(token, input)
-                                    .try_powf_with(2.4, options($domain))
+                                    .try_powf_runtime(2.4, options($domain))
                                     .unwrap_err(),
                                 PowfError {
                                     kind: PowfErrorKind::InvalidBase,
@@ -275,7 +371,7 @@ macro_rules! payloads {
                             );
                             assert_eq!(
                                 crate::simd::generic::$ty::from_array_t(token, [1.0; $n])
-                                    .try_powf_with(nan, options($domain))
+                                    .try_powf_runtime(nan, options($domain))
                                     .unwrap_err(),
                                 PowfError {
                                     kind: PowfErrorKind::InvalidExponent,
@@ -353,4 +449,59 @@ fn nan_sign_payload_and_subnormal_families_reject_with_exact_masks() {
         .unwrap();
     assert!(stride > 0);
     require_tier!(run_payloads, stride);
+}
+
+#[test]
+fn const_array_width_and_rejection_precedence() {
+    const FLAGS: u32 = PowfOptions::GAMMA | PowfOptions::CALLER;
+    assert_eq!(
+        try_powf_array_with::<FLAGS, 0>([], f32::NAN).unwrap_err(),
+        PowfError {
+            kind: PowfErrorKind::UnsupportedWidth,
+            lane_mask: 0
+        }
+    );
+    assert_eq!(
+        try_powf_array_with::<FLAGS, 3>([1.0; 3], f32::NAN).unwrap_err(),
+        PowfError {
+            kind: PowfErrorKind::UnsupportedWidth,
+            lane_mask: 0
+        }
+    );
+    assert_eq!(
+        try_powf_array_with::<FLAGS, 32>([1.0; 32], f32::NAN).unwrap_err(),
+        PowfError {
+            kind: PowfErrorKind::UnsupportedWidth,
+            lane_mask: 0
+        }
+    );
+    assert_eq!(
+        try_powf_array_with::<FLAGS, 4>([f32::NAN; 4], f32::NAN).unwrap_err(),
+        PowfError {
+            kind: PowfErrorKind::InvalidExponent,
+            lane_mask: 15
+        }
+    );
+    assert_eq!(
+        try_powf_array_with::<{ PowfOptions::CALLER }, 4>(
+            [2.0, f32::NAN, f32::from_bits(1), -1.0],
+            2.4
+        )
+        .unwrap_err(),
+        PowfError {
+            kind: PowfErrorKind::InvalidBase,
+            lane_mask: 14
+        }
+    );
+    assert_eq!(
+        try_powf_array_with::<{ PowfOptions::CALLER }, 4>(
+            [2.0, 4.0, f32::MAX, f32::MIN_POSITIVE],
+            2.0
+        )
+        .unwrap_err(),
+        PowfError {
+            kind: PowfErrorKind::OutsideApproximationRange,
+            lane_mask: 12
+        }
+    );
 }

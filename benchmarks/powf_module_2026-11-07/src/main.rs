@@ -28,7 +28,7 @@ fn scalar(arm: usize, input: &[f32], output: &mut [f32], chain: bool, options: P
         let x = if chain { acc } else { base };
         let y = match arm {
             0 => prevalidated_call4(archmage::ScalarToken, [x; 4], n, options.domain)[0],
-            1 => magetypes::powf::try_powf_with(
+            1 => magetypes::powf::try_powf_runtime(
                 x,
                 n,
                 PowfOptions {
@@ -37,7 +37,7 @@ fn scalar(arm: usize, input: &[f32], output: &mut [f32], chain: bool, options: P
                 },
             )
             .unwrap(),
-            2 => magetypes::powf::try_powf_with(
+            2 => magetypes::powf::try_powf_runtime(
                 x,
                 n,
                 PowfOptions {

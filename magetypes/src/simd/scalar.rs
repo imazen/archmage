@@ -20,14 +20,23 @@ impl f32x1 {
         crate::powf::try_powf(self.0, exponent).map(Self)
     }
 
+    /// Bounded power with integer const flags; see [`crate::powf`].
+    #[inline(always)]
+    pub fn try_powf_with<const OPTIONS: u32>(
+        self,
+        exponent: f32,
+    ) -> Result<Self, crate::powf::PowfError> {
+        crate::powf::try_powf_with::<OPTIONS>(self.0, exponent).map(Self)
+    }
+
     /// Bounded power with explicit domain/execution options; see [`crate::powf`].
     #[inline]
-    pub fn try_powf_with(
+    pub fn try_powf_runtime(
         self,
         exponent: f32,
         options: crate::powf::PowfOptions,
     ) -> Result<Self, crate::powf::PowfError> {
-        crate::powf::try_powf_with(self.0, exponent, options).map(Self)
+        crate::powf::try_powf_runtime(self.0, exponent, options).map(Self)
     }
 
     /// Number of lanes (always 1 for scalar).

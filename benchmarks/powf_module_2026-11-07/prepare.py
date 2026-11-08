@@ -46,8 +46,8 @@ fn core{width}<T: magetypes::simd::backends::F32x{width}Convert, const ARM:usize
         let x=if chain {{acc}} else {{*base}};
         let y=match ARM {{
             0 => prevalidated_call{width}(token,x,exponent,options.domain),
-            1 => V::from_array_t(token,x).try_powf_with(exponent,PowfOptions {{execution:PowfExecution::Caller,..options}}).unwrap().to_array(),
-            2 => V::from_array_t(token,x).try_powf_with(exponent,PowfOptions {{execution:PowfExecution::Automatic,..options}}).unwrap().to_array(),
+            1 => V::from_array_t(token,x).try_powf_runtime(exponent,PowfOptions {{execution:PowfExecution::Caller,..options}}).unwrap().to_array(),
+            2 => V::from_array_t(token,x).try_powf_runtime(exponent,PowfOptions {{execution:PowfExecution::Automatic,..options}}).unwrap().to_array(),
             _ => unreachable!(),
         }};
         let y=if chain {{y.map(|x|x.abs()*0.125+0.5)}} else {{y}};
@@ -131,7 +131,7 @@ for width in [4, 8, 16]:
 fn reject{width}<const AUTO:bool>(token:Token,input:&[[f32;{width}]],output:&mut [u16]) {{
     let options=PowfOptions {{domain:PowfDomain::Gamma,execution:if AUTO {{PowfExecution::Automatic}} else {{PowfExecution::Caller}}}};
     for (x,out) in input.iter().zip(output) {{
-        let result=magetypes::simd::generic::f32x{width}::from_array_t(token,*x).try_powf_with(std::hint::black_box(2.4),options);
+        let result=magetypes::simd::generic::f32x{width}::from_array_t(token,*x).try_powf_runtime(std::hint::black_box(2.4),options);
         *out=match result {{Ok(_)=>0,Err(e)=>{{assert_eq!(e.kind,magetypes::powf::PowfErrorKind::InvalidBase);e.lane_mask}}}};
     }}
 }}

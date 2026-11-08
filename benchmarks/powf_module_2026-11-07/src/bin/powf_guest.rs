@@ -151,7 +151,7 @@ mod guest {
             let x = if chain { acc } else { base };
             let y = match arm {
                 0 => prevalidated_call4(archmage::ScalarToken, [x; 4], n, options.domain)[0],
-                1 => magetypes::powf::try_powf_with(
+                1 => magetypes::powf::try_powf_runtime(
                     x,
                     n,
                     PowfOptions {
@@ -160,7 +160,7 @@ mod guest {
                     },
                 )
                 .unwrap(),
-                2 => magetypes::powf::try_powf_with(
+                2 => magetypes::powf::try_powf_runtime(
                     x,
                     n,
                     PowfOptions {

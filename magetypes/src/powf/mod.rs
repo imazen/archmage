@@ -8,14 +8,15 @@
 //! Existing `pow_lowp`/`pow_midp` methods retain their existing behavior.
 //!
 //! ```
-//! use magetypes::powf::{try_powf, try_powf_with, PowfDomain, PowfOptions};
+//! use magetypes::powf::{try_powf, try_powf_with, PowfOptions};
 //! assert_eq!(try_powf(4.0, 0.5).unwrap(), 2.0);
 //! assert!(try_powf(f32::NAN, 2.4).is_err());
-//! let options = PowfOptions { domain: PowfDomain::NonNegativeNormal, ..PowfOptions::default() };
-//! assert_eq!(try_powf_with(0.0, 2.4, options).unwrap(), 0.0);
+//! assert_eq!(try_powf_with::<{ PowfOptions::NON_NEGATIVE_NORMAL }>(0.0, 2.4).unwrap(), 0.0);
 //! ```
 
+pub(crate) mod const_api;
 mod dispatch;
+pub use const_api::{try_powf_array_with, try_powf_with};
 mod graph;
 mod std_probe;
 #[cfg(test)]
@@ -51,13 +52,33 @@ pub enum PowfExecution {
     Caller,
 }
 
-/// Numerical domain and execution selection for bounded f32 power.
+/// Const flags for bounded power, plus a runtime adapter for dynamic options.
+///
+/// Use the associated integer constants with `try_powf_with::<FLAGS>`. Combine
+/// one domain with an execution flag using bitwise OR. Reserved flags and the
+/// reserved domain encoding are rejected at compile time. The fields serve
+/// [`try_powf_runtime`] when options are only known at runtime.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct PowfOptions {
     /// Accepted base domain.
     pub domain: PowfDomain,
     /// Whether a caller without native FMA can upgrade for the whole operation.
     pub execution: PowfExecution,
+}
+
+impl PowfOptions {
+    /// Default const flags: positive normal bases, automatic execution.
+    pub const DEFAULT: u32 = 0;
+    /// Admit strictly positive finite normal bases.
+    pub const POSITIVE_NORMAL: u32 = 0;
+    /// Also admit positive zero with a nonnegative exponent.
+    pub const NON_NEGATIVE_NORMAL: u32 = 1;
+    /// Admit positive zero or [2^-16, 2^16], with exponent in [0, 4].
+    pub const GAMMA: u32 = 2;
+    /// Select an available backend for the complete operation.
+    pub const AUTOMATIC: u32 = 0;
+    /// Preserve the caller's backend; scalar uses exact software FMA.
+    pub const CALLER: u32 = 4;
 }
 
 /// Reason a complete vector was rejected.
@@ -97,7 +118,7 @@ impl std::error::Error for PowfError {}
 /// Bounded scalar power using the default positive-normal domain.
 #[inline(always)]
 pub fn try_powf(base: f32, exponent: f32) -> Result<f32, PowfError> {
-    try_powf_with(base, exponent, PowfOptions::default())
+    try_powf_with::<{ PowfOptions::DEFAULT }>(base, exponent)
 }
 
 /// Bounded scalar power with explicit domain/execution options.
@@ -105,8 +126,8 @@ pub fn try_powf(base: f32, exponent: f32) -> Result<f32, PowfError> {
 /// The scalar entry shares the same graph as every vector width, including
 /// range reduction, division, nearest-even splitting and fused Horner steps.
 #[inline(always)]
-pub fn try_powf_with(base: f32, exponent: f32, options: PowfOptions) -> Result<f32, PowfError> {
-    try_powf_array_with([base], exponent, options).map(|result| result[0])
+pub fn try_powf_runtime(base: f32, exponent: f32, options: PowfOptions) -> Result<f32, PowfError> {
+    try_powf_array_runtime([base], exponent, options).map(|result| result[0])
 }
 
 /// Version-independent array boundary for widths 1/4/8 and, with `w512`, 16.
@@ -117,16 +138,16 @@ pub fn try_powf_with(base: f32, exponent: f32, options: PowfOptions) -> Result<f
 /// This bound refers to the approximation's computed argument, not an exact
 /// mathematical power or an independent accuracy guarantee.
 #[inline(always)]
-pub fn try_powf_array_with<const N: usize>(
+pub fn try_powf_array_runtime<const N: usize>(
     bases: [f32; N],
     exponent: f32,
     options: PowfOptions,
 ) -> Result<[f32; N], PowfError> {
-    try_powf_token_with(archmage::ScalarToken, bases, exponent, options)
+    try_powf_token_runtime(archmage::ScalarToken, bases, exponent, options)
 }
 
 #[inline(always)]
-pub(crate) fn try_powf_token_with<T: archmage::SimdToken, const N: usize>(
+pub(crate) fn try_powf_token_runtime<T: archmage::SimdToken, const N: usize>(
     token: T,
     bases: [f32; N],
     exponent: f32,

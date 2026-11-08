@@ -11,7 +11,7 @@ pub(super) const WASM_SOFTWARE: usize = 3;
 pub(super) const STD: usize = 2;
 
 macro_rules! graph {
-    ($core:ident, $entry:ident, $float:ident, $int:ident, $bound:ident, $lanes:literal) => {
+    ($core:ident, $vector:ident, $profile:ident, $entry:ident, $const_entry:ident, $float:ident, $int:ident, $bound:ident, $lanes:literal) => {
         #[inline(always)]
         fn $core<
             T: crate::simd::backends::$bound,
@@ -23,10 +23,28 @@ macro_rules! graph {
             bases: [f32; $lanes],
             exponent: f32,
         ) -> Result<[f32; $lanes], PowfError> {
+            $vector::<T, ARITHMETIC, ZERO, GAMMA>(
+                token,
+                crate::simd::generic::$float::from_array_t(token, bases),
+                exponent,
+            )
+            .map(|result| result.to_array())
+        }
+
+        #[inline(always)]
+        fn $vector<
+            T: crate::simd::backends::$bound,
+            const ARITHMETIC: usize,
+            const ZERO: bool,
+            const GAMMA: bool,
+        >(
+            token: T,
+            input: crate::simd::generic::$float<T>,
+            exponent: f32,
+        ) -> Result<crate::simd::generic::$float<T>, PowfError> {
             use crate::simd::generic::{$float as V, $int as I};
             let sp = |x| V::splat_t(token, x);
             let ip = |x| I::splat_t(token, x);
-            let input = V::from_array_t(token, bases);
             let bits = input.bitcast_to_i32();
             let zero = bits.simd_eq(ip(0));
             let invalid = if GAMMA {
@@ -130,7 +148,41 @@ macro_rules! graph {
             } else {
                 result
             };
-            Ok(result.to_array())
+            Ok(result)
+        }
+
+        // These flags remain const parameters through the generic caller and
+        // native feature entry. No runtime domain enum enters this path.
+        #[inline(always)]
+        pub(super) fn $profile<
+            T: crate::simd::backends::$bound,
+            const ARITHMETIC: usize,
+            const OPTIONS: u32,
+        >(
+            token: T,
+            input: crate::simd::generic::$float<T>,
+            exponent: f32,
+        ) -> Result<crate::simd::generic::$float<T>, PowfError> {
+            match OPTIONS & 3 {
+                0 => $vector::<T, ARITHMETIC, false, false>(token, input, exponent),
+                1 => $vector::<T, ARITHMETIC, true, false>(token, input, exponent),
+                2 => $vector::<T, ARITHMETIC, true, true>(token, input, exponent),
+                _ => unreachable!("validated const domain"),
+            }
+        }
+
+        #[archmage::magetypes(v4x(cfg(avx512)), v4(cfg(avx512)), v3, neon, wasm128, scalar)]
+        pub(super) fn $const_entry<const ARITHMETIC: usize, const OPTIONS: u32>(
+            token: Token,
+            bases: [f32; $lanes],
+            exponent: f32,
+        ) -> Result<[f32; $lanes], PowfError> {
+            $profile::<Token, ARITHMETIC, OPTIONS>(
+                token,
+                crate::simd::generic::$float::from_array_t(token, bases),
+                exponent,
+            )
+            .map(|result| result.to_array())
         }
 
         #[archmage::magetypes(v4x(cfg(avx512)), v4(cfg(avx512)), v3, neon, wasm128, scalar)]
@@ -149,7 +201,37 @@ macro_rules! graph {
     };
 }
 
-graph!(core4, kernel4, f32x4, i32x4, F32x4Convert, 4);
-graph!(core8, kernel8, f32x8, i32x8, F32x8Convert, 8);
+graph!(
+    core4,
+    vector4,
+    profile4,
+    kernel4,
+    kernel4_with,
+    f32x4,
+    i32x4,
+    F32x4Convert,
+    4
+);
+graph!(
+    core8,
+    vector8,
+    profile8,
+    kernel8,
+    kernel8_with,
+    f32x8,
+    i32x8,
+    F32x8Convert,
+    8
+);
 #[cfg(feature = "w512")]
-graph!(core16, kernel16, f32x16, i32x16, F32x16Convert, 16);
+graph!(
+    core16,
+    vector16,
+    profile16,
+    kernel16,
+    kernel16_with,
+    f32x16,
+    i32x16,
+    F32x16Convert,
+    16
+);

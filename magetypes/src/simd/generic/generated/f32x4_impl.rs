@@ -343,20 +343,37 @@ impl<T: F32x4Backend> f32x4<T> {
     /// Bounded, bit-consistent power in the default positive-normal domain.
     /// See [`crate::powf`] for rejection, rounding and accuracy contracts.
     #[inline(always)]
-    pub fn try_powf(self, exponent: f32) -> Result<Self, crate::powf::PowfError> {
-        self.try_powf_with(exponent, crate::powf::PowfOptions::default())
+    pub fn try_powf(self, exponent: f32) -> Result<Self, crate::powf::PowfError>
+    where
+        T: crate::simd::backends::F32x4Convert,
+    {
+        self.try_powf_with::<{ crate::powf::PowfOptions::DEFAULT }>(exponent)
+    }
+
+    /// Bounded power with integer const flags carried through the caller.
+    /// Combine a domain with `PowfOptions::CALLER` or automatic execution;
+    /// see [`crate::powf`]. Any rejected lane rejects the whole vector.
+    #[inline(always)]
+    pub fn try_powf_with<const OPTIONS: u32>(
+        self,
+        exponent: f32,
+    ) -> Result<Self, crate::powf::PowfError>
+    where
+        T: crate::simd::backends::F32x4Convert,
+    {
+        crate::powf::const_api::run4::<T, OPTIONS>(self.1, self, exponent)
     }
 
     /// Bounded power with explicit domain and execution selection.
     /// Any rejected lane rejects the whole vector. Automatic selection
     /// may enter a more capable backend for the complete power graph.
     #[inline(always)]
-    pub fn try_powf_with(
+    pub fn try_powf_runtime(
         self,
         exponent: f32,
         options: crate::powf::PowfOptions,
     ) -> Result<Self, crate::powf::PowfError> {
-        crate::powf::try_powf_token_with(self.1, self.to_array(), exponent, options)
+        crate::powf::try_powf_token_runtime(self.1, self.to_array(), exponent, options)
             .map(|result| Self::from_array_t(self.1, result))
     }
 

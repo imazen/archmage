@@ -152,3 +152,71 @@ run!(
     kernel16_scalar,
     16
 );
+
+macro_rules! run_const {
+    ($name:ident, $v3:ident, $v4:ident, $v4x:ident, $neon:ident, $wasm:ident, $scalar:ident, $n:literal) => {
+        #[inline(always)]
+        pub(super) fn $name<const OPTIONS: u32>(
+            plan: Plan,
+            bases: [f32; $n],
+            exponent: f32,
+        ) -> Result<[f32; $n], PowfError> {
+            match plan {
+                #[cfg(target_arch = "x86_64")]
+                Plan::V3(t) => graph::$v3::<{ graph::NATIVE }, OPTIONS>(t, bases, exponent),
+                #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+                Plan::V4(t) => graph::$v4::<{ graph::NATIVE }, OPTIONS>(t, bases, exponent),
+                #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+                Plan::V4x(t) => graph::$v4x::<{ graph::NATIVE }, OPTIONS>(t, bases, exponent),
+                #[cfg(target_arch = "aarch64")]
+                Plan::Neon(t) => graph::$neon::<{ graph::NATIVE }, OPTIONS>(t, bases, exponent),
+                #[cfg(target_arch = "wasm32")]
+                Plan::Wasm(t, true) => {
+                    graph::$wasm::<{ graph::NATIVE }, OPTIONS>(t, bases, exponent)
+                }
+                #[cfg(target_arch = "wasm32")]
+                Plan::Wasm(t, false) => {
+                    graph::$wasm::<{ graph::WASM_SOFTWARE }, OPTIONS>(t, bases, exponent)
+                }
+                Plan::Software => {
+                    graph::$scalar::<{ graph::SOFTWARE }, OPTIONS>(ScalarToken, bases, exponent)
+                }
+                #[cfg(all(feature = "std", not(miri)))]
+                Plan::Std => {
+                    graph::$scalar::<{ graph::STD }, OPTIONS>(ScalarToken, bases, exponent)
+                }
+            }
+        }
+    };
+}
+run_const!(
+    run4_const,
+    kernel4_with_v3,
+    kernel4_with_v4,
+    kernel4_with_v4x,
+    kernel4_with_neon,
+    kernel4_with_wasm128,
+    kernel4_with_scalar,
+    4
+);
+run_const!(
+    run8_const,
+    kernel8_with_v3,
+    kernel8_with_v4,
+    kernel8_with_v4x,
+    kernel8_with_neon,
+    kernel8_with_wasm128,
+    kernel8_with_scalar,
+    8
+);
+#[cfg(feature = "w512")]
+run_const!(
+    run16_const,
+    kernel16_with_v3,
+    kernel16_with_v4,
+    kernel16_with_v4x,
+    kernel16_with_neon,
+    kernel16_with_wasm128,
+    kernel16_with_scalar,
+    16
+);

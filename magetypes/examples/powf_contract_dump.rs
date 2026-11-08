@@ -1,6 +1,6 @@
 //! Read `base_bits exponent_bits domain` rows; emit actual bounded powf results.
 #![forbid(unsafe_code)]
-use magetypes::powf::{PowfDomain, PowfExecution, PowfOptions, try_powf_with};
+use magetypes::powf::{PowfDomain, PowfExecution, PowfOptions, try_powf_runtime};
 use std::io::{self, BufRead};
 fn main() {
     for line in io::stdin().lock().lines() {
@@ -21,7 +21,7 @@ fn main() {
         };
         let b = f32::from_bits(base);
         let n = f32::from_bits(exponent);
-        match try_powf_with(b, n, options) {
+        match try_powf_runtime(b, n, options) {
             Ok(result) => println!(
                 "{base:08x} {exponent:08x} {} {:08x} {:08x}",
                 fields[2],

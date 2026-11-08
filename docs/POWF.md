@@ -5,10 +5,23 @@ power. `f32x1`, generic `f32x4`, `f32x8` and enabled `f32x16` delegate to it.
 The existing `pow_lowp`, `pow_midp` and related methods are unchanged.
 
 ```rust
-use magetypes::powf::{PowfDomain, PowfOptions, try_powf_with};
-let options = PowfOptions { domain: PowfDomain::Gamma, ..PowfOptions::default() };
-assert_eq!(try_powf_with(4.0, 0.5, options).unwrap(), 2.0);
+use magetypes::powf::{PowfOptions, try_powf_with};
+const OPTIONS: u32 = PowfOptions::GAMMA | PowfOptions::CALLER;
+assert_eq!(try_powf_with::<OPTIONS>(4.0, 0.5).unwrap(), 2.0);
 ```
+
+`try_powf_with::<OPTIONS>` takes an integer const configuration. Combine one
+of `PowfOptions::POSITIVE_NORMAL`, `NON_NEGATIVE_NORMAL` or `GAMMA` with
+`AUTOMATIC` (zero) or `CALLER`. The flags remain const through vector delegates,
+backend selection and the graph. A capable caller evaluates the vector directly
+in its feature region, without an array dispatch boundary. Reserved encodings
+are compile errors. Runtime input checks still enforce the declared domain.
+
+For options selected at runtime, `try_powf_runtime` and
+`try_powf_array_runtime` retain the explicit `PowfOptions { domain, execution }`
+adapter. These APIs share the graph and rejection contract. The array const
+entry is `try_powf_array_with::<OPTIONS, N>`; the vector method is
+`vector.try_powf_with::<OPTIONS>(exponent)`.
 
 The contract is identical result bits across admitted backends for the same
 accepted inputs and options, under round-to-nearest and gradual underflow.
