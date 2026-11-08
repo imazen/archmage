@@ -84,3 +84,9 @@ resource-dirty verdict (`--record-all`). No completed cell is rerun, no dirty
 round is removed, and no admission or promotion condition is relaxed. Both
 invalid cells (155 and 302) remain in the mandatory denominator. Functional
 verification failures and admission errors still stop execution.
+
+The AMD worker was quiet on reinspection after the original run stopped at
+cell 0. Its previously unmeasured suffix may run once with the same executable,
+cell list and 50 retained rounds, using `--continue-unmeasured --record-all`.
+The original invalid cell 0 stays in the denominator and is never retried.
+Dirty verdicts remain invalid; admission/functional failures still stop.
