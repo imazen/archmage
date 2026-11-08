@@ -261,3 +261,14 @@ Missing performance coverage still includes complete admitted AMD/Intel and
 WASM replacement matrices, native first-use and physical below-V3/std fallback
 costs. Intel's recorded pilot has no samples after an admission timeout. The
 owner-approved M6 run is exploratory; it does not fill strict placement coverage.
+
+Final local verification of the completed implementation/study source passed
+all 19 CI stages, both semver checks, all 24 warning configurations, unchanged
+assembly guards (1,623 x86 / 794 ARM / 794 WASM probes, zero reviewed
+differences), and standalone all-target/all-feature clippy. It completed in
+838 s, peak RSS 0.78 GiB, minimum available 21,588 MiB, peak load 17.83.
+Explicit no_std power tests and i686 std/no_std checks pass (8 s, peak RSS
+0.40 GiB); physical N1 full-payload tests pass with the NEON plan asserted
+(6 s, peak RSS below the wrapper's 0.01 GiB display resolution). M6 study
+clippy passes (11 s, BSD peak RSS 0.37 GiB, reclaimable-page proxy minimum
+8,163 MiB, peak load 1.63). No benchmark runs overlapped M6 builds.
