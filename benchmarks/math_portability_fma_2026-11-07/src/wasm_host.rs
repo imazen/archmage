@@ -180,13 +180,15 @@ pub fn register(suite: &mut zenbench::Suite, path: &str) {
     let id = format!("wasm/{mode}/first-use/exp2_midp/x4/64");
     if super::matches_filter(&id) {
         suite.group(id, |g| {
+            let rounds = std::env::var("STUDY_FIRST_USE_ROUNDS").map_or(50, |s| s.parse().unwrap());
+            let wall = std::env::var("STUDY_FIRST_USE_WALL").map_or(60, |s| s.parse().unwrap());
             g.config()
-                .min_rounds(50)
-                .max_rounds(50)
+                .min_rounds(rounds)
+                .max_rounds(rounds)
                 .auto_rounds(false)
                 .warmup_time(Duration::from_millis(10))
                 .max_time(Duration::from_millis(20))
-                .max_wall_time(Duration::from_secs(60));
+                .max_wall_time(Duration::from_secs(wall));
             for (arm, label) in ["baseline", "exceptional", "fixed_fused"]
                 .iter()
                 .enumerate()

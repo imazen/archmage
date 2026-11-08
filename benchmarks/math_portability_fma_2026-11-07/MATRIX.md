@@ -80,3 +80,14 @@ therefore process one untimed buffer before `b.iter`. The original strict
 exp2_lowp attempt, which amortized an unprimed instance over the timed calls,
 is retained separately as diagnostic; it cannot establish the cached gate.
 The fresh-instance first-use group deliberately keeps its cache unprimed.
+
+
+First-use extension preregistration: the unchanged fresh-instance unit hit the
+60s wall safety cap at 28 strict / 25 fusing pairs. All those pairs passed every
+resource gate. They are insufficient for the 50-pair minimum and are retained.
+Use the one allowed extension to 200 total pairs per mode: append172 strict /
+175 fusing pairs, wall safety budget600s. Keep guest bytes, instance preparation,
+timed work, sample-duration target and every inference/admission bound unchanged.
+Pool ALL original and appended paired ratios; keep each source/binary identity.
+No further extension or favorable-run selection. Steady-state cells proceed
+independently; an insufficient first-use count does not imply host contention.

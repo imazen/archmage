@@ -4,6 +4,7 @@ Stdout changes output transport only. Resource gates, lock, samples and
 arithmetic are the same. Full worker stdout/stderr is retained for every run.
 """
 import json
+import os
 from pathlib import Path
 import shlex
 import subprocess
@@ -14,7 +15,10 @@ out = Path(destination).resolve()
 out.mkdir(parents=True)
 q = shlex.quote
 base = '$HOME/work/archmage-portability-fma-results'
+binary = q(os.environ.get('STUDY_HOST_BINARY','primed-study-arm-host'))
 env = ['ZENBENCH_NO_SAVE=1', 'STUDY_CONTEXTS=scalar,neon', 'STUDY_FILTER='+q(filter_text)]
+for key in ['STUDY_FIRST_USE_ROUNDS','STUDY_FIRST_USE_WALL']:
+    if key in os.environ: env.append(key+'='+q(os.environ[key]))
 if mode != 'native':
     guest = 'strict-buffer.wasm' if mode == 'strict' else 'relaxed-buffer.wasm'
     env += ['STUDY_WASM_HOST="$PWD/'+guest+'"', 'STUDY_WASM_MODE='+q(mode),
@@ -22,8 +26,8 @@ if mode != 'native':
 script = f'''set -eu
 cd "{base}"
 export TMPDIR="$HOME/tmp/archmage-portability-fma-sol"
-sha256sum ./primed-study-arm-host
-{' '.join(env)} STUDY_OUTPUT=- ./run-heavy --mem 4G --jobs 2 -- ./primed-study-arm-host
+sha256sum ./{binary}
+{' '.join(env)} STUDY_OUTPUT=- ./run-heavy --mem 4G --jobs 2 -- ./{binary}
 '''
 (out/'command.sh').write_text(script)
 with (out/'worker.log').open('xb') as log:

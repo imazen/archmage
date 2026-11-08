@@ -592,3 +592,11 @@ portability-first-use binary output:
 # Output transport avoids filling worker disks; the normal common gates stay active.
 portability-stream worker output mode filter:
     python3 -B benchmarks/math_portability_fma_2026-11-07/stream_worker.py {{quote(worker)}} {{quote(output)}} {{quote(mode)}} {{quote(filter)}}
+
+# The per-operation supervisor records every process; dirty modes stop.
+portability-stream-series worker output:
+    python3 -B benchmarks/math_portability_fma_2026-11-07/stream_series.py {{quote(worker)}} {{quote(output)}}
+
+# The original and single appended packets must total exactly200 pairs.
+portability-first-use-pool original appended:
+    cargo run --release --manifest-path benchmarks/math_portability_fma_2026-11-07/Cargo.toml --bin pool_first_use -- {{quote(original)}} {{quote(appended)}}
