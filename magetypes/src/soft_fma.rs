@@ -5,7 +5,8 @@
 //!   `neon`) use Rust's `mul_add`;
 //! - other x86_64 std builds check archmage's cached V3 token once per call
 //!   for f64 and send each lane through the FMA instruction when the CPU has
-//!   it (the one runtime check in vector arithmetic; see `fma_lanes`);
+//!   it; below full V3, usable x86 FMA delegates to safe std `mul_add`,
+//!   whose compiler/runtime owns its narrower feature dispatch;
 //! - no_std builds use a token only when the target features prove it at
 //!   compile time (V3 or NEON); archmage cannot detect at run time without
 //!   std, and its `summon` would otherwise still load a cache to answer None;
@@ -97,9 +98,11 @@ token_or_software_fma! {
     }
 
     /// `a[i] * b[i] + c[i]` rounded once, per lane. On x86_64 with std this is
-    /// a cached runtime check (archmage's `summon`, once per call) that sends
-    /// every lane through the FMA instruction: on CPUs with FMA that measured
-    /// 0.09-0.43x the software path's time, and about 1.0x without. Lanes pass
+    /// a cached full-V3 check (archmage's `summon`, once per call). The paired
+    /// helper on full-V3 CPUs previously measured 0.09-0.43x the software time.
+    /// Below V3, a usable-FMA check delegates to safe std `mul_add`; its
+    /// compiler/runtime owns the narrower feature dispatch. Costs of this
+    /// secondary check and route are not yet established on quiet hardware. Lanes pass
     /// in float registers, two per call; an array or SIMD-vector argument would
     /// go through memory. Without std the token path is compiled only when
     /// the target features prove FMA, where `summon` folds to `Some` (archmage
@@ -131,6 +134,13 @@ token_or_software_fma! {
                 out[i] = hw::fma(token, a[i], b[i], c[i]);
             }
             return out;
+        }
+        // FMA-only processors cannot furnish a full V3 token. Rust's safe
+        // primitive needs no such proof: its baseline lowering owns feature
+        // selection. Keep the existing paired V3 helper above for that fast path.
+        #[cfg(all(not(miri), feature = "std", target_arch = "x86_64"))]
+        if std::is_x86_feature_detected!("fma") {
+            return core::array::from_fn(|i| a[i].mul_add(b[i], c[i]));
         }
         f64_soft::fma_soft_lanes(a, b, c)
     }

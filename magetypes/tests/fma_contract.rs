@@ -93,6 +93,8 @@ fn scalar_and_software_contract() {
     }
     for [a, b, c, expected] in fixtures::F64.map(|row| row.map(f64::from_bits)) {
         same!(magetypes::nostd_math::fma(a, b, c), expected);
+        // A safe baseline std candidate, checked against the rational oracle.
+        same!(std::hint::black_box(a).mul_add(std::hint::black_box(b), std::hint::black_box(c)), expected);
         use magetypes::simd::f64x1 as V;
         same!(V(a).mul_add_portable(V(b), V(c)).0, expected);
         same!(V(a).mul_add_fused(V(b), V(c)).0, expected);
