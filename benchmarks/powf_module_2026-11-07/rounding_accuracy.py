@@ -64,6 +64,7 @@ def main():
     p.add_argument('inputs', type=Path)
     p.add_argument('output', type=Path)
     p.add_argument('--witnesses', type=Path)
+    p.add_argument('--fixtures',type=Path,help='emit independent rational expectations for width/mixed-lane replay')
     a = p.parse_args()
     assert not a.output.exists(), 'preserve prior evidence'
     request = corpus(a.inputs)
@@ -82,10 +83,12 @@ def main():
                   gamma_certificates=model.gamma_certificates(),
                   claim='sampled maxima; no full-domain ULP guarantee',
                   mismatches=[], tiers={}, rounding_differences={})
+    fixtures=[]
     for index, row in enumerate(request.splitlines()):
         fields = row.split()
         base, n, domain = int(fields[0],16), int(fields[1],16), int(fields[2])
         expected = [model.mirror(base,n,domain,m>=2,m%2==1) for m in range(4)]
+        fixtures.append(row+' '+ ' '.join(f'{((error<<32) if error else bits):016x}'for bits,error in expected))
         values = {}
         for tier, lines in actual.items():
             assert lines[index][:3] == fields
@@ -139,6 +142,9 @@ def main():
         if index % 1024 == 0:
             print(json.dumps(dict(processed=index,required=report['cases'],mismatches=len(report['mismatches']))),flush=True)
     a.output.write_text(json.dumps(report,indent=2)+'\n')
+    if a.fixtures:
+        assert not a.fixtures.exists()
+        a.fixtures.write_text('\n'.join(fixtures)+'\n')
     print(json.dumps(report,indent=2))
     assert not report['mismatches'], 'exact graph mismatch'
 
