@@ -12,6 +12,7 @@ p=argparse.ArgumentParser(description=__doc__)
 p.add_argument('binary',type=Path)
 p.add_argument('directory',type=Path)
 p.add_argument('--pilot',action='store_true')
+p.add_argument('--rounding',action='store_true',help='the separately frozen 96-cell forced-rounding matrix')
 p.add_argument('--record-all',action='store_true',help='record every unmeasured cell once; preserve every dirty verdict')
 p.add_argument('--exploratory',action='store_true',help='explicit scheduler-controlled study; never promotion evidence')
 p.add_argument('--continue-unmeasured',type=Path,help='retain prior failed cell; measure only its previously unmeasured suffix')
@@ -20,10 +21,10 @@ a.directory.mkdir(parents=True,exist_ok=False)
 binary=a.binary.resolve()
 env=dict(os.environ,POWF_LIST='1')
 cells=subprocess.check_output([str(binary)],env=env,text=True).splitlines()
-assert len(cells)==672
+assert len(cells)==(96 if a.rounding else 672)
 if a.pilot:
     native='neon' if any('/neon/' in c for c in cells) else 'v3'
-    cells=[f'replacement/x4/{native}/64/stream/2/4019999a/literal-n/unorm8']
+    cells=[f'rounding/x4/{native}/64/stream/Gamma/4019999a/checked' if a.rounding else f'replacement/x4/{native}/64/stream/2/4019999a/literal-n/unorm8']
 start=0
 if a.continue_unmeasured:
     assert not a.pilot and not a.exploratory

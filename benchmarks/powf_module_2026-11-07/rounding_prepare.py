@@ -102,3 +102,29 @@ pub fn kernel{width}<T: magetypes::simd::backends::F32x{width}Convert,
     'fused': 'magetypes mul_add_fused',
     'separate': 'Rust multiply followed by add; assembly and rational oracle checked',
 }, indent=2) + '\n')
+
+probes = ''
+calls = []
+for width in [4,8,16]:
+    for lowp in [False,True]:
+        for fused in [False,True]:
+            name=f'roundprobe_{"lowp" if lowp else "midp"}_{"fused" if fused else "separate"}_x{width}'
+            probes+=f'''#[archmage::magetypes(v3,neon,wasm128,scalar)]
+#[inline(never)]
+pub fn {name}(token:Token,input:&[f32;{width}],n:f32,output:&mut[f32;{width}]) {{
+    let v=magetypes::simd::generic::f32x{width}::from_array_t(token,*input);
+    *output=archmage_powf_study::rounding::kernel{width}::<Token,{str(lowp).lower()},{str(fused).lower()},true,2>(token,v,n).unwrap().to_array();
+}}
+'''
+            calls.append((name,width))
+probes+='fn main(){use archmage::SimdToken;let n=std::hint::black_box(2.4_f32);\n'
+for width in [4,8,16]:
+    probes+=f'let input{width}=std::hint::black_box([0.75;{width}]);let mut output{width}=[0.;{width}];\n'
+for tier,ty,cfg in [('scalar','ScalarToken',None),('v3','X64V3Token','target_arch="x86_64"'),('neon','NeonToken','target_arch="aarch64"'),('wasm128','Wasm128Token','target_arch="wasm32"')]:
+    if cfg:probes+=f'#[cfg({cfg})]\n'
+    probes+=f'if let Some(token)=archmage::{ty}::summon(){{\n'
+    for name,width in calls:
+        probes+=f'{name}_{tier}(token,&input{width},n,&mut output{width});std::hint::black_box(output{width});\n'
+    probes+='}\n'
+probes+='}\n'
+(out/'rounding_probes.rs').write_text(probes)

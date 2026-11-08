@@ -31,7 +31,8 @@ def build(a):
         assert hashlib.sha256(raw).hexdigest()==digest, name
         (a.directory/name).write_bytes(raw)
     symbols=subprocess.check_output(['nm','-g','--defined-only',str(a.library)],text=True)
-    symbols=[line.split()[-1]for line in symbols.splitlines()if 'replacement_evaluate'in line and ' T 'in line]
+    callback='rounding_evaluate' if a.rounding else 'replacement_evaluate'
+    symbols=[line.split()[-1]for line in symbols.splitlines()if callback in line and ' T 'in line]
     assert len(symbols)==1
     header='''
 /* Rust callback: compiler-assigned C-ABI symbol, located from this archive. */
@@ -52,6 +53,9 @@ static float study_value(float x,float y) {
   uint32_t bits=(uint32_t)r;float value;memcpy(&value,&bits,sizeof(value));calls++;return value;
 }
 '''.replace('SYMBOL',symbols[0])
+    if a.rounding:
+        header=header.replace('candidate<8', 'candidate<4').replace(
+            'actual_pow(x,y,0,domain,native)', 'actual_pow(x,y,candidate,domain,native)')
     source=(a.directory/'check_sample2.c').read_text()
     # Upstream STAT calls this diagnostic printer, whose definition is disabled.
     source=replace_once(source,'#if 0\nstatic void\nList_print','#ifdef STAT\nstatic void\nList_print')
@@ -86,7 +90,7 @@ def run(a):
     seeds=['0x1.3e66c4p43,0x1.333334p1',
            '0x1.31c29ep-17,0x1.91c0d6p2',
            '0x1.11bb04p-16,0x1.333334p1']
-    cells=[(method,domain,tier,mode)for method in range(8)for domain in range(3)
+    cells=[(method,domain,tier,mode)for method in range(4 if a.rounding else 8)for domain in ([2] if a.rounding else range(3))
            for tier in range(2)for mode in range(3)]
     if a.pilot:cells=cells[:1]
     manifest={'binary_sha256':hashlib.sha256(a.binary.read_bytes()).hexdigest(),
@@ -116,7 +120,7 @@ def run(a):
 
 p=argparse.ArgumentParser(description=__doc__)
 sub=p.add_subparsers(dest='operation',required=True)
-b=sub.add_parser('build');b.add_argument('source',type=Path);b.add_argument('library',type=Path);b.add_argument('directory',type=Path)
-r=sub.add_parser('run');r.add_argument('binary',type=Path);r.add_argument('directory',type=Path);r.add_argument('--pilot',action='store_true')
+b=sub.add_parser('build');b.add_argument('source',type=Path);b.add_argument('library',type=Path);b.add_argument('directory',type=Path);b.add_argument('--rounding',action='store_true')
+r=sub.add_parser('run');r.add_argument('binary',type=Path);r.add_argument('directory',type=Path);r.add_argument('--pilot',action='store_true');r.add_argument('--rounding',action='store_true')
 a=p.parse_args()
 build(a)if a.operation=='build'else run(a)
