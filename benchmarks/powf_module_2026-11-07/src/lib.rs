@@ -47,6 +47,7 @@ fn evaluate(token: Token, base: f32, n: f32, choice: u32, domain: u32) -> u64 {
                         PowfErrorKind::InvalidBase => 2,
                         PowfErrorKind::OutsideApproximationRange => 3,
                         PowfErrorKind::UnsupportedWidth => 4,
+                        _ => panic!("unknown rejection stage: {:?}", error.kind),
                     }) << 32;
                 }
             }

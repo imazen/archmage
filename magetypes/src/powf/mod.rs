@@ -108,7 +108,22 @@ impl PowfOptions {
 }
 
 /// Reason a complete vector was rejected.
+///
+/// Additional rejection reasons may be added. Callers must retain a fallback:
+///
+/// ```compile_fail
+/// use magetypes::powf::PowfErrorKind;
+/// fn classify(kind: PowfErrorKind) -> u8 {
+///     match kind {
+///         PowfErrorKind::InvalidExponent => 1,
+///         PowfErrorKind::InvalidBase => 2,
+///         PowfErrorKind::OutsideApproximationRange => 3,
+///         PowfErrorKind::UnsupportedWidth => 4,
+///     }
+/// }
+/// ```
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[non_exhaustive]
 pub enum PowfErrorKind {
     /// An exponent is NaN, infinite, a nonzero subnormal, or outside the
     /// selected domain's exponent bounds.
