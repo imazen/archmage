@@ -306,3 +306,14 @@ archive digest before extraction. A wrong-byte HTTP-success control fails
 before installation. The installed v48.0.1 passes strict, fusing and nonfusing
 unit/full-payload tests (24 s, peak RSS 0.10 GiB, minimum available 24,220 MiB,
 peak load 12.30). No compiled library source or test expectation changes.
+
+The non-exhaustive error API passed all 19 local CI stages again in 651 s,
+including the original three-architecture assembly gate, and both semver checks.
+All 240 refreshed x86 caller probes retain their instruction/branch counts;
+changed data references in error paths remain visible in the diagnostic report.
+The combined command ended after 677 s on a broken pre-existing local registry
+cache during a duplicate study lint (peak RSS 0.74 GiB, minimum available
+22,291 MiB, peak load 16.24). The identical all-target/all-feature study lint
+passes using the separate task Cargo home: 39 s, peak RSS 1.22 GiB, minimum
+available 22,322 MiB, peak load 14.17. The failed attempt is retained, and the
+shared registry cache is untouched.
