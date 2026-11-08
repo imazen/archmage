@@ -19,7 +19,14 @@ fn main() {
             .unwrap()
             .success()
     );
-    assert!(Command::new("python3").arg(directory.join("codegen_prepare.py")).arg(&output).status().unwrap().success());
+    assert!(
+        Command::new("python3")
+            .arg(directory.join("codegen_prepare.py"))
+            .arg(&output)
+            .status()
+            .unwrap()
+            .success()
+    );
     println!("cargo:rerun-if-changed=codegen_prepare.py");
     println!("cargo:rerun-if-changed=replacement_prepare.py");
     println!("cargo:rerun-if-changed=prepare.py");
