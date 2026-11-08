@@ -1208,6 +1208,15 @@ fn process(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 
 ## Known Bugs
 
+Backend-dependent LOWP range limitation (2026-11-08): a normal computed output
+does not establish accuracy for unrestricted exponents. At base `3f7fffff`,
+exponent `cb317217`, both fused and separate LOWP return `4ad3af2c` while
+MPFR power is approximately 1.99999992591481. Explicit exponent bounds are
+required for a LOWP accuracy preset. The controlled Gamma study leaves all
+production math and pre-existing thresholds unchanged; see
+`benchmarks/powf_module_2026-11-07/NONFUSED.md` for measured errors, all retained
+timings, unavailable coverage and the exploratory M6 cost tradeoff.
+
 Draft bounded powf accuracy (2026-11-08): the fixed fused midp graph has no
 whole-domain ULP guarantee. Adaptive search plus directed MPFR confirmation
 found measured errors up to 438.504 ULP (PositiveNormal), 416.579
