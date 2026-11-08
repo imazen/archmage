@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Report normalized caller instructions/local callees; std externals excluded."""
+"""Report caller instructions and in-module callees; unresolved calls are listed."""
 import argparse
 import importlib.util
 import json
@@ -38,7 +38,7 @@ for name in functions:
     body=module.expand(name,functions)
     instructions=[line for line in body if not line.startswith('LABEL ')]
     external=[line for line in instructions if module.opcode(line)in['callq','call','bl','return_call'] and not line.startswith('INTERNAL_CALL')]
-    branches=[line for line in instructions if re.match(r'^(j[a-z]+|b\.[a-z]+|cbnz|cbz|tbz|tbnz|br_if)\b',line)]
+    branches=[line for line in instructions if re.match(r'^(j[a-z]+|b(?:\.[a-z]+)?|TAIL_CALL|cbnz|cbz|tbz|tbnz|br_if)\b',line)]
     rows.append(dict(zip(['candidate','width','domain','exponent','tier'],match.groups()))|{'symbol':name,'instructions_with_local_callees':len(instructions),'conditional_or_unconditional_branches':len(branches),'external_calls':external,'body':body})
 assert rows,'no caller probes parsed; refusing vacuous report'
 summary={'assembly':str(a.assembly),'format':'macho'if a.macho else'elf','instructions_include_local_callees':True,'external_library_instructions_unmeasured':True,'rows':rows}

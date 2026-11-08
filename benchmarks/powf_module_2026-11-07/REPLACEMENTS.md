@@ -29,16 +29,17 @@ Rust 1.99.1 / LLVM 23.1.1 distribution-target x86 codegen, x4 Gamma:
 LLVM already specializes literal runtime options in this probe. The const API
 makes the flags explicit throughout the generic caller chain; these counts do
 not show an additional win over the optimized literal runtime form. Input
-rejection remains. Counts include error paths and local callees, exclude external
-stdlib/panic implementation bodies, and are not dynamic instruction counts.
+rejection remains. Counts include error paths and callees present in the emitted module.
+Unresolved calls, including std/panic bodies and out-of-module helpers, are
+listed and their instruction work is unmeasured. These are static counts.
 The report contains 240 distinct Scalar/V3 probe bodies; LLVM coalesces several
 identical domain variants. No existing assembly-equality gate was relaxed.
 
 Retained Apple M6 NEON caller probes show the same specialization pattern:
 x4 Gamma/literal exponent has 125 instructions and one branch for both const
-and literal runtime options, versus 367 instructions and seven branches with
+and literal runtime options, versus 367 instructions and 11 branches with
 opaque options. With an opaque exponent, const/literal-runtime options have
-145 instructions/four branches, versus 355/11 for opaque options. All 240
+145 instructions/five branches, versus 355/15 for opaque options. All 240
 distinct Scalar/NEON bodies are retained; an initial probe build inlined native
 entries into main, so the diagnostic generator now preserves a plain caller
 on guaranteed-feature targets. No production or measured binary changed.
@@ -146,6 +147,67 @@ unmeasured cells once. Missing or invalid cells cannot pass promotion. No
 favorable rerun replaces an existing cell. Full M6/N1 descriptive results and
 remaining platform coverage are recorded with the final artifacts.
 
+## Completed native matrices
+
+Both M6 and N1 record all 672 ordinary cells and 50 pairs per cell. M6 has
+275 resource-clean cells and 397 flagged cells; every M6 comparison remains
+exploratory because core-class placement is unrestricted. N1 has 621 clean
+cells and 51 invalid cells. Every pair remains in the direct paired analysis.
+No aggregate result satisfies the every-cell promotion rule.
+
+| N1 Automatic versus actual control | PASS | FAIL | INCONCLUSIVE | INADMISSIBLE |
+|---|---:|---:|---:|---:|
+| pow_midp | 589 | 16 | 16 | 51 |
+| pow_midp_unchecked | 352 | 264 | 5 | 51 |
+| pow_midp_precise | 585 | 19 | 17 | 51 |
+| pow_lowp | 309 | 310 | 2 | 51 |
+| pow_lowp_unchecked | 308 | 310 | 3 | 51 |
+| std_f32_powf | 368 | 253 | 0 | 51 |
+| std_promoted_f64_powf | 368 | 253 | 0 | 51 |
+
+All 16 clean Automatic failures versus checked midp are matching-NEON
+NonNegativeNormal cells. Their full cell identities and paired ratios follow.
+All use literal exponents; `inv2.4` denotes f32 bits 3ed55555.
+
+| Width / elements / work | Exponent | Inputs | Ratio | 95% CI |
+|---|---|---|---:|---|
+| x16 / 64 / chain | 2.4 | unorm8 | 1.031462 | 1.027336–1.037964 |
+| x8 / 4096 / stream | 2.4 | unorm8 | 1.023559 | 1.021370–1.025636 |
+| x16 / 4096 / chain | 2.4 | unorm8 | 1.053175 | 1.051279–1.055085 |
+| x16 / 64 / chain | 2.4 | wide | 1.030201 | 1.024843–1.035698 |
+| x16 / 4096 / chain | 2.4 | wide | 1.053010 | 1.048327–1.056935 |
+| x16 / 64 / chain | inv2.4 | unorm8 | 1.032915 | 1.027971–1.037326 |
+| x8 / 4096 / stream | inv2.4 | unorm8 | 1.024317 | 1.021814–1.026739 |
+| x16 / 4096 / chain | inv2.4 | unorm8 | 1.054007 | 1.050996–1.057141 |
+| x16 / 64 / chain | inv2.4 | wide | 1.031732 | 1.029882–1.033670 |
+| x8 / 4096 / stream | inv2.4 | wide | 1.023797 | 1.021539–1.026395 |
+| x16 / 4096 / chain | inv2.4 | wide | 1.053365 | 1.050903–1.055772 |
+| x8 / 64 / stream | 0.5 | unorm8 | 1.024947 | 1.023002–1.027044 |
+| x16 / 4096 / stream | 0.5 | unorm8 | 1.058460 | 1.055130–1.062849 |
+| x8 / 64 / stream | 0.5 | wide | 1.024435 | 1.021061–1.027681 |
+| x16 / 4096 / stream | 0.5 | wide | 1.056906 | 1.054440–1.059477 |
+| x16 / 4096 / chain | 0.5 | wide | 1.037850 | 1.035782–1.039880 |
+
+The following full-matrix Gamma x4/4096 stream cells are resource-clean on
+both CPUs. They compare const Caller directly with every ordinary control.
+M6's intervals are descriptive under OS scheduling. Prevalidated graph is a
+diagnostic for checked-API cost, not the legacy/std replacement baseline.
+
+| Actual control | N1 ratio [95% CI] | M6 exploratory ratio [95% CI] |
+|---|---|---|
+| pow_midp | 0.825371 [0.822617–0.827926] | 0.858938 [0.856215–0.861370] |
+| pow_midp_unchecked | 1.224479 [1.220621–1.228377] | 1.252263 [1.248647–1.256671] |
+| pow_midp_precise | 0.822885 [0.820499–0.825335] | 0.859846 [0.857514–0.862926] |
+| pow_lowp | 1.503125 [1.497736–1.508589] | 1.408977 [1.404983–1.413816] |
+| pow_lowp_unchecked | 1.490778 [1.485029–1.496325] | 1.407463 [1.402181–1.413474] |
+| std_f32_powf | 0.386969 [0.386158–0.387842] | 0.314333 [0.313577–0.315380] |
+| std_promoted_f64_powf | 0.223919 [0.223474–0.224412] | 0.152816 [0.152317–0.153248] |
+| runtime_literal_caller | 0.998394 [0.995148–1.001472] | 1.000382 [0.997361–1.004028] |
+| runtime_dynamic_caller | 1.002291 [0.999864–1.004713] | 1.003493 [1.000889–1.006806] |
+| runtime_literal_auto | 0.998823 [0.996100–1.001534] | 1.001961 [0.999371–1.005349] |
+| runtime_dynamic_auto | 0.992276 [0.989591–0.995119] | 1.001565 [0.998484–1.005222] |
+| prevalidated_graph | 1.291519 [1.287984–1.295021] | 1.250139 [1.245715–1.255043] |
+
 ## Artifacts and resources
 
 Frozen performance source: e4fad9b3caf96ddfaa4856a56cc11e0b7c25f3b0, tree
@@ -176,3 +238,26 @@ These shared-host raw build diagnostics are not precise build-speed claims.
 The third row changes the called API and its contract. The wrapper completed
 in 41 s with peak RSS 0.35 GiB, minimum available 23,264 MiB, peak load 14.03;
 per-build GNU-time RSS and exact binary hashes are retained.
+
+All-pair analyses completed in 224 s (M6 data, including analyzer build) and
+194 s (N1 data). Their respective wrapper peak RSS values were 0.53/0.04 GiB,
+minimum available 22,924/23,571 MiB, and peak load 15.27 for both. The sealed
+const implementation passed all 19 local CI stages and both semver checks in
+696 s, peak RSS 1.00 GiB, minimum available 22,009 MiB, peak load 17.34.
+The final study tools receive their separate lint/codegen checks; no existing
+behavioral, numerical or assembly expectation is weakened.
+
+Review checked the main-to-PR diff and the const migration against the previous
+draft: coefficient bits and graph order are unchanged; generators and delegates
+match; invalid const encodings fail compilation; exponent/base/range rejection
+precedence and exact whole-vector masks remain covered. The native proof and
+WASM probe select the arithmetic mode before evaluating the graph. No hand-written
+unsafe Rust, library dependency, existing math behavior, accuracy threshold or
+assembly-equality exception was introduced. Std FMA screening remains distinct
+from direct std power admission. The external error-search tool is test-only,
+with pinned original source and notices outside the production dependency graph.
+
+Missing performance coverage still includes complete admitted AMD/Intel and
+WASM replacement matrices, native first-use and physical below-V3/std fallback
+costs. Intel's recorded pilot has no samples after an admission timeout. The
+owner-approved M6 run is exploratory; it does not fill strict placement coverage.

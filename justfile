@@ -631,3 +631,6 @@ powf-replacement-wasm-host:
 
 powf-replacement-matrix-analyze directory cells *runs:
     python3 -B benchmarks/powf_module_2026-11-07/analyze_replacement_matrix.py benchmarks/powf_module_2026-11-07/target/release/replacement_analyze "{{directory}}" {{runs}} --require-cells {{cells}}
+
+powf-replacement-codegen-audit assembly output *options:
+    python3 -B benchmarks/powf_module_2026-11-07/codegen_audit.py "{{assembly}}" "{{output}}" {{options}}
