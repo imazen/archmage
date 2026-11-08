@@ -53,6 +53,7 @@ macro_rules! const_options {
                 const $flags: u32 = 6;
                 $body
             }
+            _ => panic!("legacy test uses restricted domains"),
         }
     }};
 }
@@ -517,11 +518,12 @@ fn const_builder_encodes_each_supported_configuration() {
             let builder = PowfOptions::new()
                 .with_domain(domain)
                 .with_execution(execution);
-            assert_eq!(builder, PowfOptions { domain, execution });
+            assert_eq!(builder, PowfOptions { domain, execution, ..PowfOptions::new() });
             let expected = match domain {
                 PowfDomain::PositiveNormal => 0,
                 PowfDomain::NonNegativeNormal => 1,
                 PowfDomain::Gamma => 2,
+                PowfDomain::Full => unreachable!("legacy domain test"),
             } | if execution == PowfExecution::Caller {
                 4
             } else {

@@ -46,6 +46,7 @@ fn main() {
             .success()
     );
     println!("cargo:rerun-if-changed=rounding_prepare.py");
+    println!("cargo:rerun-if-changed=reference_graph.rs");
     println!(
         "cargo:rerun-if-changed=../../magetypes/src/simd/generic/generated/transcendentals_f32x4.rs"
     );

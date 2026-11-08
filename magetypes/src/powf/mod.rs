@@ -1,7 +1,7 @@
-//! Bounded f32 power with one fused arithmetic graph across backends.
+//! Configurable f32 power with explicit portability, precision and validation.
 //!
 //! These functions evaluate a fixed approximation to `exp2(n * log2(x))`.
-//! Bit identity on accepted inputs is the portability contract; this is not
+//! The default promises bit identity on accepted inputs; this is not
 //! correctly rounded `powf`, and no whole-domain ULP bound is advertised.
 //! Round-to-nearest and gradual underflow are required. NaN/infinite inputs,
 //! negative bases, subnormal inputs and unsupported output ranges are rejected.
@@ -18,94 +18,16 @@ pub(crate) mod const_api;
 mod dispatch;
 pub use const_api::{try_powf_array_with, try_powf_with};
 mod graph;
+#[cfg(feature="std")]
+mod highp;
 mod std_probe;
 #[cfg(test)]
 mod tests;
 #[cfg(target_arch = "wasm32")]
 mod wasm;
 
-/// Supported base domain. All domains reject negative zero and subnormals.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
-pub enum PowfDomain {
-    /// Strictly positive, finite, normal bases.
-    #[default]
-    PositiveNormal,
-    /// Also admit positive zero when the exponent is nonnegative.
-    /// `0^0` is 1; `0^n` for positive `n` is positive zero.
-    NonNegativeNormal,
-    /// Positive zero or a base in [2^-16, 2^16], with exponent in [0, 4].
-    /// Includes normalized 8/16-bit integer-channel gamma inputs. The bounds prove the
-    /// computed exp2 argument stays in range, removing its rejection branch.
-    Gamma,
-}
-
-/// Control autonomous selection independently of the numerical contract.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
-pub enum PowfExecution {
-    /// Reuse a capable caller token, otherwise select an available native tier.
-    /// Scalar fallback can use std FMA after its cached correctness screen.
-    /// Runtime token disabling is respected.
-    #[default]
-    Automatic,
-    /// Preserve the caller's tier. Scalar callers use the exact software graph.
-    /// This also provides a stable entry for backend tests without upgrades.
-    Caller,
-}
-
-/// Const flags for bounded power, plus a runtime adapter for dynamic options.
-///
-/// Build a configuration in const evaluation, then pass `.bits()` to
-/// `try_powf_with::<FLAGS>`. Reserved flags and the reserved domain encoding
-/// are rejected at compile time. The fields serve
-/// [`try_powf_runtime`] when options are only known at runtime.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
-pub struct PowfOptions {
-    /// Accepted base domain.
-    pub domain: PowfDomain,
-    /// Whether a caller without native FMA can upgrade for the whole operation.
-    pub execution: PowfExecution,
-}
-
-impl PowfOptions {
-    pub(crate) const DEFAULT: u32 = 0;
-    pub(crate) const GAMMA: u32 = 2;
-    pub(crate) const CALLER: u32 = 4;
-
-    /// Build the default positive-normal, automatic configuration.
-    pub const fn new() -> Self {
-        Self {
-            domain: PowfDomain::PositiveNormal,
-            execution: PowfExecution::Automatic,
-        }
-    }
-
-    /// Set the accepted numerical domain.
-    pub const fn with_domain(mut self, domain: PowfDomain) -> Self {
-        self.domain = domain;
-        self
-    }
-
-    /// Set whole-operation execution selection.
-    pub const fn with_execution(mut self, execution: PowfExecution) -> Self {
-        self.execution = execution;
-        self
-    }
-
-    /// Encode this configuration as the integer const argument to
-    /// [`try_powf_with`] or [`try_powf_array_with`].
-    pub const fn bits(self) -> u32 {
-        let domain = match self.domain {
-            PowfDomain::PositiveNormal => 0,
-            PowfDomain::NonNegativeNormal => 1,
-            PowfDomain::Gamma => 2,
-        };
-        let execution = match self.execution {
-            PowfExecution::Automatic => 0,
-            PowfExecution::Caller => 4,
-        };
-        domain | execution
-    }
-}
+mod options;
+pub use options::{PowfDomain, PowfExecution, PowfOptions, PowfPortability, PowfPrecision, PowfValidation};
 
 /// Reason a complete vector was rejected.
 ///
@@ -134,6 +56,8 @@ pub enum PowfErrorKind {
     OutsideApproximationRange,
     /// The array width is not 1, 4, 8, or enabled width 16.
     UnsupportedWidth,
+    /// An unsupported combination of precision, portability, domain or features.
+    UnsupportedOptions,
 }
 
 /// Whole-vector rejection. No partial result is returned.
@@ -194,48 +118,5 @@ pub(crate) fn try_powf_token_runtime<T: archmage::SimdToken, const N: usize>(
     exponent: f32,
     options: PowfOptions,
 ) -> Result<[f32; N], PowfError> {
-    if !matches!(N, 1 | 4 | 8) && !(cfg!(feature = "w512") && N == 16) {
-        return Err(PowfError {
-            kind: PowfErrorKind::UnsupportedWidth,
-            lane_mask: 0,
-        });
-    }
-    let bits = exponent.to_bits() & 0x7fff_ffff;
-    if bits >= 0x7f80_0000
-        || (bits != 0 && bits < 0x0080_0000)
-        || (options.domain == PowfDomain::Gamma && !(0.0..=4.0).contains(&exponent))
-    {
-        return Err(PowfError {
-            kind: PowfErrorKind::InvalidExponent,
-            lane_mask: ((1_u32 << N) - 1) as u16,
-        });
-    }
-    let plan = dispatch::select(token, options.execution);
-    let mut output = [0.0; N];
-    if N == 1 {
-        let result =
-            dispatch::run4(plan, [bases[0]; 4], exponent, options.domain).map_err(|error| {
-                PowfError {
-                    lane_mask: 1,
-                    ..error
-                }
-            })?;
-        output[0] = result[0];
-    } else if N == 4 {
-        let mut input = [0.0; 4];
-        input.copy_from_slice(&bases);
-        output.copy_from_slice(&dispatch::run4(plan, input, exponent, options.domain)?);
-    } else if N == 8 {
-        let mut input = [0.0; 8];
-        input.copy_from_slice(&bases);
-        output.copy_from_slice(&dispatch::run8(plan, input, exponent, options.domain)?);
-    } else {
-        #[cfg(feature = "w512")]
-        {
-            let mut input = [0.0; 16];
-            input.copy_from_slice(&bases);
-            output.copy_from_slice(&dispatch::run16(plan, input, exponent, options.domain)?);
-        }
-    }
-    Ok(output)
+    const_api::runtime(token, bases, exponent, options)
 }

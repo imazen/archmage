@@ -1,4 +1,4 @@
-use super::{PowfDomain, PowfError, PowfExecution, graph};
+use super::{PowfError, PowfExecution, PowfOptions, graph};
 use archmage::{ScalarToken, SimdToken};
 
 #[derive(Clone, Copy, Debug)]
@@ -19,7 +19,7 @@ pub(super) enum Plan {
 }
 
 #[inline(always)]
-pub(super) fn select<T: SimdToken>(token: T, execution: PowfExecution) -> Plan {
+fn select_impl<T: SimdToken, const EXACT: bool>(token: T, execution: PowfExecution) -> Plan {
     let _ = token;
     #[cfg(any(
         target_arch = "x86_64",
@@ -48,17 +48,21 @@ pub(super) fn select<T: SimdToken>(token: T, execution: PowfExecution) -> Plan {
     }
     #[cfg(target_arch = "wasm32")]
     if let Some(t) = any.downcast_ref::<archmage::Wasm128Token>() {
-        return Plan::Wasm(*t, crate::wasm_fma::powf_f32_fuses());
+        return Plan::Wasm(*t, !EXACT || crate::wasm_fma::powf_f32_fuses());
     }
     if execution == PowfExecution::Caller {
         return Plan::Software;
     }
-    let plan = archmage::reattune!(upgrade(), [_v3_t, _neon_t, _wasm128_t, _scalar_t]);
+    let plan = if EXACT {
+        archmage::reattune!(upgrade(), [_v3_t, _neon_t, _wasm128_t, _scalar_t])
+    } else {
+        archmage::reattune!(upgrade_relaxed(), [_v3_t, _neon_t, _wasm128_t, _scalar_t])
+    };
     if !matches!(plan, Plan::Software) {
         return plan;
     }
     #[cfg(all(feature = "std", not(miri)))]
-    if super::std_probe::available() {
+    if EXACT && super::std_probe::available() {
         return Plan::Std;
     }
     Plan::Software
@@ -71,87 +75,20 @@ fn upgrade(token: Token) -> Plan {
     select(token, PowfExecution::Caller)
 }
 
-macro_rules! run {
-    ($name:ident, $profile:ident, $v3:ident, $v4:ident, $v4x:ident, $neon:ident, $wasm:ident, $scalar:ident, $n:literal) => {
-        #[inline(always)]
-        pub(super) fn $name(
-            plan: Plan,
-            bases: [f32; $n],
-            exponent: f32,
-            domain: PowfDomain,
-        ) -> Result<[f32; $n], PowfError> {
-            match domain {
-                PowfDomain::PositiveNormal => $profile::<0>(plan, bases, exponent),
-                PowfDomain::NonNegativeNormal => $profile::<1>(plan, bases, exponent),
-                PowfDomain::Gamma => $profile::<2>(plan, bases, exponent),
-            }
-        }
-        #[inline(always)]
-        fn $profile<const DOMAIN: usize>(
-            plan: Plan,
-            bases: [f32; $n],
-            exponent: f32,
-        ) -> Result<[f32; $n], PowfError> {
-            match plan {
-                #[cfg(target_arch = "x86_64")]
-                Plan::V3(t) => graph::$v3::<{ graph::NATIVE }, DOMAIN>(t, bases, exponent),
-                #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-                Plan::V4(t) => graph::$v4::<{ graph::NATIVE }, DOMAIN>(t, bases, exponent),
-                #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-                Plan::V4x(t) => graph::$v4x::<{ graph::NATIVE }, DOMAIN>(t, bases, exponent),
-                #[cfg(target_arch = "aarch64")]
-                Plan::Neon(t) => graph::$neon::<{ graph::NATIVE }, DOMAIN>(t, bases, exponent),
-                #[cfg(target_arch = "wasm32")]
-                Plan::Wasm(t, true) => {
-                    graph::$wasm::<{ graph::NATIVE }, DOMAIN>(t, bases, exponent)
-                }
-                #[cfg(target_arch = "wasm32")]
-                Plan::Wasm(t, false) => {
-                    graph::$wasm::<{ graph::WASM_SOFTWARE }, DOMAIN>(t, bases, exponent)
-                }
-                Plan::Software => {
-                    graph::$scalar::<{ graph::SOFTWARE }, DOMAIN>(ScalarToken, bases, exponent)
-                }
-                #[cfg(all(feature = "std", not(miri)))]
-                Plan::Std => graph::$scalar::<{ graph::STD }, DOMAIN>(ScalarToken, bases, exponent),
-            }
-        }
-    };
+#[inline(always)]
+pub(super) fn select<T: SimdToken>(token: T, execution: PowfExecution) -> Plan {
+    select_impl::<T, true>(token, execution)
 }
-run!(
-    run4,
-    run4_profile,
-    kernel4_v3,
-    kernel4_v4,
-    kernel4_v4x,
-    kernel4_neon,
-    kernel4_wasm128,
-    kernel4_scalar,
-    4
-);
-run!(
-    run8,
-    run8_profile,
-    kernel8_v3,
-    kernel8_v4,
-    kernel8_v4x,
-    kernel8_neon,
-    kernel8_wasm128,
-    kernel8_scalar,
-    8
-);
-#[cfg(feature = "w512")]
-run!(
-    run16,
-    run16_profile,
-    kernel16_v3,
-    kernel16_v4,
-    kernel16_v4x,
-    kernel16_neon,
-    kernel16_wasm128,
-    kernel16_scalar,
-    16
-);
+
+#[inline(always)]
+pub(super) fn select_relaxed<T: SimdToken>(token: T, execution: PowfExecution) -> Plan {
+    select_impl::<T, false>(token, execution)
+}
+
+#[archmage::attune(_*_t)]
+fn upgrade_relaxed(token: Token) -> Plan {
+    select_impl::<_, false>(token, PowfExecution::Caller)
+}
 
 macro_rules! run_const {
     ($name:ident, $v3:ident, $v4:ident, $v4x:ident, $neon:ident, $wasm:ident, $scalar:ident, $n:literal) => {
@@ -179,7 +116,11 @@ macro_rules! run_const {
                     graph::$wasm::<{ graph::WASM_SOFTWARE }, OPTIONS>(t, bases, exponent)
                 }
                 Plan::Software => {
-                    graph::$scalar::<{ graph::SOFTWARE }, OPTIONS>(ScalarToken, bases, exponent)
+                    if OPTIONS & PowfOptions::BACKEND != 0 {
+                        graph::$scalar::<{ graph::RELAXED }, OPTIONS>(ScalarToken, bases, exponent)
+                    } else {
+                        graph::$scalar::<{ graph::SOFTWARE }, OPTIONS>(ScalarToken, bases, exponent)
+                    }
                 }
                 #[cfg(all(feature = "std", not(miri)))]
                 Plan::Std => {

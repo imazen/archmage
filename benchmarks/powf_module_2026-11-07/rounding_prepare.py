@@ -10,7 +10,7 @@ import sys
 
 root = Path(__file__).resolve().parents[2]
 out = Path(sys.argv[1])
-midp = (root / 'magetypes/src/powf/graph.rs').read_text()
+midp = (root / 'benchmarks/powf_module_2026-11-07/reference_graph.rs').read_text()
 legacy = (root / 'magetypes/src/simd/generic/generated/transcendentals_f32x4.rs').read_text()
 
 

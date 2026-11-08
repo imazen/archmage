@@ -6,7 +6,7 @@ import sys
 ROOT = Path(__file__).resolve().parents[2]
 OUT = Path(sys.argv[1])
 OUT.mkdir(parents=True, exist_ok=True)
-graph = (ROOT / 'magetypes/src/powf/graph.rs').read_text().replace('//!', '//')
+graph = (ROOT / 'benchmarks/powf_module_2026-11-07/reference_graph.rs').read_text().replace('//!', '//')
 graph = graph.replace('use super::{PowfError, PowfErrorKind};',
                       'use magetypes::powf::{PowfError, PowfErrorKind};')
 graph = graph.replace('fn $core<', 'pub(super) fn $core<')
@@ -77,6 +77,7 @@ fn prevalidated_call{width}<T:magetypes::simd::backends::F32x{width}Convert>(tok
         PowfDomain::PositiveNormal=>prevalidated::core{width}::<T,{{$arithmetic}},false,false>(token,x,n).unwrap(),
         PowfDomain::NonNegativeNormal=>prevalidated::core{width}::<T,{{$arithmetic}},true,false>(token,x,n).unwrap(),
         PowfDomain::Gamma=>prevalidated::core{width}::<T,{{$arithmetic}},true,true>(token,x,n).unwrap(),
+        PowfDomain::Full=>panic!("full domain is not part of the frozen study"),
     }}}};}}
     if core::any::TypeId::of::<T>()==core::any::TypeId::of::<archmage::ScalarToken>() {{call!(prevalidated::SOFTWARE)}}
     else {{call!(prevalidated::NATIVE)}}
@@ -88,7 +89,7 @@ fn register{width}(suite:&mut zenbench::Suite,context:&str,size:usize,chain:bool
     let name=format!("powf/x{width}/{{context}}/{{size}}/{{}}/{{domain:?}}/{{distribution}}",if chain {{"chain"}} else {{"stream"}});
     if !matches_filter(&name) {{return;}}
     let input:Vec<[f32;{width}]>=(0..size/{width}).map(|i|core::array::from_fn(|j|value(i*{width}+j,distribution))).collect();
-    let options=PowfOptions {{domain,execution:PowfExecution::Caller}};
+    let options=PowfOptions {{domain,execution:PowfExecution::Caller,..PowfOptions::new()}};
     // Independent equality gate before any timing, with every selected arm.
     let mut expected=vec![[0.0;{width}];input.len()];
     let mut checked=expected.clone();
@@ -129,7 +130,7 @@ for width in [4, 8, 16]:
 #[cfg(not(target_arch="wasm32"))]
 #[archmage::magetypes(v3,neon,wasm128,scalar)]
 fn reject{width}<const AUTO:bool>(token:Token,input:&[[f32;{width}]],output:&mut [u16]) {{
-    let options=PowfOptions {{domain:PowfDomain::Gamma,execution:if AUTO {{PowfExecution::Automatic}} else {{PowfExecution::Caller}}}};
+    let options=PowfOptions {{domain:PowfDomain::Gamma,execution:if AUTO {{PowfExecution::Automatic}} else {{PowfExecution::Caller}},..PowfOptions::new()}};
     for (x,out) in input.iter().zip(output) {{
         let result=magetypes::simd::generic::f32x{width}::from_array_t(token,*x).try_powf_runtime(std::hint::black_box(2.4),options);
         *out=match result {{Ok(_)=>0,Err(e)=>{{assert_eq!(e.kind,magetypes::powf::PowfErrorKind::InvalidBase);e.lane_mask}}}};

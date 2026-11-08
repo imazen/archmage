@@ -69,8 +69,7 @@ fn register1(
     let input: Vec<_> = (0..size).map(|i| value(i, distribution)).collect();
     let options = PowfOptions {
         domain,
-        execution: PowfExecution::Caller,
-    };
+        execution: PowfExecution::Caller, ..PowfOptions::new() };
     let mut expected = vec![0.0; size];
     let mut output = expected.clone();
     scalar(0, &input, &mut expected, chain, options);

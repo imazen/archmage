@@ -11,6 +11,7 @@ fn prevalidated_call@N@<T:magetypes::simd::backends::F32x@N@Convert>(token:T,x:[
         PowfDomain::PositiveNormal=>prevalidated::core@N@::<T,{$a},false,false>(token,x,n).unwrap(),
         PowfDomain::NonNegativeNormal=>prevalidated::core@N@::<T,{$a},true,false>(token,x,n).unwrap(),
         PowfDomain::Gamma=>prevalidated::core@N@::<T,{$a},true,true>(token,x,n).unwrap(),
+        PowfDomain::Full=>panic!("full domain is not part of the frozen study"),
     }}}
     if core::any::TypeId::of::<T>()==core::any::TypeId::of::<archmage::ScalarToken>(){call!(prevalidated::SOFTWARE)}else{call!(prevalidated::NATIVE)}
 }
@@ -36,9 +37,9 @@ fn replacement_core@N@<T:magetypes::simd::backends::F32x@N@Convert,const ARM:usi
             4=>v.pow_lowp_unchecked(n).to_array(),
             5=>x.map(|x|x.powf(n)),
             6=>x.map(|x|(f64::from(x).powf(f64::from(n)))as f32),
-            7=>v.try_powf_runtime(n,PowfOptions{domain,execution:PowfExecution::Caller}).unwrap().to_array(),
+            7=>v.try_powf_runtime(n,PowfOptions{domain,execution:PowfExecution::Caller,..PowfOptions::new()}).unwrap().to_array(),
             8=>v.try_powf_runtime(n,dynamic_options).unwrap().to_array(),
-            9=>v.try_powf_runtime(n,PowfOptions{domain,execution:PowfExecution::Automatic}).unwrap().to_array(),
+            9=>v.try_powf_runtime(n,PowfOptions{domain,execution:PowfExecution::Automatic,..PowfOptions::new()}).unwrap().to_array(),
             10=>v.try_powf_runtime(n,dynamic_options).unwrap().to_array(),
             11=>v.try_powf_with::<CALLER>(n).unwrap().to_array(),
             12=>v.try_powf_with::<AUTO>(n).unwrap().to_array(),
@@ -143,9 +144,9 @@ fn replacement_dispatch@N@(suite:Option<&mut zenbench::Suite>,cell:&Cell){
         block=block.replace('let v=V::from_array_t(token,x);','let v=V::splat_t(token,x[0]);')
         block=block.replace('5=>x.map(|x|x.powf(n)),','5=>x[0].powf(n),')
         block=block.replace('6=>x.map(|x|(f64::from(x).powf(f64::from(n)))as f32),','6=>(f64::from(x[0]).powf(f64::from(n)))as f32,')
-        block=block.replace('7=>v.try_powf_runtime(n,PowfOptions{domain,execution:PowfExecution::Caller}).unwrap().to_array(),','7=>magetypes::powf::try_powf_runtime(x[0],n,PowfOptions{domain,execution:PowfExecution::Caller}).unwrap(),')
+        block=block.replace('7=>v.try_powf_runtime(n,PowfOptions{domain,execution:PowfExecution::Caller,..PowfOptions::new()}).unwrap().to_array(),','7=>magetypes::powf::try_powf_runtime(x[0],n,PowfOptions{domain,execution:PowfExecution::Caller,..PowfOptions::new()}).unwrap(),')
         block=block.replace('8=>v.try_powf_runtime(n,dynamic_options).unwrap().to_array(),','8=>magetypes::powf::try_powf_runtime(x[0],n,dynamic_options).unwrap(),')
-        block=block.replace('9=>v.try_powf_runtime(n,PowfOptions{domain,execution:PowfExecution::Automatic}).unwrap().to_array(),','9=>magetypes::powf::try_powf_runtime(x[0],n,PowfOptions{domain,execution:PowfExecution::Automatic}).unwrap(),')
+        block=block.replace('9=>v.try_powf_runtime(n,PowfOptions{domain,execution:PowfExecution::Automatic,..PowfOptions::new()}).unwrap().to_array(),','9=>magetypes::powf::try_powf_runtime(x[0],n,PowfOptions{domain,execution:PowfExecution::Automatic,..PowfOptions::new()}).unwrap(),')
         block=block.replace('10=>v.try_powf_runtime(n,dynamic_options).unwrap().to_array(),','10=>magetypes::powf::try_powf_runtime(x[0],n,dynamic_options).unwrap(),')
         block=block.replace('11=>v.try_powf_with::<CALLER>(n).unwrap().to_array(),','11=>magetypes::powf::try_powf_with::<CALLER>(x[0],n).unwrap(),')
         block=block.replace('12=>v.try_powf_with::<AUTO>(n).unwrap().to_array(),','12=>magetypes::powf::try_powf_with::<AUTO>(x[0],n).unwrap(),')
