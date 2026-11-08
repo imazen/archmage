@@ -41,6 +41,8 @@ for name in functions:
     if row['rounding']=='separate':
         assert not fused, ('unexpected fusion',name,fused)
         assert multiply and adds, ('no separate arithmetic found',name)
+    elif row['tier'] in ['v3','neon']:
+        assert fused, ('native fused probe has no FMA instructions',name)
     rows.append(row)
 expected=24
 assert len(rows)==expected, ('missing actual probe bodies',len(rows),expected)

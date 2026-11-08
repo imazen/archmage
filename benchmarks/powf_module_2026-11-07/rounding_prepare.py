@@ -117,6 +117,15 @@ pub fn {name}(token:Token,input:&[f32;{width}],n:f32,output:&mut[f32;{width}]) {
 }}
 '''
             calls.append((name,width))
+            # Guaranteed-feature targets can inline the macro wrapper despite
+            # the inner attribute. Keep a plain non-inlined caller inspectable.
+            for tier,ty,cfg in [('neon','NeonToken','target_arch="aarch64"'),('wasm128','Wasm128Token','target_arch="wasm32"')]:
+                probes+=f'''#[cfg({cfg})]
+#[inline(never)]
+pub fn caller_{name}_{tier}(token:archmage::{ty},input:&[f32;{width}],n:f32,output:&mut[f32;{width}]) {{
+    {name}_{tier}(token,input,n,output);
+}}
+'''
 probes+='fn main(){use archmage::SimdToken;let n=std::hint::black_box(2.4_f32);\n'
 for width in [4,8,16]:
     probes+=f'let input{width}=std::hint::black_box([0.75;{width}]);let mut output{width}=[0.;{width}];\n'
@@ -124,7 +133,8 @@ for tier,ty,cfg in [('scalar','ScalarToken',None),('v3','X64V3Token','target_arc
     if cfg:probes+=f'#[cfg({cfg})]\n'
     probes+=f'if let Some(token)=archmage::{ty}::summon(){{\n'
     for name,width in calls:
-        probes+=f'{name}_{tier}(token,&input{width},n,&mut output{width});std::hint::black_box(output{width});\n'
+        caller=f'caller_{name}_{tier}' if tier in ['neon','wasm128'] else f'{name}_{tier}'
+        probes+=f'{caller}(token,&input{width},n,&mut output{width});std::hint::black_box(output{width});\n'
     probes+='}\n'
 probes+='}\n'
 (out/'rounding_probes.rs').write_text(probes)
