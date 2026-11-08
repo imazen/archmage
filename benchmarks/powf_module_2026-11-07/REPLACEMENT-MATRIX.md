@@ -90,3 +90,10 @@ cell 0. Its previously unmeasured suffix may run once with the same executable,
 cell list and 50 retained rounds, using `--continue-unmeasured --record-all`.
 The original invalid cell 0 stays in the denominator and is never retried.
 Dirty verdicts remain invalid; admission/functional failures still stop.
+
+The Intel admission owner also finished before reinspection. Its original
+pilot timed out before collecting any samples; preserve that refusal. A fresh
+pilot may attempt the same 50-pair cell with the identical reference executable
+and verified performance-core confinement. Only a clean pilot admits the full
+previously unmeasured 672-cell matrix. Record each cell once, retaining dirty
+verdicts as invalid with `--record-all`; admission/functional failures stop.
