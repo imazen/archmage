@@ -92,21 +92,25 @@ def main():
                 report['fixed_graph_mismatches'].append([row,tier,values[0],expected])
             assert values[1] == values[2] and values[3] == values[5], ('legacy aliases',row,tier)
             for name,bits in zip(NAMES,values):
-                stats = profile['methods'].setdefault(name, {'nonfinite':0,'correctly_rounded':0,
-                    'canonical_bit_differences':0,'max_ulp_upper':0.,'worst':None})
-                stats['canonical_bit_differences'] += bits != values[0]
-                stats['correctly_rounded'] += bits == reference_bits[0]
-                value = accuracy.oracle.value(bits)
-                if not math.isfinite(value):
-                    stats['nonfinite'] += 1
-                    continue
-                y = Fraction.from_float(value)
-                bound = max(abs(y-Fraction.from_float(v)) for v in enclosure)/quantum
-                bound = math.nextafter(float(bound),math.inf) if bound else 0.
-                if bound > stats['max_ulp_upper']:
-                    stats['max_ulp_upper'] = bound
-                    stats['worst'] = {'base':fields[0],'exponent':fields[1],
-                        'actual':f'{bits:08x}','reference_interval':enclosure}
+                scopes=[profile['methods']]
+                if base & 0x7fffffff and n & 0x7fffffff:
+                    scopes.append(profile.setdefault('methods_without_zero_rails',{}))
+                for scope in scopes:
+                    stats = scope.setdefault(name, {'nonfinite':0,'correctly_rounded':0,
+                        'canonical_bit_differences':0,'max_ulp_upper':0.,'worst':None})
+                    stats['canonical_bit_differences'] += bits != values[0]
+                    stats['correctly_rounded'] += bits == reference_bits[0]
+                    value = accuracy.oracle.value(bits)
+                    if not math.isfinite(value):
+                        stats['nonfinite'] += 1
+                        continue
+                    y = Fraction.from_float(value)
+                    bound = max(abs(y-Fraction.from_float(v)) for v in enclosure)/quantum
+                    bound = math.nextafter(float(bound),math.inf) if bound else 0.
+                    if bound > stats['max_ulp_upper']:
+                        stats['max_ulp_upper'] = bound
+                        stats['worst'] = {'base':fields[0],'exponent':fields[1],
+                            'actual':f'{bits:08x}','reference_interval':enclosure}
         if len(set(canonical))!=1:
             report['canonical_tier_mismatches'].append([row,canonical])
     a.output.write_text(json.dumps(report,indent=2)+'\n')

@@ -1,3 +1,9 @@
+The caller-visible const API and actual legacy/std replacement comparisons are
+reported in [REPLACEMENTS.md](REPLACEMENTS.md). The runtime-options study below
+retains its original source and data; its cost ratios must not be applied to
+the new const caller path. The later adaptive accuracy search found larger
+errors than the original random corpus.
+
 # Bounded powf: portability and cost study
 
 Promotion is held. The checked API fails the 2% cost gate in matching native
