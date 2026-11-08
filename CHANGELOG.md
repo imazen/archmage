@@ -143,6 +143,10 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 - Planned: make `w512` non-default in magetypes; users who need 512-bit types would add `features = ["w512"]`. This patch keeps the existing default features.
 - Remove `cast::Upcast` and `cast::Downcast`, and with them the `cast` module, which holds nothing else. Both are deprecated in 0.9.30 and were never implemented (b1b2ff67).
 
+#### Added
+
+- Add bounded, bit-consistent f32 power through `magetypes::powf` and scalar/vector `try_powf_with` delegates, with explicit domains, whole-vector rejection and whole-operation fused dispatch. Existing power methods are unchanged; mathematical accuracy and admission costs remain separately measured (56059d2c).
+
 ### [0.9.31] - 2026-11-07
 
 #### Changed

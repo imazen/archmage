@@ -1210,6 +1210,14 @@ fn process(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 
 ### Open
 
+- **Bounded powf draft cost gate (2026-11-07, open):** the new checked API
+  is additive; existing power methods are unchanged. Against its identical
+  prevalidated fused graph, the clean Neoverse-N1 x4/64 Gamma stream Caller
+  costs +37.64% (paired 95% CI +36.65–38.25%). All 72 matching-NEON Automatic
+  cells fail the 2% bound; all 96 scalar-context Automatic cells pass through
+  whole-operation acceleration. Quiet full AMD/Intel/WASM coverage is missing.
+  Keep promotion held; see `benchmarks/powf_module_2026-11-07/README.md`.
+
 - **magetypes transcendentals mishandle NaN inputs (2026-11-05, open):** the
   docs claimed NaN → NaN for logs. Measured on scalar, V3, NEON and WASM:
   `log2_midp(NaN)` is -383.4 everywhere, `pow_midp(NaN, 2.4)` is 0, and

@@ -107,6 +107,8 @@ chunks and a tail. You need no aligned allocator and no padding.
   [gather and scatter](https://imazen.github.io/archmage/magetypes/memory/gather-scatter/)
   on `u32x16`, `i32x16` and `f32x16`.
 
+Bounded, bit-consistent f32 power is described in the [powf contract](../docs/POWF.md).
+
 ## Naming: `<name>_<tier>`
 
 `incant!(scale_plane_impl(…), [v3, scalar])` calls `scale_plane_impl_v3(token, …)` or
@@ -332,5 +334,3 @@ MIT OR Apache-2.0
 [imageflow-dotnet]: https://github.com/imazen/imageflow-dotnet
 [imageflow-node]: https://github.com/imazen/imageflow-node
 [imageflow-go]: https://github.com/imazen/imageflow-go
-
-Bounded, bit-consistent f32 power is described in the [powf contract](../docs/POWF.md).

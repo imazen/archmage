@@ -33,7 +33,7 @@ pub enum PowfDomain {
     /// `0^0` is 1; `0^n` for positive `n` is positive zero.
     NonNegativeNormal,
     /// Positive zero or a base in [2^-16, 2^16], with exponent in [0, 4].
-    /// Includes normalized 8/16-bit gamma inputs. The bounds prove the
+    /// Includes normalized 8/16-bit integer-channel gamma inputs. The bounds prove the
     /// computed exp2 argument stays in range, removing its rejection branch.
     Gamma,
 }
@@ -79,7 +79,9 @@ pub enum PowfErrorKind {
 pub struct PowfError {
     /// Which part of the contract failed.
     pub kind: PowfErrorKind,
-    /// Rejected lanes, low bit first. Zero for an unsupported array width.
+    /// Lanes failing the reported stage, low bit first. Later stages are not
+    /// examined. An invalid uniform exponent selects every lane; an unsupported
+    /// array width uses zero.
     pub lane_mask: u16,
 }
 
