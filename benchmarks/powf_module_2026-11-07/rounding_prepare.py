@@ -83,7 +83,7 @@ pub fn kernel{width}<T: magetypes::simd::backends::F32x{width}Convert,
             let outside = (t.simd_lt(sp(-126.0)) | t.simd_gt(sp(127.5))).bitcast_to_i32();
             // Admitted zero has an explicit result, independent of LOWP's
             // nonzero log2(1) bias and the size of the positive exponent.
-            let outside = if DOMAIN != 0 {{ outside & !zero }} else {{ outside }};
+            let outside = if DOMAIN != 0 {{ outside & (zero ^ ip(-1)) }} else {{ outside }};
             if outside.any_true() {{
                 return Err(reject(outside, PowfErrorKind::OutsideApproximationRange));
             }}

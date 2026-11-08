@@ -49,7 +49,7 @@ fused probes contain FMA instructions. No assembly-equality gate is changed.
 The final width audit emits expected values directly from the independent
 rational oracle, then checks every lane at x4/x8/x16, including whole-vector
 rejection precedence and exact masks on mixed inputs sharing one exponent.
-Twelve additional zero/large-exponent cases expand that corpus to 27,774.
+Forty-eight additional zero/large-exponent cases expand that corpus to 27,810.
 They first expose eight mismatches in the benchmark-only LOWP normal profile:
 admitted +0 with n=2^30 or f32::MAX is incorrectly rejected by its result-range
 guard because LOWP log2(1) has a small bias. Excluding admitted zero lanes from

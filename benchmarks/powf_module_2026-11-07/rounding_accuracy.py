@@ -32,8 +32,13 @@ def reference(base, exponent):
         bounds.append(accuracy.mp.mpfr_get_d(C.byref(c),rnd))
         exponents.append(accuracy.mp.mpfr_get_exp(C.byref(c)) if accuracy.mp.mpfr_number_p(C.byref(c)) and not accuracy.mp.mpfr_zero_p(C.byref(c)) else None)
     for v in [a,b,c]:accuracy.mp.mpfr_clear(C.byref(v))
-    assert exponents[0]==exponents[1], ('unresolved MPFR binade',base,exponent,exponents)
-    return bounds, max(exponents[0]-24,-149) if exponents[0] is not None else -149
+    if not all(math.isfinite(x)for x in bounds):
+        return bounds,None
+    # MPFR itself can underflow for huge exponents. Both endpoints still
+    # use the same minimum f32 quantum; keep their directed enclosure.
+    quantums=[max(e-24,-149)if e is not None else -149 for e in exponents]
+    assert quantums[0]==quantums[1], ('unresolved MPFR binade',base,exponent,exponents)
+    return bounds,quantums[0]
 
 NAMES = ['midp_separate', 'midp_fused', 'lowp_separate', 'lowp_fused']
 
@@ -56,8 +61,9 @@ def corpus(path):
                     for domain in range(3):
                         added.append(f'{base:08x} {nb:08x} {domain}')
     for n in [2.**26,2.**30,model.fp.value(0x7f7fffff),-model.fp.value(0x7f7fffff)]:
-        for domain in range(3):
-            added.append(f'00000000 {model.fp.bits(n):08x} {domain}')
+        for base in [0,model.fp.bits(.5),model.fp.ONE,model.fp.bits(2.)]:
+            for domain in range(3):
+                added.append(f'{base:08x} {model.fp.bits(n):08x} {domain}')
     return '\n'.join(rows + sorted(set(added) - set(rows))) + '\n'
 
 
@@ -124,6 +130,8 @@ def main():
                     old = values[tier][4 if m>=2 else 5]
                     stats['legacy_mismatches'] += bits != old
                 lower, upper = enclosure
+                if cls=='overflow':
+                    continue  # Classified explicitly; f32 ULP at infinity is undefined.
                 if not (math.isfinite(lower) and math.isfinite(upper)):
                     continue
                 quantum = Fraction(2)**quantum_exponent

@@ -126,6 +126,11 @@ unused arithmetic-policy path during monomorphization. Hardware FMA is preferred
 where supported: the measured M6 NEON separate graphs cost more than the fused
 graphs. These BackendDependent combinations remain experimental.
 
+The normative [WASM relaxed-operation rules](https://webassembly.github.io/spec/core/exec/numerics.html#relaxed-operations)
+fix the global `R_fmadd` choice throughout one program execution. For admitted
+non-NaN arithmetic, the two uniform graphs therefore cover its fused and
+separate choices; this does not assume arbitrary per-node fast-math rewrites.
+
 Validation defaults to `Checked` in every restricted preset. A separately
 named `AssumeValid` override could remove input checks, with the same numerical
 preconditions and zero rules. Invalid inputs would have unspecified numerical
