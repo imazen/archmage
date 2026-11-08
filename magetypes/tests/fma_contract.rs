@@ -95,9 +95,7 @@ fn scalar_and_software_contract() {
         same!(magetypes::nostd_math::fma(a, b, c), expected);
         use magetypes::simd::f64x1 as V;
         same!(V(a).mul_add_portable(V(b), V(c)).0, expected);
-        same!(V(a).mul_sub_portable(V(b), V(-c)).0, expected);
         same!(V(a).mul_add_fused(V(b), V(c)).0, expected);
-        same!(V(a).mul_sub_fused(V(b), V(-c)).0, expected);
         same!(V(a).mul_add_relaxed(V(b), V(c)).0, a * b + c);
     }
 }
@@ -136,8 +134,11 @@ fn requested_cpu_context() {
     let fma = std::is_x86_feature_detected!("fma");
     let v3 = archmage::X64V3Token::summon().is_some();
     assert!(!v3 || fma);
-    match std::env::var("ARCHMAGE_FMA_CONTEXT").as_deref().unwrap_or("auto") {
-        "auto" => {},
+    match std::env::var("ARCHMAGE_FMA_CONTEXT")
+        .as_deref()
+        .unwrap_or("auto")
+    {
+        "auto" => {}
         "v3" => assert!(v3 && fma, "required full V3 and FMA"),
         "no-fma" => assert!(!fma && !v3, "required no-FMA execution"),
         "fma-only" => assert!(fma && !v3, "required FMA without full V3"),

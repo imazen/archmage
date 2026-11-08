@@ -19,9 +19,13 @@ depth=1;macro_end=macro_brace+1
 while depth:
     depth+=(source[macro_end]=='{')-(source[macro_end]=='}');macro_end+=1
 source=source[:macro_start]+source[macro_end:]
+# Removing the cfg macro must also remove its immediately preceding doc block.
+import re
+source=re.sub(r'(///[^\n]*\n)+\s*\n(?=/// The 29 low)', '', source)
 source=source.replace('//!','//').replace('#![forbid(unsafe_code)]','')
+source=source[:source.index('#[cfg(test)]\nmod tests')]
 source+='\npub fn software64<const N:usize>(a:[f64;N],b:[f64;N],c:[f64;N])->[f64;N] {f64_soft::fma_soft_lanes(a,b,c)}\n'
-s='#[allow(dead_code)] mod soft {\n'+source+'\n}\n'
+s='#[allow(dead_code)] pub(super) mod soft {\n'+source+'\n}\n'
 for f,widths in [('f32',[1,4,8,16]),('f64',[1,2,4,8])]:
     for n in widths:
         name=f'{f}x{n}'
@@ -52,28 +56,31 @@ fn kernel_{name}<const ARM:usize>(t:Token,input:&[[{f};{n}]],output:&mut [[{f};{
 #[archmage::arcane]
 fn scalar_v3_{name}<const ARM:usize>(_t:archmage::X64V3Token,input:&[[{f};{n}]],output:&mut [[{f};{n}]],chain:bool) {{core_{name}::<_,ARM>(archmage::ScalarToken,input,output,chain);}}
 '''
+        count='size' if n==1 else f'size/{n}'
+        index='i+j' if n==1 else f'i*{n}+j'
         s+=f'''
 #[cfg(target_arch="x86_64")]
 fn dispatch_{name}(input:&[[{f};{n}]],output:&mut [[{f};{n}]],chain:bool) {{
     if let Some(t)=archmage::X64V3Token::summon() {{kernel_{name}_v3::<2>(t,input,output,chain);}}
     else {{kernel_{name}_scalar::<1>(archmage::ScalarToken,input,output,chain);}}
 }}
+#[cfg(not(target_arch="wasm32"))]
 fn register_{name}(suite:&mut zenbench::Suite,context:&str,size:usize,chain:bool,dist:&str) {{
     let id=format!("fma/{name}/{{context}}/{{size}}/{{}}/{{dist}}",if chain {{"chain"}} else {{"stream"}});
     if !super::matches_filter(&id) {{return;}}
-    let source:Vec<[{f};{n}]>=(0..size/{n}).map(|i|core::array::from_fn(|j|super::fma_value_{f}(i*{n}+j,dist))).collect();
+    let source:Vec<[{f};{n}]>=(0..{count}).map(|i|core::array::from_fn(|j|super::fma_value_{f}({index},dist))).collect();
     suite.group(id,|g| {{
         g.config().min_rounds(50).max_rounds(50).auto_rounds(false).warmup_time(std::time::Duration::from_millis(10)).max_time(std::time::Duration::from_millis(100)).max_wall_time(std::time::Duration::from_secs(60));
 '''
         for arm,label in enumerate(('current_fused','array_software','whole_buffer_hardware')):
+            scalar_x86=(f'bencher.iter(||dispatch_{name}(std::hint::black_box(&input),std::hint::black_box(&mut output),chain));' if arm==2 else f'bencher.iter(||kernel_{name}_scalar::<{arm}>(archmage::ScalarToken,std::hint::black_box(&input),std::hint::black_box(&mut output),chain));')
             s+=f'''
         let input=source.clone(); let context=context.to_string();
         g.bench("{label}",move |bencher| {{ let mut output=vec![[0.0;{n}];input.len()];
             match context.as_str() {{
                 "scalar" => {{
                     #[cfg(target_arch="x86_64")]
-                    if {arm}==2 {{bencher.iter(||dispatch_{name}(std::hint::black_box(&input),std::hint::black_box(&mut output),chain));}}
-                    else {{bencher.iter(||kernel_{name}_scalar::<{arm}>(archmage::ScalarToken,std::hint::black_box(&input),std::hint::black_box(&mut output),chain));}}
+                    {{{scalar_x86}}}
                     #[cfg(not(target_arch="x86_64"))]
                     bencher.iter(||kernel_{name}_scalar::<{arm}>(archmage::ScalarToken,std::hint::black_box(&input),std::hint::black_box(&mut output),chain));
                 }},
@@ -92,7 +99,7 @@ fn register_{name}(suite:&mut zenbench::Suite,context:&str,size:usize,chain:bool
         # Shadow context moves a String after first arm; use unique local name.
         s=s.replace('let context=context.to_string();','let arm_context=context.to_string();').replace('match context.as_str()','match arm_context.as_str()').replace('unsupported context {context}','unsupported context {arm_context}')
         s+='});\n}\n'
-s+='pub fn register(suite:&mut zenbench::Suite,context:&str,size:usize,kind:&str,dist:&str) {\n'
+s+='#[cfg(not(target_arch="wasm32"))]\npub fn register(suite:&mut zenbench::Suite,context:&str,size:usize,kind:&str,dist:&str) {\n'
 for f,widths in [('f32',[1,4,8,16]),('f64',[1,2,4,8])]:
     for n in widths:
         s+=f'register_{f}x{n}(suite,context,size,kind=="chain",dist);\n'

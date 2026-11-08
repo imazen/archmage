@@ -2,7 +2,7 @@
 from pathlib import Path
 import sys
 out = Path(sys.argv[1])
-ops = ['exp2_lowp', 'exp_lowp', 'pow_lowp', 'exp2_midp', 'exp_midp', 'pow_midp', 'sigmoid_midp', 'silu_midp', 'log2_lowp', 'ln_lowp', 'log10_lowp', 'log2_midp', 'ln_midp', 'log10_midp']
+ops = ['exp2_lowp', 'exp_lowp', 'pow_lowp', 'exp2_midp', 'exp_midp', 'pow_midp', 'sigmoid_midp', 'silu_midp', 'log2_lowp', 'ln_lowp', 'log10_lowp', 'log2_midp', 'ln_midp', 'log10_midp', 'combined_patch']
 s = '#![allow(dead_code)]\n'
 for w in (4, 8, 16):
     for label in ('baseline', 'fused'):
@@ -14,6 +14,14 @@ fn eval{w}<T: magetypes::simd::backends::F32x{w}Convert, const OP: usize, const 
 '''
     for i, op in enumerate(ops):
         for arm,label in enumerate(('baseline', '', 'fused')):
+            if op=='combined_patch':
+                parts=[]
+                for part in ops[:8]:
+                    name=(label+'_' if label else '')+part
+                    args=('t, ' if label else '')+('2.4' if part.startswith('pow') else '')
+                    parts.append(f'x.{name}({args.rstrip(", ")})')
+                s+=f'({i},{arm}) => '+ '+'.join(parts)+',\n'
+                continue
             name = label+'_'+op if label else op
             args = ('t, ' if label else '') + ('2.4' if op.startswith('pow') else '')
             s += f'({i},{arm}) => x.{name}({args.rstrip(", ")}),\n'
@@ -100,7 +108,7 @@ s+='_ => panic!("unsupported verification context {context}"),} println!("frozen
 for w in (4,8,16):
     s+=f'fn dump{w}<T: magetypes::simd::backends::F32x{w}Convert>(t:T) {{\n'
     s+=f'for block in 0..64 {{let input:[f32;{w}]=core::array::from_fn(|i|super::oracle_value(block*{w}+i));let x=magetypes::simd::generic::f32x{w}::from_array_t(t,input);\n'
-    for i,op in enumerate(ops):
+    for i,op in enumerate(ops[:14]):
         s+=f'println!("{{}}",serde_json::json!({{"op":"{op}","width":{w},"token":T::NAME,"input":input.map(f32::to_bits),"baseline":eval{w}::<T,{i},0>(t,x).to_array().map(f32::to_bits),"exceptional":eval{w}::<T,{i},1>(t,x).to_array().map(f32::to_bits),"fused":eval{w}::<T,{i},2>(t,x).to_array().map(f32::to_bits)}}));\n'
     s+='}\n}\n'
 s+='pub fn dump(context:&str) {match context {\n'

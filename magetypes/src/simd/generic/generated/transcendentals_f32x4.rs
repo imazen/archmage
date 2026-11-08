@@ -97,32 +97,7 @@ impl<T: F32x4Convert> f32x4<T> {
         let upper = splat_f32::<T>(self.1, 127.99);
         let x = if core::any::TypeId::of::<T>() == core::any::TypeId::of::<archmage::ScalarToken>()
         {
-            #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
-            {
-                // Only enter when summon is a compile-time proof. With
-                // testable_dispatch it is not, so keep the core clamp;
-                // this branch must never introduce a runtime CPU probe.
-                let native = if <archmage::NeonToken as archmage::SimdToken>::compiled_with()
-                    == Some(true)
-                {
-                    <archmage::NeonToken as archmage::SimdToken>::summon()
-                } else {
-                    None
-                };
-                if let Some(native) = native {
-                    type Native = f32x4<archmage::NeonToken>;
-                    let x = Native::from_array_t(native, self.to_array());
-                    let lower = Native::splat_t(native, -126.0);
-                    let upper = Native::splat_t(native, 127.99);
-                    Self::from_array_t(self.1, upper.min(lower.max(x)).to_array())
-                } else {
-                    Self::from_array_t(self.1, self.to_array().map(|x| x.clamp(-126.0, 127.99)))
-                }
-            }
-            #[cfg(not(all(target_arch = "aarch64", target_feature = "neon")))]
-            {
-                Self::from_array_t(self.1, self.to_array().map(|x| x.clamp(-126.0, 127.99)))
-            }
+            Self::from_array_t(self.1, self.to_array().map(|x| x.clamp(-126.0, 127.99)))
         } else {
             upper.min(lower.max(self))
         };
@@ -313,32 +288,7 @@ impl<T: F32x4Convert> f32x4<T> {
         // Clamp to prevent overflow in intermediate calculations
         let clamped =
             if core::any::TypeId::of::<T>() == core::any::TypeId::of::<archmage::ScalarToken>() {
-                #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
-                {
-                    // Only enter when summon is a compile-time proof. With
-                    // testable_dispatch it is not, so keep the core clamp;
-                    // this branch must never introduce a runtime CPU probe.
-                    let native = if <archmage::NeonToken as archmage::SimdToken>::compiled_with()
-                        == Some(true)
-                    {
-                        <archmage::NeonToken as archmage::SimdToken>::summon()
-                    } else {
-                        None
-                    };
-                    if let Some(native) = native {
-                        type Native = f32x4<archmage::NeonToken>;
-                        let x = Native::from_array_t(native, self.to_array());
-                        let lower = Native::splat_t(native, -126.0);
-                        let upper = Native::splat_t(native, 128.0);
-                        Self::from_array_t(self.1, upper.min(lower.max(x)).to_array())
-                    } else {
-                        Self::from_array_t(self.1, self.to_array().map(|x| x.clamp(-126.0, 128.0)))
-                    }
-                }
-                #[cfg(not(all(target_arch = "aarch64", target_feature = "neon")))]
-                {
-                    Self::from_array_t(self.1, self.to_array().map(|x| x.clamp(-126.0, 128.0)))
-                }
+                Self::from_array_t(self.1, self.to_array().map(|x| x.clamp(-126.0, 128.0)))
             } else {
                 overflow_limit.min(underflow_limit.max(self))
             };

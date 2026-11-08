@@ -11,7 +11,7 @@ binary=Path(sys.argv[1]).resolve()
 out=Path(sys.argv[2]).resolve()
 out.mkdir(parents=True,exist_ok=True)
 identity=hashlib.sha256(binary.read_bytes()).hexdigest()
-ops=['exp2_lowp','exp_lowp','pow_lowp','exp2_midp','exp_midp','pow_midp','sigmoid_midp','silu_midp','log2_lowp','ln_lowp','log10_lowp','log2_midp','ln_midp','log10_midp']
+ops=['exp2_lowp','exp_lowp','pow_lowp','exp2_midp','exp_midp','pow_midp','sigmoid_midp','silu_midp','log2_lowp','ln_lowp','log10_lowp','log2_midp','ln_midp','log10_midp','combined_patch']
 for op in ops:
     assert not (out/f'{op}.json').exists(), 'Never overwrite a study'
     env=dict(os.environ,STUDY_FILTER=op+'/',STUDY_OUTPUT=str(out/f'{op}.json'))

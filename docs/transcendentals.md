@@ -196,6 +196,15 @@ transcendentals.
 - Use `cbrt_midp_precise` when inputs may be subnormal or above `f32::MAX / 3`; the other `_precise` names add nothing
 - For perfect precision, use std::f32 (scalar) at ~4-5x slower throughput
 
+The exp correction also propagates internally produced NaNs: checked
+`pow_midp` on a negative base now returns NaN, as do power calls whose
+exponent is NaN or whose logarithm-times-exponent is invalid (for example
+`pow_midp(1, inf)` and `pow_midp(0, 0)`). The existing lowp zero mask
+still takes precedence: `pow_lowp(0, NaN)` is +0. This does not establish
+full `powf` semantics; NaN bases still enter the legacy bitwise log.
+Unchecked midp exp/log/pow paths keep their existing restricted domains.
+
+
 ## Algorithms
 
 ### log2_lowp — Rational Polynomial
@@ -463,11 +472,3 @@ if let Some(token) = X64V3Token::summon() {
 - butteraugli (libjxl): fast_log2f rational polynomial
 - wide crate: MIT-licensed polynomial implementations
 - [sleef-rs](https://github.com/burrbull/sleef-rs): high-precision vectorized math functions
-
-The exp correction also propagates internally produced NaNs: checked
-`pow_midp` on a negative base now returns NaN, as do power calls whose
-exponent is NaN or whose logarithm-times-exponent is invalid (for example
-`pow_midp(1, inf)` and `pow_midp(0, 0)`). The existing lowp zero mask
-still takes precedence: `pow_lowp(0, NaN)` is +0. This does not establish
-full `powf` semantics; NaN bases still enter the legacy bitwise log.
-Unchecked midp exp/log/pow paths keep their existing restricted domains.

@@ -346,8 +346,8 @@ respective fixups. `xtask/codegen.py` checks per-ISA consumer assembly, direct
 storage access, and integer formulations. These gates check the tested shapes
 and contexts; they do not establish optimal codegen for every possible caller.
 
-The clamped generic `exp2_lowp` and checked `exp2_midp` classify original
-NaN inputs explicitly, so every backend returns NaN. Exp aliases and
+The clamped generic `exp2_lowp` and checked `exp2_midp` preserve original
+NaN classification at their clamps, so every backend returns NaN. Exp aliases and
 activation helpers inherit this behavior. Checked power also preserves
 NaNs produced by a negative base entering log. Payload/sign remain
 unspecified, and ordinary polynomial rounding remains relaxed. See the

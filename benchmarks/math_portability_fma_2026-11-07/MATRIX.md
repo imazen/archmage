@@ -45,3 +45,30 @@ reported individually; missing native Intel/NEON/WASM coverage prevents an
 unqualified promotion recommendation. Preliminary historical context is
 [PR128](https://github.com/imazen/archmage/pull/128), which used an earlier
 FMA implementation and is not a current performance measurement.
+
+
+## Supplemental controls, frozen before their first timing
+
+The original fourteen-operation runs stay intact. `combined_patch` adds the
+left-associated sum of the eight changed canonical operations on the same input,
+with the same widths, buffers, contexts and distributions. It is a workload
+comparison, not an additional accuracy claim. The independent graph dump keeps
+the original fourteen operations; the sum introduces no different polynomial.
+
+FMA controls compare the existing public fused primitive, mechanically copied
+array software arithmetic, and a hardware projection dispatched once per buffer.
+Native widths are f32 1/4/8/16 and f64 1/2/4/8. They use the same context,
+size, shape and distribution axes. A forced no-V3 run measures fallback overhead;
+it prints the actual detector state. These controls do not alter library dispatch.
+WASM representatives are f32 1/4 and f64 1/2; scalar hardware uses a packed
+broadcast because WASM has no scalar FMA instruction. All share prepared inputs.
+
+WASM uses a host-verified f32/f64 fusion probe. The strict guest lacks relaxed
+instructions. The relaxed nonfusing x86 engine clears ISA autodetection, which
+also disables other optional ISA features: cross-engine differences cannot be
+attributed solely to FMA. Deterministic relaxed selection is a separate control.
+Each steady-state timed call processes 128 complete buffers. A separate fresh
+guest-instance group times the first complete 64-element exp2_midp buffer;
+instance construction/preparation/destruction remain outside the timer.
+Native fresh-process perf-stat diagnostics include process startup and cannot
+be described as isolated primitive latency.

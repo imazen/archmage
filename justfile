@@ -551,7 +551,7 @@ portability-nan tier="scalar" stride="65537":
 
 # Frozen-main/live exceptional/fixed-fused comparison; output is required.
 portability-build:
-    cargo build --release --manifest-path benchmarks/math_portability_fma_2026-11-07/Cargo.toml
+    cargo build --release --manifest-path benchmarks/math_portability_fma_2026-11-07/Cargo.toml --bin archmage-portability-study
 
 portability-bench output filter="" contexts="scalar,scalar-v3,v3,baseline-v3":
     STUDY_OUTPUT={{quote(output)}} STUDY_FILTER={{quote(filter)}} STUDY_CONTEXTS={{quote(contexts)}} benchmarks/math_portability_fma_2026-11-07/target/release/archmage-portability-study

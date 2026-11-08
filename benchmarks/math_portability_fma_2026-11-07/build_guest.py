@@ -15,8 +15,8 @@ cmd=['cargo','build','--release','--manifest-path',str(manifest),'--target','was
 wasm=manifest.parent/'target/wasm32-wasip1/release/archmage-portability-study.wasm'
 with (out/f'{mode}-discover.log').open('w') as log:
     subprocess.run(cmd,env=dict(os.environ,RUSTFLAGS=flags+' -Clink-arg=--export-all'),stdout=log,stderr=subprocess.STDOUT,check=True)
-names=set(re.findall(rb'_RNvNtCs[0-9A-Za-z]+_26archmage_portability_study5guest(?:13guest_prepare|9guest_run|11guest_probe)',wasm.read_bytes()))
-assert len(names)==3, names
+names=set(re.findall(rb'_RNvNtCs[0-9A-Za-z]+_26archmage_portability_study5guest(?:13guest_prepare|9guest_run|11guest_probe|9guest_fma)',wasm.read_bytes()))
+assert len(names)==4, names
 final_flags=flags+' '+ ' '.join('-Clink-arg=--export='+name.decode() for name in sorted(names))
 with (out/f'{mode}-export.log').open('w') as log:
     subprocess.run(cmd,env=dict(os.environ,RUSTFLAGS=final_flags),stdout=log,stderr=subprocess.STDOUT,check=True)
