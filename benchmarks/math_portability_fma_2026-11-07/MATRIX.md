@@ -58,8 +58,9 @@ the original fourteen operations; the sum introduces no different polynomial.
 FMA controls compare the existing public fused primitive, mechanically copied
 array software arithmetic, and a hardware projection dispatched once per buffer.
 Native widths are f32 1/4/8/16 and f64 1/2/4/8. They use the same context,
-size, shape and distribution axes. A forced no-V3 run measures fallback overhead;
-it prints the actual detector state. These controls do not alter library dispatch.
+size, shape and distribution axes. A forced no-V3 run exercises the secondary std route on an FMA host;
+it prints the actual detector state. It does not model a no-FMA processor.
+No-FMA speed requires real admitted hardware; QEMU is correctness-only. These controls do not alter library dispatch.
 WASM representatives are f32 1/4 and f64 1/2; scalar hardware uses a packed
 broadcast because WASM has no scalar FMA instruction. All share prepared inputs.
 

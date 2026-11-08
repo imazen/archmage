@@ -34,7 +34,11 @@ fn work(t:Token,x:[f32;8])->[f32;8] {
  let v=magetypes::simd::generic::f32x8::from_array_t(t,x);
  (v.exp2_lowp()+v.exp2_midp()+v.exp_lowp()+v.exp_midp()+v.pow_lowp(2.4)+v.pow_midp(2.4)+v.sigmoid_midp()+v.silu_midp()+v.log2_lowp()+v.log2_midp()+v.ln_lowp()+v.ln_midp()+v.log10_lowp()+v.log10_midp()).to_array()
 }
-fn main(){let x=std::env::args().nth(1).unwrap_or_else(||"0.5".into()).parse().unwrap();println!("{:?}",incant!(work(std::hint::black_box([x;8])),[v3,neon,scalar]).map(f32::to_bits));}
+fn fused_scalar(x:f64)->[f64;4] {
+ let v=magetypes::simd::generic::f64x4::from_array_t(archmage::ScalarToken,[x,x+0.125,x+0.25,x+0.5]);
+ v.mul_add_fused(v,magetypes::simd::generic::f64x4::splat_t(archmage::ScalarToken,0.00013)).to_array()
+}
+fn main(){let x=std::env::args().nth(1).unwrap_or_else(||"0.5".into()).parse().unwrap();println!("{:?} {:?}",incant!(work(std::hint::black_box([x;8])),[v3,neon,scalar]).map(f32::to_bits),std::hint::black_box(fused_scalar(x as f64)).map(f64::to_bits));}
 ''')
 subprocess.run(['cargo','generate-lockfile','--manifest-path',str(out/'baseline/consumer/Cargo.toml')],check=True)
 (out/'candidate/consumer/Cargo.lock').write_bytes((out/'baseline/consumer/Cargo.lock').read_bytes())

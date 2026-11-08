@@ -152,6 +152,14 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
   [the portability study](benchmarks/math_portability_fma_2026-11-07/README.md)
   for measured costs and the candidate's failed performance promotion gate.
 
+#### Changed
+
+- Below full V3 on x86_64 std, f64 fused operations delegate to safe
+  `f64::mul_add`, allowing its runtime to use FMA-only CPUs. The paired V3
+  helper remains; no new magetypes feature detector or proof API is added
+  (68320dbd). Performance, including the no-FMA software fallback, is unproven;
+  the portability study keeps this candidate unpromoted.
+
 ### [0.9.31] - 2026-11-07
 
 #### Changed

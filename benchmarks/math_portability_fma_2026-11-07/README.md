@@ -4,15 +4,19 @@ The exceptional-value candidate fails the 2% performance promotion gate on
 real NEON scalar callers. It needs an explicit correctness/cost decision before
 landing. Quiet AMD and Intel timings and a complete WASM timing matrix are still
 missing; busy-host results cannot fill those gaps. The fixed-fused polynomial
-candidate is experimental and is not the library default.
+candidate is experimental and is not the library default. The separate x86_64
+std f64 fallback candidate has correct FMA-only execution but unmeasured
+no-FMA and hardware-path costs; it also remains unpromoted.
 
 ## Change and contracts
 
-Only generic `exp2_lowp` and checked `exp2_midp` clamps change. Native backends
+The exceptional-value change affects only generic `exp2_lowp` and checked
+`exp2_midp` clamps. Native backends
 put the input second in both min/max operations; ScalarToken uses `f32::clamp`.
 NaN inputs return NaN on every backend, with payload/sign unspecified. The
 existing relaxed polynomial, coefficients, overflow/underflow masks, public
-signatures, primitive FMA implementation and dependencies remain unchanged.
+signatures and dependencies remain unchanged. A separate f64 std fallback
+change is described below; it does not change polynomial rounding.
 
 Exp aliases and sigmoid/SiLU inherit NaN classification. Checked pow now
 preserves internal NaNs from negative bases, NaN exponents and invalid
@@ -30,8 +34,9 @@ This is not an exhaustive binary-pow or full-f32-domain accuracy claim.
 ## Frozen experiment
 
 Baseline: `6bfd83d744e41259ec758054631dcb0928fc4ea1` (0.9.31).
-The production core-clamp body is frozen at `22f5b2dd91b2`; subsequent method-doc
-edits do not change that arithmetic. Rust 1.99.1 (`58cf8f9c3`), LLVM 23.1.1,
+The core-clamp body is frozen at `22f5b2dd91b2`. The later x86_64 std f64
+fallback candidate `68320dbd` is excluded by cfg on the measured NEON/WASM
+paths; it has not passed the x86 performance gate. Rust 1.99.1 (`58cf8f9c3`), LLVM 23.1.1,
 release, one codegen unit, thin LTO, baseline distribution target settings;
 no `target-cpu=native`. See [MATRIX.md](MATRIX.md) for all mandatory axes and
 controls, including the combined workload, cached dispatch and first use.
@@ -97,17 +102,28 @@ Existing fused primitives already use native FMA on supported tokens, cached
 WASM fusion probes and the baseline x86 f64 V3 helper. F32 scalar dispatch is
 not unconditionally replaced by software or by per-call hardware detection.
 
-A narrower x86 runtime helper was not added. Existing proofs authorize full V3;
-a bare FMA detector cannot authorize V3 instructions. Tests explicitly execute
-no-FMA and FMA-without-full-V3 CPU models and assert the actual detector states.
-A new granular public proof API is outside this change.
+The f64 std candidate preserves the full-V3 paired helper and delegates below
+V3 to safe `f64::mul_add`. Rust 1.99.1's compiler-builtins selected
+`fma_with_fma` under Haswell with AVX2 disabled; the executed bytes decode to
+`vfmadd213sd` plus return. Independent exact-rational fixtures pass under that
+model, no-FMA Nehalem, full V3 and no_std. Emulation establishes correctness
+and the selected path, never speed.
+
+The safe standard operation owns its complete hardware/software selection;
+no FMA bit authorizes an all-V3 helper. A manually added secondary detector
+was rejected by the unchanged structural guard. The final candidate adds no
+feature detector or proof API in magetypes. It also delegates the no-FMA case
+to std software, whose cost may differ from the prior vectorized array path.
+Those costs and isolated first-use costs on FMA-only hardware are unmeasured:
+hold this candidate independently of the measured NaN tradeoff. F32 dispatch,
+no_std, i686, NEON and WASM paths retain their implementations.
 
 The real NEON FMA study completed all 256 predeclared cells, 50 pairs each,
 with every admission check clean. It compares current fused, copied exact array
 software and once-per-buffer hardware controls, covering f32 1/4/8/16 and
 f64 1/2/4/8, scalar/NEON callers, both lengths/shapes and four distributions.
 These are measurements of existing paths and experimental call granularity;
-there is no new shipped FMA optimization. For example, real NEON scalar
+these NEON paths are unaffected by the x86-only fallback change. For example, real NEON scalar
 f32x4/64 ordinary streams measured whole-buffer hardware/current R=0.941664,
 CI [0.934024, 0.949027], while array software/current R=8.039430,
 CI [7.978791, 8.095745]. The corresponding f64x4 hardware/current ratio was
@@ -147,8 +163,28 @@ failures. No default fusion policy is accepted by this PR.
   registry/tokens, structural soundness, Miri, parity, ARM, WASM, docs and
   consumer codegen. Both package semver checks passed. Later harness/doc
   verification is recorded alongside its final identity. Report head 2d3d1e49
-  passed all 19 steps again (248s, peak RSS0.74GiB), and every GitHub CI job
+  passed all 19 steps again (248s, peak RSS 0.74GiB), and every GitHub CI job
   passed at that head, including Windows ARM, macOS ARM and i686 cross.
+
+## Remaining timing coverage
+
+Native NEON completed 13/14 canonical operations plus combined, 1,344/1,440
+cells admitted. The original 96 log10_lowp cells remain invalid. All 256 native
+FMA cells are admitted. There are no clean current AMD/Intel comparisons;
+common admission checks refused, so the new std f64 fallback's hardware and
+no-FMA costs remain unknown.
+
+Of 784 steady-state cells per WASM mode, strict admitted 112 (64 FMA and 48
+exp2_lowp); exp_lowp 48 became unreliable and stopped that mode. Fusing admitted
+64 FMA cells; exp2_lowp 48 became unreliable and stopped that mode. Remaining
+strict 624 and fusing 672 cells were not attempted. No quiet nonfusing timing
+is available. These fractions prevent an unqualified promotion claim.
+
+The strict first-use result retains all 200 pairs and passes the exceptional
+candidate's gate. The fusing 200-pair population retains one dirty gate record
+and is INADMISSIBLE, even though the suite's unreliable flag is false. No round
+was removed and no second extension is permitted. Isolated native first-call
+latency is also unproven; fresh-process counters include startup.
 
 ## Cold build and resource diagnostics
 
@@ -165,11 +201,11 @@ inferred from build times.
 Maximum RSS in KiB, main: 353796/353812/354240; candidate:
 354688/354688/354792. Size includes the complete linked consumer.
 
-`run-heavy` resource lines: final CI+semver 267s, peak RSS0.74GiB,
-min available19836MiB, peak load6.10; build+all-cell analysis+cold builds153s,
-peak RSS1.37GiB, min available19836MiB, peak load6.10; NEON FMA323s,
-peak RSS0.03GiB, min available14880MiB, peak load0.86; combined workload68s,
-peak RSS0.01GiB, min available14886MiB, peak load0.46. Caps were explicit;
+`run-heavy` resource lines: final CI+semver 267s, peak RSS 0.74GiB,
+min available 19836MiB, peak load 6.10; build+all-cell analysis+cold builds 153s,
+peak RSS1.37GiB, min available 19836MiB, peak load 6.10; NEON FMA 323s,
+peak RSS 0.03GiB, min available 14880MiB, peak load 0.86; combined workload 68s,
+peak RSS 0.01GiB, min available 14886MiB, peak load 0.46. Caps were explicit;
 no other workload was interrupted.
 
 Fresh native-process counters include startup and therefore are not primitive
@@ -178,7 +214,7 @@ f64 2533272 on the counted Intel atom PMU. Core-PMU events were not counted.
 The strict first-buffer cell pooled all 200 preregistered pairs (28+172):
 exceptional/main R=0.985225, CI [0.975316, 0.995332], PASS;
 fixed-fused/corrected R=6.405867, CI [6.347259, 6.465085], FAIL.
-It measures the first complete64-element exp2_midp x4 buffer, including
+It measures the first complete 64-element exp2_midp x4 buffer, including
 the actual first fused-cache probe where applicable. It is not an isolated
 FMA-instruction latency. The per-call WASM first-buffer experiment is separate. Isolated native first-call
 latency was not established by these process counters.

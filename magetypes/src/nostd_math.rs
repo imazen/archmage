@@ -407,8 +407,10 @@ pub fn fmaf(a: f32, b: f32, c: f32) -> f32 {
     crate::soft_fma::fmaf_lanes([a], [b], [c])[0]
 }
 
-/// Correctly rounded fused multiply-add, without runtime CPU detection.
-/// Hardware where the build guarantees it, else software; see `soft_fma`.
+/// Correctly rounded fused multiply-add.
+/// On x86_64 with std, uses the cached V3 helper or the safe std primitive,
+/// which owns its feature selection. Other configurations use build-proven
+/// hardware or software; see `soft_fma`. NaN payload/sign are unspecified.
 #[inline(always)]
 pub fn fma(a: f64, b: f64, c: f64) -> f64 {
     crate::soft_fma::fma_lanes([a], [b], [c])[0]
