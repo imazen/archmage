@@ -26,7 +26,7 @@ pub(super) fn select<T: SimdToken>(token: T, execution: PowfExecution) -> Plan {
         target_arch = "aarch64",
         target_arch = "wasm32"
     ))]
-    let any = &token as &dyn core::any::Any;
+    let any: &dyn core::any::Any = &token;
     #[cfg(target_arch = "x86_64")]
     {
         if let Some(t) = any.downcast_ref::<archmage::X64V3Token>() {

@@ -2,7 +2,7 @@
 // Each row is [a bits, b bits, c bits, correctly rounded (a*b+c) bits].
 // NaN expectations assert NaN-ness, not a particular payload or sign.
 #[rustfmt::skip]
-pub const F32: [[u32; 4]; 128] = [
+pub(super) const F32: [[u32; 4]; 128] = [
     [0x7f7fffff, 0x40000000, 0xff7fffff, 0x7f7fffff],
     [0x7f7fffff, 0x40000000, 0x00000000, 0x7f800000],
     [0x00800001, 0x3f000000, 0x80000001, 0x00400000],

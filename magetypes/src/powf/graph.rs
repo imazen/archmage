@@ -66,7 +66,8 @@ macro_rules! graph {
                     let (a, b, c) = (a.to_array(), b.to_array(), c.to_array());
                     #[cfg(target_arch = "wasm32")]
                     if ARITHMETIC == WASM_SOFTWARE {
-                        let proof = (&token as &dyn core::any::Any)
+                        let any: &dyn core::any::Any = &token;
+                        let proof = any
                             .downcast_ref::<archmage::Wasm128Token>()
                             .expect("private WASM mode requires its matching proof");
                         return V::from_array_t(

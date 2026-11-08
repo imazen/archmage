@@ -129,7 +129,8 @@ if __name__ == '__main__':
     parser.add_argument('--check', action='store_true')
     args = parser.parse_args()
     contents = render()
-    probe = contents.split('#[rustfmt::skip]\npub const F64:', 1)[0]
+    probe = contents.split('#[rustfmt::skip]\npub const F64:', 1)[0].replace(
+        'pub const F32:', 'pub(super) const F32:')
     if args.check:
         if OUTPUT.read_text() != contents:
             raise SystemExit('FMA fixtures differ; review before regenerating expectations')
