@@ -597,3 +597,6 @@ powf-study-lint:
 
 powf-study-wasm-verify wasm mode:
     POWF_WASM="{{wasm}}" POWF_WASM_MODE={{mode}} POWF_VERIFY_ONLY=1 benchmarks/powf_module_2026-11-07/target/release/wasm_host
+
+powf-sde-contract sde cpu="-nhm" expected="software":
+    python3 -B benchmarks/powf_module_2026-11-07/sde_contract.py "{{sde}}" --cpu={{cpu}} --expected={{expected}}

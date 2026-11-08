@@ -921,7 +921,7 @@ jobs:
   # ==========================================================================
   sde:
     name: SDE ${{ matrix.cpu.name }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.cpu.runner }}
     # Emulation runs the full magetypes suite in ~2.5 min per lane; anything
     # dramatically slower means a subprocess-spawning binary slipped past the
     # skip list (soundness_exploits once burned 19 emulated minutes on one
@@ -933,13 +933,16 @@ jobs:
         cpu:
           # Pentium 4 (-p4) removed: SDE's Pentium 4 model is 32-bit only
           # and cannot run 64-bit test binaries.
-          - { name: "Nehalem (SSE4.2)", flag: "-nhm" }
-          - { name: "Haswell (AVX2+FMA)", flag: "-hsw" }
-          - { name: "Skylake-X (AVX-512)", flag: "-skx" }
-          - { name: "Ice Lake (AVX-512 VBMI2)", flag: "-icl" }
+          # Ubuntu 26.04 cloud images default to amd64v3; their loader can
+          # execute AVX before Nehalem tests start. Use a baseline userland.
+          # https://ubuntu.com/cloud/public-cloud/docs/all-clouds-explanation/architecture-variants/
+          - { name: "Nehalem (SSE4.2)", flag: "-nhm", runner: "ubuntu-24.04" }
+          - { name: "Haswell (AVX2+FMA)", flag: "-hsw", runner: "ubuntu-latest" }
+          - { name: "Skylake-X (AVX-512)", flag: "-skx", runner: "ubuntu-latest" }
+          - { name: "Ice Lake (AVX-512 VBMI2)", flag: "-icl", runner: "ubuntu-latest" }
           # The only lane where Avx512Fp16Token summons, so the only one that
           # executes tests/avx512fp16_intrinsics.rs.
-          - { name: "Sapphire Rapids (AVX-512 FP16)", flag: "-spr" }
+          - { name: "Sapphire Rapids (AVX-512 FP16)", flag: "-spr", runner: "ubuntu-latest" }
 
     steps:
       - uses: actions/checkout@v7

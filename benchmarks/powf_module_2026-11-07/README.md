@@ -155,3 +155,12 @@ minimum available 23,181 MiB, peak load 4.61; N1 ordinary matrix, 148 s, peak
 RSS 0.03 GiB, minimum available 14,899 MiB, peak load 0.64; cold study, 41 s,
 peak RSS 0.35 GiB, minimum available 24,213 MiB, peak load 2.20. Full stdout and
 stderr preserve the remaining wrapper lines. These values describe those runs.
+
+CI follow-up: the full cross-target warning sweep passes after using fixed-size
+chunks in the WASM adapter, implicit Any coercions and private probe visibility.
+No fixture values changed. The Nehalem job uses Ubuntu 24.04 because Ubuntu
+26.04 cloud images default to an amd64v3 userland; the failing runner executed
+AVX in its dynamic loader before the test binary started. SDE 10.8 passes the
+root and bounded-power unit suites in the baseline Ubuntu 24.04 container.
+All CPU instruction checks and test assertions remain active. See
+[Ubuntu's image policy](https://ubuntu.com/cloud/public-cloud/docs/all-clouds-explanation/architecture-variants/).
