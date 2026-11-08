@@ -605,6 +605,29 @@ powf-sde-contract sde cpu="-nhm" expected="software":
 powf-replacement-build:
     cargo build --release --locked --manifest-path benchmarks/powf_module_2026-11-07/Cargo.toml --bin replacement --bin replacement_eval --bin replacement_analyze
 
+# Controlled benchmark-only rounding study; public fused defaults unchanged.
+powf-rounding-build:
+    cargo build --release --locked --manifest-path benchmarks/powf_module_2026-11-07/Cargo.toml --bin rounding_bench --bin rounding_eval --bin rounding_analyze --bin rounding_codegen --lib
+
+powf-rounding-check:
+    cargo test --release --locked --manifest-path benchmarks/powf_module_2026-11-07/Cargo.toml --lib
+    POWF_VERIFY_ONLY=1 benchmarks/powf_module_2026-11-07/target/release/rounding_bench
+
+powf-rounding-matrix directory *options:
+    python3 -B benchmarks/powf_module_2026-11-07/replacement_matrix.py benchmarks/powf_module_2026-11-07/target/release/rounding_bench "{{directory}}" --rounding {{options}}
+
+powf-rounding-accuracy inputs output *options:
+    python3 -B benchmarks/powf_module_2026-11-07/rounding_accuracy.py benchmarks/powf_module_2026-11-07/target/release/rounding_eval "{{inputs}}" "{{output}}" {{options}}
+
+powf-rounding-codegen:
+    cargo rustc --release --locked --manifest-path benchmarks/powf_module_2026-11-07/Cargo.toml --bin rounding_codegen -- --emit=asm
+
+powf-rounding-codegen-audit assembly output *options:
+    python3 -B benchmarks/powf_module_2026-11-07/rounding_codegen_audit.py "{{assembly}}" "{{output}}" {{options}}
+
+powf-rounding-matrix-analyze directory *runs:
+    python3 -B benchmarks/powf_module_2026-11-07/analyze_replacement_matrix.py benchmarks/powf_module_2026-11-07/target/release/rounding_analyze "{{directory}}" {{runs}} --require-cells 96
+
 powf-replacement-matrix directory *options:
     python3 -B benchmarks/powf_module_2026-11-07/replacement_matrix.py benchmarks/powf_module_2026-11-07/target/release/replacement "{{directory}}" {{options}}
 

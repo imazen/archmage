@@ -89,3 +89,49 @@ for accuracy/performance tradeoffs against the actual legacy/std methods. See th
 [study](../benchmarks/powf_module_2026-11-07/MATRIX.md) for frozen cost gates and
 missing performance coverage. The API remains a draft pending its review and
 performance evidence.
+
+## Proposed quality and portability presets
+
+These names describe the next option design; only the BitExact/MIDP/Checked
+combinations above are currently public. Unsupported const encodings still
+fail to compile. Accuracy, portability, range, validation and execution are
+independent choices; a preset fixes every choice rather than leaving range or
+validation implicit. A const builder ending in `.bits()` must carry those
+choices through the caller and feature kernel, allowing unused checks and
+backend paths to disappear during compilation.
+
+| Proposed preset | Portability / quality | Base / uniform exponent | Output / validation | Execution |
+|---|---|---|---|---|
+| `PORTABLE_GAMMA_MIDP` | BitExact / MIDP graph | +0 or [2^-16,2^16] / normal or signed zero in [0,4] | Normal positive or +0; 0^0=1; checked whole-vector rejection, no result-range branch | Automatic |
+| `FAST_GAMMA_MIDP` | BackendDependent / MIDP graph | Same Gamma interval and exponent bounds | Same zero semantics; checked whole-vector rejection | Automatic; hardware FMA where supported, separate arithmetic otherwise |
+| `FAST_GAMMA_LOWP` | BackendDependent / LOWP graph | Same Gamma interval and exponent bounds | Same zero semantics; checked whole-vector rejection | Automatic; hardware FMA where supported, separate arithmetic otherwise |
+| `PORTABLE_NORMAL_MIDP` | BitExact / MIDP graph | Positive finite normal / finite normal or signed zero | Computed argument [-126,127.5], normal output; checked whole-vector rejection | Automatic |
+| `STD_HIGHP` | BackendDependent / HIGHP | Proposed full f32 domain, including negative bases where defined, subnormals, infinities and NaNs | Proposed std-style specials, overflow and underflow; requires a separate backend contract | Scalar std or another measured backend; not implemented |
+
+`PORTABLE_GAMMA_MIDP` and `PORTABLE_NORMAL_MIDP` describe the existing default
+graph with the corresponding domain. The FAST presets are experiments, not
+new promises that the old coefficient families have a global ULP bound.
+MIDP and LOWP are quality-family names. `HIGHP` similarly leaves room for a
+scalar backend; `ONE_ULP` would be an additional quantitative guarantee that
+requires evidence beyond finite startup screening. Direct std delegation
+cannot satisfy BitExact merely by passing startup samples.
+
+Validation defaults to `Checked` in every restricted preset. A separately
+named `AssumeValid` override could remove input checks, with the same numerical
+preconditions and zero rules. Invalid inputs would have unspecified numerical
+results, never permission for memory unsoundness. Such an override is not
+currently public. `Caller` is a separate execution override; choosing it must
+not change the selected quality, input domain or validation policy.
+
+The old methods do not supply one uniform preset: LOWP clamps computed exp2
+arguments and forces 0^0 to +0, while MIDP has its own zero/overflow handling.
+`pow_lowp_unchecked` and `pow_midp_precise` are aliases; their names add neither
+a validation choice nor extra precision/range. A replacement must explicitly
+choose whether it preserves those legacy special cases or uses the new
+checked zero convention above.
+
+The controlled [non-fused study](../benchmarks/powf_module_2026-11-07/NONFUSED-PLAN.md)
+compares both rounding paths against independent rational graphs and MPFR.
+Gamma's exponent bound is essential: LOWP's log bias near 1 can be magnified
+catastrophically by large exponents even when its computed result remains in
+normal range. PositiveNormal alone is therefore not a LOWP accuracy preset.

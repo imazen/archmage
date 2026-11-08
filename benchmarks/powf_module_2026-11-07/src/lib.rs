@@ -17,47 +17,96 @@ mod rounding_tests {
                 use magetypes::simd::generic::$vector as V;
                 macro_rules! modes {
                     ($lowp:literal,$fused:literal) => {{
-                        let mut x=[0.75;$n]; x[1]=f32::NAN; x[$n-1]=-0.0;
-                        let result=rounding::$kernel::<Token,$lowp,$fused,true,2>(token,V::from_array_t(token,x),2.4).unwrap_err();
-                        assert_eq!(result.kind,PowfErrorKind::InvalidBase);
-                        assert_eq!(result.lane_mask,(1<<1)|(1<<($n-1)));
-                        let result=rounding::$kernel::<Token,$lowp,$fused,true,2>(token,V::from_array_t(token,x),f32::from_bits(1)).unwrap_err();
-                        assert_eq!(result.kind,PowfErrorKind::InvalidExponent);
-                        assert_eq!(result.lane_mask,((1u32<<$n)-1)as u16);
-                        x[1]=0.;x[$n-1]=65536.;
-                        for exponent in [0.,-0.,0.5,2.4,4.] {
-                            let v=V::from_array_t(token,x);
-                            let a=rounding::$kernel::<Token,$lowp,$fused,true,2>(token,v,exponent).unwrap().to_array();
-                            let b=rounding::$kernel::<Token,$lowp,$fused,false,2>(token,v,exponent).unwrap().to_array();
-                            assert_eq!(a.map(f32::to_bits),b.map(f32::to_bits));
-                            assert_eq!(a[1].to_bits(),if exponent==0.{1f32.to_bits()}else{0});
-                            assert!(a.iter().all(|v|v.is_normal()||*v==0.));
+                        let mut x = [0.75; $n];
+                        x[1] = f32::NAN;
+                        x[$n - 1] = -0.0;
+                        let result = rounding::$kernel::<Token, $lowp, $fused, true, 2>(
+                            token,
+                            V::from_array_t(token, x),
+                            2.4,
+                        )
+                        .unwrap_err();
+                        assert_eq!(result.kind, PowfErrorKind::InvalidBase);
+                        assert_eq!(result.lane_mask, (1 << 1) | (1 << ($n - 1)));
+                        let result = rounding::$kernel::<Token, $lowp, $fused, true, 2>(
+                            token,
+                            V::from_array_t(token, x),
+                            f32::from_bits(1),
+                        )
+                        .unwrap_err();
+                        assert_eq!(result.kind, PowfErrorKind::InvalidExponent);
+                        assert_eq!(result.lane_mask, ((1u32 << $n) - 1) as u16);
+                        x[1] = 0.;
+                        x[$n - 1] = 65536.;
+                        for exponent in [0., -0., 0.5, 2.4, 4.] {
+                            let v = V::from_array_t(token, x);
+                            let a = rounding::$kernel::<Token, $lowp, $fused, true, 2>(
+                                token, v, exponent,
+                            )
+                            .unwrap()
+                            .to_array();
+                            let b = rounding::$kernel::<Token, $lowp, $fused, false, 2>(
+                                token, v, exponent,
+                            )
+                            .unwrap()
+                            .to_array();
+                            assert_eq!(a.map(f32::to_bits), b.map(f32::to_bits));
+                            assert_eq!(
+                                a[1].to_bits(),
+                                if exponent == 0. { 1f32.to_bits() } else { 0 }
+                            );
+                            assert!(a.iter().all(|v| v.is_normal() || *v == 0.));
                         }
-                        x[0]=f32::from_bits(1);
-                        let error=rounding::$kernel::<Token,$lowp,$fused,true,2>(token,V::from_array_t(token,x),0.).unwrap_err();
-                        assert_eq!(error.kind,PowfErrorKind::InvalidBase);
-                        assert_eq!(error.lane_mask,1);
+                        x[0] = f32::from_bits(1);
+                        let error = rounding::$kernel::<Token, $lowp, $fused, true, 2>(
+                            token,
+                            V::from_array_t(token, x),
+                            0.,
+                        )
+                        .unwrap_err();
+                        assert_eq!(error.kind, PowfErrorKind::InvalidBase);
+                        assert_eq!(error.lane_mask, 1);
                     }};
                 }
-                modes!(false,false);modes!(false,true);modes!(true,false);modes!(true,true);
+                modes!(false, false);
+                modes!(false, true);
+                modes!(true, false);
+                modes!(true, true);
             }
         };
     }
-    width!(check4,kernel4,f32x4,4);
-    width!(check8,kernel8,f32x8,8);
-    width!(check16,kernel16,f32x16,16);
+    width!(check4, kernel4, f32x4, 4);
+    width!(check8, kernel8, f32x8, 8);
+    width!(check16, kernel16, f32x16, 16);
     #[test]
     fn scalar_mixed_lanes() {
-        check4_scalar(archmage::ScalarToken);check8_scalar(archmage::ScalarToken);check16_scalar(archmage::ScalarToken);
+        check4_scalar(archmage::ScalarToken);
+        check8_scalar(archmage::ScalarToken);
+        check16_scalar(archmage::ScalarToken);
     }
     #[test]
     fn explicit_native_mixed_lanes() {
-        #[cfg(target_arch="x86_64")]
-        {let token=archmage::X64V3Token::summon().expect("study requires V3");check4_v3(token);check8_v3(token);check16_v3(token);}
-        #[cfg(target_arch="aarch64")]
-        {let token=archmage::NeonToken::summon().expect("study requires NEON");check4_neon(token);check8_neon(token);check16_neon(token);}
-        #[cfg(target_arch="wasm32")]
-        {let token=archmage::Wasm128Token::summon().expect("study requires SIMD128");check4_wasm128(token);check8_wasm128(token);check16_wasm128(token);}
+        #[cfg(target_arch = "x86_64")]
+        {
+            let token = archmage::X64V3Token::summon().expect("study requires V3");
+            check4_v3(token);
+            check8_v3(token);
+            check16_v3(token);
+        }
+        #[cfg(target_arch = "aarch64")]
+        {
+            let token = archmage::NeonToken::summon().expect("study requires NEON");
+            check4_neon(token);
+            check8_neon(token);
+            check16_neon(token);
+        }
+        #[cfg(target_arch = "wasm32")]
+        {
+            let token = archmage::Wasm128Token::summon().expect("study requires SIMD128");
+            check4_wasm128(token);
+            check8_wasm128(token);
+            check16_wasm128(token);
+        }
     }
 }
 

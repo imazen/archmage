@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Actual forced-rounding graphs, exact rational bits, directed MPFR accuracy."""
 import argparse
+import ctypes as C
 from fractions import Fraction
 import json
 import math
@@ -9,6 +10,30 @@ import subprocess
 import accuracy
 import rounding_oracle as model
 from replacement_accuracy import rounded_reference
+
+accuracy.mp.mpfr_get_exp.argtypes=[accuracy.P]
+accuracy.mp.mpfr_get_exp.restype=C.c_long
+accuracy.mp.mpfr_number_p.argtypes=[accuracy.P]
+accuracy.mp.mpfr_number_p.restype=C.c_int
+accuracy.mp.mpfr_zero_p.argtypes=[accuracy.P]
+accuracy.mp.mpfr_zero_p.restype=C.c_int
+
+
+def reference(base, exponent):
+    # Get the binade before conversion to double. A directed double interval
+    # for 1-epsilon can straddle 1 even when MPFR resolves its binade exactly.
+    a,b,c=[accuracy.MP() for _ in range(3)]
+    for v in [a,b,c]:accuracy.mp.mpfr_init2(C.byref(v),256)
+    accuracy.mp.mpfr_set_d(C.byref(a),model.fp.value(base),0)
+    accuracy.mp.mpfr_set_d(C.byref(b),model.fp.value(exponent),0)
+    bounds=[];exponents=[]
+    for rnd in [3,2]:
+        accuracy.mp.mpfr_pow(C.byref(c),C.byref(a),C.byref(b),rnd)
+        bounds.append(accuracy.mp.mpfr_get_d(C.byref(c),rnd))
+        exponents.append(accuracy.mp.mpfr_get_exp(C.byref(c)) if accuracy.mp.mpfr_number_p(C.byref(c)) and not accuracy.mp.mpfr_zero_p(C.byref(c)) else None)
+    for v in [a,b,c]:accuracy.mp.mpfr_clear(C.byref(v))
+    assert exponents[0]==exponents[1], ('unresolved MPFR binade',base,exponent,exponents)
+    return bounds, max(exponents[0]-24,-149) if exponents[0] is not None else -149
 
 NAMES = ['midp_separate', 'midp_fused', 'lowp_separate', 'lowp_fused']
 
@@ -69,7 +94,7 @@ def main():
         if values['scalar'][:4] != values['native'][:4]:
             report['mismatches'].append(['tier',row,values])
         valid = not model.preflight(base,n,domain)
-        enclosure = accuracy.enclosure(base,n) if valid else None
+        enclosure, quantum_exponent = reference(base,n) if valid else (None,None)
         ref_bits = rounded_reference(base,n) if valid else None
         for m, (bits,error) in enumerate(expected):
             for tier in actual:
@@ -95,9 +120,7 @@ def main():
                 lower, upper = enclosure
                 if not (math.isfinite(lower) and math.isfinite(upper)):
                     continue
-                e = [math.frexp(v)[1] if v else -125 for v in enclosure]
-                assert e[0] == e[1], ('unresolved reference binade',row,enclosure)
-                quantum = Fraction(2)**max(e[0]-24,-149)
+                quantum = Fraction(2)**quantum_exponent
                 y = Fraction.from_float(model.fp.value(bits))
                 delta = max(abs(y-Fraction.from_float(v)) for v in enclosure)
                 ulp = math.nextafter(float(delta/quantum),math.inf) if delta else 0.
