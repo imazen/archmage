@@ -146,6 +146,7 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 #### Added
 
 - Add bounded, bit-consistent f32 power through `magetypes::powf` and scalar/vector `try_powf_with` delegates, with explicit domains, whole-vector rejection and whole-operation fused dispatch. Existing power methods are unchanged; mathematical accuracy and admission costs remain separately measured (56059d2c).
+- Carry bounded-power options as caller-visible integer const flags, produced by `PowfOptions::new().with_domain(...).with_execution(...).bits()`; retain explicitly named runtime adapters and compare actual legacy/std methods separately (7bdcaf84, e4fad9b3).
 
 ### [0.9.31] - 2026-11-07
 

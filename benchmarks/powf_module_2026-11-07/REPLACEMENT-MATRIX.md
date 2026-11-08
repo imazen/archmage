@@ -77,3 +77,10 @@ its asymmetric core classes. Every result is labeled exploratory and cannot
 satisfy the strict promotion gate, even when resource flags are clean. Dirty
 cells remain reported and the exploratory run proceeds through unmeasured cells
 without retrying them. The original strict refusal is retained separately.
+
+The N1 suffix also stopped at cell 302. To complete descriptive coverage, the
+remaining suffix may record each unmeasured cell once without stopping on a
+resource-dirty verdict (`--record-all`). No completed cell is rerun, no dirty
+round is removed, and no admission or promotion condition is relaxed. Both
+invalid cells (155 and 302) remain in the mandatory denominator. Functional
+verification failures and admission errors still stop execution.

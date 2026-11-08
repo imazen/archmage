@@ -73,9 +73,14 @@ without changing the graph or invoking fast-math assumptions.
 The independent rational fixtures cover boundaries, mixed exceptional lanes,
 gamma/PQ exponents and deterministic random samples. The separate MPFR study
 measures mathematical error from actual library outputs. Its 26,823 sampled
-pairs had zero graph mismatches. Maximum measured error bounds were 91.258 ULP
-for `PositiveNormal`, 92.613 ULP for `NonNegativeNormal`, and 25.397 ULP for
-`Gamma`; these are sampled maxima, not worst-case guarantees. See the
+pairs had zero graph mismatches. The later adaptive search expanded the identical-input comparison to 26,857
+pairs. Its largest measured canonical errors were below 438.504 ULP for
+`PositiveNormal`, 416.579 ULP for `NonNegativeNormal`, and 47.902 ULP for
+`Gamma`. These replace the earlier sampled maxima of 91.258, 92.613 and
+25.397 ULP; none is a worst-case guarantee. Scalar and V3 canonical bits
+agree, while std f32 power stays below 0.507 ULP on this corpus. See the
+[replacement comparison](../benchmarks/powf_module_2026-11-07/REPLACEMENTS.md)
+for accuracy/performance tradeoffs against the actual legacy/std methods. See the
 [study](../benchmarks/powf_module_2026-11-07/MATRIX.md) for frozen cost gates and
 missing performance coverage. The API remains a draft pending its review and
 performance evidence.

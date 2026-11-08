@@ -6,14 +6,14 @@
 # impls omitted; re-export duplicates annotated `[also: path]`.
 # DO NOT EDIT BY HAND — commit regenerated changes with the code.
 #
-# files: magetypes.txt 2705 lines (supported surface) | magetypes.features.txt 96 added (features: avx512,std,w512) | magetypes.internal.txt 46 lines (58 hidden + 0 excluded-feature)
+# files: magetypes.txt 2718 lines (supported surface) | magetypes.features.txt 96 added (features: avx512,std,w512) | magetypes.internal.txt 46 lines (58 hidden + 0 excluded-feature)
 
 ## summary
 #
 #   pub modules                                13
 #   pub types (struct/enum/trait/alias)       382
-#   pub consts/statics                        228
-#   free functions                           3905
+#   pub consts/statics                        232
+#   free functions                           3915
 #   inherent methods                         1251
 #   struct fields                               4
 #   enum variants                              10
@@ -24,13 +24,13 @@
 #   auto-trait exceptions                      30
 #
 # per-module pub lines:
-#   (root)                          322
+#   (root)                          326
 #   cast                              3
-#   powf                             21
-#   prelude                        3734
-#   simd                           1715
+#   powf                             23
+#   prelude                        3740
+#   simd                           1717
 
-## items (2476 lines)
+## items (2489 lines)
 
 pub mod magetypes
 pub use archmage
@@ -58,9 +58,15 @@ pub powf::PowfError::lane_mask: u16
 pub struct powf::PowfOptions
 pub powf::PowfOptions::domain: powf::PowfDomain
 pub powf::PowfOptions::execution: powf::PowfExecution
+pub const fn powf::PowfOptions::bits(self) -> u32
+pub const fn powf::PowfOptions::new() -> Self
+pub const fn powf::PowfOptions::with_domain(self, powf::PowfDomain) -> Self
+pub const fn powf::PowfOptions::with_execution(self, powf::PowfExecution) -> Self
 pub fn powf::try_powf(f32, f32) -> core::result::Result<f32, powf::PowfError>
-pub fn powf::try_powf_array_with<const N: usize>([f32; N], f32, powf::PowfOptions) -> core::result::Result<[f32; N], powf::PowfError>
-pub fn powf::try_powf_with(f32, f32, powf::PowfOptions) -> core::result::Result<f32, powf::PowfError>
+pub fn powf::try_powf_array_runtime<const N: usize>([f32; N], f32, powf::PowfOptions) -> core::result::Result<[f32; N], powf::PowfError>
+pub fn powf::try_powf_array_with<const OPTIONS: u32, const N: usize>([f32; N], f32) -> core::result::Result<[f32; N], powf::PowfError>
+pub fn powf::try_powf_runtime(f32, f32, powf::PowfOptions) -> core::result::Result<f32, powf::PowfError>
+pub fn powf::try_powf_with<const OPTIONS: u32>(f32, f32) -> core::result::Result<f32, powf::PowfError>
 pub mod prelude
 pub use prelude::SimdToken
 #[repr(C)] pub struct prelude::f32x16<T: simd::backends::F32x16Backend>(_, _) [also: simd::generic]
@@ -81,6 +87,8 @@ pub fn prelude::f32x16<T>::rcp_approx_portable(self) -> Self where T: simd::back
 pub fn prelude::f32x16<T>::rsqrt_approx_portable(self) -> Self where T: simd::backends::F32x16Convert [also: prelude::f32x16<T>]
 pub fn prelude::f32x16<T>::store(self, &mut [f32; 16]) [also: prelude::f32x16<T>]
 pub fn prelude::f32x16<T>::to_array(self) -> [f32; 16] [also: prelude::f32x16<T>]
+pub fn prelude::f32x16<T>::try_powf(self, f32) -> core::result::Result<Self, powf::PowfError> where T: simd::backends::F32x16Convert [also: prelude::f32x16<T>]
+pub fn prelude::f32x16<T>::try_powf_with<const OPTIONS: u32>(self, f32) -> core::result::Result<Self, powf::PowfError> where T: simd::backends::F32x16Convert [also: prelude::f32x16<T>]
 pub fn prelude::f32x16<T>::from_array(T, [f32; 16]) -> Self [also: prelude::f32x16<T>]
 pub fn prelude::f32x16<T>::from_repr(T, <T as simd::backends::F32x16Backend>::Repr) -> Self [also: prelude::f32x16<T>]
 pub fn prelude::f32x16<T>::load(T, &[f32; 16]) -> Self [also: prelude::f32x16<T>]
@@ -135,6 +143,8 @@ pub fn prelude::f32x4<T>::simd_ne(self, Self) -> Self [also: prelude::f32x16<T>,
 pub fn prelude::f32x4<T>::splat_t(T, f32) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
 pub fn prelude::f32x4<T>::store(self, &mut [f32; 4]) [also: prelude::f32x4<T>]
 pub fn prelude::f32x4<T>::to_array(self) -> [f32; 4] [also: prelude::f32x4<T>]
+pub fn prelude::f32x4<T>::try_powf(self, f32) -> core::result::Result<Self, powf::PowfError> where T: simd::backends::F32x4Convert [also: prelude::f32x4<T>]
+pub fn prelude::f32x4<T>::try_powf_with<const OPTIONS: u32>(self, f32) -> core::result::Result<Self, powf::PowfError> where T: simd::backends::F32x4Convert [also: prelude::f32x4<T>]
 pub fn prelude::f32x4<T>::zero_t(T) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>, prelude::f64x2<T>, prelude::f64x4<T>, prelude::f64x8<T>, prelude::i16x16<T>, prelude::i16x32<T>, prelude::i16x8<T>, prelude::i32x16<T>, prelude::i32x4<T>, prelude::i32x8<T>, prelude::i64x2<T>, prelude::i64x4<T>, prelude::i64x8<T>, prelude::i8x16<T>, prelude::i8x32<T>, prelude::i8x64<T>, prelude::u16x16<T>, prelude::u16x32<T>, prelude::u16x8<T>, prelude::u32x16<T>, prelude::u32x4<T>, prelude::u32x8<T>, prelude::u64x2<T>, prelude::u64x4<T>, prelude::u64x8<T>, prelude::u8x16<T>, prelude::u8x32<T>, prelude::u8x64<T>]
 pub fn prelude::f32x4<T>::as_array(&self) -> &[f32; 4] [also: prelude::f32x4<T>]
 pub fn prelude::f32x4<T>::as_array_mut(&mut self) -> &mut [f32; 4] [also: prelude::f32x4<T>]
@@ -245,6 +255,8 @@ pub fn prelude::f32x8<T>::rcp_approx_portable(self) -> Self where T: simd::backe
 pub fn prelude::f32x8<T>::rsqrt_approx_portable(self) -> Self where T: simd::backends::F32x8Convert [also: prelude::f32x8<T>]
 pub fn prelude::f32x8<T>::store(self, &mut [f32; 8]) [also: prelude::f32x8<T>]
 pub fn prelude::f32x8<T>::to_array(self) -> [f32; 8] [also: prelude::f32x8<T>]
+pub fn prelude::f32x8<T>::try_powf(self, f32) -> core::result::Result<Self, powf::PowfError> where T: simd::backends::F32x8Convert [also: prelude::f32x8<T>]
+pub fn prelude::f32x8<T>::try_powf_with<const OPTIONS: u32>(self, f32) -> core::result::Result<Self, powf::PowfError> where T: simd::backends::F32x8Convert [also: prelude::f32x8<T>]
 pub fn prelude::f32x8<T>::as_array(&self) -> &[f32; 8] [also: prelude::f32x8<T>]
 pub fn prelude::f32x8<T>::as_array_mut(&mut self) -> &mut [f32; 8] [also: prelude::f32x8<T>]
 pub fn prelude::f32x8<T>::as_bytes(&self) -> &[u8; 32] [also: prelude::f32x8<T>, prelude::f64x4<T>, prelude::i32x8<T>]
@@ -2220,8 +2232,9 @@ pub fn simd::f32x1::splat_t(archmage::tokens::ScalarToken, f32) -> Self [also: s
 pub fn simd::f32x1::sqrt(self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>, prelude::f64x2<T>, prelude::f64x4<T>, prelude::f64x8<T>, simd::f32x1, simd::f64x1]
 pub fn simd::f32x1::store(self, &mut [f32; 1]) [also: simd::f32x1]
 pub fn simd::f32x1::to_array(self) -> [f32; 1] [also: simd::f32x1]
-pub fn simd::f32x1::try_powf(self, f32) -> core::result::Result<Self, powf::PowfError> [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>, simd::f32x1]
-pub fn simd::f32x1::try_powf_with(self, f32, powf::PowfOptions) -> core::result::Result<Self, powf::PowfError> [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>, simd::f32x1]
+pub fn simd::f32x1::try_powf(self, f32) -> core::result::Result<Self, powf::PowfError> [also: simd::f32x1]
+pub fn simd::f32x1::try_powf_runtime(self, f32, powf::PowfOptions) -> core::result::Result<Self, powf::PowfError> [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>, simd::f32x1]
+pub fn simd::f32x1::try_powf_with<const OPTIONS: u32>(self, f32) -> core::result::Result<Self, powf::PowfError> [also: simd::f32x1]
 pub fn simd::f32x1::from_array(archmage::tokens::ScalarToken, [f32; 1]) -> Self [also: simd::f32x1]
 pub fn simd::f32x1::load(archmage::tokens::ScalarToken, &[f32; 1]) -> Self [also: simd::f32x1]
 pub fn simd::f32x1::splat(archmage::tokens::ScalarToken, f32) -> Self [also: simd::f32x1]

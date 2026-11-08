@@ -52,3 +52,13 @@ crate-type = ["rlib", "staticlib"]
 [[bin]]
 name = "replacement_eval"
 path = "src/bin/replacement_eval.rs"
+
+[[bin]]
+name = "replacement_guest"
+path = "src/bin/replacement_guest.rs"
+required-features = ["wasm-guest"]
+
+[[bin]]
+name = "replacement_wasm_host"
+path = "src/bin/replacement_wasm_host.rs"
+required-features = ["wasm-host"]

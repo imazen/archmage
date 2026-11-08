@@ -600,3 +600,31 @@ powf-study-wasm-verify wasm mode:
 
 powf-sde-contract sde cpu="-nhm" expected="software":
     python3 -B benchmarks/powf_module_2026-11-07/sde_contract.py "{{sde}}" --cpu={{cpu}} --expected={{expected}}
+
+# Actual legacy/std controls, const options, and explicitly labeled diagnostics.
+powf-replacement-build:
+    cargo build --release --locked --manifest-path benchmarks/powf_module_2026-11-07/Cargo.toml --bin replacement --bin replacement_eval --bin replacement_analyze
+
+powf-replacement-matrix directory *options:
+    python3 -B benchmarks/powf_module_2026-11-07/replacement_matrix.py benchmarks/powf_module_2026-11-07/target/release/replacement "{{directory}}" {{options}}
+
+powf-replacement-analyze *files:
+    benchmarks/powf_module_2026-11-07/target/release/replacement_analyze {{files}}
+
+powf-replacement-codegen:
+    cargo rustc --release --locked --manifest-path benchmarks/powf_module_2026-11-07/Cargo.toml --bin replacement_codegen -- --emit=asm
+
+powf-replacement-accuracy inputs output *options:
+    python3 -B benchmarks/powf_module_2026-11-07/replacement_accuracy.py benchmarks/powf_module_2026-11-07/target/release/replacement_eval "{{inputs}}" "{{output}}" {{options}}
+
+powf-replacement-search-build source directory:
+    python3 -B benchmarks/powf_module_2026-11-07/error_search.py build "{{source}}" benchmarks/powf_module_2026-11-07/target/release/libarchmage_powf_study.a "{{directory}}"
+
+powf-replacement-search binary directory *options:
+    python3 -B benchmarks/powf_module_2026-11-07/error_search.py run "{{binary}}" "{{directory}}" {{options}}
+
+powf-replacement-wasm-build directory mode:
+    python3 -B benchmarks/powf_module_2026-11-07/build_guest.py "{{directory}}" {{mode}} replacement_guest
+
+powf-replacement-wasm-host:
+    cargo build --release --locked --manifest-path benchmarks/powf_module_2026-11-07/Cargo.toml --features wasm-host --bin replacement_wasm_host

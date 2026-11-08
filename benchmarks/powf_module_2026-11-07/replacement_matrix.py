@@ -12,6 +12,7 @@ p=argparse.ArgumentParser(description=__doc__)
 p.add_argument('binary',type=Path)
 p.add_argument('directory',type=Path)
 p.add_argument('--pilot',action='store_true')
+p.add_argument('--record-all',action='store_true',help='record every unmeasured cell once; preserve every dirty verdict')
 p.add_argument('--exploratory',action='store_true',help='explicit scheduler-controlled study; never promotion evidence')
 p.add_argument('--continue-unmeasured',type=Path,help='retain prior failed cell; measure only its previously unmeasured suffix')
 a=p.parse_args()
@@ -34,7 +35,7 @@ if a.continue_unmeasured:
     assert 0<start<len(cells)
 policy=os.environ.get('ZENBENCH_CPU_POLICY','auto')
 assert (policy=='unrestricted')==a.exploratory, 'unrestricted requires explicit exploratory labeling'
-manifest={'binary':str(binary),'sha256':hashlib.sha256(binary.read_bytes()).hexdigest(),'cells':cells,'pairs':50,'pilot':a.pilot,'exploratory':a.exploratory,'promotion_eligible':not a.exploratory,'cpu_policy':policy,'start_index':start,'prior_run':str(a.continue_unmeasured.resolve())if a.continue_unmeasured else None}
+manifest={'binary':str(binary),'sha256':hashlib.sha256(binary.read_bytes()).hexdigest(),'cells':cells,'pairs':50,'pilot':a.pilot,'exploratory':a.exploratory,'promotion_eligible':not a.exploratory,'cpu_policy':policy,'record_all':a.record_all,'start_index':start,'prior_run':str(a.continue_unmeasured.resolve())if a.continue_unmeasured else None}
 (a.directory/'MATRIX.json').write_text(json.dumps(manifest,indent=2)+'\n')
 for index,cell in enumerate(cells):
     if index<start:continue
@@ -66,4 +67,4 @@ for index,cell in enumerate(cells):
     progress['last_check']=datetime.now(timezone.utc).isoformat()
     (a.directory/'progress.json').write_text(json.dumps(progress,indent=2)+'\n')
     print(json.dumps(progress),flush=True)
-    if progress['stage']!='complete' and not(a.exploratory and progress['stage']=='inadmissible'):raise SystemExit('stopped: preserved all evidence, no favorable rerun')
+    if progress['stage']!='complete' and not((a.exploratory or a.record_all) and progress['stage']=='inadmissible'):raise SystemExit('stopped: preserved all evidence, no favorable rerun')

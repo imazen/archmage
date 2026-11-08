@@ -15,7 +15,6 @@ module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
 functions=module.parse(a.assembly.read_text())
 rows=[]
 for name in functions:
-    if '__arcane_'in name or '__attune_'in name:continue
     match=re.search(r'probe_(const_caller|const_auto|runtime_literal_caller|runtime_literal_auto|runtime_dynamic|midp_unchecked|midp|lowp|std_f32|std_f64)_x(4|8|16)_(PositiveNormal|NonNegativeNormal|Gamma)_(literal|dynamic)_(scalar|v3|v4x|v4|neon|wasm128)',name)
     if not match:continue
     body=module.expand(name,functions)
