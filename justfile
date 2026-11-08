@@ -526,6 +526,10 @@ fma-contract:
     cargo test -p magetypes --features avx512 --test fma_contract --test fused_arithmetic
     cargo test -p magetypes --no-default-features --features w512 --test fma_contract --test fused_arithmetic
 
+# Explicit diagnostic of std itself; exits nonzero on independent-oracle mismatches.
+std-fma-oracle:
+    cargo run -p magetypes --example std_fma_oracle
+
 # Exercise the native software fallback on x86 without FMA.
 fma-no-hardware:
     CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER="qemu-x86_64 -cpu Nehalem" cargo test -p magetypes --target x86_64-unknown-linux-gnu --test fma_contract --test fused_arithmetic

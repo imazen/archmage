@@ -1230,6 +1230,15 @@ fn process(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
   reviewable; fixed-fused polynomial rounding remains experimental. Full
   cell evidence is in `benchmarks/math_portability_fma_2026-11-07/README.md`.
 
+- **Direct std f32 diagnostic (2026-11-07, external implementation):**
+  The independent FMA fixtures expose two subnormal mismatches in direct
+  `std::f32::mul_add` under no-FMA Nehalem; the added std comparison also failed
+  on ARMv7 and strict WASM CI. Magetypes' own software paths pass those inputs.
+  `just std-fma-oracle` preserves an explicit failing reproducer, separate
+  from library contract tests. No fixtures or Magetypes assertions were relaxed.
+  Nehalem's f64 diagnostic passes all 128 cases; that sampled result does not
+  establish full-domain correctness or performance for the std prototype.
+
 - **Below-V3 std f64 prototype (2026-11-07, not integrated):** safe std
   `f64::mul_add` executed FMA3 with AVX2 disabled and passed the independent
   fixtures. Production candidate 68320dbd changed six x86 scalar-f64 codegen

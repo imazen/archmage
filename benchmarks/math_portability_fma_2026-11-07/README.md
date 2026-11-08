@@ -54,8 +54,8 @@ and strict admission gates must all be clean and `unreliable=false`. Analysis
 uses every retained candidate/baseline ratio and 100,000 bootstrap samples.
 PASS requires upper paired 95% CI <=1.02; lower >1.02 is FAIL; a crossing
 interval is INCONCLUSIVE. No outlier filtering, best-of-run selection or
-aggregate offsetting of failing cells. The first-use cell uses the single preregistered extension to200 total pairs;
-its original28 strict/25 fusing pairs hit a wall safety cap with clean gates.
+aggregate offsetting of failing cells. The first-use cell uses the single preregistered extension to 200 total pairs;
+its original 28 strict/25 fusing pairs hit a wall safety cap with clean gates.
 All original pairs are retained. See MATRIX.md for the frozen extension budget.
 
 ## Logged regressions
@@ -186,7 +186,18 @@ no aggregate optimization claim or production FMA change follows.
   consumer codegen. Both package semver checks passed. Later harness/doc
   verification is recorded alongside its final identity. Report head 2d3d1e49
   passed all 19 steps again (248s, peak RSS 0.74GiB), and every GitHub CI job
-  passed at that head, including Windows ARM, macOS ARM and i686 cross.
+  passed there, including Windows ARM, macOS ARM and i686 cross. Final production
+  scope 85b59484 passed all 19 steps and both semver checks (268s, peak RSS 0.73GiB).
+
+The later direct-std comparison added during this study exposed two f32
+subnormal mismatches on no-FMA Nehalem (rows 38/78 of the unchanged rational
+fixtures); CI also failed that comparison on ARMv7 and strict WASM. These are
+not Magetypes results: its software implementation passes those inputs. The
+comparison now lives in an explicit `just std-fma-oracle` diagnostic, which
+still exits nonzero for mismatches and checks both precisions before failing.
+Under QEMU Nehalem, 2/128 f32 cases mismatch and 0/128 f64 cases mismatch;
+Haswell with AVX2 disabled passes both sets. No std operation serves as truth
+for a Magetypes contract assertion. The failed CI log is retained.
 
 ## Remaining timing coverage
 
@@ -228,13 +239,13 @@ Maximum RSS in KiB, main: 352012/352956/350540; candidate:
 `run-heavy` resource lines: final scope CI+semver 268s, peak RSS 0.73GiB,
 min available 21681MiB, peak load 14.57; final cold builds 47s, peak RSS 0.34GiB,
 min available 21880MiB, peak load 14.57. Earlier build+all-cell analysis+cold builds 153s,
-peak RSS1.37GiB, min available 19836MiB, peak load 6.10; NEON FMA 323s,
+peak RSS 1.37GiB, min available 19836MiB, peak load 6.10; NEON FMA 323s,
 peak RSS 0.03GiB, min available 14880MiB, peak load 0.86; combined workload 68s,
 peak RSS 0.01GiB, min available 14886MiB, peak load 0.46. Caps were explicit;
 no other workload was interrupted.
 
 Fresh native-process counters include startup and therefore are not primitive
-latency: three-repetition instruction counts were empty2532533, f32 2532542,
+latency: three-repetition instruction counts were empty 2532533, f32 2532542,
 f64 2533272 on the counted Intel atom PMU. Core-PMU events were not counted.
 The strict first-buffer cell pooled all 200 preregistered pairs (28+172):
 exceptional/main R=0.985225, CI [0.975316, 0.995332], PASS;
@@ -255,8 +266,9 @@ Raw retained rounds, commands, source archives, binary hashes, all logs and
 resource lines live under
 `/mnt/v/output/archmage/math-portability-fma-2026-11-07/`, mirrored to the same
 project path on durable storage. [Artifact index](http://dev.lan:3300/archmage/math-portability-fma-2026-11-07/)
-includes `arm-results/core-study`, `final-source/core-cells.tsv`,
-`arm-results/final-fma.json`, `cold-final`, independent oracle dumps and
+includes `ARTIFACTS.md`, `DATASETS.json`, `arm-results/core-study`,
+`final-source/core-cells.tsv`,
+`arm-results/final-fma.json`, `cold-final-scope`, independent oracle dumps and
 per-control WASM directories. Large generated dumps and binaries stay outside git.
 
 The initial FIFO transport failed because atomic save replaced the FIFO. Two
