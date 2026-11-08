@@ -559,3 +559,17 @@ portability-bench output filter="" contexts="scalar,scalar-v3,v3,baseline-v3":
 # Assert the actual CPU model, then run the independent exact FMA fixtures.
 portability-fma-context context cpu:
     ARCHMAGE_FMA_CONTEXT={{context}} CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER="qemu-x86_64 -cpu {{cpu}}" cargo test -p magetypes --target x86_64-unknown-linux-gnu --test fma_contract --test fused_arithmetic
+
+# Three cold linked-consumer builds per source, alternating order, unique targets.
+portability-cold-build output candidate:
+    python3 benchmarks/math_portability_fma_2026-11-07/cold_build.py {{quote(output)}} {{candidate}}
+
+# Runner explicitly forwards tier/probe expectations into the WASI guest.
+portability-wasm flags runner:
+    RUSTFLAGS="-Ctarget-feature={{flags}}" CARGO_TARGET_WASM32_WASIP1_RUNNER={{quote(runner)}} cargo test --release -p magetypes --target wasm32-wasip1 --lib --test fma_contract --test fused_arithmetic --test transcendental_nan
+
+portability-wasm-nostd flags runner:
+    RUSTFLAGS="-Ctarget-feature={{flags}}" CARGO_TARGET_WASM32_WASIP1_RUNNER={{quote(runner)}} cargo test --release -p magetypes --no-default-features --features w512 --target wasm32-wasip1 --test fma_contract --test fused_arithmetic --test transcendental_nan
+
+portability-analyze *files:
+    cargo run --release --manifest-path benchmarks/math_portability_fma_2026-11-07/Cargo.toml --bin analyze -- {{files}}

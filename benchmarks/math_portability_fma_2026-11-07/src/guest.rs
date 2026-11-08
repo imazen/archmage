@@ -21,3 +21,17 @@ pub extern "C" fn guest_run(op:i32,arm:i32,width:i32,chain:i32,repeats:i32)->i64
     for _ in 0..repeats {super::kernels::guest_kernel(op,arm,width,&mut state,chain!=0);}
     (match width {4=>state.output4[0][0].to_bits(),8=>state.output8[0][0].to_bits(),16=>state.output16[0][0].to_bits(),_=>panic!("width") }) as i64
 }
+
+pub extern "C" fn guest_probe()->i32 {
+    use archmage::SimdToken;
+    let t=archmage::Wasm128Token::summon().expect("SIMD module");
+    let x=magetypes::simd::generic::f32x4::splat_t(t,std::hint::black_box(1.0+1.0/4096.0));
+    let c=magetypes::simd::generic::f32x4::splat_t(t,std::hint::black_box(-(1.0+1.0/2048.0)));
+    let r32=x.mul_add_relaxed(x,c).to_array()[0].to_bits();
+    let x=magetypes::simd::generic::f64x2::splat_t(t,std::hint::black_box(1.0+1.0/134217728.0));
+    let c=magetypes::simd::generic::f64x2::splat_t(t,std::hint::black_box(-(1.0+1.0/67108864.0)));
+    let r64=x.mul_add_relaxed(x,c).to_array()[0].to_bits();
+    assert!(r32==0 || r32==0x33800000);
+    assert!(r64==0 || r64==969u64<<52);
+    i32::from(r32!=0) | (i32::from(r64!=0)<<1)
+}

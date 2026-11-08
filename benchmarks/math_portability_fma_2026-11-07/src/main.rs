@@ -88,6 +88,7 @@ fn main() {
 
 #[cfg(target_arch="wasm32")]
 fn main() {
+    std::hint::black_box(guest::guest_probe as extern "C" fn()->i32);
     std::hint::black_box(guest::guest_prepare as extern "C" fn(i32,i32,i32));
     std::hint::black_box(guest::guest_run as extern "C" fn(i32,i32,i32,i32,i32)->i64);
     if let Ok(context)=std::env::var("STUDY_DUMP") {kernels::dump(&context);}
