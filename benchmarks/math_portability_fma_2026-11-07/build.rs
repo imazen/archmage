@@ -8,6 +8,7 @@ fn main() {
             .arg(&out).status().unwrap().success());
         println!("cargo:rerun-if-changed={script}");
     }
+    println!("cargo:rerun-if-changed=../../magetypes/src/soft_fma.rs");
     for width in [4, 8, 16] {
         println!("cargo:rerun-if-changed=../../magetypes/src/simd/generic/generated/transcendentals_f32x{width}.rs");
     }

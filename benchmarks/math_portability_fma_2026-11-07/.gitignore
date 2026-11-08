@@ -1,2 +1,3 @@
 /target/
 /.zenbench/
+!Cargo.lock

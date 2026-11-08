@@ -580,3 +580,11 @@ portability-clamp-profile output before after:
 # Keep Rust's unique guest symbols; select explicit linker exports without unsafe attributes.
 portability-guest output mode:
     python3 benchmarks/math_portability_fma_2026-11-07/build_guest.py {{quote(output)}} {{mode}}
+
+# Exact graph mirror plus independent MPFR-directed error samples.
+portability-oracle output *inputs:
+    python3 -B benchmarks/math_portability_fma_2026-11-07/oracle.py {{inputs}} > {{quote(output)}}
+
+# Counters include startup; they are not a primitive-latency timing gate.
+portability-first-use binary output:
+    python3 -B benchmarks/math_portability_fma_2026-11-07/first_use.py {{quote(binary)}} {{quote(output)}}

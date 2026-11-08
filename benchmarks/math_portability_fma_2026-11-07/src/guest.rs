@@ -11,8 +11,8 @@ pub struct State {
     pub output16: Vec<[f32; 16]>,
 }
 static STATE: OnceLock<Mutex<State>> = OnceLock::new();
-// --export-all exposes the compiler's unique symbols. The host discovers the
-// names; no unsafe export attribute or hand-chosen global symbol is required.
+// The build discovers compiler-assigned names, then explicitly exports them
+// through the linker without unsafe attributes or hand-chosen global symbols.
 pub extern "C" fn guest_prepare(size: i32, distribution: i32, op: i32) {
     let dist = ["ordinary", "bits", "sparse", "dense"][distribution as usize];
     let n = size as usize;
@@ -94,12 +94,54 @@ pub extern "C" fn guest_probe() -> i32 {
 // The hardware control uses a per-buffer fusion decision; scalar controls
 // broadcast into a packed register because WASM has no scalar FMA opcode.
 pub extern "C" fn guest_fma(kind: i32, width: i32, arm: i32, chain: i32, repeats: i32) -> i64 {
-    use super::fma_kernels::soft;
     use archmage::SimdToken;
     let t = archmage::Wasm128Token::summon().expect("SIMD module");
     let mut state = STATE.get().expect("prepare first").lock().unwrap();
+    match (kind, width, arm) {
+        (32,1,0) => {
+            run_fma::<32,1,0,false>(t,&mut state,chain,repeats)
+        },
+        (32,1,1) => {
+            run_fma::<32,1,1,false>(t,&mut state,chain,repeats)
+        },
+        (32,1,2) => {
+            if state.fusion & 1 != 0 { run_fma::<32,1,2,true>(t,&mut state,chain,repeats) } else { run_fma::<32,1,2,false>(t,&mut state,chain,repeats) }
+        },
+        (32,4,0) => {
+            run_fma::<32,4,0,false>(t,&mut state,chain,repeats)
+        },
+        (32,4,1) => {
+            run_fma::<32,4,1,false>(t,&mut state,chain,repeats)
+        },
+        (32,4,2) => {
+            if state.fusion & 1 != 0 { run_fma::<32,4,2,true>(t,&mut state,chain,repeats) } else { run_fma::<32,4,2,false>(t,&mut state,chain,repeats) }
+        },
+        (64,1,0) => {
+            run_fma::<64,1,0,false>(t,&mut state,chain,repeats)
+        },
+        (64,1,1) => {
+            run_fma::<64,1,1,false>(t,&mut state,chain,repeats)
+        },
+        (64,1,2) => {
+            if state.fusion & 2 != 0 { run_fma::<64,1,2,true>(t,&mut state,chain,repeats) } else { run_fma::<64,1,2,false>(t,&mut state,chain,repeats) }
+        },
+        (64,2,0) => {
+            run_fma::<64,2,0,false>(t,&mut state,chain,repeats)
+        },
+        (64,2,1) => {
+            run_fma::<64,2,1,false>(t,&mut state,chain,repeats)
+        },
+        (64,2,2) => {
+            if state.fusion & 2 != 0 { run_fma::<64,2,2,true>(t,&mut state,chain,repeats) } else { run_fma::<64,2,2,false>(t,&mut state,chain,repeats) }
+        },
+        _ => panic!("unsupported FMA shape"),
+    }
+}
+
+fn run_fma<const KIND:i32,const WIDTH:i32,const ARM:i32,const FUSED:bool>(t:archmage::Wasm128Token,state:&mut State,chain:i32,repeats:i32)->i64 {
+    use super::fma_kernels::soft;
     let dependent = chain != 0;
-    if kind == 32 {
+    if KIND == 32 {
         use magetypes::simd::generic::f32x4 as V;
         let b = [std::hint::black_box(0.99991f32); 4];
         let c = [std::hint::black_box(0.00013f32); 4];
@@ -110,13 +152,13 @@ pub extern "C" fn guest_fma(kind: i32, width: i32, arm: i32, chain: i32, repeats
             let mut scalar = acc[0];
             for index in 0..state.input4.len() {
                 let a = state.input4[index];
-                if width == 4 {
+                if WIDTH == 4 {
                     let x = if dependent { acc } else { a };
-                    let y = match arm {
+                    let y = match ARM {
                         0 => V::from_array_t(t, x).mul_add_fused(bv, cv).to_array(),
                         1 => soft::fmaf_soft_lanes(x, b, c),
                         2 => {
-                            if state.fusion & 1 != 0 {
+                            if FUSED {
                                 V::from_array_t(t, x).mul_add_relaxed(bv, cv).to_array()
                             } else {
                                 soft::fmaf_soft_lanes(x, b, c)
@@ -130,10 +172,10 @@ pub extern "C" fn guest_fma(kind: i32, width: i32, arm: i32, chain: i32, repeats
                         state.output4[index] = y;
                     }
                 } else {
-                    assert_eq!(width, 1);
-                    for lane in 0..4 {
-                        let x = if dependent { scalar } else { a[lane] };
-                        let y = match arm {
+                    assert_eq!(WIDTH, 1);
+                    for (lane, &lane_value) in a.iter().enumerate() {
+                        let x = if dependent { scalar } else { lane_value };
+                        let y = match ARM {
                             0 => {
                                 magetypes::simd::f32x1(x)
                                     .mul_add_fused(
@@ -144,7 +186,7 @@ pub extern "C" fn guest_fma(kind: i32, width: i32, arm: i32, chain: i32, repeats
                             }
                             1 => soft::fmaf_soft_lanes([x], [b[0]], [c[0]])[0],
                             2 => {
-                                if state.fusion & 1 != 0 {
+                                if FUSED {
                                     V::splat_t(t, x).mul_add_relaxed(bv, cv).to_array()[0]
                                 } else {
                                     soft::fmaf_soft_lanes([x], [b[0]], [c[0]])[0]
@@ -161,12 +203,12 @@ pub extern "C" fn guest_fma(kind: i32, width: i32, arm: i32, chain: i32, repeats
                 }
             }
             if dependent {
-                state.output4[0] = if width == 4 { acc } else { [scalar; 4] };
+                state.output4[0] = if WIDTH == 4 { acc } else { [scalar; 4] };
             }
         }
         state.output4[0][0].to_bits() as i64
     } else {
-        assert_eq!(kind, 64);
+        assert_eq!(KIND, 64);
         use magetypes::simd::generic::f64x2 as V;
         let b = [std::hint::black_box(0.99991f64); 2];
         let c = [std::hint::black_box(0.00013f64); 2];
@@ -177,13 +219,13 @@ pub extern "C" fn guest_fma(kind: i32, width: i32, arm: i32, chain: i32, repeats
             let mut scalar = acc[0];
             for index in 0..state.inputd2.len() {
                 let a = state.inputd2[index];
-                if width == 2 {
+                if WIDTH == 2 {
                     let x = if dependent { acc } else { a };
-                    let y = match arm {
+                    let y = match ARM {
                         0 => V::from_array_t(t, x).mul_add_fused(bv, cv).to_array(),
                         1 => soft::software64(x, b, c),
                         2 => {
-                            if state.fusion & 2 != 0 {
+                            if FUSED {
                                 V::from_array_t(t, x).mul_add_relaxed(bv, cv).to_array()
                             } else {
                                 soft::software64(x, b, c)
@@ -197,10 +239,10 @@ pub extern "C" fn guest_fma(kind: i32, width: i32, arm: i32, chain: i32, repeats
                         state.outputd2[index] = y;
                     }
                 } else {
-                    assert_eq!(width, 1);
-                    for lane in 0..2 {
-                        let x = if dependent { scalar } else { a[lane] };
-                        let y = match arm {
+                    assert_eq!(WIDTH, 1);
+                    for (lane, &lane_value) in a.iter().enumerate() {
+                        let x = if dependent { scalar } else { lane_value };
+                        let y = match ARM {
                             0 => {
                                 magetypes::simd::f64x1(x)
                                     .mul_add_fused(
@@ -211,7 +253,7 @@ pub extern "C" fn guest_fma(kind: i32, width: i32, arm: i32, chain: i32, repeats
                             }
                             1 => soft::software64([x], [b[0]], [c[0]])[0],
                             2 => {
-                                if state.fusion & 2 != 0 {
+                                if FUSED {
                                     V::splat_t(t, x).mul_add_relaxed(bv, cv).to_array()[0]
                                 } else {
                                     soft::software64([x], [b[0]], [c[0]])[0]
@@ -228,7 +270,7 @@ pub extern "C" fn guest_fma(kind: i32, width: i32, arm: i32, chain: i32, repeats
                 }
             }
             if dependent {
-                state.outputd2[0] = if width == 2 { acc } else { [scalar; 2] };
+                state.outputd2[0] = if WIDTH == 2 { acc } else { [scalar; 2] };
             }
         }
         state.outputd2[0][0].to_bits() as i64
