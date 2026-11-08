@@ -31,6 +31,16 @@ pub fn {name}(token:Token,input:&[f32;{n}],exponent:f32,options:PowfOptions,outp
     *output={body};
 }}
 '''
+                # Guaranteed-feature targets may inline the macro's native entry
+                # into main. Retain a plain caller so its complete body is inspectable.
+                for tier,ty,cfg in [('neon','NeonToken','target_arch="aarch64"'),('wasm128','Wasm128Token','target_arch="wasm32"')]:
+                    code+=f'''#[cfg({cfg})]
+#[allow(non_snake_case)]
+#[inline(never)]
+pub fn caller_{name}_{tier}(token:archmage::{ty},input:&[f32;{n}],exponent:f32,options:PowfOptions,output:&mut[f32;{n}]){{
+    {name}_{tier}(token,input,exponent,options,output);
+}}
+'''
                 calls.append((name,n,domain))
 code+='fn main(){use archmage::SimdToken;let n=std::hint::black_box(2.4_f32);\n'
 for width in [4,8,16]:code+=f'let input{width}=std::hint::black_box([0.75;{width}]);let mut output{width}=[0.0;{width}];\n'
@@ -38,7 +48,8 @@ for tier,ty,cfg in [('scalar','ScalarToken',None),('v3','X64V3Token','target_arc
     if cfg:code+=f'#[cfg({cfg})]\n'
     code+=f'if let Some(token)=archmage::{ty}::summon(){{\n'
     for name,width,domain in calls:
-        code+=f'{name}_{tier}(token,&input{width},n,std::hint::black_box(PowfOptions::new().with_domain(PowfDomain::{domain}).with_execution(PowfExecution::Caller)),&mut output{width});std::hint::black_box(output{width});\n'
+        caller=f'caller_{name}_{tier}'if tier in['neon','wasm128']else f'{name}_{tier}'
+        code+=f'{caller}(token,&input{width},n,std::hint::black_box(PowfOptions::new().with_domain(PowfDomain::{domain}).with_execution(PowfExecution::Caller)),&mut output{width});std::hint::black_box(output{width});\n'
     code+='}\n'
 code+='}\n'
 (out/'replacement_probes.rs').write_text(code)

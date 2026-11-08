@@ -78,7 +78,8 @@ pairs. Its largest measured canonical errors were below 438.504 ULP for
 `PositiveNormal`, 416.579 ULP for `NonNegativeNormal`, and 47.902 ULP for
 `Gamma`. These replace the earlier sampled maxima of 91.258, 92.613 and
 25.397 ULP; none is a worst-case guarantee. Scalar and V3 canonical bits
-agree, while std f32 power stays below 0.507 ULP on this corpus. See the
+agree. On this corpus, std f32 power stays below 0.507 ULP on Linux x86
+and below 0.511 ULP on Apple ARM. See the
 [replacement comparison](../benchmarks/powf_module_2026-11-07/REPLACEMENTS.md)
 for accuracy/performance tradeoffs against the actual legacy/std methods. See the
 [study](../benchmarks/powf_module_2026-11-07/MATRIX.md) for frozen cost gates and

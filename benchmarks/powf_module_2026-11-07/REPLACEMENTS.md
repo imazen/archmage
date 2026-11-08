@@ -34,6 +34,15 @@ stdlib/panic implementation bodies, and are not dynamic instruction counts.
 The report contains 240 distinct Scalar/V3 probe bodies; LLVM coalesces several
 identical domain variants. No existing assembly-equality gate was relaxed.
 
+Retained Apple M6 NEON caller probes show the same specialization pattern:
+x4 Gamma/literal exponent has 125 instructions and one branch for both const
+and literal runtime options, versus 367 instructions and seven branches with
+opaque options. With an opaque exponent, const/literal-runtime options have
+145 instructions/four branches, versus 355/11 for opaque options. All 240
+distinct Scalar/NEON bodies are retained; an initial probe build inlined native
+entries into main, so the diagnostic generator now preserves a plain caller
+on guaranteed-feature targets. No production or measured binary changed.
+
 ## Mathematical accuracy
 
 The pinned external `math_accuracy` bivariate adaptive search was connected to
@@ -45,6 +54,14 @@ patches, command lines, every search log, admission/rejection evaluation counts
 and witnesses are preserved outside git. Search arithmetic uses MPFR at 72
 bits; every resulting witness is rechecked at 256 bits with directed MPFR.
 This is a bounded search, not a certified global maximum-error computation.
+Gamma search covers its positive interval; exact zero rails remain in the
+common fixed corpus and the separate semantic comparison.
+
+M6 numerical verification repeats all 26,857 common pairs through both Scalar
+and actual NEON paths. It has zero independent-graph or canonical tier
+mismatches and the same canonical maxima. Its system std f32 power has measured
+maxima below 0.511, 0.510 and 0.509 ULP in the three domains, respectively;
+promoted f64 remains below 0.500000002. These are platform-specific observations.
 
 The union of 34 distinct new witnesses and the original 26,823 domain-tagged
 pairs gives 26,857 common pairs for every implementation and both backends.
@@ -53,7 +70,7 @@ pairs gives 26,857 common pairs for every implementation and both backends.
 rational/RNE graph, with zero scalar/V3 canonical differences. No coefficients
 were changed. These results supersede the earlier sampled maxima.
 
-| Domain | Canonical maximum measured ULP upper bound | std f32 power |
+| Domain | Canonical maximum measured ULP upper bound | Linux x86 std f32 power |
 |---|---:|---:|
 | PositiveNormal | 438.504 | 0.507 |
 | NonNegativeNormal | 416.579 | 0.507 |
@@ -145,3 +162,17 @@ peak RSS 0.34 GiB, minimum available 22,161 MiB, peak load 13.86. M6 pilot:
 page proxy 8,518 MiB, peak load 1.24; macOS used a monitored 2 GiB process-tree
 guard, not a cgroup hard cap. That BSD statistic is not a measured whole-build
 process-tree peak. Full logs preserve every resource wrapper line.
+
+Cold consumer diagnostics use three fresh-target repetitions, Rust 1.99.1,
+one codegen unit, thin LTO, cached dependencies and remapped source paths:
+
+| Consumer | Build seconds (all repetitions) | Executable bytes (each repetition) |
+|---|---|---:|
+| Main / legacy | 4.433156 / 4.391728 / 4.422096 | 406,152 |
+| Const candidate / same legacy source | 4.506343 / 4.457358 / 4.516223 | 406,168 |
+| Const candidate / default bounded powf | 4.551558 / 4.536466 / 4.590131 | 422,008 |
+
+These shared-host raw build diagnostics are not precise build-speed claims.
+The third row changes the called API and its contract. The wrapper completed
+in 41 s with peak RSS 0.35 GiB, minimum available 23,264 MiB, peak load 14.03;
+per-build GNU-time RSS and exact binary hashes are retained.

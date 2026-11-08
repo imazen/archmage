@@ -628,3 +628,6 @@ powf-replacement-wasm-build directory mode:
 
 powf-replacement-wasm-host:
     cargo build --release --locked --manifest-path benchmarks/powf_module_2026-11-07/Cargo.toml --features wasm-host --bin replacement_wasm_host
+
+powf-replacement-matrix-analyze directory cells *runs:
+    python3 -B benchmarks/powf_module_2026-11-07/analyze_replacement_matrix.py benchmarks/powf_module_2026-11-07/target/release/replacement_analyze "{{directory}}" {{runs}} --require-cells {{cells}}
