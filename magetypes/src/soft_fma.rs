@@ -5,7 +5,7 @@
 //!   `neon`) use Rust's `mul_add`;
 //! - other x86_64 std builds check archmage's cached V3 token once per call
 //!   for f64 and send each lane through the FMA instruction when the CPU has
-//!   it; below full V3, usable x86 FMA delegates to safe std `mul_add`,
+//!   it; below full V3, x86_64 std delegates to safe std `mul_add`,
 //!   whose compiler/runtime owns its narrower feature dispatch;
 //! - no_std builds use a token only when the target features prove it at
 //!   compile time (V3 or NEON); archmage cannot detect at run time without
@@ -100,11 +100,13 @@ token_or_software_fma! {
     /// `a[i] * b[i] + c[i]` rounded once, per lane. On x86_64 with std this is
     /// a cached full-V3 check (archmage's `summon`, once per call). The paired
     /// helper on full-V3 CPUs previously measured 0.09-0.43x the software time.
-    /// Below V3, a usable-FMA check delegates to safe std `mul_add`; its
-    /// compiler/runtime owns the narrower feature dispatch. Costs of this
-    /// secondary check and route are not yet established on quiet hardware. Lanes pass
-    /// in float registers, two per call; an array or SIMD-vector argument would
-    /// go through memory. Without std the token path is compiled only when
+    /// Its arguments/returns use float registers, two lanes per call, avoiding
+    /// the memory ABI of arrays or SIMD values.
+    /// Below V3, safe std `mul_add` owns hardware/software selection. This
+    /// adds no feature detector to magetypes and needs no full-V3 proof for
+    /// FMA-only processors. The cost of this route, including its no-FMA
+    /// software fallback, is not yet established on quiet hardware.
+    /// Without std the token path is compiled only when
     /// the target features prove FMA, where `summon` folds to `Some` (archmage
     /// cannot detect at run time without std). Results equal the software
     /// path's bit for bit.
@@ -135,14 +137,17 @@ token_or_software_fma! {
             }
             return out;
         }
-        // FMA-only processors cannot furnish a full V3 token. Rust's safe
-        // primitive needs no such proof: its baseline lowering owns feature
-        // selection. Keep the existing paired V3 helper above for that fast path.
+        // Keep the paired full-V3 helper above. Below V3, this safe standard
+        // operation owns feature selection, including FMA-only processors;
+        // magetypes introduces no narrower feature proof or hidden detector.
         #[cfg(all(not(miri), feature = "std", target_arch = "x86_64"))]
-        if std::is_x86_feature_detected!("fma") {
-            return core::array::from_fn(|i| a[i].mul_add(b[i], c[i]));
+        {
+            core::array::from_fn(|i| a[i].mul_add(b[i], c[i]))
         }
-        f64_soft::fma_soft_lanes(a, b, c)
+        #[cfg(not(all(not(miri), feature = "std", target_arch = "x86_64")))]
+        {
+            f64_soft::fma_soft_lanes(a, b, c)
+        }
     }
 }
 
@@ -254,8 +259,8 @@ mod hw {
     }
 }
 
-/// [`token_or_software_fma`] plus test builds, which exercise the software
-/// path everywhere.
+/// Keep software where it can be selected, and in tests on every platform.
+/// Baseline x86_64 std now delegates its below-V3 fallback to std.
 macro_rules! software_fma_or_test {
     ($($item:item)*) => {$(
         #[cfg(any(test, not(all(
@@ -263,7 +268,8 @@ macro_rules! software_fma_or_test {
             feature = "std",
             any(
                 all(target_arch = "aarch64", target_feature = "neon"),
-                all(any(target_arch = "x86", target_arch = "x86_64"), target_feature = "fma")
+                target_arch = "x86_64",
+                all(target_arch = "x86", target_feature = "fma")
             )
         ))))]
         $item
@@ -350,7 +356,7 @@ fn round_to_odd(sum: f64, error: f64, apply: bool) -> f64 {
 }
 
 software_fma_or_test! {
-    /// The f64 software path: unused where the build guarantees hardware FMA.
+    /// The f64 software path, where selected by this crate and in tests.
     mod f64_soft {
         use super::two_sum;
 
