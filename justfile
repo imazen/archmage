@@ -544,3 +544,56 @@ release-compat-recheck source output inventory:
 
 release-compat-audit directory source *options:
     python3 xtask/release_compat/audit.py {{directory}} --source {{source}} {{options}}
+
+# Bounded, fixed-fused powf: independent graph fixtures and required backend.
+powf-fixtures-check:
+    python3 -B xtask/powf_vectors.py --check
+
+powf-contract tier="scalar":
+    ARCHMAGE_POWF_TIER={{tier}} cargo test --release -p magetypes --features avx512 --lib powf::
+
+powf-payloads tier="scalar" stride="65537":
+    ARCHMAGE_POWF_TIER={{tier}} ARCHMAGE_NAN_STRIDE={{stride}} cargo test --release -p magetypes --features avx512 --lib powf::tests::nan_sign_payload
+
+# Build the frozen bounded-powf study (distribution target flags only).
+powf-study-build target="x86_64-unknown-linux-gnu":
+    cargo build --release --manifest-path benchmarks/powf_module_2026-11-07/Cargo.toml --target {{target}}
+
+# Strict zenbench admission; output must not already exist.
+powf-study result filter="":
+    POWF_RESULT="{{result}}" POWF_FILTER="{{filter}}" cargo run --release --manifest-path benchmarks/powf_module_2026-11-07/Cargo.toml
+
+powf-accuracy output:
+    cargo build --release -p magetypes --example powf_contract_dump
+    python3 -B benchmarks/powf_module_2026-11-07/accuracy.py target/release/examples/powf_contract_dump "{{output}}"
+
+powf-study-matrix directory native="v3":
+    python3 -B benchmarks/powf_module_2026-11-07/run_matrix.py benchmarks/powf_module_2026-11-07/target/release/archmage-powf-study "{{directory}}" --native {{native}}
+
+powf-study-analyze *files:
+    cargo run --release --manifest-path benchmarks/powf_module_2026-11-07/Cargo.toml --bin analyze -- {{files}}
+
+powf-contract-target target:
+    cargo test --release -p magetypes --target {{target}} --lib powf::
+
+powf-wasm-build:
+    RUSTFLAGS="-C target-feature=+simd128" CARGO_TARGET_DIR=target/powf-wasm-strict cargo test --release -p magetypes --target wasm32-wasip1 --lib powf:: --no-run
+    RUSTFLAGS="-C target-feature=+simd128,+relaxed-simd" CARGO_TARGET_DIR=target/powf-wasm-relaxed cargo test --release -p magetypes --target wasm32-wasip1 --lib powf:: --no-run
+
+powf-wasm-contract:
+    bash benchmarks/powf_module_2026-11-07/verify_wasm.sh
+
+powf-study-cold directory base candidate:
+    python3 -B benchmarks/powf_module_2026-11-07/cold_build.py "{{directory}}" --base {{base}} --candidate {{candidate}}
+
+powf-study-wasm-build directory mode:
+    python3 -B benchmarks/powf_module_2026-11-07/build_guest.py "{{directory}}" {{mode}}
+
+powf-study-wasm-host:
+    cargo build --release --manifest-path benchmarks/powf_module_2026-11-07/Cargo.toml --features wasm-host --bin wasm_host
+
+powf-study-lint:
+    cargo clippy --manifest-path benchmarks/powf_module_2026-11-07/Cargo.toml --all-targets --all-features -- -D warnings
+
+powf-study-wasm-verify wasm mode:
+    POWF_WASM="{{wasm}}" POWF_WASM_MODE={{mode}} POWF_VERIFY_ONLY=1 benchmarks/powf_module_2026-11-07/target/release/wasm_host

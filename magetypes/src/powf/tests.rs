@@ -38,6 +38,65 @@ macro_rules! check {
                 [0.0_f32, 1.0, 2.0, 4.0].map(f32::to_bits),
             );
         }
+        // Distinct accepted lanes catch packing/shuffle errors that splats miss.
+        let bases = [
+            0x3780_0000,
+            0x3780_0001,
+            0x3f7f_ffff,
+            0x3f80_0000,
+            0x3f80_0001,
+            0x3f35_04f3,
+            0x3fb5_04f3,
+            0x4000_0000,
+            0x4080_0000,
+            0x477f_ffff,
+            0x4780_0000,
+        ];
+        for domain in 0..3 {
+            for exponent in [0.5_f32, 2.4, 4.0] {
+                for execution in [PowfExecution::Caller, PowfExecution::Automatic] {
+                    let opts = PowfOptions {
+                        execution,
+                        ..options(domain)
+                    };
+                    macro_rules! mixed_width {
+                        ($ty:ident, $n:literal) => {{
+                            let input: [f32; $n] = core::array::from_fn(|i| {
+                                f32::from_bits(if i == 0 && domain != 0 {
+                                    0
+                                } else {
+                                    bases[i % bases.len()]
+                                })
+                            });
+                            let expected: [u32; $n] = core::array::from_fn(|i| {
+                                let row = fixtures::POWF
+                                    .iter()
+                                    .find(|r| {
+                                        r[0] == input[i].to_bits()
+                                            && r[1] == exponent.to_bits()
+                                            && r[4] == domain
+                                    })
+                                    .expect("independent mixed-lane fixture");
+                                assert_eq!(row[3], 0);
+                                row[2]
+                            });
+                            assert_eq!(
+                                crate::simd::generic::$ty::from_array_t(token, input)
+                                    .try_powf_with(exponent, opts)
+                                    .unwrap()
+                                    .to_array()
+                                    .map(f32::to_bits),
+                                expected
+                            );
+                        }};
+                    }
+                    mixed_width!(f32x4, 4);
+                    mixed_width!(f32x8, 8);
+                    #[cfg(feature = "w512")]
+                    mixed_width!(f32x16, 16);
+                }
+            }
+        }
         for &[base, exponent, expected, error, allow_zero] in &fixtures::POWF {
             let b = f32::from_bits(base);
             let n = f32::from_bits(exponent);
