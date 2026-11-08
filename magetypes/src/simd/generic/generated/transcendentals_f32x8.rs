@@ -82,6 +82,7 @@ impl<T: F32x8Convert> f32x8<T> {
 
     /// Low-precision base-2 exponential: relative error at most 0.56% for x up
     /// to 127.99 and 1.23% above, where the input is clamped to 127.99.
+    /// NaN inputs return NaN; payload and sign are unspecified.
     #[inline(always)]
     pub fn exp2_lowp(self) -> Self {
         const C0: f32 = 1.0;
@@ -113,7 +114,7 @@ impl<T: F32x8Convert> f32x8<T> {
         poly * scale_bits.bitcast_to_f32()
     }
 
-    /// Alias of [`exp2_lowp`](Self::exp2_lowp), including its clamps
+    /// Alias of [`exp2_lowp`](f32x8::exp2_lowp), including its clamps
     /// and NaN classification.
     #[inline(always)]
     pub fn exp2_lowp_unchecked(self) -> Self {
@@ -138,7 +139,7 @@ impl<T: F32x8Convert> f32x8<T> {
         (self * splat_f32::<T>(self.1, core::f32::consts::LOG2_E)).exp2_lowp()
     }
 
-    /// Alias of [`exp_lowp`](Self::exp_lowp), including its clamps
+    /// Alias of [`exp_lowp`](f32x8::exp_lowp), including its clamps
     /// and NaN classification.
     #[inline(always)]
     pub fn exp_lowp_unchecked(self) -> Self {
@@ -279,7 +280,7 @@ impl<T: F32x8Convert> f32x8<T> {
     ///
     /// At most 1.9 ULP for x below 127.5 and up to 134.1 ULP in [127.5, 128).
     /// Returns 0 for x < -126 (denormal results can't be constructed),
-    /// inf for x >= 128.
+    /// inf for x >= 128, and NaN for NaN inputs (payload/sign unspecified).
     #[inline(always)]
     pub fn exp2_midp(self) -> Self {
         let underflow_limit = splat_f32::<T>(self.1, -126.0);

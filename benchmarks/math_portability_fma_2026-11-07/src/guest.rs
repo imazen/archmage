@@ -98,47 +98,52 @@ pub extern "C" fn guest_fma(kind: i32, width: i32, arm: i32, chain: i32, repeats
     let t = archmage::Wasm128Token::summon().expect("SIMD module");
     let mut state = STATE.get().expect("prepare first").lock().unwrap();
     match (kind, width, arm) {
-        (32,1,0) => {
-            run_fma::<32,1,0,false>(t,&mut state,chain,repeats)
-        },
-        (32,1,1) => {
-            run_fma::<32,1,1,false>(t,&mut state,chain,repeats)
-        },
-        (32,1,2) => {
-            if state.fusion & 1 != 0 { run_fma::<32,1,2,true>(t,&mut state,chain,repeats) } else { run_fma::<32,1,2,false>(t,&mut state,chain,repeats) }
-        },
-        (32,4,0) => {
-            run_fma::<32,4,0,false>(t,&mut state,chain,repeats)
-        },
-        (32,4,1) => {
-            run_fma::<32,4,1,false>(t,&mut state,chain,repeats)
-        },
-        (32,4,2) => {
-            if state.fusion & 1 != 0 { run_fma::<32,4,2,true>(t,&mut state,chain,repeats) } else { run_fma::<32,4,2,false>(t,&mut state,chain,repeats) }
-        },
-        (64,1,0) => {
-            run_fma::<64,1,0,false>(t,&mut state,chain,repeats)
-        },
-        (64,1,1) => {
-            run_fma::<64,1,1,false>(t,&mut state,chain,repeats)
-        },
-        (64,1,2) => {
-            if state.fusion & 2 != 0 { run_fma::<64,1,2,true>(t,&mut state,chain,repeats) } else { run_fma::<64,1,2,false>(t,&mut state,chain,repeats) }
-        },
-        (64,2,0) => {
-            run_fma::<64,2,0,false>(t,&mut state,chain,repeats)
-        },
-        (64,2,1) => {
-            run_fma::<64,2,1,false>(t,&mut state,chain,repeats)
-        },
-        (64,2,2) => {
-            if state.fusion & 2 != 0 { run_fma::<64,2,2,true>(t,&mut state,chain,repeats) } else { run_fma::<64,2,2,false>(t,&mut state,chain,repeats) }
-        },
+        (32, 1, 0) => run_fma::<32, 1, 0, false>(t, &mut state, chain, repeats),
+        (32, 1, 1) => run_fma::<32, 1, 1, false>(t, &mut state, chain, repeats),
+        (32, 1, 2) => {
+            if state.fusion & 1 != 0 {
+                run_fma::<32, 1, 2, true>(t, &mut state, chain, repeats)
+            } else {
+                run_fma::<32, 1, 2, false>(t, &mut state, chain, repeats)
+            }
+        }
+        (32, 4, 0) => run_fma::<32, 4, 0, false>(t, &mut state, chain, repeats),
+        (32, 4, 1) => run_fma::<32, 4, 1, false>(t, &mut state, chain, repeats),
+        (32, 4, 2) => {
+            if state.fusion & 1 != 0 {
+                run_fma::<32, 4, 2, true>(t, &mut state, chain, repeats)
+            } else {
+                run_fma::<32, 4, 2, false>(t, &mut state, chain, repeats)
+            }
+        }
+        (64, 1, 0) => run_fma::<64, 1, 0, false>(t, &mut state, chain, repeats),
+        (64, 1, 1) => run_fma::<64, 1, 1, false>(t, &mut state, chain, repeats),
+        (64, 1, 2) => {
+            if state.fusion & 2 != 0 {
+                run_fma::<64, 1, 2, true>(t, &mut state, chain, repeats)
+            } else {
+                run_fma::<64, 1, 2, false>(t, &mut state, chain, repeats)
+            }
+        }
+        (64, 2, 0) => run_fma::<64, 2, 0, false>(t, &mut state, chain, repeats),
+        (64, 2, 1) => run_fma::<64, 2, 1, false>(t, &mut state, chain, repeats),
+        (64, 2, 2) => {
+            if state.fusion & 2 != 0 {
+                run_fma::<64, 2, 2, true>(t, &mut state, chain, repeats)
+            } else {
+                run_fma::<64, 2, 2, false>(t, &mut state, chain, repeats)
+            }
+        }
         _ => panic!("unsupported FMA shape"),
     }
 }
 
-fn run_fma<const KIND:i32,const WIDTH:i32,const ARM:i32,const FUSED:bool>(t:archmage::Wasm128Token,state:&mut State,chain:i32,repeats:i32)->i64 {
+fn run_fma<const KIND: i32, const WIDTH: i32, const ARM: i32, const FUSED: bool>(
+    t: archmage::Wasm128Token,
+    state: &mut State,
+    chain: i32,
+    repeats: i32,
+) -> i64 {
     use super::fma_kernels::soft;
     let dependent = chain != 0;
     if KIND == 32 {

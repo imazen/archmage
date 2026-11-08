@@ -588,3 +588,7 @@ portability-oracle output *inputs:
 # Counters include startup; they are not a primitive-latency timing gate.
 portability-first-use binary output:
     python3 -B benchmarks/math_portability_fma_2026-11-07/first_use.py {{quote(binary)}} {{quote(output)}}
+
+# Output transport avoids filling worker disks; the normal common gates stay active.
+portability-stream worker output mode filter:
+    python3 -B benchmarks/math_portability_fma_2026-11-07/stream_worker.py {{quote(worker)}} {{quote(output)}} {{quote(mode)}} {{quote(filter)}}

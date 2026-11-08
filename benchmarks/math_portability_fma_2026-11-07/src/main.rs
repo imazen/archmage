@@ -10,7 +10,7 @@ mod kernels {
 }
 #[allow(dead_code)]
 mod fma_kernels {
-    #[cfg(not(target_arch="wasm32"))]
+    #[cfg(not(target_arch = "wasm32"))]
     use archmage::SimdToken;
     include!(concat!(env!("OUT_DIR"), "/fma_kernels.rs"));
 }
@@ -136,9 +136,13 @@ fn main() {
     #[cfg(target_arch = "x86_64")]
     if std::env::var_os("STUDY_DISABLE_V3").is_some() {
         use archmage::SimdToken;
-        archmage::X64V3Token::dangerously_disable_token_process_wide(true).expect("baseline build permits disabling V3");
+        archmage::X64V3Token::dangerously_disable_token_process_wide(true)
+            .expect("baseline build permits disabling V3");
         assert!(archmage::X64V3Token::summon().is_none());
-        println!("forced no-V3 fallback; hardware FMA present={}",std::is_x86_feature_detected!("fma"));
+        println!(
+            "forced no-V3 fallback; hardware FMA present={}",
+            std::is_x86_feature_detected!("fma")
+        );
     }
     let mut suite = Suite::new();
     #[cfg(feature = "wasm-host")]
@@ -164,9 +168,12 @@ fn main() {
         }
     }
     let result = zenbench::run_gated(GateConfig::strict(), move |s| *s = suite);
-    result
-        .save(std::env::var("STUDY_OUTPUT").expect("required STUDY_OUTPUT"))
-        .unwrap();
+    let destination = std::env::var("STUDY_OUTPUT").expect("required STUDY_OUTPUT");
+    if destination == "-" {
+        println!("STUDY_JSON {}", serde_json::to_string(&result).unwrap());
+    } else {
+        result.save(destination).unwrap();
+    }
     for group in &result.comparisons {
         let clean = !result.unreliable
             && group.samples.len() >= 50

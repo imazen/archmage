@@ -149,18 +149,21 @@ def main():
     summary={};mismatches=[]
     for file in sys.argv[1:]:
         for line in Path(file).read_text().splitlines():
-            row=json.loads(line);key=(row['token'],row['width'],row['op'])
-            q=summary.setdefault(key,dict(n=0,mismatches=0,changed_fused_bits=0,max_ulp_upper=None,accuracy_samples=0))
-            for x,y,base in zip(row['input'],row['fused'],row['baseline']):
+            row=json.loads(line);key=(str(file),row['token'],row['width'],row['op'])
+            q=summary.setdefault(key,dict(n=0,mismatches=0,changed_fused_bits=0,max_ulp_upper=None,accuracy_samples=0,changed_fusion_bits=0,ordinary_changed_fusion_bits=0))
+            for x,y,base,corrected in zip(row['input'],row['fused'],row['baseline'],row['exceptional']):
                 expected=mirror(row['op'],x);q['n']+=1
                 same=(is_nan(y) and is_nan(expected)) or y==expected
                 if not same:
                     q['mismatches']+=1
                     if len(mismatches)<30:mismatches.append(dict(key=key,x=f'{x:08x}',got=f'{y:08x}',expected=f'{expected:08x}'))
                 q['changed_fused_bits']+=not ((is_nan(y) and is_nan(base)) or y==base)
+                fusion_changed=not ((is_nan(y) and is_nan(corrected)) or y==corrected)
+                q['changed_fusion_bits']+=fusion_changed
                 ref=reference(row['op'],x)
                 v=val(x)
                 domain=(0<v<math.inf and x&0x7fffffff>=0x00800000) if row['op'].startswith(('log','ln','pow')) else ((-126<=v<(127.99 if row['op'].endswith('lowp') else 128)) if row['op'].startswith('exp2') else -87<=v<=88.5)
+                q['ordinary_changed_fusion_bits']+=domain and fusion_changed
                 if domain and ref and all(math.isfinite(v) for v in ref) and math.isfinite(val(y)):
                     rounded_ref=bits((ref[0]+ref[1])/2)
                     r=val(rounded_ref)
@@ -169,6 +172,6 @@ def main():
                         exact_error=max(abs(Fraction.from_float(val(y))-Fraction.from_float(r)) for r in ref)/Fraction.from_float(ulp)
                         error=math.nextafter(float(exact_error),math.inf)
                         q['max_ulp_upper']=max(q['max_ulp_upper'] or 0,error);q['accuracy_samples']+=1
-    print(json.dumps(dict(mpfr=mp.mpfr_get_version().decode(),summaries=[dict(token=k[0],width=k[1],op=k[2],**v) for k,v in summary.items()],mismatch_examples=mismatches),indent=2))
+    print(json.dumps(dict(mpfr=mp.mpfr_get_version().decode(),summaries=[dict(source=k[0],token=k[1],width=k[2],op=k[3],**v) for k,v in summary.items()],mismatch_examples=mismatches),indent=2))
     if mismatches:sys.exit(1)
 if __name__=='__main__':main()
