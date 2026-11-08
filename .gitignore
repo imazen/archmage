@@ -35,3 +35,7 @@ Cargo.toml.original.txt
 perf.data
 perf.data.old
 fuzz-*.log
+
+# Task-owned member build output and Python oracle bytecode.
+/magetypes/target/
+/xtask/__pycache__/
