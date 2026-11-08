@@ -549,6 +549,10 @@ release-compat-recheck source output inventory:
 release-compat-audit directory source *options:
     python3 xtask/release_compat/audit.py {{directory}} --source {{source}} {{options}}
 
+# Read-only literal-call inventory of explicitly selected local checkouts.
+portability-usage output *roots:
+    python3 benchmarks/math_portability_fma_2026-11-07/usage_inventory.py {{quote(output)}} {{roots}}
+
 # Exp-boundary exceptional-value classification, with an explicit required tier.
 portability-nan tier="scalar" stride="65537":
     ARCHMAGE_NAN_STRIDE={{stride}} ARCHMAGE_TEST_TIER={{tier}} cargo test --release -p magetypes --features avx512 --test transcendental_nan

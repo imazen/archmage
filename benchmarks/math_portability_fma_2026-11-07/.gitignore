@@ -1,3 +1,4 @@
 /target/
 /.zenbench/
 !Cargo.lock
+__pycache__/

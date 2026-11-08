@@ -2,12 +2,17 @@
 
 The exceptional-value candidate fails the 2% performance promotion gate on
 real NEON scalar callers. It needs an explicit correctness/cost decision before
-landing. Quiet AMD and Intel timings and a complete WASM timing matrix are still
+landing. The owner chose to hold promotion and keep PR143 draft. Quiet AMD and Intel timings and a complete WASM timing matrix are still
 missing; busy-host results cannot fill those gaps. The fixed-fused polynomial
 candidate is experimental and is not the library default. The separate x86_64
 std f64 fallback prototype has correct FMA-only execution but unmeasured
 no-FMA and hardware-path costs. It is benchmark-only: its intended assembly
-changes require an approved codegen expectation before integration.
+changes require an approved codegen expectation before integration. The owner
+chose to retain this candidate only in the benchmark experiment.
+
+The [local ripgrep consumer inventory](USAGE.md) prioritizes checked pow/PQ,
+gamma/contrast aliases and actual exp/exp2 transfer/tonemapping callers. It
+does not change the frozen matrix or its failing promotion results.
 
 ## Change and contracts
 
