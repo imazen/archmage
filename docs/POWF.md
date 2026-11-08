@@ -26,6 +26,10 @@ adapter. These APIs share the graph and rejection contract. The array const
 entry is `try_powf_array_with::<OPTIONS, N>`; the vector method is
 `vector.try_powf_with::<OPTIONS>(exponent)`.
 
+`PowfErrorKind` is non-exhaustive so future rejection reasons can be added.
+External matches retain a fallback arm; the numerical study panics on an
+unknown reason rather than silently classifying it as an existing stage.
+
 The contract is identical result bits across admitted backends for the same
 accepted inputs and options, under round-to-nearest and gradual underflow.
 It is an approximation to `exp2(n * log2(x))`, not correctly rounded power.

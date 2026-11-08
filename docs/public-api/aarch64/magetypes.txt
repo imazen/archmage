@@ -44,7 +44,7 @@ pub enum powf::PowfDomain
 pub powf::PowfDomain::Gamma
 pub powf::PowfDomain::NonNegativeNormal
 pub powf::PowfDomain::PositiveNormal
-pub enum powf::PowfErrorKind
+#[non_exhaustive] pub enum powf::PowfErrorKind
 pub powf::PowfErrorKind::InvalidBase
 pub powf::PowfErrorKind::InvalidExponent
 pub powf::PowfErrorKind::OutsideApproximationRange

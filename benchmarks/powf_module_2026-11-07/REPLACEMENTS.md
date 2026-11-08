@@ -8,6 +8,11 @@ caller-visible const options as separate controls. The original
 [prevalidated-graph study](README.md) remains historical evidence for its own
 runtime implementation; its ratios do not describe the new const caller path.
 
+Final API review makes the new error-kind enum non-exhaustive. A compile-fail
+example checks external exhaustive matching, and the numerical adapter panics
+on unknown reasons. Coefficients, arithmetic and acceptance rules are unchanged;
+timing source identities below remain the frozen measured revisions.
+
 CI release-page downloads encountered HTTP 503/504 before running checks.
 The Linux x86_64 installers now use immutable release asset API URLs and verify
 the upstream archive SHA-256 before extraction. Wasmtime remains 48.0.1 and
