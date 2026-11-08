@@ -2,6 +2,10 @@
 #![forbid(unsafe_code)]
 use archmage::SimdToken;
 use magetypes::powf::{PowfDomain, PowfErrorKind, PowfExecution, PowfOptions};
+#[allow(dead_code)]
+pub mod rounding {
+    include!(concat!(env!("OUT_DIR"), "/rounding_kernels.rs"));
+}
 pub const METHOD_NAMES: [&str; 8] = [
     "canonical",
     "pow_lowp",

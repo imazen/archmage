@@ -28,6 +28,16 @@ fn main() {
             .success()
     );
     println!("cargo:rerun-if-changed=codegen_prepare.py");
+    assert!(
+        Command::new("python3")
+            .arg(directory.join("rounding_prepare.py"))
+            .arg(&output)
+            .status()
+            .unwrap()
+            .success()
+    );
+    println!("cargo:rerun-if-changed=rounding_prepare.py");
+    println!("cargo:rerun-if-changed=../../magetypes/src/simd/generic/generated/transcendentals_f32x4.rs");
     println!("cargo:rerun-if-changed=replacement_prepare.py");
     println!("cargo:rerun-if-changed=prepare.py");
     println!("cargo:rerun-if-changed=../../magetypes/src/powf/graph.rs");
