@@ -8,6 +8,16 @@ caller-visible const options as separate controls. The original
 [prevalidated-graph study](README.md) remains historical evidence for its own
 runtime implementation; its ratios do not describe the new const caller path.
 
+CI release-page downloads encountered HTTP 503/504 before running checks.
+The Linux x86_64 installers now use immutable release asset API URLs and verify
+the upstream archive SHA-256 before extraction. Wasmtime remains 48.0.1 and
+cargo-semver-checks remains 0.51.0; test commands and expectations are unchanged.
+Wrong HTTP-200 response bytes are rejected by a separate integrity control for
+each installer. The new semver installer, both semver checks and precise
+target-feature checks pass locally: 23 s, run-heavy peak RSS 0.34 GiB,
+minimum available 23,708 MiB, peak load 13.33. These CI-only changes do not alter
+the measured library or benchmark binaries.
+
 ## Const caller code
 
 The primary API carries `PowfOptions::new().with_domain(...)
