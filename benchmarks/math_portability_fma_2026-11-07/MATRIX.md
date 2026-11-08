@@ -72,3 +72,11 @@ guest-instance group times the first complete 64-element exp2_midp buffer;
 instance construction/preparation/destruction remain outside the timer.
 Native fresh-process perf-stat diagnostics include process startup and cannot
 be described as isolated primitive latency.
+
+
+Steady-cache audit correction, before the remaining WASM timings: zenbench
+0.1.11 invokes the bench closure anew for each round. Each guest instance must
+therefore process one untimed buffer before `b.iter`. The original strict
+exp2_lowp attempt, which amortized an unprimed instance over the timed calls,
+is retained separately as diagnostic; it cannot establish the cached gate.
+The fresh-instance first-use group deliberately keeps its cache unprimed.

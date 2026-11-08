@@ -22,7 +22,8 @@ if mode != 'native':
 script = f'''set -eu
 cd "{base}"
 export TMPDIR="$HOME/tmp/archmage-portability-fma-sol"
-{' '.join(env)} STUDY_OUTPUT=- ./run-heavy --mem 4G --jobs 2 -- ./stdout-study-arm-host
+sha256sum ./primed-study-arm-host
+{' '.join(env)} STUDY_OUTPUT=- ./run-heavy --mem 4G --jobs 2 -- ./primed-study-arm-host
 '''
 (out/'command.sh').write_text(script)
 with (out/'worker.log').open('xb') as log:

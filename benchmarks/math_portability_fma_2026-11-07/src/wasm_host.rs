@@ -95,6 +95,13 @@ pub fn register(suite: &mut zenbench::Suite, path: &str) {
                                     let f = instance
                                         .typed_func::<(i32, i32, i32, i32, i32), i64>(&run)
                                         .unwrap();
+                                    // Each round creates an instance. Prime its private
+                                    // fused cache outside the steady-state timer.
+                                    f.call(
+                                        &mut instance.store,
+                                        (op as i32, arm as i32, width, chain as i32, 1),
+                                    )
+                                    .unwrap();
                                     b.iter(|| {
                                         f.call(
                                             &mut instance.store,
@@ -148,6 +155,11 @@ pub fn register(suite: &mut zenbench::Suite, path: &str) {
                                 let f = instance
                                     .typed_func::<(i32, i32, i32, i32, i32), i64>(&fma)
                                     .unwrap();
+                                f.call(
+                                    &mut instance.store,
+                                    (kind, width, arm as i32, chain as i32, 1),
+                                )
+                                .unwrap();
                                 b.iter(|| {
                                     f.call(
                                         &mut instance.store,
