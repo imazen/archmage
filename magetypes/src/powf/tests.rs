@@ -505,3 +505,29 @@ fn const_array_width_and_rejection_precedence() {
         }
     );
 }
+
+#[test]
+fn const_builder_encodes_each_supported_configuration() {
+    for domain in [
+        PowfDomain::PositiveNormal,
+        PowfDomain::NonNegativeNormal,
+        PowfDomain::Gamma,
+    ] {
+        for execution in [PowfExecution::Automatic, PowfExecution::Caller] {
+            let builder = PowfOptions::new()
+                .with_domain(domain)
+                .with_execution(execution);
+            assert_eq!(builder, PowfOptions { domain, execution });
+            let expected = match domain {
+                PowfDomain::PositiveNormal => 0,
+                PowfDomain::NonNegativeNormal => 1,
+                PowfDomain::Gamma => 2,
+            } | if execution == PowfExecution::Caller {
+                4
+            } else {
+                0
+            };
+            assert_eq!(builder.bits(), expected);
+        }
+    }
+}

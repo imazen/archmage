@@ -6,11 +6,20 @@ fn main() {
     assert!(
         Command::new("python3")
             .arg(directory.join("prepare.py"))
-            .arg(output)
+            .arg(&output)
             .status()
             .unwrap()
             .success()
     );
+    assert!(
+        Command::new("python3")
+            .arg(directory.join("replacement_prepare.py"))
+            .arg(&output)
+            .status()
+            .unwrap()
+            .success()
+    );
+    println!("cargo:rerun-if-changed=replacement_prepare.py");
     println!("cargo:rerun-if-changed=prepare.py");
     println!("cargo:rerun-if-changed=../../magetypes/src/powf/graph.rs");
     println!("cargo:rerun-if-changed=../../magetypes/src/soft_fma.rs");

@@ -8,10 +8,10 @@
 //! Existing `pow_lowp`/`pow_midp` methods retain their existing behavior.
 //!
 //! ```
-//! use magetypes::powf::{try_powf, try_powf_with, PowfOptions};
+//! use magetypes::powf::{try_powf, try_powf_with, PowfDomain, PowfOptions};
 //! assert_eq!(try_powf(4.0, 0.5).unwrap(), 2.0);
 //! assert!(try_powf(f32::NAN, 2.4).is_err());
-//! assert_eq!(try_powf_with::<{ PowfOptions::NON_NEGATIVE_NORMAL }>(0.0, 2.4).unwrap(), 0.0);
+//! assert_eq!(try_powf_with::<{ PowfOptions::new().with_domain(PowfDomain::NonNegativeNormal).bits() }>(0.0, 2.4).unwrap(), 0.0);
 //! ```
 
 pub(crate) mod const_api;
@@ -54,9 +54,9 @@ pub enum PowfExecution {
 
 /// Const flags for bounded power, plus a runtime adapter for dynamic options.
 ///
-/// Use the associated integer constants with `try_powf_with::<FLAGS>`. Combine
-/// one domain with an execution flag using bitwise OR. Reserved flags and the
-/// reserved domain encoding are rejected at compile time. The fields serve
+/// Build a configuration in const evaluation, then pass `.bits()` to
+/// `try_powf_with::<FLAGS>`. Reserved flags and the reserved domain encoding
+/// are rejected at compile time. The fields serve
 /// [`try_powf_runtime`] when options are only known at runtime.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct PowfOptions {
@@ -67,18 +67,44 @@ pub struct PowfOptions {
 }
 
 impl PowfOptions {
-    /// Default const flags: positive normal bases, automatic execution.
-    pub const DEFAULT: u32 = 0;
-    /// Admit strictly positive finite normal bases.
-    pub const POSITIVE_NORMAL: u32 = 0;
-    /// Also admit positive zero with a nonnegative exponent.
-    pub const NON_NEGATIVE_NORMAL: u32 = 1;
-    /// Admit positive zero or [2^-16, 2^16], with exponent in [0, 4].
-    pub const GAMMA: u32 = 2;
-    /// Select an available backend for the complete operation.
-    pub const AUTOMATIC: u32 = 0;
-    /// Preserve the caller's backend; scalar uses exact software FMA.
-    pub const CALLER: u32 = 4;
+    pub(crate) const DEFAULT: u32 = 0;
+    pub(crate) const GAMMA: u32 = 2;
+    pub(crate) const CALLER: u32 = 4;
+
+    /// Build the default positive-normal, automatic configuration.
+    pub const fn new() -> Self {
+        Self {
+            domain: PowfDomain::PositiveNormal,
+            execution: PowfExecution::Automatic,
+        }
+    }
+
+    /// Set the accepted numerical domain.
+    pub const fn with_domain(mut self, domain: PowfDomain) -> Self {
+        self.domain = domain;
+        self
+    }
+
+    /// Set whole-operation execution selection.
+    pub const fn with_execution(mut self, execution: PowfExecution) -> Self {
+        self.execution = execution;
+        self
+    }
+
+    /// Encode this configuration as the integer const argument to
+    /// [`try_powf_with`] or [`try_powf_array_with`].
+    pub const fn bits(self) -> u32 {
+        let domain = match self.domain {
+            PowfDomain::PositiveNormal => 0,
+            PowfDomain::NonNegativeNormal => 1,
+            PowfDomain::Gamma => 2,
+        };
+        let execution = match self.execution {
+            PowfExecution::Automatic => 0,
+            PowfExecution::Caller => 4,
+        };
+        domain | execution
+    }
 }
 
 /// Reason a complete vector was rejected.

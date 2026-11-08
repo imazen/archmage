@@ -1,0 +1,55 @@
+#!/usr/bin/env python3
+"""Freeze/run replacement cells; retain all pairs and stop on dirty admission."""
+import argparse
+from datetime import datetime, timezone
+import gzip
+import hashlib
+import json
+import os
+from pathlib import Path
+import subprocess
+p=argparse.ArgumentParser(description=__doc__)
+p.add_argument('binary',type=Path)
+p.add_argument('directory',type=Path)
+p.add_argument('--pilot',action='store_true')
+a=p.parse_args()
+a.directory.mkdir(parents=True,exist_ok=False)
+binary=a.binary.resolve()
+env=dict(os.environ,POWF_LIST='1')
+cells=subprocess.check_output([str(binary)],env=env,text=True).splitlines()
+assert len(cells)==672
+if a.pilot:
+    native='neon' if any('/neon/' in c for c in cells) else 'v3'
+    cells=[f'replacement/x4/{native}/64/stream/2/4019999a/literal-n/unorm8']
+manifest={'binary':str(binary),'sha256':hashlib.sha256(binary.read_bytes()).hexdigest(),'cells':cells,'pairs':50,'pilot':a.pilot}
+(a.directory/'MATRIX.json').write_text(json.dumps(manifest,indent=2)+'\n')
+for index,cell in enumerate(cells):
+    output=(a.directory/f'{index:03d}.json').resolve()
+    log=a.directory/f'{index:03d}.log'
+    progress={'pid':os.getpid(),'binary_sha256':manifest['sha256'],'stage':'running','index':index,'required':len(cells),'cell':cell,'last_check':datetime.now(timezone.utc).isoformat()}
+    (a.directory/'progress.json').write_text(json.dumps(progress,indent=2)+'\n')
+    child_env={k:v for k,v in os.environ.items() if k not in ['POWF_LIST','POWF_VERIFY_ONLY']}
+    child_env.update(POWF_FILTER=cell,POWF_RESULT=str(output))
+    with log.open('w') as handle:
+        run=subprocess.run([str(binary)],env=child_env,stdout=handle,stderr=subprocess.STDOUT)
+    if run.returncode:
+        progress.update(stage='failed',returncode=run.returncode)
+    else:
+        result=json.loads(output.read_text())
+        assert len(result['comparisons'])==1 and result['comparisons'][0]['group_name']==cell
+        samples=result['comparisons'][0]['samples']
+        clean=not result['unreliable'] and len(samples)>=50 and all(s['gate_clean']is True for s in samples)
+        progress.update(stage='complete'if clean else'inadmissible',pairs=len(samples),unreliable=result['unreliable'])
+    # Lossless compression bounds disk usage on the admitted homogeneous ARM
+    # worker. Compare decompressed bytes before removing task-owned originals.
+    for source in [output,log]:
+        if source.exists():
+            raw=source.read_bytes(); packed=source.with_suffix(source.suffix+'.gz')
+            assert not packed.exists()
+            with gzip.open(packed,'wb')as handle:handle.write(raw)
+            assert gzip.decompress(packed.read_bytes())==raw
+            source.unlink()
+    progress['last_check']=datetime.now(timezone.utc).isoformat()
+    (a.directory/'progress.json').write_text(json.dumps(progress,indent=2)+'\n')
+    print(json.dumps(progress),flush=True)
+    if progress['stage']!='complete':raise SystemExit('stopped: preserved all evidence, no favorable rerun')

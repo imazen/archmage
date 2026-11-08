@@ -24,8 +24,15 @@ fn exponent<const OPTIONS: u32, const N: usize>(n: f32) -> Result<(), PowfError>
 
 /// Bounded scalar power with integer const options.
 ///
-/// Combine one domain and an execution flag, for example
-/// `try_powf_with::<{ PowfOptions::GAMMA | PowfOptions::CALLER }>(x, n)`.
+/// Build the configuration in const evaluation, then supply its integer bits:
+/// ```
+/// use magetypes::powf::{PowfOptions, PowfDomain, PowfExecution, try_powf_with};
+/// const OPTIONS: u32 = PowfOptions::new()
+///     .with_domain(PowfDomain::Gamma)
+///     .with_execution(PowfExecution::Caller)
+///     .bits();
+/// assert_eq!(try_powf_with::<OPTIONS>(4.0, 0.5).unwrap(), 2.0);
+/// ```
 /// Invalid encodings are compile errors:
 /// ```compile_fail
 /// let _ = magetypes::powf::try_powf_with::<3>(1.0, 2.4);
@@ -51,7 +58,12 @@ pub fn try_powf_array_with<const OPTIONS: u32, const N: usize>(
     n: f32,
 ) -> Result<[f32; N], PowfError> {
     use crate::simd::generic::{f32x4, f32x8};
-    const { assert!(OPTIONS & !7 == 0 && OPTIONS & 3 < 3, "invalid powf const options"); }
+    const {
+        assert!(
+            OPTIONS & !7 == 0 && OPTIONS & 3 < 3,
+            "invalid powf const options"
+        );
+    }
     use archmage::ScalarToken;
     let mut output = [0.0; N];
     if N == 1 {

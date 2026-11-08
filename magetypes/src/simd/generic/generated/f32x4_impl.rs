@@ -351,7 +351,7 @@ impl<T: F32x4Backend> f32x4<T> {
     }
 
     /// Bounded power with integer const flags carried through the caller.
-    /// Combine a domain with `PowfOptions::CALLER` or automatic execution;
+    /// Build `PowfOptions` in const evaluation and supply `.bits()`;
     /// see [`crate::powf`]. Any rejected lane rejects the whole vector.
     #[inline(always)]
     pub fn try_powf_with<const OPTIONS: u32>(

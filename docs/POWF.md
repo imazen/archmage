@@ -5,14 +5,17 @@ power. `f32x1`, generic `f32x4`, `f32x8` and enabled `f32x16` delegate to it.
 The existing `pow_lowp`, `pow_midp` and related methods are unchanged.
 
 ```rust
-use magetypes::powf::{PowfOptions, try_powf_with};
-const OPTIONS: u32 = PowfOptions::GAMMA | PowfOptions::CALLER;
+use magetypes::powf::{PowfOptions, PowfDomain, PowfExecution, try_powf_with};
+const OPTIONS: u32 = PowfOptions::new()
+    .with_domain(PowfDomain::Gamma)
+    .with_execution(PowfExecution::Caller)
+    .bits();
 assert_eq!(try_powf_with::<OPTIONS>(4.0, 0.5).unwrap(), 2.0);
 ```
 
-`try_powf_with::<OPTIONS>` takes an integer const configuration. Combine one
-of `PowfOptions::POSITIVE_NORMAL`, `NON_NEGATIVE_NORMAL` or `GAMMA` with
-`AUTOMATIC` (zero) or `CALLER`. The flags remain const through vector delegates,
+`try_powf_with::<OPTIONS>` takes an integer const configuration produced by
+`PowfOptions::new().with_domain(...).with_execution(...).bits()`.
+The flags remain const through vector delegates,
 backend selection and the graph. A capable caller evaluates the vector directly
 in its feature region, without an array dispatch boundary. Reserved encodings
 are compile errors. Runtime input checks still enforce the declared domain.

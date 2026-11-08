@@ -36,3 +36,7 @@ required-features = ["wasm-guest"]
 name = "wasm_host"
 path = "src/bin/wasm_host.rs"
 required-features = ["wasm-host"]
+
+[[bin]]
+name = "replacement"
+path = "src/bin/replacement.rs"
