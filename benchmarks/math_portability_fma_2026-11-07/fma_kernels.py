@@ -53,10 +53,15 @@ fn kernel_{name}<const ARM:usize>(t:Token,input:&[[{f};{n}]],output:&mut [[{f};{
 fn scalar_v3_{name}<const ARM:usize>(_t:archmage::X64V3Token,input:&[[{f};{n}]],output:&mut [[{f};{n}]],chain:bool) {{core_{name}::<_,ARM>(archmage::ScalarToken,input,output,chain);}}
 '''
         s+=f'''
+#[cfg(target_arch="x86_64")]
+fn dispatch_{name}(input:&[[{f};{n}]],output:&mut [[{f};{n}]],chain:bool) {{
+    if let Some(t)=archmage::X64V3Token::summon() {{kernel_{name}_v3::<2>(t,input,output,chain);}}
+    else {{kernel_{name}_scalar::<1>(archmage::ScalarToken,input,output,chain);}}
+}}
 fn register_{name}(suite:&mut zenbench::Suite,context:&str,size:usize,chain:bool,dist:&str) {{
     let id=format!("fma/{name}/{{context}}/{{size}}/{{}}/{{dist}}",if chain {{"chain"}} else {{"stream"}});
     if !super::matches_filter(&id) {{return;}}
-    let source:Vec<[{f};{n}]>=(0..size/{n}).map(|i|core::array::from_fn(|j|super::value(i*{n}+j,dist,0) as {f})).collect();
+    let source:Vec<[{f};{n}]>=(0..size/{n}).map(|i|core::array::from_fn(|j|super::fma_value_{f}(i*{n}+j,dist))).collect();
     suite.group(id,|g| {{
         g.config().min_rounds(50).max_rounds(50).auto_rounds(false).warmup_time(std::time::Duration::from_millis(10)).max_time(std::time::Duration::from_millis(100)).max_wall_time(std::time::Duration::from_secs(60));
 '''
@@ -67,7 +72,7 @@ fn register_{name}(suite:&mut zenbench::Suite,context:&str,size:usize,chain:bool
             match context.as_str() {{
                 "scalar" => {{
                     #[cfg(target_arch="x86_64")]
-                    if {arm}==2 {{if let Some(t)=archmage::X64V3Token::summon() {{bencher.iter(||kernel_{name}_v3::<2>(t,std::hint::black_box(&input),std::hint::black_box(&mut output),chain));}} else {{bencher.iter(||kernel_{name}_scalar::<1>(archmage::ScalarToken,std::hint::black_box(&input),std::hint::black_box(&mut output),chain));}}}}
+                    if {arm}==2 {{bencher.iter(||dispatch_{name}(std::hint::black_box(&input),std::hint::black_box(&mut output),chain));}}
                     else {{bencher.iter(||kernel_{name}_scalar::<{arm}>(archmage::ScalarToken,std::hint::black_box(&input),std::hint::black_box(&mut output),chain));}}
                     #[cfg(not(target_arch="x86_64"))]
                     bencher.iter(||kernel_{name}_scalar::<{arm}>(archmage::ScalarToken,std::hint::black_box(&input),std::hint::black_box(&mut output),chain));

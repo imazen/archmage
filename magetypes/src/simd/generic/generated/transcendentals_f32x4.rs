@@ -17,7 +17,8 @@
 //!   function gives its figures.
 //!
 //! Variant suffixes:
-//! - `_unchecked`: No edge case handling (fastest, undefined for ≤0/NaN/Inf)
+//! - `_unchecked`: lowp names are aliases of the plain forms; midp
+//!   log/exp/pow forms omit their edge checks and require valid inputs.
 //! - (normal): Basic edge case handling (0→-inf, negative→NaN for log)
 //! - `_precise`: `cbrt_midp_precise` also handles subnormal inputs and the
 //!   whole range; the other `_midp_precise` names are aliases of the plain
@@ -96,7 +97,32 @@ impl<T: F32x4Convert> f32x4<T> {
         let upper = splat_f32::<T>(self.1, 127.99);
         let x = if core::any::TypeId::of::<T>() == core::any::TypeId::of::<archmage::ScalarToken>()
         {
-            Self::from_array_t(self.1, self.to_array().map(|x| x.clamp(-126.0, 127.99)))
+            #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
+            {
+                // Only enter when summon is a compile-time proof. With
+                // testable_dispatch it is not, so keep the core clamp;
+                // this branch must never introduce a runtime CPU probe.
+                let native = if <archmage::NeonToken as archmage::SimdToken>::compiled_with()
+                    == Some(true)
+                {
+                    <archmage::NeonToken as archmage::SimdToken>::summon()
+                } else {
+                    None
+                };
+                if let Some(native) = native {
+                    type Native = f32x4<archmage::NeonToken>;
+                    let x = Native::from_array_t(native, self.to_array());
+                    let lower = Native::splat_t(native, -126.0);
+                    let upper = Native::splat_t(native, 127.99);
+                    Self::from_array_t(self.1, upper.min(lower.max(x)).to_array())
+                } else {
+                    Self::from_array_t(self.1, self.to_array().map(|x| x.clamp(-126.0, 127.99)))
+                }
+            }
+            #[cfg(not(all(target_arch = "aarch64", target_feature = "neon")))]
+            {
+                Self::from_array_t(self.1, self.to_array().map(|x| x.clamp(-126.0, 127.99)))
+            }
         } else {
             upper.min(lower.max(self))
         };
@@ -112,7 +138,8 @@ impl<T: F32x4Convert> f32x4<T> {
         poly * scale_bits.bitcast_to_f32()
     }
 
-    /// Low-precision base-2 exponential, no edge case handling.
+    /// Alias of [`exp2_lowp`](Self::exp2_lowp), including its clamps
+    /// and NaN classification.
     #[inline(always)]
     pub fn exp2_lowp_unchecked(self) -> Self {
         self.exp2_lowp()
@@ -136,7 +163,8 @@ impl<T: F32x4Convert> f32x4<T> {
         (self * splat_f32::<T>(self.1, core::f32::consts::LOG2_E)).exp2_lowp()
     }
 
-    /// Low-precision natural exponential, no edge case handling.
+    /// Alias of [`exp_lowp`](Self::exp_lowp), including its clamps
+    /// and NaN classification.
     #[inline(always)]
     pub fn exp_lowp_unchecked(self) -> Self {
         self.exp_lowp()
@@ -285,7 +313,32 @@ impl<T: F32x4Convert> f32x4<T> {
         // Clamp to prevent overflow in intermediate calculations
         let clamped =
             if core::any::TypeId::of::<T>() == core::any::TypeId::of::<archmage::ScalarToken>() {
-                Self::from_array_t(self.1, self.to_array().map(|x| x.clamp(-126.0, 128.0)))
+                #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
+                {
+                    // Only enter when summon is a compile-time proof. With
+                    // testable_dispatch it is not, so keep the core clamp;
+                    // this branch must never introduce a runtime CPU probe.
+                    let native = if <archmage::NeonToken as archmage::SimdToken>::compiled_with()
+                        == Some(true)
+                    {
+                        <archmage::NeonToken as archmage::SimdToken>::summon()
+                    } else {
+                        None
+                    };
+                    if let Some(native) = native {
+                        type Native = f32x4<archmage::NeonToken>;
+                        let x = Native::from_array_t(native, self.to_array());
+                        let lower = Native::splat_t(native, -126.0);
+                        let upper = Native::splat_t(native, 128.0);
+                        Self::from_array_t(self.1, upper.min(lower.max(x)).to_array())
+                    } else {
+                        Self::from_array_t(self.1, self.to_array().map(|x| x.clamp(-126.0, 128.0)))
+                    }
+                }
+                #[cfg(not(all(target_arch = "aarch64", target_feature = "neon")))]
+                {
+                    Self::from_array_t(self.1, self.to_array().map(|x| x.clamp(-126.0, 128.0)))
+                }
             } else {
                 overflow_limit.min(underflow_limit.max(self))
             };

@@ -31,6 +31,18 @@ fn value(i:usize, distribution:&str, op:usize) -> f32 {
     // exercise signs. The feedback graph is documented separately.
     if op < 8 && op != 2 && op != 5 && i%2==0 { -x } else { x }
 }
+#[cfg(not(target_arch="wasm32"))]
+fn fma_value_f32(i:usize,dist:&str)->f32 {
+    if dist!="bits" {return value(i,dist,0);}
+    let x=f32::from_bits((i as u32).wrapping_mul(747796405).wrapping_add(2891336453));
+    if x.is_finite(){x}else{1.0}
+}
+#[cfg(not(target_arch="wasm32"))]
+fn fma_value_f64(i:usize,dist:&str)->f64 {
+    if dist!="bits" {return value(i,dist,0) as f64;}
+    let x=f64::from_bits((i as u64).wrapping_mul(0x9e3779b97f4a7c15).wrapping_add(0xd1b54a32d192ed03));
+    if x.is_finite(){x}else{1.0}
+}
 fn oracle_value(i:usize) -> f32 {
     const SPECIAL:&[u32]=&[0,0x80000000,1,0x80000001,0x007fffff,0x00800000,
         0x3f000000,0x3f800000,0x3f800001,0x3f7fffff,0xbf800000,

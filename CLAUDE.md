@@ -1210,12 +1210,15 @@ fn process(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 
 ### Open
 
-- **magetypes transcendentals mishandle NaN inputs (2026-11-05, open):** the
-  docs claimed NaN → NaN for logs. Measured on scalar, V3, NEON and WASM:
-  `log2_midp(NaN)` is -383.4 everywhere, `pow_midp(NaN, 2.4)` is 0, and
-  `exp2_midp(NaN)` is 2^-126 on x86 and scalar but NaN on NEON and WASM, because
-  it clamps with `max`/`min`. Docs corrected in `docs/transcendentals.md`; the
-  methods are unchanged, since any fix needs its own bit-contract review.
+- **magetypes log/pow NaN inputs (2026-11-05, partly open):**
+  `log2_midp(NaN)` can return about -383.4 and `pow_midp(NaN, 2.4)` can
+  return zero; those shared legacy defects remain. The portability candidate
+  corrects the clamped exp2 boundary locally: reversed native min/max operands
+  and scalar `f32::clamp` preserve NaNs without changing the ordinary graph.
+  Exp aliases/activations and NaNs created by checked pow inherit the fix.
+  Ordinary rounding stays relaxed. Numerical contracts and cascades are in
+  `docs/transcendentals.md`; isolated performance candidates and evidence live
+  under `benchmarks/math_portability_fma_2026-11-07/`.
 
 - **Portable FMA rounding and Miri (2026-10-12, fixed locally; CI pending):**
   The all-target f32 round-to-odd fallback fixes the independent subnormal

@@ -573,3 +573,10 @@ portability-wasm-nostd flags runner:
 
 portability-analyze *files:
     cargo run --release --manifest-path benchmarks/math_portability_fma_2026-11-07/Cargo.toml --bin analyze -- {{files}}
+
+portability-clamp-profile output before after:
+    python3 benchmarks/math_portability_fma_2026-11-07/profile_clamp.py {{quote(output)}} {{quote(before)}} {{quote(after)}}
+
+# Keep Rust's unique guest symbols; select explicit linker exports without unsafe attributes.
+portability-guest output mode:
+    python3 benchmarks/math_portability_fma_2026-11-07/build_guest.py {{quote(output)}} {{mode}}
