@@ -66,6 +66,23 @@ is insufficient for that classification. ULP error uses the true result's
 binade, including gradual underflow. Finite-output and zero-rail behavior are
 reported separately in the raw comparison. Std is a candidate, never truth.
 
+On identical accepted Gamma pairs excluding base zero and exponent zero:
+
+| Implementation | Scalar maximum measured ULP upper bound | V3 maximum measured ULP upper bound |
+|---|---:|---:|
+| Canonical | 47.902 | 47.902 |
+| pow_midp / unchecked / precise | 48.562 | 47.902 |
+| pow_lowp / unchecked | 93411.466 | 93408.852 |
+| std f32 power | 0.502 | 0.502 |
+
+Zero rails are a separate semantic difference, not silently removed failures:
+checked midp/lowp can differ at admitted zero inputs, and unchecked midp has
+large zero-rail errors. The raw report retains the full accepted corpus and
+separate zero-rail-free summaries for every method and domain. Across nonzero
+accepted inputs, native V3 midp matches the canonical graph in this corpus;
+scalar midp follows its existing separate-rounding graph. The const design
+improves portability/validation/caller integration, not these coefficients.
+
 The canonical graph can replace existing approximations only where its domain
 and measured accuracy satisfy the caller. Replacing std under a tight error
 contract requires a more accurate algorithm. A finite startup screen cannot

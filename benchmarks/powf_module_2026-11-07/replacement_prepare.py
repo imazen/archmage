@@ -164,12 +164,13 @@ fn replacement_dispatch@N@(suite:Option<&mut zenbench::Suite>,cell:&Cell){
             configs.append((domain,exp,False))
     configs += [(0,0x3e232000,False),(0,0x429db000,False),(2,0x4019999a,True),(2,0x40000000,False),(2,0x40800000,False)]
     lines='\n'.join(f'        ({d},0x{e:08x},{str(dynamic).lower()})=>replacement_register{width}::<{d|4},{d},0x{e:08x},{str(dynamic).lower()}>(suite,cell),' for d,e,dynamic in configs)
+    if width==1:block=block.replace('cell.size/@N@','cell.size').replace('i*@N@+j','i+j')
     code+=block.replace('@N@',str(width)).replace('@CONFIGS@',lines)
     guest_lines='\n'.join(f'        ({d},0x{e:08x},{str(dynamic).lower()})=>replacement_execute{width}::<{d|4},{d},0x{e:08x},{str(dynamic).lower()}>(arm,context,input,output,chain),' for d,e,dynamic in configs)
     code+=f'''
 #[cfg(target_arch="wasm32")]
-fn replacement_guest{width}(arm:usize,context:&str,input:&[[f32;{width}]],output:&mut[[f32;{width}]],chain:bool,domain:u32,exponent:u32,dynamic:bool) {{
-    match(domain,exponent,dynamic) {{
+fn replacement_guest{width}(arm:usize,context:&str,input:&[[f32;{width}]],output:&mut[[f32;{width}]],chain:bool,config:(u32,u32,bool)) {{
+    match config {{
 {guest_lines}
         _=>panic!("unregistered replacement WASM configuration"),
     }}

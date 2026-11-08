@@ -109,9 +109,7 @@ mod guest {
                     s.input1.as_chunks::<1>().0,
                     s.output1.as_chunks_mut::<1>().0,
                     chain != 0,
-                    domain,
-                    s.exponent,
-                    s.dynamic,
+                    (domain, s.exponent, s.dynamic),
                 ),
                 4 => replacement_guest4(
                     arm as usize,
@@ -119,9 +117,7 @@ mod guest {
                     &s.input4,
                     &mut s.output4,
                     chain != 0,
-                    domain,
-                    s.exponent,
-                    s.dynamic,
+                    (domain, s.exponent, s.dynamic),
                 ),
                 8 => replacement_guest8(
                     arm as usize,
@@ -129,9 +125,7 @@ mod guest {
                     &s.input8,
                     &mut s.output8,
                     chain != 0,
-                    domain,
-                    s.exponent,
-                    s.dynamic,
+                    (domain, s.exponent, s.dynamic),
                 ),
                 16 => replacement_guest16(
                     arm as usize,
@@ -139,9 +133,7 @@ mod guest {
                     &s.input16,
                     &mut s.output16,
                     chain != 0,
-                    domain,
-                    s.exponent,
-                    s.dynamic,
+                    (domain, s.exponent, s.dynamic),
                 ),
                 _ => panic!("width"),
             }

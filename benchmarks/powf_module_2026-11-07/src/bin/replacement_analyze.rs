@@ -8,7 +8,7 @@ fn main() {
         let placement = raw["cpu_placement"]["status"]
             .as_str()
             .expect("placement metadata required");
-        let verified = matches!(placement, "uniform_hardware" | "enforced");
+        let verified = matches!(placement, "uniform_hardware" | "enforced_uniform");
         for group in &result.comparisons {
             let clean = !result.unreliable
                 && !raw["incomplete"].as_bool().unwrap()

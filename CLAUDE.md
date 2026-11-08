@@ -1208,15 +1208,28 @@ fn process(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 
 ## Known Bugs
 
+Draft bounded powf accuracy (2026-11-08): the fixed fused midp graph has no
+whole-domain ULP guarantee. Adaptive search plus directed MPFR confirmation
+found measured errors up to 438.504 ULP (PositiveNormal), 416.579
+(NonNegativeNormal), and 47.902 (Gamma), exceeding the original random-sample
+maxima. Do not treat its bit-consistency contract as std-level accuracy.
+Actual legacy/std comparisons and held performance gates are recorded in
+`benchmarks/powf_module_2026-11-07/REPLACEMENTS.md`. Existing legacy coefficients
+are unchanged.
+
 ### Open
 
-- **Bounded powf draft cost gate (2026-11-07, open):** the new checked API
-  is additive; existing power methods are unchanged. Against its identical
+- **Original runtime-options bounded powf cost gate (2026-11-07, held):**
+  the historical implementation at `56059d2c` is additive; existing power
+  methods are unchanged. Against its identical
   prevalidated fused graph, the clean Neoverse-N1 x4/64 Gamma stream Caller
   costs +37.64% (paired 95% CI +36.65–38.25%). All 72 matching-NEON Automatic
   cells fail the 2% bound; all 96 scalar-context Automatic cells pass through
   whole-operation acceleration. Quiet full AMD/Intel/WASM coverage is missing.
-  Keep promotion held; see `benchmarks/powf_module_2026-11-07/README.md`.
+  These ratios describe the original runtime-options caller boundary. The
+  caller-visible const route and actual legacy/std controls have separate
+  evidence in `benchmarks/powf_module_2026-11-07/REPLACEMENTS.md`; promotion
+  remains held. Historical data: `benchmarks/powf_module_2026-11-07/README.md`.
 
 - **magetypes transcendentals mishandle NaN inputs (2026-11-05, open):** the
   docs claimed NaN → NaN for logs. Measured on scalar, V3, NEON and WASM:
