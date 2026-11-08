@@ -33,8 +33,9 @@ contracts rather than judging std against mathematical truth.
 The rational unit corpus has 2,247 boundary/structured cases. Mixed accepted
 lanes, positive-zero handling and rejection masks are checked separately at
 every logical width. Each NaN family and each nonzero-subnormal family has
-16,777,214 sign/payload patterns. Full sweeps exercise all three profiles at
-widths 4/8/16. Explicit tier assertions prevent silent scalar fallback.
+16,777,214 sign/payload patterns. Full sweeps exercise bases and uniform exponents in all three profiles at
+widths 4/8/16. Inputs pass an optimizer barrier so classification executes at
+runtime. Explicit tier assertions prevent silent scalar fallback.
 
 The Gamma range-check omission has a rational/RNE interval certificate over
 its entire admitted input domain: the magnitude of the computed exp2 argument

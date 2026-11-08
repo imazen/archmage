@@ -55,19 +55,21 @@ macro_rules! check {
         for domain in 0..3 {
             for exponent in [0.5_f32, 2.4, 4.0] {
                 for execution in [PowfExecution::Caller, PowfExecution::Automatic] {
+                    let exponent = std::hint::black_box(exponent);
                     let opts = PowfOptions {
                         execution,
                         ..options(domain)
                     };
                     macro_rules! mixed_width {
                         ($ty:ident, $n:literal) => {{
-                            let input: [f32; $n] = core::array::from_fn(|i| {
-                                f32::from_bits(if i == 0 && domain != 0 {
-                                    0
-                                } else {
-                                    bases[i % bases.len()]
-                                })
-                            });
+                            let input: [f32; $n] =
+                                std::hint::black_box(core::array::from_fn(|i| {
+                                    f32::from_bits(if i == 0 && domain != 0 {
+                                        0
+                                    } else {
+                                        bases[i % bases.len()]
+                                    })
+                                }));
                             let expected: [u32; $n] = core::array::from_fn(|i| {
                                 let row = fixtures::POWF
                                     .iter()
@@ -98,8 +100,8 @@ macro_rules! check {
             }
         }
         for &[base, exponent, expected, error, allow_zero] in &fixtures::POWF {
-            let b = f32::from_bits(base);
-            let n = f32::from_bits(exponent);
+            let b = f32::from_bits(std::hint::black_box(base));
+            let n = f32::from_bits(std::hint::black_box(exponent));
             let options = options(allow_zero);
             macro_rules! width {
                 ($ty:ident, $width:literal) => {{
@@ -133,8 +135,8 @@ macro_rules! check {
 #[test]
 fn scalar_array_and_auto_have_identical_graph() {
     for &[base, exponent, expected, error, allow_zero] in &fixtures::POWF {
-        let b = f32::from_bits(base);
-        let n = f32::from_bits(exponent);
+        let b = f32::from_bits(std::hint::black_box(base));
+        let n = f32::from_bits(std::hint::black_box(exponent));
         for execution in [PowfExecution::Caller, PowfExecution::Automatic] {
             let options = PowfOptions {
                 execution,
@@ -253,7 +255,7 @@ macro_rules! payloads {
         for sign in [0, 0x8000_0000] {
             for payload in (1..=0x007f_ffff_u32).step_by($stride) {
                 for rejected in [sign | 0x7f80_0000 | payload, sign | payload] {
-                    let nan = f32::from_bits(rejected);
+                    let nan = f32::from_bits(std::hint::black_box(rejected));
                     macro_rules! width {
                         ($ty:ident, $n:literal, $domain:expr) => {{
                             let lane = payload as usize % $n;
@@ -266,7 +268,22 @@ macro_rules! payloads {
                                 PowfError {
                                     kind: PowfErrorKind::InvalidBase,
                                     lane_mask: 1 << lane
-                                }
+                                },
+                                "base_bits={rejected:08x}, width={}, domain={}",
+                                $n,
+                                $domain
+                            );
+                            assert_eq!(
+                                crate::simd::generic::$ty::from_array_t(token, [1.0; $n])
+                                    .try_powf_with(nan, options($domain))
+                                    .unwrap_err(),
+                                PowfError {
+                                    kind: PowfErrorKind::InvalidExponent,
+                                    lane_mask: ((1_u32 << $n) - 1) as u16,
+                                },
+                                "exponent_bits={rejected:08x}, width={}, domain={}",
+                                $n,
+                                $domain
                             );
                         }};
                     }
@@ -329,7 +346,7 @@ fn rational_graph_and_selected_backend() {
 }
 
 #[test]
-fn nan_sign_payload_families_reject_only_the_bad_lane() {
+fn nan_sign_payload_and_subnormal_families_reject_with_exact_masks() {
     let stride: usize = std::env::var("ARCHMAGE_NAN_STRIDE")
         .unwrap_or_else(|_| "65537".into())
         .parse()
