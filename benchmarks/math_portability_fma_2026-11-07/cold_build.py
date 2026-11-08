@@ -44,9 +44,10 @@ for pair in range(3):
         root=out/label;target=root/f'target-{pair}'
         assert not target.exists()
         cmd=['cargo','build','--locked','--release','--manifest-path',str(root/'consumer/Cargo.toml')]
+        flags=[f'--remap-path-prefix={root/source.name}=source',f'--remap-path-prefix={root/consumer.name}=consumer']
         with (root/f'build-{pair}.log').open('x') as f:
-            subprocess.run(['/usr/bin/time','-v','-o',str(root/f'build-{pair}.time'),*cmd],env=dict(os.environ,CARGO_TARGET_DIR=str(target)),stdout=f,stderr=subprocess.STDOUT,check=True)
+            subprocess.run(['/usr/bin/time','-v','-o',str(root/f'build-{pair}.time'),*cmd],env=dict(os.environ,CARGO_TARGET_DIR=str(target),CARGO_ENCODED_RUSTFLAGS="\x1f".join(flags)),stdout=f,stderr=subprocess.STDOUT,check=True)
         binary=target/'release/portability-build-consumer'
-        record=dict(label=label,revision=rev,pair=pair,command=cmd,binary_bytes=binary.stat().st_size,time_file=str(root/f'build-{pair}.time'))
+        record=dict(label=label,revision=rev,pair=pair,command=cmd,rustflags=flags,binary_bytes=binary.stat().st_size,time_file=str(root/f'build-{pair}.time'))
         records.append(record);(out/'records.json').write_text(json.dumps(records,indent=2)+'\n')
 subprocess.run(['rustc','-Vv'],stdout=(out/'compiler.txt').open('w'),check=True)

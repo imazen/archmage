@@ -1220,6 +1220,16 @@ fn process(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
   `docs/transcendentals.md`; isolated performance candidates and evidence live
   under `benchmarks/math_portability_fma_2026-11-07/`.
 
+- **Exp portability candidate cost (2026-11-07, not promoted):** the NaN
+  correction fails the 2% performance gate on real Neoverse-N1 ScalarToken
+  callers: x4/64 ordinary streams measured exp2_midp R=1.194328
+  (95% CI 1.191663–1.196972), exp_midp R=1.217332
+  (1.214774–1.219837), and the combined patch R=1.149418
+  (1.145333–1.153668). Matching NEON cells do not offset scalar failures.
+  [PR143](https://github.com/imazen/archmage/pull/143) keeps this tradeoff
+  reviewable; fixed-fused polynomial rounding remains experimental. Full
+  cell evidence is in `benchmarks/math_portability_fma_2026-11-07/README.md`.
+
 - **Portable FMA rounding and Miri (2026-10-12, fixed locally; CI pending):**
   The all-target f32 round-to-odd fallback fixes the independent subnormal
   counterexample that failed under Nehalem and ARMv7. Direct generic f64

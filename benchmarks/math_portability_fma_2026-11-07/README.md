@@ -48,7 +48,9 @@ and strict admission gates must all be clean and `unreliable=false`. Analysis
 uses every retained candidate/baseline ratio and 100,000 bootstrap samples.
 PASS requires upper paired 95% CI <=1.02; lower >1.02 is FAIL; a crossing
 interval is INCONCLUSIVE. No outlier filtering, best-of-run selection or
-aggregate offsetting of failing cells. No 200-pair extension was used.
+aggregate offsetting of failing cells. The first-use cell uses the single preregistered extension to200 total pairs;
+its original28 strict/25 fusing pairs hit a wall safety cap with clean gates.
+All original pairs are retained. See MATRIX.md for the frozen extension budget.
 
 ## Logged regressions
 
@@ -71,6 +73,11 @@ The matching NEON-token x4/64/ordinary stream cells pass. That does not cover
 all cells: exp2_lowp/x8/NEON/64 stream is inconclusive, CI
 [1.001444, 1.020480]. Exp2_lowp/x16/NEON/64 stream passes while being slower:
 R=1.014061, CI [1.009499, 1.018636]. Per-cell results remain authoritative.
+
+The combined workload also fails for scalar x4/64 ordinary streams:
+R=1.149418, CI [1.145333, 1.153668]. Scalar x16 in that workload passes,
+R=0.997774, CI [0.994839, 1.000703]; matching NEON x4 passes at
+R=1.003176, CI [0.999472, 1.007744]. None offsets the scalar x4 failure.
 
 The core study completed ten canonical operations, 96 cells each, before
 admission became invalid during log10_lowp; the supervisor stopped. The invalid
@@ -100,11 +107,18 @@ with every admission check clean. It compares current fused, copied exact array
 software and once-per-buffer hardware controls, covering f32 1/4/8/16 and
 f64 1/2/4/8, scalar/NEON callers, both lengths/shapes and four distributions.
 These are measurements of existing paths and experimental call granularity;
-there is no new shipped FMA optimization.
+there is no new shipped FMA optimization. For example, real NEON scalar
+f32x4/64 ordinary streams measured whole-buffer hardware/current R=0.941664,
+CI [0.934024, 0.949027], while array software/current R=8.039430,
+CI [7.978791, 8.095745]. The corresponding f64x4 hardware/current ratio was
+1.003065, CI [0.993975, 1.010995]. Those controls demonstrate why portable
+fusion must not be equated with unconditional software arithmetic.
 
 The fixed-fused graph has zero non-NaN bit or NaN-classification mismatches in
 150,528 sampled lane results spanning scalar, V3, native NEON, strict WASM and
-explicit fusing/nonfusing relaxed WASM. This covers 14 canonical operations;
+explicit fusing/nonfusing relaxed WASM. Pure fusion changes 2,004 of those 150,528 sampled lane results versus the
+corrected relaxed graph, all within the sampled ordinary domains. There are 2,348 NaN-classification changes versus main in those same samples,
+counted separately from fusion. This covers 14 canonical operations;
 aliases share their bodies, and cbrt has no relaxed multiply-add. MPFR error
 samples are independent. For scalar x4, sampled midp upper errors include
 exp2 1.203032 ULP, exp 45.090223 ULP, pow 69.409022 ULP and log10 1.650535 ULP.
@@ -120,7 +134,8 @@ failures. No default fusion policy is accepted by this PR.
 ## Correctness and validation
 
 - Every positive/negative nonzero f32 NaN payload (16,777,214 patterns per
-  width), widths4/8/16: scalar, V3, V4 and real NEON classify both exp2 clamps
+  width), widths 4/8/16: scalar, V3, V4, real NEON, strict WASM and both
+  relaxed WASM engine controls classify both exp2 clamps
   as NaN. Mixed lanes and exceptional cascades are tested separately.
 - Existing independent exact-rational f32/f64 fixtures now also exercise the
   named fused operations at every generic width and available one-lane APIs.
@@ -131,7 +146,9 @@ failures. No default fusion policy is accepted by this PR.
 - Full `just ci` at `22f5b2dd`: all 19 steps passed, including generation,
   registry/tokens, structural soundness, Miri, parity, ARM, WASM, docs and
   consumer codegen. Both package semver checks passed. Later harness/doc
-  verification is recorded alongside its final identity.
+  verification is recorded alongside its final identity. Report head 2d3d1e49
+  passed all 19 steps again (248s, peak RSS0.74GiB), and every GitHub CI job
+  passed at that head, including Windows ARM, macOS ARM and i686 cross.
 
 ## Cold build and resource diagnostics
 
@@ -158,7 +175,12 @@ no other workload was interrupted.
 Fresh native-process counters include startup and therefore are not primitive
 latency: three-repetition instruction counts were empty2532533, f32 2532542,
 f64 2533272 on the counted Intel atom PMU. Core-PMU events were not counted.
-The per-call WASM first-buffer experiment is separate. Isolated native first-call
+The strict first-buffer cell pooled all 200 preregistered pairs (28+172):
+exceptional/main R=0.985225, CI [0.975316, 0.995332], PASS;
+fixed-fused/corrected R=6.405867, CI [6.347259, 6.465085], FAIL.
+It measures the first complete64-element exp2_midp x4 buffer, including
+the actual first fused-cache probe where applicable. It is not an isolated
+FMA-instruction latency. The per-call WASM first-buffer experiment is separate. Isolated native first-call
 latency was not established by these process counters.
 
 ## Reproduction and retained evidence
@@ -190,3 +212,14 @@ FMA/combined ARM host binary SHA256:
 [PR128](https://github.com/imazen/archmage/pull/128) is historical preliminary
 data for an earlier implementation. Its reported costs are not measurements of
 this candidate. The current report uses only the retained runs described here.
+
+
+Normative context: [WebAssembly relaxed operations](https://webassembly.github.io/spec/core/exec/numerics.html#relaxed-operations)
+fix the implementation's relaxed choice during a program execution, while NaN
+encodings can remain nondeterministic. The deterministic profile selects
+unfused multiply-add. Engine controls must be probed: Wasmtime40.0.1 still
+reported fused projections with its deterministic flag in this experiment;
+the nonfusing correctness control instead explicitly disabled x86 FMA.
+[NaN canonicalization](https://docs.wasmtime.dev/api/wasmtime/struct.Config.html#method.cranelift_nan_canonicalization)
+is a separate setting. Correctness runs use Wasmtime40.0.1; the benchmark host
+locks Wasmtime49.0.5 and verifies its actual f32/f64 projection before timing.

@@ -91,3 +91,7 @@ timed work, sample-duration target and every inference/admission bound unchanged
 Pool ALL original and appended paired ratios; keep each source/binary identity.
 No further extension or favorable-run selection. Steady-state cells proceed
 independently; an insufficient first-use count does not imply host contention.
+
+The combined ordinary workload uses positive values so that all eight
+operations, including pow, receive valid inputs. Individual exp/activation
+cells separately exercise alternating signs.

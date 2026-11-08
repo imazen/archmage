@@ -150,7 +150,7 @@ def main():
     for file in sys.argv[1:]:
         for line in Path(file).read_text().splitlines():
             row=json.loads(line);key=(str(file),row['token'],row['width'],row['op'])
-            q=summary.setdefault(key,dict(n=0,mismatches=0,changed_fused_bits=0,max_ulp_upper=None,accuracy_samples=0,changed_fusion_bits=0,ordinary_changed_fusion_bits=0))
+            q=summary.setdefault(key,dict(n=0,mismatches=0,changed_fused_bits=0,max_ulp_upper=None,accuracy_samples=0,changed_fusion_bits=0,ordinary_changed_fusion_bits=0,changed_main_nan_classifications=0))
             for x,y,base,corrected in zip(row['input'],row['fused'],row['baseline'],row['exceptional']):
                 expected=mirror(row['op'],x);q['n']+=1
                 same=(is_nan(y) and is_nan(expected)) or y==expected
@@ -160,6 +160,7 @@ def main():
                 q['changed_fused_bits']+=not ((is_nan(y) and is_nan(base)) or y==base)
                 fusion_changed=not ((is_nan(y) and is_nan(corrected)) or y==corrected)
                 q['changed_fusion_bits']+=fusion_changed
+                q['changed_main_nan_classifications']+=is_nan(corrected)!=is_nan(base)
                 ref=reference(row['op'],x)
                 v=val(x)
                 domain=(0<v<math.inf and x&0x7fffffff>=0x00800000) if row['op'].startswith(('log','ln','pow')) else ((-126<=v<(127.99 if row['op'].endswith('lowp') else 128)) if row['op'].startswith('exp2') else -87<=v<=88.5)
