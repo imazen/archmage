@@ -12,6 +12,13 @@ Final API review makes the new error-kind enum non-exhaustive. A compile-fail
 example checks external exhaustive matching, and the numerical adapter panics
 on unknown reasons. Coefficients, arithmetic and acceptance rules are unchanged;
 timing source identities below remain the frozen measured revisions.
+All 240 expanded M6 caller bodies match the preceding candidate exactly after
+this API annotation, with zero instruction or branch-count changes. The new
+compile-fail example, all three API snapshots and study lint pass (23 s,
+run-heavy peak RSS 0.47 GiB, minimum available 23,449 MiB, peak load 12.56).
+Explicit NEON selection and full NaN/subnormal families pass on M6 (7 s,
+BSD peak RSS 0.53 GiB, minimum reclaimable-page proxy 7,816 MiB, peak load 1.72;
+monitored 3 GiB process-tree guard, not a Linux cgroup cap).
 
 CI release-page downloads encountered HTTP 503/504 before running checks.
 The Linux x86_64 installers now use immutable release asset API URLs and verify
