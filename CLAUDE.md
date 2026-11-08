@@ -1217,6 +1217,13 @@ production math and pre-existing thresholds unchanged; see
 `benchmarks/powf_module_2026-11-07/NONFUSED.md` for measured errors, all retained
 timings, unavailable coverage and the exploratory M6 cost tradeoff.
 
+Benchmark-only LOWP zero guard (2026-11-08, corrected): its experimental
+NonNegativeNormal path rejected +0 with n=2^30 or f32::MAX because its biased
+log2(1) entered the computed-range check. The guard now excludes admitted zero
+lanes, preserving the independent oracle's +0 result. Gamma timing kernels
+and production library code are unchanged. Full-width/mixed-lane validation
+includes the reproducer; see the controlled rounding report above.
+
 Draft bounded powf accuracy (2026-11-08): the fixed fused midp graph has no
 whole-domain ULP guarantee. Adaptive search plus directed MPFR confirmation
 found measured errors up to 438.504 ULP (PositiveNormal), 416.579

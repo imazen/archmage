@@ -55,6 +55,9 @@ def corpus(path):
                 if 0 <= nb <= 0xffffffff:
                     for domain in range(3):
                         added.append(f'{base:08x} {nb:08x} {domain}')
+    for n in [2.**26,2.**30,model.fp.value(0x7f7fffff),-model.fp.value(0x7f7fffff)]:
+        for domain in range(3):
+            added.append(f'00000000 {model.fp.bits(n):08x} {domain}')
     return '\n'.join(rows + sorted(set(added) - set(rows))) + '\n'
 
 

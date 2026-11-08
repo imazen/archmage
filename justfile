@@ -607,7 +607,7 @@ powf-replacement-build:
 
 # Controlled benchmark-only rounding study; public fused defaults unchanged.
 powf-rounding-build:
-    cargo build --release --locked --manifest-path benchmarks/powf_module_2026-11-07/Cargo.toml --bin rounding_bench --bin rounding_eval --bin rounding_analyze --bin rounding_codegen --lib
+    cargo build --release --locked --manifest-path benchmarks/powf_module_2026-11-07/Cargo.toml --bin rounding_bench --bin rounding_eval --bin rounding_analyze --bin rounding_codegen --bin rounding_widths --lib
 
 powf-rounding-check:
     cargo test --release --locked --manifest-path benchmarks/powf_module_2026-11-07/Cargo.toml --lib
@@ -636,6 +636,10 @@ powf-rounding-search binary directory:
 
 powf-rounding-replay binary inputs reference output *options:
     python3 -B benchmarks/powf_module_2026-11-07/rounding_replay.py "{{binary}}" "{{inputs}}" "{{reference}}" "{{output}}" {{options}}
+
+powf-rounding-widths fixtures:
+    benchmarks/powf_module_2026-11-07/target/release/rounding_widths scalar < "{{fixtures}}"
+    benchmarks/powf_module_2026-11-07/target/release/rounding_widths native < "{{fixtures}}"
 
 powf-rounding-wasm-build flags="+simd128":
     RUSTFLAGS="-Ctarget-feature={{flags}}" cargo build --release --locked --manifest-path benchmarks/powf_module_2026-11-07/Cargo.toml --target wasm32-wasip1 --bin rounding_eval

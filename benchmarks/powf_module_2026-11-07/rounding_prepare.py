@@ -80,9 +80,12 @@ pub fn kernel{width}<T: magetypes::simd::backends::F32x{width}Convert,
         let log = {{ {low_body('log2_lowp', 'x')} }};
         let t = log * sp(exponent);
         if CHECKED && DOMAIN != 2 {{
-            let outside = t.simd_lt(sp(-126.0)) | t.simd_gt(sp(127.5));
-            if outside.bitcast_to_i32().any_true() {{
-                return Err(reject(outside.bitcast_to_i32(), PowfErrorKind::OutsideApproximationRange));
+            let outside = (t.simd_lt(sp(-126.0)) | t.simd_gt(sp(127.5))).bitcast_to_i32();
+            // Admitted zero has an explicit result, independent of LOWP's
+            // nonzero log2(1) bias and the size of the positive exponent.
+            let outside = if DOMAIN != 0 {{ outside & !zero }} else {{ outside }};
+            if outside.any_true() {{
+                return Err(reject(outside, PowfErrorKind::OutsideApproximationRange));
             }}
         }}
         {{ {low_body('exp2_lowp', 't')} }}

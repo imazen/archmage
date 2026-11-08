@@ -46,6 +46,17 @@ on x86, M6, strict WASM and relaxed WASM are inspected. Every separate graph
 has multiplication/addition and zero FMA instructions; native x86/NEON
 fused probes contain FMA instructions. No assembly-equality gate is changed.
 
+The final width audit emits expected values directly from the independent
+rational oracle, then checks every lane at x4/x8/x16, including whole-vector
+rejection precedence and exact masks on mixed inputs sharing one exponent.
+Twelve additional zero/large-exponent cases expand that corpus to 27,774.
+They first expose eight mismatches in the benchmark-only LOWP normal profile:
+admitted +0 with n=2^30 or f32::MAX is incorrectly rejected by its result-range
+guard because LOWP log2(1) has a small bias. Excluding admitted zero lanes from
+that guard restores the already-declared +0 result. Expected oracle bits are
+unchanged. The Gamma guard is omitted already, so frozen Gamma timings and
+production math are unaffected. Original failures remain in the addendum.
+
 Directed MPFR-256 supplies mathematical truth. Its binade is resolved before
 conversion to double so intervals for `1-epsilon` do not select the wrong ULP.
 These are sampled maxima, including adaptive witnesses, not global guarantees.
