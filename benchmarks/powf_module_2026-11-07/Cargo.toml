@@ -54,6 +54,10 @@ name = "replacement_eval"
 path = "src/bin/replacement_eval.rs"
 
 [[bin]]
+name = "rounding_eval"
+path = "src/bin/rounding_eval.rs"
+
+[[bin]]
 name = "replacement_guest"
 path = "src/bin/replacement_guest.rs"
 required-features = ["wasm-guest"]
