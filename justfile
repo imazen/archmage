@@ -641,6 +641,10 @@ powf-rounding-widths fixtures:
     benchmarks/powf_module_2026-11-07/target/release/rounding_widths scalar < "{{fixtures}}"
     benchmarks/powf_module_2026-11-07/target/release/rounding_widths native < "{{fixtures}}"
 
+powf-rounding-widths-i686 fixtures:
+    cargo build --release --locked --manifest-path benchmarks/powf_module_2026-11-07/Cargo.toml --target i686-unknown-linux-gnu --bin rounding_widths
+    benchmarks/powf_module_2026-11-07/target/i686-unknown-linux-gnu/release/rounding_widths scalar < "{{fixtures}}"
+
 powf-rounding-wasm-build flags="+simd128":
     RUSTFLAGS="-Ctarget-feature={{flags}}" cargo build --release --locked --manifest-path benchmarks/powf_module_2026-11-07/Cargo.toml --target wasm32-wasip1 --bin rounding_eval
 

@@ -103,13 +103,14 @@ backend paths to disappear during compilation.
 | Proposed preset | Portability / quality | Base / uniform exponent | Output / validation | Execution |
 |---|---|---|---|---|
 | `PORTABLE_GAMMA_MIDP` | BitExact / MIDP graph | +0 or [2^-16,2^16] / normal or signed zero in [0,4] | Normal positive or +0; 0^0=1; checked whole-vector rejection, no result-range branch | Automatic |
-| `FAST_GAMMA_MIDP` | BackendDependent / MIDP graph | Same Gamma interval and exponent bounds | Same zero semantics; checked whole-vector rejection | Automatic; hardware FMA where supported, separate arithmetic otherwise |
-| `FAST_GAMMA_LOWP` | BackendDependent / LOWP graph | Same Gamma interval and exponent bounds | Same zero semantics; checked whole-vector rejection | Automatic; hardware FMA where supported, separate arithmetic otherwise |
+| `PORTABLE_GAMMA_LOWP` | BitExact / LOWP fused graph | Same Gamma interval and exponent bounds | Same zero semantics; checked whole-vector rejection | Automatic; exact fused fallback where needed |
+| `BACKEND_GAMMA_MIDP` | BackendDependent / MIDP graph | Same Gamma interval and exponent bounds | Same zero semantics; checked whole-vector rejection | Automatic; hardware FMA where supported, separate arithmetic otherwise |
+| `BACKEND_GAMMA_LOWP` | BackendDependent / LOWP graph | Same Gamma interval and exponent bounds | Same zero semantics; checked whole-vector rejection | Automatic; hardware FMA where supported, separate arithmetic otherwise |
 | `PORTABLE_NORMAL_MIDP` | BitExact / MIDP graph | Positive finite normal / finite normal or signed zero | Computed argument [-126,127.5], normal output; checked whole-vector rejection | Automatic |
 | `STD_HIGHP` | BackendDependent / HIGHP | Proposed full f32 domain, including negative bases where defined, subnormals, infinities and NaNs | Proposed std-style specials, overflow and underflow; requires a separate backend contract | Scalar std or another measured backend; not implemented |
 
 `PORTABLE_GAMMA_MIDP` and `PORTABLE_NORMAL_MIDP` describe the existing default
-graph with the corresponding domain. The FAST presets are experiments, not
+graph with the corresponding domain. Portable LOWP and the BackendDependent presets are experiments, not
 new promises that the old coefficient families have a global ULP bound.
 MIDP and LOWP are quality-family names. `HIGHP` similarly leaves room for a
 scalar backend; `ONE_ULP` would be an additional quantitative guarantee that

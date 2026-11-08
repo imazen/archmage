@@ -11,7 +11,7 @@ correction probe is needed for BitExact, not simply to admit either graph.
 Whole-operation dispatch is still an independent policy decision.
 No production graph, existing fixture, accuracy threshold or default changes.
 The [preset specification](../../docs/POWF.md#proposed-quality-and-portability-presets)
-states range, validation and execution explicitly; new FAST/HIGHP options
+states range, validation and execution explicitly; new LOWP/BackendDependent/HIGHP options
 remain proposed, not public APIs.
 
 Missing evidence: this study has no qualified full AMD, Intel, Neoverse-N1
@@ -59,7 +59,7 @@ production math are unaffected. Original failures remain in the addendum.
 
 After correction, every lane matches the rational expectations at all three
 widths on scalar/V3, scalar/NEON, no-FMA Nehalem, strict WASM and both probed
-relaxed-WASM providers. Each context checks 83,430 broadcast vectors and
+relaxed-WASM providers, plus scalar i686. Each context checks 83,430 broadcast vectors and
 13,498 mixed vectors against all four graphs. Before/after input files and
 independent expected-bit fixtures are byte-identical. The new coverage does
 not turn the sampled mathematical-error maxima into global accuracy bounds.
