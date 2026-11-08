@@ -628,6 +628,21 @@ powf-rounding-codegen-audit assembly output *options:
 powf-rounding-matrix-analyze directory *runs:
     python3 -B benchmarks/powf_module_2026-11-07/analyze_replacement_matrix.py benchmarks/powf_module_2026-11-07/target/release/rounding_analyze "{{directory}}" {{runs}} --require-cells 96
 
+powf-rounding-search-build source directory:
+    python3 -B benchmarks/powf_module_2026-11-07/error_search.py build "{{source}}" benchmarks/powf_module_2026-11-07/target/release/libarchmage_powf_study.a "{{directory}}" --rounding
+
+powf-rounding-search binary directory:
+    python3 -B benchmarks/powf_module_2026-11-07/error_search.py run "{{binary}}" "{{directory}}" --rounding
+
+powf-rounding-replay binary inputs reference output *options:
+    python3 -B benchmarks/powf_module_2026-11-07/rounding_replay.py "{{binary}}" "{{inputs}}" "{{reference}}" "{{output}}" {{options}}
+
+powf-rounding-wasm-build flags="+simd128":
+    RUSTFLAGS="-Ctarget-feature={{flags}}" cargo build --release --locked --manifest-path benchmarks/powf_module_2026-11-07/Cargo.toml --target wasm32-wasip1 --bin rounding_eval
+
+powf-rounding-wasm-codegen flags="+simd128":
+    RUSTFLAGS="-Ctarget-feature={{flags}}" cargo rustc --release --locked --manifest-path benchmarks/powf_module_2026-11-07/Cargo.toml --target wasm32-wasip1 --bin rounding_codegen -- --emit=asm
+
 powf-replacement-matrix directory *options:
     python3 -B benchmarks/powf_module_2026-11-07/replacement_matrix.py benchmarks/powf_module_2026-11-07/target/release/replacement "{{directory}}" {{options}}
 

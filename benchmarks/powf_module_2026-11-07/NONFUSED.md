@@ -31,6 +31,16 @@ compared with the corresponding legacy method agree: separate with legacy
 scalar, fused with legacy FMA-native. Zero and saturation semantics are
 intentionally reported separately, rather than claimed equivalent.
 
+The complete 27,762-pair replay also passes with no graph mismatches under
+Nehalem no-FMA emulation, strict WASM SIMD, and relaxed WASM with both
+fusing and nonfusing providers. WASM uses Wasmtime 40.0.1 with explicit
+Cranelift `has_fma` selection; a cancellation probe verifies the actual
+provider before each replay. These executions establish correctness coverage,
+not emulated or WASM speed. All 24 selected scalar/native assembly probes
+on x86, M6, strict WASM and relaxed WASM are inspected. Every separate graph
+has multiplication/addition and zero FMA instructions; native x86/NEON
+fused probes contain FMA instructions. No assembly-equality gate is changed.
+
 Directed MPFR-256 supplies mathematical truth. Its binade is resolved before
 conversion to double so intervals for `1-epsilon` do not select the wrong ULP.
 These are sampled maxima, including adaptive witnesses, not global guarantees.
