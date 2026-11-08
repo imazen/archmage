@@ -187,6 +187,11 @@ exploratory because core-class placement is unrestricted. N1 has 621 clean
 cells and 51 invalid cells. Every pair remains in the direct paired analysis.
 No aggregate result satisfies the every-cell promotion rule.
 
+The later Zen 4 continuation also completes 672/672 cells, combining the
+preserved invalid first cell with its 671 previously unmeasured successors.
+It has 183 clean and 489 inadmissible cells, all retaining 50 pairs. The
+executable is the identical frozen reference; no completed cell was retried.
+
 | N1 Automatic versus actual control | PASS | FAIL | INCONCLUSIVE | INADMISSIBLE |
 |---|---:|---:|---:|---:|
 | pow_midp | 589 | 16 | 16 | 51 |
@@ -239,6 +244,58 @@ diagnostic for checked-API cost, not the legacy/std replacement baseline.
 | runtime_literal_auto | 0.998823 [0.996100–1.001534] | 1.001961 [0.999371–1.005349] |
 | runtime_dynamic_auto | 0.992276 [0.989591–0.995119] | 1.001565 [0.998484–1.005222] |
 | prevalidated_graph | 1.291519 [1.287984–1.295021] | 1.250139 [1.245715–1.255043] |
+
+## Completed Zen 4 continuation
+
+Reinspection found the worker idle before admission. Every newly measured
+cell still passes through the unchanged resource/reliability gates. All
+672 cells are now recorded, but only 183 are admitted; the other 489 remain
+invalid, including the original first cell. The 16,240 direct paired rows
+retain every sample and classify each comparison independently.
+
+| Zen 4 Automatic versus actual control | PASS | FAIL | INCONCLUSIVE | INADMISSIBLE |
+|---|---:|---:|---:|---:|
+| pow_midp | 179 | 0 | 4 | 489 |
+| pow_midp_unchecked | 101 | 80 | 2 | 489 |
+| pow_midp_precise | 179 | 1 | 3 | 489 |
+| pow_lowp | 100 | 83 | 0 | 489 |
+| pow_lowp_unchecked | 100 | 83 | 0 | 489 |
+| std_f32_powf | 115 | 68 | 0 | 489 |
+| std_promoted_f64_powf | 125 | 56 | 2 | 489 |
+
+Caller versus checked midp has 79 PASS / 100 FAIL / 4 INCONCLUSIVE /
+489 INADMISSIBLE. Caller versus lowp fails in all 183 clean cells. Both
+Caller and Automatic fail against std powi in all 20 clean integer cells;
+the remaining 36 integer cells are invalid. Accuracy and domain contracts
+remain separate from these timing verdicts.
+
+The four Automatic/checked-midp inconclusive cells are all x16 V3 / 4096 /
+chain, with literal exponents:
+
+| Domain / exponent / inputs | Ratio | 95% CI |
+|---|---:|---|
+| NonNegativeNormal / 0.5 / wide | 1.023716 | 1.004379–1.050757 |
+| Gamma / 2.4 / unorm8 | 1.029172 | 1.018216–1.048351 |
+| Gamma / inv2.4 / unorm8 | 1.025024 | 1.010255–1.037655 |
+| Gamma / 0.5 / unorm8 | 1.022880 | 1.012360–1.031905 |
+
+The last cell fails against the separate `pow_midp_precise` arm:
+1.027644 [1.022336–1.035814]. Two Automatic/checked-midp passes have point
+ratios above one. The largest passing cost is NonNegativeNormal / inv2.4 /
+unorm8 / x16 V3 / 4096 chain: 1.006872 [1.001293–1.015596]. The 2% tolerance
+permits this measured slowdown. Inconclusive cells remain unproven at 50 pairs.
+
+The corresponding full Gamma x4 V3 / 4096 stream / 2.4 / unorm8 cell is
+inadmissible. Its intervals remain descriptive in the raw report and supply
+no speed claim. The separately preregistered clean 64-element pilot above
+remains a pilot; it does not replace an invalid full-matrix cell.
+
+Collection: 2,168 s, run-heavy peak RSS 0.09 GiB, minimum available
+17,286 MiB, peak load 1.51. All-cell analysis: 190 s, peak RSS 0.04 GiB,
+minimum available 24,477 MiB, peak load 12.97. New evidence is under the
+artifact record's `publication/amd-continuation/`, leaving the earlier frozen
+core intact. Complete admitted AMD/Intel/WASM coverage and the N1 failures
+still prevent promotion.
 
 ## Artifacts and resources
 
