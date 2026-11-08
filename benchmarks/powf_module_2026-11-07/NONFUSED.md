@@ -57,6 +57,15 @@ that guard restores the already-declared +0 result. Expected oracle bits are
 unchanged. The Gamma guard is omitted already, so frozen Gamma timings and
 production math are unaffected. Original failures remain in the addendum.
 
+After correction, every lane matches the rational expectations at all three
+widths on scalar/V3, scalar/NEON, no-FMA Nehalem, strict WASM and both probed
+relaxed-WASM providers. Each context checks 83,430 broadcast vectors and
+13,498 mixed vectors against all four graphs. Before/after input files and
+independent expected-bit fixtures are byte-identical. The new coverage does
+not turn the sampled mathematical-error maxima into global accuracy bounds.
+Validation pipelines report peak RSS 0.25 GiB on x86, 0.28 GiB on M6,
+0.18 GiB under Nehalem emulation and 0.35 GiB for both WASM builds/replays.
+
 Directed MPFR-256 supplies mathematical truth. Its binade is resolved before
 conversion to double so intervals for `1-epsilon` do not select the wrong ULP.
 These are sampled maxima, including adaptive witnesses, not global guarantees.
