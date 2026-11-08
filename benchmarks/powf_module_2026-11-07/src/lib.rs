@@ -30,32 +30,60 @@ fn rounding_value(token: Token, base: f32, n: f32, method: u32, domain: u32) -> 
     };
     match result {
         Ok(value) => u64::from(value.to_array()[0].to_bits()),
-        Err(error) => (match error.kind {
-            PowfErrorKind::InvalidExponent => 1_u64,
-            PowfErrorKind::InvalidBase => 2,
-            PowfErrorKind::OutsideApproximationRange => 3,
-            PowfErrorKind::UnsupportedWidth => 4,
-            _ => panic!("unknown rejection stage"),
-        }) << 32,
+        Err(error) => {
+            (match error.kind {
+                PowfErrorKind::InvalidExponent => 1_u64,
+                PowfErrorKind::InvalidBase => 2,
+                PowfErrorKind::OutsideApproximationRange => 3,
+                PowfErrorKind::UnsupportedWidth => 4,
+                _ => panic!("unknown rejection stage"),
+            }) << 32
+        }
     }
 }
 
 /// Controlled benchmark-only callback: midp separate/fused, lowp separate/fused.
 #[inline(never)]
 pub extern "C" fn rounding_evaluate(
-    base: f32, n: f32, method: u32, domain: u32, native: u32,
+    base: f32,
+    n: f32,
+    method: u32,
+    domain: u32,
+    native: u32,
 ) -> u64 {
     assert!(method < 4 && domain < 3 && native < 2);
     if native == 0 {
         return rounding_value_scalar(archmage::ScalarToken, base, n, method, domain);
     }
     #[cfg(target_arch = "x86_64")]
-    return rounding_value_v3(archmage::X64V3Token::summon().expect("required V3"), base, n, method, domain);
+    return rounding_value_v3(
+        archmage::X64V3Token::summon().expect("required V3"),
+        base,
+        n,
+        method,
+        domain,
+    );
     #[cfg(target_arch = "aarch64")]
-    return rounding_value_neon(archmage::NeonToken::summon().expect("required NEON"), base, n, method, domain);
+    return rounding_value_neon(
+        archmage::NeonToken::summon().expect("required NEON"),
+        base,
+        n,
+        method,
+        domain,
+    );
     #[cfg(target_arch = "wasm32")]
-    return rounding_value_wasm128(archmage::Wasm128Token::summon().expect("required WASM SIMD"), base, n, method, domain);
-    #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64", target_arch = "wasm32")))]
+    return rounding_value_wasm128(
+        archmage::Wasm128Token::summon().expect("required WASM SIMD"),
+        base,
+        n,
+        method,
+        domain,
+    );
+    #[cfg(not(any(
+        target_arch = "x86_64",
+        target_arch = "aarch64",
+        target_arch = "wasm32"
+    )))]
     panic!("no native study context on this target");
 }
 pub const METHOD_NAMES: [&str; 8] = [
