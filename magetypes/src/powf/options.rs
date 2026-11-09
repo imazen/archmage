@@ -31,6 +31,7 @@ pub enum PowfExecution {
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub enum PowfPortability {
     /// One fused graph, with exact software FMA when necessary. Not std power.
+    /// Full HIGHP preserves NaN classification; NaN payload/sign are unspecified.
     #[default]
     BitExact,
     /// Native fused or separate graph; result bits and range rejection may vary.

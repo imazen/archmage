@@ -126,3 +126,44 @@ fn canonical_mixed_lanes() {
         }
     }
 }
+
+fn gamma_mixed<const N: usize>() {
+    const G: u32 = PowfOptions::PORTABLE_GAMMA_HIGHP.bits();
+    const A: u32 = PowfOptions::PORTABLE_GAMMA_HIGHP
+        .with_validation(powf::PowfValidation::AssumeValid)
+        .bits();
+    let mut cases: Vec<_> = fixtures::CASES
+        .iter()
+        .copied()
+        .filter(|r| {
+            let x = f32::from_bits(r[0]);
+            let n = f32::from_bits(r[1]);
+            (r[0] == 0 || (1. / 65536. ..=65536.).contains(&x))
+                && (0. ..=4.).contains(&n)
+                && (n == 0. || n.is_normal())
+        })
+        .collect();
+    assert!(cases.len() >= 128);
+    cases.sort_by_key(|r| r[1]);
+    for chunk in cases.chunks(N) {
+        let x = core::array::from_fn(|i| f32::from_bits(chunk[i % chunk.len()][0]));
+        for (i, &[_, n, expected]) in chunk.iter().enumerate() {
+            equal(
+                powf::try_powf_array_with::<G, N>(x, f32::from_bits(n)).unwrap()[i],
+                expected,
+            );
+            equal(
+                powf::try_powf_array_with::<A, N>(x, f32::from_bits(n)).unwrap()[i],
+                expected,
+            );
+        }
+    }
+}
+#[test]
+fn canonical_gamma_mixed_lanes() {
+    gamma_mixed::<1>();
+    gamma_mixed::<4>();
+    gamma_mixed::<8>();
+    #[cfg(feature = "w512")]
+    gamma_mixed::<16>();
+}

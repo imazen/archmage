@@ -36,17 +36,19 @@ macro_rules! packed {
                             x[offset + lane].to_bits().wrapping_sub(0x0080_0000) < 0x7f00_0000;
                     }
                 }
+                if OPTIONS & 3 == 2 {
+                    // Zero is admitted, but uncommon. One pack predicate keeps
+                    // zero restoration out of the ordinary arithmetic graph.
+                    for lane in 0..$lanes {
+                        normal &= x[offset + lane] != 0.;
+                    }
+                }
                 if normal {
                     let mut zs = [0.; $lanes];
                     let mut invcs = [0.; $lanes];
                     let mut y0s = [0.; $lanes];
                     for lane in 0..$lanes {
-                        // Gamma zero lanes use log2(1), then restore +0.
-                        let ix = if OPTIONS & 3 == 2 && x[offset + lane] == 0. {
-                            1f32.to_bits()
-                        } else {
-                            x[offset + lane].to_bits()
-                        };
+                        let ix = x[offset + lane].to_bits();
                         let tmp = ix.wrapping_sub(0x3f33_0000);
                         let index = ((tmp >> 19) & 15) as usize;
                         let top = tmp & 0xff80_0000;
@@ -87,11 +89,7 @@ macro_rules! packed {
                         let result =
                             (z.mul_add_relaxed(r2, tail) * V::from_array_t(t, scales)).to_array();
                         for lane in 0..$lanes {
-                            out[offset + lane] = if OPTIONS & 3 == 2 && x[offset + lane] == 0. {
-                                0.
-                            } else {
-                                result[lane] as f32
-                            };
+                            out[offset + lane] = result[lane] as f32;
                         }
                         offset += $lanes;
                         continue;
