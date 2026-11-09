@@ -382,7 +382,7 @@ impl<T: F32x16Backend> f32x16<T> {
         self.try_powf_with::<{ crate::powf::PowfOptions::DEFAULT }>(exponent)
     }
 
-    /// Bounded power with integer const flags carried through the caller.
+    /// Configurable power with integer const flags carried through the caller.
     /// Build `PowfOptions` in const evaluation and supply `.bits()`;
     /// see [`crate::powf`]. Any rejected lane rejects the whole vector.
     #[inline(always)]
@@ -396,7 +396,7 @@ impl<T: F32x16Backend> f32x16<T> {
         crate::powf::const_api::run16::<T, OPTIONS>(self.1, self, exponent)
     }
 
-    /// Bounded power with explicit domain and execution selection.
+    /// Configurable power with runtime portability, precision and validation.
     /// Any rejected lane rejects the whole vector. Automatic selection
     /// may enter a more capable backend for the complete power graph.
     #[inline(always)]

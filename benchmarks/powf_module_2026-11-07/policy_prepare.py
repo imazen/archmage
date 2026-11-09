@@ -71,6 +71,15 @@ pub fn {name}(token:Token,input:&[f32;{n}],n:f32,output:&mut[f32;{n}]){{
 #[inline(never)]
 fn caller_{name}_{tier}(token:archmage::{ty},input:&[f32;{n}],n:f32,output:&mut[f32;{n}]){{{name}_{tier}(token,input,n,output);}}
 '''
+# Retained pointer tables expose every configuration even when LLVM merges
+# identical probe bodies. The audit resolves the actual relocation targets.
+for n in [4,8,16]:
+ for tier,ty,cfg in [('scalar','ScalarToken',None),('v3','X64V3Token','x86_64'),('neon','NeonToken','aarch64'),('wasm128','Wasm128Token','wasm32')]:
+  attr=f'#[cfg(target_arch="{cfg}")]\n'if cfg else ''
+  alias=f'ProbeX{n}{tier.title()}'
+  probes+=attr+f'type {alias}=fn(archmage::{ty},&[f32;{n}],f32,&mut[f32;{n}]);\n'
+  probes+=attr+f'#[used]\npub static POLICYTABLE_X{n}_{tier.upper()}: [{alias};64]=[\n'
+  probes+=''.join(f'policyprobe_f{f}_x{n}_{tier},\n'for f in flags)+'];\n'
 probes+='fn main(){use archmage::SimdToken;let n=std::hint::black_box(2.4);\n'
 for n in [4,8,16]:probes+=f'let input{n}=std::hint::black_box([0.75;{n}]);let mut output{n}=[0.;{n}];\n'
 for tier,ty,cfg in [('scalar','ScalarToken',None),('v3','X64V3Token','x86_64'),('neon','NeonToken','aarch64'),('wasm128','Wasm128Token','wasm32')]:

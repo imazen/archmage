@@ -19,13 +19,25 @@ if a.macho:
   assert name not in active
   return functions[name]if name in functions else resolve(aliases[name],(*active,name))
  for name in aliases:functions[name]=resolve(name)
-else:functions=m.parse(source)
+else:
+ source=re.sub(r"Cs[0-9a-zA-Z]+_", "CsHASH_", source)
+ functions=m.parse(source)
 selected={};flags=[x for x in range(64)if x&3!=3]+[x for x in range(64,128)if x&16 and not x&8]
 for name in functions:
  match=re.search(r'policyprobe_f(\d+)_x(4|8|16)_(scalar|v3|neon|wasm128)',name)
  if not match:continue
  f,n,t=match.groups();key=(int(f),int(n),t)
  if key not in selected or 'caller_policyprobe_'in name:selected[key]=name
+# A used pointer table survives body merging without adding instructions to
+# the probes. Its relocation order is the frozen option encoding order.
+for name,body in re.findall(r'^([^:\s]*POLICYTABLE_X(?:4|8|16)_(?:SCALAR|V3|NEON|WASM128)[^:\s]*):[^\n]*\n((?:\s*\.(?:quad|xword|int32)\s+[^\n]+\n)+)',source,re.M):
+ match=re.search(r'POLICYTABLE_X(4|8|16)_(SCALAR|V3|NEON|WASM128)',name)
+ n,t=match.groups();targets=re.findall(r'\.(?:quad|xword|int32)\s+(\S+)',body)
+ assert len(targets)==64,(name,len(targets))
+ for f,target in zip(flags,targets):
+  target=target.rstrip(',')
+  assert target in functions,('missing retained table target',name,target)
+  selected[(f,int(n),t.lower())]=target
 expected={(f,n,t)for f in flags for n in [4,8,16]for t in ['scalar', 'wasm128'if a.wasm else 'neon'if a.macho else 'v3']}
 assert set(selected)==expected,('missing probes',expected-set(selected),'extra',set(selected)-expected)
 rows=[]

@@ -621,7 +621,7 @@ powf-policy-check:
     cargo clippy -p magetypes --all-features --all-targets -- -D warnings
 
 powf-policy-build:
-    cargo build --release --locked --manifest-path benchmarks/powf_module_2026-11-07/Cargo.toml --bin policy_widths --bin policy_bench --bin policy_codegen --bin policy_analyze
+    cargo build --release --locked --manifest-path benchmarks/powf_module_2026-11-07/Cargo.toml --bin policy_widths --bin policy_bench --bin policy_codegen --bin policy_analyze --bin highp_eval
 
 powf-policy-widths fixtures:
     benchmarks/powf_module_2026-11-07/target/release/policy_widths scalar < "{{fixtures}}"
@@ -721,3 +721,6 @@ powf-policy-matrix-analyze directory *runs:
 
 powf-policy-codegen-audit assembly output *options:
     python3 -B benchmarks/powf_module_2026-11-07/policy_codegen_audit.py "{{assembly}}" "{{output}}" {{options}}
+
+powf-highp-accuracy fixtures output:
+    python3 -B benchmarks/powf_module_2026-11-07/highp_accuracy.py benchmarks/powf_module_2026-11-07/target/release/highp_eval "{{fixtures}}" "{{output}}"
