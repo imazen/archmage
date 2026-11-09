@@ -41,3 +41,20 @@ bars are reported in ns per complete buffer; pair analysis uses all samples.
 
 Artifacts: dev `/home/lilith/tmp/powf-mid-low-final-20261109`, promoted to
 `/mnt/v/output/archmage/powf-mid-low-final-2026-11-09` with a verified NAS mirror.
+
+## Second frozen revision: positive Gamma
+
+The first 40-cell revision retained zero. It wins against checked MIDP in all
+40 cost-only intervals, but loses to unchecked MIDP in 15 portable / 16 backend
+cells; five cells have fully clean admission. This motivates a new explicit
+`PositiveGamma` domain, not changing the old Gamma semantics. It excludes +0
+and removes the result mask. Checked mode rejects zero; AssumeValid promises
+positive inputs. Every positive result remains bit-identical to Gamma.
+
+The second source revision retains all earlier output and adds 16 positive
+Gamma encodings (64 bounded total). All 40 native cells compare old Gamma and
+positive Gamma side by side, plus all three legacy methods. Eight scalar API
+cells use Automatic selection and actual public scalar calls, compared with
+actual legacy ScalarToken splats (legacy has no scalar power method). The four
+range/validation cells now contain all 64 bounded encodings plus three legacy
+methods. These exact 52 cells are frozen before timing the second revision.

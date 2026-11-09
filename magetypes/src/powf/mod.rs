@@ -8,6 +8,7 @@
 //! Round-to-nearest and gradual underflow are required. NaN/infinite inputs,
 //! negative bases, subnormal inputs and unsupported output ranges are rejected
 //! by restricted Checked presets. Full HIGHP permits all f32 inputs/results; NaN payloads are unspecified.
+//! PositiveGamma excludes zero from Gamma and removes its result masks.
 //! AssumeValid omits numerical checks while retaining memory safety.
 //! Existing `pow_lowp`/`pow_midp` methods retain their existing behavior.
 //!

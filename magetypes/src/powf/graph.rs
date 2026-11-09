@@ -33,7 +33,12 @@ macro_rules! graph {
             let zero = bits.simd_eq(ip(0));
             let invalid = if GAMMA {
                 let within = input.simd_ge(sp(1.0 / 65_536.0)) & input.simd_le(sp(65_536.0));
-                (within.bitcast_to_i32() | zero) ^ ip(-1)
+                let valid = if ZERO {
+                    within.bitcast_to_i32() | zero
+                } else {
+                    within.bitcast_to_i32()
+                };
+                valid ^ ip(-1)
             } else {
                 let exp_bits = bits & ip(0x7f80_0000);
                 let invalid = bits.simd_lt(ip(0)) | exp_bits.simd_eq(ip(0x7f80_0000));
@@ -202,7 +207,13 @@ macro_rules! graph {
             match OPTIONS & 3 {
                 0 => $vector::<T, ARITHMETIC, false, false, OPTIONS>(token, input, exponent),
                 1 => $vector::<T, ARITHMETIC, true, false, OPTIONS>(token, input, exponent),
-                2 => $vector::<T, ARITHMETIC, true, true, OPTIONS>(token, input, exponent),
+                2 => {
+                    if OPTIONS & PowfOptions::POSITIVE != 0 {
+                        $vector::<T, ARITHMETIC, false, true, OPTIONS>(token, input, exponent)
+                    } else {
+                        $vector::<T, ARITHMETIC, true, true, OPTIONS>(token, input, exponent)
+                    }
+                }
                 _ => unreachable!("validated const domain"),
             }
         }

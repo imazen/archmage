@@ -11,6 +11,9 @@ pub enum PowfDomain {
     /// +0 or positive normal [2^-16,2^16], exponent normal or zero in [0,4].
     /// The approximation's output is positive normal or +0 without a range check.
     Gamma,
+    /// Positive normal [2^-16,2^16], exponent normal or zero in [0,4].
+    /// Same nonzero graph as Gamma; excludes zero and removes its masks.
+    PositiveGamma,
     /// Full f32 input/output domain for HIGHP.
     /// BitExact uses the canonical graph; BackendDependent uses std semantics.
     Full,
@@ -87,6 +90,7 @@ impl PowfOptions {
     pub(crate) const BACKEND: u32 = 16;
     pub(crate) const ASSUME: u32 = 32;
     pub(crate) const HIGHP: u32 = 64;
+    pub(crate) const POSITIVE: u32 = 128;
 
     /// BitExact MIDP, Gamma range, checked, automatic execution.
     pub const PORTABLE_GAMMA_MIDP: Self = Self::new().with_domain(PowfDomain::Gamma);
@@ -107,6 +111,18 @@ impl PowfOptions {
     /// Backend-dependent LOWP, Gamma range, checked, automatic execution.
     pub const BACKEND_GAMMA_LOWP: Self =
         Self::BACKEND_GAMMA_MIDP.with_precision(PowfPrecision::Lowp);
+    /// BitExact MIDP, positive Gamma range, checked, automatic execution.
+    pub const PORTABLE_POSITIVE_GAMMA_MIDP: Self =
+        Self::PORTABLE_GAMMA_MIDP.with_domain(PowfDomain::PositiveGamma);
+    /// BitExact LOWP, positive Gamma range, checked, automatic execution.
+    pub const PORTABLE_POSITIVE_GAMMA_LOWP: Self =
+        Self::PORTABLE_POSITIVE_GAMMA_MIDP.with_precision(PowfPrecision::Lowp);
+    /// Backend-dependent MIDP, positive Gamma range, checked, automatic execution.
+    pub const BACKEND_POSITIVE_GAMMA_MIDP: Self =
+        Self::PORTABLE_POSITIVE_GAMMA_MIDP.with_portability(PowfPortability::BackendDependent);
+    /// Backend-dependent LOWP, positive Gamma range, checked, automatic execution.
+    pub const BACKEND_POSITIVE_GAMMA_LOWP: Self =
+        Self::BACKEND_POSITIVE_GAMMA_MIDP.with_precision(PowfPrecision::Lowp);
     /// BitExact MIDP, positive-normal range, checked, automatic execution.
     pub const PORTABLE_NORMAL_MIDP: Self = Self::new();
     /// Std power, full f32 domain, backend-dependent, automatic execution.
@@ -159,6 +175,7 @@ impl PowfOptions {
             PowfDomain::PositiveNormal => 0,
             PowfDomain::NonNegativeNormal => 1,
             PowfDomain::Gamma => 2,
+            PowfDomain::PositiveGamma => Self::POSITIVE | Self::GAMMA,
             PowfDomain::Full => 3,
         };
         domain
@@ -181,7 +198,10 @@ impl PowfOptions {
             }
     }
     pub(crate) const fn valid(bits: u32) -> bool {
-        if bits & !127 != 0 || bits & (Self::LOWP | Self::HIGHP) == Self::LOWP | Self::HIGHP {
+        if bits & !255 != 0
+            || bits & (Self::LOWP | Self::HIGHP) == Self::LOWP | Self::HIGHP
+            || (bits & Self::POSITIVE != 0 && bits & 3 != Self::GAMMA)
+        {
             return false;
         }
         if bits & Self::HIGHP != 0 {

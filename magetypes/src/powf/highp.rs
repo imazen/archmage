@@ -11,7 +11,8 @@ pub(super) fn check_bases<const OPTIONS: u32, const N: usize>(
         let mut mask = 0;
         for (i, &x) in bases.iter().enumerate() {
             let valid = if domain == 2 {
-                x.to_bits() == 0 || (1.0 / 65_536.0..=65_536.0).contains(&x)
+                (OPTIONS & PowfOptions::POSITIVE == 0 && x.to_bits() == 0)
+                    || (1.0 / 65_536.0..=65_536.0).contains(&x)
             } else {
                 (x.is_normal() && x > 0.) || (domain == 1 && x.to_bits() == 0 && exponent >= 0.)
             };

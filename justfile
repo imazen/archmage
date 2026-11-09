@@ -901,3 +901,9 @@ powf-midlow-build:
 
 powf-midlow-verify binary:
     MIDLOW_VERIFY=1 {{binary}}
+
+powf-midlow-matrix binary directory *options:
+    python3 -B benchmarks/powf_module_2026-11-07/midlow_matrix.py "{{binary}}" "{{directory}}" {{options}}
+
+powf-midlow-analyze binary *files:
+    {{binary}} {{files}}

@@ -6,17 +6,17 @@
 # impls omitted; re-export duplicates annotated `[also: path]`.
 # DO NOT EDIT BY HAND — commit regenerated changes with the code.
 #
-# files: magetypes.txt 2747 lines (supported surface) | magetypes.features.txt 96 added (features: avx512,std,w512) | magetypes.internal.txt 52 lines (64 hidden + 0 excluded-feature)
+# files: magetypes.txt 2752 lines (supported surface) | magetypes.features.txt 96 added (features: avx512,std,w512) | magetypes.internal.txt 52 lines (64 hidden + 0 excluded-feature)
 
 ## summary
 #
 #   pub modules                                13
 #   pub types (struct/enum/trait/alias)       385
-#   pub consts/statics                        243
+#   pub consts/statics                        247
 #   free functions                           3915
 #   inherent methods                         1251
 #   struct fields                               7
-#   enum variants                              19
+#   enum variants                              20
 #   re-exports                                  2
 #   trait roster entries (type × trait)       790
 #   conditional trait impls (verbatim)        120
@@ -26,11 +26,11 @@
 # per-module pub lines:
 #   (root)                          329
 #   cast                              3
-#   powf                             46
+#   powf                             51
 #   prelude                        3740
 #   simd                           1717
 
-## items (2515 lines)
+## items (2520 lines)
 
 pub mod magetypes
 pub use archmage
@@ -44,6 +44,7 @@ pub enum powf::PowfDomain
 pub powf::PowfDomain::Full
 pub powf::PowfDomain::Gamma
 pub powf::PowfDomain::NonNegativeNormal
+pub powf::PowfDomain::PositiveGamma
 pub powf::PowfDomain::PositiveNormal
 #[non_exhaustive] pub enum powf::PowfErrorKind
 pub powf::PowfErrorKind::InvalidBase
@@ -75,11 +76,15 @@ pub powf::PowfOptions::precision: powf::PowfPrecision
 pub powf::PowfOptions::validation: powf::PowfValidation
 pub const powf::PowfOptions::BACKEND_GAMMA_LOWP: Self
 pub const powf::PowfOptions::BACKEND_GAMMA_MIDP: Self
+pub const powf::PowfOptions::BACKEND_POSITIVE_GAMMA_LOWP: Self
+pub const powf::PowfOptions::BACKEND_POSITIVE_GAMMA_MIDP: Self
 pub const powf::PowfOptions::PORTABLE_GAMMA_HIGHP: Self
 pub const powf::PowfOptions::PORTABLE_GAMMA_LOWP: Self
 pub const powf::PowfOptions::PORTABLE_GAMMA_MIDP: Self
 pub const powf::PowfOptions::PORTABLE_HIGHP: Self
 pub const powf::PowfOptions::PORTABLE_NORMAL_MIDP: Self
+pub const powf::PowfOptions::PORTABLE_POSITIVE_GAMMA_LOWP: Self
+pub const powf::PowfOptions::PORTABLE_POSITIVE_GAMMA_MIDP: Self
 pub const powf::PowfOptions::STD_HIGHP: Self
 pub const fn powf::PowfOptions::bits(self) -> u32
 pub const fn powf::PowfOptions::new() -> Self

@@ -36,7 +36,7 @@ macro_rules! packed {
                             x[offset + lane].to_bits().wrapping_sub(0x0080_0000) < 0x7f00_0000;
                     }
                 }
-                if OPTIONS & 3 == 2 {
+                if OPTIONS & 3 == 2 && OPTIONS & super::PowfOptions::POSITIVE == 0 {
                     // Zero is admitted, but uncommon. One pack predicate keeps
                     // zero restoration out of the ordinary arithmetic graph.
                     for lane in 0..$lanes {

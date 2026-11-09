@@ -338,6 +338,34 @@ pub(super) fn runtime<T: archmage::SimdToken, const N: usize>(
         118 => token_array::<T, 118, N>(token, bases, n),
         #[cfg(feature = "std")]
         119 => token_array::<T, 119, N>(token, bases, n),
+        130 => token_array::<T, 130, N>(token, bases, n),
+        134 => token_array::<T, 134, N>(token, bases, n),
+        138 => token_array::<T, 138, N>(token, bases, n),
+        142 => token_array::<T, 142, N>(token, bases, n),
+        146 => token_array::<T, 146, N>(token, bases, n),
+        150 => token_array::<T, 150, N>(token, bases, n),
+        154 => token_array::<T, 154, N>(token, bases, n),
+        158 => token_array::<T, 158, N>(token, bases, n),
+        162 => token_array::<T, 162, N>(token, bases, n),
+        166 => token_array::<T, 166, N>(token, bases, n),
+        170 => token_array::<T, 170, N>(token, bases, n),
+        174 => token_array::<T, 174, N>(token, bases, n),
+        178 => token_array::<T, 178, N>(token, bases, n),
+        182 => token_array::<T, 182, N>(token, bases, n),
+        186 => token_array::<T, 186, N>(token, bases, n),
+        190 => token_array::<T, 190, N>(token, bases, n),
+        194 => token_array::<T, 194, N>(token, bases, n),
+        198 => token_array::<T, 198, N>(token, bases, n),
+        #[cfg(feature = "std")]
+        210 => token_array::<T, 210, N>(token, bases, n),
+        #[cfg(feature = "std")]
+        214 => token_array::<T, 214, N>(token, bases, n),
+        226 => token_array::<T, 226, N>(token, bases, n),
+        230 => token_array::<T, 230, N>(token, bases, n),
+        #[cfg(feature = "std")]
+        242 => token_array::<T, 242, N>(token, bases, n),
+        #[cfg(feature = "std")]
+        246 => token_array::<T, 246, N>(token, bases, n),
         _ => Err(PowfError {
             kind: PowfErrorKind::UnsupportedOptions,
             lane_mask: 0,

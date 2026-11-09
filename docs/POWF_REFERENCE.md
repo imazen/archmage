@@ -19,13 +19,14 @@ Every bit-consistency promise requires round-to-nearest and gradual underflow. T
 | PositiveNormal | Positive finite normal | Finite normal or signed zero | MIDP/LOWP computed exp2 argument in [-126,127.5]; HIGHP result normal |
 | NonNegativeNormal | Same, plus +0 for a nonnegative exponent | Same | Same, plus admitted +0 result for positive exponent |
 | Gamma | +0 or [2^-16,2^16] | Normal or signed zero in [0,4] | Normal or +0; 0^0=1; range check omitted |
+| PositiveGamma | Positive normal [2^-16,2^16], excluding zero | Normal or signed zero in [0,4] | Same nonzero bits as Gamma; omits zero masks |
 | Full | All f32 values | All f32 values | HIGHP only; overflow, underflow, signed zero and NaN classification follow the selected graph |
 
 Checked rejects the entire vector with the exact lane mask at the first failing stage: width/options, exponent, base, output range. AssumeValid removes numerical checks while retaining width/option checks and memory safety. Violating an assumed domain has unspecified numerical results. Gamma's bounds justify deleting range/special-case work; checking those stricter input bounds still costs instructions.
 
 ## Const options and dispatch
 
-Use `try_powf_with::<{ PowfOptions::PORTABLE_GAMMA_HIGHP.with_validation(PowfValidation::AssumeValid).bits() }>(x, n)`, or the matching vector delegate. The integer stays const through delegates, dispatch and kernels. There are 80 supported configurations with std and 64 without it. Runtime adapters decode to the same const graphs.
+Use `try_powf_with::<{ PowfOptions::PORTABLE_GAMMA_HIGHP.with_validation(PowfValidation::AssumeValid).bits() }>(x, n)`, or the matching vector delegate. The integer stays const through delegates, dispatch and kernels. There are 104 supported configurations with std and 84 without it; 64 are bounded MIDP/LOWP configurations. Runtime adapters decode to the same const graphs.
 
 Automatic preserves a capable caller or upgrades the whole operation. Caller prevents autonomous upgrades. FMA selection and packing remain private tuning choices. BackendDependent HIGHP preserves its std call path and may inherit std's own dispatch.
 

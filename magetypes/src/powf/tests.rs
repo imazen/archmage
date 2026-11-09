@@ -514,6 +514,7 @@ fn const_builder_encodes_each_supported_configuration() {
         PowfDomain::PositiveNormal,
         PowfDomain::NonNegativeNormal,
         PowfDomain::Gamma,
+        PowfDomain::PositiveGamma,
     ] {
         for execution in [PowfExecution::Automatic, PowfExecution::Caller] {
             let builder = PowfOptions::new()
@@ -531,6 +532,7 @@ fn const_builder_encodes_each_supported_configuration() {
                 PowfDomain::PositiveNormal => 0,
                 PowfDomain::NonNegativeNormal => 1,
                 PowfDomain::Gamma => 2,
+                PowfDomain::PositiveGamma => 130,
                 PowfDomain::Full => unreachable!("legacy domain test"),
             } | if execution == PowfExecution::Caller {
                 4
@@ -651,8 +653,9 @@ fn std_highp_full_domain_and_restricted_masks() {
 // A feature-context tail must use the same graph as the packed body. In
 // particular BackendDependent Caller must retain its token rather than switch
 // to ScalarToken (which intentionally uses separate arithmetic).
-#[archmage::magetypes(v4x(cfg(avx512)), v3, neon, wasm128, scalar)]
-fn bounded_widths_and_tails(token: Token) {
+#[archmage::attune(_*_t, +v4(cfg(avx512)), +v4x(cfg(avx512)))]
+fn bounded_widths_and_tails(token: Token, expected: &str) {
+    assert_eq!(<Token as archmage::SimdToken>::NAME, expected);
     use crate::simd::generic::{f32x4, f32x8};
     fn check<const FLAGS: u32>(token: Token) {
         let mut state = 0x9e37_79b9_u32;
@@ -661,7 +664,7 @@ fn bounded_widths_and_tails(token: Token) {
                 state ^= state << 13;
                 state ^= state >> 17;
                 state ^= state << 5;
-                if FLAGS & 3 != 0 && i % 17 == 0 {
+                if FLAGS & 3 != 0 && FLAGS & PowfOptions::POSITIVE == 0 && i % 17 == 0 {
                     0.0
                 } else {
                     f32::from_bits(0x3780_0000 + state % 0x1000_0001)
@@ -673,7 +676,10 @@ fn bounded_widths_and_tails(token: Token) {
                     .unwrap()
                     .to_array()[0];
                 if FLAGS & PowfOptions::CALLER == 0 || FLAGS & PowfOptions::BACKEND == 0 {
-                    assert_eq!(try_powf_with::<FLAGS>(x, n).unwrap().to_bits(), result.to_bits());
+                    assert_eq!(
+                        try_powf_with::<FLAGS>(x, n).unwrap().to_bits(),
+                        result.to_bits()
+                    );
                 }
                 result.to_bits()
             });
@@ -716,28 +722,82 @@ fn bounded_widths_and_tails(token: Token) {
         ($($f:literal),* $(,)?) => { $(check::<$f>(token);)* };
     }
     flags!(
-        0, 1, 2, 4, 5, 6, 8, 9, 10, 12, 13, 14, 16, 17, 18, 20, 21, 22, 24,
-        25, 26, 28, 29, 30, 32, 33, 34, 36, 37, 38, 40, 41, 42, 44, 45, 46,
-        48, 49, 50, 52, 53, 54, 56, 57, 58, 60, 61, 62,
+        0, 1, 2, 4, 5, 6, 8, 9, 10, 12, 13, 14, 16, 17, 18, 20, 21, 22, 24, 25, 26, 28, 29, 30, 32,
+        33, 34, 36, 37, 38, 40, 41, 42, 44, 45, 46, 48, 49, 50, 52, 53, 54, 56, 57, 58, 60, 61, 62,
+        130, 134, 138, 142, 146, 150, 154, 158, 162, 166, 170, 174, 178, 182, 186, 190,
     );
 }
 
 #[test]
 fn all_bounded_policies_match_single_vector_and_tail_forms() {
-    bounded_widths_and_tails_scalar(archmage::ScalarToken);
-    #[cfg(target_arch = "x86_64")]
-    {
-        use archmage::SimdToken;
-        if let Some(token) = archmage::X64V3Token::summon() {
-            bounded_widths_and_tails_v3(token);
-        }
-        #[cfg(feature = "avx512")]
-        if let Some(token) = archmage::X64V4xToken::summon() {
-            bounded_widths_and_tails_v4x(token);
+    require_tier!(bounded_widths_and_tails);
+}
+
+#[test]
+fn positive_gamma_preserves_nonzero_graph_and_rejects_zero() {
+    fn check<const FLAGS: u32, const GAMMA_FLAGS: u32>() {
+        let options = PowfOptions {
+            domain: PowfDomain::PositiveGamma,
+            execution: if FLAGS & PowfOptions::CALLER != 0 {
+                PowfExecution::Caller
+            } else {
+                PowfExecution::Automatic
+            },
+            portability: if FLAGS & PowfOptions::BACKEND != 0 {
+                PowfPortability::BackendDependent
+            } else {
+                PowfPortability::BitExact
+            },
+            precision: if FLAGS & PowfOptions::HIGHP != 0 {
+                PowfPrecision::Highp
+            } else if FLAGS & PowfOptions::LOWP != 0 {
+                PowfPrecision::Lowp
+            } else {
+                PowfPrecision::Midp
+            },
+            validation: if FLAGS & PowfOptions::ASSUME != 0 {
+                PowfValidation::AssumeValid
+            } else {
+                PowfValidation::Checked
+            },
+        };
+        assert_eq!(options.bits(), FLAGS);
+        for n in [0., -0., 0.5, 2.4, 4.] {
+            let input = [1.0 / 65_536.0, 0.75, 1., 65_536.0];
+            let got = try_powf_array_with::<FLAGS, 4>(input, n).unwrap();
+            let gamma = try_powf_array_with::<GAMMA_FLAGS, 4>(input, n).unwrap();
+            assert_eq!(got.map(f32::to_bits), gamma.map(f32::to_bits));
+            assert_eq!(
+                got.map(f32::to_bits),
+                try_powf_array_runtime(input, n, options)
+                    .unwrap()
+                    .map(f32::to_bits)
+            );
+            if options.validation == PowfValidation::Checked {
+                for x in [0., -0., f32::from_bits(1), f32::NAN, f32::INFINITY] {
+                    assert_eq!(
+                        try_powf_array_with::<FLAGS, 4>([1., x, 1., x], n).unwrap_err(),
+                        PowfError {
+                            kind: PowfErrorKind::InvalidBase,
+                            lane_mask: 10
+                        }
+                    );
+                }
+            }
         }
     }
-    #[cfg(target_arch = "aarch64")]
-    bounded_widths_and_tails_neon(archmage::NeonToken::summon().unwrap());
-    #[cfg(target_arch = "wasm32")]
-    bounded_widths_and_tails_wasm128(archmage::Wasm128Token::summon().unwrap());
+    macro_rules! flags {
+        ($($f:literal),* $(,)?) => { $(check::<$f, {$f & !128}>();)* };
+    }
+    flags!(
+        130, 134, 138, 142, 146, 150, 154, 158, 162, 166, 170, 174, 178, 182, 186, 190
+    );
+    flags!(194, 198, 226, 230);
+    #[cfg(feature = "std")]
+    {
+        flags!(210, 214, 242, 246);
+    }
+    for bits in [128, 129, 131, 255, 256] {
+        assert!(!PowfOptions::valid(bits));
+    }
 }

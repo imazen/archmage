@@ -145,6 +145,8 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 
 #### Added
 
+- Add checked positive-only Gamma presets for portable and backend-dependent MIDP/LOWP; assumed configurations remove zero masks and redundant range work while preserving Gamma result bits on positive inputs. Verify all 64 bounded encodings across scalar, vector and tail forms.
+
 - Keep unoptimized powf runtime policy frames separate to avoid default WASM stack exhaustion; release inlining is unchanged (354be602).
 
 - Add canonical BitExact HIGHP power, including Full and Gamma presets, with a safe Arm graph port, exact-rational fixtures and no_std fallback. BackendDependent HIGHP retains std delegation.
