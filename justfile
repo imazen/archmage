@@ -737,3 +737,6 @@ powf-policy-avx512-check fixtures sde:
 
 powf-policy-miri-highp:
     cargo +$(cat xtask/miri-nightly.txt) miri test -p magetypes --features avx512 --lib powf::tests::std_highp_full_domain_and_restricted_masks
+
+powf-highp-cross directory fixtures sde wasm_runner="wasmtime":
+    bash benchmarks/powf_module_2026-11-07/highp_cross.sh "{{directory}}" "{{fixtures}}" "{{sde}}" "{{wasm_runner}}"
