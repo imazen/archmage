@@ -28,6 +28,8 @@ replaced by another implementation under their names. This is 32 cells;
 repeat each buffer exactly 1,048,576/size times, reset chain for each repeat.
 Input and normalization match the direct-provider study. Native and Rust
 adapters have different call overhead, which is included and must be disclosed.
+The native worker also exposes system C powf as an adapter-matched scalar
+reference. EMPTY arms measure transport only and perform zero math evaluations.
 
 Fifty interleaved retained zenbench rounds; unchanged common admission gates,
 all-retained-round paired 95% confidence intervals. Predeclare all real-provider

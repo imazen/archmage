@@ -22,6 +22,9 @@
 #include <immintrin.h>
 #include <gnu/libc-version.h>
 #endif
+#ifdef __aarch64__
+#include <arm_neon.h>
+#endif
 static float from_bits(uint32_t v) {float f; std::memcpy(&f,&v,4);return f;}
 static uint32_t bits(float f) {uint32_t v;std::memcpy(&v,&f,4);return v;}
 static void *required_dso(const char *name) {
@@ -43,19 +46,35 @@ __attribute__((target("avx2,fma"))) static void vector8(void *fn,const float *x,
     _mm256_storeu_ps(out,reinterpret_cast<F>(fn)(_mm256_loadu_ps(x),_mm256_loadu_ps(n)));
 }
 #endif
+#ifdef __aarch64__
+static void vector4(void *fn,const float *x,const float *n,float *out) {
+    typedef float32x4_t (*F)(float32x4_t,float32x4_t) __attribute__((aarch64_vector_pcs));
+    vst1q_f32(out,reinterpret_cast<F>(fn)(vld1q_f32(x),vld1q_f32(n)));
+}
+#endif
 static void evaluate(const Provider &p,const float *x,const float *n,float *out,size_t width) {
     if(width%p.lanes)throw std::runtime_error("logical width cannot contain native ABI width");
     for(size_t i=0;i<width;i+=p.lanes) {
         if(p.lanes==1)out[i]=reinterpret_cast<Scalar>(p.fn)(x[i],n[i]);
-#ifdef __x86_64__
+#if defined(__x86_64__) || defined(__aarch64__)
         else if(p.lanes==4)vector4(p.fn,x+i,n+i,out+i);
+#endif
+#ifdef __x86_64__
         else if(p.lanes==8)vector8(p.fn,x+i,n+i,out+i);
 #endif
         else throw std::runtime_error("unsupported ABI width");
     }
 }
 static void load() {
+#ifdef __APPLE__
+    providers.push_back({"system_C_powf",symbol(required_dso("/usr/lib/libSystem.B.dylib"),"powf"),1});
+#else
+    providers.push_back({"system_C_powf",symbol(required_dso("libm.so.6"),"powf"),1});
+#endif
     if(const char *arm=std::getenv("POWF_ARM_DSO"))providers.push_back({"Arm_v26_07_scalar",symbol(required_dso(arm),"powf"),1});
+#if defined(__aarch64__) && !defined(__APPLE__)
+    if(const char *arm=std::getenv("POWF_ARM_DSO"))providers.push_back({"Arm_v26_07_AdvSIMD_x4",symbol(required_dso(arm),"_ZGVnN4vv_powf"),4});
+#endif
 #ifdef __x86_64__
     if(std::strcmp(gnu_get_libc_version(),"2.43"))throw std::runtime_error("libmvec version differs from frozen 2.43; update manifest before timing");
     auto *gnu=required_dso("libmvec.so.1");
@@ -84,7 +103,10 @@ static void load() {
     if(fpcr&((1ull<<24)|(1ull<<19)))throw std::runtime_error("requires gradual underflow");
     std::cerr<<"FPCR="<<std::hex<<fpcr<<std::dec<<"\n";
 #endif
-    for(auto &p:providers)std::cerr<<"PROVIDER "<<p.name<<" lanes="<<p.lanes<<"\n";
+    for(auto &p:providers) {
+        Dl_info info{};if(!dladdr(p.fn,&info)||!info.dli_fname)throw std::runtime_error("cannot identify provider DSO");
+        std::cerr<<"PROVIDER "<<p.name<<" lanes="<<p.lanes<<" DSO "<<info.dli_fname<<"\n";
+    }
 }
 static std::string request(const std::string &line) {
     if(line=="EMPTY")return "00000000\n";
@@ -92,14 +114,14 @@ static std::string request(const std::string &line) {
     if(!in||!(width==1||width==4||width==8||width==16))throw std::runtime_error("bad width");
     const Provider *p=nullptr;for(auto &v:providers)if(v.name==method)p=&v;
     if(!p)throw std::runtime_error("unknown provider: "+method);
-    std::array<float,16>x{},n{},out{};
+    std::array<float,16>x{},n{},out{};std::vector<float> traced;
     if(op=="E") {
         for(size_t i=0;i<width;i++) {uint32_t xb,nb;in>>std::hex>>xb>>nb;x[i]=from_bits(xb);n[i]=from_bits(nb);}
         if(!in)throw std::runtime_error("truncated E input");
         evaluate(*p,x.data(),n.data(),out.data(),width);
-    } else if(op=="B") {
+    } else if(op=="B"||op=="T") {
         size_t size,repeats;int chain;uint32_t exponent;in>>size>>chain>>std::hex>>exponent>>std::dec>>repeats;
-        if(!in||!(size==64||size==4096)||size*repeats!=1048576||(chain!=0&&chain!=1))throw std::runtime_error("bad B workload");
+        if(!in||!(size==64||size==4096)||(op=="T"?repeats!=1:size*repeats!=1048576)||(chain!=0&&chain!=1))throw std::runtime_error("bad B/T workload");
         std::vector<float>input(size),output(size);
         for(size_t i=0;i<size;i++)input[i]=float((i%255)+1)/255.f;
         n.fill(from_bits(exponent));
@@ -115,8 +137,10 @@ static std::string request(const std::string &line) {
             asm volatile(""::"m"(output):"memory");
         }
         std::copy_n(output.end()-width,width,out.begin());
+        if(op=="T")traced=output;
     } else throw std::runtime_error("bad operation");
     std::ostringstream response;response<<std::hex;
+    if(op=="T") {for(auto v:traced){response.width(8);response.fill('0');response<<bits(v)<<' ';}response<<'\n';return response.str();}
     for(size_t i=0;i<width;i++){response.width(8);response.fill('0');response<<bits(out[i])<<' ';}
     response<<'\n';return response.str();
 }

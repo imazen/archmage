@@ -61,7 +61,10 @@ def main():
             all_outputs[key]=(broadcast,mixed)
             stats={'width':width,'native_lanes':provider['lanes'],'classes':{},'rounded_differences':0,
                    'max_finite_output_ulp_upper':0.,'worst':None,'nonfinite_mismatches_against_MPFR':0,
-                   'range_witnesses':[],'mixed_lane_non_NaN_differences':0,'NaN_payload_lane_differences':0}
+                   'range_witnesses':[],'classification_mismatches_against_MPFR':0,
+                   'mixed_lane_non_NaN_differences':0,'NaN_payload_lane_differences':0}
+            gamma={'positive_samples':0,'rounded_differences':0,'classification_mismatches_against_MPFR':0,
+                   'max_finite_output_ulp_upper':0.,'worst':None}
             for index,(lanes,b) in enumerate(zip(broadcast,mixed,strict=True)):
                 cls=classify(b);stats['classes'][cls]=stats['classes'].get(cls,0)+1
                 for value in lanes:
@@ -71,16 +74,26 @@ def main():
                 if refs[index] is None:continue
                 rounded,(bounds,quantum)=refs[index]
                 stats['rounded_differences']+=b!=rounded
+                xb,nb=map(lambda text:model.fp.value(int(text,16)),rows[index][:2])
+                in_gamma=2**-16<=xb<=2**16 and 0<=nb<=4
+                if in_gamma:
+                    gamma['positive_samples']+=1;gamma['rounded_differences']+=b!=rounded
+                    gamma['classification_mismatches_against_MPFR']+=classify(b)!=classify(rounded)
+                if classify(b)!=classify(rounded):
+                    stats['classification_mismatches_against_MPFR']+=1
+                    if len(stats['range_witnesses'])<8:stats['range_witnesses'].append({'input':rows[index],'actual':f'{b:08x}','rounded_MPFR':f'{rounded:08x}'})
                 y=model.fp.value(b)
                 if not math.isfinite(y) and b!=rounded:
                     stats['nonfinite_mismatches_against_MPFR']+=1
-                    if len(stats['range_witnesses'])<8:stats['range_witnesses'].append({'input':rows[index],'actual':f'{b:08x}','rounded_MPFR':f'{rounded:08x}'})
                 if not math.isfinite(y) or not all(math.isfinite(z) for z in bounds):continue
                 value=Fraction.from_float(y)
                 error=max(abs(value-Fraction.from_float(z)) for z in bounds)/(Fraction(2)**quantum)
                 error=math.nextafter(float(error),math.inf) if error else 0.
                 if error>stats['max_finite_output_ulp_upper']:
                     stats.update(max_finite_output_ulp_upper=error,worst={'input':rows[index],'actual':f'{b:08x}','reference':bounds})
+                if in_gamma and error>gamma['max_finite_output_ulp_upper']:
+                    gamma.update(max_finite_output_ulp_upper=error,worst={'input':rows[index],'actual':f'{b:08x}','reference':bounds})
+            stats['Gamma_positive_input_subset']=gamma
             report['providers'][key]=stats
             (a.directory/'progress.json').write_text(json.dumps({'completed_provider_widths':len(all_outputs),'last':key})+'\n')
             print(json.dumps({'provider':key,**stats}),flush=True)

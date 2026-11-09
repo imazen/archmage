@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import sys
 import time
 
 RUST_METHODS = ['std', 'Rust_libm_0_2_16', 'SLEEF_0_3_3_scalar_u10',
@@ -26,6 +27,14 @@ def discover(rust, native, v3=None):
                  for m in RUST_METHODS]
     result = subprocess.run([str(native.resolve()), '--list'], capture_output=True, text=True)
     result.check_returncode()
+    resolved={}
+    for line in result.stderr.splitlines():
+        if ' DSO ' not in line:continue
+        path=line.split(' DSO ',1)[1]
+        if Path(path).is_file():resolved[path]={'sha256':digest(path)}
+        else:
+            assert sys.platform=='darwin' and path.startswith('/usr/lib/'), 'unresolved native DSO identity'
+            resolved[path]={'identity':'macOS shared-cache mapping; retain sw_vers OS build identity'}
     for line in result.stdout.splitlines():
         method, lanes = line.split()
         providers.append({'label': method, 'method': method, 'worker': 1, 'lanes': int(lanes)})
@@ -34,6 +43,7 @@ def discover(rust, native, v3=None):
         providers.extend({'label': m+'_Rust_AVX2_FMA', 'method': m, 'worker': 2, 'lanes': 1}
                          for m in RUST_METHODS[2:])
     return {'workers': workers, 'providers': providers, 'native_diagnostics': result.stderr,
+            'resolved_native_dsos':resolved,
             'dsos': {name: {'path': value, 'sha256': digest(value)} for name, value in os.environ.items()
                      if name in ['POWF_ARM_DSO', 'POWF_AOCL_DSO', 'POWF_AOCL_FAST_DSO']},
             'timing_unit': 'ns per 1,048,576 actual evaluations including one socket request',

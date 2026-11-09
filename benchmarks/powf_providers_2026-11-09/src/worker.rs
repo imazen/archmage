@@ -22,12 +22,13 @@ fn execute_method<const N: usize, const M: u8>(f: &[&str]) -> Vec<u32> {
         let n: [f32; N] = core::array::from_fn(|i| f32::from_bits(u32::from_str_radix(f[4+2*i],16).unwrap()));
         return calculate::<N,M>( x, n).map(f32::to_bits).to_vec();
     }
-    assert_eq!(f[0], "B"); assert_eq!(f.len(), 7);
+    assert!(["B","T"].contains(&f[0])); assert_eq!(f.len(), 7);
     let size: usize = f[3].parse().unwrap();
     let chain = match f[4] { "0" => false, "1" => true, _=>panic!("bad mode") };
     let n = f32::from_bits(u32::from_str_radix(f[5],16).unwrap());
     let repeats: usize = f[6].parse().unwrap();
-    assert!([64,4096].contains(&size) && size%N==0 && repeats*size==1_048_576);
+    assert!([64,4096].contains(&size) && size%N==0 &&
+        if f[0]=="T" {repeats==1} else {repeats*size==1_048_576});
     let input: Vec<[f32;N]> = (0..size/N).map(|i|core::array::from_fn(|j|(((i*N+j)%255)+1) as f32/255.)).collect();
     let mut output = vec![[0.;N];input.len()];
     for _ in 0..repeats {
@@ -39,7 +40,8 @@ fn execute_method<const N: usize, const M: u8>(f: &[&str]) -> Vec<u32> {
         }
         std::hint::black_box(&output);
     }
-    output.last().unwrap().map(f32::to_bits).to_vec()
+    if f[0]=="T" {output.iter().flatten().map(|v|v.to_bits()).collect()}
+    else {output.last().unwrap().map(f32::to_bits).to_vec()}
 }
 fn execute<const N: usize>(f: &[&str]) -> Vec<u32> {
     match f[1] {
