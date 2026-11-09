@@ -19,7 +19,10 @@ pub(super) enum Plan {
 }
 
 #[inline(always)]
-fn select_impl<T: SimdToken, const EXACT: bool>(token: T, execution: PowfExecution) -> Plan {
+fn select_impl<T: SimdToken, const EXACT: bool, const DOUBLE: bool>(
+    token: T,
+    execution: PowfExecution,
+) -> Plan {
     let _ = token;
     #[cfg(any(
         target_arch = "x86_64",
@@ -48,12 +51,22 @@ fn select_impl<T: SimdToken, const EXACT: bool>(token: T, execution: PowfExecuti
     }
     #[cfg(target_arch = "wasm32")]
     if let Some(t) = any.downcast_ref::<archmage::Wasm128Token>() {
-        return Plan::Wasm(*t, !EXACT || crate::wasm_fma::powf_f32_fuses());
+        return Plan::Wasm(
+            *t,
+            !EXACT
+                || if DOUBLE {
+                    crate::wasm_fma::powf_f64_fuses()
+                } else {
+                    crate::wasm_fma::powf_f32_fuses()
+                },
+        );
     }
     if execution == PowfExecution::Caller {
         return Plan::Software;
     }
-    let plan = if EXACT {
+    let plan = if DOUBLE {
+        archmage::reattune!(upgrade_highp(), [_v3_t, _neon_t, _wasm128_t, _scalar_t])
+    } else if EXACT {
         archmage::reattune!(upgrade(), [_v3_t, _neon_t, _wasm128_t, _scalar_t])
     } else {
         archmage::reattune!(upgrade_relaxed(), [_v3_t, _neon_t, _wasm128_t, _scalar_t])
@@ -62,7 +75,7 @@ fn select_impl<T: SimdToken, const EXACT: bool>(token: T, execution: PowfExecuti
         return plan;
     }
     #[cfg(all(feature = "std", not(miri)))]
-    if EXACT && super::std_probe::available() {
+    if EXACT && !DOUBLE && super::std_probe::available() {
         return Plan::Std;
     }
     Plan::Software
@@ -77,17 +90,17 @@ fn upgrade(token: Token) -> Plan {
 
 #[inline(always)]
 pub(super) fn select<T: SimdToken>(token: T, execution: PowfExecution) -> Plan {
-    select_impl::<T, true>(token, execution)
+    select_impl::<T, true, false>(token, execution)
 }
 
 #[inline(always)]
 pub(super) fn select_relaxed<T: SimdToken>(token: T, execution: PowfExecution) -> Plan {
-    select_impl::<T, false>(token, execution)
+    select_impl::<T, false, false>(token, execution)
 }
 
 #[archmage::attune(_*_t)]
 fn upgrade_relaxed(token: Token) -> Plan {
-    select_impl::<_, false>(token, PowfExecution::Caller)
+    select_impl::<_, false, false>(token, PowfExecution::Caller)
 }
 
 macro_rules! run_const {
@@ -161,3 +174,12 @@ run_const!(
     kernel16_with_scalar,
     16
 );
+
+#[archmage::attune(_*_t)]
+fn upgrade_highp(token: Token) -> Plan {
+    select_impl::<_, true, true>(token, PowfExecution::Caller)
+}
+#[inline(always)]
+pub(super) fn select_highp<T: SimdToken>(token: T, execution: PowfExecution) -> Plan {
+    select_impl::<T, true, true>(token, execution)
+}

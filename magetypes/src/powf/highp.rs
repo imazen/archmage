@@ -1,4 +1,4 @@
-//! Scalar std backend. No cross-platform bit or ULP guarantee is inferred.
+//! Shared whole-vector HIGHP validation and the explicitly std-backed policy.
 use super::{PowfError, PowfErrorKind, PowfOptions};
 
 #[inline(always)]
@@ -49,6 +49,7 @@ pub(super) fn check_results<const OPTIONS: u32, const N: usize>(
     }
     Ok(())
 }
+#[cfg(feature = "std")]
 #[inline(always)]
 pub(super) fn run<const OPTIONS: u32, const N: usize>(
     bases: [f32; N],

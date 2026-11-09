@@ -14,6 +14,18 @@ pub(crate) fn powf_f32_fuses() -> bool {
     {
         relaxed_probe::fuses_f32()
     }
+    // Canonical HIGHP uses binary64 intermediates; screen that operator separately.
+    pub(crate) fn powf_f64_fuses() -> bool {
+        #[cfg(target_feature = "relaxed-simd")]
+        {
+            relaxed_probe::fuses_f64()
+        }
+        #[cfg(not(target_feature = "relaxed-simd"))]
+        {
+            false
+        }
+    }
+
     #[cfg(not(target_feature = "relaxed-simd"))]
     {
         false

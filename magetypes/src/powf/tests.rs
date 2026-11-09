@@ -568,7 +568,9 @@ fn new_policy_presets_and_invalid_runtime_combinations() {
     }
     for opts in [
         PowfOptions::new().with_domain(PowfDomain::Full),
-        PowfOptions::new().with_precision(PowfPrecision::Highp),
+        PowfOptions::new()
+            .with_precision(PowfPrecision::Lowp)
+            .with_domain(PowfDomain::Full),
     ] {
         assert_eq!(
             try_powf_runtime(1., 2.4, opts).unwrap_err(),

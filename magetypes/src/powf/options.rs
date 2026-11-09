@@ -11,8 +11,8 @@ pub enum PowfDomain {
     /// +0 or positive normal [2^-16,2^16], exponent normal or zero in [0,4].
     /// The approximation's output is positive normal or +0 without a range check.
     Gamma,
-    /// Full f32 input/output domain, available only for backend-dependent HIGHP.
-    /// Uses std power semantics, including its NaNs, signed zeros and infinities.
+    /// Full f32 input/output domain for HIGHP.
+    /// BitExact uses the canonical graph; BackendDependent uses std semantics.
     Full,
 }
 
@@ -46,8 +46,8 @@ pub enum PowfPrecision {
     Midp,
     /// Existing shorter LOWP coefficients; prefer a bounded Gamma preset.
     Lowp,
-    /// Std scalar power, requiring `std` and BackendDependent portability.
-    /// Inherits std's unspecified precision; this is not a ONE_ULP promise.
+    /// Table-based binary64 graph for BitExact; std power for BackendDependent.
+    /// BackendDependent requires `std`. Neither is a global ONE_ULP promise.
     Highp,
 }
 
@@ -92,6 +92,14 @@ impl PowfOptions {
     /// BitExact LOWP, Gamma range, checked, automatic execution.
     pub const PORTABLE_GAMMA_LOWP: Self =
         Self::PORTABLE_GAMMA_MIDP.with_precision(PowfPrecision::Lowp);
+    /// Canonical HIGHP, Gamma range, checked, automatic execution.
+    pub const PORTABLE_GAMMA_HIGHP: Self =
+        Self::PORTABLE_GAMMA_MIDP.with_precision(PowfPrecision::Highp);
+    /// Canonical HIGHP, full f32 domain, automatic execution.
+    /// NaN classification is canonical; NaN payload and sign are unspecified.
+    pub const PORTABLE_HIGHP: Self = Self::new()
+        .with_precision(PowfPrecision::Highp)
+        .with_domain(PowfDomain::Full);
     /// Backend-dependent MIDP, Gamma range, checked, automatic execution.
     pub const BACKEND_GAMMA_MIDP: Self =
         Self::PORTABLE_GAMMA_MIDP.with_portability(PowfPortability::BackendDependent);
@@ -176,7 +184,7 @@ impl PowfOptions {
             return false;
         }
         if bits & Self::HIGHP != 0 {
-            cfg!(feature = "std") && bits & Self::BACKEND != 0
+            bits & Self::BACKEND == 0 || cfg!(feature = "std")
         } else {
             bits & 3 != 3
         }

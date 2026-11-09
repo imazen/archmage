@@ -61,7 +61,6 @@ pub fn try_powf_array_with<const OPTIONS: u32, const N: usize>(
     const {
         assert!(PowfOptions::valid(OPTIONS), "invalid powf const options");
     }
-    #[cfg(feature = "std")]
     if OPTIONS & PowfOptions::HIGHP != 0 {
         if !matches!(N, 1 | 4 | 8) && !(cfg!(feature = "w512") && N == 16) {
             return Err(PowfError {
@@ -70,7 +69,7 @@ pub fn try_powf_array_with<const OPTIONS: u32, const N: usize>(
             });
         }
         exponent::<OPTIONS, N>(n)?;
-        return super::highp::run::<OPTIONS, N>(bases, n);
+        return super::highp_dispatch::for_token::<_, OPTIONS, N>(archmage::ScalarToken, bases, n);
     }
     use archmage::ScalarToken;
     let mut output = [0.0; N];
@@ -124,12 +123,9 @@ macro_rules! vector {
             n: f32,
         ) -> Result<crate::simd::generic::$float<T>, PowfError> {
             exponent::<OPTIONS, $n>(n)?;
-            #[cfg(feature = "std")]
             if OPTIONS & PowfOptions::HIGHP != 0 {
-                let bases = input.to_array();
-                super::highp::check_bases::<OPTIONS, $n>(&bases, n)?;
-                let result = bases.map(|x| x.powf(n));
-                super::highp::check_results::<OPTIONS, $n>(&bases, &result, n)?;
+                let result =
+                    super::highp_dispatch::for_token::<_, OPTIONS, $n>(token, input.to_array(), n)?;
                 return Ok(crate::simd::generic::$float::from_array_t(token, result));
             }
             let caller = select::<T, OPTIONS>(token, PowfExecution::Caller);
@@ -168,7 +164,13 @@ fn select<T: archmage::SimdToken, const OPTIONS: u32>(
     token: T,
     execution: PowfExecution,
 ) -> dispatch::Plan {
-    if OPTIONS & PowfOptions::BACKEND != 0 {
+    if OPTIONS & PowfOptions::HIGHP != 0 {
+        if OPTIONS & PowfOptions::BACKEND != 0 {
+            dispatch::Plan::Software
+        } else {
+            dispatch::select_highp(token, execution)
+        }
+    } else if OPTIONS & PowfOptions::BACKEND != 0 {
         dispatch::select_relaxed(token, execution)
     } else {
         dispatch::select(token, execution)
@@ -177,7 +179,7 @@ fn select<T: archmage::SimdToken, const OPTIONS: u32>(
 
 // The runtime adapter shares literal const instantiations with the hot API.
 // Every policy arm is outside the polynomial; no dynamic flags enter Horner steps.
-// Keep the 64-arm runtime decoder and each selected graph in separate frames
+// Keep the runtime decoder and each selected graph in separate frames
 // in unoptimized builds. Forced inlining otherwise exhausts the WASM stack.
 // Preserve release specialization and the measured optimized call shape.
 #[cfg_attr(debug_assertions, inline(never))]
@@ -194,9 +196,8 @@ fn token_array<T: archmage::SimdToken, const OPTIONS: u32, const N: usize>(
         });
     }
     exponent::<OPTIONS, N>(n)?;
-    #[cfg(feature = "std")]
     if OPTIONS & PowfOptions::HIGHP != 0 {
-        return super::highp::run::<OPTIONS, N>(bases, n);
+        return super::highp_dispatch::for_token::<_, OPTIONS, N>(token, bases, n);
     }
     let plan = select::<T, OPTIONS>(
         token,
@@ -289,6 +290,22 @@ pub(super) fn runtime<T: archmage::SimdToken, const N: usize>(
         60 => token_array::<T, 60, N>(token, bases, n),
         61 => token_array::<T, 61, N>(token, bases, n),
         62 => token_array::<T, 62, N>(token, bases, n),
+        64 => token_array::<T, 64, N>(token, bases, n),
+        65 => token_array::<T, 65, N>(token, bases, n),
+        66 => token_array::<T, 66, N>(token, bases, n),
+        67 => token_array::<T, 67, N>(token, bases, n),
+        68 => token_array::<T, 68, N>(token, bases, n),
+        69 => token_array::<T, 69, N>(token, bases, n),
+        70 => token_array::<T, 70, N>(token, bases, n),
+        71 => token_array::<T, 71, N>(token, bases, n),
+        96 => token_array::<T, 96, N>(token, bases, n),
+        97 => token_array::<T, 97, N>(token, bases, n),
+        98 => token_array::<T, 98, N>(token, bases, n),
+        99 => token_array::<T, 99, N>(token, bases, n),
+        100 => token_array::<T, 100, N>(token, bases, n),
+        101 => token_array::<T, 101, N>(token, bases, n),
+        102 => token_array::<T, 102, N>(token, bases, n),
+        103 => token_array::<T, 103, N>(token, bases, n),
         #[cfg(feature = "std")]
         80 => token_array::<T, 80, N>(token, bases, n),
         #[cfg(feature = "std")]

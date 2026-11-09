@@ -1,12 +1,13 @@
 //! Configurable f32 power with explicit portability, precision and validation.
 //!
 //! MIDP and LOWP evaluate fixed approximations to `exp2(n * log2(x))`;
-//! backend-dependent HIGHP delegates to std when the `std` feature is enabled.
+//! BitExact HIGHP evaluates a canonical binary64 graph. BackendDependent HIGHP
+//! delegates to std when the `std` feature is enabled.
 //! The default promises bit identity on accepted inputs; this is not
 //! correctly rounded `powf`, and no whole-domain ULP bound is advertised.
 //! Round-to-nearest and gradual underflow are required. NaN/infinite inputs,
 //! negative bases, subnormal inputs and unsupported output ranges are rejected
-//! by restricted Checked presets. Full HIGHP permits all std inputs/results.
+//! by restricted Checked presets. Full HIGHP permits all f32 inputs/results; NaN payloads are unspecified.
 //! AssumeValid omits numerical checks while retaining memory safety.
 //! Existing `pow_lowp`/`pow_midp` methods retain their existing behavior.
 //!
@@ -21,8 +22,11 @@ pub(crate) mod const_api;
 mod dispatch;
 pub use const_api::{try_powf_array_with, try_powf_with};
 mod graph;
-#[cfg(feature = "std")]
 mod highp;
+mod highp_data;
+mod highp_dispatch;
+mod highp_scalar;
+mod highp_simd;
 mod std_probe;
 #[cfg(test)]
 mod tests;
