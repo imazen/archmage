@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 import hashlib
 import json
 import os
+import platform
 from pathlib import Path
 import subprocess
 import sys
@@ -13,6 +14,20 @@ import time
 RUST_METHODS = ['std', 'Rust_libm_0_2_16', 'SLEEF_0_3_3_scalar_u10',
                 'SLEEF_0_3_3_scalar_fast', 'SLEEF_0_3_3_vector_u10',
                 'SLEEF_0_3_3_vector_fast']
+ARM_C_ENV = {'POWF_ARM_C_'+name.upper() for name in [
+    'x86_64_separate_errno1','AVX2_FMA_errno1','AVX_FMA_no_AVX2_errno1',
+    'AVX2_FMA_errno0','native_errno1','Armv8_FMA_errno1','Armv8_separate_errno1','Armv8_FMA_TOINT0_errno1']}
+
+def native_identity():
+    if sys.platform=='linux':
+        fields=dict(line.split(':',1)for line in Path('/proc/cpuinfo').read_text().split('\n\n',1)[0].splitlines()if ':'in line)
+        fields={k.strip():v.strip()for k,v in fields.items()}
+        return {'machine':platform.machine(),'model':fields.get('model name',fields.get('CPU implementer')),
+                'features':sorted(fields.get('flags',fields.get('Features','')).split())}
+    if sys.platform=='darwin':
+        return {'machine':platform.machine(),'model':subprocess.check_output(['sysctl','-n','machdep.cpu.brand_string'],text=True).strip(),
+                'OS_build':subprocess.check_output(['sw_vers','-buildVersion'],text=True).strip()}
+    raise RuntimeError('unregistered native diagnostic host')
 
 def save(path, value):
     path.write_text(json.dumps(value, indent=2)+'\n')
@@ -23,8 +38,10 @@ def digest(path):
 def load_manifest(path):
     """Restore the frozen DSO selection before launching any worker."""
     manifest = json.loads(Path(path).read_text())
+    if manifest.get('native_identity') is not None:
+        assert manifest['native_identity']==native_identity(),'host-specific native build moved to another CPU/context'
     allowed = {'POWF_ARM_DSO', 'POWF_AOCL_DSO', 'POWF_AOCL_FAST_DSO',
-               'POWF_CORE_MATH_DSO', 'POWF_CORE_MATH_FMA_DSO'}
+               'POWF_CORE_MATH_DSO', 'POWF_CORE_MATH_FMA_DSO'} | ARM_C_ENV
     assert set(manifest['dsos']) <= allowed
     for name in allowed:
         os.environ.pop(name, None)
@@ -38,6 +55,11 @@ def load_manifest(path):
         assert subprocess.check_output(['sw_vers', '-buildVersion'], text=True).strip() == manifest['os_build'], 'macOS shared-cache build changed'
     for worker in manifest['workers']:
         assert digest(worker['binary']) == worker['sha256'], 'frozen worker changed'
+    if 'runtime_env' in manifest:
+        assert set(manifest['runtime_env']) <= {'GLIBC_TUNABLES'}
+        for name,value in manifest['runtime_env'].items():
+            if value is None:os.environ.pop(name,None)
+            else:os.environ[name]=value
     return manifest
 
 def discover(rust, native, v3=None):
@@ -66,7 +88,7 @@ def discover(rust, native, v3=None):
             'os_build': subprocess.check_output(['sw_vers', '-buildVersion'], text=True).strip() if sys.platform == 'darwin' else None,
             'resolved_native_dsos':resolved,
             'dsos': {name: {'path': value, 'sha256': digest(value)} for name, value in os.environ.items()
-                     if name in ['POWF_ARM_DSO', 'POWF_AOCL_DSO', 'POWF_AOCL_FAST_DSO', 'POWF_CORE_MATH_DSO', 'POWF_CORE_MATH_FMA_DSO']},
+                     if name in {'POWF_ARM_DSO', 'POWF_AOCL_DSO', 'POWF_AOCL_FAST_DSO', 'POWF_CORE_MATH_DSO', 'POWF_CORE_MATH_FMA_DSO'} | ARM_C_ENV},
             'timing_unit': 'ns per 1,048,576 actual evaluations including one socket request',
             'compiler_flags': {'Rust_baseline': 'build-arm label; verify actual flags from retained Cargo fingerprint; nightly-2026-10-06',
                                'Rust_AVX2_FMA': '-C target-feature=+avx2,+fma; physical support required'},

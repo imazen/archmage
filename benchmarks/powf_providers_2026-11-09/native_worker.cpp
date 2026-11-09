@@ -3,6 +3,7 @@
 #include <array>
 #include <algorithm>
 #include <cerrno>
+#include <cctype>
 #include <cfenv>
 #include <cstdint>
 #include <cstring>
@@ -72,6 +73,22 @@ static void load() {
     providers.push_back({"system_C_powf",symbol(required_dso("libm.so.6"),"powf"),1});
 #endif
     if(const char *arm=std::getenv("POWF_ARM_DSO"))providers.push_back({"Arm_v26_07_scalar",symbol(required_dso(arm),"powf"),1});
+#ifdef __x86_64__
+    const std::array<const char*,5> arm_c_profiles={"x86_64_separate_errno1","AVX2_FMA_errno1","AVX_FMA_no_AVX2_errno1","AVX2_FMA_errno0","native_errno1"};
+#elif defined(__aarch64__)
+    const std::array<const char*,4> arm_c_profiles={"Armv8_FMA_errno1","Armv8_separate_errno1","Armv8_FMA_TOINT0_errno1","native_errno1"};
+#endif
+    for(const char *profile:arm_c_profiles) {
+        std::string env="POWF_ARM_C_"+std::string(profile);
+        std::transform(env.begin(),env.end(),env.begin(),[](unsigned char c){return std::toupper(c);});
+        if(const char *path=std::getenv(env.c_str())) {
+#ifdef __x86_64__
+            if(std::strstr(profile,"FMA")&& !(__builtin_cpu_supports("avx")&&__builtin_cpu_supports("fma")))throw std::runtime_error("Arm C profile requires usable AVX+FMA");
+            if(std::strstr(profile,"AVX2_")&& !std::strstr(profile,"no_AVX2")&&!__builtin_cpu_supports("avx2"))throw std::runtime_error("Arm C profile requires AVX2");
+#endif
+            providers.push_back({"Arm_powf_C_"+std::string(profile),symbol(required_dso(path),"arm_powf_reference"),1});
+        }
+    }
 #if defined(__aarch64__) && !defined(__APPLE__)
     if(const char *arm=std::getenv("POWF_ARM_DSO"))providers.push_back({"Arm_v26_07_AdvSIMD_x4",symbol(required_dso(arm),"_ZGVnN4vv_powf"),4});
 #endif
@@ -122,10 +139,17 @@ static std::string request(const std::string &line) {
     const Provider *p=nullptr;for(auto &v:providers)if(v.name==method)p=&v;
     if(!p)throw std::runtime_error("unknown provider: "+method);
     std::array<float,16>x{},n{},out{};std::vector<float> traced;
-    if(op=="E") {
+    if(op=="E"||op=="F") {
+        if(op=="F"&&width!=1)throw std::runtime_error("F requires one scalar lane");
         for(size_t i=0;i<width;i++) {uint32_t xb,nb;if(!(in>>std::hex>>xb>>nb))throw std::runtime_error("truncated E input");x[i]=from_bits(xb);n[i]=from_bits(nb);}
         if(!in)throw std::runtime_error("truncated E input");
+        if(op=="F") {std::feclearexcept(FE_ALL_EXCEPT);errno=0;}
         evaluate(*p,x.data(),n.data(),out.data(),width);
+        if(op=="F") {
+            int error=errno,flags=std::fetestexcept(FE_ALL_EXCEPT);
+            std::ostringstream response;response<<std::hex;response.width(8);response.fill('0');
+            response<<bits(out[0])<<' '<<std::dec<<error<<' '<<flags<<'\n';return response.str();
+        }
     } else if(op=="B"||op=="T") {
         size_t size,repeats;int chain;uint32_t exponent;in>>size>>chain>>std::hex>>exponent>>std::dec>>repeats;
         if(!in||!(size==64||size==4096)||(op=="T"?repeats!=1:size*repeats!=1048576)||(chain!=0&&chain!=1))throw std::runtime_error("bad B/T workload");

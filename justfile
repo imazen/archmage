@@ -828,3 +828,12 @@ powf-core-trace trace *options:
 
 powf-provider-artifacts mode directory manifest:
     python3 -B benchmarks/powf_providers_2026-11-09/artifact_manifest.py {{mode}} "{{directory}}" "{{manifest}}"
+
+powf-arm-c-prepare repository directory:
+    python3 -B benchmarks/powf_providers_2026-11-09/arm_powf_prepare.py "{{repository}}" "{{directory}}"
+
+powf-arm-c-manifest rust native build output *options:
+    python3 -B benchmarks/powf_providers_2026-11-09/arm_c_manifest.py "{{rust}}" "{{native}}" "{{build}}" "{{output}}" {{options}}
+
+powf-arm-c-flags manifest fixtures directory:
+    python3 -B benchmarks/powf_providers_2026-11-09/arm_c_flags.py "{{manifest}}" "{{fixtures}}" "{{directory}}"
