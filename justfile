@@ -613,6 +613,20 @@ powf-rounding-check:
     cargo test --release --locked --manifest-path benchmarks/powf_module_2026-11-07/Cargo.toml --lib
     POWF_VERIFY_ONLY=1 benchmarks/powf_module_2026-11-07/target/release/rounding_bench
 
+powf-policy-check:
+    cargo fmt --check
+    cargo test --release -p magetypes --all-features --lib powf::
+    cargo test --release -p magetypes --no-default-features --features w512 --lib powf::
+    cargo test --doc -p magetypes --all-features
+    cargo clippy -p magetypes --all-features --all-targets -- -D warnings
+
+powf-policy-build:
+    cargo build --release --locked --manifest-path benchmarks/powf_module_2026-11-07/Cargo.toml --bin policy_widths
+
+powf-policy-widths fixtures:
+    benchmarks/powf_module_2026-11-07/target/release/policy_widths scalar < "{{fixtures}}"
+    benchmarks/powf_module_2026-11-07/target/release/policy_widths native < "{{fixtures}}"
+
 powf-rounding-matrix directory *options:
     python3 -B benchmarks/powf_module_2026-11-07/replacement_matrix.py benchmarks/powf_module_2026-11-07/target/release/rounding_bench "{{directory}}" --rounding {{options}}
 

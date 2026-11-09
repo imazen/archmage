@@ -12,6 +12,7 @@ fn options(domain: u32) -> PowfOptions {
             _ => panic!("unknown test domain"),
         },
         execution: PowfExecution::Caller,
+        ..PowfOptions::new()
     }
 }
 
@@ -532,4 +533,50 @@ fn const_builder_encodes_each_supported_configuration() {
             assert_eq!(builder.bits(), expected);
         }
     }
+}
+
+#[test]
+fn new_policy_presets_and_invalid_runtime_combinations() {
+    for preset in [PowfOptions::PORTABLE_GAMMA_MIDP, PowfOptions::PORTABLE_GAMMA_LOWP,
+        PowfOptions::BACKEND_GAMMA_MIDP, PowfOptions::BACKEND_GAMMA_LOWP] {
+        assert_eq!(preset.domain, PowfDomain::Gamma);
+        assert_eq!(preset.validation, PowfValidation::Checked);
+        assert_eq!(try_powf_array_runtime([0.,1.,4.,16.],0.,preset).unwrap()[0].to_bits(),1f32.to_bits());
+        let error=try_powf_array_runtime([0.,f32::NAN,-0.,f32::from_bits(1)],2.4,preset).unwrap_err();
+        assert_eq!(error,PowfError{kind:PowfErrorKind::InvalidBase,lane_mask:14});
+    }
+    for opts in [PowfOptions::new().with_domain(PowfDomain::Full),
+        PowfOptions::new().with_precision(PowfPrecision::Highp)] {
+        assert_eq!(try_powf_runtime(1.,2.4,opts).unwrap_err(),PowfError{kind:PowfErrorKind::UnsupportedOptions,lane_mask:0});
+    }
+    #[cfg(not(feature="std"))]
+    assert_eq!(try_powf_runtime(1.,2.4,PowfOptions::STD_HIGHP).unwrap_err().kind,PowfErrorKind::UnsupportedOptions);
+    assert!(!PowfOptions::valid(128));
+    assert!(!PowfOptions::valid(PowfOptions::LOWP|PowfOptions::HIGHP|PowfOptions::BACKEND));
+}
+
+#[test]
+fn lowp_admitted_zero_survives_huge_exponent_in_both_const_modes() {
+    const PORTABLE:u32=PowfOptions::PORTABLE_GAMMA_LOWP.with_domain(PowfDomain::NonNegativeNormal).with_execution(PowfExecution::Caller).bits();
+    const BACKEND:u32=PowfOptions::BACKEND_GAMMA_LOWP.with_domain(PowfDomain::NonNegativeNormal).with_execution(PowfExecution::Caller).bits();
+    for n in [1_073_741_824., f32::MAX] {
+        assert_eq!(try_powf_with::<PORTABLE>(0.,n).unwrap().to_bits(),0);
+        assert_eq!(try_powf_with::<BACKEND>(0.,n).unwrap().to_bits(),0);
+    }
+}
+
+#[test]
+#[cfg(feature="std")]
+fn std_highp_full_domain_and_restricted_masks() {
+    const STD:u32=PowfOptions::STD_HIGHP.bits();
+    let result=try_powf_array_with::<STD,4>([-2.,-0.,f32::INFINITY,f32::NAN],3.).unwrap();
+    assert_eq!(result[..3].iter().map(|x|x.to_bits()).collect::<std::vec::Vec<_>>(),[-8f32,-0.,f32::INFINITY].map(f32::to_bits));
+    assert!(result[3].is_nan());
+    assert_eq!(try_powf_array_with::<STD,4>([f32::NAN,0.,-0.,f32::INFINITY],0.).unwrap(),[1.;4]);
+    assert_eq!(try_powf_with::<STD>(0.,-1.).unwrap(),f32::INFINITY);
+    assert_eq!(try_powf_with::<STD>(f32::from_bits(1),1.).unwrap().to_bits(),1);
+    assert_eq!(try_powf_array_with::<STD,3>([1.;3],2.).unwrap_err().kind,PowfErrorKind::UnsupportedWidth);
+    let opts=PowfOptions::STD_HIGHP.with_domain(PowfDomain::PositiveNormal);
+    assert_eq!(try_powf_array_runtime([2.,-1.,f32::from_bits(1),f32::NAN],2.,opts).unwrap_err(),PowfError{kind:PowfErrorKind::InvalidBase,lane_mask:14});
+    assert_eq!(try_powf_array_runtime([2.,4.,f32::MAX,f32::MIN_POSITIVE],2.,opts).unwrap_err(),PowfError{kind:PowfErrorKind::OutsideApproximationRange,lane_mask:12});
 }
