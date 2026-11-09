@@ -807,3 +807,21 @@ powf-core-math-prepare crate directory:
 
 powf-glibc-history repository directory:
     python3 -B benchmarks/powf_providers_2026-11-09/glibc_history.py "{{repository}}" "{{directory}}"
+
+powf-core-math-manifest rust native output:
+    python3 -B benchmarks/powf_providers_2026-11-09/core_math_manifest.py "{{rust}}" "{{native}}" "{{output}}"
+
+powf-core-worst crate directory *options:
+    python3 -B benchmarks/powf_providers_2026-11-09/core_worst.py "{{crate}}" "{{directory}}" {{options}}
+
+powf-core-emulation manifest fixtures directory:
+    python3 -B benchmarks/powf_providers_2026-11-09/core_emulation.py "{{manifest}}" "{{fixtures}}" "{{directory}}"
+
+powf-glibc-binding output:
+    cc -std=c11 -O2 -Wall -Wextra -Werror benchmarks/powf_providers_2026-11-09/glibc_binding.c -ldl -o "{{output}}"
+
+powf-external-helpers native directory:
+    python3 -B benchmarks/powf_providers_2026-11-09/verify_helpers.py "{{native}}" "{{directory}}"
+
+powf-core-trace trace:
+    python3 -B benchmarks/powf_providers_2026-11-09/core_trace.py "{{trace}}"

@@ -67,7 +67,6 @@ for repetition,ordered in enumerate(order):
         assert not target.exists()
         env={k:v for k,v in os.environ.items()if k not in ['RUSTFLAGS','CARGO_ENCODED_RUSTFLAGS','CARGO_TARGET_DIR']}
         env['CARGO_TARGET_DIR']=str(target.resolve())
-        env['RUSTFLAGS']='';env['CARGO_ENCODED_RUSTFLAGS']=''
         command=['cargo','+'+a.toolchain,'build','--release','--locked','--manifest-path',str(directory/'Cargo.toml')]
         if feature:command+=['--features',feature]
         stem=a.directory/f'{repetition}-{name}';timefile=stem.with_suffix('.time.txt')

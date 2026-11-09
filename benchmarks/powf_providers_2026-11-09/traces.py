@@ -6,12 +6,12 @@ import hashlib
 import json
 from pathlib import Path
 import subprocess
-from external import cells
+from external import cells, load_manifest
 
 p=argparse.ArgumentParser(description=__doc__)
 p.add_argument('manifest',type=Path);p.add_argument('directory',type=Path)
 a=p.parse_args();a.directory.mkdir(parents=True,exist_ok=False)
-manifest=json.loads(a.manifest.read_text())
+manifest=load_manifest(a.manifest)
 summary={'cells':0,'provider_cells':0,'batch_last_lane_mismatches':0,'budget_bytes':512*1024*1024,
          'semantics':'streams are raw powers; chains contain normalized states and may have different inputs after divergence',
          'edges':{}}

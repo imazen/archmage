@@ -3,7 +3,9 @@
 **Promotion remains held.** No external provider was added to production.
 The existing opt-in policy API and unchanged legacy methods are documented in
 [POLICIES.md](../powf_module_2026-11-07/POLICIES.md). This study adds explicit
-std, Rust libm, Rust SLEEF, GNU libmvec, Arm and AOCL comparisons.
+std, Rust libm, Rust SLEEF, GNU libmvec, Arm and AOCL comparisons. A separate
+[glibc source audit and CORE-MATH comparison](GLIBC-HISTORY.md) identifies the
+actual algorithm families, runtime dispatch and hard-to-round witnesses.
 
 ## Implementations and coverage
 
@@ -28,11 +30,16 @@ nightly-2026-10-06 for every Rust batch-comparison arm. Baseline and explicit
 combined feature context; their comparison does not isolate FMA alone.
 The production workspace retains stable Rust and has no SLEEF dependency.
 
-Four physical platforms supplied 199 provider/width executions of the unchanged
+Four physical platforms supplied 234 provider/width executions of the unchanged
 27,909 domain-tagged pairs, with both broadcasts and mixed lanes. The 32 ordinary
 workload traces also agree with the corresponding repeated batch's last lanes:
 528 Intel, 528 AMD, 256 M6 and 280 Neoverse provider/workload combinations.
-There were no harness parity failures. Provider numerical differences below
+The first Neoverse Rust worker inherited `-C target-cpu=neoverse-n1`; its timing
+pilot is CPU-targeted evidence, not a generic distribution baseline. Its data
+is retained. A separate numerical-only generic build with actual Cargo flags
+`[]` adds 35 executions: all raw outputs and complete trajectories are
+byte-identical to the targeted build. No timing was rerun. The other baseline
+workers' retained fingerprints have flags `[]`. Provider numerical differences below
 are retained as observations, not accepted mathematical behavior.
 
 The separate stable-Rust std/libm study covers twelve execution contexts,
@@ -54,8 +61,8 @@ exact-rational graph oracle; std and the libraries are not its mathematical trut
 The complete
 inventory retains every provider's bits, broadcast/mixed differences, NaN
 payloads, feature-context and platform differences, and rounded MPFR results.
-It covers 21,003 differing input records across 199 provider/width executions;
-the uncompressed ledger is 369,516,424 bytes, below its 512 MiB budget.
+It covers 21,003 differing input records across 234 provider/width executions;
+the uncompressed ledger is 447,102,610 bytes, below its 512 MiB budget.
 Raw outputs retain all ties as well. See [ARTIFACTS.md](ARTIFACTS.md).
 
 Gamma statistics use the unchanged independent domain oracle: +0 or normal

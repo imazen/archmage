@@ -9,6 +9,7 @@ import math
 from pathlib import Path
 import subprocess
 import sys
+from external import load_manifest
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent/'powf_module_2026-11-07'))
 import rounding_accuracy as reference
 import rounding_oracle as model
@@ -21,14 +22,15 @@ def classify(b):
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('manifest',type=Path);p.add_argument('fixtures',type=Path);p.add_argument('directory',type=Path)
+    p.add_argument('--expected-cases',type=int,default=27909,help='explicit caller count for separately identified bounded witnesses')
     a=p.parse_args();a.directory.mkdir(parents=True,exist_ok=False)
-    manifest=json.loads(a.manifest.read_text())
+    manifest=load_manifest(a.manifest)
     rows=[line.split()[:3] for line in a.fixtures.read_text().splitlines()]
     # Fixtures can be the original 27,810 rows or the already expanded .inputs.
     if len(rows)==27810:
         rows += [[f'{b:08x}',f'{n:08x}','3'] for b in [0,0x80000000,1,0x007fffff,0x7f7fffff,0x7f800000,0xff800000,0x7fc00001,0x7f800001,0xbf800000,0xc0000000]
                  for n in [0,0x80000000,1,0x3f000000,0x40000000,0x40400000,0xbf800000,0x7f800000,0x7fc00001]]
-    assert len(rows)==27909
+    assert len(rows)==a.expected_cases
     (a.directory/'inputs.txt').write_text(''.join(' '.join(r)+'\n' for r in rows))
     refs=[]
     for xb,nb,_ in rows:

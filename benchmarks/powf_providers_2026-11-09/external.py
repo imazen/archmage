@@ -20,6 +20,21 @@ def save(path, value):
 def digest(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
+def load_manifest(path):
+    """Restore the frozen DSO selection before launching any worker."""
+    manifest = json.loads(Path(path).read_text())
+    allowed = {'POWF_ARM_DSO', 'POWF_AOCL_DSO', 'POWF_AOCL_FAST_DSO',
+               'POWF_CORE_MATH_DSO', 'POWF_CORE_MATH_FMA_DSO'}
+    assert set(manifest['dsos']) <= allowed
+    for name in allowed:
+        os.environ.pop(name, None)
+    for name, identity in manifest['dsos'].items():
+        assert digest(identity['path']) == identity['sha256'], 'frozen DSO changed'
+        os.environ[name] = identity['path']
+    for worker in manifest['workers']:
+        assert digest(worker['binary']) == worker['sha256'], 'frozen worker changed'
+    return manifest
+
 def discover(rust, native, v3=None):
     workers = [{'name': 'Rust_baseline', 'binary': str(rust.resolve()), 'sha256': digest(rust)},
                {'name': 'native_C_ABI', 'binary': str(native.resolve()), 'sha256': digest(native)}]
@@ -45,9 +60,9 @@ def discover(rust, native, v3=None):
     return {'workers': workers, 'providers': providers, 'native_diagnostics': result.stderr,
             'resolved_native_dsos':resolved,
             'dsos': {name: {'path': value, 'sha256': digest(value)} for name, value in os.environ.items()
-                     if name in ['POWF_ARM_DSO', 'POWF_AOCL_DSO', 'POWF_AOCL_FAST_DSO']},
+                     if name in ['POWF_ARM_DSO', 'POWF_AOCL_DSO', 'POWF_AOCL_FAST_DSO', 'POWF_CORE_MATH_DSO', 'POWF_CORE_MATH_FMA_DSO']},
             'timing_unit': 'ns per 1,048,576 actual evaluations including one socket request',
-            'compiler_flags': {'Rust_baseline': 'baseline distribution; nightly-2026-10-06',
+            'compiler_flags': {'Rust_baseline': 'build-arm label; verify actual flags from retained Cargo fingerprint; nightly-2026-10-06',
                                'Rust_AVX2_FMA': '-C target-feature=+avx2,+fma; physical support required'},
             'claim': 'benchmark-only; no production admission or universal accuracy guarantee'}
 
@@ -72,7 +87,7 @@ def main():
     if a.command == 'discover':
         assert not a.output.exists()
         save(a.output, discover(a.rust, a.native, a.v3)); return
-    manifest = json.loads(a.manifest.read_text())
+    manifest = load_manifest(a.manifest)
     assert a.exploratory == (os.environ.get('ZENBENCH_CPU_POLICY') == 'unrestricted')
     a.directory.mkdir(exist_ok=False, parents=True)
     save(a.directory/'frozen.json', {'providers': manifest, 'cells': cells(), 'bench': str(a.bench.resolve()),

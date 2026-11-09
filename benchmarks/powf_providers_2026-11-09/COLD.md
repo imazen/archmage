@@ -29,6 +29,8 @@ GNU time peak RSS ranges: main legacy 394,300–394,660 KiB; patched legacy
 423,328–423,592 KiB; const policy 417,636–423,560 KiB; runtime options
 763,576–764,244 KiB. The full resource wrapper lines and GNU time records are
 preserved per build. No memory estimate is derived from source or struct sizes.
+The largest runtime-options wrapper record is `peak-RSS 0.73GiB`; across the
+twelve builds the minimum available memory is 27,439 MiB and peak load 7.36.
 
 The runtime client deliberately hides all five option fields from LLVM. It can
 retain dispatch and graph families that a caller's const flags remove. This
