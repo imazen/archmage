@@ -872,3 +872,6 @@ powf-highp-test:
 
 powf-highp-verify expected directory command *options:
     python3 -B benchmarks/powf_providers_2026-11-09/highp_verify.py "{{expected}}" "{{directory}}" --command '{{command}}' {{options}}
+
+powf-highp-manifest worker output source:
+    python3 -B benchmarks/powf_providers_2026-11-09/highp_manifest.py "{{worker}}" "{{output}}" --source "{{source}}"

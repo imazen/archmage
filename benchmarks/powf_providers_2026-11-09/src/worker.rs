@@ -5,6 +5,8 @@ use std::io::{BufRead, Write};
 use std::simd::Simd;
 mod arm_data;
 mod arm_powf;
+mod library_powf;
+use library_powf::LibraryToken;
 
 #[inline(always)]
 fn arm_array<const N: usize, const FUSED: bool, const COLD: bool, const ASSUME: bool>(
@@ -53,7 +55,11 @@ fn arm_unrolled<const N: usize, const ASSUME: bool>(x: [f32; N], n: [f32; N]) ->
 }
 
 #[inline(always)]
-fn calculate<const N: usize, const M: u8>(x: [f32; N], n: [f32; N]) -> [f32; N] {
+fn calculate<T: LibraryToken, const N: usize, const M: u8>(
+    t: T,
+    x: [f32; N],
+    n: [f32; N],
+) -> [f32; N] {
     match M {
         0 => core::array::from_fn(|i| x[i].powf(n[i])),
         1 => core::array::from_fn(|i| libm::powf(x[i], n[i])),
@@ -67,11 +73,12 @@ fn calculate<const N: usize, const M: u8>(x: [f32; N], n: [f32; N]) -> [f32; N] 
         9 => arm_array::<N, true, true, true>(x, n),
         10 => arm_unrolled::<N, false>(x, n),
         11 => arm_unrolled::<N, true>(x, n),
+        12..=16 => library_powf::calculate::<T, N, M>(t, x, n),
         _ => panic!("unknown provider index"),
     }
 }
 #[inline(always)]
-fn execute_method<const N: usize, const M: u8>(f: &[&str]) -> Vec<u32> {
+fn execute_method<T: LibraryToken, const N: usize, const M: u8>(t: T, f: &[&str]) -> Vec<u32> {
     if f[0] == "E" {
         assert_eq!(f.len(), 3 + 2 * N);
         let x: [f32; N] = core::array::from_fn(|i| {
@@ -80,7 +87,7 @@ fn execute_method<const N: usize, const M: u8>(f: &[&str]) -> Vec<u32> {
         let n: [f32; N] = core::array::from_fn(|i| {
             f32::from_bits(u32::from_str_radix(f[4 + 2 * i], 16).unwrap())
         });
-        return calculate::<N, M>(x, n).map(f32::to_bits).to_vec();
+        return calculate::<T, N, M>(t, x, n).map(f32::to_bits).to_vec();
     }
     assert!(["B", "T"].contains(&f[0]));
     assert_eq!(f.len(), 7);
@@ -108,7 +115,11 @@ fn execute_method<const N: usize, const M: u8>(f: &[&str]) -> Vec<u32> {
     for _ in 0..repeats {
         let mut acc = input[0];
         for (x, out) in std::hint::black_box(&input).iter().zip(&mut output) {
-            let y = calculate::<N, M>(if chain { acc } else { *x }, [std::hint::black_box(n); N]);
+            let y = calculate::<T, N, M>(
+                t,
+                if chain { acc } else { *x },
+                [std::hint::black_box(n); N],
+            );
             acc = if chain {
                 y.map(|v| f32::from_bits(0x3f000000 | (v.to_bits() & 0x007fffff)))
             } else {
@@ -126,8 +137,13 @@ fn execute_method<const N: usize, const M: u8>(f: &[&str]) -> Vec<u32> {
 }
 #[cfg(target_arch = "x86_64")]
 #[archmage::arcane]
-fn arm_v3<const N: usize, const M: u8>(_t: archmage::X64V3Token, f: &[&str]) -> Vec<u32> {
-    execute_method::<N, M>(f)
+fn arm_v3<const N: usize, const M: u8>(t: archmage::X64V3Token, f: &[&str]) -> Vec<u32> {
+    execute_method::<_, N, M>(t, f)
+}
+#[cfg(target_arch = "aarch64")]
+#[archmage::arcane]
+fn arm_neon<const N: usize, const M: u8>(t: archmage::NeonToken, f: &[&str]) -> Vec<u32> {
+    execute_method::<_, N, M>(t, f)
 }
 fn execute_arm<const N: usize, const M: u8>(f: &[&str]) -> Vec<u32> {
     #[cfg(target_arch = "x86_64")]
@@ -137,22 +153,33 @@ fn execute_arm<const N: usize, const M: u8>(f: &[&str]) -> Vec<u32> {
             return arm_v3::<N, M>(t, f);
         }
     }
-    execute_method::<N, M>(f)
+    #[cfg(target_arch = "aarch64")]
+    {
+        use archmage::SimdToken;
+        return arm_neon::<N, M>(archmage::NeonToken::summon().expect("required NEON"), f);
+    }
+    #[cfg(not(target_arch = "aarch64"))]
+    execute_method::<_, N, M>(archmage::ScalarToken, f)
 }
 fn execute<const N: usize>(f: &[&str]) -> Vec<u32> {
     match f[1] {
-        "std" => execute_method::<N, 0>(f),
-        "Rust_libm_0_2_16" => execute_method::<N, 1>(f),
-        "SLEEF_0_3_3_scalar_u10" => execute_method::<N, 2>(f),
-        "SLEEF_0_3_3_scalar_fast" => execute_method::<N, 3>(f),
-        "SLEEF_0_3_3_vector_u10" => execute_method::<N, 4>(f),
-        "SLEEF_0_3_3_vector_fast" => execute_method::<N, 5>(f),
+        "std" => execute_method::<_, N, 0>(archmage::ScalarToken, f),
+        "Rust_libm_0_2_16" => execute_method::<_, N, 1>(archmage::ScalarToken, f),
+        "SLEEF_0_3_3_scalar_u10" => execute_method::<_, N, 2>(archmage::ScalarToken, f),
+        "SLEEF_0_3_3_scalar_fast" => execute_method::<_, N, 3>(archmage::ScalarToken, f),
+        "SLEEF_0_3_3_vector_u10" => execute_method::<_, N, 4>(archmage::ScalarToken, f),
+        "SLEEF_0_3_3_vector_fast" => execute_method::<_, N, 5>(archmage::ScalarToken, f),
         "Arm_Rust_fused_cold" => execute_arm::<N, 6>(f),
         "Arm_Rust_separate_cold" => execute_arm::<N, 7>(f),
         "Arm_Rust_fused_warm" => execute_arm::<N, 8>(f),
         "Arm_Rust_fused_assume_Gamma" => execute_arm::<N, 9>(f),
         "Arm_Rust_fused_unrolled" => execute_arm::<N, 10>(f),
         "Arm_Rust_assume_Gamma_unrolled" => execute_arm::<N, 11>(f),
+        "Magetypes_HIGHP_Full_packed" => execute_arm::<N, 12>(f),
+        "Magetypes_HIGHP_Gamma_checked_packed" => execute_arm::<N, 13>(f),
+        "Magetypes_HIGHP_Gamma_assumed_packed" => execute_arm::<N, 14>(f),
+        "Magetypes_legacy_midp" => execute_arm::<N, 15>(f),
+        "Magetypes_legacy_lowp" => execute_arm::<N, 16>(f),
         _ => panic!("unknown named provider"),
     }
 }

@@ -9,6 +9,7 @@ autobins = false
 
 [dependencies]
 archmage = { path = "../.." }
+magetypes = { path = "../../magetypes" }
 sleef = "=0.3.3"
 libm = "=0.2.16"
 serde_json = "1.0.151"
