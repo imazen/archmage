@@ -75,7 +75,7 @@ def main():
                 rounded,(bounds,quantum)=refs[index]
                 stats['rounded_differences']+=b!=rounded
                 xb,nb=map(lambda text:model.fp.value(int(text,16)),rows[index][:2])
-                in_gamma=2**-16<=xb<=2**16 and 0<=nb<=4
+                in_gamma=model.preflight(int(rows[index][0],16),int(rows[index][1],16),2)==0 and xb>0
                 if in_gamma:
                     gamma['positive_samples']+=1;gamma['rounded_differences']+=b!=rounded
                     gamma['classification_mismatches_against_MPFR']+=classify(b)!=classify(rounded)
@@ -105,6 +105,7 @@ def main():
             values={key:{'mixed':f'{mixed[index]:08x}','broadcast':[f'{b:08x}' for b in broadcast[index]]}
                     for key,(broadcast,mixed) in all_outputs.items()}
             flattened={v for item in values.values() for v in [item['mixed']]+item['broadcast']}
+            if refs[index] is not None:flattened.add(f'{refs[index][0]:08x}')
             if len(flattened)<=1:continue
             record={'case':index,'input':row,'outputs':values,'rounded_MPFR':f'{refs[index][0]:08x}' if refs[index] else None}
             text=json.dumps(record,separators=(',',':'))+'\n';used+=len(text.encode())

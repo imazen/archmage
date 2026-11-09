@@ -24,3 +24,7 @@ path = "src/worker.rs"
 [[bin]]
 name = "external_providers_bench"
 path = "src/bench.rs"
+
+[[bin]]
+name = "external_providers_analyze"
+path = "src/analyze.rs"

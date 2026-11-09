@@ -792,3 +792,9 @@ powf-external-verify directory fixtures tier="baseline":
 
 powf-external-format:
     cargo +nightly-2026-10-06 fmt --manifest-path benchmarks/powf_providers_2026-11-09/Cargo.toml
+
+powf-external-analyze *runs:
+    cargo +nightly-2026-10-06 run --release --locked --manifest-path benchmarks/powf_providers_2026-11-09/Cargo.toml --bin external_providers_analyze -- {{runs}}
+
+powf-external-inventory directory *runs:
+    python3 -B benchmarks/powf_providers_2026-11-09/inventory.py "{{directory}}" {{runs}}
