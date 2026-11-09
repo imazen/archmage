@@ -56,3 +56,34 @@ provider timing matrices are not measured. Sample agreement cannot establish
 whole-domain canonical behavior or a maximum mathematical error bound.
 The 515 hard-to-round witnesses are bounded adversarial coverage. Production
 promotion remains held, and the PR stays draft.
+
+## Subsequent Arm C and Rust port review
+
+The production source and workspace dependency diff from 5f2817ec remains
+empty. The safe Rust port, source-derived constants, Arm license and cold_path
+use stay in the independent unpublished benchmark package. The C comparison
+finished before porting. Explicitly named native profiles are owner-requested
+diagnostics; CPU identity guards prevent cross-host native reuse.
+
+Review of the actual linked worker found the array callback's feature-context
+leak that a scalar-only probe had missed. The explicit iteration correction
+removes indirect FMA calls. Explicit unrolling reduces ordinary loop work but
+expands the x8 kernel from 4,711 to 16,527 bytes. Native loop vectorization has
+lower instruction count and higher observed cycle cost; neither native flags
+nor cold hints are promoted as automatic improvements. Exact C-data replay
+reproduces the checked-in Rust constants. Changed CPU identities and changed
+cross-execution files are rejected by negative controls.
+
+All-target standalone tests, formatting and Clippy pass. Full and Gamma
+numerical comparisons pass on x86 and physical Neoverse, together with i686,
+no-FMA emulation and strict/relaxed WASM contexts. No pre-existing assertion,
+assembly threshold, precision bound, test selection or resource gate changed.
+The new explicit expected-case parameter defaults to the original 27,909;
+bounded Gamma and hard-witness callers provide their separate exact counts.
+
+The first Zen 5 launch correctly refused ambiguous cache-class selection
+before timing; the corrected auto policy plus explicit verified cpuset retained
+every common gate. Its resulting pilot was inadmissible, so the matrix stopped.
+Reported speed observations include C function-pointer versus inline Rust
+batching differences. They do not establish equal raw scalar function latency.
+See [ARM-RESULTS.md](ARM-RESULTS.md) and [ARTIFACTS.md](ARTIFACTS.md).

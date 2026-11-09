@@ -39,3 +39,29 @@ an observed std reference is explicitly not mathematical truth.
 Use `just powf-provider-artifacts verify DIRECTORY MANIFEST` to verify a copy.
 The original policy/fused-arithmetic studies remain in their separate sealed
 artifact roots; this additional study does not overwrite or requalify them.
+
+## Subsequent isolated C and Rust port study
+
+Separate root: `/mnt/v/output/archmage/powf-arm-c-preport-2026-11-09/`.
+Independent mirror: `/mnt/tower/output/archmage/powf-arm-c-preport-2026-11-09/`.
+Both copies verify all **5,367 files** in `CORE-MANIFEST.json`, SHA-256
+`15f25df1238004d11ea5156536bb9ebeb7932f92d3062bb481dd424a743f8284`.
+Later CI/publication evidence is an additive closing manifest.
+
+`intel/` preserves the C-before-port comparison, all five C profiles, Rust
+V1/V2/V3 binaries and numerical ledgers, the feature-context callback defect,
+its corrected code generation, counters, every noisy pilot and the frozen V1
+native retrospective check. `zen5/` preserves locally rebuilt C/native Rust,
+full/Gamma and 148 portable cross-context executions, exact Cargo fingerprints,
+frozen WASM/i686 executables and runners, actual cargo asm output, hardware
+counters, identity negative controls, full trajectories and the first pilot.
+`zen5/all-zenbench-bars.md` retains every complete implementation name and raw
+ns mean alongside bars copied from zenbench. `neoverse-n1/` contains physical
+ARM numerical comparisons, its locally built C profiles and native FMA
+disassembly. `sources/` retains versioned source archives.
+
+All result-bit, class and NaN-payload differences remain reconstructible from
+the per-width raw outputs and complete variance maps. Numerical comparisons
+exercise assumed-input variants only inside their declared Gamma domain.
+No timing run qualifies for promotion; setup refusals and flagged rounds are
+preserved. Read [ARM-RESULTS.md](ARM-RESULTS.md) for the substantive findings.
