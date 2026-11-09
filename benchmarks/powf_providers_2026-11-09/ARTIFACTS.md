@@ -65,3 +65,21 @@ the per-width raw outputs and complete variance maps. Numerical comparisons
 exercise assumed-input variants only inside their declared Gamma domain.
 No timing run qualifies for promotion; setup refusals and flagged rounds are
 preserved. Read [ARM-RESULTS.md](ARM-RESULTS.md) for the substantive findings.
+
+## Direct M6 extension
+
+Root `/mnt/v/output/archmage/powf-arm-m6-2026-11-09/` and independent mirror
+`/mnt/tower/output/archmage/powf-arm-m6-2026-11-09/` verify **1,452 files** in
+`CORE-MANIFEST.json`, SHA-256
+`a68d0934d461789a72b1577bcff3da03b1cbb7d1452b86f5eff50c1e3282a19d`.
+
+The root includes the 424-context combined inventory and all paired
+comparisons; `m6/` contains full/Gamma/required-NEON raw outputs, every round of
+all 32 exploratory cells, the corrected full-native C pilot, exact native
+driver features, actual Cargo fingerprints, frozen binaries and disassembly.
+`m6/all-zenbench-bars.md` preserves all complete implementation names and raw
+ns means. The native Miri failure on both interpreter versions and the stopped
+old-snapshot CI attempt are retained. No test skip or threshold change follows.
+The counter directory mislabeled x1 explicitly records its actual default x8;
+`profile-x1-actual/` contains the corrected explicit-width diagnostic.
+Closing publication records are additive. See [M6-NEON.md](M6-NEON.md).

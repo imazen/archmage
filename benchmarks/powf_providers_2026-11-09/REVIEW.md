@@ -93,3 +93,20 @@ generation/registry/token/soundness checks, API snapshots and code generation.
 The run-heavy record is `710s | peak-RSS 1.27GiB | min-avail 42246MiB |
 peak-load 7.50`. Standalone all-target tests, format and warnings-as-errors
 Clippy pass with `18s | peak-RSS 0.34GiB | min-avail 43524MiB | peak-load 4.36`.
+
+The direct M6 extension adds native full/Gamma/required-NEON comparisons and
+the complete 32-cell exploratory matrix. All 424 combined Rust-graph
+provider/width samples match the canonical non-NaN bits and NaN classes.
+Darwin full-native C flags now remove the baseline architecture restriction;
+the earlier native-CPU/baseline-ISA matrix remains labeled and preserved.
+Exact feature-list and disassembly checks document the compiler's older native
+CPU mapping. Root production source, generators and workspace dependencies
+remain unchanged from 5f2817ec.
+
+M6 standalone tests, format and Clippy pass (`9s | peak-RSS 0.11GiB |
+min-avail proxy 9601MiB | peak-load 2.16`). Native full CI passes Steps 1–14
+and fails at AArch64 Miri's unsupported NEON shift intrinsic; the same focused
+test fails on the newer interpreter. This limitation is explicit, with all
+assertions and the established zero-shift contract preserved. The a29d7a35
+GitHub run completes successfully with all 56 PR checks green. Read
+[M6-NEON.md](M6-NEON.md) for every cell, rank reversal and coverage limit.
