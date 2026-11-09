@@ -6,6 +6,8 @@ The existing opt-in policy API and unchanged legacy methods are documented in
 std, Rust libm, Rust SLEEF, GNU libmvec, Arm and AOCL comparisons. A separate
 [glibc source audit and CORE-MATH comparison](GLIBC-HISTORY.md) identifies the
 actual algorithm families, runtime dispatch and hard-to-round witnesses.
+The [review](REVIEW.md) records fixes to the measurement harness and remaining
+coverage limits; [ARTIFACTS.md](ARTIFACTS.md) identifies the verified mirror.
 
 ## Implementations and coverage
 
