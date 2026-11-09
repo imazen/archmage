@@ -23,19 +23,17 @@ macro_rules! packed {
             n: f32,
         ) -> [f32; N] {
             use crate::simd::generic::$vector as V;
+            if OPTIONS & 3 == 2 && n == 0. {
+                return [1.; N];
+            }
             let mut out = [0.; N];
             let mut offset = 0;
             while offset + $lanes <= N {
-                let mut normal = n.is_finite() && n != 0.;
+                let mut normal = OPTIONS & 3 == 2 || (n.is_finite() && n != 0.);
                 if OPTIONS & 3 != 2 {
                     for lane in 0..$lanes {
                         normal &=
                             x[offset + lane].to_bits().wrapping_sub(0x0080_0000) < 0x7f00_0000;
-                    }
-                } else {
-                    // Gamma admits +0, which is handled by the scalar graph.
-                    for lane in 0..$lanes {
-                        normal &= x[offset + lane] != 0.;
                     }
                 }
                 if normal {
@@ -43,7 +41,12 @@ macro_rules! packed {
                     let mut invcs = [0.; $lanes];
                     let mut y0s = [0.; $lanes];
                     for lane in 0..$lanes {
-                        let ix = x[offset + lane].to_bits();
+                        // Gamma zero lanes use log2(1), then restore +0.
+                        let ix = if OPTIONS & 3 == 2 && x[offset + lane] == 0. {
+                            1f32.to_bits()
+                        } else {
+                            x[offset + lane].to_bits()
+                        };
                         let tmp = ix.wrapping_sub(0x3f33_0000);
                         let index = ((tmp >> 19) & 15) as usize;
                         let top = tmp & 0xff80_0000;
@@ -84,7 +87,11 @@ macro_rules! packed {
                         let result =
                             (z.mul_add_relaxed(r2, tail) * V::from_array_t(t, scales)).to_array();
                         for lane in 0..$lanes {
-                            out[offset + lane] = result[lane] as f32;
+                            out[offset + lane] = if OPTIONS & 3 == 2 && x[offset + lane] == 0. {
+                                0.
+                            } else {
+                                result[lane] as f32
+                            };
                         }
                         offset += $lanes;
                         continue;
