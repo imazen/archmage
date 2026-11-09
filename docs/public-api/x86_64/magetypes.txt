@@ -6,31 +6,31 @@
 # impls omitted; re-export duplicates annotated `[also: path]`.
 # DO NOT EDIT BY HAND — commit regenerated changes with the code.
 #
-# files: magetypes.txt 2718 lines (supported surface) | magetypes.features.txt 96 added (features: avx512,std,w512) | magetypes.internal.txt 46 lines (58 hidden + 0 excluded-feature)
+# files: magetypes.txt 2745 lines (supported surface) | magetypes.features.txt 96 added (features: avx512,std,w512) | magetypes.internal.txt 52 lines (64 hidden + 0 excluded-feature)
 
 ## summary
 #
 #   pub modules                                13
-#   pub types (struct/enum/trait/alias)       382
-#   pub consts/statics                        232
+#   pub types (struct/enum/trait/alias)       385
+#   pub consts/statics                        241
 #   free functions                           3915
 #   inherent methods                         1251
-#   struct fields                               4
-#   enum variants                              10
+#   struct fields                               7
+#   enum variants                              19
 #   re-exports                                  2
-#   trait roster entries (type × trait)       772
+#   trait roster entries (type × trait)       790
 #   conditional trait impls (verbatim)        120
-#   auto-trait-complete types                  15
+#   auto-trait-complete types                  18
 #   auto-trait exceptions                      30
 #
 # per-module pub lines:
-#   (root)                          326
+#   (root)                          329
 #   cast                              3
-#   powf                             23
+#   powf                             44
 #   prelude                        3740
 #   simd                           1717
 
-## items (2489 lines)
+## items (2513 lines)
 
 pub mod magetypes
 pub use archmage
@@ -41,6 +41,7 @@ pub trait cast::Upcast<T>
 pub unsafe fn cast::Upcast::upcast(self) -> T
 pub mod powf
 pub enum powf::PowfDomain
+pub powf::PowfDomain::Full
 pub powf::PowfDomain::Gamma
 pub powf::PowfDomain::NonNegativeNormal
 pub powf::PowfDomain::PositiveNormal
@@ -48,20 +49,43 @@ pub powf::PowfDomain::PositiveNormal
 pub powf::PowfErrorKind::InvalidBase
 pub powf::PowfErrorKind::InvalidExponent
 pub powf::PowfErrorKind::OutsideApproximationRange
+pub powf::PowfErrorKind::UnsupportedOptions
 pub powf::PowfErrorKind::UnsupportedWidth
 pub enum powf::PowfExecution
 pub powf::PowfExecution::Automatic
 pub powf::PowfExecution::Caller
+pub enum powf::PowfPortability
+pub powf::PowfPortability::BackendDependent
+pub powf::PowfPortability::BitExact
+pub enum powf::PowfPrecision
+pub powf::PowfPrecision::Highp
+pub powf::PowfPrecision::Lowp
+pub powf::PowfPrecision::Midp
+pub enum powf::PowfValidation
+pub powf::PowfValidation::AssumeValid
+pub powf::PowfValidation::Checked
 pub struct powf::PowfError
 pub powf::PowfError::kind: powf::PowfErrorKind
 pub powf::PowfError::lane_mask: u16
 pub struct powf::PowfOptions
 pub powf::PowfOptions::domain: powf::PowfDomain
 pub powf::PowfOptions::execution: powf::PowfExecution
+pub powf::PowfOptions::portability: powf::PowfPortability
+pub powf::PowfOptions::precision: powf::PowfPrecision
+pub powf::PowfOptions::validation: powf::PowfValidation
+pub const powf::PowfOptions::BACKEND_GAMMA_LOWP: Self
+pub const powf::PowfOptions::BACKEND_GAMMA_MIDP: Self
+pub const powf::PowfOptions::PORTABLE_GAMMA_LOWP: Self
+pub const powf::PowfOptions::PORTABLE_GAMMA_MIDP: Self
+pub const powf::PowfOptions::PORTABLE_NORMAL_MIDP: Self
+pub const powf::PowfOptions::STD_HIGHP: Self
 pub const fn powf::PowfOptions::bits(self) -> u32
 pub const fn powf::PowfOptions::new() -> Self
 pub const fn powf::PowfOptions::with_domain(self, powf::PowfDomain) -> Self
 pub const fn powf::PowfOptions::with_execution(self, powf::PowfExecution) -> Self
+pub const fn powf::PowfOptions::with_portability(self, powf::PowfPortability) -> Self
+pub const fn powf::PowfOptions::with_precision(self, powf::PowfPrecision) -> Self
+pub const fn powf::PowfOptions::with_validation(self, powf::PowfValidation) -> Self
 pub fn powf::try_powf(f32, f32) -> core::result::Result<f32, powf::PowfError>
 pub fn powf::try_powf_array_runtime<const N: usize>([f32; N], f32, powf::PowfOptions) -> core::result::Result<[f32; N], powf::PowfError>
 pub fn powf::try_powf_array_with<const OPTIONS: u32, const N: usize>([f32; N], f32) -> core::result::Result<[f32; N], powf::PowfError>
@@ -2522,7 +2546,7 @@ pub fn WidthDispatch::u8x64_load(self, &[u8; 64]) -> Self::U8x64
 pub fn WidthDispatch::u8x64_splat(self, u8) -> Self::U8x64
 pub fn WidthDispatch::u8x64_zero(self) -> Self::U8x64
 
-## trait impls (78 types)
+## trait impls (81 types)
 
 [f32; 16]: From<prelude::f32x16<T>>
 [f32; 4]: From<prelude::f32x4<T>>
@@ -2562,6 +2586,9 @@ powf::PowfError: Clone, Copy, Debug, Display, Eq, Error, PartialEq
 powf::PowfErrorKind: Clone, Copy, Debug, Eq, PartialEq
 powf::PowfExecution: Clone, Copy, Debug, Default, Eq, PartialEq
 powf::PowfOptions: Clone, Copy, Debug, Default, Eq, PartialEq
+powf::PowfPortability: Clone, Copy, Debug, Default, Eq, PartialEq
+powf::PowfPrecision: Clone, Copy, Debug, Default, Eq, PartialEq
+powf::PowfValidation: Clone, Copy, Debug, Default, Eq, PartialEq
 prelude::f32x16<T>: Add, Add<f32>, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Debug, Div, Div<f32>, DivAssign, Index<usize>, IndexMut<usize>, Mul, Mul<f32>, MulAssign, Neg, Sub, Sub<f32>, SubAssign
 prelude::f32x4<T>: Add, Add<f32>, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Debug, Div, Div<f32>, DivAssign, Index<usize>, IndexMut<usize>, Mul, Mul<f32>, MulAssign, Neg, Sub, Sub<f32>, SubAssign
 prelude::f32x8<T>: Add, Add<f32>, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Debug, Div, Div<f32>, DivAssign, Index<usize>, IndexMut<usize>, Mul, Mul<f32>, MulAssign, Neg, Sub, Sub<f32>, SubAssign
@@ -2725,7 +2752,7 @@ impl<T: core::marker::Copy + simd::backends::U8x64Backend> core::marker::Copy fo
 
 ## auto traits
 
-15 types implement all of: Freeze, RefUnwindSafe, Send, Sync, Unpin, UnwindSafe
+18 types implement all of: Freeze, RefUnwindSafe, Send, Sync, Unpin, UnwindSafe
 prelude::f32x16<T>: !Freeze !RefUnwindSafe !Send !Sync !Unpin !UnwindSafe
 prelude::f32x4<T>: !Freeze !RefUnwindSafe !Send !Sync !Unpin !UnwindSafe
 prelude::f32x8<T>: !Freeze !RefUnwindSafe !Send !Sync !Unpin !UnwindSafe

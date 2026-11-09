@@ -1,8 +1,9 @@
 //! One expression graph, instantiated per logical width and arithmetic backend.
 use super::{PowfError, PowfErrorKind, PowfOptions};
 
-// Arithmetic mode is chosen once at the operation boundary. Mode 0 is used
-// only with a token whose native madd fuses, or a verified relaxed-WASM probe.
+// Arithmetic mode is chosen once at the operation boundary. Mode 0 uses the
+// token-native relaxed madd; BitExact proves fusion before selecting it, while
+// BackendDependent permits either rounding choice.
 pub(super) const NATIVE: usize = 0;
 pub(super) const SOFTWARE: usize = 1;
 pub(super) const RELAXED: usize = 4;

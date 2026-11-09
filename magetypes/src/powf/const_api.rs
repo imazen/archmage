@@ -22,7 +22,7 @@ pub(super) fn exponent<const OPTIONS: u32, const N: usize>(n: f32) -> Result<(),
     Ok(())
 }
 
-/// Bounded scalar power with integer const options.
+/// Configurable scalar power with integer const options.
 ///
 /// Build the configuration in const evaluation, then supply its integer bits:
 /// ```

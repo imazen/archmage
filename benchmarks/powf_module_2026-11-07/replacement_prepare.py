@@ -59,7 +59,7 @@ fn replacement_execute@N@<const CALLER:u32,const AUTO:u32,const EXP:u32,const DY
     arm:usize,context:&str,input:&[[f32;@N@]],output:&mut[[f32;@N@]],chain:bool,
 ) {
     let domain=match CALLER&3 {0=>PowfDomain::PositiveNormal,1=>PowfDomain::NonNegativeNormal,2=>PowfDomain::Gamma,_=>unreachable!()};
-    let options=std::hint::black_box(PowfOptions{domain,execution:if arm==10{PowfExecution::Automatic}else{PowfExecution::Caller}});
+    let options=std::hint::black_box(PowfOptions{domain,execution:if arm==10{PowfExecution::Automatic}else{PowfExecution::Caller},..PowfOptions::new()});
     macro_rules! go {($f:ident,$t:expr)=>{match arm {
         0=>$f::<0,CALLER,AUTO,EXP,DYNAMIC>($t,input,output,chain,options),
         1=>$f::<1,CALLER,AUTO,EXP,DYNAMIC>($t,input,output,chain,options),

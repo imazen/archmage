@@ -71,6 +71,7 @@ mod guest {
                 _ => panic!("domain"),
             },
             execution: PowfExecution::Caller,
+            ..PowfOptions::new()
         };
     }
     pub extern "C" fn guest_probe() -> i32 {
@@ -101,6 +102,7 @@ mod guest {
                 PowfDomain::PositiveNormal => 0,
                 PowfDomain::NonNegativeNormal => 1,
                 PowfDomain::Gamma => 2,
+                PowfDomain::Full => panic!("full domain is outside the frozen study"),
             };
             match width {
                 1 => replacement_guest1(

@@ -57,7 +57,8 @@ pub enum PowfErrorKind {
     InvalidExponent,
     /// A base is outside the selected input domain.
     InvalidBase,
-    /// The computed `n * log2(x)` is outside the inclusive interval [-126, 127.5].
+    /// The approximation's computed `n * log2(x)` is outside [-126,127.5],
+    /// or a restricted HIGHP result is outside its normal-output domain.
     OutsideApproximationRange,
     /// The array width is not 1, 4, 8, or enabled width 16.
     UnsupportedWidth,

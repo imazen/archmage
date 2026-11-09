@@ -62,6 +62,7 @@ mod guest {
                 _ => panic!("domain"),
             },
             execution: PowfExecution::Caller,
+            ..PowfOptions::new()
         };
     }
     pub extern "C" fn guest_probe() -> i32 {
