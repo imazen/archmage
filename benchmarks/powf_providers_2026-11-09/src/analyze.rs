@@ -23,52 +23,56 @@ fn main() {
                 .position(|b| b.name == "system_C_powf")
                 .unwrap();
             let mut edges = std::collections::BTreeSet::new();
-            for numerator in 0..group.benchmarks.len() {
-                if group.benchmarks[numerator].name.starts_with("EMPTY_") { continue; }
-                for denominator in [std, native_std] {
-                    if numerator != denominator { edges.insert((numerator, denominator)); }
+            for (numerator, implementation) in group.benchmarks.iter().enumerate() {
+                if implementation.name.starts_with("EMPTY_") {
+                    continue;
                 }
-                for denominator in 0..numerator {
-                    if !group.benchmarks[denominator].name.starts_with("EMPTY_") {
+                for denominator in [std, native_std] {
+                    if numerator != denominator {
+                        edges.insert((numerator, denominator));
+                    }
+                }
+                for (denominator, reference) in group.benchmarks.iter().enumerate().take(numerator)
+                {
+                    if !reference.name.starts_with("EMPTY_") {
                         edges.insert((numerator, denominator));
                     }
                 }
             }
             for (numerator, denominator) in edges {
-                    let ratios: Vec<_> = group
-                        .samples
-                        .iter()
-                        .map(|r| {
-                            assert!(r.compensated_ns[denominator] > 0);
-                            r.compensated_ns[numerator] as f64
-                                / r.compensated_ns[denominator] as f64
-                        })
-                        .collect();
-                    let ci = zenbench::MeanCi::from_samples(&ratios, 100_000).unwrap();
-                    let cost = if ci.upper <= 1.02 {
-                        "PASS"
-                    } else if ci.lower > 1.02 {
-                        "FAIL"
-                    } else {
-                        "INCONCLUSIVE"
-                    };
-                    let verdict = if !verified {
-                        "EXPLORATORY"
-                    } else if !clean {
-                        "INADMISSIBLE"
-                    } else {
-                        cost
-                    };
-                    println!(
-                        "{}",
-                        serde_json::json!({"file":path,"group":group.group_name,
+                let ratios: Vec<_> = group
+                    .samples
+                    .iter()
+                    .map(|r| {
+                        assert!(r.compensated_ns[denominator] > 0);
+                        r.compensated_ns[numerator] as f64 / r.compensated_ns[denominator] as f64
+                    })
+                    .collect();
+                let ci = zenbench::MeanCi::from_samples(&ratios, 100_000).unwrap();
+                let cost = if ci.upper <= 1.02 {
+                    "PASS"
+                } else if ci.lower > 1.02 {
+                    "FAIL"
+                } else {
+                    "INCONCLUSIVE"
+                };
+                let verdict = if !verified {
+                    "EXPLORATORY"
+                } else if !clean {
+                    "INADMISSIBLE"
+                } else {
+                    cost
+                };
+                println!(
+                    "{}",
+                    serde_json::json!({"file":path,"group":group.group_name,
                     "implementation":group.benchmarks[numerator].name,"reference":group.benchmarks[denominator].name,
                     "numerator_mean_ns":raw["comparisons"][index]["benchmarks"][numerator]["summary"]["mean"],
                     "denominator_mean_ns":raw["comparisons"][index]["benchmarks"][denominator]["summary"]["mean"],
                     "comparison_family":if denominator == std || denominator == native_std {"predeclared_std_reference"} else {"descriptive_pairwise"},
                     "pairs":ratios.len(),"resource_clean":clean,"placement":placement,
                     "promotion_eligible":clean&&verified,"ratio_ci95":ci,"cost_bound_only":cost,"verdict":verdict})
-                    );
+                );
             }
         }
     }

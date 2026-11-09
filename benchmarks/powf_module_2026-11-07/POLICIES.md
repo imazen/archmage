@@ -150,8 +150,10 @@ The cost rule is unchanged: qualified upper 95% <=1.02 passes, lower >1.02
 fails, overlap is inconclusive; an optimization needs upper <1.00. Missing
 admitted physical x86, ARM and WASM timings remain missing. New exceptional-
 lane, bit-distributed-input and first-use timing coverage is also missing. Fresh-target
-compile time, size and first-use cost for the 64-policy expansion are unmeasured;
-the earlier cold-build diagnostics describe the earlier default-only API.
+compile time and linked size for representative const and runtime-option clients
+are now recorded in the [three-repetition diagnostic](../powf_providers_2026-11-09/COLD.md).
+First-use runtime cost remains unmeasured. The earlier cold-build diagnostics
+describe the earlier default-only API.
 
 ## Debug runtime stack correction
 

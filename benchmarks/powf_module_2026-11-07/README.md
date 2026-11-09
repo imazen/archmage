@@ -1,4 +1,8 @@
-The latest [implemented policy comparison](POLICIES.md) covers all64 const
+The later [provider comparison](../powf_providers_2026-11-09/README.md) measures
+std, Rust libm, Rust SLEEF, GNU libmvec, Arm and AOCL, with a complete numerical
+variance ledger and a separate const/runtime cold-build comparison.
+
+The [implemented policy comparison](POLICIES.md) covers all 64 const
 configurations and six presets, including BackendDependent LOWP/MIDP and
 std HIGHP. The runtime-options study below is historical; its statement that
 std power is not admitted applies to its BitExact graph. Promotion remains held.

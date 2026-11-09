@@ -1208,6 +1208,15 @@ fn process(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 
 ## Known Bugs
 
+Benchmark provider range observations (2026-11-09): Rust SLEEF 0.3.3 vector
+u10 returns infinity for f32 MAX raised to 1 on the measured builds. AOCL-LibM
+OSE 5.3.2 vector x4/x8 returns 1fb504f2 for +0^0.5 on the measured AMD build,
+and x4 special-input results can depend on neighboring lanes. These are
+benchmark-only providers; no production admission or threshold change follows.
+Finite-output ULP maxima do not describe their exceptional/range behavior.
+Complete outputs, flags, source identity and scope are documented in
+`benchmarks/powf_providers_2026-11-09/README.md`.
+
 Benchmark Rust libm range observation (2026-11-09): pinned Rust libm 0.2.16
 `powf` returns +inf for base bits 3f7ffff6, exponent bits cd000001, on Intel and
 M6. Directed MPFR 256 encloses the finite result in
