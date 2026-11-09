@@ -884,3 +884,9 @@ powf-canonical-highp-fusion-modes directory expected modules wasmtime:
 
 powf-canonical-highp-fusion-probe directory wasmtime:
     bash benchmarks/powf_providers_2026-11-09/highp_fusion_probe.sh "{{directory}}" "{{wasmtime}}"
+
+powf-canonical-highp-nan-build:
+    cargo build -p magetypes --release --example powf_highp_nan_scan
+
+powf-canonical-highp-nan-scan binary context:
+    "{{binary}}" "{{context}}"
