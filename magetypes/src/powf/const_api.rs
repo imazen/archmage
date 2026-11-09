@@ -61,6 +61,14 @@ pub fn try_powf_array_with<const OPTIONS: u32, const N: usize>(
     const {
         assert!(PowfOptions::valid(OPTIONS), "invalid powf const options");
     }
+    #[cfg(feature = "std")]
+    if OPTIONS & PowfOptions::HIGHP != 0 {
+        if !matches!(N, 1 | 4 | 8) && !(cfg!(feature="w512") && N==16) {
+            return Err(PowfError {kind:PowfErrorKind::UnsupportedWidth,lane_mask:0});
+        }
+        exponent::<OPTIONS,N>(n)?;
+        return super::highp::run::<OPTIONS,N>(bases,n);
+    }
     use archmage::ScalarToken;
     let mut output = [0.0; N];
     if N == 1 {
@@ -115,8 +123,8 @@ macro_rules! vector {
             exponent::<OPTIONS, $n>(n)?;
             #[cfg(feature = "std")]
             if OPTIONS & PowfOptions::HIGHP != 0 {
-                return super::highp::run::<OPTIONS, $n>(input.to_array(), n)
-                    .map(|result| crate::simd::generic::$float::from_array_t(token, result));
+                let result = super::highp::run::<OPTIONS, $n>(input.to_array(), n)?;
+                return Ok(crate::simd::generic::$float::from_array_t(token, result));
             }
             let caller = select::<T, OPTIONS>(token, PowfExecution::Caller);
             if matches!(caller, dispatch::Plan::Software) {

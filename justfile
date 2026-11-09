@@ -727,3 +727,10 @@ powf-highp-accuracy fixtures output:
 
 powf-policy-cross directory fixtures sde wasm_runner="wasmtime":
     bash benchmarks/powf_module_2026-11-07/policy_cross.sh "{{directory}}" "{{fixtures}}" "{{sde}}" "{{wasm_runner}}"
+
+powf-policy-avx512-build:
+    cargo build --release --locked --manifest-path benchmarks/powf_module_2026-11-07/Cargo.toml --features avx512 --bin policy_widths
+
+powf-policy-avx512-check fixtures sde:
+    {{sde}} -icx -- benchmarks/powf_module_2026-11-07/target/release/policy_widths v4 < "{{fixtures}}"
+    {{sde}} -icx -- benchmarks/powf_module_2026-11-07/target/release/policy_widths v4x < "{{fixtures}}"

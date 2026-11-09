@@ -31,7 +31,7 @@ fn relaxed_probe(token: archmage::Wasm128Token) -> u32 {
 
 macro_rules! width {
     ($check:ident,$execute:ident,$kernel:ident,$vector:ident,$n:literal) => {
-        #[archmage::magetypes(v3, neon, wasm128, scalar)]
+        #[archmage::magetypes(v4x(cfg(avx512)), v4(cfg(avx512)), v3, neon, wasm128, scalar)]
         fn $check(
             token: Token,
             input: [f32; $n],
@@ -171,15 +171,24 @@ macro_rules! width {
             }
         }
         fn $execute(
-            native: bool,
+            context: &str,
             input: [f32; $n],
             exponent: f32,
             domain: u32,
             expected: [[u64; 4]; $n],
         ) {
-            if !native {
+            if context == "scalar" {
                 return $check::scalar(archmage::ScalarToken, input, exponent, domain, expected);
             }
+            #[cfg(all(target_arch = "x86_64", feature="avx512"))]
+            if context == "v4" {
+                return $check::v4(archmage::X64V4Token::summon().expect("required V4"),input,exponent,domain,expected);
+            }
+            #[cfg(all(target_arch = "x86_64", feature="avx512"))]
+            if context == "v4x" {
+                return $check::v4x(archmage::X64V4xToken::summon().expect("required V4x"),input,exponent,domain,expected);
+            }
+            assert_eq!(context,"native","explicit requested backend unavailable");
             #[cfg(target_arch = "x86_64")]
             return $check::v3(
                 archmage::X64V3Token::summon().expect("required V3"),
@@ -216,6 +225,10 @@ macro_rules! width {
 
 // A module provides stable names for the macro-generated feature entries.
 mod check4 {
+    #[cfg(all(target_arch="x86_64",feature="avx512"))]
+    pub(super) use super::check4_v4 as v4;
+    #[cfg(all(target_arch="x86_64",feature="avx512"))]
+    pub(super) use super::check4_v4x as v4x;
     #[cfg(target_arch = "aarch64")]
     pub(super) use super::check4_neon as neon;
     pub(super) use super::check4_scalar as scalar;
@@ -225,6 +238,10 @@ mod check4 {
     pub(super) use super::check4_wasm128 as wasm128;
 }
 mod check8 {
+    #[cfg(all(target_arch="x86_64",feature="avx512"))]
+    pub(super) use super::check8_v4 as v4;
+    #[cfg(all(target_arch="x86_64",feature="avx512"))]
+    pub(super) use super::check8_v4x as v4x;
     #[cfg(target_arch = "aarch64")]
     pub(super) use super::check8_neon as neon;
     pub(super) use super::check8_scalar as scalar;
@@ -234,6 +251,10 @@ mod check8 {
     pub(super) use super::check8_wasm128 as wasm128;
 }
 mod check16 {
+    #[cfg(all(target_arch="x86_64",feature="avx512"))]
+    pub(super) use super::check16_v4 as v4;
+    #[cfg(all(target_arch="x86_64",feature="avx512"))]
+    pub(super) use super::check16_v4x as v4x;
     #[cfg(target_arch = "aarch64")]
     pub(super) use super::check16_neon as neon;
     pub(super) use super::check16_scalar as scalar;
@@ -311,11 +332,8 @@ fn main() {
         assert_eq!(actual, expected, "actual relaxed provider rounding");
         eprintln!("relaxed provider cancellation bits {actual:08x}");
     }
-    let native = match std::env::args().nth(1).as_deref() {
-        Some("scalar") => false,
-        Some("native") => true,
-        _ => panic!("explicit scalar or native context required"),
-    };
+    let context=std::env::args().nth(1).expect("explicit context required");
+    assert!(matches!(context.as_str(),"scalar"|"native"|"v4"|"v4x"));
     let mut groups: BTreeMap<(u32, u32), Vec<Case>> = BTreeMap::new();
     let mut broadcasts = 0;
     let mut mixed = 0;
@@ -329,7 +347,7 @@ fn main() {
         let domain = fields[2].parse().unwrap();
         let expected = std::array::from_fn(|m| u64::from_str_radix(fields[3 + m], 16).unwrap());
         execute4(
-            native,
+            &context,
             [f32::from_bits(base); 4],
             f32::from_bits(n),
             domain,
@@ -337,7 +355,7 @@ fn main() {
         );
         broadcasts += 1;
         execute8(
-            native,
+            &context,
             [f32::from_bits(base); 8],
             f32::from_bits(n),
             domain,
@@ -345,7 +363,7 @@ fn main() {
         );
         broadcasts += 1;
         execute16(
-            native,
+            &context,
             [f32::from_bits(base); 16],
             f32::from_bits(n),
             domain,
@@ -365,7 +383,7 @@ fn main() {
                     let input =
                         std::array::from_fn(|lane| f32::from_bits(chunk[lane % chunk.len()].base));
                     let expected = std::array::from_fn(|lane| chunk[lane % chunk.len()].expected);
-                    $execute(native, input, f32::from_bits(n), domain, expected);
+                    $execute(&context, input, f32::from_bits(n), domain, expected);
                     mixed += 1;
                 }
             };
@@ -377,6 +395,6 @@ fn main() {
     assert!(rows > 0);
     println!(
         "{}",
-        serde_json::json!({"rows":rows,"native":native,"widths":[4,8,16],"broadcast_vectors":broadcasts,"mixed_vectors":mixed,"policy_encodings":48,"assume_valid":"accepted cases only","mismatches":0})
+        serde_json::json!({"rows":rows,"context":context,"widths":[4,8,16],"broadcast_vectors":broadcasts,"mixed_vectors":mixed,"policy_encodings":48,"assume_valid":"accepted cases only","mismatches":0})
     );
 }
