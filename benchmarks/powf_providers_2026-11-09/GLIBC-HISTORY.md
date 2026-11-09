@@ -80,6 +80,16 @@ raw OBJD-T bytes. Its failed analysis is preserved; `core_trace.py` decodes
 those bytes with objdump and checks executed addresses, with a negative
 control rejecting an unexecuted FMA block. Emulation supplies no speed evidence.
 
+The separate CORE-MATH inventory covers 68 provider/width executions, including
+the std references and emulated context. Its complete ledger contains 196
+differing input records and 1,082,571 uncompressed bytes. Matching CORE-MATH
+implementations have zero non-NaN bit or NaN-class differences across these
+executions. NaN payloads remain variable: native x86 versus either Arm platform
+differs on 46 tagged cases per width; emulated versus native x86 differs on
+three. Every raw output and payload difference is retained. The no-FMA SDE
+profile also rejects the FMA-only provider, validating that its guard does not
+silently admit that unsupported execution context.
+
 ### Hard-to-round search
 
 CORE-MATH includes `src/binary32/pow/worst.c`, a finder for results close to

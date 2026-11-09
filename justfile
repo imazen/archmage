@@ -825,3 +825,6 @@ powf-external-helpers native directory:
 
 powf-core-trace trace:
     python3 -B benchmarks/powf_providers_2026-11-09/core_trace.py "{{trace}}"
+
+powf-provider-artifacts mode directory manifest:
+    python3 -B benchmarks/powf_providers_2026-11-09/artifact_manifest.py {{mode}} "{{directory}}" "{{manifest}}"
