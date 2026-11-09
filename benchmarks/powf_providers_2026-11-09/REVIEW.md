@@ -87,3 +87,9 @@ every common gate. Its resulting pilot was inadmissible, so the matrix stopped.
 Reported speed observations include C function-pointer versus inline Rust
 batching differences. They do not establish equal raw scalar function latency.
 See [ARM-RESULTS.md](ARM-RESULTS.md) and [ARTIFACTS.md](ARTIFACTS.md).
+
+Current full validation also passes all 19 `just ci` stages, including Miri,
+generation/registry/token/soundness checks, API snapshots and code generation.
+The run-heavy record is `710s | peak-RSS 1.27GiB | min-avail 42246MiB |
+peak-load 7.50`. Standalone all-target tests, format and warnings-as-errors
+Clippy pass with `18s | peak-RSS 0.34GiB | min-avail 43524MiB | peak-load 4.36`.
