@@ -770,7 +770,7 @@ powf-external-build:
     cargo +nightly-2026-10-06 build --release --locked --manifest-path benchmarks/powf_providers_2026-11-09/Cargo.toml
 
 powf-external-native-build output:
-    c++ -std=c++17 -O3 -fno-fast-math -ffp-contract=off -pthread benchmarks/powf_providers_2026-11-09/native_worker.cpp -o "{{output}}" $(if test "$(uname -s)" = Linux; then echo -ldl; fi)
+    c++ -std=c++17 -O3 -Wall -Wextra -Werror -fno-fast-math -ffp-contract=off -pthread benchmarks/powf_providers_2026-11-09/native_worker.cpp -o "{{output}}" $(if test "$(uname -s)" = Linux; then echo -ldl; fi)
 
 powf-providers-cross directory fixtures sde wasm_runner="wasmtime":
     bash benchmarks/powf_module_2026-11-07/providers_cross.sh "{{directory}}" "{{fixtures}}" "{{sde}}" "{{wasm_runner}}"
@@ -786,3 +786,9 @@ powf-external-traces manifest directory:
 
 powf-external-matrix manifest directory *options:
     python3 -B benchmarks/powf_providers_2026-11-09/external.py run benchmarks/powf_providers_2026-11-09/target/release/external_providers_bench "{{manifest}}" "{{directory}}" {{options}}
+
+powf-external-verify directory fixtures tier="baseline":
+    bash benchmarks/powf_providers_2026-11-09/verify.sh "{{directory}}" "{{fixtures}}" "{{tier}}"
+
+powf-external-format:
+    cargo +nightly-2026-10-06 fmt --manifest-path benchmarks/powf_providers_2026-11-09/Cargo.toml
