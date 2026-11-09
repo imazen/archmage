@@ -614,14 +614,14 @@ powf-rounding-check:
     POWF_VERIFY_ONLY=1 benchmarks/powf_module_2026-11-07/target/release/rounding_bench
 
 powf-policy-check:
-    cargo fmt --check
+    cargo fmt -p magetypes --check
     cargo test --release -p magetypes --all-features --lib powf::
     cargo test --release -p magetypes --no-default-features --features w512 --lib powf::
     cargo test --doc -p magetypes --all-features
     cargo clippy -p magetypes --all-features --all-targets -- -D warnings
 
 powf-policy-build:
-    cargo build --release --locked --manifest-path benchmarks/powf_module_2026-11-07/Cargo.toml --bin policy_widths
+    cargo build --release --locked --manifest-path benchmarks/powf_module_2026-11-07/Cargo.toml --bin policy_widths --bin policy_bench --bin policy_codegen --bin policy_analyze
 
 powf-policy-widths fixtures:
     benchmarks/powf_module_2026-11-07/target/release/policy_widths scalar < "{{fixtures}}"
@@ -709,3 +709,12 @@ wasmtime-ci-installer-check:
     bash -n xtask/install-wasmtime-ci.sh
     bash -n xtask/install-semver-ci.sh
     python3 -B xtask/test_wasmtime_installer.py
+
+powf-policy-codegen:
+    cargo rustc --release --locked --manifest-path benchmarks/powf_module_2026-11-07/Cargo.toml --bin policy_codegen -- --emit=asm
+
+powf-policy-matrix directory *options:
+    python3 -B benchmarks/powf_module_2026-11-07/replacement_matrix.py benchmarks/powf_module_2026-11-07/target/release/policy_bench "{{directory}}" --policies {{options}}
+
+powf-policy-matrix-analyze directory *runs:
+    python3 -B benchmarks/powf_module_2026-11-07/analyze_replacement_matrix.py benchmarks/powf_module_2026-11-07/target/release/policy_analyze "{{directory}}" {{runs}} --require-cells 56
