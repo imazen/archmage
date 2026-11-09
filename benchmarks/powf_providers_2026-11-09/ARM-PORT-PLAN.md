@@ -35,3 +35,12 @@ context. Compare frozen C objdump and cargo asm disassembly of actual linked
 Rust code. Inspect ordinary path, FMA graph, table bounds checks, calls, return
 conversions and branch placement. Profile with hardware counters before/after
 performance changes. Keep all codegen and numerical evidence for each version.
+
+M6 extension: the owner authorized direct LAN verification and exploratory
+interleaved timings on the available Mac. Rebuild C using Darwin's native
+compiler/linker and baseline plus explicitly native Rust. Compare result bits
+against the unscaled Arm C reference; retain Apple std as a distinct platform
+implementation. Require an explicit NEON token in the portable evaluator.
+Preserve the strict placement refusal, then collect the separately labeled
+32-cell/50-pair exploratory matrix with all resource observations retained.
+Unsupported macOS process confinement excludes it from the 2% promotion gate.

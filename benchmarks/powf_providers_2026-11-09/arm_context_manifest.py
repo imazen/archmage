@@ -10,7 +10,7 @@ p=argparse.ArgumentParser(description=__doc__)
 p.add_argument('reference',type=Path);p.add_argument('contexts',type=Path);p.add_argument('directory',type=Path)
 a=p.parse_args();a.directory.mkdir(parents=True,exist_ok=False)
 x=load_manifest(a.reference)
-x['providers']=[v for v in x['providers']if v['method']in ['std','system_C_powf','Arm_powf_C_AVX2_FMA_errno1','Arm_powf_C_x86_64_separate_errno1']and v['worker']<2]
+x['providers']=[v for v in x['providers']if (v['method']in ['std','system_C_powf']or v['method'].startswith('Arm_powf_C_'))and v['worker']<2]
 methods=['Arm_Rust_fused_cold','Arm_Rust_separate_cold','Arm_Rust_fused_warm']
 files={}
 for context in json.loads(a.contexts.read_text()):
