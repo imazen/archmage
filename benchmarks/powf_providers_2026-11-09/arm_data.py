@@ -38,4 +38,5 @@ for name,key,size,kind in [('A','A',5,'f64'),('TABLE','T',32,'u64'),('C','C',3,'
     text+=f'pub(super) const {name}: [{kind};{size}] = [\n'+''.join('    '+(f'f64::from_bits(0x{v[0]})'if kind=='f64'else f'0x{v[0]}')+',\n'for v in rows[key])+'];\n'
 for name,key in [('SHIFT','S'),('OVERFLOW','O'),('OVERFLOW_BOUND','B')]:text+=f'pub(super) const {name}: f64 = f64::from_bits(0x{rows[key][0][0]});\n'
 a.output.write_text(text)
+subprocess.run(['rustfmt','--edition','2024',str(a.output)],check=True)
 print(json.dumps({'source_revision':build['source_revision'],'output_sha256':hashlib.sha256(a.output.read_bytes()).hexdigest(),'constants':len(raw.splitlines())}))

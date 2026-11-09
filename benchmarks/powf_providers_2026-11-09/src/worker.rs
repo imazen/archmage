@@ -7,6 +7,20 @@ mod arm_data;
 mod arm_powf;
 
 #[inline(always)]
+fn arm_array<const N: usize, const FUSED: bool, const COLD: bool, const ASSUME: bool>(
+    x: [f32; N],
+    n: [f32; N],
+) -> [f32; N] {
+    let mut output = [0.; N];
+    let mut i = 0;
+    while i < N {
+        output[i] = arm_powf::pow::<FUSED, COLD, ASSUME>(x[i], n[i]);
+        i += 1;
+    }
+    output
+}
+
+#[inline(always)]
 fn calculate<const N: usize, const M: u8>(x: [f32; N], n: [f32; N]) -> [f32; N] {
     match M {
         0 => core::array::from_fn(|i| x[i].powf(n[i])),
@@ -15,10 +29,10 @@ fn calculate<const N: usize, const M: u8>(x: [f32; N], n: [f32; N]) -> [f32; N] 
         3 => core::array::from_fn(|i| sleef::f32::pow_fast(x[i], n[i])),
         4 => sleef::f32x::pow_u10(Simd::from_array(x), Simd::from_array(n)).to_array(),
         5 => sleef::f32x::pow_fast(Simd::from_array(x), Simd::from_array(n)).to_array(),
-        6 => core::array::from_fn(|i| arm_powf::pow::<true, true, false>(x[i], n[i])),
-        7 => core::array::from_fn(|i| arm_powf::pow::<false, true, false>(x[i], n[i])),
-        8 => core::array::from_fn(|i| arm_powf::pow::<true, false, false>(x[i], n[i])),
-        9 => core::array::from_fn(|i| arm_powf::pow::<true, true, true>(x[i], n[i])),
+        6 => arm_array::<N, true, true, false>(x, n),
+        7 => arm_array::<N, false, true, false>(x, n),
+        8 => arm_array::<N, true, false, false>(x, n),
+        9 => arm_array::<N, true, true, true>(x, n),
         _ => panic!("unknown provider index"),
     }
 }

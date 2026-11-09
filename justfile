@@ -846,3 +846,9 @@ powf-arm-port-manifest c_manifest rust output *options:
 
 powf-arm-port-asm function *options:
     cargo +nightly-2026-10-06 asm --manifest-path benchmarks/powf_providers_2026-11-09/Cargo.toml --bin arm_codegen --locked --no-color --asm {{options}} "{{function}}"
+
+powf-arm-profile manifest directory *methods:
+    python3 -B benchmarks/powf_providers_2026-11-09/arm_profile.py "{{manifest}}" "{{directory}}" {{methods}}
+
+powf-arm-frozen-asm binary function:
+    cargo +nightly-2026-10-06 asm --file "{{binary}}" --disasm --no-color "{{function}}"

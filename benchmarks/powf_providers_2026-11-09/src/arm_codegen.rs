@@ -23,6 +23,7 @@ pub fn fused_v3_warm(_t: archmage::X64V3Token, x: f32, n: f32) -> f32 {
     arm_powf::pow::<true, false, false>(x, n)
 }
 fn main() {
+    #[cfg(target_arch = "x86_64")]
     use archmage::SimdToken;
     let x = std::hint::black_box(0.75f32);
     let n = std::hint::black_box(2.4f32);
