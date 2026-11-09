@@ -756,3 +756,9 @@ powf-providers-matrix directory *options:
 
 powf-providers-analyze directory *runs:
     python3 -B benchmarks/powf_module_2026-11-07/analyze_replacement_matrix.py benchmarks/powf_module_2026-11-07/target/release/providers_analyze "{{directory}}" {{runs}} --require-cells 56
+
+powf-providers-accuracy fixtures output tier *options:
+    python3 -B benchmarks/powf_module_2026-11-07/providers_accuracy.py benchmarks/powf_module_2026-11-07/target/release/providers_eval "{{fixtures}}" "{{output}}" --tier {{tier}} {{options}}
+
+powf-providers-compare output *actuals:
+    python3 -B benchmarks/powf_module_2026-11-07/providers_compare.py "{{output}}" {{actuals}}
