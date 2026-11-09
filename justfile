@@ -890,3 +890,6 @@ powf-canonical-highp-nan-build:
 
 powf-canonical-highp-nan-scan binary context:
     "{{binary}}" "{{context}}"
+
+powf-canonical-highp-bars directory output:
+    python3 -B benchmarks/powf_providers_2026-11-09/highp_bars.py "{{directory}}" "{{output}}"
