@@ -37,7 +37,7 @@ if a.continue_unmeasured:
     assert 0<start<len(cells)
 policy=os.environ.get('ZENBENCH_CPU_POLICY','auto')
 assert (policy=='unrestricted')==a.exploratory, 'unrestricted requires explicit exploratory labeling'
-manifest={'binary':str(binary),'sha256':hashlib.sha256(binary.read_bytes()).hexdigest(),'cells':cells,'pairs':50,'pilot':a.pilot,'exploratory':a.exploratory,'promotion_eligible':not a.exploratory,'cpu_policy':policy,'record_all':a.record_all,'start_index':start,'prior_run':str(a.continue_unmeasured.resolve())if a.continue_unmeasured else None}
+manifest={'binary':str(binary),'sha256':hashlib.sha256(binary.read_bytes()).hexdigest(),'cells':cells,'pairs':50,'pilot':a.pilot,'exploratory':a.exploratory,'promotion_eligible':not a.exploratory,'cpu_policy':policy,'record_all':a.record_all,'start_index':start,'prior_run':str(a.continue_unmeasured.resolve())if a.continue_unmeasured else None,'registered_launcher_pid':os.getpid()if a.policies else None}
 (a.directory/'MATRIX.json').write_text(json.dumps(manifest,indent=2)+'\n')
 for index,cell in enumerate(cells):
     if index<start:continue
@@ -47,6 +47,11 @@ for index,cell in enumerate(cells):
     (a.directory/'progress.json').write_text(json.dumps(progress,indent=2)+'\n')
     child_env={k:v for k,v in os.environ.items() if k not in ['POWF_LIST','POWF_VERIFY_ONLY']}
     child_env.update(POWF_FILTER=cell,POWF_RESULT=str(output))
+    if a.policies:
+        # zenbench's documented multi-process owner registration excludes
+        # this waiting launcher and the measuring process from foreign load.
+        # Every unrelated process, RAM and temperature gate remains visible.
+        child_env['ZENBENCH_LAUNCHER_PIDS']=str(os.getpid())
     with log.open('w') as handle:
         run=subprocess.run([str(binary)],env=child_env,stdout=handle,stderr=subprocess.STDOUT)
     if run.returncode:

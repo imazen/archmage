@@ -58,3 +58,21 @@ full matrix. The owner-authorized M6 run uses explicit unrestricted scheduler
 placement and is exploratory even when its resource gates are clean. Preserve
 all flagged rounds, failures, binary hashes, source and resource logs.
 No merge, promotion or numerical guarantee follows from an exploratory ranking.
+
+## Launcher correction
+
+The first M6 run omitted zenbench's documented `ZENBENCH_LAUNCHER_PIDS`
+registration for its waiting Python launcher. Preserve the complete original
+run and its foreign-heavy-process observations; those observations alone do
+not identify the process. The published 0.1.11 sampler already excludes the
+measuring process itself. A separately labeled corrected launch uses the same
+frozen binary, inputs, rounds and gates, registers only the waiting launcher's
+actual PID and enables gate identity tracing. Every unrelated process and all
+RAM/temperature thresholds remain visible and unchanged. This corrects explicit
+owner registration; whether it explains the original flags requires evidence.
+No further favorable reruns are authorized by this correction.
+
+The first Intel launch refused before timing because its process boundary
+spanned performance and efficiency cores. Preserve that zero-sample refusal.
+Resolve the topology, confine the process to its performance CPU class, and run
+the correctly registered pilot once before considering the full Intel matrix.

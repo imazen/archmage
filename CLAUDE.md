@@ -1208,6 +1208,15 @@ fn process(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 
 ## Known Bugs
 
+Draft powf option families (2026-11-08): LOWP options inherit the exponent-bias
+limitation below; Gamma presets explicitly bound inputs and validate the whole
+vector. MIDP/LOWP/HIGHP names are quality families, not global ULP guarantees.
+Std HIGHP is BackendDependent only. AssumeValid removes numerical checks but
+never relaxes width or option validity. Native FMA policies can intentionally
+compile to identical graphs; inspect the public policy protocol and measured
+instruction/timing comparisons in `benchmarks/powf_module_2026-11-07/POLICY-PLAN.md`.
+
+
 Backend-dependent LOWP range limitation (2026-11-08): a normal computed output
 does not establish accuracy for unrestricted exponents. At base `3f7fffff`,
 exponent `cb317217`, both fused and separate LOWP return `4ad3af2c` while

@@ -137,9 +137,9 @@ macro_rules! vector {
             if matches!(caller, dispatch::Plan::Wasm(_, false)) {
                 return graph::$profile::<T, { graph::WASM_SOFTWARE }, OPTIONS>(token, input, n);
             }
-            // Caller selection admits only a native FMA proof here (or a
-            // relaxed-WASM proof after its cached fusion screen). Keep the
-            // vector representation in the caller's optimization region.
+            // BitExact reaches this point only with a native FMA proof or
+            // a screened relaxed-WASM provider. BackendDependent also admits
+            // strict/nonfusing WASM. Keep vectors in the caller's feature region.
             graph::$profile::<T, { graph::NATIVE }, OPTIONS>(token, input, n)
         }
     };
