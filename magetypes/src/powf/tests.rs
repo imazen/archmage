@@ -623,8 +623,8 @@ fn std_highp_full_domain_and_restricted_masks() {
         [1.; 4]
     );
     assert_eq!(try_powf_with::<STD>(0., -1.).unwrap(), f32::INFINITY);
-    let tiny=try_powf_with::<STD>(f32::from_bits(1),1.).unwrap();
-    assert!(tiny.is_subnormal() || tiny==0.);
+    let tiny = try_powf_with::<STD>(f32::from_bits(1), 1.).unwrap();
+    assert!(tiny.is_subnormal() || tiny == 0.);
     assert_eq!(
         try_powf_array_with::<STD, 3>([1.; 3], 2.).unwrap_err().kind,
         PowfErrorKind::UnsupportedWidth
