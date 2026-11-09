@@ -798,3 +798,6 @@ powf-external-analyze *runs:
 
 powf-external-inventory directory *runs:
     python3 -B benchmarks/powf_providers_2026-11-09/inventory.py "{{directory}}" {{runs}}
+
+powf-policy-cold-build base patched directory toolchain:
+    python3 -B benchmarks/powf_providers_2026-11-09/cold_build.py "{{base}}" "{{patched}}" "{{directory}}" --toolchain "{{toolchain}}"

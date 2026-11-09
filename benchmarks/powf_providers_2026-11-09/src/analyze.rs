@@ -22,14 +22,19 @@ fn main() {
                 .iter()
                 .position(|b| b.name == "system_C_powf")
                 .unwrap();
+            let mut edges = std::collections::BTreeSet::new();
             for numerator in 0..group.benchmarks.len() {
-                if group.benchmarks[numerator].name.starts_with("EMPTY_") {
-                    continue;
-                }
+                if group.benchmarks[numerator].name.starts_with("EMPTY_") { continue; }
                 for denominator in [std, native_std] {
-                    if numerator == denominator {
-                        continue;
+                    if numerator != denominator { edges.insert((numerator, denominator)); }
+                }
+                for denominator in 0..numerator {
+                    if !group.benchmarks[denominator].name.starts_with("EMPTY_") {
+                        edges.insert((numerator, denominator));
                     }
+                }
+            }
+            for (numerator, denominator) in edges {
                     let ratios: Vec<_> = group
                         .samples
                         .iter()
@@ -60,10 +65,10 @@ fn main() {
                     "implementation":group.benchmarks[numerator].name,"reference":group.benchmarks[denominator].name,
                     "numerator_mean_ns":raw["comparisons"][index]["benchmarks"][numerator]["summary"]["mean"],
                     "denominator_mean_ns":raw["comparisons"][index]["benchmarks"][denominator]["summary"]["mean"],
+                    "comparison_family":if denominator == std || denominator == native_std {"predeclared_std_reference"} else {"descriptive_pairwise"},
                     "pairs":ratios.len(),"resource_clean":clean,"placement":placement,
                     "promotion_eligible":clean&&verified,"ratio_ci95":ci,"cost_bound_only":cost,"verdict":verdict})
                     );
-                }
             }
         }
     }
