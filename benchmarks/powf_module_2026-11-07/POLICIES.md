@@ -64,7 +64,9 @@ Intel and M6. NaN payloads are unspecified; non-NaN bits, classes, masks and
 rejection stages are checked. Directed MPFR-256 finds sampled maximum ULP error
 upper bounds 0.506155662238598 on Linux x86 and 0.5116611998528243 on Apple ARM;
 17 and 121 results respectively differ from correctly rounded power.
-These finite samples do not establish a global ULP guarantee.
+These finite samples do not establish a global ULP guarantee. The same 16-policy
+vector/array equivalence replay also passes under no-FMA Nehalem emulation,
+i686, and scalar/native strict and both relaxed-WASM engine controls.
 
 Full HIGHP inherits a measured std special-value difference: signaling NaN
 bits 7f800001 raised to either signed zero yields NaN on Linux x86 and 1 on
