@@ -145,6 +145,7 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 
 #### Added
 
+- Route existing approximate power methods through the const-configured engine, retaining their per-backend arithmetic and preserving all 72 x86 before/after caller probe bodies.
 - Add `try_powf_with_token` for single values and tails retaining the vector caller's proof, including backend-dependent Caller rounding.
 - Add checked positive-only Gamma presets for portable and backend-dependent MIDP/LOWP; assumed configurations remove zero masks and redundant range work while preserving Gamma result bits on positive inputs. Verify all 64 bounded encodings across scalar, vector and tail forms.
 

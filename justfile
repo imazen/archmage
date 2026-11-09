@@ -913,3 +913,10 @@ powf-midlow-cross directory:
 
 powf-midlow-codegen binary directory:
     python3 -B benchmarks/powf_module_2026-11-07/midlow_codegen.py "{{binary}}" "{{directory}}"
+
+powf-remap-probes:
+    python3 -B benchmarks/powf_module_2026-11-07/remap_probes.py
+    cargo rustc --release --locked --manifest-path benchmarks/powf_module_2026-11-07/Cargo.toml --features avx512 --bin remap_codegen -- --emit=asm
+
+powf-remap-codegen assembly output *options:
+    python3 -B benchmarks/powf_module_2026-11-07/remap_codegen_audit.py "{{assembly}}" "{{output}}" {{options}}

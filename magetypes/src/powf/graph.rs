@@ -1,4 +1,4 @@
-//! One expression graph, instantiated per logical width and arithmetic backend.
+//! Const-configured power graphs, instantiated per width and arithmetic provider.
 use super::{PowfError, PowfErrorKind, PowfOptions};
 
 // Arithmetic mode is chosen once at the operation boundary. Mode 0 uses the
@@ -7,6 +7,10 @@ use super::{PowfError, PowfErrorKind, PowfOptions};
 pub(super) const NATIVE: usize = 0;
 pub(super) const SOFTWARE: usize = 1;
 pub(super) const RELAXED: usize = 4;
+// Internal approximate-power configurations. These are not accepted public
+// option encodings: the existing infallible methods select them at compile time.
+pub(super) const CLAMP: u32 = 256;
+pub(super) const INPUT_EDGES: u32 = 512;
 #[cfg(target_arch = "wasm32")]
 pub(super) const WASM_SOFTWARE: usize = 3;
 #[cfg(all(feature = "std", not(miri)))]
@@ -74,6 +78,11 @@ macro_rules! graph {
             let madd = |a: V<T>, b: V<T>, c: V<T>| -> V<T> {
                 if ARITHMETIC == NATIVE || ARITHMETIC == RELAXED {
                     a.mul_add_relaxed(b, c)
+                } else if ARITHMETIC == SOFTWARE {
+                    // Preserve the scalar representation, while allowing the
+                    // existing fused primitive to use compile-proven FMA (for
+                    // example baseline AArch64). It adds no runtime f32 probe.
+                    a.mul_add_fused(b, c)
                 } else {
                     let (a, b, c) = (a.to_array(), b.to_array(), c.to_array());
                     #[cfg(target_arch = "wasm32")]
@@ -98,15 +107,20 @@ macro_rules! graph {
                 }
             };
             let result = if OPTIONS & PowfOptions::LOWP != 0 {
-                let xb = x.bitcast_to_i32();
-                let offset = ip(0x3f2a_aaab_u32 as i32);
-                let shifted = (xb - offset).shr_arithmetic_const::<23>();
-                let m = (xb - shifted.shl_const::<23>()).bitcast_to_f32() - sp(1.0);
-                let yp = madd(sp(0.742_458_7), m, sp(1.428_716_1));
-                let yp = madd(yp, m, sp(-1.850_383_3e-6));
-                let yq = madd(sp(0.174_093_43), m, sp(1.009_671_8));
-                let yq = madd(yq, m, sp(0.990_328_14));
-                let t = (yp / yq + shifted.to_f32()) * sp(exponent);
+                let log = if OPTIONS & CLAMP != 0 {
+                    input.log2_lowp()
+                } else {
+                    let xb = x.bitcast_to_i32();
+                    let offset = ip(0x3f2a_aaab_u32 as i32);
+                    let shifted = (xb - offset).shr_arithmetic_const::<23>();
+                    let m = (xb - shifted.shl_const::<23>()).bitcast_to_f32() - sp(1.0);
+                    let yp = madd(sp(0.742_458_7), m, sp(1.428_716_1));
+                    let yp = madd(yp, m, sp(-1.850_383_3e-6));
+                    let yq = madd(sp(0.174_093_43), m, sp(1.009_671_8));
+                    let yq = madd(yq, m, sp(0.990_328_14));
+                    yp / yq + shifted.to_f32()
+                };
+                let t = log * sp(exponent);
                 if OPTIONS & PowfOptions::ASSUME == 0 && !GAMMA {
                     let outside = (t.simd_lt(sp(-126.0)) | t.simd_gt(sp(127.5))).bitcast_to_i32();
                     // Admitted zero has an explicit result, independent of
@@ -123,7 +137,7 @@ macro_rules! graph {
                 // PositiveNormal already promises t in [-126,127.5]; Gamma's
                 // nonzero lanes have |t| < 68. Only general nonnegative zero
                 // needs the legacy clamp (LOWP log2(1) has a small bias).
-                let t = if ZERO && !GAMMA {
+                let t = if (ZERO && !GAMMA) || OPTIONS & CLAMP != 0 {
                     t.max(sp(-126.0)).min(sp(127.99))
                 } else {
                     t
@@ -139,16 +153,22 @@ macro_rules! graph {
             } else {
                 // BEGIN MIDP GRAPH
                 // Coefficients and arithmetic order from the existing midp log2
-                // and exp2 graph; every former relaxed madd rounds exactly once.
-                let adjusted = x.bitcast_to_i32() + ip((0x3f80_0000_u32 - 0x3f35_04f3) as i32);
-                let n = (adjusted.shr_arithmetic_const::<23>() - ip(127)).to_f32();
-                let a = ((adjusted & ip(0x007f_ffff)) + ip(0x3f35_04f3)).bitcast_to_f32();
-                let y = (a - sp(1.0)) / (a + sp(1.0));
-                let y2 = y * y;
-                let p = madd(sp(0.434_411_97), y2, sp(0.576_974_45));
-                let p = madd(p, y2, sp(0.961_800_76));
-                let p = madd(p, y2, sp(2.885_39));
-                let t = madd(p, y, n) * sp(exponent);
+                // and exp2 graph; BitExact rounds every madd once, while the
+                // infallible approximation retains its caller's relaxed arithmetic.
+                let log = if OPTIONS & INPUT_EDGES != 0 {
+                    input.log2_midp()
+                } else {
+                    let adjusted = x.bitcast_to_i32() + ip((0x3f80_0000_u32 - 0x3f35_04f3) as i32);
+                    let n = (adjusted.shr_arithmetic_const::<23>() - ip(127)).to_f32();
+                    let a = ((adjusted & ip(0x007f_ffff)) + ip(0x3f35_04f3)).bitcast_to_f32();
+                    let y = (a - sp(1.0)) / (a + sp(1.0));
+                    let y2 = y * y;
+                    let p = madd(sp(0.434_411_97), y2, sp(0.576_974_45));
+                    let p = madd(p, y2, sp(0.961_800_76));
+                    let p = madd(p, y2, sp(2.885_39));
+                    madd(p, y, n)
+                };
+                let t = log * sp(exponent);
                 // Gamma: |integer exponent| <= 16, |y| < 1/4, and the
                 // positive Horner polynomial is < 2.96. Thus |log2| < 17,
                 // and |n*log2| < 68 for n in [0,4]. xtask/powf_vectors.py
@@ -162,12 +182,19 @@ macro_rules! graph {
                         ));
                     }
                 }
-                let xi = if GAMMA {
-                    t.round()
+                let underflow_limit = sp(-126.0);
+                let overflow_limit = sp(128.0);
+                let reduced = if OPTIONS & CLAMP != 0 {
+                    t.max(underflow_limit).min(overflow_limit)
                 } else {
-                    t.round().min(sp(127.0))
+                    t
                 };
-                let xf = t - xi;
+                let xi = if GAMMA {
+                    reduced.round()
+                } else {
+                    reduced.round().min(sp(127.0))
+                };
+                let xf = reduced - xi;
                 let p = madd(sp(0.000_154_47), xf, sp(0.001_333_37));
                 let p = madd(p, xf, sp(0.009_618_055));
                 let p = madd(p, xf, sp(0.055_504_545));
@@ -177,7 +204,17 @@ macro_rules! graph {
                 let scale = (xi.to_i32_round() + ip(127))
                     .shl_const::<23>()
                     .bitcast_to_f32();
-                p * scale
+                let result = p * scale;
+                if OPTIONS & CLAMP != 0 {
+                    let is_underflow = t.simd_lt(underflow_limit);
+                    let is_overflow = t.simd_ge(overflow_limit);
+                    let zero = sp(0.0);
+                    let inf = sp(f32::INFINITY);
+                    let result = V::blend(is_underflow, zero, result);
+                    V::blend(is_overflow, inf, result)
+                } else {
+                    result
+                }
                 // END MIDP GRAPH
             };
             let result = if ZERO {

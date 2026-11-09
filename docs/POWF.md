@@ -244,3 +244,14 @@ both forms; BitExact preserves its fused graph even through software fallback.
 
 The [replacement matrix](../benchmarks/powf_module_2026-11-07/MIDLOW.md)
 reports exact methods, ranges, validation, ns and retained admission results.
+
+
+The existing infallible `pow_lowp`, `pow_midp`, unchecked and precise aliases
+now delegate to the const-configured engine. Private clamp/edge configurations
+keep their broad approximation behavior; the scalar backend reuses the existing
+log/exp composition to preserve compiler scheduling. The x86 before/after audit
+compares actual pre-remap methods at b3413314, not just a hand-written expression:
+all 72 scalar/V3/V4/V4x literal/dynamic probes are identical, with data constants,
+operands, branches, calls and instruction order retained. This introduces no
+arithmetic or dispatch overhead in those probes. Backend-dependent scalar math
+continues to permit separate multiplication/addition.

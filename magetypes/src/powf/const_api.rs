@@ -213,6 +213,61 @@ fn select<T: archmage::SimdToken, const OPTIONS: u32>(
     }
 }
 
+// Existing infallible power methods use the same polynomial engine. Their
+// clamp and edge policy is a private const configuration; no runtime decoder,
+// validation Result, autonomous dispatch or portable-FMA cost enters this path.
+macro_rules! approximate {
+    ($name:ident,$profile:ident,$v:ident,$bound:ident) => {
+        #[inline(always)]
+        pub(crate) fn $name<
+            T: crate::simd::backends::$bound,
+            const LOWP: bool,
+            const CHECKED: bool,
+        >(
+            token: T,
+            input: crate::simd::generic::$v<T>,
+            n: f32,
+        ) -> crate::simd::generic::$v<T> {
+            // Keep the scalar backend's existing log/exp composition: LLVM's
+            // scalar rounding expansion is sensitive to the aggregate's live
+            // ranges. This is a monomorphized type choice, not CPU detection.
+            if core::any::TypeId::of::<T>() == core::any::TypeId::of::<archmage::ScalarToken>() {
+                use crate::simd::generic::$v as V;
+                return if LOWP {
+                    (input.log2_lowp() * V::splat_t(token, n)).exp2_lowp()
+                } else if CHECKED {
+                    (input.log2_midp() * V::splat_t(token, n)).exp2_midp()
+                } else {
+                    (input.log2_midp_unchecked() * V::splat_t(token, n)).exp2_midp_unchecked()
+                };
+            }
+            let result = if LOWP {
+                graph::$profile::<
+                    T,
+                    { graph::NATIVE },
+                    { PowfOptions::ASSUME | PowfOptions::LOWP | graph::CLAMP },
+                >(token, input, n)
+            } else if CHECKED {
+                graph::$profile::<
+                    T,
+                    { graph::NATIVE },
+                    { PowfOptions::ASSUME | graph::CLAMP | graph::INPUT_EDGES },
+                >(token, input, n)
+            } else {
+                graph::$profile::<T, { graph::NATIVE }, { PowfOptions::ASSUME }>(token, input, n)
+            };
+            match result {
+                Ok(value) => value,
+                Err(_) => unreachable!("private assumed configuration cannot reject"),
+            }
+        }
+    };
+}
+approximate!(approximate4, profile4, f32x4, F32x4Convert);
+approximate!(approximate8, profile8, f32x8, F32x8Convert);
+#[cfg(feature = "w512")]
+approximate!(approximate16, profile16, f32x16, F32x16Convert);
+
 // The runtime adapter shares literal const instantiations with the hot API.
 // Every policy arm is outside the polynomial; no dynamic flags enter Horner steps.
 // Keep the runtime decoder and each selected graph in separate frames

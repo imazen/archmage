@@ -91,3 +91,20 @@ numerical grids are excluded by the explicit Miri runner list. Existing Miri and
 regression expectations are unchanged.
 
 The final source/review/CI and artifact hashes are appended after verification.
+
+
+## Legacy entry-point remapping
+
+The existing power methods now route through the const-configured engine. Their
+private clamp/edge configurations reuse the existing log building blocks; the
+scalar path keeps its established composition to preserve register allocation.
+All 72 actual-before/actual-after x86 probes are identical across scalar, V3,
+V4 and V4x, widths 4/8/16, dynamic and literal exponents. All non-NaN output bits
+and NaN classification agree with the frozen log/exp composition in the retained
+structured corpus. No global error-bound or full IEEE powf claim follows.
+
+The separate comparison against a hand-written composition initially reported
+70/72 matching x86 bodies. The two scalar x16 LOWP differences already existed
+before remapping: using the actual frozen entry points as the compiler oracle
+resolves both without weakening assembly normalization. Every earlier report
+and failed implementation attempt is retained.
