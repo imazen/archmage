@@ -837,3 +837,12 @@ powf-arm-c-manifest rust native build output *options:
 
 powf-arm-c-flags manifest fixtures directory:
     python3 -B benchmarks/powf_providers_2026-11-09/arm_c_flags.py "{{manifest}}" "{{fixtures}}" "{{directory}}"
+
+powf-arm-data build output:
+    python3 -B benchmarks/powf_providers_2026-11-09/arm_data.py "{{build}}" "{{output}}"
+
+powf-arm-port-manifest c_manifest rust output *options:
+    python3 -B benchmarks/powf_providers_2026-11-09/arm_port_manifest.py "{{c_manifest}}" "{{rust}}" "{{output}}" {{options}}
+
+powf-arm-port-asm function *options:
+    cargo +nightly-2026-10-06 asm --manifest-path benchmarks/powf_providers_2026-11-09/Cargo.toml --bin arm_codegen --locked --no-color --asm {{options}} "{{function}}"
