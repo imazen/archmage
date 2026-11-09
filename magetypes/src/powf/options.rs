@@ -22,7 +22,8 @@ pub enum PowfExecution {
     /// Reuse a capable caller or select a native tier once per power operation.
     #[default]
     Automatic,
-    /// Retain the caller's tier without runtime upgrades.
+    /// Retain the caller's Magetypes tier without autonomous upgrades.
+    /// A std HIGHP provider may still use its own internal CPU dispatch.
     Caller,
 }
 

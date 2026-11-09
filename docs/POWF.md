@@ -66,7 +66,9 @@ is therefore available only as BackendDependent HIGHP, never BitExact.
 `PowfExecution::Caller` prevents autonomous upgrades. A scalar caller then
 uses software, making backend tests explicit. This option also works in an
 integration test whose dependency was compiled without `cfg(test)`.
-It is not a compile-time removal of other backends.
+It is not a compile-time removal of other backends. HIGHP currently has one
+std provider, so Caller and Automatic intentionally coincide; std may perform
+its own internal CPU dispatch independently of Magetypes token selection.
 
 The graph retains the existing midp coefficients, with four log2 FMA steps,
 one multiplication by the exponent, and six exp2 FMA steps. Domain selection

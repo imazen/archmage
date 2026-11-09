@@ -722,8 +722,8 @@ powf-policy-matrix-analyze directory *runs:
 powf-policy-codegen-audit assembly output *options:
     python3 -B benchmarks/powf_module_2026-11-07/policy_codegen_audit.py "{{assembly}}" "{{output}}" {{options}}
 
-powf-highp-accuracy fixtures output:
-    python3 -B benchmarks/powf_module_2026-11-07/highp_accuracy.py benchmarks/powf_module_2026-11-07/target/release/highp_eval "{{fixtures}}" "{{output}}"
+powf-highp-accuracy fixtures output *options:
+    python3 -B benchmarks/powf_module_2026-11-07/highp_accuracy.py benchmarks/powf_module_2026-11-07/target/release/highp_eval "{{fixtures}}" "{{output}}" {{options}}
 
 powf-policy-cross directory fixtures sde wasm_runner="wasmtime":
     bash benchmarks/powf_module_2026-11-07/policy_cross.sh "{{directory}}" "{{fixtures}}" "{{sde}}" "{{wasm_runner}}"
@@ -734,3 +734,6 @@ powf-policy-avx512-build:
 powf-policy-avx512-check fixtures sde:
     {{sde}} -icx -- benchmarks/powf_module_2026-11-07/target/release/policy_widths v4 < "{{fixtures}}"
     {{sde}} -icx -- benchmarks/powf_module_2026-11-07/target/release/policy_widths v4x < "{{fixtures}}"
+
+powf-policy-miri-highp:
+    cargo +$(cat xtask/miri-nightly.txt) miri test -p magetypes --features avx512 --lib powf::tests::std_highp_full_domain_and_restricted_masks
