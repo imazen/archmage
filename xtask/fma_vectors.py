@@ -141,6 +141,9 @@ if __name__ == '__main__':
         import powf_vectors
         if powf_vectors.OUTPUT.read_text() != powf_vectors.render():
             raise SystemExit('Bounded powf graph fixtures differ')
+        import highp_powf_vectors
+        if highp_powf_vectors.OUTPUT.read_text() != highp_powf_vectors.render():
+            raise SystemExit('Canonical HIGHP graph fixtures differ')
     else:
         OUTPUT.write_text(contents)
         PROBE_OUTPUT.write_text(probe)

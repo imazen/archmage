@@ -1,0 +1,60 @@
+# Arm v26.07 4be260a5 canonical TOINT=0 data; extracted through pinned C.
+L 3ff661ec79f8f3be bfdefec65b963019
+L 3ff571ed4aaf883d bfdb0b6832d4fca4
+L 3ff49539f0f010b0 bfd7418b0a1fb77b
+L 3ff3c995b0b80385 bfd39de91a6dcf7b
+L 3ff30d190c8864a5 bfd01d9bf3f2b631
+L 3ff25e227b0b8ea0 bfc97c1d1b3b7af0
+L 3ff1bb4a4a1a343f bfc2f9e393af3c9f
+L 3ff12358f08ae5ba bfb960cbbf788d5c
+L 3ff0953f419900a7 bfaa6f9db6475fce
+L 3ff0000000000000 0000000000000000
+L 3fee608cfd9a47ac 3fb338ca9f24f53d
+L 3feca4b31f026aa0 3fc476a9543891ba
+L 3feb2036576afce6 3fce840b4ac4e4d2
+L 3fe9c2d163a1aa2d 3fd40645f0c6651c
+L 3fe886e6037841ed 3fd88e9c2c1b9ff8
+L 3fe767dcf5534862 3fdce0a44eb17bcc
+A 3fd27616c9496e0b
+A bfd71969a075c67a
+A 3fdec70a6ca7badd
+A bfe7154748bef6c8
+A 3ff71547652ab82b
+T 3ff0000000000000
+T 3fefd9b0d3158574
+T 3fefb5586cf9890f
+T 3fef9301d0125b51
+T 3fef72b83c7d517b
+T 3fef54873168b9aa
+T 3fef387a6e756238
+T 3fef1e9df51fdee1
+T 3fef06fe0a31b715
+T 3feef1a7373aa9cb
+T 3feedea64c123422
+T 3feece086061892d
+T 3feebfdad5362a27
+T 3feeb42b569d4f82
+T 3feeab07dd485429
+T 3feea47eb03a5585
+T 3feea09e667f3bcd
+T 3fee9f75e8ec5f74
+T 3feea11473eb0187
+T 3feea589994cce13
+T 3feeace5422aa0db
+T 3feeb737b0cdc5e5
+T 3feec49182a3f090
+T 3feed503b23e255d
+T 3feee89f995ad3ad
+T 3feeff76f2fb5e47
+T 3fef199bdd85529c
+T 3fef3720dcef9069
+T 3fef5818dcfba487
+T 3fef7c97337b9b5f
+T 3fefa4afa2a490da
+T 3fefd0765b6e4540
+C 3fac6af84b912394
+C 3fcebfce50fac4f3
+C 3fe62e42ff0c52d6
+S 42e8000000000000
+O 405fffffffd1d571
+B 405fffffffa3aae2
