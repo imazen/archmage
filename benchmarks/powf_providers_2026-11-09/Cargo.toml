@@ -33,3 +33,7 @@ path = "src/analyze.rs"
 [[bin]]
 name = "arm_codegen"
 path = "src/arm_codegen.rs"
+
+[[bin]]
+name = "arm_eval"
+path = "src/arm_eval.rs"

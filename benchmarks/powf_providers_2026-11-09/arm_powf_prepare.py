@@ -15,17 +15,23 @@ def digest(path):
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('repository',type=Path);p.add_argument('directory',type=Path)
+    p.add_argument('--snapshot-manifest',type=Path,help='rebuild a frozen source snapshot after verifying every source hash')
     a=p.parse_args();a.directory.mkdir(parents=True,exist_ok=False)
-    revision=subprocess.check_output(['git','-C',str(a.repository),'rev-parse','HEAD'],text=True).strip()
+    frozen=json.loads(a.snapshot_manifest.read_text())if a.snapshot_manifest else None
+    revision=frozen['source_revision']if frozen else subprocess.check_output(['git','-C',str(a.repository),'rev-parse','HEAD'],text=True).strip()
     assert revision=='4be260a5117480382690c6d8c300bc784e927d76'
     # Ignore the caller's local claim; source changes would invalidate this pin.
-    subprocess.run(['git','-C',str(a.repository),'diff','--quiet','HEAD','--','math'],check=True)
+    if frozen:
+        actual={str(path.relative_to(a.repository)):digest(path)for path in a.repository.rglob('*')if path.is_file()}
+        assert actual==frozen['source_files'],'frozen source differs'
+    else:subprocess.run(['git','-C',str(a.repository),'diff','--quiet','HEAD','--','math'],check=True)
     snapshot=a.directory/'source';snapshot.mkdir()
     names=['powf.c','powf_log2_data.c','exp2f_data.c','math_errf.c','math_config.h','powf_common.h']
-    for name in names:shutil.copy2(a.repository/'math'/name,snapshot/name)
+    source_root=a.repository if frozen else a.repository/'math'
+    for name in names:shutil.copy2(source_root/name,snapshot/name)
     # Rename after math.h's vector declarations have been parsed.
     (snapshot/'powf_entry.c').write_text('#include <math.h>\n#define powf arm_powf_reference\n#include "powf.c"\n')
-    shutil.copytree(a.repository/'math/include',snapshot/'include')
+    shutil.copytree(source_root/'include',snapshot/'include')
     for name in ['LICENSE','LICENSE-MIT','LICENSE-Apache','LICENSE-LLVM','README.md']:
         source=a.repository/name
         if source.is_file():shutil.copy2(source,snapshot/name)

@@ -13,8 +13,8 @@ a=p.parse_args();assert not a.output.exists()
 c=load_manifest(a.c_manifest)
 x=discover(a.rust,Path(c['workers'][1]['binary']))
 x['providers']=[v for v in x['providers']if v['method']in ['std','system_C_powf']or v['method'].startswith('Arm_powf_C_')]
-methods=['Arm_Rust_fused_cold','Arm_Rust_separate_cold','Arm_Rust_fused_warm']
-if a.gamma:methods+=['Arm_Rust_fused_assume_Gamma']
+methods=['Arm_Rust_fused_cold','Arm_Rust_separate_cold','Arm_Rust_fused_warm','Arm_Rust_fused_unrolled']
+if a.gamma:methods+=['Arm_Rust_fused_assume_Gamma','Arm_Rust_assume_Gamma_unrolled']
 x['providers'] +=[{'label':m+'_Rust_baseline','method':m,'worker':0,'lanes':1}for m in methods]
 if a.native:
     x['workers'].append({'name':'Rust_native_owner_diagnostic','binary':str(a.native.resolve()),'sha256':digest(a.native)})

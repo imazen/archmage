@@ -8,11 +8,8 @@ use crate::arm_data::{A, C, LOG, OVERFLOW, OVERFLOW_BOUND, SHIFT, TABLE};
 fn madd<const FUSED: bool>(x: f64, y: f64, z: f64) -> f64 {
     if FUSED { x.mul_add(y, z) } else { x * y + z }
 }
-#[inline(always)]
-fn cold<const COLD: bool>() {
-    if COLD {
-        core::hint::cold_path();
-    }
+macro_rules! cold {
+    ($enabled:expr) => { if $enabled { core::hint::cold_path(); } };
 }
 #[inline(always)]
 fn zeroinfnan(x: u32) -> bool {
@@ -45,7 +42,7 @@ pub fn pow<const FUSED: bool, const COLD: bool, const ASSUME: bool>(x: f32, y: f
     let iy = y.to_bits();
     let mut sign_bias = 0u32;
     if !ASSUME && (ix.wrapping_sub(0x0080_0000) >= 0x7f00_0000 || zeroinfnan(iy)) {
-        cold::<COLD>();
+        cold!(COLD);
         if zeroinfnan(iy) {
             if iy.wrapping_mul(2) == 0 {
                 return if signaling(ix) { x + y } else { 1. };
@@ -105,7 +102,7 @@ pub fn pow<const FUSED: bool, const COLD: bool, const ASSUME: bool>(x: f32, y: f
     let logx = madd::<FUSED>(h, r4, q);
     let ylogx = f64::from(y) * logx;
     if !ASSUME && ((ylogx.to_bits() >> 47) & 0xffff) >= (126f64.to_bits() >> 47) {
-        cold::<COLD>();
+        cold!(COLD);
         let sign = if sign_bias == 0 { 0 } else { 0x8000_0000 };
         if ylogx <= -150. {
             return f32::from_bits(sign);
@@ -129,4 +126,42 @@ pub fn pow<const FUSED: bool, const COLD: bool, const ASSUME: bool>(x: f32, y: f
     let r2 = r * r;
     let tail = madd::<FUSED>(C[2], r, 1.);
     (madd::<FUSED>(z, r2, tail) * f64::from_bits(scale)) as f32
+}
+
+#[cfg(test)]
+mod tests {
+    use super::pow;
+
+    #[test]
+    fn signed_zero_subnormal_and_range_regressions() {
+        // Exact power/IEEE cases, plus the independently MPFR-enclosed input
+        // on which the measured Rust libm overflowed incorrectly.
+        let cases=[
+            (0x00000000,0x00000000,0x3f800000),
+            (0x80000000,0x40400000,0x80000000),
+            (0x80000000,0xc0400000,0xff800000),
+            (0x00000001,0x3f800000,0x00000001),
+            (0x80000001,0x3f800000,0x80000001),
+            (0x80800000,0x40400000,0x80000000),
+            (0x7f7fffff,0x3f800000,0x7f7fffff),
+            (0xff7fffff,0x3f800000,0xff7fffff),
+            (0xff800000,0xc0400000,0x80000000),
+            (0xbf800000,0x7f800000,0x3f800000),
+            (0x3f7ffff6,0xcd000001,0x792abd43),
+        ];
+        for (xb,nb,expected)in cases {
+            let x=f32::from_bits(xb);let n=f32::from_bits(nb);
+            assert_eq!(pow::<true,true,false>(x,n).to_bits(),expected,"fused {xb:08x}^{nb:08x}");
+            assert_eq!(pow::<false,true,false>(x,n).to_bits(),expected,"separate {xb:08x}^{nb:08x}");
+        }
+    }
+
+    #[test]
+    fn signaling_nan_precedence_and_gamma_zero() {
+        assert!(pow::<true,true,false>(f32::from_bits(0x7f800001),0.).is_nan());
+        assert!(pow::<true,true,false>(1.,f32::from_bits(0x7f800001)).is_nan());
+        assert_eq!(pow::<true,true,false>(f32::NAN,0.),1.);
+        assert_eq!(pow::<true,true,true>(0.,0.),1.);
+        assert_eq!(pow::<true,true,true>(0.,0.5).to_bits(),0);
+    }
 }
