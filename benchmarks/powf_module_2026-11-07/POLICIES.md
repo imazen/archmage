@@ -3,8 +3,10 @@
 The six presets and all 64 supported const configurations are implemented in
 the held draft. Missing evidence comes first: **there is no qualified new timing
 matrix for these 64 configurations**. Every cell in the three M6 runs is flagged;
-macOS placement is exploratory. Intel's confined pilot times out behind another
-zenbench owner without collecting a sample. No promotion follows these timings.
+macOS placement is exploratory. The earlier Intel confined pilot times out behind another
+zenbench owner without collecting a sample. A final 71 continuation after
+that owner exits collects 50 pairs with enforced performance-core placement;
+all 50 are dirty and unreliable. It stops before any full matrix. No promotion follows these timings.
 Existing power methods, default BitExact MIDP graph, dependencies, numerical
 fixtures and assembly expectations are unchanged.
 
@@ -89,7 +91,10 @@ second identifies Storage activity. The owner then closes Storage and requests
 one comparison of the updated implementation; it has 71 arms, including the
 local Result-map provider and direct public HIGHP arrays. Other OS services
 remain busy, so **all 56 cells are flagged in every run**. Every round remains.
-No additional favorable retry is selected.
+No additional favorable retry is selected. The final Intel native x4/64
+stream pilot (literal 2.4) collects 50 dirty pairs, unreliable=true, with
+cpuset 0-7 enforced. No full matrix follows it. Its resource wrapper reports
+8 s, peak RSS 0.03 GiB, minimum available 23,135 MiB, load 3.41.
 
 Final binary SHA-256:
 `5c60abb900e8c09684db89ac043ba5902198e61064ad8217eb772ec5dcfcacdc`.
@@ -143,7 +148,8 @@ keeps all edges, ties and reversals. **Zero cells are promotion-eligible.**
 
 The cost rule is unchanged: qualified upper 95% <=1.02 passes, lower >1.02
 fails, overlap is inconclusive; an optimization needs upper <1.00. Missing
-admitted physical x86, ARM and WASM timings remain missing. Fresh-target
+admitted physical x86, ARM and WASM timings remain missing. New exceptional-
+lane, bit-distributed-input and first-use timing coverage is also missing. Fresh-target
 compile time, size and first-use cost for the 64-policy expansion are unmeasured;
 the earlier cold-build diagnostics describe the earlier default-only API.
 
