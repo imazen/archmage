@@ -10,9 +10,11 @@ relaxed WASM follows its engine, and native FMA-capable tiers fuse. A fusion
 correction probe is needed for BitExact, not simply to admit either graph.
 Whole-operation dispatch is still an independent policy decision.
 No production graph, existing fixture, accuracy threshold or default changes.
-The [preset specification](../../docs/POWF.md#proposed-quality-and-portability-presets)
-states range, validation and execution explicitly; new LOWP/BackendDependent/HIGHP options
-remain proposed, not public APIs.
+This historical study left LOWP/BackendDependent/HIGHP options proposed. The
+later [implemented policy comparison](POLICIES.md) adds those public draft
+configurations, preserving this study's frozen graphs and timings. The
+[preset specification](../../docs/POWF.md#quality-and-portability-presets) states
+range, validation and execution explicitly.
 
 Missing evidence: this study has no qualified full AMD, Intel, Neoverse-N1
 or WASM timing matrix. M6 timings use owner-approved unrestricted OS scheduling

@@ -1,3 +1,8 @@
+The latest [implemented policy comparison](POLICIES.md) covers all64 const
+configurations and six presets, including BackendDependent LOWP/MIDP and
+std HIGHP. The runtime-options study below is historical; its statement that
+std power is not admitted applies to its BitExact graph. Promotion remains held.
+
 The caller-visible const API and actual legacy/std replacement comparisons are
 reported in [REPLACEMENTS.md](REPLACEMENTS.md). The runtime-options study below
 retains its original source and data; its cost ratios must not be applied to

@@ -117,7 +117,7 @@ assert!(result.is_normal());
 | `BACKEND_GAMMA_MIDP` | BackendDependent / MIDP graph | Same Gamma interval and exponent bounds | Same zero semantics; checked whole-vector rejection | Automatic; hardware FMA where supported, separate arithmetic otherwise |
 | `BACKEND_GAMMA_LOWP` | BackendDependent / LOWP graph | Same Gamma interval and exponent bounds | Same zero semantics; checked whole-vector rejection | Automatic; hardware FMA where supported, separate arithmetic otherwise |
 | `PORTABLE_NORMAL_MIDP` | BitExact / MIDP graph | Positive finite normal / finite normal or signed zero | Computed argument [-126,127.5], normal output; checked whole-vector rejection | Automatic |
-| `STD_HIGHP` | BackendDependent / HIGHP | Full f32 domain, including negative bases where defined, subnormals, infinities and NaNs | Std-style specials, overflow and underflow; std precision | Scalar std or another measured backend; requires `std` |
+| `STD_HIGHP` | BackendDependent / HIGHP | Full f32 domain, including negative bases where defined, subnormals, infinities and NaNs | Std-style specials, overflow and underflow; std precision | Scalar std provider, Automatic; requires `std` |
 
 The default remains BitExact/MIDP/Checked/PositiveNormal/Automatic. LOWP retains
 the legacy coefficients and exp2 clamp; its shorter graph changes accuracy.
@@ -169,7 +169,7 @@ Gamma's exponent bound is essential: LOWP's log bias near 1 can be magnified
 catastrophically by large exponents even when its computed result remains in
 normal range. PositiveNormal alone is therefore not a LOWP accuracy preset.
 
-The [public policy protocol](../benchmarks/powf_module_2026-11-07/POLICY-PLAN.md)
+The [public policy comparison](../benchmarks/powf_module_2026-11-07/POLICIES.md)
 compares all 64 supported configurations and records where flags save work,
 collapse to identical native graphs, or trade validation/dispatch cost against
 arithmetic cost. HIGHP inherits the [std power precision contract](https://doc.rust-lang.org/std/primitive.f32.html#method.powf),
