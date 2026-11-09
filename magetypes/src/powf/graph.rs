@@ -56,7 +56,12 @@ macro_rules! graph {
             if OPTIONS & PowfOptions::ASSUME == 0 && invalid.any_true() {
                 return Err(reject(invalid, PowfErrorKind::InvalidBase));
             }
-            let x = if ZERO {
+            // Gamma's zero sentinel can follow the ordinary reduction safely:
+            // its integer exponent is -127, and multiplying by n in [0,4]
+            // stays within [-512,0]. The final mask supplies the specified
+            // zero result. General nonnegative inputs still need substitution
+            // before multiplying by an arbitrarily large admitted exponent.
+            let x = if ZERO && !GAMMA {
                 V::blend(zero.bitcast_to_f32(), sp(1.0), input)
             } else {
                 input
@@ -110,8 +115,14 @@ macro_rules! graph {
                         return Err(reject(outside, PowfErrorKind::OutsideApproximationRange));
                     }
                 }
-                // Preserve the legacy LOWP graph, including its clamping.
-                let t = t.max(sp(-126.0)).min(sp(127.99));
+                // PositiveNormal already promises t in [-126,127.5]; Gamma's
+                // nonzero lanes have |t| < 68. Only general nonnegative zero
+                // needs the legacy clamp (LOWP log2(1) has a small bias).
+                let t = if ZERO && !GAMMA {
+                    t.max(sp(-126.0)).min(sp(127.99))
+                } else {
+                    t
+                };
                 let xi = t.floor();
                 let xf = t - xi;
                 let p = madd(sp(0.055_504_11), xf, sp(0.240_226_5));
@@ -146,7 +157,11 @@ macro_rules! graph {
                         ));
                     }
                 }
-                let xi = t.round().min(sp(127.0));
+                let xi = if GAMMA {
+                    t.round()
+                } else {
+                    t.round().min(sp(127.0))
+                };
                 let xf = t - xi;
                 let p = madd(sp(0.000_154_47), xf, sp(0.001_333_37));
                 let p = madd(p, xf, sp(0.009_618_055));

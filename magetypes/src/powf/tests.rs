@@ -647,3 +647,97 @@ fn std_highp_full_domain_and_restricted_masks() {
         }
     );
 }
+
+// A feature-context tail must use the same graph as the packed body. In
+// particular BackendDependent Caller must retain its token rather than switch
+// to ScalarToken (which intentionally uses separate arithmetic).
+#[archmage::magetypes(v4x(cfg(avx512)), v3, neon, wasm128, scalar)]
+fn bounded_widths_and_tails(token: Token) {
+    use crate::simd::generic::{f32x4, f32x8};
+    fn check<const FLAGS: u32>(token: Token) {
+        let mut state = 0x9e37_79b9_u32;
+        for n in [0.0_f32, -0.0, 0.5, 2.4, 4.0] {
+            let input: [f32; 513] = core::array::from_fn(|i| {
+                state ^= state << 13;
+                state ^= state >> 17;
+                state ^= state << 5;
+                if FLAGS & 3 != 0 && i % 17 == 0 {
+                    0.0
+                } else {
+                    f32::from_bits(0x3780_0000 + state % 0x1000_0001)
+                }
+            });
+            let single = input.map(|x| {
+                let result = f32x4::splat_t(token, x)
+                    .try_powf_with::<FLAGS>(n)
+                    .unwrap()
+                    .to_array()[0];
+                if FLAGS & PowfOptions::CALLER == 0 || FLAGS & PowfOptions::BACKEND == 0 {
+                    assert_eq!(try_powf_with::<FLAGS>(x, n).unwrap().to_bits(), result.to_bits());
+                }
+                result.to_bits()
+            });
+            macro_rules! width {
+                ($ty:ident, $lanes:literal) => {
+                    for length in (0..=33).chain([64, 65, 127, 255, 511, 512, 513]) {
+                        let mut chunks = input[..length].chunks_exact($lanes);
+                        let mut offset = 0;
+                        for chunk in chunks.by_ref() {
+                            let result = $ty::from_array_t(token, chunk.try_into().unwrap())
+                                .try_powf_with::<FLAGS>(n)
+                                .unwrap()
+                                .to_array()
+                                .map(f32::to_bits);
+                            assert_eq!(&result, &single[offset..offset + $lanes]);
+                            offset += $lanes;
+                        }
+                        for &x in chunks.remainder() {
+                            let result = f32x4::splat_t(token, x)
+                                .try_powf_with::<FLAGS>(n)
+                                .unwrap()
+                                .to_array()[0];
+                            assert_eq!(result.to_bits(), single[offset]);
+                            offset += 1;
+                        }
+                        assert_eq!(offset, length);
+                    }
+                };
+            }
+            width!(f32x4, 4);
+            width!(f32x8, 8);
+            #[cfg(feature = "w512")]
+            {
+                use crate::simd::generic::f32x16;
+                width!(f32x16, 16);
+            }
+        }
+    }
+    macro_rules! flags {
+        ($($f:literal),* $(,)?) => { $(check::<$f>(token);)* };
+    }
+    flags!(
+        0, 1, 2, 4, 5, 6, 8, 9, 10, 12, 13, 14, 16, 17, 18, 20, 21, 22, 24,
+        25, 26, 28, 29, 30, 32, 33, 34, 36, 37, 38, 40, 41, 42, 44, 45, 46,
+        48, 49, 50, 52, 53, 54, 56, 57, 58, 60, 61, 62,
+    );
+}
+
+#[test]
+fn all_bounded_policies_match_single_vector_and_tail_forms() {
+    bounded_widths_and_tails_scalar(archmage::ScalarToken);
+    #[cfg(target_arch = "x86_64")]
+    {
+        use archmage::SimdToken;
+        if let Some(token) = archmage::X64V3Token::summon() {
+            bounded_widths_and_tails_v3(token);
+        }
+        #[cfg(feature = "avx512")]
+        if let Some(token) = archmage::X64V4xToken::summon() {
+            bounded_widths_and_tails_v4x(token);
+        }
+    }
+    #[cfg(target_arch = "aarch64")]
+    bounded_widths_and_tails_neon(archmage::NeonToken::summon().unwrap());
+    #[cfg(target_arch = "wasm32")]
+    bounded_widths_and_tails_wasm128(archmage::Wasm128Token::summon().unwrap());
+}
