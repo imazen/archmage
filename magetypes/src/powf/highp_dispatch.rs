@@ -1,5 +1,4 @@
 //! One whole-operation feature selection for the canonical HIGHP graph.
-#[cfg(feature = "std")]
 use super::PowfOptions;
 #[cfg(any(
     target_arch = "x86_64",
@@ -127,14 +126,14 @@ pub(super) fn for_token<T: archmage::SimdToken, const OPTIONS: u32, const N: usi
     n: f32,
 ) -> Result<[f32; N], PowfError> {
     #[cfg(feature = "std")]
-    if OPTIONS & super::PowfOptions::BACKEND != 0 {
+    if OPTIONS & PowfOptions::BACKEND != 0 {
         return highp::run::<OPTIONS, N>(bases, n);
     }
     let caller = super::dispatch::select_highp(t, super::PowfExecution::Caller);
     if !matches!(caller, Plan::Software) {
         return run::<true, OPTIONS, N>(caller, bases, n);
     }
-    let plan = if OPTIONS & super::PowfOptions::CALLER == 0 {
+    let plan = if OPTIONS & PowfOptions::CALLER == 0 {
         super::dispatch::select_highp(t, super::PowfExecution::Automatic)
     } else {
         caller

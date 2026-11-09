@@ -69,7 +69,7 @@ pub fn try_powf_array_with<const OPTIONS: u32, const N: usize>(
             });
         }
         exponent::<OPTIONS, N>(n)?;
-        return super::highp_dispatch::for_token::<_, OPTIONS, N>(archmage::ScalarToken, bases, n);
+        return super::highp_dispatch::for_token::<_, OPTIONS, N>(ScalarToken, bases, n);
     }
     use archmage::ScalarToken;
     let mut output = [0.0; N];
