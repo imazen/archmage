@@ -155,8 +155,11 @@ graphs into each unoptimized caller. The payload-test frame is 1,068,352 bytes b
 afterward. Retaining separate decoder and selected
 graph frames in debug builds fixes the test with the original stack limits,
 payload stride, widths, masks and assertions. Release builds with debug assertions disabled retain the
-original always-inline attributes, so frozen release comparisons remain
-applicable. The focused WASM replay passes all 13 powf tests after correction
+original always-inline attributes. All 406 expanded release probe bodies
+match before/after on x86, strict WASM and relaxed WASM, after normalizing
+only LLVM unique private-symbol suffixes. Symbol bases, operands, registers
+and immediates remain significant; the existing assembly gate is unchanged.
+Thus the frozen release comparisons remain applicable. The focused WASM replay passes all 13 powf tests after correction
 (15 s, peak RSS 1.70 GiB), versus the reproduced trap before correction
 (35 s, peak RSS 6.05 GiB). These are build/test resource records, not runtime
 speed comparisons. Original failing module and corrected module are preserved
