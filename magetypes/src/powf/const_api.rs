@@ -177,7 +177,11 @@ fn select<T: archmage::SimdToken, const OPTIONS: u32>(
 
 // The runtime adapter shares literal const instantiations with the hot API.
 // Every policy arm is outside the polynomial; no dynamic flags enter Horner steps.
-#[inline(always)]
+// Keep the 64-arm runtime decoder and each selected graph in separate frames
+// in unoptimized builds. Forced inlining otherwise exhausts the WASM stack.
+// Preserve release specialization and the measured optimized call shape.
+#[cfg_attr(debug_assertions, inline(never))]
+#[cfg_attr(not(debug_assertions), inline(always))]
 fn token_array<T: archmage::SimdToken, const OPTIONS: u32, const N: usize>(
     token: T,
     bases: [f32; N],
@@ -228,7 +232,8 @@ fn token_array<T: archmage::SimdToken, const OPTIONS: u32, const N: usize>(
     }
     Ok(output)
 }
-#[inline(always)]
+#[cfg_attr(debug_assertions, inline(never))]
+#[cfg_attr(not(debug_assertions), inline(always))]
 pub(super) fn runtime<T: archmage::SimdToken, const N: usize>(
     token: T,
     bases: [f32; N],
