@@ -102,3 +102,16 @@ method emitted58. Do not report their timing ratio as the original public
 method's speedup. The actual before/after public-method assembly and the two
 original69-arm timing runs are retained separately. The direct public array
 HIGHP and direct std probes have matching instruction counts at every width.
+
+## Intel final 71 admission continuation
+
+The earlier correctly confined pilot collected zero samples while queued behind
+a live owner. Before the final 71 implementation is timed, re-resolve that PID
+and the common admission state. If the owner has exited, allow one fresh
+correctly confined native x4/64 stream pilot, using the same frozen 56 cells,
+50 rounds, inputs and strict gates. Run no timings alongside this lane's CI or
+builds. A clean pilot permits the full matrix; any dirty result or admission
+failure stops this continuation and remains recorded. Retain the pilot and
+every full-matrix cell; do not select whichever repetition is favorable. The
+prior zero-sample refusals and all M6 results remain unchanged. This introduces
+no additional M6 timing attempt.
