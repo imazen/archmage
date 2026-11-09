@@ -17,7 +17,9 @@ fn main() {
         };
         let options = PowfOptions {
             domain,
-            execution: PowfExecution::Caller, ..PowfOptions::new() };
+            execution: PowfExecution::Caller,
+            ..PowfOptions::new()
+        };
         let b = f32::from_bits(base);
         let n = f32::from_bits(exponent);
         match try_powf_runtime(b, n, options) {
