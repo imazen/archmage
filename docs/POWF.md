@@ -1,6 +1,6 @@
 # Configurable f32 power
 
-`magetypes::powf` owns the MIDP/LOWP approximation graphs and scalar std HIGHP
+`magetypes::powf` owns the MIDP/LOWP approximation graphs, a canonical binary64 HIGHP graph and the scalar std HIGHP
 backend for scalar and vector power. `f32x1`, generic `f32x4`, `f32x8` and enabled `f32x16` delegate to it.
 The existing `pow_lowp`, `pow_midp` and related methods are unchanged.
 
@@ -61,13 +61,13 @@ With `std`, an independent cached FMA fixture screen can admit `f32::mul_add`
 on otherwise unsupported native configurations. The standard's FMA contract
 supplies the correctness requirement; finite probes only screen known bugs.
 They cannot certify direct `std::powf` against the fixed graph. Direct std power
-is therefore available only as BackendDependent HIGHP, never BitExact.
+is available only as BackendDependent HIGHP. BitExact HIGHP instead owns its graph.
 
 `PowfExecution::Caller` prevents autonomous upgrades. A scalar caller then
 uses software, making backend tests explicit. This option also works in an
 integration test whose dependency was compiled without `cfg(test)`.
-It is not a compile-time removal of other backends. HIGHP currently has one
-std provider, so Caller and Automatic intentionally coincide; std may perform
+It is not a compile-time removal of other backends. BackendDependent HIGHP uses one
+std provider, so its Caller and Automatic coincide; std may perform
 its own internal CPU dispatch independently of Magetypes token selection.
 
 The graph retains the existing midp coefficients, with four log2 FMA steps,
@@ -96,7 +96,7 @@ performance evidence.
 
 ## Quality and portability presets
 
-All six named presets below are implemented as `PowfOptions` const builder
+All eight named presets below are implemented as `PowfOptions` const builder
 values. Append `.bits()` for a const entry, or pass the builder value to a runtime
 adapter. Every preset states its range, validation and execution policy.
 `with_precision`, `with_portability`, `with_domain`, `with_validation` and
@@ -117,14 +117,17 @@ assert!(result.is_normal());
 | `BACKEND_GAMMA_MIDP` | BackendDependent / MIDP graph | Same Gamma interval and exponent bounds | Same zero semantics; checked whole-vector rejection | Automatic; hardware FMA where supported, separate arithmetic otherwise |
 | `BACKEND_GAMMA_LOWP` | BackendDependent / LOWP graph | Same Gamma interval and exponent bounds | Same zero semantics; checked whole-vector rejection | Automatic; hardware FMA where supported, separate arithmetic otherwise |
 | `PORTABLE_NORMAL_MIDP` | BitExact / MIDP graph | Positive finite normal / finite normal or signed zero | Computed argument [-126,127.5], normal output; checked whole-vector rejection | Automatic |
+| `PORTABLE_GAMMA_HIGHP` | BitExact / canonical binary64 HIGHP | Same Gamma interval and exponent bounds | Checked whole-vector rejection; 0^0=1 | Automatic fused graph with exact fallback |
+| `PORTABLE_HIGHP` | BitExact / canonical binary64 HIGHP | Full f32 domain | Signed zeros, subnormals, infinities and NaN classification; NaN payload/sign unspecified | Automatic fused graph with exact fallback |
 | `STD_HIGHP` | BackendDependent / HIGHP | Full f32 domain, including negative bases where defined, subnormals, infinities and NaNs | Std-style specials, overflow and underflow; std precision | Scalar std provider, Automatic; requires `std` |
 
 The default remains BitExact/MIDP/Checked/PositiveNormal/Automatic. LOWP retains
 the legacy coefficients and exp2 clamp; its shorter graph changes accuracy.
 All restricted approximation domains require a finite normal-or-zero exponent.
-`Full` requires Highp + BackendDependent + the `std` feature. Highp with a
+`Full` requires Highp. BackendDependent Highp requires the `std` feature;
+BitExact Highp also works without std. Highp with a
 restricted domain enforces the same input rules; PositiveNormal and
-NonNegativeNormal check the **std result** is normal (or an admitted zero),
+NonNegativeNormal check the **selected graph result** is normal (or an admitted zero),
 rather than evaluating a second approximation solely to check its argument.
 Gamma Highp needs no output check. Full Highp permits all f32 inputs and results.
 Unsupported runtime combinations return `UnsupportedOptions`, mask zero.
@@ -181,3 +184,20 @@ classification differences. In the measured corpus, signaling NaN bits
 ARM (two unique input pairs, repeated across four corpus tags). Restricted
 Checked presets reject that NaN base before delegating. BackendDependent HIGHP
 is therefore not a canonical-special-values contract for Full inputs.
+
+## Canonical HIGHP graph
+
+The HIGHP graph is a safe Rust port of Arm Optimized Routines v26.07
+(commit `4be260a5`), using the unscaled TOINT=0 reduction and exact
+binary64 coefficients. Its nine fused nodes retain their ordering; other
+adds and multiplies remain separately rounded. The final conversion rounds
+to binary32. The Arm MIT license ships in `magetypes/LICENSE-ARM`.
+
+`xtask/highp_powf_vectors.py` computes expected graph bits using exact rational
+IEEE rounding and separately frozen C-extracted coefficients. No host pow
+implementation supplies its answers. This checks graph identity; MPFR supplies
+the separate mathematical accuracy comparison. Finite samples do not establish
+a whole-domain error bound, and HIGHP does not promise correct rounding.
+
+The first integration adds sixteen BitExact HIGHP encodings: 80 configurations
+with std and 64 without std. BackendDependent HIGHP retains std delegation.

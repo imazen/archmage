@@ -147,6 +147,7 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 
 - Keep unoptimized powf runtime policy frames separate to avoid default WASM stack exhaustion; release inlining is unchanged (354be602).
 
+- Add canonical BitExact HIGHP power, including Full and Gamma presets, with a safe Arm graph port, exact-rational fixtures and no_std fallback. BackendDependent HIGHP retains std delegation.
 - Add bounded, bit-consistent f32 power through `magetypes::powf` and scalar/vector `try_powf_with` delegates, with explicit domains, whole-vector rejection and whole-operation fused dispatch. Existing power methods are unchanged; mathematical accuracy and admission costs remain separately measured (56059d2c).
 - Add independent const portability, MIDP/LOWP/std HIGHP precision, domain and validation choices, with six complete presets. BackendDependent can use separate rounding; AssumeValid removes numerical checks. Default fused MIDP and legacy methods are unchanged (b357e019).
 - Carry bounded-power options as caller-visible integer const flags, produced by `PowfOptions::new().with_domain(...).with_execution(...).bits()`; retain explicitly named runtime adapters and compare actual legacy/std methods separately (7bdcaf84, e4fad9b3).

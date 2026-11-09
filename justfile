@@ -858,3 +858,17 @@ powf-arm-contexts reference contexts directory:
 
 powf-arm-eval-test:
     cargo +nightly-2026-10-06 test --release --locked --manifest-path benchmarks/powf_providers_2026-11-09/Cargo.toml --bin arm_eval
+
+# Canonical HIGHP graph oracle and physical/cross evaluator.
+powf-highp-oracle *options:
+    python3 -B xtask/highp_powf_vectors.py {{options}}
+
+powf-highp-eval-build:
+    cargo build -p magetypes --release --example powf_highp_eval
+
+powf-highp-test:
+    cargo test -p magetypes --test powf_highp
+    cargo test -p magetypes --no-default-features --test powf_highp
+
+powf-highp-verify expected directory command *options:
+    python3 -B benchmarks/powf_providers_2026-11-09/highp_verify.py "{{expected}}" "{{directory}}" --command '{{command}}' {{options}}
