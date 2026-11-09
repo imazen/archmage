@@ -1208,6 +1208,13 @@ fn process(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 
 ## Known Bugs
 
+Powf debug runtime fanout (2026-11-08, corrected in draft): forcing all 64
+policy arms into each unoptimized caller exhausts the default WASM linear
+stack in the existing payload/mask test. Debug builds retain separate runtime
+decoder and selected-graph frames. Optimized builds keep their existing
+always-inline policy; no stack limit, expectation or input coverage changes.
+Use `just powf-policy-debug-wasm` with the normal WASM runner.
+
 Std Full HIGHP special values (2026-11-08): signaling-NaN bits `7f800001`
 raised to +0 or -0 yield NaN on Linux x86 and 1 on Apple ARM. Full HIGHP
 inherits that backend-dependent std classification. Restricted Checked

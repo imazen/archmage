@@ -145,6 +145,20 @@ The cost rule is unchanged: qualified upper 95% <=1.02 passes, lower >1.02
 fails, overlap is inconclusive; an optimization needs upper <1.00. Missing
 admitted physical x86, ARM and WASM timings remain missing.
 
+## Debug runtime stack correction
+
+GitHub CI and local reproduction expose WASM linear-stack exhaustion in the
+existing NaN/subnormal payload test. The 64-arm runtime decoder forces all
+graphs into each unoptimized caller. Retaining separate decoder and selected
+graph frames in debug builds fixes the test with the original stack limits,
+payload stride, widths, masks and assertions. Optimized builds retain the
+original always-inline attributes, so frozen release comparisons remain
+applicable. The focused WASM replay passes all 13 powf tests after correction
+(15 s, peak RSS 1.70 GiB), versus the reproduced trap before correction
+(35 s, peak RSS 6.05 GiB). These are build/test resource records, not runtime
+speed comparisons. Original failing module and corrected module are preserved
+in a separate addendum; the sealed core evidence remains unchanged.
+
 ## Validation and retained evidence
 
 Full 19-stage local CI passes, including Miri and soundness. A new HIGHP test

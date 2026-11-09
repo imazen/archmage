@@ -740,3 +740,7 @@ powf-policy-miri-highp:
 
 powf-highp-cross directory fixtures sde wasm_runner="wasmtime":
     bash benchmarks/powf_module_2026-11-07/highp_cross.sh "{{directory}}" "{{fixtures}}" "{{sde}}" "{{wasm_runner}}"
+
+# Preserve default linker/engine stack limits while exercising debug policy fanout.
+powf-policy-debug-wasm:
+    cargo test -p magetypes --features 'std avx512' --target wasm32-wasip1
