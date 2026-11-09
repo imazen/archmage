@@ -20,6 +20,7 @@
 #include <unistd.h>
 #ifdef __x86_64__
 #include <immintrin.h>
+#include <gnu/libc-version.h>
 #endif
 static float from_bits(uint32_t v) {float f; std::memcpy(&f,&v,4);return f;}
 static uint32_t bits(float f) {uint32_t v;std::memcpy(&v,&f,4);return v;}
@@ -56,16 +57,22 @@ static void evaluate(const Provider &p,const float *x,const float *n,float *out,
 static void load() {
     if(const char *arm=std::getenv("POWF_ARM_DSO"))providers.push_back({"Arm_v26_07_scalar",symbol(required_dso(arm),"powf"),1});
 #ifdef __x86_64__
+    if(std::strcmp(gnu_get_libc_version(),"2.43"))throw std::runtime_error("libmvec version differs from frozen 2.43; update manifest before timing");
     auto *gnu=required_dso("libmvec.so.1");
     providers.push_back({"glibc_2_43_libmvec_SSE2x4",symbol(gnu,"_ZGVbN4vv_powf"),4});
     if(__builtin_cpu_supports("avx2")&&__builtin_cpu_supports("fma"))providers.push_back({"glibc_2_43_libmvec_AVX2x8",symbol(gnu,"_ZGVdN8vv_powf"),8});
     if(const char *aocl=std::getenv("POWF_AOCL_DSO")) {
+        if(!(__builtin_cpu_supports("avx2")&&__builtin_cpu_supports("fma")))throw std::runtime_error("AOCL default powf requires AVX2+FMA");
         auto *lib=required_dso(aocl);
         providers.push_back({"AOCL_5_3_2_scalar",symbol(lib,"amd_powf"),1});
         if(__builtin_cpu_supports("avx2")&&__builtin_cpu_supports("fma")) {
             providers.push_back({"AOCL_5_3_2_vector4",symbol(lib,"amd_vrs4_powf"),4});
             providers.push_back({"AOCL_5_3_2_vector8",symbol(lib,"amd_vrs8_powf"),8});
         }
+    }
+    if(const char *fast=std::getenv("POWF_AOCL_FAST_DSO")) {
+        if(!(__builtin_cpu_supports("avx2")&&__builtin_cpu_supports("fma")))throw std::runtime_error("AOCL fast requires AVX2+FMA");
+        providers.push_back({"AOCL_5_3_2_fast_scalar",symbol(required_dso(fast),"amd_powf"),1});
     }
 #endif
     if(std::fegetround()!=FE_TONEAREST)throw std::runtime_error("requires RNE");
@@ -125,6 +132,7 @@ static void connection(int fd) {
 int main(int argc,char **argv) {
     try {
         load();
+        if(argc==2&&std::string(argv[1])=="--list") {for(auto &p:providers)std::cout<<p.name<<' '<<p.lanes<<'\n';return 0;}
         if(argc==1) {std::string line;while(std::getline(std::cin,line))std::cout<<request(line)<<std::flush;return 0;}
         if(argc!=2||std::strlen(argv[1])>=sizeof(sockaddr_un::sun_path))throw std::runtime_error("socket path too long");
         int fd=socket(AF_UNIX,SOCK_STREAM,0);if(fd<0)throw std::runtime_error("socket");
