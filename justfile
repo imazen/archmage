@@ -744,3 +744,6 @@ powf-highp-cross directory fixtures sde wasm_runner="wasmtime":
 # Preserve default linker/engine stack limits while exercising debug policy fanout.
 powf-policy-debug-wasm:
     cargo test -p magetypes --features 'std avx512' --target wasm32-wasip1
+
+powf-policy-codegen-identity before after output:
+    python3 -B benchmarks/powf_module_2026-11-07/policy_identity.py "{{before}}" "{{after}}" "{{output}}"
