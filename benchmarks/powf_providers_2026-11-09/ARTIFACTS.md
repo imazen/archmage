@@ -83,3 +83,23 @@ old-snapshot CI attempt are retained. No test skip or threshold change follows.
 The counter directory mislabeled x1 explicitly records its actual default x8;
 `profile-x1-actual/` contains the corrected explicit-width diagnostic.
 Closing publication records are additive. See [M6-NEON.md](M6-NEON.md).
+
+## Canonical HIGHP integration and packed kernels
+
+Root `/mnt/v/output/archmage/powf-highp-simd-2026-11-09/` and independent mirror
+`/mnt/tower/output/archmage/powf-highp-simd-2026-11-09/` verify **1,278 files**
+in `CORE-MANIFEST.json`, SHA-256
+`19a8e9c8d3091c3f2fc3691baa09af63242717aa547095c3a0d8121f8f2170b5`.
+
+The root preserves independent graph answers, every actual output and variance,
+MPFR full/hard/Gamma replays, all M6 V1/V2 rounds and bars, both Linux pilots,
+N1 native measurements, hardware counters, actual-worker assembly, exhaustive
+NaN-family scans, no-FMA/FMA-only execution, both relaxed-engine fusion choices,
+default-stack debug WASM checks, full CI and every failed setup attempt.
+Binaries/modules and their relocation identities are frozen separately from
+Cargo outputs. Cargo caches are excluded. Later publication records are
+additive and do not alter this sealed core.
+
+Read the maintained [ISA bounds and performance reference](../../docs/POWF_REFERENCE.md)
+and the [integration review](HIGHP-SIMD.md). The earlier provider-only studies
+remain separate and immutable. All new performance promotion remains held.
