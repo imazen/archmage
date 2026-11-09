@@ -95,6 +95,11 @@ silently admit that unsupported execution context.
 CORE-MATH includes `src/binary32/pow/worst.c`, a finder for results close to
 rounding boundaries. That is different from maximizing an approximation's
 error. `check.sh --worst` consumes such witnesses; it is not itself the search.
+The project's [worst-case notes](https://core-math.gitlabpages.inria.fr/worst.html)
+name [BaCSeL](https://gitlab.inria.fr/bacsel/bacsel) as the tool used for most
+of its hard-to-round cases. The powf-specific finder is the tool exercised here.
+Neither should be described as a proof of an approximate graph's maximum ULP
+error merely because its inputs are hard to round.
 
 We ran the unchanged finder with degree two and target m=16 over x in
 [0.5,2] and the single f32 exponent `4019999a` (the f32 value of 2.4).
