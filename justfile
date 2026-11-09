@@ -762,3 +762,6 @@ powf-providers-accuracy fixtures output tier *options:
 
 powf-providers-compare output *actuals:
     python3 -B benchmarks/powf_module_2026-11-07/providers_compare.py "{{output}}" {{actuals}}
+
+powf-provider-ffi-check:
+    cargo check --manifest-path benchmarks/powf_providers_2026-11-09/Cargo.toml
