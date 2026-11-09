@@ -1,10 +1,13 @@
 //! Configurable f32 power with explicit portability, precision and validation.
 //!
-//! These functions evaluate a fixed approximation to `exp2(n * log2(x))`.
+//! MIDP and LOWP evaluate fixed approximations to `exp2(n * log2(x))`;
+//! backend-dependent HIGHP delegates to std when the `std` feature is enabled.
 //! The default promises bit identity on accepted inputs; this is not
 //! correctly rounded `powf`, and no whole-domain ULP bound is advertised.
 //! Round-to-nearest and gradual underflow are required. NaN/infinite inputs,
-//! negative bases, subnormal inputs and unsupported output ranges are rejected.
+//! negative bases, subnormal inputs and unsupported output ranges are rejected
+//! by restricted Checked presets. Full HIGHP permits all std inputs/results.
+//! AssumeValid omits numerical checks while retaining memory safety.
 //! Existing `pow_lowp`/`pow_midp` methods retain their existing behavior.
 //!
 //! ```
@@ -88,9 +91,9 @@ pub fn try_powf(base: f32, exponent: f32) -> Result<f32, PowfError> {
     try_powf_with::<{ PowfOptions::DEFAULT }>(base, exponent)
 }
 
-/// Bounded scalar power with explicit domain/execution options.
+/// Scalar power with explicit runtime policy options.
 ///
-/// The scalar entry shares the same graph as every vector width, including
+/// MIDP/LOWP scalar entries share their graph with every vector width, including
 /// range reduction, division, nearest-even splitting and fused Horner steps.
 #[inline(always)]
 pub fn try_powf_runtime(base: f32, exponent: f32, options: PowfOptions) -> Result<f32, PowfError> {
@@ -99,7 +102,9 @@ pub fn try_powf_runtime(base: f32, exponent: f32, options: PowfOptions) -> Resul
 
 /// Version-independent array boundary for widths 1/4/8 and, with `w512`, 16.
 ///
-/// Every lane must be accepted. The exponent is uniform across the array;
+/// Checked restricted presets require every lane to be accepted. Full HIGHP
+/// permits all f32 inputs/results. AssumeValid removes numerical checks.
+/// The exponent is uniform across the array; in restricted presets,
 /// it must be finite and either normal or zero. The computed exp2 argument
 /// must lie in [-126, 127.5], excluding overflow/subnormal-result regions.
 /// This bound refers to the approximation's computed argument, not an exact

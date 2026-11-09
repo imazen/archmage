@@ -14,6 +14,8 @@ positive normalized 8-bit fractions; chain normalization maps output back into
 [0.5,1). All range/validation configurations are valid on these inputs.
 No native CPU compiler flag or fast math. Native means an actual matching proof.
 x1 uses the public scalar/array boundary and has no separate native-token API.
+The legacy x1 comparisons splat into the actual scalar f32x4 legacy methods
+and extract lane zero; f32x1 has no legacy power methods.
 
 Correctness: the unchanged independent rational four-graph fixtures are replayed
 through all 48 bounded const encodings and their runtime adapters, widths 4/8/16,

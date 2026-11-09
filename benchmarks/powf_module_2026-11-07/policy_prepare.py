@@ -13,7 +13,7 @@ for n in [1,4,8,16]:
  vector=f'magetypes::simd::generic::f32x{n}'
  public=f'v.try_powf_with::<FLAGS>(n).unwrap().to_array()' if n!=1 else 'magetypes::powf::try_powf_array_with::<FLAGS,1>(x,n).unwrap()'
  runtime='v.try_powf_runtime(n,options).unwrap().to_array()' if n!=1 else 'magetypes::powf::try_powf_array_runtime(x,n,options).unwrap()'
- legacy=[f'v.pow_lowp(n).to_array()',f'v.pow_midp(n).to_array()'] if n!=1 else ['x.map(|x|magetypes::simd::scalar::f32x1(x).pow_lowp(n).0)','x.map(|x|magetypes::simd::scalar::f32x1(x).pow_midp(n).0)']
+ legacy=[f'v.pow_lowp(n).to_array()',f'v.pow_midp(n).to_array()'] if n!=1 else ['x.map(|x|magetypes::simd::generic::f32x4::splat_t(archmage::ScalarToken,x).pow_lowp(n).to_array()[0])','x.map(|x|magetypes::simd::generic::f32x4::splat_t(archmage::ScalarToken,x).pow_midp(n).to_array()[0])']
  code+=f'''#[archmage::magetypes(v3,neon,scalar)]
 #[inline(never)]
 fn policy_loop{n}<const ARM:usize,const FLAGS:u32,const EXP:u32>(token:Token,input:&[[f32;{n}]],output:&mut[[f32;{n}]],chain:bool,options:magetypes::powf::PowfOptions){{
