@@ -32,7 +32,7 @@ fn execute{n}<const EXP:u32>(arm:usize,context:&str,input:&[[f32;{n}]],output:&m
 '''
  for i,f in enumerate(flags):code+=f'  {i}=>$f::<0,{f},EXP>($t,input,output,chain,options),\n'
  for i in range(5):code+=f'  {64+i}=>$f::<{i+1},2,EXP>($t,input,output,chain,options),\n'
- code+='  _=>unreachable!(),\n }}}}\n'
+ code+='  _=>unreachable!(),\n }}}\n'
  code+=f''' match context{{
  "scalar"=>call!(policy_loop{n}_scalar,archmage::ScalarToken),
  #[cfg(target_arch="x86_64")] "v3"=>call!(policy_loop{n}_v3,archmage::X64V3Token::summon().expect("required V3")),

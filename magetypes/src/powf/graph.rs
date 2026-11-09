@@ -100,7 +100,11 @@ macro_rules! graph {
                     let outside = (t.simd_lt(sp(-126.0)) | t.simd_gt(sp(127.5))).bitcast_to_i32();
                     // Admitted zero has an explicit result, independent of
                     // LOWP's nonzero log2(1) bias at very large exponents.
-                    let outside = if ZERO { outside & (zero ^ ip(-1)) } else { outside };
+                    let outside = if ZERO {
+                        outside & (zero ^ ip(-1))
+                    } else {
+                        outside
+                    };
                     if outside.any_true() {
                         return Err(reject(outside, PowfErrorKind::OutsideApproximationRange));
                     }
@@ -112,45 +116,47 @@ macro_rules! graph {
                 let p = madd(sp(0.055_504_11), xf, sp(0.240_226_5));
                 let p = madd(p, xf, sp(core::f32::consts::LN_2));
                 let p = madd(p, xf, sp(1.0));
-                p * (xi.to_i32_round() + ip(127)).shl_const::<23>().bitcast_to_f32()
+                p * (xi.to_i32_round() + ip(127))
+                    .shl_const::<23>()
+                    .bitcast_to_f32()
             } else {
                 // BEGIN MIDP GRAPH
-            // Coefficients and arithmetic order from the existing midp log2
-            // and exp2 graph; every former relaxed madd rounds exactly once.
-            let adjusted = x.bitcast_to_i32() + ip((0x3f80_0000_u32 - 0x3f35_04f3) as i32);
-            let n = (adjusted.shr_arithmetic_const::<23>() - ip(127)).to_f32();
-            let a = ((adjusted & ip(0x007f_ffff)) + ip(0x3f35_04f3)).bitcast_to_f32();
-            let y = (a - sp(1.0)) / (a + sp(1.0));
-            let y2 = y * y;
-            let p = madd(sp(0.434_411_97), y2, sp(0.576_974_45));
-            let p = madd(p, y2, sp(0.961_800_76));
-            let p = madd(p, y2, sp(2.885_39));
-            let t = madd(p, y, n) * sp(exponent);
-            // Gamma: |integer exponent| <= 16, |y| < 1/4, and the
-            // positive Horner polynomial is < 2.96. Thus |log2| < 17,
-            // and |n*log2| < 68 for n in [0,4]. xtask/powf_vectors.py
-            // checks an independent rational/RNE interval certificate.
-            if OPTIONS & PowfOptions::ASSUME == 0 && !GAMMA {
-                let outside = t.simd_lt(sp(-126.0)) | t.simd_gt(sp(127.5));
-                if outside.bitcast_to_i32().any_true() {
-                    return Err(reject(
-                        outside.bitcast_to_i32(),
-                        PowfErrorKind::OutsideApproximationRange,
-                    ));
+                // Coefficients and arithmetic order from the existing midp log2
+                // and exp2 graph; every former relaxed madd rounds exactly once.
+                let adjusted = x.bitcast_to_i32() + ip((0x3f80_0000_u32 - 0x3f35_04f3) as i32);
+                let n = (adjusted.shr_arithmetic_const::<23>() - ip(127)).to_f32();
+                let a = ((adjusted & ip(0x007f_ffff)) + ip(0x3f35_04f3)).bitcast_to_f32();
+                let y = (a - sp(1.0)) / (a + sp(1.0));
+                let y2 = y * y;
+                let p = madd(sp(0.434_411_97), y2, sp(0.576_974_45));
+                let p = madd(p, y2, sp(0.961_800_76));
+                let p = madd(p, y2, sp(2.885_39));
+                let t = madd(p, y, n) * sp(exponent);
+                // Gamma: |integer exponent| <= 16, |y| < 1/4, and the
+                // positive Horner polynomial is < 2.96. Thus |log2| < 17,
+                // and |n*log2| < 68 for n in [0,4]. xtask/powf_vectors.py
+                // checks an independent rational/RNE interval certificate.
+                if OPTIONS & PowfOptions::ASSUME == 0 && !GAMMA {
+                    let outside = t.simd_lt(sp(-126.0)) | t.simd_gt(sp(127.5));
+                    if outside.bitcast_to_i32().any_true() {
+                        return Err(reject(
+                            outside.bitcast_to_i32(),
+                            PowfErrorKind::OutsideApproximationRange,
+                        ));
+                    }
                 }
-            }
-            let xi = t.round().min(sp(127.0));
-            let xf = t - xi;
-            let p = madd(sp(0.000_154_47), xf, sp(0.001_333_37));
-            let p = madd(p, xf, sp(0.009_618_055));
-            let p = madd(p, xf, sp(0.055_504_545));
-            let p = madd(p, xf, sp(0.240_226_46));
-            let p = madd(p, xf, sp(core::f32::consts::LN_2));
-            let p = madd(p, xf, sp(1.0));
-            let scale = (xi.to_i32_round() + ip(127))
-                .shl_const::<23>()
-                .bitcast_to_f32();
-            p * scale
+                let xi = t.round().min(sp(127.0));
+                let xf = t - xi;
+                let p = madd(sp(0.000_154_47), xf, sp(0.001_333_37));
+                let p = madd(p, xf, sp(0.009_618_055));
+                let p = madd(p, xf, sp(0.055_504_545));
+                let p = madd(p, xf, sp(0.240_226_46));
+                let p = madd(p, xf, sp(core::f32::consts::LN_2));
+                let p = madd(p, xf, sp(1.0));
+                let scale = (xi.to_i32_round() + ip(127))
+                    .shl_const::<23>()
+                    .bitcast_to_f32();
+                p * scale
                 // END MIDP GRAPH
             };
             let result = if ZERO {
@@ -198,7 +204,6 @@ macro_rules! graph {
             )
             .map(|result| result.to_array())
         }
-
     };
 }
 

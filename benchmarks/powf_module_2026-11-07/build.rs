@@ -3,9 +3,23 @@ use std::{env, path::PathBuf, process::Command};
 fn main() {
     let directory = PathBuf::from(env::var_os("CARGO_MANIFEST_DIR").unwrap());
     let output = PathBuf::from(env::var_os("OUT_DIR").unwrap());
-    assert!(Command::new("python3").arg(directory.join("policy_prepare.py")).arg(&output).status().unwrap().success());
+    assert!(
+        Command::new("python3")
+            .arg(directory.join("policy_prepare.py"))
+            .arg(&output)
+            .status()
+            .unwrap()
+            .success()
+    );
     println!("cargo:rerun-if-changed=policy_prepare.py");
-    assert!(Command::new("python3").arg(directory.join("policy_analyze.py")).arg(&output).status().unwrap().success());
+    assert!(
+        Command::new("python3")
+            .arg(directory.join("policy_analyze.py"))
+            .arg(&output)
+            .status()
+            .unwrap()
+            .success()
+    );
     println!("cargo:rerun-if-changed=policy_analyze.py");
     assert!(
         Command::new("python3")

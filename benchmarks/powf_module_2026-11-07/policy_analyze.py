@@ -14,7 +14,7 @@ for f in flags:
  if f&64 and f&3==2:edges.append((index[(f&~3)|3],index[f],'Full/Gamma'))
 edges += [(index[2],68,'Const/Runtime'),(index[83],66,'HIGHP_Full/std_f32'),(index[2],65,'BitExact_MIDP_Gamma/legacy_midp'),(index[10],64,'BitExact_LOWP_Gamma/legacy_lowp')]
 assert len(set(edges))==len(edges)
-code=Path(__file__).with_name('src/bin/rounding_analyze.rs').read_text()
+code=(Path(__file__).parent/'src/bin/rounding_analyze.rs').read_text()
 a=code.index('            for (numerator, denominator) in [');b=code.index('                let ratios:',a)
 code=code[code.index('fn main()'):a]+'            for (numerator,denominator,edge) in [\n'+''.join(f'                ({n},{d},"{label}"),\n'for n,d,label in edges)+'            ] {\n'+code[b:]
 code=code.replace('"file":path,"group":group.group_name,','"file":path,"group":group.group_name,"edge":edge,')

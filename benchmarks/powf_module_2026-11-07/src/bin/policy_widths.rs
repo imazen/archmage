@@ -41,15 +41,35 @@ macro_rules! width {
         ) {
             use magetypes::simd::generic::$vector as V;
             let v = V::from_array_t(token, input);
-            let caller_fuses = core::any::TypeId::of::<Token>() != core::any::TypeId::of::<archmage::ScalarToken>() && backend_fuses();
+            let caller_fuses = core::any::TypeId::of::<Token>()
+                != core::any::TypeId::of::<archmage::ScalarToken>()
+                && backend_fuses();
             for flags in 0..64u32 {
-                if flags & 3 != domain {continue;}
-                let fused = flags & 16 == 0 || if flags & 4 != 0 { caller_fuses } else { backend_fuses() };
-                let method = usize::from(flags & 8 != 0)*2 + usize::from(fused);
-                let stage = expected.iter().map(|r|r[method]>>32).filter(|&x|x!=0).min().unwrap_or(0);
-                if flags & 32 != 0 && stage != 0 { continue; } // Caller only promises valid lanes.
-                macro_rules! call {($flags:literal)=>{v.try_powf_with::<$flags>(exponent)}}
-                let actual=match flags {
+                if flags & 3 != domain {
+                    continue;
+                }
+                let fused = flags & 16 == 0
+                    || if flags & 4 != 0 {
+                        caller_fuses
+                    } else {
+                        backend_fuses()
+                    };
+                let method = usize::from(flags & 8 != 0) * 2 + usize::from(fused);
+                let stage = expected
+                    .iter()
+                    .map(|r| r[method] >> 32)
+                    .filter(|&x| x != 0)
+                    .min()
+                    .unwrap_or(0);
+                if flags & 32 != 0 && stage != 0 {
+                    continue;
+                } // Caller only promises valid lanes.
+                macro_rules! call {
+                    ($flags:literal) => {
+                        v.try_powf_with::<$flags>(exponent)
+                    };
+                }
+                let actual = match flags {
                     0 => call!(0),
                     1 => call!(1),
                     2 => call!(2),
@@ -98,11 +118,15 @@ macro_rules! width {
                     60 => call!(60),
                     61 => call!(61),
                     62 => call!(62),
-                    _=>unreachable!(),
+                    _ => unreachable!(),
                 };
-                let opts=options(flags);
-                let dynamic=v.try_powf_runtime(exponent,opts);
-                assert_eq!(actual.map(|v|v.to_array().map(f32::to_bits)),dynamic.map(|v|v.to_array().map(f32::to_bits)),"const/runtime flags={flags}");
+                let opts = options(flags);
+                let dynamic = v.try_powf_runtime(exponent, opts);
+                assert_eq!(
+                    actual.map(|v| v.to_array().map(f32::to_bits)),
+                    dynamic.map(|v| v.to_array().map(f32::to_bits)),
+                    "const/runtime flags={flags}"
+                );
                 let stage = expected
                     .iter()
                     .map(|r| r[method] >> 32)
@@ -222,21 +246,57 @@ width!(check4, execute4, kernel4, f32x4, 4);
 width!(check8, execute8, kernel8, f32x8, 8);
 width!(check16, execute16, kernel16, f32x16, 16);
 
-
-fn options(flags:u32)->magetypes::powf::PowfOptions {
+fn options(flags: u32) -> magetypes::powf::PowfOptions {
     use magetypes::powf::*;
     PowfOptions::new()
-        .with_domain(match flags&3 {0=>PowfDomain::PositiveNormal,1=>PowfDomain::NonNegativeNormal,2=>PowfDomain::Gamma,_=>unreachable!()})
-        .with_execution(if flags&4!=0 {PowfExecution::Caller}else{PowfExecution::Automatic})
-        .with_precision(if flags&8!=0 {PowfPrecision::Lowp}else{PowfPrecision::Midp})
-        .with_portability(if flags&16!=0 {PowfPortability::BackendDependent}else{PowfPortability::BitExact})
-        .with_validation(if flags&32!=0 {PowfValidation::AssumeValid}else{PowfValidation::Checked})
+        .with_domain(match flags & 3 {
+            0 => PowfDomain::PositiveNormal,
+            1 => PowfDomain::NonNegativeNormal,
+            2 => PowfDomain::Gamma,
+            _ => unreachable!(),
+        })
+        .with_execution(if flags & 4 != 0 {
+            PowfExecution::Caller
+        } else {
+            PowfExecution::Automatic
+        })
+        .with_precision(if flags & 8 != 0 {
+            PowfPrecision::Lowp
+        } else {
+            PowfPrecision::Midp
+        })
+        .with_portability(if flags & 16 != 0 {
+            PowfPortability::BackendDependent
+        } else {
+            PowfPortability::BitExact
+        })
+        .with_validation(if flags & 32 != 0 {
+            PowfValidation::AssumeValid
+        } else {
+            PowfValidation::Checked
+        })
 }
-fn backend_fuses()->bool {
-    #[cfg(target_arch="x86_64")] {archmage::X64V3Token::summon().is_some()}
-    #[cfg(target_arch="aarch64")] {archmage::NeonToken::summon().is_some()}
-    #[cfg(target_arch="wasm32")] {relaxed_probe(archmage::Wasm128Token::summon().unwrap())!=0}
-    #[cfg(not(any(target_arch="x86_64",target_arch="aarch64",target_arch="wasm32")))] {false}
+fn backend_fuses() -> bool {
+    #[cfg(target_arch = "x86_64")]
+    {
+        archmage::X64V3Token::summon().is_some()
+    }
+    #[cfg(target_arch = "aarch64")]
+    {
+        archmage::NeonToken::summon().is_some()
+    }
+    #[cfg(target_arch = "wasm32")]
+    {
+        relaxed_probe(archmage::Wasm128Token::summon().unwrap()) != 0
+    }
+    #[cfg(not(any(
+        target_arch = "x86_64",
+        target_arch = "aarch64",
+        target_arch = "wasm32"
+    )))]
+    {
+        false
+    }
 }
 
 fn main() {

@@ -20,16 +20,32 @@ fn cells() -> Vec<Cell> {
         "v3"
     };
     let mut cells = Vec::new();
-    for width in [1,4,8,16] {
-        for context in ["scalar",native] {
-            if width==1 && context!= "scalar" {continue;}
-            for size in [64,4096] {for chain in [false,true] {for exponent in [0x4019999a,0x3f000000] {
-                let name=format!("policy/x{width}/{context}/{size}/{}/{exponent:08x}",if chain{"chain"}else{"stream"});
-                cells.push(Cell{name,width,context,size,chain,exponent});
-            }}}
+    for width in [1, 4, 8, 16] {
+        for context in ["scalar", native] {
+            if width == 1 && context != "scalar" {
+                continue;
+            }
+            for size in [64, 4096] {
+                for chain in [false, true] {
+                    for exponent in [0x4019999a, 0x3f000000] {
+                        let name = format!(
+                            "policy/x{width}/{context}/{size}/{}/{exponent:08x}",
+                            if chain { "chain" } else { "stream" }
+                        );
+                        cells.push(Cell {
+                            name,
+                            width,
+                            context,
+                            size,
+                            chain,
+                            exponent,
+                        });
+                    }
+                }
+            }
         }
     }
-    assert_eq!(cells.len(),56);
+    assert_eq!(cells.len(), 56);
     cells
 }
 fn register_all(mut suite: Option<&mut zenbench::Suite>) {
@@ -37,12 +53,22 @@ fn register_all(mut suite: Option<&mut zenbench::Suite>) {
         if std::env::var("POWF_FILTER").is_ok_and(|f| f != cell.name) {
             continue;
         }
-        macro_rules! go {($n:ident)=>{match cell.exponent {
-            0x4019999a=>$n::<0x4019999a>(suite.as_deref_mut(),&cell),
-            0x3f000000=>$n::<0x3f000000>(suite.as_deref_mut(),&cell),_=>unreachable!(),
-        }}}
-        match cell.width {1=>go!(register1),4=>go!(register4),8=>go!(register8),16=>go!(register16),_=>unreachable!()}
-
+        macro_rules! go {
+            ($n:ident) => {
+                match cell.exponent {
+                    0x4019999a => $n::<0x4019999a>(suite.as_deref_mut(), &cell),
+                    0x3f000000 => $n::<0x3f000000>(suite.as_deref_mut(), &cell),
+                    _ => unreachable!(),
+                }
+            };
+        }
+        match cell.width {
+            1 => go!(register1),
+            4 => go!(register4),
+            8 => go!(register8),
+            16 => go!(register16),
+            _ => unreachable!(),
+        }
     }
 }
 fn main() {

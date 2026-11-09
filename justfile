@@ -718,3 +718,6 @@ powf-policy-matrix directory *options:
 
 powf-policy-matrix-analyze directory *runs:
     python3 -B benchmarks/powf_module_2026-11-07/analyze_replacement_matrix.py benchmarks/powf_module_2026-11-07/target/release/policy_analyze "{{directory}}" {{runs}} --require-cells 56
+
+powf-policy-codegen-audit assembly output *options:
+    python3 -B benchmarks/powf_module_2026-11-07/policy_codegen_audit.py "{{assembly}}" "{{output}}" {{options}}

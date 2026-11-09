@@ -18,7 +18,7 @@ pub(crate) mod const_api;
 mod dispatch;
 pub use const_api::{try_powf_array_with, try_powf_with};
 mod graph;
-#[cfg(feature="std")]
+#[cfg(feature = "std")]
 mod highp;
 mod std_probe;
 #[cfg(test)]
@@ -27,7 +27,9 @@ mod tests;
 mod wasm;
 
 mod options;
-pub use options::{PowfDomain, PowfExecution, PowfOptions, PowfPortability, PowfPrecision, PowfValidation};
+pub use options::{
+    PowfDomain, PowfExecution, PowfOptions, PowfPortability, PowfPrecision, PowfValidation,
+};
 
 /// Reason a complete vector was rejected.
 ///
