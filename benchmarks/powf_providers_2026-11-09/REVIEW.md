@@ -1,5 +1,9 @@
 # Provider-study review
 
+The source-unchanged statements below describe the provider-only study through
+`11ff14c3`. The subsequent canonical HIGHP integration changes production
+source and is reviewed separately in [HIGHP-SIMD.md](HIGHP-SIMD.md).
+
 The production powf implementation, generators and workspace dependencies have
 no changes from the previously verified 5f2817ec head. This follow-up adds
 benchmarks, numerical comparisons and source research. External libraries stay

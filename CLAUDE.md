@@ -1208,6 +1208,16 @@ fn process(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 
 ## Known Bugs
 
+Canonical HIGHP packed performance (2026-11-09, draft held): the first M6
+32-cell exploratory matrix has 24 Full packed cells within the 2% std cost
+bound by the cost-only interval and eight exceeding it. None is promotion
+eligible: all fifty rounds per cell are flagged and class confinement is
+unverified. Gamma zero restoration also adds work: x8/4096 stream 2.4 takes
+1,450,365.67 ns per 1,048,576 powers in the assumed packed graph versus
+1,372,896.49 ns in the prior scalar Gamma graph. A separately frozen pack-zero
+predicate iteration is under comparison; preserve both. See
+`benchmarks/powf_providers_2026-11-09/HIGHP-SIMD.md`.
+
 AArch64 Miri coverage gap (2026-11-09): native M6 `just ci` reaches the
 unsupported interpreter intrinsic `llvm.aarch64.neon.sshl.v4i32` from the
 automatic powf preset test. Both pinned nightly-2026-10-06 and current
@@ -1252,10 +1262,11 @@ always-inline policy; no stack limit, expectation or input coverage changes.
 Use `just powf-policy-debug-wasm` with the normal WASM runner.
 
 Std Full HIGHP special values (2026-11-08): signaling-NaN bits `7f800001`
-raised to +0 or -0 yield NaN on Linux x86 and 1 on Apple ARM. Full HIGHP
-inherits that backend-dependent std classification. Restricted Checked
-presets reject the NaN base before std delegation; no Full BitExact/HIGHP
-combination is offered. See `docs/POWF.md`.
+raised to +0 or -0 yield NaN on Linux x86 and 1 on Apple ARM. BackendDependent Full HIGHP
+inherits that std classification. Restricted Checked
+presets reject the NaN base before std delegation. Canonical Full BitExact/HIGHP
+preserves the Arm graph classification, including signaling NaN raised to zero;
+NaN payload/sign are unspecified. See `docs/POWF.md`.
 
 
 Draft powf option families (2026-11-08): LOWP options inherit the exponent-bias

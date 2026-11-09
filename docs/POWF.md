@@ -1,5 +1,8 @@
 # Configurable f32 power
 
+The maintained [ISA bounds and performance reference](POWF_REFERENCE.md) records
+contracts, accuracy, implementation coverage and qualified/exploratory costs.
+
 `magetypes::powf` owns the MIDP/LOWP approximation graphs, a canonical binary64 HIGHP graph and the scalar std HIGHP
 backend for scalar and vector power. `f32x1`, generic `f32x4`, `f32x8` and enabled `f32x16` delegate to it.
 The existing `pow_lowp`, `pow_midp` and related methods are unchanged.
