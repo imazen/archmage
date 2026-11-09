@@ -15,13 +15,13 @@ fn main() {
             let std = group
                 .benchmarks
                 .iter()
-                .position(|b| b.name == "std_Rust_baseline")
+                .position(|b| b.name == "std_Rust_baseline" || b.name == "std")
                 .unwrap();
             let native_std = group
                 .benchmarks
                 .iter()
                 .position(|b| b.name == "system_C_powf")
-                .unwrap();
+                .unwrap_or(std);
             let mut edges = std::collections::BTreeSet::new();
             for (numerator, implementation) in group.benchmarks.iter().enumerate() {
                 if implementation.name.starts_with("EMPTY_") {
