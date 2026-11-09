@@ -123,7 +123,10 @@ macro_rules! vector {
             exponent::<OPTIONS, $n>(n)?;
             #[cfg(feature = "std")]
             if OPTIONS & PowfOptions::HIGHP != 0 {
-                let result = super::highp::run::<OPTIONS, $n>(input.to_array(), n)?;
+                let bases = input.to_array();
+                super::highp::check_bases::<OPTIONS, $n>(&bases,n)?;
+                let result = bases.map(|x|x.powf(n));
+                super::highp::check_results::<OPTIONS, $n>(&bases,&result,n)?;
                 return Ok(crate::simd::generic::$float::from_array_t(token, result));
             }
             let caller = select::<T, OPTIONS>(token, PowfExecution::Caller);
