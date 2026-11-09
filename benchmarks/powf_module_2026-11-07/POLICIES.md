@@ -143,15 +143,18 @@ keeps all edges, ties and reversals. **Zero cells are promotion-eligible.**
 
 The cost rule is unchanged: qualified upper 95% <=1.02 passes, lower >1.02
 fails, overlap is inconclusive; an optimization needs upper <1.00. Missing
-admitted physical x86, ARM and WASM timings remain missing.
+admitted physical x86, ARM and WASM timings remain missing. Fresh-target
+compile time, size and first-use cost for the 64-policy expansion are unmeasured;
+the earlier cold-build diagnostics describe the earlier default-only API.
 
 ## Debug runtime stack correction
 
 GitHub CI and local reproduction expose WASM linear-stack exhaustion in the
 existing NaN/subnormal payload test. The 64-arm runtime decoder forces all
-graphs into each unoptimized caller. Retaining separate decoder and selected
+graphs into each unoptimized caller. The payload-test frame is 1,068,352 bytes before correction and 874,288
+afterward. Retaining separate decoder and selected
 graph frames in debug builds fixes the test with the original stack limits,
-payload stride, widths, masks and assertions. Optimized builds retain the
+payload stride, widths, masks and assertions. Release builds with debug assertions disabled retain the
 original always-inline attributes, so frozen release comparisons remain
 applicable. The focused WASM replay passes all 13 powf tests after correction
 (15 s, peak RSS 1.70 GiB), versus the reproduced trap before correction
