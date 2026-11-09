@@ -878,3 +878,9 @@ powf-highp-manifest worker output source:
 
 powf-canonical-highp-cross directory expected wasmtime:
     bash benchmarks/powf_providers_2026-11-09/highp_cross.sh "{{directory}}" "{{expected}}" "{{wasmtime}}"
+
+powf-canonical-highp-fusion-modes directory expected modules wasmtime:
+    bash benchmarks/powf_providers_2026-11-09/highp_fusion_modes.sh "{{directory}}" "{{expected}}" "{{modules}}" "{{wasmtime}}"
+
+powf-canonical-highp-fusion-probe directory wasmtime:
+    bash benchmarks/powf_providers_2026-11-09/highp_fusion_probe.sh "{{directory}}" "{{wasmtime}}"
