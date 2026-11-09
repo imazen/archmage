@@ -3,7 +3,6 @@
 import argparse
 import json
 from pathlib import Path
-import rounding_oracle as model
 p = argparse.ArgumentParser(description=__doc__)
 p.add_argument('output', type=Path)
 p.add_argument('actuals', nargs='+', type=Path)

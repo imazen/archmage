@@ -144,6 +144,7 @@ name = "archmage-powf-study"
 version = "0.0.0"
 dependencies = [
  "archmage",
+ "libm",
  "magetypes",
  "serde_json",
  "zenbench",

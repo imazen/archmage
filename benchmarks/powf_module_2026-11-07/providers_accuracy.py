@@ -26,8 +26,10 @@ request += ''.join(f'{b:08x} {n:08x} 3\n'
     for n in [0, 0x80000000, 1, 0x3f000000, 0x40000000, 0x40400000, 0xbf800000,
               0x7f800000, 0x7fc00001])
 run = subprocess.run(shlex.split(a.runner) + [str(a.binary.resolve()), a.tier],
-                     input=request, text=True, capture_output=True, check=True)
+                     input=request, text=True, capture_output=True)
 a.output.with_suffix('.actual').write_text(run.stdout)
+a.output.with_suffix('.stderr').write_text(run.stderr)
+run.check_returncode()
 a.output.with_suffix('.inputs').write_text(request)
 
 def classify(bits):
