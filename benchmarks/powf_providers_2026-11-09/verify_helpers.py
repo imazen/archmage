@@ -37,6 +37,16 @@ except AssertionError as error:
     assert str(error) == 'frozen DSO changed'
 else:
     raise AssertionError('changed DSO accepted')
+identity.write_text('frozen\n')
+manifest['dsos'] = {}
+manifest['resolved_native_dsos'] = {str(identity): {'sha256': '0'*64}}
+path.write_text(json.dumps(manifest))
+try:
+    load_manifest(path)
+except AssertionError as error:
+    assert str(error) == 'resolved native DSO changed'
+else:
+    raise AssertionError('changed resolved system DSO accepted')
 trace = a.directory/'synthetic.trace'
 trace.write_text('IN: \n0x1000: \nOBJD-T: c4e2d19901\nTrace 0: 0x123 [00000000/00001000/0/0]\n')
 assert prove(trace)['executed_FMA_blocks'] == [0x1000]

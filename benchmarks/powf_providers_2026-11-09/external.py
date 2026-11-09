@@ -31,6 +31,11 @@ def load_manifest(path):
     for name, identity in manifest['dsos'].items():
         assert digest(identity['path']) == identity['sha256'], 'frozen DSO changed'
         os.environ[name] = identity['path']
+    for resolved, identity in manifest.get('resolved_native_dsos', {}).items():
+        if 'sha256' in identity:
+            assert digest(resolved) == identity['sha256'], 'resolved native DSO changed'
+    if manifest.get('os_build') is not None:
+        assert subprocess.check_output(['sw_vers', '-buildVersion'], text=True).strip() == manifest['os_build'], 'macOS shared-cache build changed'
     for worker in manifest['workers']:
         assert digest(worker['binary']) == worker['sha256'], 'frozen worker changed'
     return manifest
@@ -58,6 +63,7 @@ def discover(rust, native, v3=None):
         providers.extend({'label': m+'_Rust_AVX2_FMA', 'method': m, 'worker': 2, 'lanes': 1}
                          for m in RUST_METHODS[2:])
     return {'workers': workers, 'providers': providers, 'native_diagnostics': result.stderr,
+            'os_build': subprocess.check_output(['sw_vers', '-buildVersion'], text=True).strip() if sys.platform == 'darwin' else None,
             'resolved_native_dsos':resolved,
             'dsos': {name: {'path': value, 'sha256': digest(value)} for name, value in os.environ.items()
                      if name in ['POWF_ARM_DSO', 'POWF_AOCL_DSO', 'POWF_AOCL_FAST_DSO', 'POWF_CORE_MATH_DSO', 'POWF_CORE_MATH_FMA_DSO']},
