@@ -30,7 +30,7 @@ For x4 V3: checked NonNegativeNormal MIDP has 127 instructions, checked Gamma
 117, assumed Gamma 63, and assumed Gamma LOWP 55. Native Horner FMA counts
 are ten and seven. M6 NEON corresponding counts are 162,145,83,73.
 For scalar Caller Gamma, BitExact versus BackendDependent expands to 2,106
-versus 420 x86 instructions and 1,621 versus 504 M6 instructions. These are
+versus 420 x86 instructions and 1,621 versus 504 M6  instructions. These are
 codegen evidence, not measured hardware execution counts or timing ratios.
 
 All 384 policy bodies per target are retained, including compiler aliases.
@@ -39,35 +39,35 @@ no FMA/software-fusion/probe calls. An additional 22 probes retain the public
 array/std/local-reference shapes. On M6, Full HIGHP public arrays and direct
 std have identical instruction counts at widths 1/4/8/16: 11/32/57/112.
 
-The original public HIGHP x4 native wrapper emitted58 instructions. Removing
-Result::map reduced it to48; separating validation from direct vector
-construction reduced it to38. The scalar/array route is32. The locally copied
-Result-map provider already optimizes to38 in its new module; its timing must
+The original public HIGHP x4 native wrapper emitted 58  instructions. Removing
+Result::map reduced it to 48; separating validation from direct vector
+construction reduced it to 38. The scalar/array route is 32. The locally copied
+Result-map provider already optimizes to 38 in its new module; its timing must
 not be described as the original public-method baseline. See the protocol.
 
 ## Exactness and accuracy
 
 All 48 bounded configurations and their runtime adapters match the unchanged
 independent four-graph rational/RNE fixtures. There are 27,810 domain-tagged
-pairs, every broadcast lane at widths4/8/16, and mixed vectors with exact
-whole-vector rejection masks. Each execution context checks83,430 broadcast
-vectors and13,498 mixed vectors; AssumeValid executes only admitted inputs.
+pairs, every broadcast lane at widths 4/8/16, and mixed vectors with exact
+whole-vector rejection masks. Each execution context checks 83,430 broadcast
+vectors and 13,498 mixed vectors; AssumeValid executes only admitted inputs.
 
-Zero mismatches in14 contexts: Intel scalar/V3; M6 scalar/NEON; i686 scalar;
+Zero mismatches in 14 contexts: Intel scalar/V3; M6 scalar/NEON; i686 scalar;
 Nehalem no-FMA emulation; scalar/native strict WASM; scalar/native relaxed WASM
 with both independently probed fusing and nonfusing engines; V4/V4x under SDE.
 Emulation establishes correctness, not physical-machine performance.
 
-All16 HIGHP configurations, widths1/4/8/16, public vector/array and const/runtime
-routes agree with the same platform's runtime std provider on27,909 cases on
+All 16 HIGHP configurations, widths 1/4/8/16, public vector/array and const/runtime
+routes agree with the same platform's runtime std provider on 27,909 cases on
 Intel and M6. NaN payloads are unspecified; non-NaN bits, classes, masks and
 rejection stages are checked. Directed MPFR-256 finds sampled maximum ULP error
-upper bounds0.506155662238598 on Linux x86 and0.5116611998528243 on Apple ARM;
-17 and121 results respectively differ from correctly rounded power.
+upper bounds 0.506155662238598 on Linux x86 and 0.5116611998528243 on Apple ARM;
+17 and 121 results respectively differ from correctly rounded power.
 These finite samples do not establish a global ULP guarantee.
 
 Full HIGHP inherits a measured std special-value difference: signaling NaN
-bits7f800001 raised to either signed zero yields NaN on Linux x86 and1 on
+bits 7f800001 raised to either signed zero yields NaN on Linux x86 and 1 on
 Apple ARM. Two unique input pairs repeat across four corpus domain tags.
 Restricted Checked configurations reject the NaN base. HIGHP is therefore
 BackendDependent; it is neither a canonical-special-values nor ONE_ULP promise.
@@ -75,28 +75,28 @@ BackendDependent; it is neither a canonical-special-values nor ONE_ULP promise.
 The [earlier MPFR/search comparison](NONFUSED.md) measures all four polynomial
 graphs. Sampled Gamma maximum ULP errors are47.90180805 fused MIDP,
 48.56180874 separate MIDP,93408.85148075 fused LOWP and93411.46518661 separate
-LOWP. Unbounded exponents amplify LOWP log bias near1 catastrophically.
+LOWP. Unbounded exponents amplify LOWP log bias near 1 catastrophically.
 PositiveNormal LOWP is an available range choice, not an accuracy preset.
 No prior accuracy threshold is loosened.
 
 ## Retained exploratory timings
 
-Three complete M6 runs each contain56 workloads and50 interleaved rounds per
-workload. The first two use69 implementations. Gate identity tracing in the
+Three complete M6 runs each contain 56 workloads and 50 interleaved rounds per
+workload. The first two use 69 implementations. Gate identity tracing in the
 second identifies Storage activity. The owner then closes Storage and requests
-one comparison of the updated implementation; it has71 arms, including the
+one comparison of the updated implementation; it has 71 arms, including the
 local Result-map provider and direct public HIGHP arrays. Other OS services
-remain busy, so **all56 cells are flagged in every run**. Every round remains.
+remain busy, so **all 56 cells are flagged in every run**. Every round remains.
 No additional favorable retry is selected.
 
 Final binary SHA-256:
 `5c60abb900e8c09684db89ac043ba5902198e61064ad8217eb772ec5dcfcacdc`.
-Actual formatted worker source6e69588c is frozen before this run, with source
-archive, Cargo.lock, compiler and executable. Earlier69-arm runs retain their
+Actual formatted worker source 6e69588c is frozen before this run, with source
+archive, Cargo.lock, compiler and executable. Earlier 69-arm runs retain their
 actual formatted source archives because their embedded git identity refers
 to the worker's prior parent; that field alone is not their source identity.
 
-Selected final cell: M6 NEON x4,4,096 values, stream, literal f32 exponent2.4.
+Selected final cell: M6 NEON x4, 4,096 values, stream, literal f32 exponent 2.4.
 These are the original zenbench bar lengths with complete names and means
 converted to ns per buffer. Checked/AssumeValid labels are explicit.
 
@@ -114,9 +114,9 @@ direct array HIGHP Full                  █████████████
 Backend HIGHP Full Checked Auto vector   █████████████████████   8408.14 ns
 ```
 
-All-retained paired MeanCi uses100,000 resamples. Descriptive95% ratio bounds:
+All-retained paired MeanCi uses 100,000 resamples. Descriptive 95% ratio bounds:
 
-| Numerator / denominator | Paired95% interval |
+| Numerator / denominator | Paired 95% interval |
 |---|---|
 | Checked Gamma MIDP / checked NonNegativeNormal MIDP | 0.871630–0.874519 |
 | Assumed Gamma MIDP / checked Gamma MIDP | 0.887942–0.891740 |
@@ -129,23 +129,23 @@ All-retained paired MeanCi uses100,000 resamples. Descriptive95% ratio bounds:
 
 These intervals do not repair interference or unverified placement. The native
 vector HIGHP overhead and checked LOWP cost remain tradeoffs, not hidden wins.
-Across the56 final workloads, array HIGHP/std is descriptively within the2%
-bound in56/56. Vector HIGHP/std is within in40, above in14, inconclusive in2.
-Checked Gamma MIDP/legacy MIDP is within in56/56; checked Gamma LOWP/legacy
-LOWP is within in32 and above in24. Const/runtime is within in48 and above in8;
-all8 reversals are scalar x4/x8 dependency chains. Shorter LOWP reverses in4
-of1,344 predeclared LOWP/MIDP edges, Full/Gamma HIGHP in2 of224, and
-AssumeValid/Checked in38 of1,792. Caller/Automatic is above in768 of1,792,
+Across the 56 final workloads, array HIGHP/std is descriptively within the2%
+bound in 56/56. Vector HIGHP/std is within in 40, above in 14, inconclusive in 2.
+Checked Gamma MIDP/legacy MIDP is within in 56/56; checked Gamma LOWP/legacy
+LOWP is within in 32 and above in 24. Const/runtime is within in 48 and above in 8;
+all 8 reversals are scalar x4/x8 dependency chains. Shorter LOWP reverses in 4
+of 1,344 predeclared LOWP/MIDP edges, Full/Gamma HIGHP in 2 of 224, and
+AssumeValid/Checked in 38 of 1,792. Caller/Automatic is above in 768 of 1,792,
 consistent with retaining expensive exact software FMA. The full paired record
 keeps all edges, ties and reversals. **Zero cells are promotion-eligible.**
 
-The cost rule is unchanged: qualified upper95% <=1.02 passes, lower>1.02
-fails, overlap is inconclusive; an optimization needs upper<1.00. Missing
+The cost rule is unchanged: qualified upper 95% <=1.02 passes, lower >1.02
+fails, overlap is inconclusive; an optimization needs upper <1.00. Missing
 admitted physical x86, ARM and WASM timings remain missing.
 
 ## Validation and retained evidence
 
-Full19-stage local CI passes, including Miri and soundness. A new HIGHP test
+Full 19-stage local CI passes, including Miri and soundness. A new HIGHP test
 initially assumed exact std(-2)^3; Miri demonstrates std's unspecified precision.
 Only that newly introduced test changes to its declared sign/classification
 contract. Pre-existing numerical and assembly expectations are preserved.
@@ -153,12 +153,12 @@ All-target/all-feature study Clippy passes after re-downloading an incomplete
 external dependency into a task-owned Cargo home and simplifying generated
 x1 arithmetic. The failed shared-cache build is retained untouched.
 
-Resource records: final M6 timing502s, peak process-tree RSS0.03GiB,
-minimum free/inactive/speculative proxy10,527MiB, peak load3.00; analysis37s,
-peak0.04GiB. M6's monitor is not a cgroup hard cap. Native HIGHP verification
-2s, peak0.04GiB. Intel native HIGHP plus V4/V4x validation128s, peak4.02GiB,
-minimum available20,108MiB, load3.20. The full CI wrapper812s reaches
-peak1.97GiB, minimum available22,024MiB, load4.42; its19 CI stages pass,
+Resource records: final M6 timing 502 s, peak process-tree RSS 0.03 GiB,
+minimum free/inactive/speculative proxy 10,527 MiB, peak load 3.00; analysis 37 s,
+peak 0.04 GiB. M6's monitor is not a cgroup hard cap. Native HIGHP verification
+2 s, peak 0.04 GiB. Intel native HIGHP plus V4/V4x validation 128 s, peak 4.02 GiB,
+minimum available 20,108 MiB, load 3.20. The full CI wrapper 812 s reaches
+peak 1.97 GiB, minimum available 22,024 MiB, load 4.42; its 19 CI stages pass,
 then a subsequent study lint fails on the incomplete dependency. Separate
 successful study lint and final checks have their own logs.
 
