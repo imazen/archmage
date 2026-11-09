@@ -46,7 +46,7 @@ __attribute__((target("avx2,fma"))) static void vector8(void *fn,const float *x,
     _mm256_storeu_ps(out,reinterpret_cast<F>(fn)(_mm256_loadu_ps(x),_mm256_loadu_ps(n)));
 }
 #endif
-#ifdef __aarch64__
+#if defined(__aarch64__) && !defined(__APPLE__)
 static void vector4(void *fn,const float *x,const float *n,float *out) {
     typedef float32x4_t (*F)(float32x4_t,float32x4_t) __attribute__((aarch64_vector_pcs));
     vst1q_f32(out,reinterpret_cast<F>(fn)(vld1q_f32(x),vld1q_f32(n)));
@@ -56,7 +56,7 @@ static void evaluate(const Provider &p,const float *x,const float *n,float *out,
     if(width%p.lanes)throw std::runtime_error("logical width cannot contain native ABI width");
     for(size_t i=0;i<width;i+=p.lanes) {
         if(p.lanes==1)out[i]=reinterpret_cast<Scalar>(p.fn)(x[i],n[i]);
-#if defined(__x86_64__) || defined(__aarch64__)
+#if defined(__x86_64__) || (defined(__aarch64__) && !defined(__APPLE__))
         else if(p.lanes==4)vector4(p.fn,x+i,n+i,out+i);
 #endif
 #ifdef __x86_64__
