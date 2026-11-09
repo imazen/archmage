@@ -162,7 +162,9 @@ and immediates remain significant; the existing assembly gate is unchanged.
 Thus the frozen release comparisons remain applicable. The focused WASM replay passes all 13 powf tests after correction
 (15 s, peak RSS 1.70 GiB), versus the reproduced trap before correction
 (35 s, peak RSS 6.05 GiB). These are build/test resource records, not runtime
-speed comparisons. Original failing module and corrected module are preserved
+speed comparisons. The final rerun passes all 19 CI stages, including Miri,
+then the full WASM debug crate tests and doctests: 766 s, peak RSS 4.72 GiB,
+minimum available 18,869 MiB, peak load 6.87. Original failing module and corrected module are preserved
 in a separate addendum; the sealed core evidence remains unchanged.
 
 ## Validation and retained evidence
