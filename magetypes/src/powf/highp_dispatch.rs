@@ -1,7 +1,13 @@
 //! One whole-operation feature selection for the canonical HIGHP graph.
 #[cfg(feature = "std")]
 use super::PowfOptions;
-use super::{PowfError, dispatch::Plan, graph, highp, highp_scalar, highp_simd};
+#[cfg(any(
+    target_arch = "x86_64",
+    target_arch = "aarch64",
+    target_arch = "wasm32"
+))]
+use super::highp_simd;
+use super::{PowfError, dispatch::Plan, graph, highp, highp_scalar};
 use archmage::ScalarToken;
 
 #[inline(always)]
@@ -84,6 +90,11 @@ fn scalar<
     }
     out
 }
+#[cfg(any(
+    target_arch = "x86_64",
+    target_arch = "aarch64",
+    target_arch = "wasm32"
+))]
 macro_rules! entry {
     ($name:ident,$token:ident,$packed:ident) => {
         #[archmage::arcane]
