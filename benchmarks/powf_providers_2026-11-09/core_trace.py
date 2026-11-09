@@ -6,7 +6,7 @@ from pathlib import Path
 import re
 import subprocess
 
-def prove(trace):
+def prove(trace, library=None):
     lines = trace.read_text().splitlines()
     block = None
     fma_blocks, executed = set(), set()
@@ -43,13 +43,30 @@ def prove(trace):
              'trace_bytes': trace.stat().st_size,
              'evidence': 'intersection of FMA translation block addresses with executed Trace addresses'}
     assert proof['executed_FMA_blocks'], 'FMA translation alone does not prove execution'
+    if library is not None:
+        # This mode uses QEMU's raw bytes to identify the retained feature DSO.
+        # Every executed FMA block must match uniquely at a common load bias.
+        blob = library.read_bytes()
+        matches = []
+        for address in proof['executed_FMA_blocks']:
+            code = raw[address]
+            assert len(code) >= 16
+            offset = blob.find(code)
+            assert offset >= 0 and blob.find(code, offset+1) < 0, 'FMA block does not uniquely match the frozen DSO'
+            matches.append({'address': address, 'file_offset': offset, 'bytes': len(code)})
+        biases = {m['address']-m['file_offset'] for m in matches}
+        assert len(biases) == 1, 'FMA blocks do not share the DSO mapping'
+        import hashlib
+        proof.update(library_sha256=hashlib.sha256(blob).hexdigest(),
+                     DSO_byte_matches=matches, guest_minus_file_offset=biases.pop())
     return proof
 
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('trace', type=Path)
+    parser.add_argument('--library', type=Path, help='also match raw blocks uniquely to the retained feature DSO')
     args = parser.parse_args()
-    result = prove(args.trace)
-    args.trace.with_suffix('.proof.json').write_text(json.dumps(result, indent=2)+'\n')
+    result = prove(args.trace, args.library)
+    args.trace.with_suffix('.library-proof.json' if args.library else '.proof.json').write_text(json.dumps(result, indent=2)+'\n')
     print(json.dumps(result, indent=2))

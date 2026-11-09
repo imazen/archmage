@@ -79,6 +79,9 @@ The first trace parser expected mnemonic disassembly, but this QEMU emits
 raw OBJD-T bytes. Its failed analysis is preserved; `core_trace.py` decodes
 those bytes with objdump and checks executed addresses, with a negative
 control rejecting an unexecuted FMA block. Emulation supplies no speed evidence.
+The two executed FMA blocks also match uniquely to 274 and 177 bytes in the
+retained FMA-only DSO, at a common guest-address/file-offset bias; they are
+not merely FMA instructions observed elsewhere during startup.
 
 The separate CORE-MATH inventory covers 68 provider/width executions, including
 the std references and emulated context. Its complete ledger contains 196
@@ -103,8 +106,13 @@ error merely because its inputs are hard to round.
 
 We ran the unchanged finder with degree two and target m=16 over x in
 [0.5,2] and the single f32 exponent `4019999a` (the f32 value of 2.4).
-A COUNT build admitted 16,777,216 logical pairs under the predeclared
-20-million-pair / 60-second budget, without OpenMP. The search completed in
+A COUNT build reports 16,777,216 pairs; its last-binade formula omits the final
+inclusive endpoint. The actual search reports **16,777,217 logical checks**,
+matching the independent count of f32 bit patterns in [0.5,2]. This remains
+under the predeclared 20-million-pair / 60-second budget, without OpenMP.
+The reproduction helper admits the independent inclusive count and checks the
+search's reported total. The original COUNT and search outputs remain intact.
+The search completed in
 2 seconds and produced **515 unique witnesses**. Source, commands, stdout,
 MPFR/GMP identities and every witness are retained. Witness-file SHA-256:
 `02a99ca094ee9bf15581303aa5779d4c6c6be51316aa05ba5d767dd73fcb506d`.

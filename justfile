@@ -823,8 +823,8 @@ powf-glibc-binding output:
 powf-external-helpers native directory:
     python3 -B benchmarks/powf_providers_2026-11-09/verify_helpers.py "{{native}}" "{{directory}}"
 
-powf-core-trace trace:
-    python3 -B benchmarks/powf_providers_2026-11-09/core_trace.py "{{trace}}"
+powf-core-trace trace *options:
+    python3 -B benchmarks/powf_providers_2026-11-09/core_trace.py "{{trace}}" {{options}}
 
 powf-provider-artifacts mode directory manifest:
     python3 -B benchmarks/powf_providers_2026-11-09/artifact_manifest.py {{mode}} "{{directory}}" "{{manifest}}"

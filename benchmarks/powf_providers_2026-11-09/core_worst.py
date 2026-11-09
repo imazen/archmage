@@ -21,6 +21,7 @@ args=['-m','16','-d','2','-xmin','0x1p-1','-xmax','0x1p+1','-ymin','0x1.333334p+
 manifest={'source_sha256':hashlib.sha256(source.read_bytes()).hexdigest(),'arguments':args,
           'scope':'x in [0.5,2], one f32 exponent 4019999a; target 16 identical bits after rounding bit',
           'logical_pair_budget':20_000_000,'wall_limit_seconds':60,'OpenMP':False,
+          'inclusive_domain_pairs':0x40000000-0x3f000000+1,
           'claim':'upstream hard-to-round search in a bounded rectangle; not global maximum approximation error'}
 for mode,extra in [('count',['-DCOUNT']),('search',[])]:
     binary=(a.directory/f'worst-{mode}').resolve()
@@ -35,11 +36,16 @@ for mode,extra in [('count',['-DCOUNT']),('search',[])]:
     if run.returncode:raise SystemExit('bounded search failed/timed out; partial evidence retained')
     if mode=='count':
         text=(a.directory/'count.stdout').read_text();count=int(re.search(r'tot_checks=(\d+)',text)[1])
-        manifest['logical_pairs']=count
-        assert count<=manifest['logical_pair_budget'],'budget admission failed before search'
+        manifest['upstream_COUNT_pairs']=count
+        # Upstream COUNT omits the final inclusive endpoint in its last binade.
+        # Admit using the independently counted fixed rectangle, not that value.
+        assert manifest['inclusive_domain_pairs']<=manifest['logical_pair_budget'],'budget admission failed before search'
     else:
+        output=(a.directory/'search.stdout').read_text()
+        manifest['search_logical_checks']=int(re.search(r'# tot_checks=(\d+)',output)[1])
+        assert manifest['search_logical_checks']==manifest['inclusive_domain_pairs']
         rows=[]
-        for line in (a.directory/'search.stdout').read_text().splitlines():
+        for line in output.splitlines():
             if line.startswith('#')or not line.strip():continue
             fields=line.split('#',1)[0].strip().split(',')
             assert len(fields)==2,('unrecognized upstream witness',line)

@@ -26,6 +26,11 @@ Review found and corrected these issues in the study:
 - This QEMU lacks mnemonic disassembly in its raw log. The instruction proof
   decodes its OBJD-T bytes and requires FMA block addresses in actual execution
   records. A translated-but-unexecuted block fails the negative control.
+- The upstream hard-to-round finder's COUNT formula omits its final inclusive
+  endpoint: it reports 16,777,216 while the search reports 16,777,217 checks.
+  The helper now admits the independent inclusive bit-pattern count and checks
+  the actual search total. Both are below the unchanged 20-million budget;
+  all 515 witnesses and the original raw outputs remain unchanged.
 
 The whole-function CORE-MATH FMA kernel enables AVX+FMA and disables AVX2.
 Its guard requires usable AVX+FMA, the AVX2-disabled run selects it, and the
