@@ -15,5 +15,5 @@ case "$path" in
 esac
 [[ -r "/sys/fs/cgroup${path}/cpuset.cpus.effective" ]] || { echo 'cpuset controller is unavailable in this scope' >&2; exit 2; }
 echo "verified scope memory.max=$cap cpuset=$(cat "/sys/fs/cgroup${path}/cpuset.cpus.effective")"
-export ZENBENCH_CPU_POLICY=performance ZENBENCH_CPU_SET="$cpus"
+export ZENBENCH_CPU_POLICY="${ZENBENCH_CPU_POLICY:-performance}" ZENBENCH_CPU_SET="$cpus"
 exec "$@"

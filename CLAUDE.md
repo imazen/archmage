@@ -1208,6 +1208,15 @@ fn process(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 
 ## Known Bugs
 
+Experimental Arm scalar powf port (2026-11-09, benchmark package only): the
+first array::from_fn callback was outlined outside its V3 caller and performed
+nine indirect FMA calls per ordinary lane. Explicit inline array iteration
+preserves the feature context; frozen actual-worker cargo asm and perf counters
+verify the correction. Native Zen 5 compilation also vectorizes the full loop
+into a different graph layout with gathers; fewer instructions did not imply
+lower measured cycle cost. Preserve both iterations and the separate native
+diagnostic. See `benchmarks/powf_providers_2026-11-09/ARM-RESULTS.md`.
+
 Benchmark provider range observations (2026-11-09): Rust SLEEF 0.3.3 vector
 u10 returns infinity for f32 MAX raised to 1 on the measured builds. AOCL-LibM
 OSE 5.3.2 vector x4/x8 returns 1fb504f2 for +0^0.5 on the measured AMD build,

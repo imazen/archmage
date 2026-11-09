@@ -21,12 +21,34 @@ fn arm_array<const N: usize, const FUSED: bool, const COLD: bool, const ASSUME: 
 }
 
 #[inline(always)]
-fn arm_unrolled<const N:usize,const ASSUME:bool>(x:[f32;N],n:[f32;N])->[f32;N]{
-    const {assert!(N<=16);}
-    let mut out=[0.;N];
-    macro_rules! lane {($i:literal)=>{if $i<N {out[$i]=arm_powf::pow::<true,true,ASSUME>(x[$i],n[$i]);}};}
-    lane!(0);lane!(1);lane!(2);lane!(3);lane!(4);lane!(5);lane!(6);lane!(7);
-    lane!(8);lane!(9);lane!(10);lane!(11);lane!(12);lane!(13);lane!(14);lane!(15);
+fn arm_unrolled<const N: usize, const ASSUME: bool>(x: [f32; N], n: [f32; N]) -> [f32; N] {
+    const {
+        assert!(N <= 16);
+    }
+    let mut out = [0.; N];
+    macro_rules! lane {
+        ($i:literal) => {
+            if $i < N {
+                out[$i] = arm_powf::pow::<true, true, ASSUME>(x[$i], n[$i]);
+            }
+        };
+    }
+    lane!(0);
+    lane!(1);
+    lane!(2);
+    lane!(3);
+    lane!(4);
+    lane!(5);
+    lane!(6);
+    lane!(7);
+    lane!(8);
+    lane!(9);
+    lane!(10);
+    lane!(11);
+    lane!(12);
+    lane!(13);
+    lane!(14);
+    lane!(15);
     out
 }
 
@@ -43,8 +65,8 @@ fn calculate<const N: usize, const M: u8>(x: [f32; N], n: [f32; N]) -> [f32; N] 
         7 => arm_array::<N, false, true, false>(x, n),
         8 => arm_array::<N, true, false, false>(x, n),
         9 => arm_array::<N, true, true, true>(x, n),
-        10 => arm_unrolled::<N,false>(x,n),
-        11 => arm_unrolled::<N,true>(x,n),
+        10 => arm_unrolled::<N, false>(x, n),
+        11 => arm_unrolled::<N, true>(x, n),
         _ => panic!("unknown provider index"),
     }
 }
@@ -129,8 +151,8 @@ fn execute<const N: usize>(f: &[&str]) -> Vec<u32> {
         "Arm_Rust_separate_cold" => execute_arm::<N, 7>(f),
         "Arm_Rust_fused_warm" => execute_arm::<N, 8>(f),
         "Arm_Rust_fused_assume_Gamma" => execute_arm::<N, 9>(f),
-        "Arm_Rust_fused_unrolled" => execute_arm::<N,10>(f),
-        "Arm_Rust_assume_Gamma_unrolled" => execute_arm::<N,11>(f),
+        "Arm_Rust_fused_unrolled" => execute_arm::<N, 10>(f),
+        "Arm_Rust_assume_Gamma_unrolled" => execute_arm::<N, 11>(f),
         _ => panic!("unknown named provider"),
     }
 }

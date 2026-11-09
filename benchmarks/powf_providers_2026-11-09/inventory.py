@@ -26,6 +26,7 @@ def shape(b):
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('directory',type=Path);p.add_argument('runs',nargs='+',help='execution-name=accuracy-directory')
+    p.add_argument('--expected-cases',type=int,default=27909,help='explicit size of a separately identified bounded witness set')
     a=p.parse_args();a.directory.mkdir(exist_ok=False,parents=True)
     contexts={};inputs=None;intra={};mixed={}
     for spec in a.runs:
@@ -49,7 +50,7 @@ def main():
                 category=kind(x,y)
                 if category:counts['unique_input_cases']+=1;counts[category]+=1
             mixed[key]=counts
-    assert len(inputs)==27909
+    assert len(inputs)==a.expected_cases
     names=list(contexts);base=next(k for k in names if k.endswith('/std_Rust_baseline/x1'))
     # One per-input complete map preserves every pairwise variance without a
     # quadratic ledger. Raw .actual.gz files retain every repeated broadcast.

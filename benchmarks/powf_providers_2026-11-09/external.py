@@ -55,6 +55,8 @@ def load_manifest(path):
         assert subprocess.check_output(['sw_vers', '-buildVersion'], text=True).strip() == manifest['os_build'], 'macOS shared-cache build changed'
     for worker in manifest['workers']:
         assert digest(worker['binary']) == worker['sha256'], 'frozen worker changed'
+    for filename,identity in manifest.get('referenced_files',{}).items():
+        assert digest(filename)==identity['sha256'],'frozen execution input changed'
     if 'runtime_env' in manifest:
         assert set(manifest['runtime_env']) <= {'GLIBC_TUNABLES'}
         for name,value in manifest['runtime_env'].items():

@@ -829,8 +829,8 @@ powf-core-trace trace *options:
 powf-provider-artifacts mode directory manifest:
     python3 -B benchmarks/powf_providers_2026-11-09/artifact_manifest.py {{mode}} "{{directory}}" "{{manifest}}"
 
-powf-arm-c-prepare repository directory:
-    python3 -B benchmarks/powf_providers_2026-11-09/arm_powf_prepare.py "{{repository}}" "{{directory}}"
+powf-arm-c-prepare repository directory *options:
+    python3 -B benchmarks/powf_providers_2026-11-09/arm_powf_prepare.py "{{repository}}" "{{directory}}" {{options}}
 
 powf-arm-c-manifest rust native build output *options:
     python3 -B benchmarks/powf_providers_2026-11-09/arm_c_manifest.py "{{rust}}" "{{native}}" "{{build}}" "{{output}}" {{options}}
@@ -852,3 +852,9 @@ powf-arm-profile manifest directory *methods:
 
 powf-arm-frozen-asm binary function:
     cargo +nightly-2026-10-06 asm --file "{{binary}}" --disasm --no-color "{{function}}"
+
+powf-arm-contexts reference contexts directory:
+    python3 -B benchmarks/powf_providers_2026-11-09/arm_context_manifest.py "{{reference}}" "{{contexts}}" "{{directory}}"
+
+powf-arm-eval-test:
+    cargo +nightly-2026-10-06 test --release --locked --manifest-path benchmarks/powf_providers_2026-11-09/Cargo.toml --bin arm_eval
