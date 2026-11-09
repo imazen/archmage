@@ -778,8 +778,8 @@ powf-providers-cross directory fixtures sde wasm_runner="wasmtime":
 powf-external-discover rust native output *options:
     python3 -B benchmarks/powf_providers_2026-11-09/external.py discover "{{rust}}" "{{native}}" "{{output}}" {{options}}
 
-powf-external-accuracy manifest fixtures directory:
-    python3 -B benchmarks/powf_providers_2026-11-09/accuracy.py "{{manifest}}" "{{fixtures}}" "{{directory}}"
+powf-external-accuracy manifest fixtures directory *options:
+    python3 -B benchmarks/powf_providers_2026-11-09/accuracy.py "{{manifest}}" "{{fixtures}}" "{{directory}}" {{options}}
 
 powf-external-traces manifest directory:
     python3 -B benchmarks/powf_providers_2026-11-09/traces.py "{{manifest}}" "{{directory}}"

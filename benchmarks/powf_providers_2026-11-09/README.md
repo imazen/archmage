@@ -8,6 +8,9 @@ std, Rust libm, Rust SLEEF, GNU libmvec, Arm and AOCL comparisons. A separate
 actual algorithm families, runtime dispatch and hard-to-round witnesses.
 The [review](REVIEW.md) records fixes to the measurement harness and remaining
 coverage limits; [ARTIFACTS.md](ARTIFACTS.md) identifies the verified mirror.
+The subsequent [isolated Arm C comparison and safe Rust port](ARM-RESULTS.md)
+records matching sampled results, actual-worker assembly, native builds and
+the code-size/performance tradeoffs. Its timings also remain unqualified.
 
 ## Implementations and coverage
 
