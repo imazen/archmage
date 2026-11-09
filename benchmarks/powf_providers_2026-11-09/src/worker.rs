@@ -161,6 +161,16 @@ fn execute_arm<const N: usize, const M: u8>(f: &[&str]) -> Vec<u32> {
     #[cfg(not(target_arch = "aarch64"))]
     execute_method::<_, N, M>(archmage::ScalarToken, f)
 }
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[archmage::arcane]
+fn library_v4x<const N: usize, const M: u8>(t: archmage::X64V4xToken, f: &[&str]) -> Vec<u32> {
+    execute_method::<_, N, M>(t, f)
+}
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+fn execute_wide<const N: usize, const M: u8>(f: &[&str]) -> Vec<u32> {
+    use archmage::SimdToken;
+    library_v4x::<N, M>(archmage::X64V4xToken::summon().expect("required V4x"), f)
+}
 fn execute<const N: usize>(f: &[&str]) -> Vec<u32> {
     match f[1] {
         "std" => execute_method::<_, N, 0>(archmage::ScalarToken, f),
@@ -180,6 +190,12 @@ fn execute<const N: usize>(f: &[&str]) -> Vec<u32> {
         "Magetypes_HIGHP_Gamma_assumed_packed" => execute_arm::<N, 14>(f),
         "Magetypes_legacy_midp" => execute_arm::<N, 15>(f),
         "Magetypes_legacy_lowp" => execute_arm::<N, 16>(f),
+        #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+        "Magetypes_HIGHP_Full_packed_V4x" => execute_wide::<N, 12>(f),
+        #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+        "Magetypes_HIGHP_Gamma_checked_packed_V4x" => execute_wide::<N, 13>(f),
+        #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+        "Magetypes_HIGHP_Gamma_assumed_packed_V4x" => execute_wide::<N, 14>(f),
         _ => panic!("unknown named provider"),
     }
 }
