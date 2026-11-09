@@ -724,3 +724,6 @@ powf-policy-codegen-audit assembly output *options:
 
 powf-highp-accuracy fixtures output:
     python3 -B benchmarks/powf_module_2026-11-07/highp_accuracy.py benchmarks/powf_module_2026-11-07/target/release/highp_eval "{{fixtures}}" "{{output}}"
+
+powf-policy-cross directory fixtures sde wasm_runner="wasmtime":
+    bash benchmarks/powf_module_2026-11-07/policy_cross.sh "{{directory}}" "{{fixtures}}" "{{sde}}" "{{wasm_runner}}"
