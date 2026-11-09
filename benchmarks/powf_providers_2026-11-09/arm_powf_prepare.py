@@ -35,7 +35,8 @@ def main():
     for name in ['LICENSE','LICENSE-MIT','LICENSE-Apache','LICENSE-LLVM','README.md']:
         source=a.repository/name
         if source.is_file():shutil.copy2(source,snapshot/name)
-    common=['-std=c11','-O3','-g','-fPIC','-shared','-fno-fast-math',
+    darwin=platform.system()=='Darwin'
+    common=['-std=c11','-O3','-g','-fPIC','-dynamiclib'if darwin else'-shared','-fno-fast-math',
             '-frounding-math','-fexcess-precision=standard','-DUSE_GLIBC_ABI=0',
             '-DWANT_ROUNDING=1','-I',str((snapshot/'include').resolve())]
     if platform.machine()=='x86_64':
@@ -50,17 +51,19 @@ def main():
                   ('Armv8_separate_errno1',['-ffp-contract=off','-DWANT_ERRNO=1']),
                   ('Armv8_FMA_TOINT0_errno1',['-ffp-contract=fast','-DWANT_ERRNO=1','-DHAVE_FAST_ROUND=0','-DHAVE_FAST_LROUND=0'])]
     else:raise RuntimeError('unregistered platform')
-    variants.append(('native_errno1',['-march=native','-ffp-contract=fast','-DWANT_ERRNO=1']))
+    native_flag='-mcpu=native'if darwin and platform.machine()=='arm64'else'-march=native'
+    variants.append(('native_errno1',[native_flag,'-ffp-contract=fast','-DWANT_ERRNO=1']))
     report={'source_revision':revision,'compiler':subprocess.check_output(['cc','--version'],text=True),
             'native_identity':native_identity(),
             'source_files':{str(path.relative_to(snapshot)):digest(path)for path in sorted(snapshot.rglob('*'))if path.is_file()},
             'builds':[],'claim':'isolated scalar C reference; no Rust port'}
     for name,features in variants:
-        library=(a.directory/f'arm-powf-{name}.so').resolve()
+        library=(a.directory/f'arm-powf-{name}{".dylib"if darwin else".so"}').resolve()
         sources=[str((snapshot/name).resolve())for name in ['powf_entry.c',*names[1:4]]]
-        command=['cc',*common,*features,*sources,'-Wl,-z,defs','-lm','-o',str(library)]
+        command=['cc',*common,*features,*sources,'-Wl,-undefined,error'if darwin else'-Wl,-z,defs','-lm','-o',str(library)]
         with (a.directory/f'{name}.log').open('w')as log:subprocess.run(command,stdout=log,stderr=subprocess.STDOUT,check=True)
-        assembly=subprocess.check_output(['objdump','-d',str(library)],text=True)
+        disassembler=['xcrun','llvm-objdump']if darwin else['objdump']
+        assembly=subprocess.check_output([*disassembler,'-d',str(library)],text=True)
         (a.directory/f'{name}.asm').write_text(assembly)
         if platform.machine()=='x86_64':
             assert ('vfmadd' in assembly or 'vfmsub' in assembly)==('separate'not in name)

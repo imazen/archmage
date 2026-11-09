@@ -27,6 +27,7 @@ def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('directory',type=Path);p.add_argument('runs',nargs='+',help='execution-name=accuracy-directory')
     p.add_argument('--expected-cases',type=int,default=27909,help='explicit size of a separately identified bounded witness set')
+    p.add_argument('--reference-suffix',default='/std_Rust_baseline/x1',help='explicit observed reference; independent MPFR accuracy is unchanged')
     a=p.parse_args();a.directory.mkdir(exist_ok=False,parents=True)
     contexts={};inputs=None;intra={};mixed={}
     for spec in a.runs:
@@ -51,7 +52,7 @@ def main():
                 if category:counts['unique_input_cases']+=1;counts[category]+=1
             mixed[key]=counts
     assert len(inputs)==a.expected_cases
-    names=list(contexts);base=next(k for k in names if k.endswith('/std_Rust_baseline/x1'))
+    names=list(contexts);base=next(k for k in names if k.endswith(a.reference_suffix))
     # One per-input complete map preserves every pairwise variance without a
     # quadratic ledger. Raw .actual.gz files retain every repeated broadcast.
     used=0;records=0;budget=512*1024*1024
