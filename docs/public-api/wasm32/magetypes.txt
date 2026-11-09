@@ -6,13 +6,13 @@
 # impls omitted; re-export duplicates annotated `[also: path]`.
 # DO NOT EDIT BY HAND — commit regenerated changes with the code.
 #
-# files: magetypes.txt 2714 lines (supported surface) | magetypes.features.txt 12 added (features: avx512,std,w512) | magetypes.internal.txt 52 lines (64 hidden + 0 excluded-feature)
+# files: magetypes.txt 2716 lines (supported surface) | magetypes.features.txt 12 added (features: avx512,std,w512) | magetypes.internal.txt 52 lines (64 hidden + 0 excluded-feature)
 
 ## summary
 #
 #   pub modules                                13
 #   pub types (struct/enum/trait/alias)       295
-#   pub consts/statics                        241
+#   pub consts/statics                        243
 #   free functions                           3815
 #   inherent methods                         1251
 #   struct fields                               7
@@ -26,11 +26,11 @@
 # per-module pub lines:
 #   (root)                          329
 #   cast                              3
-#   powf                             44
+#   powf                             46
 #   prelude                        3640
 #   simd                           1627
 
-## items (2482 lines)
+## items (2484 lines)
 
 pub mod magetypes
 pub use archmage
@@ -75,8 +75,10 @@ pub powf::PowfOptions::precision: powf::PowfPrecision
 pub powf::PowfOptions::validation: powf::PowfValidation
 pub const powf::PowfOptions::BACKEND_GAMMA_LOWP: Self
 pub const powf::PowfOptions::BACKEND_GAMMA_MIDP: Self
+pub const powf::PowfOptions::PORTABLE_GAMMA_HIGHP: Self
 pub const powf::PowfOptions::PORTABLE_GAMMA_LOWP: Self
 pub const powf::PowfOptions::PORTABLE_GAMMA_MIDP: Self
+pub const powf::PowfOptions::PORTABLE_HIGHP: Self
 pub const powf::PowfOptions::PORTABLE_NORMAL_MIDP: Self
 pub const powf::PowfOptions::STD_HIGHP: Self
 pub const fn powf::PowfOptions::bits(self) -> u32
