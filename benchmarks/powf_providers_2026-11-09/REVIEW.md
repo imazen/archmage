@@ -95,8 +95,9 @@ peak-load 7.50`. Standalone all-target tests, format and warnings-as-errors
 Clippy pass with `18s | peak-RSS 0.34GiB | min-avail 43524MiB | peak-load 4.36`.
 
 The direct M6 extension adds native full/Gamma/required-NEON comparisons and
-the complete 32-cell exploratory matrix. All 424 combined Rust-graph
-provider/width samples match the canonical non-NaN bits and NaN classes.
+the complete 32-cell exploratory matrix. Within the combined inventory's 424
+provider/width executions, the Rust graph matches canonical non-NaN bits and
+NaN classes; the other providers' differences remain recorded.
 Darwin full-native C flags now remove the baseline architecture restriction;
 the earlier native-CPU/baseline-ISA matrix remains labeled and preserved.
 Exact feature-list and disassembly checks document the compiler's older native
