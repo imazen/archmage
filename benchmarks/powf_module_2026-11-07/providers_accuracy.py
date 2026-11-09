@@ -37,6 +37,7 @@ def classify(bits):
     return ('nan' if math.isnan(x) else 'infinity' if math.isinf(x) else 'zero' if x == 0
             else 'subnormal' if abs(x) < 2**-126 else 'normal')
 
+variances = a.output.with_suffix('.variances.jsonl').open('x')
 report = {'cases': len(request.splitlines()), 'tier': a.tier, 'runner': a.runner,
           'precision': 256, 'libm_version': '0.2.16', 'libm_features': ['arch'],
           'claim': 'sampled actual outputs; no whole-domain ULP/portability guarantee',
@@ -58,6 +59,12 @@ for row, output in zip(request.splitlines(), run.stdout.splitlines(), strict=Tru
         report['pairwise_non_nan_bit_differences'] += 1
     valid = x > 0 and math.isfinite(x) and math.isfinite(n)
     rounded = rounded_reference(xb, nb) if valid else None
+    if bits[0] != bits[1]:
+        kind = ('classification' if classes[0] != classes[1] else
+                'NaN_payload_or_sign' if classes[0] == 'nan' else 'non_NaN_bits')
+        variances.write(json.dumps({'input': fields, 'std_bits': got[3],
+            'Rust_libm_bits': got[4], 'classes': classes, 'kind': kind,
+            'rounded_MPFR': f'{rounded:08x}' if rounded is not None else None}) + '\n')
     bounds, quantum = reference.reference(xb, nb) if valid else (None, None)
     for name, b, cls in zip(['std_f32_powf', 'Rust_libm_0_2_16_powf'], bits, classes, strict=True):
         stats = report['providers'].setdefault(name, {'classes': {}, 'rounded_differences': 0,
@@ -84,5 +91,7 @@ for row, output in zip(request.splitlines(), run.stdout.splitlines(), strict=Tru
             relative = max(abs(value - Fraction.from_float(z)) / Fraction.from_float(z) for z in bounds)
             relative = math.nextafter(float(relative), math.inf) if relative else 0.
             stats['max_relative_upper'] = max(stats['max_relative_upper'], relative)
+variances.close()
+report['all_variances'] = str(a.output.with_suffix('.variances.jsonl'))
 a.output.write_text(json.dumps(report, indent=2) + '\n')
 print(json.dumps(report, indent=2))

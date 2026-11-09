@@ -13,6 +13,7 @@ left = all_rows[0]
 report = {'baseline': str(a.actuals[0]), 'cases': len(left), 'comparisons': []}
 def nan(bits):
     return bits & 0x7fffffff > 0x7f800000
+variances = a.output.with_suffix('.variances.jsonl').open('x')
 for path, right in zip(a.actuals[1:], all_rows[1:], strict=True):
     assert len(right) == len(left)
     counts = [{'provider': name, 'non_nan_bit_differences': 0, 'NaN_class_differences': 0,
@@ -27,8 +28,13 @@ for path, right in zip(a.actuals[1:], all_rows[1:], strict=True):
                    'non_nan_bit_differences' if not nan(x) and x != y else None)
             if key:
                 stats[key] += 1
+                variances.write(json.dumps({'baseline': str(a.actuals[0]), 'actual': str(path),
+                    'provider': stats['provider'], 'input': row[:3], 'left': row[3+i],
+                    'right': other[3+i], 'kind': key}) + '\n')
                 if len(stats['witnesses']) < 16:
                     stats['witnesses'].append({'input': row[:3], 'left': row[3+i], 'right': other[3+i], 'kind': key})
     report['comparisons'].append({'actual': str(path), 'providers': counts})
+variances.close()
+report['all_variances'] = str(a.output.with_suffix('.variances.jsonl'))
 a.output.write_text(json.dumps(report, indent=2) + '\n')
 print(json.dumps(report, indent=2))

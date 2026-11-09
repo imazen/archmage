@@ -1,6 +1,7 @@
 //! Separate std/Rust-libm comparison; PROVIDERS-PLAN.md freezes the protocol.
 #![forbid(unsafe_code)]
 use archmage::SimdToken;
+use std::io::Write;
 
 struct Cell {
     name: String,
@@ -71,14 +72,33 @@ fn execute<const N: usize, const EXP: u32>(
         _ => panic!("unsupported explicit provider context"),
     }
 }
-fn register<const N: usize, const EXP: u32>(suite: Option<&mut zenbench::Suite>, cell: &Cell) {
+fn register<const N: usize, const EXP: u32>(
+    suite: Option<&mut zenbench::Suite>,
+    cell: &Cell,
+    trace: Option<&mut std::fs::File>,
+) {
     let input: Vec<[f32; N]> = (0..cell.size / N)
         .map(|i| core::array::from_fn(|j| (((i * N + j) % 255) + 1) as f32 / 255.))
         .collect();
     let mut output = vec![[0.; N]; input.len()];
+    let mut traced = Vec::new();
     for arm in 0..LABELS.len() {
         execute::<N, EXP>(arm, cell.context, &input, &mut output, cell.chain);
         assert!(output.iter().flatten().all(|x| x.is_normal()));
+        if trace.is_some() {
+            traced.push(output.clone());
+        }
+    }
+    if let Some(writer) = trace {
+        assert!(suite.is_none(), "trace only during untimed verification");
+        let record = serde_json::json!({"group": cell.name, "width": N,
+            "exponent_bits": format!("{EXP:08x}"), "chain_normalized": cell.chain,
+            "inputs": input.iter().flatten().map(|x|x.to_bits()).collect::<Vec<_>>(),
+            "outputs": traced.iter().zip(LABELS).map(|(values,name)|serde_json::json!({
+                "name":name,"bits":values.iter().flatten().map(|x|x.to_bits()).collect::<Vec<_>>()
+            })).collect::<Vec<_>>()});
+        serde_json::to_writer(&mut *writer, &record).unwrap();
+        writeln!(writer).unwrap();
     }
     let Some(suite) = suite else { return };
     suite.group(&cell.name, |g| {
@@ -144,7 +164,7 @@ fn cells() -> Vec<Cell> {
     assert_eq!(cells.len(), 56);
     cells
 }
-fn register_all(mut suite: Option<&mut zenbench::Suite>) {
+fn register_all(mut suite: Option<&mut zenbench::Suite>, mut trace: Option<&mut std::fs::File>) {
     for cell in cells() {
         if std::env::var("POWF_FILTER").is_ok_and(|f| f != cell.name) {
             continue;
@@ -152,8 +172,16 @@ fn register_all(mut suite: Option<&mut zenbench::Suite>) {
         macro_rules! width {
             ($n:literal) => {
                 match cell.exponent {
-                    0x4019999a => register::<$n, 0x4019999a>(suite.as_deref_mut(), &cell),
-                    0x3f000000 => register::<$n, 0x3f000000>(suite.as_deref_mut(), &cell),
+                    0x4019999a => register::<$n, 0x4019999a>(
+                        suite.as_deref_mut(),
+                        &cell,
+                        trace.as_deref_mut(),
+                    ),
+                    0x3f000000 => register::<$n, 0x3f000000>(
+                        suite.as_deref_mut(),
+                        &cell,
+                        trace.as_deref_mut(),
+                    ),
                     _ => panic!("unknown frozen exponent"),
                 }
             };
@@ -175,7 +203,9 @@ fn main() {
         return;
     }
     if std::env::var("POWF_VERIFY_ONLY").is_ok() {
-        register_all(None);
+        let mut trace =
+            std::env::var_os("POWF_PROVIDER_TRACE").map(|p| std::fs::File::create_new(p).unwrap());
+        register_all(None, trace.as_mut());
         println!("all 56 std/Rust-libm cells verified");
         return;
     }
@@ -183,7 +213,9 @@ fn main() {
     assert!(std::env::var("ZENBENCH_NO_BUSY_GATE").map_or(true, |v| v.is_empty() || v == "0"));
     let output = std::env::var("POWF_RESULT").expect("new POWF_RESULT required");
     assert!(!std::path::Path::new(&output).exists());
-    zenbench::run_gated(zenbench::GateConfig::strict(), |s| register_all(Some(s)))
-        .save(std::path::Path::new(&output))
-        .unwrap();
+    zenbench::run_gated(zenbench::GateConfig::strict(), |s| {
+        register_all(Some(s), None)
+    })
+    .save(std::path::Path::new(&output))
+    .unwrap();
 }
