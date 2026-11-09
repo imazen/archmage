@@ -2,7 +2,10 @@
 use super::{PowfError, PowfErrorKind, PowfOptions};
 
 #[inline(always)]
-pub(super) fn check_bases<const OPTIONS:u32,const N:usize>(bases:&[f32;N],exponent:f32)->Result<(),PowfError>{
+pub(super) fn check_bases<const OPTIONS: u32, const N: usize>(
+    bases: &[f32; N],
+    exponent: f32,
+) -> Result<(), PowfError> {
     let domain = OPTIONS & 3;
     if OPTIONS & PowfOptions::ASSUME == 0 && domain != 3 {
         let mut mask = 0;
@@ -24,8 +27,12 @@ pub(super) fn check_bases<const OPTIONS:u32,const N:usize>(bases:&[f32;N],expone
     Ok(())
 }
 #[inline(always)]
-pub(super) fn check_results<const OPTIONS:u32,const N:usize>(bases:&[f32;N],result:&[f32;N],exponent:f32)->Result<(),PowfError>{
-    let domain=OPTIONS & 3;
+pub(super) fn check_results<const OPTIONS: u32, const N: usize>(
+    bases: &[f32; N],
+    result: &[f32; N],
+    exponent: f32,
+) -> Result<(), PowfError> {
+    let domain = OPTIONS & 3;
     if OPTIONS & PowfOptions::ASSUME == 0 && domain < 2 {
         let mut mask = 0;
         for (i, &x) in result.iter().enumerate() {
@@ -43,9 +50,12 @@ pub(super) fn check_results<const OPTIONS:u32,const N:usize>(bases:&[f32;N],resu
     Ok(())
 }
 #[inline(always)]
-pub(super) fn run<const OPTIONS:u32,const N:usize>(bases:[f32;N],exponent:f32)->Result<[f32;N],PowfError>{
-    check_bases::<OPTIONS,N>(&bases,exponent)?;
-    let result=bases.map(|x|x.powf(exponent));
-    check_results::<OPTIONS,N>(&bases,&result,exponent)?;
+pub(super) fn run<const OPTIONS: u32, const N: usize>(
+    bases: [f32; N],
+    exponent: f32,
+) -> Result<[f32; N], PowfError> {
+    check_bases::<OPTIONS, N>(&bases, exponent)?;
+    let result = bases.map(|x| x.powf(exponent));
+    check_results::<OPTIONS, N>(&bases, &result, exponent)?;
     Ok(result)
 }

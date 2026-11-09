@@ -42,7 +42,7 @@ fn execute{n}<const EXP:u32>(arm:usize,context:&str,input:&[[f32;{n}]],output:&m
  }}
 }}
 fn register{n}<const EXP:u32>(suite:Option<&mut zenbench::Suite>,cell:&Cell){{
- let input:Vec<[f32;{n}]>=(0..cell.size/{n}).map(|i|core::array::from_fn(|j|(((i*{n}+j)%255)+1)as f32/255.)).collect();
+ let input:Vec<[f32;{n}]>=(0..{('cell.size' if n == 1 else f'cell.size/{n}')} ).map(|i|core::array::from_fn(|j|((({('i+j' if n == 1 else f'i*{n}+j')})%255)+1)as f32/255.)).collect();
  let mut output=vec![[0.;{n}];input.len()];
  for arm in 0..LABELS.len(){{execute{n}::<EXP>(arm,cell.context,&input,&mut output,cell.chain);assert!(output.iter().flatten().all(|x|x.is_normal()));}}
  let Some(suite)=suite else{{return;}};
