@@ -161,8 +161,12 @@ peak 0.04 GiB. M6's monitor is not a cgroup hard cap. Native HIGHP verification
 2 s, peak 0.04 GiB. Intel native HIGHP plus V4/V4x validation 128 s, peak 4.02 GiB,
 minimum available 20,108 MiB, load 3.20. The full CI wrapper 812 s reaches
 peak 1.97 GiB, minimum available 22,024 MiB, load 4.42; its 19 CI stages pass,
-then a subsequent study lint fails on the incomplete dependency. Separate
-successful study lint and final checks have their own logs.
+then a subsequent study lint fails on the incomplete dependency. The final isolated-Cargo-home pipeline passes study Clippy, all HIGHP
+cross-provider checks, codegen emission and both semver/target-feature gates:
+437 s, peak RSS 5.27 GiB, minimum available 18,743 MiB, peak load 3.26.
+The unchanged legacy assembly gate passes 1,623/794/794 probes with zero
+reviewed differences: 23 s, peak RSS 0.44 GiB, minimum available 20,154 MiB,
+peak load 3.11. Its baseline allowances remain unchanged.
 
 Raw rounds, gate traces, original and corrected failures, source/binary/lock
 identities, compiler settings, MPFR actuals and inputs, assembly and all checks
