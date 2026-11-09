@@ -44,3 +44,11 @@ implementation. Require an explicit NEON token in the portable evaluator.
 Preserve the strict placement refusal, then collect the separately labeled
 32-cell/50-pair exploratory matrix with all resource observations retained.
 Unsupported macOS process confinement excludes it from the 2% promotion gate.
+
+The first Darwin C native profile retained `-march=armv8-a` alongside
+`-mcpu=native`. The driver's actual feature list confirms native CPU scheduling
+with baseline ISA features. Preserve that matrix under this explicit label.
+Remove the baseline architecture flag for the corrected full-native build,
+recheck its numerical outputs, and collect one additional 50-pair x8/4096
+stream/2.4 pilot. This is a changed compiler configuration, not a retry of the
+unchanged matrix. Keep its evidence separately and retain all resource flags.

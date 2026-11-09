@@ -1208,6 +1208,15 @@ fn process(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 
 ## Known Bugs
 
+AArch64 Miri coverage gap (2026-11-09): native M6 `just ci` reaches the
+unsupported interpreter intrinsic `llvm.aarch64.neon.sshl.v4i32` from the
+automatic powf preset test. Both pinned nightly-2026-10-06 and current
+nightly-2026-11-07 reproduce it. Native ARM tests and sampled canonical result
+comparisons pass; x86 Miri passes. No test is skipped or expectation relaxed.
+The existing variable-shift lowering preserves the established N=0 contract;
+do not replace it with an unguarded immediate intrinsic to work around Miri.
+See `benchmarks/powf_providers_2026-11-09/M6-NEON.md`.
+
 Experimental Arm scalar powf port (2026-11-09, benchmark package only): the
 first array::from_fn callback was outlined outside its V3 caller and performed
 nine indirect FMA calls per ordinary lane. Explicit inline array iteration

@@ -16,6 +16,7 @@ def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('repository',type=Path);p.add_argument('directory',type=Path)
     p.add_argument('--snapshot-manifest',type=Path,help='rebuild a frozen source snapshot after verifying every source hash')
+    p.add_argument('--native-only',action='store_true',help='compile only the explicitly host-native diagnostic')
     a=p.parse_args();a.directory.mkdir(parents=True,exist_ok=False)
     frozen=json.loads(a.snapshot_manifest.read_text())if a.snapshot_manifest else None
     revision=frozen['source_revision']if frozen else subprocess.check_output(['git','-C',str(a.repository),'rev-parse','HEAD'],text=True).strip()
@@ -36,6 +37,7 @@ def main():
         source=a.repository/name
         if source.is_file():shutil.copy2(source,snapshot/name)
     darwin=platform.system()=='Darwin'
+    if darwin:assert platform.machine()=='arm64','macOS diagnostics are ARM64-only'
     common=['-std=c11','-O3','-g','-fPIC','-dynamiclib'if darwin else'-shared','-fno-fast-math',
             '-frounding-math','-fexcess-precision=standard','-DUSE_GLIBC_ABI=0',
             '-DWANT_ROUNDING=1','-I',str((snapshot/'include').resolve())]
@@ -53,6 +55,7 @@ def main():
     else:raise RuntimeError('unregistered platform')
     native_flag='-mcpu=native'if darwin and platform.machine()=='arm64'else'-march=native'
     variants.append(('native_errno1',[native_flag,'-ffp-contract=fast','-DWANT_ERRNO=1']))
+    if a.native_only:variants=variants[-1:]
     report={'source_revision':revision,'compiler':subprocess.check_output(['cc','--version'],text=True),
             'native_identity':native_identity(),
             'source_files':{str(path.relative_to(snapshot)):digest(path)for path in sorted(snapshot.rglob('*'))if path.is_file()},
@@ -60,7 +63,8 @@ def main():
     for name,features in variants:
         library=(a.directory/f'arm-powf-{name}{".dylib"if darwin else".so"}').resolve()
         sources=[str((snapshot/name).resolve())for name in ['powf_entry.c',*names[1:4]]]
-        command=['cc',*common,*features,*sources,'-Wl,-undefined,error'if darwin else'-Wl,-z,defs','-lm','-o',str(library)]
+        profile_common=[flag for flag in common if not(name=='native_errno1'and flag.startswith('-march='))]
+        command=['cc',*profile_common,*features,*sources,'-Wl,-undefined,error'if darwin else'-Wl,-z,defs','-lm','-o',str(library)]
         with (a.directory/f'{name}.log').open('w')as log:subprocess.run(command,stdout=log,stderr=subprocess.STDOUT,check=True)
         disassembler=['xcrun','llvm-objdump']if darwin else['objdump']
         assembly=subprocess.check_output([*disassembler,'-d',str(library)],text=True)

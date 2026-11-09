@@ -175,3 +175,6 @@ The evidence supports continuing the same-algorithm approach through Archmage.
 It does not yet qualify replacing std, LOWP or MIDP. See
 [ARM-C-PLAN.md](ARM-C-PLAN.md), [ARM-PORT-PLAN.md](ARM-PORT-PLAN.md) and
 [ARTIFACTS.md](ARTIFACTS.md) for the frozen protocol and evidence locations.
+The subsequent [M6 follow-up](M6-NEON.md) records its full exploratory matrix,
+424-context combined variance inventory, native compiler feature correction
+and explicit AArch64 Miri interpreter gap.

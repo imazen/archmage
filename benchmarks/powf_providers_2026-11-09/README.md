@@ -11,6 +11,8 @@ coverage limits; [ARTIFACTS.md](ARTIFACTS.md) identifies the verified mirror.
 The subsequent [isolated Arm C comparison and safe Rust port](ARM-RESULTS.md)
 records matching sampled results, actual-worker assembly, native builds and
 the code-size/performance tradeoffs. Its timings also remain unqualified.
+The [direct M6 NEON follow-up](M6-NEON.md) adds the complete exploratory
+32-cell matrix, physical canonical comparisons and the native ARM Miri limit.
 
 ## Implementations and coverage
 
