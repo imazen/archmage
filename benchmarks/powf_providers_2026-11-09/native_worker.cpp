@@ -94,6 +94,13 @@ static void load() {
         providers.push_back({"AOCL_5_3_2_fast_scalar",symbol(required_dso(fast),"amd_powf"),1});
     }
 #endif
+    if(const char *core=std::getenv("POWF_CORE_MATH_DSO"))providers.push_back({"CORE_MATH_sys_1_4_0_baseline",symbol(required_dso(core),"cr_powf"),1});
+#ifdef __x86_64__
+    if(const char *core=std::getenv("POWF_CORE_MATH_FMA_DSO")) {
+        if(!(__builtin_cpu_supports("avx")&&__builtin_cpu_supports("fma")))throw std::runtime_error("CORE-MATH FMA-only requires usable AVX+FMA");
+        providers.push_back({"CORE_MATH_sys_1_4_0_FMA_no_AVX2",symbol(required_dso(core),"cr_powf"),1});
+    }
+#endif
     if(std::fegetround()!=FE_TONEAREST)throw std::runtime_error("requires RNE");
 #ifdef __x86_64__
     auto csr=_mm_getcsr(); if(csr&((1u<<15)|(1u<<6)))throw std::runtime_error("requires gradual underflow");
@@ -116,7 +123,7 @@ static std::string request(const std::string &line) {
     if(!p)throw std::runtime_error("unknown provider: "+method);
     std::array<float,16>x{},n{},out{};std::vector<float> traced;
     if(op=="E") {
-        for(size_t i=0;i<width;i++) {uint32_t xb,nb;in>>std::hex>>xb>>nb;x[i]=from_bits(xb);n[i]=from_bits(nb);}
+        for(size_t i=0;i<width;i++) {uint32_t xb,nb;if(!(in>>std::hex>>xb>>nb))throw std::runtime_error("truncated E input");x[i]=from_bits(xb);n[i]=from_bits(nb);}
         if(!in)throw std::runtime_error("truncated E input");
         evaluate(*p,x.data(),n.data(),out.data(),width);
     } else if(op=="B"||op=="T") {

@@ -54,6 +54,7 @@ codegen-units=1
     (directory/'src/main.rs').write_text(client)
     with (directory/'prepare.log').open('w')as out:
         subprocess.run([str(wrapper),'--mem','6G','--jobs','2','--','cargo','+'+a.toolchain,'generate-lockfile','--manifest-path',str(directory/'Cargo.toml')],stdout=out,stderr=subprocess.STDOUT,check=True)
+        subprocess.run([str(wrapper),'--mem','6G','--jobs','2','--','cargo','+'+a.toolchain,'fetch','--locked','--manifest-path',str(directory/'Cargo.toml')],stdout=out,stderr=subprocess.STDOUT,check=True)
     current=(directory/'Cargo.lock').read_bytes()
     if lock is None:lock=current
     assert current==lock,'dependency locks differ; stop before comparing builds'
@@ -66,6 +67,7 @@ for repetition,ordered in enumerate(order):
         assert not target.exists()
         env={k:v for k,v in os.environ.items()if k not in ['RUSTFLAGS','CARGO_ENCODED_RUSTFLAGS','CARGO_TARGET_DIR']}
         env['CARGO_TARGET_DIR']=str(target.resolve())
+        env['RUSTFLAGS']='';env['CARGO_ENCODED_RUSTFLAGS']=''
         command=['cargo','+'+a.toolchain,'build','--release','--locked','--manifest-path',str(directory/'Cargo.toml')]
         if feature:command+=['--features',feature]
         stem=a.directory/f'{repetition}-{name}';timefile=stem.with_suffix('.time.txt')

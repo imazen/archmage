@@ -801,3 +801,9 @@ powf-external-inventory directory *runs:
 
 powf-policy-cold-build base patched directory toolchain:
     python3 -B benchmarks/powf_providers_2026-11-09/cold_build.py "{{base}}" "{{patched}}" "{{directory}}" --toolchain "{{toolchain}}"
+
+powf-core-math-prepare crate directory:
+    python3 -B benchmarks/powf_providers_2026-11-09/core_math_prepare.py "{{crate}}" "{{directory}}"
+
+powf-glibc-history repository directory:
+    python3 -B benchmarks/powf_providers_2026-11-09/glibc_history.py "{{repository}}" "{{directory}}"
