@@ -27,7 +27,7 @@ fn run<const IN_CONTEXT: bool, const OPTIONS: u32, const N: usize>(
         #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
         Plan::V4(t) => {
             if IN_CONTEXT {
-                highp_simd::packed8::<archmage::X64V4Token, OPTIONS, N>(t, bases, n)
+                highp_simd::wide::<archmage::X64V4Token, OPTIONS, N>(t, bases, n)
             } else {
                 v4::<OPTIONS, N>(t, bases, n)
             }
@@ -35,7 +35,7 @@ fn run<const IN_CONTEXT: bool, const OPTIONS: u32, const N: usize>(
         #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
         Plan::V4x(t) => {
             if IN_CONTEXT {
-                highp_simd::packed8::<archmage::X64V4xToken, OPTIONS, N>(t, bases, n)
+                highp_simd::wide::<archmage::X64V4xToken, OPTIONS, N>(t, bases, n)
             } else {
                 v4x::<OPTIONS, N>(t, bases, n)
             }
@@ -99,9 +99,9 @@ macro_rules! entry {
 #[cfg(target_arch = "x86_64")]
 entry!(v3, X64V3Token, packed4);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-entry!(v4, X64V4Token, packed8);
+entry!(v4, X64V4Token, wide);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-entry!(v4x, X64V4xToken, packed8);
+entry!(v4x, X64V4xToken, wide);
 #[cfg(target_arch = "aarch64")]
 entry!(neon, NeonToken, packed2);
 #[cfg(target_arch = "wasm32")]

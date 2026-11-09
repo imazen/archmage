@@ -11,7 +11,7 @@ use std::io::{BufRead, Write};
 const FLAGS: u32 = PowfOptions::PORTABLE_HIGHP
     .with_execution(PowfExecution::Caller)
     .bits();
-#[archmage::magetypes(v3, neon, wasm128, scalar)]
+#[archmage::magetypes(v4x(cfg(avx512)), v4(cfg(avx512)), v3, neon, wasm128, scalar)]
 fn values<const N: usize>(token: Token, x: [f32; N], n: f32) -> [f32; N] {
     use magetypes::simd::generic::{f32x4, f32x8};
     let mut out = [0.; N];
@@ -65,6 +65,10 @@ fn evaluate<const N: usize>(ctx: &str, x: [f32; N], n: f32) -> [f32; N] {
         }
         #[cfg(target_arch = "x86_64")]
         "native" => values_v3(archmage::X64V3Token::summon().expect("required V3"), x, n),
+        #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+        "native-v4" => values_v4(archmage::X64V4Token::summon().expect("required V4"), x, n),
+        #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+        "native-v4x" => values_v4x(archmage::X64V4xToken::summon().expect("required V4x"), x, n),
         #[cfg(target_arch = "aarch64")]
         "native" => values_neon(archmage::NeonToken::summon().expect("required NEON"), x, n),
         #[cfg(target_arch = "wasm32")]

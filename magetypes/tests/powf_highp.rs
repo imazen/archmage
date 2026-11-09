@@ -167,3 +167,34 @@ fn canonical_gamma_mixed_lanes() {
     #[cfg(feature = "w512")]
     gamma_mixed::<16>();
 }
+
+#[test]
+fn every_canonical_highp_encoding_reaches_the_same_graph() {
+    macro_rules! check {
+        ($($flags:literal),+ $(,)?) => {$(
+            let expected = powf::try_powf_array_with::<$flags, 4>([2., 4., 8., 16.], 0.5).unwrap();
+            let runtime = powf::try_powf_array_runtime([2., 4., 8., 16.], 0.5,
+                PowfOptions::PORTABLE_HIGHP
+                    .with_domain(match $flags & 3 {
+                        0 => powf::PowfDomain::PositiveNormal,
+                        1 => powf::PowfDomain::NonNegativeNormal,
+                        2 => powf::PowfDomain::Gamma,
+                        _ => powf::PowfDomain::Full,
+                    })
+                    .with_execution(if $flags & 4 == 0 { PowfExecution::Automatic } else { PowfExecution::Caller })
+                    .with_validation(if $flags & 32 == 0 { powf::PowfValidation::Checked } else { powf::PowfValidation::AssumeValid })).unwrap();
+            assert_eq!(expected.map(f32::to_bits), runtime.map(f32::to_bits));
+            for (x, value) in [2f32, 4., 8., 16.].into_iter().zip(expected) {
+                let row = fixtures::CASES.iter().find(|r| r[0] == x.to_bits() && r[1] == 0.5f32.to_bits());
+                // Independent fixtures are also checked by the all-width tests;
+                // powers with known exact square roots anchor runtime plumbing.
+                if x == 4. { assert_eq!(value.to_bits(), 2f32.to_bits()); }
+                if x == 16. { assert_eq!(value.to_bits(), 4f32.to_bits()); }
+                if let Some(r) = row { equal(value, r[2]); }
+            }
+        )+};
+    }
+    check!(
+        64, 65, 66, 67, 68, 69, 70, 71, 96, 97, 98, 99, 100, 101, 102, 103
+    );
+}

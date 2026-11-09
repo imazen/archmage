@@ -57,7 +57,7 @@ fn checkint(x: u32) -> u32 {
 }
 
 // These const parameters propagate into the whole graph. ASSUME is a bounded
-// Gamma diagnostic, with its same input preconditions, not unchecked memory.
+// Gamma kernel with the same input preconditions, never unchecked memory.
 #[inline(always)]
 pub(super) fn pow<T: F64x2Backend, const MODE: usize, const ASSUME: bool>(
     token: T,

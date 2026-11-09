@@ -122,3 +122,23 @@ packed!(packed2, f64x2, F64x2Backend, 2);
 packed!(packed4, f64x4, F64x4Backend, 4);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 packed!(packed8, f64x8, F64x8Backend, 8);
+
+// A stronger token must still choose a pack that fits the requested shape.
+// Four f32 lanes need four binary64 lanes, even in a 512-bit feature context.
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[inline(always)]
+pub(super) fn wide<
+    T: crate::simd::backends::F64x8Backend + crate::simd::backends::F64x4Backend + F64x2Backend,
+    const OPTIONS: u32,
+    const N: usize,
+>(
+    t: T,
+    x: [f32; N],
+    n: f32,
+) -> [f32; N] {
+    if N < 8 {
+        packed4::<T, OPTIONS, N>(t, x, n)
+    } else {
+        packed8::<T, OPTIONS, N>(t, x, n)
+    }
+}
