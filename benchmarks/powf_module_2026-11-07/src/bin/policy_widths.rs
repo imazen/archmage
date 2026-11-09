@@ -180,15 +180,27 @@ macro_rules! width {
             if context == "scalar" {
                 return $check::scalar(archmage::ScalarToken, input, exponent, domain, expected);
             }
-            #[cfg(all(target_arch = "x86_64", feature="avx512"))]
+            #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
             if context == "v4" {
-                return $check::v4(archmage::X64V4Token::summon().expect("required V4"),input,exponent,domain,expected);
+                return $check::v4(
+                    archmage::X64V4Token::summon().expect("required V4"),
+                    input,
+                    exponent,
+                    domain,
+                    expected,
+                );
             }
-            #[cfg(all(target_arch = "x86_64", feature="avx512"))]
+            #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
             if context == "v4x" {
-                return $check::v4x(archmage::X64V4xToken::summon().expect("required V4x"),input,exponent,domain,expected);
+                return $check::v4x(
+                    archmage::X64V4xToken::summon().expect("required V4x"),
+                    input,
+                    exponent,
+                    domain,
+                    expected,
+                );
             }
-            assert_eq!(context,"native","explicit requested backend unavailable");
+            assert_eq!(context, "native", "explicit requested backend unavailable");
             #[cfg(target_arch = "x86_64")]
             return $check::v3(
                 archmage::X64V3Token::summon().expect("required V3"),
@@ -225,41 +237,41 @@ macro_rules! width {
 
 // A module provides stable names for the macro-generated feature entries.
 mod check4 {
-    #[cfg(all(target_arch="x86_64",feature="avx512"))]
-    pub(super) use super::check4_v4 as v4;
-    #[cfg(all(target_arch="x86_64",feature="avx512"))]
-    pub(super) use super::check4_v4x as v4x;
     #[cfg(target_arch = "aarch64")]
     pub(super) use super::check4_neon as neon;
     pub(super) use super::check4_scalar as scalar;
     #[cfg(target_arch = "x86_64")]
     pub(super) use super::check4_v3 as v3;
+    #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+    pub(super) use super::check4_v4 as v4;
+    #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+    pub(super) use super::check4_v4x as v4x;
     #[cfg(target_arch = "wasm32")]
     pub(super) use super::check4_wasm128 as wasm128;
 }
 mod check8 {
-    #[cfg(all(target_arch="x86_64",feature="avx512"))]
-    pub(super) use super::check8_v4 as v4;
-    #[cfg(all(target_arch="x86_64",feature="avx512"))]
-    pub(super) use super::check8_v4x as v4x;
     #[cfg(target_arch = "aarch64")]
     pub(super) use super::check8_neon as neon;
     pub(super) use super::check8_scalar as scalar;
     #[cfg(target_arch = "x86_64")]
     pub(super) use super::check8_v3 as v3;
+    #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+    pub(super) use super::check8_v4 as v4;
+    #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+    pub(super) use super::check8_v4x as v4x;
     #[cfg(target_arch = "wasm32")]
     pub(super) use super::check8_wasm128 as wasm128;
 }
 mod check16 {
-    #[cfg(all(target_arch="x86_64",feature="avx512"))]
-    pub(super) use super::check16_v4 as v4;
-    #[cfg(all(target_arch="x86_64",feature="avx512"))]
-    pub(super) use super::check16_v4x as v4x;
     #[cfg(target_arch = "aarch64")]
     pub(super) use super::check16_neon as neon;
     pub(super) use super::check16_scalar as scalar;
     #[cfg(target_arch = "x86_64")]
     pub(super) use super::check16_v3 as v3;
+    #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+    pub(super) use super::check16_v4 as v4;
+    #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+    pub(super) use super::check16_v4x as v4x;
     #[cfg(target_arch = "wasm32")]
     pub(super) use super::check16_wasm128 as wasm128;
 }
@@ -332,8 +344,11 @@ fn main() {
         assert_eq!(actual, expected, "actual relaxed provider rounding");
         eprintln!("relaxed provider cancellation bits {actual:08x}");
     }
-    let context=std::env::args().nth(1).expect("explicit context required");
-    assert!(matches!(context.as_str(),"scalar"|"native"|"v4"|"v4x"));
+    let context = std::env::args().nth(1).expect("explicit context required");
+    assert!(matches!(
+        context.as_str(),
+        "scalar" | "native" | "v4" | "v4x"
+    ));
     let mut groups: BTreeMap<(u32, u32), Vec<Case>> = BTreeMap::new();
     let mut broadcasts = 0;
     let mut mixed = 0;

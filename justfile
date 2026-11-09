@@ -747,3 +747,12 @@ powf-policy-debug-wasm:
 
 powf-policy-codegen-identity before after output:
     python3 -B benchmarks/powf_module_2026-11-07/policy_identity.py "{{before}}" "{{after}}" "{{output}}"
+
+powf-providers-build:
+    cargo build --release --locked --manifest-path benchmarks/powf_module_2026-11-07/Cargo.toml --bin providers_bench --bin providers_eval --bin providers_analyze
+
+powf-providers-matrix directory *options:
+    python3 -B benchmarks/powf_module_2026-11-07/replacement_matrix.py benchmarks/powf_module_2026-11-07/target/release/providers_bench "{{directory}}" --providers {{options}}
+
+powf-providers-analyze directory *runs:
+    python3 -B benchmarks/powf_module_2026-11-07/analyze_replacement_matrix.py benchmarks/powf_module_2026-11-07/target/release/providers_analyze "{{directory}}" {{runs}} --require-cells 56

@@ -13,19 +13,21 @@ p.add_argument('binary',type=Path)
 p.add_argument('directory',type=Path)
 p.add_argument('--pilot',action='store_true')
 p.add_argument('--policies',action='store_true',help='56 public-policy cells, 71 named implementations each')
+p.add_argument('--providers',action='store_true',help='56 std/Rust-libm cells, four literal/opaque implementations')
 p.add_argument('--rounding',action='store_true',help='the separately frozen 96-cell forced-rounding matrix')
 p.add_argument('--record-all',action='store_true',help='record every unmeasured cell once; preserve every dirty verdict')
 p.add_argument('--exploratory',action='store_true',help='explicit scheduler-controlled study; never promotion evidence')
 p.add_argument('--continue-unmeasured',type=Path,help='retain prior failed cell; measure only its previously unmeasured suffix')
 a=p.parse_args()
+assert sum([a.providers,a.policies,a.rounding])<=1
 a.directory.mkdir(parents=True,exist_ok=False)
 binary=a.binary.resolve()
 env=dict(os.environ,POWF_LIST='1')
 cells=subprocess.check_output([str(binary)],env=env,text=True).splitlines()
-assert len(cells)==(56 if a.policies else 96 if a.rounding else 672)
+assert len(cells)==(56 if (a.policies or a.providers) else 96 if a.rounding else 672)
 if a.pilot:
     native='neon' if any('/neon/' in c for c in cells) else 'v3'
-    cells=[f'policy/x4/{native}/64/stream/4019999a' if a.policies else f'rounding/x4/{native}/64/stream/Gamma/4019999a/checked' if a.rounding else f'replacement/x4/{native}/64/stream/2/4019999a/literal-n/unorm8']
+    cells=[f'providers/x4/{native}/64/stream/4019999a' if a.providers else f'policy/x4/{native}/64/stream/4019999a' if a.policies else f'rounding/x4/{native}/64/stream/Gamma/4019999a/checked' if a.rounding else f'replacement/x4/{native}/64/stream/2/4019999a/literal-n/unorm8']
 start=0
 if a.continue_unmeasured:
     assert not a.pilot and not a.exploratory
@@ -37,7 +39,7 @@ if a.continue_unmeasured:
     assert 0<start<len(cells)
 policy=os.environ.get('ZENBENCH_CPU_POLICY','auto')
 assert (policy=='unrestricted')==a.exploratory, 'unrestricted requires explicit exploratory labeling'
-manifest={'binary':str(binary),'sha256':hashlib.sha256(binary.read_bytes()).hexdigest(),'cells':cells,'pairs':50,'pilot':a.pilot,'exploratory':a.exploratory,'promotion_eligible':not a.exploratory,'cpu_policy':policy,'record_all':a.record_all,'start_index':start,'prior_run':str(a.continue_unmeasured.resolve())if a.continue_unmeasured else None,'registered_launcher_pid':os.getpid()if a.policies else None}
+manifest={'binary':str(binary),'sha256':hashlib.sha256(binary.read_bytes()).hexdigest(),'cells':cells,'pairs':50,'pilot':a.pilot,'exploratory':a.exploratory,'promotion_eligible':not a.exploratory,'cpu_policy':policy,'record_all':a.record_all,'start_index':start,'prior_run':str(a.continue_unmeasured.resolve())if a.continue_unmeasured else None,'registered_launcher_pid':os.getpid()if (a.policies or a.providers) else None}
 (a.directory/'MATRIX.json').write_text(json.dumps(manifest,indent=2)+'\n')
 for index,cell in enumerate(cells):
     if index<start:continue
@@ -47,7 +49,7 @@ for index,cell in enumerate(cells):
     (a.directory/'progress.json').write_text(json.dumps(progress,indent=2)+'\n')
     child_env={k:v for k,v in os.environ.items() if k not in ['POWF_LIST','POWF_VERIFY_ONLY']}
     child_env.update(POWF_FILTER=cell,POWF_RESULT=str(output))
-    if a.policies:
+    if a.policies or a.providers:
         # zenbench's documented multi-process owner registration excludes
         # this waiting launcher and the measuring process from foreign load.
         # Every unrelated process, RAM and temperature gate remains visible.

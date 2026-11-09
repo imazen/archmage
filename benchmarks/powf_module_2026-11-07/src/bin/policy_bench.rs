@@ -1,6 +1,8 @@
 //! Actual public policy permutations; see POLICY-PLAN.md.
 #![forbid(unsafe_code)]
-mod highp_reference { include!(concat!(env!("CARGO_MANIFEST_DIR"), "/highp_reference.rs")); }
+mod highp_reference {
+    include!(concat!(env!("CARGO_MANIFEST_DIR"), "/highp_reference.rs"));
+}
 use archmage::SimdToken;
 struct Cell {
     name: String,

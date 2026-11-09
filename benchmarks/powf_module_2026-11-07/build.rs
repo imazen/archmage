@@ -5,6 +5,15 @@ fn main() {
     let output = PathBuf::from(env::var_os("OUT_DIR").unwrap());
     assert!(
         Command::new("python3")
+            .arg(directory.join("providers_prepare.py"))
+            .arg(&output)
+            .status()
+            .unwrap()
+            .success()
+    );
+    println!("cargo:rerun-if-changed=providers_prepare.py");
+    assert!(
+        Command::new("python3")
             .arg(directory.join("policy_prepare.py"))
             .arg(&output)
             .status()

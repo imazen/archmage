@@ -2,45 +2,111 @@
 #![forbid(unsafe_code)]
 use magetypes::powf::*;
 use std::io::{self, BufRead};
-fn same<const N:usize>(a:Result<[f32;N],PowfError>,b:Result<[f32;N],PowfError>)->Result<[f32;N],PowfError>{
- match(a,b){
-  (Ok(a),Ok(b))=>{for i in 0..N{assert!(a[i].to_bits()==b[i].to_bits() || a[i].is_nan()&&b[i].is_nan(),"HIGHP lane {i}");}Ok(a)}
-  (Err(a),Err(b))=>{assert_eq!(a,b);Err(a)}
-  _=>panic!("HIGHP vector/array or const/runtime admission mismatch"),
- }
+fn same<const N: usize>(
+    a: Result<[f32; N], PowfError>,
+    b: Result<[f32; N], PowfError>,
+) -> Result<[f32; N], PowfError> {
+    match (a, b) {
+        (Ok(a), Ok(b)) => {
+            for i in 0..N {
+                assert!(
+                    a[i].to_bits() == b[i].to_bits() || a[i].is_nan() && b[i].is_nan(),
+                    "HIGHP lane {i}"
+                );
+            }
+            Ok(a)
+        }
+        (Err(a), Err(b)) => {
+            assert_eq!(a, b);
+            Err(a)
+        }
+        _ => panic!("HIGHP vector/array or const/runtime admission mismatch"),
+    }
 }
-macro_rules! kernel{
- ($name:ident,$ty:ident,$width:literal)=>{
-  #[archmage::magetypes(v3,neon,wasm128,scalar)]
-  fn $name<const FLAGS:u32>(token:Token,input:[f32;$width],n:f32,opts:PowfOptions)->Result<[f32;$width],PowfError>{
-   let v=magetypes::simd::generic::$ty::from_array_t(token,input);
-   same(v.try_powf_with::<FLAGS>(n).map(|v|v.to_array()),v.try_powf_runtime(n,opts).map(|v|v.to_array()))
-  }
- };
+macro_rules! kernel {
+    ($name:ident,$ty:ident,$width:literal) => {
+        #[archmage::magetypes(v3, neon, wasm128, scalar)]
+        fn $name<const FLAGS: u32>(
+            token: Token,
+            input: [f32; $width],
+            n: f32,
+            opts: PowfOptions,
+        ) -> Result<[f32; $width], PowfError> {
+            let v = magetypes::simd::generic::$ty::from_array_t(token, input);
+            same(
+                v.try_powf_with::<FLAGS>(n).map(|v| v.to_array()),
+                v.try_powf_runtime(n, opts).map(|v| v.to_array()),
+            )
+        }
+    };
 }
-kernel!(highp4,f32x4,4);kernel!(highp8,f32x8,8);kernel!(highp16,f32x16,16);
-fn vector<const FLAGS:u32,const N:usize>(context:&str,input:[f32;N],n:f32,opts:PowfOptions)->Result<[f32;N],PowfError>{
- #[cfg(any(target_arch="x86_64",target_arch="aarch64",target_arch="wasm32"))]
- use archmage::SimdToken;
- if N==1{
-  let value=magetypes::simd::scalar::f32x1(input[0]).try_powf_with::<FLAGS>(n)?;
-  let mut output=[0.;N];output[0]=value.0;return Ok(output);
- }
- macro_rules! go{($width:literal,$scalar:ident,$v3:ident,$neon:ident,$wasm:ident)=>{if N==$width{
-  let mut fixed=[0.;$width];fixed.copy_from_slice(&input);
-  let output=match context{
-   "scalar"=>$scalar::<FLAGS>(archmage::ScalarToken,fixed,n,opts),
-   #[cfg(target_arch="x86_64")]"native"=>$v3::<FLAGS>(archmage::X64V3Token::summon().expect("required V3"),fixed,n,opts),
-   #[cfg(target_arch="aarch64")]"native"=>$neon::<FLAGS>(archmage::NeonToken::summon().expect("required NEON"),fixed,n,opts),
-   #[cfg(target_arch="wasm32")]"native"=>$wasm::<FLAGS>(archmage::Wasm128Token::summon().expect("required SIMD128"),fixed,n,opts),
-   _=>panic!("requested native context unsupported"),
-  }?;
-  let mut result=[0.;N];result.copy_from_slice(&output);return Ok(result);
- }}}
- go!(4,highp4_scalar,highp4_v3,highp4_neon,highp4_wasm128);
- go!(8,highp8_scalar,highp8_v3,highp8_neon,highp8_wasm128);
- go!(16,highp16_scalar,highp16_v3,highp16_neon,highp16_wasm128);
- unreachable!("supported test widths only")
+kernel!(highp4, f32x4, 4);
+kernel!(highp8, f32x8, 8);
+kernel!(highp16, f32x16, 16);
+fn vector<const FLAGS: u32, const N: usize>(
+    context: &str,
+    input: [f32; N],
+    n: f32,
+    opts: PowfOptions,
+) -> Result<[f32; N], PowfError> {
+    #[cfg(any(
+        target_arch = "x86_64",
+        target_arch = "aarch64",
+        target_arch = "wasm32"
+    ))]
+    use archmage::SimdToken;
+    if N == 1 {
+        let value = magetypes::simd::scalar::f32x1(input[0]).try_powf_with::<FLAGS>(n)?;
+        let mut output = [0.; N];
+        output[0] = value.0;
+        return Ok(output);
+    }
+    macro_rules! go {
+        ($width:literal,$scalar:ident,$v3:ident,$neon:ident,$wasm:ident) => {
+            if N == $width {
+                let mut fixed = [0.; $width];
+                fixed.copy_from_slice(&input);
+                let output = match context {
+                    "scalar" => $scalar::<FLAGS>(archmage::ScalarToken, fixed, n, opts),
+                    #[cfg(target_arch = "x86_64")]
+                    "native" => $v3::<FLAGS>(
+                        archmage::X64V3Token::summon().expect("required V3"),
+                        fixed,
+                        n,
+                        opts,
+                    ),
+                    #[cfg(target_arch = "aarch64")]
+                    "native" => $neon::<FLAGS>(
+                        archmage::NeonToken::summon().expect("required NEON"),
+                        fixed,
+                        n,
+                        opts,
+                    ),
+                    #[cfg(target_arch = "wasm32")]
+                    "native" => $wasm::<FLAGS>(
+                        archmage::Wasm128Token::summon().expect("required SIMD128"),
+                        fixed,
+                        n,
+                        opts,
+                    ),
+                    _ => panic!("requested native context unsupported"),
+                }?;
+                let mut result = [0.; N];
+                result.copy_from_slice(&output);
+                return Ok(result);
+            }
+        };
+    }
+    go!(4, highp4_scalar, highp4_v3, highp4_neon, highp4_wasm128);
+    go!(8, highp8_scalar, highp8_v3, highp8_neon, highp8_wasm128);
+    go!(
+        16,
+        highp16_scalar,
+        highp16_v3,
+        highp16_neon,
+        highp16_wasm128
+    );
+    unreachable!("supported test widths only")
 }
 fn check<const F: u32, const N: usize>(
     x: f32,
@@ -49,8 +115,8 @@ fn check<const F: u32, const N: usize>(
     context: &str,
 ) -> Result<[f32; N], PowfError> {
     let input = std::hint::black_box(core::array::from_fn(|i| if i % 2 == 0 { x } else { 1. }));
-    let native = vector::<F,N>(context,input,n,opts);
-    let a = same(try_powf_array_with::<F, N>(input, n),native);
+    let native = vector::<F, N>(context, input, n, opts);
+    let a = same(try_powf_array_with::<F, N>(input, n), native);
     let b = try_powf_array_runtime(input, n, opts);
     match (a, b) {
         (Ok(a), Ok(b)) => {
@@ -69,8 +135,10 @@ fn check<const F: u32, const N: usize>(
     }
 }
 fn main() {
-    let context=std::env::args().nth(1).expect("explicit scalar/native context required");
-    assert!(matches!(context.as_str(),"scalar"|"native"));
+    let context = std::env::args()
+        .nth(1)
+        .expect("explicit scalar/native context required");
+    assert!(matches!(context.as_str(), "scalar" | "native"));
     for line in io::stdin().lock().lines() {
         let line = line.unwrap();
         let fields: Vec<_> = line.split_whitespace().collect();
