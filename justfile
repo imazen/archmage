@@ -893,3 +893,11 @@ powf-canonical-highp-nan-scan binary context:
 
 powf-canonical-highp-bars directory output:
     python3 -B benchmarks/powf_providers_2026-11-09/highp_bars.py "{{directory}}" "{{output}}"
+
+# Bounded replacement matrix with token-preserving tails and literal flags.
+powf-midlow-build:
+    python3 -B benchmarks/powf_module_2026-11-07/midlow_prepare.py
+    cargo build --release --locked --manifest-path benchmarks/powf_module_2026-11-07/Cargo.toml --features avx512 --bin midlow_bench
+
+powf-midlow-verify binary:
+    MIDLOW_VERIFY=1 {{binary}}
