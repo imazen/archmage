@@ -1208,6 +1208,13 @@ fn process(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 
 ## Known Bugs
 
+Std Full HIGHP special values (2026-11-08): signaling-NaN bits `7f800001`
+raised to +0 or -0 yield NaN on Linux x86 and 1 on Apple ARM. Full HIGHP
+inherits that backend-dependent std classification. Restricted Checked
+presets reject the NaN base before std delegation; no Full BitExact/HIGHP
+combination is offered. See `docs/POWF.md`.
+
+
 Draft powf option families (2026-11-08): LOWP options inherit the exponent-bias
 limitation below; Gamma presets explicitly bound inputs and validate the whole
 vector. MIDP/LOWP/HIGHP names are quality families, not global ULP guarantees.

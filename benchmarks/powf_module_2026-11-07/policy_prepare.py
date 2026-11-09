@@ -7,7 +7,7 @@ assert len(flags)==64
 labels=[]
 for f in flags:
  labels.append(f'{"Backend" if f&16 else "BitExact"}_{"HIGHP" if f&64 else "LOWP" if f&8 else "MIDP"}_{["PositiveNormal","NonNegativeNormal","Gamma","Full"][f&3]}_{"AssumeValid" if f&32 else "Checked"}_{"Caller" if f&4 else "Automatic"}')
-labels+=['legacy_pow_lowp','legacy_pow_midp','std_f32_powf','std_f64_powf_cast_f32','runtime_BitExact_MIDP_Gamma_Checked_Automatic','original_HIGHP_Full_ResultMap','direct_array_HIGHP_Full']
+labels+=['legacy_pow_lowp','legacy_pow_midp','std_f32_powf','std_f64_powf_cast_f32','runtime_BitExact_MIDP_Gamma_Checked_Automatic','local_HIGHP_ResultMap_reference','direct_array_HIGHP_Full']
 code+='const LABELS: &[&str] = &'+repr(labels).replace("'",'"')+';\n'
 for n in [1,4,8,16]:
  vector=f'magetypes::simd::generic::f32x{n}'

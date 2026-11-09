@@ -612,25 +612,19 @@ fn lowp_admitted_zero_survives_huge_exponent_in_both_const_modes() {
 fn std_highp_full_domain_and_restricted_masks() {
     const STD: u32 = PowfOptions::STD_HIGHP.bits();
     let result = try_powf_array_with::<STD, 4>([-2., -0., f32::INFINITY, f32::NAN], 3.).unwrap();
-    assert_eq!(
-        result[..3]
-            .iter()
-            .map(|x| x.to_bits())
-            .collect::<std::vec::Vec<_>>(),
-        [-8f32, -0., f32::INFINITY].map(f32::to_bits)
-    );
+    // Std power has unspecified precision, including under Miri. Only its
+    // admitted domain and sign/classification are the HIGHP contract here.
+    assert!(result[0].is_normal() && result[0].is_sign_negative());
+    assert_eq!(result[1].to_bits(), (-0.0f32).to_bits());
+    assert_eq!(result[2], f32::INFINITY);
     assert!(result[3].is_nan());
     assert_eq!(
         try_powf_array_with::<STD, 4>([f32::NAN, 0., -0., f32::INFINITY], 0.).unwrap(),
         [1.; 4]
     );
     assert_eq!(try_powf_with::<STD>(0., -1.).unwrap(), f32::INFINITY);
-    assert_eq!(
-        try_powf_with::<STD>(f32::from_bits(1), 1.)
-            .unwrap()
-            .to_bits(),
-        1
-    );
+    let tiny=try_powf_with::<STD>(f32::from_bits(1),1.).unwrap();
+    assert!(tiny.is_subnormal() || tiny==0.);
     assert_eq!(
         try_powf_array_with::<STD, 3>([1.; 3], 2.).unwrap_err().kind,
         PowfErrorKind::UnsupportedWidth

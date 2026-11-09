@@ -87,10 +87,18 @@ separating validation from direct vector construction reduces it to38. These
 are static counts excluding std callees, not timing ratios.
 
 For the changed implementation, retain all64 configurations and the original
-five comparisons, then append two explicitly named arms (71 total): the frozen
-original Result-map provider from c3abfbcd and the direct public array HIGHP API.
+five comparisons, then append two explicitly named arms (71 total): the locally compiled
+Result-map provider copied from c3abfbcd and the direct public array HIGHP API.
 Freeze the same56 workloads, inputs,50 interleaved rounds and unchanged gates.
-Compare corrected vector HIGHP to the original provider within each group,
+Compare corrected vector HIGHP to that local provider within each group,
 and array HIGHP to direct std. Preserve both earlier69-arm matrices and their
 foreign-process flags. This is a changed implementation, not a favorable retry
 of the same binary. Extra retained codegen tables compare all three shapes.
+
+The copied provider is labeled `local_HIGHP_ResultMap_reference`. It is not the
+original library's full call path: in the current M6 module, its x4 wrapper
+already optimizes to38 instructions, whereas the archived original public
+method emitted58. Do not report their timing ratio as the original public
+method's speedup. The actual before/after public-method assembly and the two
+original69-arm timing runs are retained separately. The direct public array
+HIGHP and direct std probes have matching instruction counts at every width.
