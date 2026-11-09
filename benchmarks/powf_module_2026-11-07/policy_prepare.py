@@ -7,12 +7,13 @@ assert len(flags)==64
 labels=[]
 for f in flags:
  labels.append(f'{"Backend" if f&16 else "BitExact"}_{"HIGHP" if f&64 else "LOWP" if f&8 else "MIDP"}_{["PositiveNormal","NonNegativeNormal","Gamma","Full"][f&3]}_{"AssumeValid" if f&32 else "Checked"}_{"Caller" if f&4 else "Automatic"}')
-labels+=['legacy_pow_lowp','legacy_pow_midp','std_f32_powf','std_f64_powf_cast_f32','runtime_BitExact_MIDP_Gamma_Checked_Automatic']
+labels+=['legacy_pow_lowp','legacy_pow_midp','std_f32_powf','std_f64_powf_cast_f32','runtime_BitExact_MIDP_Gamma_Checked_Automatic','original_HIGHP_Full_ResultMap','direct_array_HIGHP_Full']
 code+='const LABELS: &[&str] = &'+repr(labels).replace("'",'"')+';\n'
 for n in [1,4,8,16]:
  vector=f'magetypes::simd::generic::f32x{n}'
  public=f'v.try_powf_with::<FLAGS>(n).unwrap().to_array()' if n!=1 else 'magetypes::powf::try_powf_array_with::<FLAGS,1>(x,n).unwrap()'
  runtime='v.try_powf_runtime(n,options).unwrap().to_array()' if n!=1 else 'magetypes::powf::try_powf_array_runtime(x,n,options).unwrap()'
+ original=(f'highp_reference::run::<83,{n}>(v.to_array(),n).map(|a|{vector}::from_array_t(token,a)).unwrap().to_array()'if n!=1 else 'x.map(|x|{let v=magetypes::simd::generic::f32x4::splat_t(archmage::ScalarToken,x);highp_reference::run::<83,4>(v.to_array(),n).map(|a|magetypes::simd::generic::f32x4::from_array_t(archmage::ScalarToken,a)).unwrap().to_array()[0]})')
  legacy=[f'v.pow_lowp(n).to_array()',f'v.pow_midp(n).to_array()'] if n!=1 else ['x.map(|x|magetypes::simd::generic::f32x4::splat_t(archmage::ScalarToken,x).pow_lowp(n).to_array()[0])','x.map(|x|magetypes::simd::generic::f32x4::splat_t(archmage::ScalarToken,x).pow_midp(n).to_array()[0])']
  code+=f'''#[archmage::magetypes(v3,neon,scalar)]
 #[inline(never)]
@@ -22,7 +23,7 @@ fn policy_loop{n}<const ARM:usize,const FLAGS:u32,const EXP:u32>(token:Token,inp
   let x=if chain{{acc}}else{{*base}};
 '''
  if n!=1:code+=f'  let v={vector}::from_array_t(token,x);\n'
- code+=f'''  let y=match ARM {{0=>{public},1=>{legacy[0]},2=>{legacy[1]},3=>x.map(|x|x.powf(n)),4=>x.map(|x|f64::from(x).powf(f64::from(n)) as f32),5=>{runtime},_=>unreachable!()}};
+ code+=f'''  let y=match ARM {{0=>{public},1=>{legacy[0]},2=>{legacy[1]},3=>x.map(|x|x.powf(n)),4=>x.map(|x|f64::from(x).powf(f64::from(n)) as f32),5=>{runtime},6=>{original},7=>magetypes::powf::try_powf_array_with::<83,{n}>(x,n).unwrap(),_=>unreachable!()}};
   acc=if chain{{y.map(normalize)}}else{{y}};*out=acc;
  }}
 }}
@@ -31,7 +32,7 @@ fn execute{n}<const EXP:u32>(arm:usize,context:&str,input:&[[f32;{n}]],output:&m
  macro_rules! call{{($f:ident,$t:expr)=>{{match arm{{
 '''
  for i,f in enumerate(flags):code+=f'  {i}=>$f::<0,{f},EXP>($t,input,output,chain,options),\n'
- for i in range(5):code+=f'  {64+i}=>$f::<{i+1},2,EXP>($t,input,output,chain,options),\n'
+ for i in range(7):code+=f'  {64+i}=>$f::<{i+1},2,EXP>($t,input,output,chain,options),\n'
  code+='  _=>unreachable!(),\n }}}\n'
  code+=f''' match context{{
  "scalar"=>call!(policy_loop{n}_scalar,archmage::ScalarToken),
@@ -71,6 +72,19 @@ pub fn {name}(token:Token,input:&[f32;{n}],n:f32,output:&mut[f32;{n}]){{
 #[inline(never)]
 fn caller_{name}_{tier}(token:archmage::{ty},input:&[f32;{n}],n:f32,output:&mut[f32;{n}]){{{name}_{tier}(token,input,n,output);}}
 '''
+for n in [1,4,8,16]:
+ for kind in ['array','std','original']:
+  if kind=='original'and n==1:continue
+  name=f'{kind}probe_x{n}'
+  if kind=='array':expr=f'magetypes::powf::try_powf_array_with::<83,{n}>(*input,n).unwrap()'
+  elif kind=='std':expr='input.map(|x|x.powf(n))'
+  else:expr=f'highp_reference::run::<83,{n}>(magetypes::simd::generic::f32x{n}::from_array_t(token,*input).to_array(),n).map(|a|magetypes::simd::generic::f32x{n}::from_array_t(token,a)).unwrap().to_array()'
+  probes+=f'#[archmage::magetypes(v3,neon,wasm128,scalar)]\n#[inline(never)]\npub fn {name}(token:Token,input:&[f32;{n}],n:f32,output:&mut[f32;{n}]){{let _=token;*output={expr};}}\n'
+  for tier,ty,cfg in [('scalar','ScalarToken',None),('v3','X64V3Token','x86_64'),('neon','NeonToken','aarch64'),('wasm128','Wasm128Token','wasm32')]:
+   attr=f'#[cfg(target_arch="{cfg}")]\n'if cfg else ''
+   alias=f'{kind.title()}ProbeX{n}{tier.title()}'
+   probes+=attr+f'type {alias}=fn(archmage::{ty},&[f32;{n}],f32,&mut[f32;{n}]);\n'
+   probes+=attr+f'#[used]\npub static EXTRATABLE_{kind.upper()}_X{n}_{tier.upper()}: [{alias};1]=[{name}_{tier}];\n'
 # Retained pointer tables expose every configuration even when LLVM merges
 # identical probe bodies. The audit resolves the actual relocation targets.
 for n in [4,8,16]:

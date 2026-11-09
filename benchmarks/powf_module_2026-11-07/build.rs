@@ -12,6 +12,7 @@ fn main() {
             .success()
     );
     println!("cargo:rerun-if-changed=policy_prepare.py");
+    println!("cargo:rerun-if-changed=highp_reference.rs");
     assert!(
         Command::new("python3")
             .arg(directory.join("policy_analyze.py"))

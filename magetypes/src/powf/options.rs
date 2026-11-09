@@ -33,6 +33,7 @@ pub enum PowfPortability {
     #[default]
     BitExact,
     /// Native fused or separate graph; result bits and range rejection may vary.
+    /// HIGHP also inherits std platform special-value classification differences.
     BackendDependent,
 }
 

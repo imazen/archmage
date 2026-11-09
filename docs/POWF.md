@@ -172,3 +172,10 @@ compares all 64 supported configurations and records where flags save work,
 collapse to identical native graphs, or trade validation/dispatch cost against
 arithmetic cost. HIGHP inherits the [std power precision contract](https://doc.rust-lang.org/std/primitive.f32.html#method.powf),
 which does not guarantee a fixed ULP bound. Finite probes cannot strengthen it.
+
+Full HIGHP deliberately inherits platform std behavior, including special-value
+classification differences. In the measured corpus, signaling NaN bits
+`7f800001` raised to either signed zero return NaN on Linux x86 and 1 on Apple
+ARM (two unique input pairs, repeated across four corpus tags). Restricted
+Checked presets reject that NaN base before delegating. BackendDependent HIGHP
+is therefore not a canonical-special-values contract for Full inputs.

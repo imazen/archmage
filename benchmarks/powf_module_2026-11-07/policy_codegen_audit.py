@@ -56,4 +56,24 @@ lookup={(r['flags'],r['width'],r['tier']):r for r in rows}
 for(f,n,t),r in lookup.items():
  if f<64 and not f&8 and t in ['v3','neon']:
   assert lookup[(f|8,n,t)]['fmas']<r['fmas'],('LOWP did not shorten native fused graph',f,n,t)
-assert not a.output.exists();a.output.write_text(json.dumps({'assembly':str(a.assembly),'rows':rows,'probe_count':len(rows),'claim':'static normalized counts exclude external callees; timing is separate'},indent=2)+'\n');print(f'{len(rows)} public policy probes audited, including compiler aliases')
+extras=[]
+for name,body in re.findall(r'^([^:\s]*EXTRATABLE_(?:ARRAY|STD|ORIGINAL)_X(?:1|4|8|16)_(?:SCALAR|V3|NEON|WASM128)[^:\s]*):[^\n]*\n((?:\s*\.(?:quad|xword|int32)\s+[^\n]+\n)+)',source,re.M):
+ kind,n,t=re.search(r'EXTRATABLE_(ARRAY|STD|ORIGINAL)_X(1|4|8|16)_(SCALAR|V3|NEON|WASM128)',name).groups()
+ targets=re.findall(r'\.(?:quad|xword|int32)\s+(\S+)',body);assert len(targets)==1,(name,targets)
+ target=targets[0].rstrip(',');assert target in functions,(name,target)
+ ins=[x for x in m.expand(target,functions)if not x.startswith('LABEL ')]
+ extras.append(dict(kind=kind.lower(),width=int(n),tier=t.lower(),symbol=target,instructions=len(ins),body=ins))
+assert len(extras)==22,('missing explicit shape probes',len(extras))
+lookup_extra={(r['kind'],r['width'],r['tier']):r for r in extras}
+# Full HIGHP arrays have no numerical checks and should lower to direct std.
+# Preserve every body if register allocation/layout differs; counts are evidence,
+# not a substitute for the equal-work timing comparison.
+for r in extras:
+ if r['kind']=='array':
+  other=lookup_extra[('std',r['width'],r['tier'])]
+  r['direct_std_instruction_delta']=r['instructions']-other['instructions']
+ if r['kind']=='original':
+  r['new_vector_instructions']=lookup[(83,r['width'],r['tier'])]['instructions']
+assert not a.output.exists()
+a.output.write_text(json.dumps({'assembly':str(a.assembly),'rows':rows,'extra_shapes':extras,'probe_count':len(rows),'extra_shape_count':len(extras),'claim':'static normalized counts exclude external callees; timing is separate'},indent=2)+'\n')
+print(f'{len(rows)} public policy probes and {len(extras)} HIGHP shape probes audited, including aliases')
