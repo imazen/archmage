@@ -30,6 +30,25 @@ Use `try_powf_with::<{ PowfOptions::PORTABLE_GAMMA_HIGHP.with_validation(PowfVal
 
 Automatic preserves a capable caller or upgrades the whole operation. Caller prevents autonomous upgrades. FMA selection and packing remain private tuning choices. BackendDependent HIGHP preserves its std call path and may inherit std's own dispatch.
 
+## MIDP/LOWP implementation matrix
+
+| Family | FMA-capable matching caller | ScalarCaller / nonfusing backend | Single values and tails |
+|---|---|---|---|
+| BitExact MIDP | Ten native fused nodes | Exact software fused nodes | Same selected graph via `try_powf_with_token` |
+| BitExact LOWP | Seven native fused nodes | Exact software fused nodes | Same selected graph via `try_powf_with_token` |
+| BackendDependent MIDP | Ten native fused nodes | Separate multiply/add | Same token required for identical bits |
+| BackendDependent LOWP | Seven native fused nodes | Separate multiply/add | Same token required for identical bits |
+
+All four families support PositiveNormal, NonNegativeNormal, Gamma and
+PositiveGamma, Checked/AssumeValid, and Automatic/Caller: 64 bounded encodings.
+Each graph has one division. PositiveGamma removes Gamma's zero masks; its
+assumed preset also removes validation. Matching native portable/backend and
+Caller/Automatic variants intentionally collapse to the same arithmetic.
+Declining automatic upgrades can make portable software FMA expensive.
+
+See the [complete bounded replacement report](../benchmarks/powf_module_2026-11-07/MIDLOW.md)
+for scalar, packed, tail and fallback costs on each measured ISA.
+
 ## ISA implementations and measured coverage
 
 | ISA or caller context | Canonical HIGHP implementation | Correctness coverage | New library timing status |

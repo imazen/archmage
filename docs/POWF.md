@@ -176,12 +176,12 @@ catastrophically by large exponents even when its computed result remains in
 normal range. PositiveNormal alone is therefore not a LOWP accuracy preset.
 
 The [public policy comparison](../benchmarks/powf_module_2026-11-07/POLICIES.md)
-compares all 64 supported configurations and records where flags save work,
+compared its frozen set of 64 then-supported configurations and records where flags save work,
 collapse to identical native graphs, or trade validation/dispatch cost against
-arithmetic cost. HIGHP inherits the [std power precision contract](https://doc.rust-lang.org/std/primitive.f32.html#method.powf),
+arithmetic cost. BackendDependent HIGHP inherits the [std power precision contract](https://doc.rust-lang.org/std/primitive.f32.html#method.powf),
 which does not guarantee a fixed ULP bound. Finite probes cannot strengthen it.
 
-Full HIGHP deliberately inherits platform std behavior, including special-value
+BackendDependent Full HIGHP deliberately inherits platform std behavior, including special-value
 classification differences. In the measured corpus, signaling NaN bits
 `7f800001` raised to either signed zero return NaN on Linux x86 and 1 on Apple
 ARM (two unique input pairs, repeated across four corpus tags). Restricted
@@ -204,3 +204,43 @@ a whole-domain error bound, and HIGHP does not promise correct rounding.
 
 The first integration adds sixteen BitExact HIGHP encodings: 80 configurations
 with std and 64 without std. BackendDependent HIGHP retains std delegation.
+
+
+## Fast bounded replacements and matching tails
+
+`PositiveGamma` restricts Gamma to positive normal bases in [2^-16,2^16], with
+normal or signed-zero exponent in [0,4]. It preserves Gamma's nonzero result
+bits and removes zero masks. Checked mode rejects zero; AssumeValid requires
+the caller to uphold the positive input promise. Gamma continues to admit +0,
+including 0^0=1. PositiveNormal alone is not a LOWP accuracy promise.
+
+Four presets expose both precision and portability choices:
+`PORTABLE_POSITIVE_GAMMA_MIDP`, `PORTABLE_POSITIVE_GAMMA_LOWP`,
+`BACKEND_POSITIVE_GAMMA_MIDP`, `BACKEND_POSITIVE_GAMMA_LOWP`. Every preset is
+Checked and Automatic by default. Select `AssumeValid` and `Caller` explicitly
+with the const builder when those preconditions and feature context apply.
+The current total is 104 configurations with std, 84 without; 64 are MIDP/LOWP.
+The earlier HIGHP integration totals above describe that earlier revision.
+
+Keep the same token in scalar and vector forms:
+
+```rust
+use magetypes::powf::{PowfOptions, PowfExecution, PowfValidation, try_powf_with_token};
+const FAST: u32 = PowfOptions::PORTABLE_POSITIVE_GAMMA_MIDP
+    .with_validation(PowfValidation::AssumeValid)
+    .with_execution(PowfExecution::Caller)
+    .bits();
+// In a matching Magetypes feature kernel:
+// let packed = vector.try_powf_with::<FAST>(exponent)?;
+// let tail = try_powf_with_token::<FAST, _>(token, base, exponent)?;
+```
+
+`try_powf_with_token` returns one scalar and uses lane mask one on rejection.
+Within a selected token, all 64 MIDP/LOWP policies agree bit for bit between
+single values, x4/x8/x16 and every tail remainder. BackendDependent Caller
+requires that matching token: the no-token scalar API uses ScalarToken and can
+choose separate rounding, while a native vector uses FMA. Automatic can upgrade
+both forms; BitExact preserves its fused graph even through software fallback.
+
+The [replacement matrix](../benchmarks/powf_module_2026-11-07/MIDLOW.md)
+reports exact methods, ranges, validation, ns and retained admission results.

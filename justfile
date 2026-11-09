@@ -907,3 +907,9 @@ powf-midlow-matrix binary directory *options:
 
 powf-midlow-analyze binary *files:
     {{binary}} {{files}}
+
+powf-midlow-cross directory:
+    bash benchmarks/powf_module_2026-11-07/midlow_cross.sh "{{directory}}"
+
+powf-midlow-codegen binary directory:
+    python3 -B benchmarks/powf_module_2026-11-07/midlow_codegen.py "{{binary}}" "{{directory}}"

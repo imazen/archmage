@@ -43,6 +43,9 @@ fn main() {
                         let target = b.name.replace(from, to);
                         if let Some(j) = g.benchmarks.iter().position(|v| v.name == target) {
                             edges.push((i, j, edge));
+                            if edge == "BackendDependent/BitExact" {
+                                edges.push((j, i, "BitExact/BackendDependent"));
+                            }
                         }
                     }
                 }
@@ -57,9 +60,15 @@ fn main() {
                     })
                     .collect();
                 let ci = zenbench::MeanCi::from_samples(&ratios, 100_000).unwrap();
+                let deltas: Vec<_> = g
+                    .samples
+                    .iter()
+                    .map(|s| s.compensated_ns[i] as f64 - s.compensated_ns[j] as f64)
+                    .collect();
+                let delta = zenbench::MeanCi::from_samples(&deltas, 100_000).unwrap();
                 println!(
                     "{}",
-                    serde_json::json!({"file":path,"group":g.group_name,"edge":edge,"implementation":g.benchmarks[i].name,"reference":g.benchmarks[j].name,"mean_ns":raw["comparisons"][index]["benchmarks"][i]["summary"]["mean"],"reference_mean_ns":raw["comparisons"][index]["benchmarks"][j]["summary"]["mean"],"ci95":ci,"clean":clean,"verified":verified,"qualified":clean&&verified,"cost":if ci.upper<=1.02{"PASS"}else if ci.lower>1.02{"FAIL"}else{"INCONCLUSIVE"}})
+                    serde_json::json!({"file":path,"group":g.group_name,"edge":edge,"implementation":g.benchmarks[i].name,"reference":g.benchmarks[j].name,"mean_ns":raw["comparisons"][index]["benchmarks"][i]["summary"]["mean"],"reference_mean_ns":raw["comparisons"][index]["benchmarks"][j]["summary"]["mean"],"ci95":ci,"delta_ns_ci95":delta,"clean":clean,"verified":verified,"qualified":clean&&verified,"cost":if ci.upper<=1.02{"PASS"}else if ci.lower>1.02{"FAIL"}else{"INCONCLUSIVE"}})
                 );
             }
         }

@@ -1303,6 +1303,14 @@ Actual legacy/std comparisons and held performance gates are recorded in
 `benchmarks/powf_module_2026-11-07/REPLACEMENTS.md`. Existing legacy coefficients
 are unchanged.
 
+Bounded powf replacement costs (2026-11-09): zero-capable Gamma MIDP has measured
+cases above the 2% bound against legacy `pow_midp_unchecked`, despite gains over
+checked legacy MIDP. PositiveGamma explicitly excludes zero and removes those
+masks, preserving Gamma bits for positive inputs. Portable ScalarCaller still
+pays exact software-FMA cost when upgrades are declined; never label it a native
+FMA path. All retained versions, flag rankings and admission status are in
+`benchmarks/powf_module_2026-11-07/MIDLOW.md`. Existing legacy behavior is unchanged.
+
 ### Open
 
 - **Original runtime-options bounded powf cost gate (2026-11-07, held):**

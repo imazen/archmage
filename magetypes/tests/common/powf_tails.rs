@@ -18,6 +18,17 @@ const POSITIVE: u32 = PowfOptions::new()
 // to ScalarToken (which intentionally uses separate arithmetic).
 #[archmage::magetypes(v4x(cfg(avx512)), v3, neon, wasm128, scalar)]
 fn bounded_widths_and_tails(token: Token) {
+    #[cfg(target_arch = "wasm32")]
+    {
+        let a = magetypes::simd::generic::f32x4::splat_t(token, f32::from_bits(0x3f80_0001));
+        let c = magetypes::simd::generic::f32x4::splat_t(token, f32::from_bits(0xbf80_0002));
+        let bits = a.mul_add_relaxed(a, c).to_array()[0].to_bits();
+        assert!(bits == 0 || bits == 0x2880_0000);
+        std::println!(
+            "powf-tail-token={} relaxed-f32-madd-bits={bits:08x}",
+            <Token as archmage::SimdToken>::NAME
+        );
+    }
     use magetypes::simd::generic::{f32x4, f32x8};
     // Keep each graph in one test frame. The production API intentionally
     // forces inlining; duplicating it inside every verifier loop costs gigabytes
