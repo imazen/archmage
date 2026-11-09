@@ -763,5 +763,11 @@ powf-providers-accuracy fixtures output tier *options:
 powf-providers-compare output *actuals:
     python3 -B benchmarks/powf_module_2026-11-07/providers_compare.py "{{output}}" {{actuals}}
 
-powf-provider-ffi-check:
-    cargo check --manifest-path benchmarks/powf_providers_2026-11-09/Cargo.toml
+powf-providers-trace trace output:
+    python3 -B benchmarks/powf_module_2026-11-07/providers_trace.py "{{trace}}" "{{output}}"
+
+powf-external-build:
+    cargo +nightly-2026-10-06 build --release --locked --manifest-path benchmarks/powf_providers_2026-11-09/Cargo.toml
+
+powf-external-native-build output:
+    c++ -std=c++17 -O3 -fno-fast-math -ffp-contract=off -pthread benchmarks/powf_providers_2026-11-09/native_worker.cpp -o "{{output}}" $(if test "$(uname -s)" = Linux; then echo -ldl; fi)

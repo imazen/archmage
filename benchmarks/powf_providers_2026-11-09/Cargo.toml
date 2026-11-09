@@ -7,4 +7,19 @@ publish = false
 [workspace]
 
 [dependencies]
-cxx = "=1.0.205"
+sleef = "=0.3.3"
+libm = "=0.2.16"
+serde_json = "1.0.151"
+zenbench = "0.1.11"
+
+[profile.release]
+codegen-units = 1
+lto = "thin"
+
+[[bin]]
+name = "rust_provider_worker"
+path = "src/worker.rs"
+
+[[bin]]
+name = "external_providers_bench"
+path = "src/bench.rs"
