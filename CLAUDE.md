@@ -1208,6 +1208,15 @@ fn process(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 
 ## Known Bugs
 
+Benchmark Rust libm range observation (2026-11-09): pinned Rust libm 0.2.16
+`powf` returns +inf for base bits 3f7ffff6, exponent bits cd000001, on Intel and
+M6. Directed MPFR 256 encloses the finite result in
+[5.5408073257725465e34,5.540807325772547e34]; rounded f32 bits 792abd43 match
+std on both machines. One unique pair repeats under two corpus domain tags.
+This exceeds the Gamma exponent domain; libm remains a benchmark-only direct
+dependency. Its finite-output sampled ULP maximum must not hide this overflow.
+See `benchmarks/powf_module_2026-11-07/PROVIDERS-PLAN.md`.
+
 Powf debug runtime fanout (2026-11-08, corrected in draft): forcing all 64
 policy arms into each unoptimized caller exhausts the default WASM linear
 stack in the existing payload/mask test. Debug builds retain separate runtime

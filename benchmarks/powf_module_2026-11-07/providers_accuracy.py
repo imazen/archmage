@@ -61,19 +61,25 @@ for row, output in zip(request.splitlines(), run.stdout.splitlines(), strict=Tru
     bounds, quantum = reference.reference(xb, nb) if valid else (None, None)
     for name, b, cls in zip(['std_f32_powf', 'Rust_libm_0_2_16_powf'], bits, classes, strict=True):
         stats = report['providers'].setdefault(name, {'classes': {}, 'rounded_differences': 0,
-                 'max_ulp_upper': 0., 'max_relative_upper': 0., 'worst': None})
+                 'max_finite_output_ulp_upper': 0., 'max_relative_upper': 0., 'worst': None,
+                 'nonfinite_mismatches_against_MPFR': 0, 'range_witnesses': []})
         stats['classes'][cls] = stats['classes'].get(cls, 0) + 1
         if not valid:
             continue
         stats['rounded_differences'] += b != rounded
         y = model.fp.value(b)
+        if not math.isfinite(y) and b != rounded:
+            stats['nonfinite_mismatches_against_MPFR'] += 1
+            if len(stats['range_witnesses']) < 16:
+                stats['range_witnesses'].append({'input': row, 'actual': f'{b:08x}',
+                                               'rounded_MPFR': f'{rounded:08x}'})
         if not math.isfinite(y) or not all(math.isfinite(z) for z in bounds):
             continue
         value = Fraction.from_float(y)
         error = max(abs(value - Fraction.from_float(z)) for z in bounds) / (Fraction(2)**quantum)
         error = math.nextafter(float(error), math.inf) if error else 0.
-        if error > stats['max_ulp_upper']:
-            stats.update(max_ulp_upper=error, worst={'input': row, 'actual': f'{b:08x}', 'reference': bounds})
+        if error > stats['max_finite_output_ulp_upper']:
+            stats.update(max_finite_output_ulp_upper=error, worst={'input': row, 'actual': f'{b:08x}', 'reference': bounds})
         if all(z > 0 for z in bounds):
             relative = max(abs(value - Fraction.from_float(z)) / Fraction.from_float(z) for z in bounds)
             relative = math.nextafter(float(relative), math.inf) if relative else 0.
