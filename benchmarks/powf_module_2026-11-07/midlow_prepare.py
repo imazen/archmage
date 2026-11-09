@@ -20,7 +20,7 @@ fn loop{width}<const FLAGS:u32,const ARM:usize>(token:Token,input:&[f32],output:
  }}
  for (&x,y) in chunks.remainder().iter().zip(out.into_remainder()){{
   let v=Tail::splat_t(token,x);
-  *y=match ARM{{0=>v.try_powf_with::<FLAGS>(n).unwrap(),1=>v.pow_lowp(n),2=>v.pow_midp(n),3=>v.pow_midp_unchecked(n),_=>unreachable!()}}.to_array()[0];
+  *y=match ARM{{0=>magetypes::powf::try_powf_with_token::<FLAGS,_>(token,x,n).unwrap(),1=>v.pow_lowp(n).to_array()[0],2=>v.pow_midp(n).to_array()[0],3=>v.pow_midp_unchecked(n).to_array()[0],_=>unreachable!()}};
  }}
 }}
 fn execute{width}(arm:usize,context:&str,input:&[f32],output:&mut[f32],n:f32,chain:bool){{

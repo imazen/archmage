@@ -58,3 +58,24 @@ cells use Automatic selection and actual public scalar calls, compared with
 actual legacy ScalarToken splats (legacy has no scalar power method). The four
 range/validation cells now contain all 64 bounded encodings plus three legacy
 methods. These exact 52 cells are frozen before timing the second revision.
+
+## ScalarCaller fallback diagnostics
+
+After implementation, collect all 12 ScalarCaller x4/x8/x16 cells, 64/4096,
+stream/chain, opaque exponent 2.4, using the same frozen second binary. These
+retain the caller: portable executes exact software FMA; backend-dependent
+executes the separate graph. Compare both Gamma ranges and all three legacy
+methods. They diagnose the cost of declining automatic FMA upgrades; do not
+pretend they are native FMA or require software FMA to cost the same as separate
+arithmetic. Preserve every round under the same gates.
+
+## Third frozen revision: public scalar token entry
+
+`try_powf_with_token::<FLAGS,_>(token,x,n)` preserves the vector's proof in a
+single-value operation. It remaps errors to lane mask one. The no-token scalar
+API retains its ScalarCaller meaning; Automatic and BitExact already agree
+across matching contexts. The public token entry covers BackendDependent
+Caller tails without a hand-written splat recipe. The third harness calls it
+for every remainder; repeat the same 52 dev and 42 NEON cells once, retaining
+all earlier versions separately. Collect the 12 ScalarCaller diagnostics from
+this revision as well. Do not select favorable repeats between revisions.

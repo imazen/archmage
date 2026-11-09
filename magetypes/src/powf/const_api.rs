@@ -47,6 +47,42 @@ pub fn try_powf_with<const OPTIONS: u32>(base: f32, n: f32) -> Result<f32, PowfE
     try_powf_array_with::<OPTIONS, 1>([base], n).map(|result| result[0])
 }
 
+/// Scalar power retaining the vector caller's feature proof.
+///
+/// Use this for single values and slice tails inside a Magetypes kernel. Even
+/// BackendDependent Caller evaluates the same graph as a vector with this
+/// token; substituting ScalarToken could select separate rounding instead.
+/// The options and token type remain monomorphized through the entire graph.
+/// An error's lane mask is always one.
+///
+/// ```
+/// use magetypes::powf::{try_powf_with_token, PowfOptions, PowfExecution};
+/// const FLAGS: u32 = PowfOptions::BACKEND_POSITIVE_GAMMA_MIDP
+///     .with_execution(PowfExecution::Caller).bits();
+/// assert_eq!(try_powf_with_token::<FLAGS, _>(archmage::ScalarToken, 4., 0.5).unwrap(), 2.);
+/// ```
+#[inline(always)]
+pub fn try_powf_with_token<const OPTIONS: u32, T: crate::simd::backends::F32x4Convert>(
+    token: T,
+    base: f32,
+    n: f32,
+) -> Result<f32, PowfError> {
+    // HIGHP's scalar graph avoids computing a splatted pack for a single value.
+    if OPTIONS & PowfOptions::HIGHP != 0 {
+        const {
+            assert!(PowfOptions::valid(OPTIONS), "invalid powf const options");
+        }
+        exponent::<OPTIONS, 1>(n)?;
+        return super::highp_dispatch::for_token::<_, OPTIONS, 1>(token, [base], n).map(|v| v[0]);
+    }
+    run4::<T, OPTIONS>(token, crate::simd::generic::f32x4::splat_t(token, base), n)
+        .map(|v| v.to_array()[0])
+        .map_err(|error| PowfError {
+            lane_mask: 1,
+            ..error
+        })
+}
+
 /// Version-independent array boundary with caller-visible integer const flags.
 ///
 /// Supported widths are 1, 4, 8 and, with `w512`, 16. Every lane must pass;

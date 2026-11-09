@@ -21,7 +21,7 @@
 
 pub(crate) mod const_api;
 mod dispatch;
-pub use const_api::{try_powf_array_with, try_powf_with};
+pub use const_api::{try_powf_array_with, try_powf_with, try_powf_with_token};
 mod graph;
 mod highp;
 mod highp_data;

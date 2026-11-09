@@ -6,14 +6,14 @@
 # impls omitted; re-export duplicates annotated `[also: path]`.
 # DO NOT EDIT BY HAND — commit regenerated changes with the code.
 #
-# files: magetypes.txt 2747 lines (supported surface) | magetypes.features.txt 12 added (features: avx512,std,w512) | magetypes.internal.txt 52 lines (64 hidden + 0 excluded-feature)
+# files: magetypes.txt 2748 lines (supported surface) | magetypes.features.txt 12 added (features: avx512,std,w512) | magetypes.internal.txt 52 lines (64 hidden + 0 excluded-feature)
 
 ## summary
 #
 #   pub modules                                13
 #   pub types (struct/enum/trait/alias)       295
 #   pub consts/statics                        247
-#   free functions                           3815
+#   free functions                           3816
 #   inherent methods                         1251
 #   struct fields                               7
 #   enum variants                              20
@@ -26,11 +26,11 @@
 # per-module pub lines:
 #   (root)                          329
 #   cast                              3
-#   powf                             51
+#   powf                             52
 #   prelude                        3640
 #   simd                           1627
 
-## items (2516 lines)
+## items (2517 lines)
 
 pub mod magetypes
 pub use archmage
@@ -98,6 +98,7 @@ pub fn powf::try_powf_array_runtime<const N: usize>([f32; N], f32, powf::PowfOpt
 pub fn powf::try_powf_array_with<const OPTIONS: u32, const N: usize>([f32; N], f32) -> core::result::Result<[f32; N], powf::PowfError>
 pub fn powf::try_powf_runtime(f32, f32, powf::PowfOptions) -> core::result::Result<f32, powf::PowfError>
 pub fn powf::try_powf_with<const OPTIONS: u32>(f32, f32) -> core::result::Result<f32, powf::PowfError>
+pub fn powf::try_powf_with_token<const OPTIONS: u32, T: simd::backends::F32x4Convert>(T, f32, f32) -> core::result::Result<f32, powf::PowfError>
 pub mod prelude
 pub use prelude::SimdToken
 #[repr(C)] pub struct prelude::f32x16<T: simd::backends::F32x16Backend>(_, _) [also: simd::generic]

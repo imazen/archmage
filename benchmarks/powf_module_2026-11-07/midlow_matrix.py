@@ -5,12 +5,14 @@ from pathlib import Path
 p=argparse.ArgumentParser(description=__doc__)
 p.add_argument('binary',type=Path);p.add_argument('directory',type=Path)
 p.add_argument('--pilot',action='store_true');p.add_argument('--policies',action='store_true')
-p.add_argument('--neon',action='store_true');p.add_argument('--exploratory',action='store_true');p.add_argument('--source')
+p.add_argument('--neon',action='store_true');p.add_argument('--exploratory',action='store_true');p.add_argument('--source');p.add_argument('--fallback',action='store_true')
 a=p.parse_args();a.directory.mkdir(parents=True,exist_ok=False)
 binary=a.binary.resolve()
 assert (os.environ.get('ZENBENCH_CPU_POLICY')=='unrestricted')==a.exploratory
 native=[('neon',4),('neon',8),('neon',16)]if a.neon else [('v3',4),('v3',8),('v3',16),('v4x',16)]
-if a.policies:
+if a.fallback:
+ cells=[('scalar',width,size,chain,'4019999a',[29,35,41,47,57,59,61,63,64,65,66])for width in [4,8,16]for size in [64,4096]for chain in [False,True]]
+elif a.policies:
  cells=[('neon' if a.neon else 'v3',8,size,chain,'4019999a',list(range(67)))for size in [64,4096]for chain in [False,True]]
 else:
  cells=[(ctx,width,size,chain,exp,[29,35,41,47,57,59,61,63,64,65,66])for ctx,width in native for size in [64,4096]for chain in [False,True]for exp in ['4019999a','3f000000']]

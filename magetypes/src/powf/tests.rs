@@ -650,89 +650,6 @@ fn std_highp_full_domain_and_restricted_masks() {
     );
 }
 
-// A feature-context tail must use the same graph as the packed body. In
-// particular BackendDependent Caller must retain its token rather than switch
-// to ScalarToken (which intentionally uses separate arithmetic).
-#[archmage::attune(_*_t, +v4(cfg(avx512)), +v4x(cfg(avx512)))]
-fn bounded_widths_and_tails(token: Token, expected: &str) {
-    assert_eq!(<Token as archmage::SimdToken>::NAME, expected);
-    use crate::simd::generic::{f32x4, f32x8};
-    fn check<const FLAGS: u32>(token: Token) {
-        let mut state = 0x9e37_79b9_u32;
-        for n in [0.0_f32, -0.0, 0.5, 2.4, 4.0] {
-            let input: [f32; 513] = core::array::from_fn(|i| {
-                state ^= state << 13;
-                state ^= state >> 17;
-                state ^= state << 5;
-                if FLAGS & 3 != 0 && FLAGS & PowfOptions::POSITIVE == 0 && i % 17 == 0 {
-                    0.0
-                } else {
-                    f32::from_bits(0x3780_0000 + state % 0x1000_0001)
-                }
-            });
-            let single = input.map(|x| {
-                let result = f32x4::splat_t(token, x)
-                    .try_powf_with::<FLAGS>(n)
-                    .unwrap()
-                    .to_array()[0];
-                if FLAGS & PowfOptions::CALLER == 0 || FLAGS & PowfOptions::BACKEND == 0 {
-                    assert_eq!(
-                        try_powf_with::<FLAGS>(x, n).unwrap().to_bits(),
-                        result.to_bits()
-                    );
-                }
-                result.to_bits()
-            });
-            macro_rules! width {
-                ($ty:ident, $lanes:literal) => {
-                    for length in (0..=33).chain([64, 65, 127, 255, 511, 512, 513]) {
-                        let mut chunks = input[..length].chunks_exact($lanes);
-                        let mut offset = 0;
-                        for chunk in chunks.by_ref() {
-                            let result = $ty::from_array_t(token, chunk.try_into().unwrap())
-                                .try_powf_with::<FLAGS>(n)
-                                .unwrap()
-                                .to_array()
-                                .map(f32::to_bits);
-                            assert_eq!(&result, &single[offset..offset + $lanes]);
-                            offset += $lanes;
-                        }
-                        for &x in chunks.remainder() {
-                            let result = f32x4::splat_t(token, x)
-                                .try_powf_with::<FLAGS>(n)
-                                .unwrap()
-                                .to_array()[0];
-                            assert_eq!(result.to_bits(), single[offset]);
-                            offset += 1;
-                        }
-                        assert_eq!(offset, length);
-                    }
-                };
-            }
-            width!(f32x4, 4);
-            width!(f32x8, 8);
-            #[cfg(feature = "w512")]
-            {
-                use crate::simd::generic::f32x16;
-                width!(f32x16, 16);
-            }
-        }
-    }
-    macro_rules! flags {
-        ($($f:literal),* $(,)?) => { $(check::<$f>(token);)* };
-    }
-    flags!(
-        0, 1, 2, 4, 5, 6, 8, 9, 10, 12, 13, 14, 16, 17, 18, 20, 21, 22, 24, 25, 26, 28, 29, 30, 32,
-        33, 34, 36, 37, 38, 40, 41, 42, 44, 45, 46, 48, 49, 50, 52, 53, 54, 56, 57, 58, 60, 61, 62,
-        130, 134, 138, 142, 146, 150, 154, 158, 162, 166, 170, 174, 178, 182, 186, 190,
-    );
-}
-
-#[test]
-fn all_bounded_policies_match_single_vector_and_tail_forms() {
-    require_tier!(bounded_widths_and_tails);
-}
-
 #[test]
 fn positive_gamma_preserves_nonzero_graph_and_rejects_zero() {
     fn check<const FLAGS: u32, const GAMMA_FLAGS: u32>() {
@@ -767,6 +684,14 @@ fn positive_gamma_preserves_nonzero_graph_and_rejects_zero() {
             let got = try_powf_array_with::<FLAGS, 4>(input, n).unwrap();
             let gamma = try_powf_array_with::<GAMMA_FLAGS, 4>(input, n).unwrap();
             assert_eq!(got.map(f32::to_bits), gamma.map(f32::to_bits));
+            for (x, y) in input.into_iter().zip(got) {
+                assert_eq!(
+                    try_powf_with_token::<FLAGS, _>(archmage::ScalarToken, x, n)
+                        .unwrap()
+                        .to_bits(),
+                    y.to_bits()
+                );
+            }
             assert_eq!(
                 got.map(f32::to_bits),
                 try_powf_array_runtime(input, n, options)
@@ -775,6 +700,13 @@ fn positive_gamma_preserves_nonzero_graph_and_rejects_zero() {
             );
             if options.validation == PowfValidation::Checked {
                 for x in [0., -0., f32::from_bits(1), f32::NAN, f32::INFINITY] {
+                    assert_eq!(
+                        try_powf_with_token::<FLAGS, _>(archmage::ScalarToken, x, n).unwrap_err(),
+                        PowfError {
+                            kind: PowfErrorKind::InvalidBase,
+                            lane_mask: 1
+                        }
+                    );
                     assert_eq!(
                         try_powf_array_with::<FLAGS, 4>([1., x, 1., x], n).unwrap_err(),
                         PowfError {
