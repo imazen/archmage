@@ -98,6 +98,13 @@ fn register<const LOG: bool>(
     });
 }
 fn main() {
+    if std::env::var_os("POLICY_CPU_INFO").is_some() {
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&zenbench::platform::detect_cpu_topology()).unwrap()
+        );
+        return;
+    }
     if let Ok(prefix) = std::env::var("POLICY_VERIFY_PREFIX") {
         verify(std::path::Path::new(&prefix));
         return;
