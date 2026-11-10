@@ -47,6 +47,7 @@ jobs:
       - run: python3 -m pip install PyYAML==6.0.3
       - run: python3 xtask/check_ci_gate.py --test
       - run: python3 xtask/fma_vectors.py --check
+      - run: python3 -B xtask/check_published_math.py
       - run: python3 -B -m unittest discover -s xtask -p test_target_features.py -v
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -152,6 +153,11 @@ jobs:
       - name: Run tests
         run: cargo test --features "${{ env.FEATURES }}"
 
+      - name: Magemath contracts (std and no_std)
+        run: |
+          cargo test -p magemath --features "${{ env.FEATURES }}"
+          cargo test -p magemath --no-default-features --features w512
+
       - name: Portable and native FMA contracts (std and no_std)
         run: |
           cargo test -p magetypes --features "${{ env.FEATURES }}" --test fma_contract --test float_inequality --test float_negation
@@ -248,6 +254,11 @@ jobs:
       - name: Run tests
         run: cargo test --features "${{ env.FEATURES }}"
 
+      - name: Magemath contracts (std and no_std)
+        run: |
+          cargo test -p magemath --features "${{ env.FEATURES }}"
+          cargo test -p magemath --no-default-features --features w512
+
       - name: Portable and native FMA contracts (std and no_std)
         run: |
           cargo test -p magetypes --features "${{ env.FEATURES }}" --test fma_contract --test float_inequality --test float_negation
@@ -341,6 +352,11 @@ jobs:
       - name: Test magetypes (cross/QEMU)
         run: cross test -p magetypes --features "${{ env.FEATURES }}" --target ${{ matrix.target }}
 
+      - name: Magemath contracts (cross/QEMU)
+        run: |
+          cross test -p magemath --features "${{ env.FEATURES }}" --target ${{ matrix.target }}
+          cross test -p magemath --no-default-features --features w512 --target ${{ matrix.target }}
+
       - name: Portable FMA contract (no_std, cross/QEMU)
         run: cross test -p magetypes --no-default-features --features w512 --target ${{ matrix.target }} --test fma_contract
 
@@ -421,6 +437,14 @@ jobs:
           RUSTFLAGS: "-C target-feature=+simd128"
           CARGO_TARGET_WASM32_WASIP1_RUNNER: "wasmtime"
         run: cargo test -p magetypes --features "${{ env.FEATURES }}" --target wasm32-wasip1
+
+      - name: Magemath contracts on strict WASM
+        env:
+          RUSTFLAGS: "-C target-feature=+simd128"
+          CARGO_TARGET_WASM32_WASIP1_RUNNER: "wasmtime"
+        run: |
+          cargo test -p magemath --features "${{ env.FEATURES }}" --target wasm32-wasip1
+          cargo test -p magemath --no-default-features --features w512 --target wasm32-wasip1
 
       - name: Test baseline WASM scalar arithmetic
         env:
@@ -658,6 +682,9 @@ jobs:
       # `just ci` lints magetypes at default features too, and CI did not.
       - name: Clippy (magetypes, default features)
         run: cargo clippy -p magetypes -- -D warnings
+      - name: Magemath clippy
+        run: cargo clippy -p magemath --all-targets --features "std avx512" -- -D warnings
+
 
       # Macro output only meets clippy in a consuming crate: this one calls
       # every dispatch macro (attuned! in value position included).
@@ -710,6 +737,9 @@ jobs:
 
       - name: Clippy (magetypes, default features)
         run: cargo clippy -p magetypes -- -D warnings
+      - name: Magemath clippy
+        run: cargo clippy -p magemath --all-targets --features "std avx512" -- -D warnings
+
 
       - name: Clippy (macro consumer crates)
         run: cargo clippy -p archmage-no-features-test -p archmage-clippy-consumer --all-targets -- -D warnings

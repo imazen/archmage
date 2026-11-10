@@ -2,6 +2,7 @@
 //!
 //! Run with: `cargo run --example edge_case_test --release`
 
+#![allow(deprecated)] // Exercises the published flat approximation APIs.
 // x86-only example - stub main for other platforms
 #[cfg(not(target_arch = "x86_64"))]
 fn main() {}

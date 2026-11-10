@@ -1,7 +1,7 @@
 # Powf validation tools
 
 These programs are machine-facing research and regression tools. Human-facing
-usage is taught by [the bounded-power example](../../magetypes/examples/bounded_powf.rs).
+usage is taught by [the bounded-power example](../../magemath/examples/bounded_powf.rs).
 This package is outside the release workspace and is not published. Its `std`,
 `w512` and `avx512` features forward to the library being evaluated. A CLI binary
 still uses Rust std for I/O when the library's `std` feature is disabled.
@@ -31,3 +31,8 @@ std/no_std compilation pass on native and cross targets. The NaN scan is compile
 but its full exhaustive run is not repeated for a file move. Evidence on dev is
 `/mnt/v/output/archmage/powf-example-cleanup-2026-11-10/`, independently mirrored
 and SHA-256 indexed by `CORE.json`.
+
+Configured power drivers now call Magemath, where that unpublished framework
+lives. The flat-method variance driver continues to exercise the published
+Magetypes methods. No numerical oracle, corpus or threshold changes with the
+namespace move.

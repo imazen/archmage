@@ -1216,6 +1216,13 @@ fn process(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 
 ## Known Bugs
 
+Magemath migration (2026-11-10): LOWP log1p retains the rational log2 fit's bias
+near zero; a tiny positive input can produce a negative approximation. MIDP
+remains available. This refactor does not introduce a new small-x LOWP graph or
+promote the experimental normal-output exp2 range. Reciprocal/root primitives
+remain in Magetypes until separately implemented and measured replacements
+exist. See `docs/MAGEMATH-MIGRATION.md`.
+
 Canonical HIGHP packed performance (2026-11-09, draft held): the first M6
 32-cell exploratory matrix has 24 Full packed cells within the 2% std cost
 bound by the cost-only interval and eight exceeding it. None is promotion

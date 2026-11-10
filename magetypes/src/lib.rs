@@ -56,6 +56,23 @@
 //! adds native AVX-512 implementations. See the [ISA contracts](https://imazen.github.io/archmage/magetypes/isa-quirks/)
 //! for numerical differences and fixups.
 //!
+//! The pow/exp/log approximation methods now have configurable successors in
+//! Magemath. Their old names remain callable during deprecation:
+//!
+//! ```compile_fail
+//! #![deny(deprecated)]
+//! use archmage::ScalarToken;
+//! use magetypes::simd::generic::f32x4;
+//! let input = f32x4::splat_t(ScalarToken, 1.0);
+//! let _ = input.exp_midp();
+//! ```
+//!
+//! Configured math lives in Magemath. The unpublished module is not exported:
+//!
+//! ```compile_fail
+//! use magetypes::powf::PowfOptions;
+//! ```
+//!
 //! ## Safety
 //!
 //! Using magetypes takes no `unsafe` in your code, so your crate can keep
@@ -106,9 +123,6 @@ pub use types::SimdTypes;
 
 // Cross-tier casting utilities
 pub mod cast;
-
-/// Configurable f32 power with explicit portability, precision and validation.
-pub mod powf;
 
 // Platform-appropriate types via prelude
 pub mod prelude;

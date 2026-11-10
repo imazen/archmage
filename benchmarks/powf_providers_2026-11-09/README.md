@@ -1,5 +1,11 @@
 # Powf provider comparisons
 
+The recorded benchmark sources target the pre-extraction Magetypes framework.
+Reproduce runs at their recorded source revisions; the configured APIs now live
+in Magemath, and the current oracle drivers are in
+[powf_validation](../powf_validation/README.md). These historical measurements
+do not time the final crate boundary.
+
 **Promotion remains held.** No external provider was added to production.
 The existing opt-in policy API and unchanged legacy methods are documented in
 [POLICIES.md](../powf_module_2026-11-07/POLICIES.md). This study adds explicit

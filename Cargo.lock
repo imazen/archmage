@@ -330,6 +330,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "magemath"
+version = "0.1.0"
+dependencies = [
+ "archmage",
+ "magetypes",
+]
+
+[[package]]
 name = "magetypes"
 version = "0.9.31"
 dependencies = [

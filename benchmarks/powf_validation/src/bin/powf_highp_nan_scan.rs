@@ -6,7 +6,7 @@
     target_arch = "wasm32"
 ))]
 use archmage::SimdToken;
-use magetypes::powf::{PowfExecution, PowfOptions};
+use magemath::powf::{PowfExecution, PowfOptions};
 const FLAGS: u32 = PowfOptions::PORTABLE_HIGHP
     .with_execution(PowfExecution::Caller)
     .bits();
@@ -20,12 +20,19 @@ fn scan(token: Token) -> (u64, u64) {
             let nan = std::hint::black_box(f32::from_bits(sign | 0x7f80_0000 | payload));
             let signaling = payload & 0x0040_0000 == 0;
             let xs = f32x4::splat_t(token, nan);
-            let zero = xs.try_powf_with::<FLAGS>(0.).unwrap().to_array();
-            let ordinary = xs.try_powf_with::<FLAGS>(2.4).unwrap().to_array();
-            let exp_nan = f32x4::from_array_t(token, [1., 0., -1., 2.])
-                .try_powf_with::<FLAGS>(nan)
+            let zero = magemath::powf::try_powf_f32x4_with::<FLAGS, _>(token, xs, 0.)
                 .unwrap()
                 .to_array();
+            let ordinary = magemath::powf::try_powf_f32x4_with::<FLAGS, _>(token, xs, 2.4)
+                .unwrap()
+                .to_array();
+            let exp_nan = magemath::powf::try_powf_f32x4_with::<FLAGS, _>(
+                token,
+                magetypes::simd::generic::f32x4::from_array_t(token, [1., 0., -1., 2.]),
+                nan,
+            )
+            .unwrap()
+            .to_array();
             for value in zero {
                 mismatches += u64::from(if signaling {
                     !value.is_nan()

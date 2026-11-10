@@ -14,7 +14,7 @@ import random
 import fma_vectors as ieee
 
 ROOT=Path(__file__).resolve().parents[1]
-OUTPUT=ROOT/'magetypes/tests/common/highp_vectors.rs'
+OUTPUT=ROOT/'magemath/tests/common/highp_vectors.rs'
 DATA={k:[]for k in 'LATCSOB'}
 for line in Path(__file__).with_name('highp_coefficients.txt').read_text().splitlines():
     if line.startswith('#'):continue

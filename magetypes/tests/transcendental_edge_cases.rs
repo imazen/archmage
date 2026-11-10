@@ -9,6 +9,7 @@
 //!   cargo test --test transcendental_edge_cases --features "std"
 //!   cargo test --test transcendental_edge_cases --features "std avx512"
 
+#![allow(deprecated)] // Intentional coverage of retained Magetypes compatibility APIs.
 #![cfg(target_arch = "x86_64")]
 
 use archmage::{SimdToken, X64V3Token, arcane};

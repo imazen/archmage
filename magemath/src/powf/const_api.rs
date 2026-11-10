@@ -26,7 +26,7 @@ pub(super) fn exponent<const OPTIONS: u32, const N: usize>(n: f32) -> Result<(),
 ///
 /// Build the configuration in const evaluation, then supply its integer bits:
 /// ```
-/// use magetypes::powf::{PowfOptions, PowfDomain, PowfExecution, try_powf_with};
+/// use magemath::powf::{PowfOptions, PowfDomain, PowfExecution, try_powf_with};
 /// const OPTIONS: u32 = PowfOptions::new()
 ///     .with_domain(PowfDomain::Gamma)
 ///     .with_execution(PowfExecution::Caller)
@@ -35,10 +35,10 @@ pub(super) fn exponent<const OPTIONS: u32, const N: usize>(n: f32) -> Result<(),
 /// ```
 /// Invalid encodings are compile errors:
 /// ```compile_fail
-/// let _ = magetypes::powf::try_powf_with::<3>(1.0, 2.4);
+/// let _ = magemath::powf::try_powf_with::<3>(1.0, 2.4);
 /// ```
 /// ```compile_fail
-/// let _ = magetypes::powf::try_powf_with::<128>(1.0, 2.4);
+/// let _ = magemath::powf::try_powf_with::<128>(1.0, 2.4);
 /// ```
 /// Options monomorphize through the caller, backend selection and arithmetic
 /// graph. Runtime input checks retain the whole-result rejection contract.
@@ -56,13 +56,13 @@ pub fn try_powf_with<const OPTIONS: u32>(base: f32, n: f32) -> Result<f32, PowfE
 /// An error's lane mask is always one.
 ///
 /// ```
-/// use magetypes::powf::{try_powf_with_token, PowfOptions, PowfExecution};
+/// use magemath::powf::{try_powf_with_token, PowfOptions, PowfExecution};
 /// const FLAGS: u32 = PowfOptions::BACKEND_POSITIVE_GAMMA_MIDP
 ///     .with_execution(PowfExecution::Caller).bits();
 /// assert_eq!(try_powf_with_token::<FLAGS, _>(archmage::ScalarToken, 4., 0.5).unwrap(), 2.);
 /// ```
 #[inline(always)]
-pub fn try_powf_with_token<const OPTIONS: u32, T: crate::simd::backends::F32x4Convert>(
+pub fn try_powf_with_token<const OPTIONS: u32, T: magetypes::simd::backends::F32x4Convert>(
     token: T,
     base: f32,
     n: f32,
@@ -75,12 +75,16 @@ pub fn try_powf_with_token<const OPTIONS: u32, T: crate::simd::backends::F32x4Co
         exponent::<OPTIONS, 1>(n)?;
         return super::highp_dispatch::for_token::<_, OPTIONS, 1>(token, [base], n).map(|v| v[0]);
     }
-    run4::<T, OPTIONS>(token, crate::simd::generic::f32x4::splat_t(token, base), n)
-        .map(|v| v.to_array()[0])
-        .map_err(|error| PowfError {
-            lane_mask: 1,
-            ..error
-        })
+    run4::<T, OPTIONS>(
+        token,
+        magetypes::simd::generic::f32x4::splat_t(token, base),
+        n,
+    )
+    .map(|v| v.to_array()[0])
+    .map_err(|error| PowfError {
+        lane_mask: 1,
+        ..error
+    })
 }
 
 /// Version-independent array boundary with caller-visible integer const flags.
@@ -93,7 +97,7 @@ pub fn try_powf_array_with<const OPTIONS: u32, const N: usize>(
     bases: [f32; N],
     n: f32,
 ) -> Result<[f32; N], PowfError> {
-    use crate::simd::generic::{f32x4, f32x8};
+    use magetypes::simd::generic::{f32x4, f32x8};
     const {
         assert!(PowfOptions::valid(OPTIONS), "invalid powf const options");
     }
@@ -133,7 +137,7 @@ pub fn try_powf_array_with<const OPTIONS: u32, const N: usize>(
     } else {
         #[cfg(feature = "w512")]
         if N == 16 {
-            use crate::simd::generic::f32x16;
+            use magetypes::simd::generic::f32x16;
             let mut input = [0.0; 16];
             input.copy_from_slice(&bases);
             output.copy_from_slice(
@@ -153,16 +157,18 @@ pub fn try_powf_array_with<const OPTIONS: u32, const N: usize>(
 macro_rules! vector {
     ($run:ident, $profile:ident, $dispatch:ident, $float:ident, $bound:ident, $n:literal) => {
         #[inline(always)]
-        pub(crate) fn $run<T: crate::simd::backends::$bound, const OPTIONS: u32>(
+        pub(crate) fn $run<T: magetypes::simd::backends::$bound, const OPTIONS: u32>(
             token: T,
-            input: crate::simd::generic::$float<T>,
+            input: magetypes::simd::generic::$float<T>,
             n: f32,
-        ) -> Result<crate::simd::generic::$float<T>, PowfError> {
+        ) -> Result<magetypes::simd::generic::$float<T>, PowfError> {
             exponent::<OPTIONS, $n>(n)?;
             if OPTIONS & PowfOptions::HIGHP != 0 {
                 let result =
                     super::highp_dispatch::for_token::<_, OPTIONS, $n>(token, input.to_array(), n)?;
-                return Ok(crate::simd::generic::$float::from_array_t(token, result));
+                return Ok(magetypes::simd::generic::$float::from_array_t(
+                    token, result,
+                ));
             }
             let caller = select::<T, OPTIONS>(token, PowfExecution::Caller);
             if matches!(caller, dispatch::Plan::Software) {
@@ -177,7 +183,7 @@ macro_rules! vector {
                     input.to_array(),
                     n,
                 )
-                .map(|result| crate::simd::generic::$float::from_array_t(token, result));
+                .map(|result| magetypes::simd::generic::$float::from_array_t(token, result));
             }
             #[cfg(target_arch = "wasm32")]
             if matches!(caller, dispatch::Plan::Wasm(_, false)) {
@@ -212,71 +218,6 @@ fn select<T: archmage::SimdToken, const OPTIONS: u32>(
         dispatch::select(token, execution)
     }
 }
-
-// Expand the scalar composition in the caller's frame. In particular, wide
-// AArch64 scalar arrays otherwise acquire a different register/spill schedule.
-// The type predicate folds away; this performs no runtime CPU detection.
-macro_rules! approximate_power {
-    ($float:ident,$t:ty,$input:expr,$n:expr,$kernel:ident,$lowp:literal,$checked:literal) => {{
-        if core::any::TypeId::of::<$t>() == core::any::TypeId::of::<archmage::ScalarToken>() {
-            if $lowp {
-                ($input.log2_lowp() * crate::simd::generic::$float::splat_t($input.1, $n))
-                    .exp2_lowp()
-            } else if $checked {
-                ($input.log2_midp() * crate::simd::generic::$float::splat_t($input.1, $n))
-                    .exp2_midp()
-            } else {
-                ($input.log2_midp_unchecked() * crate::simd::generic::$float::splat_t($input.1, $n))
-                    .exp2_midp_unchecked()
-            }
-        } else {
-            crate::powf::const_api::$kernel::<$t, $lowp, $checked>($input.1, $input, $n)
-        }
-    }};
-}
-pub(crate) use approximate_power;
-
-// Existing infallible power methods use the same polynomial engine. Their
-// clamp and edge policy is a private const configuration; no runtime decoder,
-// validation Result, autonomous dispatch or portable-FMA cost enters this path.
-macro_rules! approximate {
-    ($name:ident,$profile:ident,$v:ident,$bound:ident) => {
-        #[inline(always)]
-        pub(crate) fn $name<
-            T: crate::simd::backends::$bound,
-            const LOWP: bool,
-            const CHECKED: bool,
-        >(
-            token: T,
-            input: crate::simd::generic::$v<T>,
-            n: f32,
-        ) -> crate::simd::generic::$v<T> {
-            let result = if LOWP {
-                graph::$profile::<
-                    T,
-                    { graph::NATIVE },
-                    { PowfOptions::ASSUME | PowfOptions::LOWP | graph::CLAMP },
-                >(token, input, n)
-            } else if CHECKED {
-                graph::$profile::<
-                    T,
-                    { graph::NATIVE },
-                    { PowfOptions::ASSUME | graph::CLAMP | graph::INPUT_EDGES },
-                >(token, input, n)
-            } else {
-                graph::$profile::<T, { graph::NATIVE }, { PowfOptions::ASSUME }>(token, input, n)
-            };
-            match result {
-                Ok(value) => value,
-                Err(_) => unreachable!("private assumed configuration cannot reject"),
-            }
-        }
-    };
-}
-approximate!(approximate4, profile4, f32x4, F32x4Convert);
-approximate!(approximate8, profile8, f32x8, F32x8Convert);
-#[cfg(feature = "w512")]
-approximate!(approximate16, profile16, f32x16, F32x16Convert);
 
 // The runtime adapter shares literal const instantiations with the hot API.
 // Every policy arm is outside the polynomial; no dynamic flags enter Horner steps.

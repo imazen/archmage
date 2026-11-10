@@ -1,6 +1,6 @@
 //! Read `base_bits exponent_bits domain` rows; emit actual bounded powf results.
 #![forbid(unsafe_code)]
-use magetypes::powf::{PowfDomain, PowfExecution, PowfOptions, try_powf_runtime};
+use magemath::powf::{PowfDomain, PowfExecution, PowfOptions, try_powf_runtime};
 use std::io::{self, BufRead};
 fn main() {
     for line in io::stdin().lock().lines() {

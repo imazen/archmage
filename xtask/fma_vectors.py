@@ -12,7 +12,7 @@ import random
 
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / 'magetypes/tests/common/fma_vectors.rs'
-PROBE_OUTPUT = ROOT / 'magetypes/src/powf/std_probe_vectors.rs'
+PROBE_OUTPUT = ROOT / 'magemath/src/powf/std_probe_vectors.rs'
 
 
 def power(exponent):

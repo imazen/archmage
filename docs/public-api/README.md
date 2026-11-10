@@ -13,7 +13,7 @@ output byte-identical on any host.
 | `aarch64/` | `aarch64-unknown-linux-gnu` |
 | `wasm32/`  | `wasm32-wasip1`             |
 
-Each directory holds three files per crate (`archmage`, `magetypes`), in the
+Each directory holds three files per crate (`archmage`, `magetypes`, `magemath`), in the
 [zenutils-apidoc](https://lib.rs/crates/zenutils-apidoc) format:
 `<crate>.txt` (supported surface, default features), `<crate>.features.txt`
 (additions from non-default features), `<crate>.internal.txt` (doc(hidden) +
@@ -26,6 +26,11 @@ excluded-feature surface).
   which fails when a committed snapshot is stale.
 - **Runner:** `apidoc/tests/public_api_doc.rs` (a workspace-excluded
   package, so plain `cargo test` never builds it or runs rustdoc).
+
+The configurable transcendental modules belong to `magemath`. Magetypes retains
+only its published flat math methods, with deprecation metadata for replacements.
+The x86-64, ARM64 and WASM listings were regenerated for this boundary on
+2026-11-10; see the [migration guide](../MAGEMATH-MIGRATION.md).
 
 `ABLATION-*.md` are one-time hand-written audit reports (2026-06-11), not
 generated files.

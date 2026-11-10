@@ -5,6 +5,7 @@
 //!
 //! Also benchmarks scalar cbrt/pow for reference.
 
+#![allow(deprecated)] // Intentional coverage of retained Magetypes compatibility APIs.
 // x86-only bench: stub main so the `harness = false` target still links on
 // other architectures (a crate-level `#![cfg]` would leave the bench with no
 // `main` at all).

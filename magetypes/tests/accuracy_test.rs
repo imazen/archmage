@@ -3,6 +3,7 @@
 //! Tests all transcendental functions against std:: implementations
 //! across their valid input ranges, including edge cases.
 
+#![allow(deprecated)] // Intentional coverage of retained Magetypes compatibility APIs.
 #![cfg(target_arch = "x86_64")]
 
 use archmage::{SimdToken, X64V3Token, arcane};

@@ -10,12 +10,11 @@ pub(super) const RELAXED: usize = 4;
 // Internal approximate-power configurations. These are not accepted public
 // option encodings: the existing infallible methods select them at compile time.
 pub(super) const CLAMP: u32 = 256;
-pub(super) const INPUT_EDGES: u32 = 512;
 // Dispatch and domain flags have already selected the provider and ZERO/GAMMA
 // parameters. Keeping them in the arithmetic instantiation duplicates identical
 // debug graphs for Caller/Automatic and portable/backend-dependent adapters.
 #[cfg(debug_assertions)]
-const KERNEL_FLAGS: u32 = PowfOptions::LOWP | PowfOptions::ASSUME | CLAMP | INPUT_EDGES;
+const KERNEL_FLAGS: u32 = PowfOptions::LOWP | PowfOptions::ASSUME;
 #[cfg(target_arch = "wasm32")]
 pub(super) const WASM_SOFTWARE: usize = 3;
 #[cfg(all(feature = "std", not(miri)))]
@@ -32,8 +31,6 @@ macro_rules! shared_kernel {
             8 => $vector::<$t, $arithmetic, $zero, $gamma, 8>($token, $input, $exponent),
             32 => $vector::<$t, $arithmetic, $zero, $gamma, 32>($token, $input, $exponent),
             40 => $vector::<$t, $arithmetic, $zero, $gamma, 40>($token, $input, $exponent),
-            296 => $vector::<$t, $arithmetic, $zero, $gamma, 296>($token, $input, $exponent),
-            800 => $vector::<$t, $arithmetic, $zero, $gamma, 800>($token, $input, $exponent),
             _ => unreachable!("private arithmetic flags are validated at the boundary"),
         }
     };
@@ -47,17 +44,17 @@ macro_rules! graph {
         #[cfg_attr(debug_assertions, inline(never))]
         #[cfg_attr(not(debug_assertions), inline(always))]
         fn $vector<
-            T: crate::simd::backends::$bound,
+            T: magetypes::simd::backends::$bound,
             const ARITHMETIC: usize,
             const ZERO: bool,
             const GAMMA: bool,
             const OPTIONS: u32,
         >(
             token: T,
-            input: crate::simd::generic::$float<T>,
+            input: magetypes::simd::generic::$float<T>,
             exponent: f32,
-        ) -> Result<crate::simd::generic::$float<T>, PowfError> {
-            use crate::simd::generic::{$float as V, $int as I};
+        ) -> Result<magetypes::simd::generic::$float<T>, PowfError> {
+            use magetypes::simd::generic::{$float as V, $int as I};
             let sp = |x| V::splat_t(token, x);
             let ip = |x| I::splat_t(token, x);
             let bits = input.bitcast_to_i32();
@@ -134,9 +131,7 @@ macro_rules! graph {
                 }
             };
             let result = if OPTIONS & PowfOptions::LOWP != 0 {
-                let log = if OPTIONS & CLAMP != 0 {
-                    input.log2_lowp()
-                } else {
+                let log = {
                     let xb = x.bitcast_to_i32();
                     let offset = ip(0x3f2a_aaab_u32 as i32);
                     let shifted = (xb - offset).shr_arithmetic_const::<23>();
@@ -191,9 +186,7 @@ macro_rules! graph {
                 // Coefficients and arithmetic order from the existing midp log2
                 // and exp2 graph; BitExact rounds every madd once, while the
                 // infallible approximation retains its caller's relaxed arithmetic.
-                let log = if OPTIONS & INPUT_EDGES != 0 {
-                    input.log2_midp()
-                } else {
+                let log = {
                     let adjusted = x.bitcast_to_i32() + ip((0x3f80_0000_u32 - 0x3f35_04f3) as i32);
                     let n = (adjusted.shr_arithmetic_const::<23>() - ip(127)).to_f32();
                     let a = ((adjusted & ip(0x007f_ffff)) + ip(0x3f35_04f3)).bitcast_to_f32();
@@ -277,14 +270,14 @@ macro_rules! graph {
         // native feature entry. No runtime domain enum enters this path.
         #[inline(always)]
         pub(super) fn $profile<
-            T: crate::simd::backends::$bound,
+            T: magetypes::simd::backends::$bound,
             const ARITHMETIC: usize,
             const OPTIONS: u32,
         >(
             token: T,
-            input: crate::simd::generic::$float<T>,
+            input: magetypes::simd::generic::$float<T>,
             exponent: f32,
-        ) -> Result<crate::simd::generic::$float<T>, PowfError> {
+        ) -> Result<magetypes::simd::generic::$float<T>, PowfError> {
             #[cfg(debug_assertions)]
             return match OPTIONS & 3 {
                 0 => shared_kernel!(
@@ -329,7 +322,7 @@ macro_rules! graph {
         ) -> Result<[f32; $lanes], PowfError> {
             $profile::<Token, ARITHMETIC, OPTIONS>(
                 token,
-                crate::simd::generic::$float::from_array_t(token, bases),
+                magetypes::simd::generic::$float::from_array_t(token, bases),
                 exponent,
             )
             .map(|result| result.to_array())

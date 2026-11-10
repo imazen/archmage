@@ -1,0 +1,72 @@
+# magemath public API — doc(hidden) items and excluded-feature surface
+# excluded features: _exhaustive-tests
+# (regenerated on every `cargo test` by zenutils-apidoc; ZEN_API_DOC=check verifies, =off skips).
+# Encodings: crate-name prefix stripped; auto traits collapse to a
+# count + exceptions; trait impls collapse to one roster line per
+# type (method signatures live at the trait definition); blanket
+# impls omitted; re-export duplicates annotated `[also: path]`.
+# DO NOT EDIT BY HAND — commit regenerated changes with the code.
+
+## summary
+#
+#   inherent methods                           24
+#   trait roster entries (type × trait)        24
+#
+# per-module pub lines:
+#   expf                              8
+#   logf                              8
+#   powf                              8
+
+## items (24 lines)
+
+pub fn expf::ExpfDomain::assert_fields_are_eq(&self)
+pub fn expf::ExpfError::assert_fields_are_eq(&self)
+pub fn expf::ExpfErrorKind::assert_fields_are_eq(&self)
+pub fn expf::ExpfExecution::assert_fields_are_eq(&self)
+pub fn expf::ExpfOptions::assert_fields_are_eq(&self)
+pub fn expf::ExpfPortability::assert_fields_are_eq(&self)
+pub fn expf::ExpfPrecision::assert_fields_are_eq(&self)
+pub fn expf::ExpfValidation::assert_fields_are_eq(&self)
+pub fn logf::LogfDomain::assert_fields_are_eq(&self)
+pub fn logf::LogfError::assert_fields_are_eq(&self)
+pub fn logf::LogfErrorKind::assert_fields_are_eq(&self)
+pub fn logf::LogfExecution::assert_fields_are_eq(&self)
+pub fn logf::LogfOptions::assert_fields_are_eq(&self)
+pub fn logf::LogfPortability::assert_fields_are_eq(&self)
+pub fn logf::LogfPrecision::assert_fields_are_eq(&self)
+pub fn logf::LogfValidation::assert_fields_are_eq(&self)
+pub fn powf::PowfDomain::assert_fields_are_eq(&self)
+pub fn powf::PowfError::assert_fields_are_eq(&self)
+pub fn powf::PowfErrorKind::assert_fields_are_eq(&self)
+pub fn powf::PowfExecution::assert_fields_are_eq(&self)
+pub fn powf::PowfOptions::assert_fields_are_eq(&self)
+pub fn powf::PowfPortability::assert_fields_are_eq(&self)
+pub fn powf::PowfPrecision::assert_fields_are_eq(&self)
+pub fn powf::PowfValidation::assert_fields_are_eq(&self)
+
+## trait impls (24 types)
+
+expf::ExpfDomain: TrivialClone
+expf::ExpfError: TrivialClone
+expf::ExpfErrorKind: TrivialClone
+expf::ExpfExecution: TrivialClone
+expf::ExpfOptions: TrivialClone
+expf::ExpfPortability: TrivialClone
+expf::ExpfPrecision: TrivialClone
+expf::ExpfValidation: TrivialClone
+logf::LogfDomain: TrivialClone
+logf::LogfError: TrivialClone
+logf::LogfErrorKind: TrivialClone
+logf::LogfExecution: TrivialClone
+logf::LogfOptions: TrivialClone
+logf::LogfPortability: TrivialClone
+logf::LogfPrecision: TrivialClone
+logf::LogfValidation: TrivialClone
+powf::PowfDomain: TrivialClone
+powf::PowfError: TrivialClone
+powf::PowfErrorKind: TrivialClone
+powf::PowfExecution: TrivialClone
+powf::PowfOptions: TrivialClone
+powf::PowfPortability: TrivialClone
+powf::PowfPrecision: TrivialClone
+powf::PowfValidation: TrivialClone

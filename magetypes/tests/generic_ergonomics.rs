@@ -6,6 +6,7 @@
 //! The key idea: write ONE function generic over `T: F32x8Backend`, and it
 //! works with any backend — AVX2, NEON, WASM SIMD128, or scalar fallback.
 
+#![allow(deprecated)] // Intentional coverage of retained Magetypes compatibility APIs.
 #![allow(dead_code)]
 
 use archmage::ScalarToken;

@@ -10,10 +10,10 @@
 //! by restricted Checked presets. Full HIGHP permits all f32 inputs/results; NaN payloads are unspecified.
 //! PositiveGamma excludes zero from Gamma and removes its result masks.
 //! AssumeValid omits numerical checks while retaining memory safety.
-//! Existing `pow_lowp`/`pow_midp` methods retain their existing behavior.
+//! Legacy Magetypes power methods remain available during deprecation.
 //!
 //! ```
-//! use magetypes::powf::{try_powf, try_powf_with, PowfDomain, PowfOptions};
+//! use magemath::powf::{try_powf, try_powf_with, PowfDomain, PowfOptions};
 //! assert_eq!(try_powf(4.0, 0.5).unwrap(), 2.0);
 //! assert!(try_powf(f32::NAN, 2.4).is_err());
 //! assert_eq!(try_powf_with::<{ PowfOptions::new().with_domain(PowfDomain::NonNegativeNormal).bits() }>(0.0, 2.4).unwrap(), 0.0);
@@ -49,7 +49,7 @@ pub use options::{
 /// Additional rejection reasons may be added. Callers must retain a fallback:
 ///
 /// ```compile_fail
-/// use magetypes::powf::PowfErrorKind;
+/// use magemath::powf::PowfErrorKind;
 /// fn classify(kind: PowfErrorKind) -> u8 {
 ///     match kind {
 ///         PowfErrorKind::InvalidExponent => 1,
@@ -137,4 +137,78 @@ pub(crate) fn try_powf_token_runtime<T: archmage::SimdToken, const N: usize>(
     options: PowfOptions,
 ) -> Result<[f32; N], PowfError> {
     const_api::runtime(token, bases, exponent, options)
+}
+
+/// Configured powf on a 4-lane vector, preserving the caller's feature proof.
+/// Use the same options and token with the scalar `*_with_token` entry for tails.
+#[inline(always)]
+pub fn try_powf_f32x4_with<const OPTIONS: u32, T: magetypes::simd::backends::F32x4Convert>(
+    token: T,
+    input: magetypes::simd::generic::f32x4<T>,
+    exponent: f32,
+) -> Result<magetypes::simd::generic::f32x4<T>, PowfError> {
+    const_api::run4::<T, OPTIONS>(token, input, exponent)
+}
+
+/// Configured powf on a 8-lane vector, preserving the caller's feature proof.
+/// Use the same options and token with the scalar `*_with_token` entry for tails.
+#[inline(always)]
+pub fn try_powf_f32x8_with<const OPTIONS: u32, T: magetypes::simd::backends::F32x8Convert>(
+    token: T,
+    input: magetypes::simd::generic::f32x8<T>,
+    exponent: f32,
+) -> Result<magetypes::simd::generic::f32x8<T>, PowfError> {
+    const_api::run8::<T, OPTIONS>(token, input, exponent)
+}
+
+/// Configured powf on a 16-lane vector, preserving the caller's feature proof.
+/// Use the same options and token with the scalar `*_with_token` entry for tails.
+#[cfg(feature = "w512")]
+#[inline(always)]
+pub fn try_powf_f32x16_with<const OPTIONS: u32, T: magetypes::simd::backends::F32x16Convert>(
+    token: T,
+    input: magetypes::simd::generic::f32x16<T>,
+    exponent: f32,
+) -> Result<magetypes::simd::generic::f32x16<T>, PowfError> {
+    const_api::run16::<T, OPTIONS>(token, input, exponent)
+}
+
+/// Power on a 4-lane vector with runtime options, retaining the caller proof.
+/// Prefer the const-options entry when the profile is known at compile time.
+#[inline(always)]
+pub fn try_powf_f32x4_runtime<T: magetypes::simd::backends::F32x4Convert>(
+    token: T,
+    input: magetypes::simd::generic::f32x4<T>,
+    exponent: f32,
+    options: PowfOptions,
+) -> Result<magetypes::simd::generic::f32x4<T>, PowfError> {
+    try_powf_token_runtime(token, input.to_array(), exponent, options)
+        .map(|v| magetypes::simd::generic::f32x4::from_array_t(token, v))
+}
+
+/// Power on a 8-lane vector with runtime options, retaining the caller proof.
+/// Prefer the const-options entry when the profile is known at compile time.
+#[inline(always)]
+pub fn try_powf_f32x8_runtime<T: magetypes::simd::backends::F32x8Convert>(
+    token: T,
+    input: magetypes::simd::generic::f32x8<T>,
+    exponent: f32,
+    options: PowfOptions,
+) -> Result<magetypes::simd::generic::f32x8<T>, PowfError> {
+    try_powf_token_runtime(token, input.to_array(), exponent, options)
+        .map(|v| magetypes::simd::generic::f32x8::from_array_t(token, v))
+}
+
+/// Power on a 16-lane vector with runtime options, retaining the caller proof.
+/// Prefer the const-options entry when the profile is known at compile time.
+#[cfg(feature = "w512")]
+#[inline(always)]
+pub fn try_powf_f32x16_runtime<T: magetypes::simd::backends::F32x16Convert>(
+    token: T,
+    input: magetypes::simd::generic::f32x16<T>,
+    exponent: f32,
+    options: PowfOptions,
+) -> Result<magetypes::simd::generic::f32x16<T>, PowfError> {
+    try_powf_token_runtime(token, input.to_array(), exponent, options)
+        .map(|v| magetypes::simd::generic::f32x16::from_array_t(token, v))
 }

@@ -1,10 +1,10 @@
 //! Canonical scalar port of Arm v26.07 powf, canonical unscaled reduction.
 //! Copyright (c) 2017-2026, Arm Limited. SPDX-License-Identifier: MIT
-//! Source: ARM-software/optimized-routines, 4be260a5; see magetypes/LICENSE-ARM.
+//! Source: ARM-software/optimized-routines, 4be260a5; see magemath/LICENSE-ARM.
 //! RNE, gradual underflow. Result bits only; no errno/FP-exception promise.
 use super::highp_data::{A, C, LOG, OVERFLOW, OVERFLOW_BOUND, SHIFT, TABLE};
 
-use crate::simd::backends::F64x2Backend;
+use magetypes::simd::backends::F64x2Backend;
 
 // The caller selects arithmetic once for the complete graph.
 #[inline(always)]
@@ -17,7 +17,7 @@ fn madd<T: F64x2Backend, const MODE: usize>(token: T, x: f64, y: f64, z: f64) ->
         }
         #[cfg(any(not(feature = "std"), target_arch = "wasm32"))]
         {
-            use crate::simd::generic::f64x2 as V;
+            use magetypes::simd::generic::f64x2 as V;
             return V::splat_t(token, x)
                 .mul_add_relaxed(V::splat_t(token, y), V::splat_t(token, z))
                 .to_array()[0];
