@@ -9,11 +9,11 @@ import subprocess
 import tarfile
 p=argparse.ArgumentParser(description=__doc__);p.add_argument('scratch',type=Path);p.add_argument('layer_sources',type=Path);p.add_argument('output',type=Path);p.add_argument('revision');a=p.parse_args()
 assert(a.output/'raw').is_dir()
-sources=a.output/'sources';sources.mkdir()
+sources=a.output/'sources'
 revs={'review':a.revision,'submitted-148':'a052a8ccfee0c463b176265c28392c755b02ee10','base-147':'0464774e7c5c63a398041ddaa131b9bd4f7035c7','merged-main':'91a13739b73f46213ecfe7083c77297c531fc8ad','original-timing-harness':'38129b882e0d105d527fac5407048e724ac77c16','ordered-harness':'d4006552','range-harness':'26eb088b','layer-preparation-tools':'f581cb7e'}
-resolved={}
-for name,rev in revs.items():
- rev=subprocess.check_output(['git','rev-parse',rev],text=True).strip();resolved[name]=rev
+resolved={name:subprocess.check_output(['git','rev-parse',rev],text=True).strip()for name,rev in revs.items()}
+sources.mkdir(exist_ok=True);assert not list(sources.iterdir()),sources
+for name,rev in resolved.items():
  with(sources/(name+'.tar')).open('wb')as f:subprocess.run(['git','archive',rev],stdout=f,check=True)
 with tarfile.open(sources/'prepared-layer-layouts.tar','w')as archive:
  for f in sorted(a.layer_sources.rglob('*')):
