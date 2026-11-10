@@ -36,14 +36,14 @@ macro_rules! width {
                     0 => {
                         if LOG {
                             if LOW {
-                                x.old_log2_lowp()
+                                x.old_log2_lowp(token)
                             } else {
-                                x.old_log2_midp()
+                                x.old_log2_midp(token)
                             }
                         } else if LOW {
-                            x.old_exp2_lowp()
+                            x.old_exp2_lowp(token)
                         } else {
-                            x.old_exp2_midp()
+                            x.old_exp2_midp(token)
                         }
                     }
                     1 => {
