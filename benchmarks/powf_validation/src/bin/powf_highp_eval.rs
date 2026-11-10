@@ -6,37 +6,43 @@
     target_arch = "wasm32"
 ))]
 use archmage::SimdToken;
-use magetypes::powf::{PowfExecution, PowfOptions};
+use magemath::powf::{PowfExecution, PowfOptions};
 use std::io::{BufRead, Write};
 const FLAGS: u32 = PowfOptions::PORTABLE_HIGHP
     .with_execution(PowfExecution::Caller)
     .bits();
 #[archmage::magetypes(v4x(cfg(avx512)), v4(cfg(avx512)), v3, neon, wasm128, scalar)]
 fn values<const N: usize>(token: Token, x: [f32; N], n: f32) -> [f32; N] {
-    use magetypes::simd::generic::{f32x4, f32x8};
+    use magetypes::simd::generic::f32x4;
     let mut out = [0.; N];
     if N == 1 {
-        out[0] = f32x4::splat_t(token, x[0])
-            .try_powf_with::<FLAGS>(n)
-            .unwrap()
-            .to_array()[0];
+        out[0] =
+            magemath::powf::try_powf_f32x4_with::<FLAGS, _>(token, f32x4::splat_t(token, x[0]), n)
+                .unwrap()
+                .to_array()[0];
     } else if N == 4 {
         let mut a = [0.; 4];
         a.copy_from_slice(&x);
         out.copy_from_slice(
-            &f32x4::from_array_t(token, a)
-                .try_powf_with::<FLAGS>(n)
-                .unwrap()
-                .to_array(),
+            &magemath::powf::try_powf_f32x4_with::<FLAGS, _>(
+                token,
+                magetypes::simd::generic::f32x4::from_array_t(token, a),
+                n,
+            )
+            .unwrap()
+            .to_array(),
         );
     } else if N == 8 {
         let mut a = [0.; 8];
         a.copy_from_slice(&x);
         out.copy_from_slice(
-            &f32x8::from_array_t(token, a)
-                .try_powf_with::<FLAGS>(n)
-                .unwrap()
-                .to_array(),
+            &magemath::powf::try_powf_f32x8_with::<FLAGS, _>(
+                token,
+                magetypes::simd::generic::f32x8::from_array_t(token, a),
+                n,
+            )
+            .unwrap()
+            .to_array(),
         );
     } else {
         #[cfg(feature = "w512")]
@@ -45,10 +51,13 @@ fn values<const N: usize>(token: Token, x: [f32; N], n: f32) -> [f32; N] {
             let mut a = [0.; 16];
             a.copy_from_slice(&x);
             out.copy_from_slice(
-                &magetypes::simd::generic::f32x16::from_array_t(token, a)
-                    .try_powf_with::<FLAGS>(n)
-                    .unwrap()
-                    .to_array(),
+                &magemath::powf::try_powf_f32x16_with::<FLAGS, _>(
+                    token,
+                    magetypes::simd::generic::f32x16::from_array_t(token, a),
+                    n,
+                )
+                .unwrap()
+                .to_array(),
             );
         }
         #[cfg(not(feature = "w512"))]
@@ -60,7 +69,7 @@ fn evaluate<const N: usize>(ctx: &str, x: [f32; N], n: f32) -> [f32; N] {
     match ctx {
         "scalar" => values_scalar(archmage::ScalarToken, x, n),
         "automatic" => {
-            magetypes::powf::try_powf_array_with::<{ PowfOptions::PORTABLE_HIGHP.bits() }, N>(x, n)
+            magemath::powf::try_powf_array_with::<{ PowfOptions::PORTABLE_HIGHP.bits() }, N>(x, n)
                 .unwrap()
         }
         #[cfg(target_arch = "x86_64")]

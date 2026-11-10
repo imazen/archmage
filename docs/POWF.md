@@ -3,12 +3,13 @@
 The maintained [ISA bounds and performance reference](POWF_REFERENCE.md) records
 contracts, accuracy, implementation coverage and qualified/exploratory costs.
 
-`magetypes::powf` owns the MIDP/LOWP approximation graphs, a canonical binary64 HIGHP graph and the scalar std HIGHP
-backend for scalar and vector power. `f32x1`, generic `f32x4`, `f32x8` and enabled `f32x16` delegate to it.
+`magemath::powf` owns the MIDP/LOWP approximation graphs, a canonical binary64 HIGHP graph and the scalar std HIGHP
+backend for scalar and vector power. Scalar, array and typed generic
+`f32x4`, `f32x8` and enabled `f32x16` entry points live in Magemath.
 The existing `pow_lowp`, `pow_midp` and related methods are unchanged.
 
 ```rust
-use magetypes::powf::{PowfOptions, PowfDomain, PowfExecution, try_powf_with};
+use magemath::powf::{PowfOptions, PowfDomain, PowfExecution, try_powf_with};
 const OPTIONS: u32 = PowfOptions::new()
     .with_domain(PowfDomain::Gamma)
     .with_execution(PowfExecution::Caller)
@@ -27,8 +28,8 @@ in its feature region, without an array dispatch boundary. Reserved encodings an
 For options selected at runtime, `try_powf_runtime` and
 `try_powf_array_runtime` accept the same builder value. Their policy decoder
 selects literal const instantiations outside the graph. These APIs share the graph and rejection contract. The array const
-entry is `try_powf_array_with::<OPTIONS, N>`; the vector method is
-`vector.try_powf_with::<OPTIONS>(exponent)`.
+entry is `try_powf_array_with::<OPTIONS, N>`; typed vector entries are
+`try_powf_f32xN_with::<OPTIONS, _>(token, vector, exponent)`.
 
 `PowfErrorKind` is non-exhaustive so future rejection reasons can be added.
 External matches retain a fallback arm; the numerical study panics on an
@@ -106,7 +107,7 @@ adapter. Every preset states its range, validation and execution policy.
 `with_execution` specialize those axes through the caller and feature kernel.
 
 ```rust
-use magetypes::powf::{PowfOptions, PowfValidation, try_powf_with};
+use magemath::powf::{PowfOptions, PowfValidation, try_powf_with};
 const FLAGS: u32 = PowfOptions::BACKEND_GAMMA_LOWP
     .with_validation(PowfValidation::AssumeValid).bits();
 let result = try_powf_with::<FLAGS>(0.5, 2.4).unwrap();
@@ -225,13 +226,13 @@ The earlier HIGHP integration totals above describe that earlier revision.
 Keep the same token in scalar and vector forms:
 
 ```rust
-use magetypes::powf::{PowfOptions, PowfExecution, PowfValidation, try_powf_with_token};
+use magemath::powf::{PowfOptions, PowfExecution, PowfValidation, try_powf_with_token};
 const FAST: u32 = PowfOptions::PORTABLE_POSITIVE_GAMMA_MIDP
     .with_validation(PowfValidation::AssumeValid)
     .with_execution(PowfExecution::Caller)
     .bits();
 // In a matching Magetypes feature kernel:
-// let packed = vector.try_powf_with::<FAST>(exponent)?;
+// let packed = magemath::powf::try_powf_f32x4_with::<FAST, _>(token, vector, exponent)?;
 // let tail = try_powf_with_token::<FAST, _>(token, base, exponent)?;
 ```
 
@@ -246,21 +247,18 @@ The [replacement matrix](../benchmarks/powf_module_2026-11-07/MIDLOW.md)
 reports exact methods, ranges, validation, ns and retained admission results.
 
 
-The existing infallible `pow_lowp`, `pow_midp`, unchecked and precise aliases
-now delegate to the const-configured engine. Private clamp/edge configurations
-keep their broad approximation behavior; the scalar backend reuses the existing
-log/exp composition to preserve compiler scheduling. The x86 before/after audit
-compares actual pre-remap methods at b3413314, not just a hand-written expression:
-all 72 scalar/V3/V4/V4x literal/dynamic probes are identical, with data constants,
-operands, branches, calls and instruction order retained. This introduces no
-arithmetic or dispatch overhead in those probes. Backend-dependent scalar math
-continues to permit separate multiplication/addition.
+The published infallible `pow_lowp`, `pow_midp`, unchecked and precise aliases
+remain in Magetypes with their published arithmetic bodies. They are deprecated
+in favor of explicitly selected Magemath profiles. The configured framework and
+its tests move as a whole; those flat methods do not call it. Historical remapping
+and assembly studies in the benchmark archive describe earlier revisions, not
+the current ownership boundary. See [migration](MAGEMATH-MIGRATION.md).
 
 ## Test tiers
 
 Default tests replay directed rational-oracle boundary cases and six representative
 encodings per MIDP/LOWP portability family, including every tail remainder through
-length 33. `cargo test -p magetypes --features _exhaustive-tests` restores all 2247
+length 33. `cargo test -p magemath --features _exhaustive-tests` restores all 2247
 frozen rational fixtures and all 64 bounded encodings at lengths 0..33 plus
 64/65/127/255/511/512/513. `just powf-test-exhaustive` also enables AVX-512.
 Both tiers retain identical expected bits, rejection assertions and bounds.

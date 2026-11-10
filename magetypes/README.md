@@ -107,7 +107,11 @@ chunks and a tail. You need no aligned allocator and no padding.
   [gather and scatter](https://imazen.github.io/archmage/magetypes/memory/gather-scatter/)
   on `u32x16`, `i32x16` and `f32x16`.
 
-The [bounded-power example](examples/bounded_powf.rs) teaches checked scalar and
+Configurable pow/exp/log now live in [Magemath](../magemath). Their existing
+Magetypes methods remain available during deprecation; see the
+[migration guide](../docs/MAGEMATH-MIGRATION.md).
+
+The [bounded-power example](../magemath/examples/bounded_powf.rs) teaches checked scalar and
 array calls. Domain and portability details are in the [powf contract](../docs/POWF.md).
 
 ## Naming: `<name>_<tier>`

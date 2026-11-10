@@ -10,6 +10,7 @@
 //! lanes. Mid-range accuracy is checked against an f64 scalar reference at
 //! the exp2_midp tier tolerance (1e-5 rel, transcendental_accuracy.rs).
 
+#![allow(deprecated)] // Intentional coverage of retained Magetypes compatibility APIs.
 use archmage::{ScalarToken, SimdToken};
 use magetypes::simd::backends::F32x8Convert;
 use magetypes::simd::generic::f32x8;

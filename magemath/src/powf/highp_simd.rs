@@ -8,13 +8,13 @@ use super::{
     highp_data::{A, C, LOG, SHIFT, TABLE},
     highp_scalar,
 };
-use crate::simd::backends::F64x2Backend;
+use magetypes::simd::backends::F64x2Backend;
 
 macro_rules! packed {
     ($name:ident, $vector:ident, $backend:ident, $lanes:literal) => {
         #[inline(always)]
         pub(super) fn $name<
-            T: crate::simd::backends::$backend + F64x2Backend,
+            T: magetypes::simd::backends::$backend + F64x2Backend,
             const OPTIONS: u32,
             const N: usize,
         >(
@@ -22,7 +22,7 @@ macro_rules! packed {
             x: [f32; N],
             n: f32,
         ) -> [f32; N] {
-            use crate::simd::generic::$vector as V;
+            use magetypes::simd::generic::$vector as V;
             if OPTIONS & 3 == 2 && n == 0. {
                 return [1.; N];
             }
@@ -128,7 +128,9 @@ packed!(packed8, f64x8, F64x8Backend, 8);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 #[inline(always)]
 pub(super) fn wide<
-    T: crate::simd::backends::F64x8Backend + crate::simd::backends::F64x4Backend + F64x2Backend,
+    T: magetypes::simd::backends::F64x8Backend
+        + magetypes::simd::backends::F64x4Backend
+        + F64x2Backend,
     const OPTIONS: u32,
     const N: usize,
 >(

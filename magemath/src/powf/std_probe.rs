@@ -43,7 +43,7 @@ mod implementation {
     mod tests {
         #[test]
         fn admits_exact_software_and_rejects_twice_rounded_provider() {
-            assert!(super::screen_with(crate::nostd_math::fmaf_soft));
+            assert!(super::screen_with(magetypes::nostd_math::fmaf_soft));
             assert!(!super::screen_with(|a, b, c| a * b + c));
         }
 

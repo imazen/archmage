@@ -5,6 +5,7 @@
 //!
 //! Run: cargo test --test transcendental_accuracy --features "std avx512" -- --nocapture
 
+#![allow(deprecated)] // Intentional coverage of retained Magetypes compatibility APIs.
 #![cfg(target_arch = "x86_64")]
 
 use archmage::{SimdToken, X64V3Token, arcane};

@@ -15,7 +15,7 @@ import struct
 import fma_vectors as fm
 
 ROOT = Path(__file__).resolve().parents[1]
-OUTPUT = ROOT / 'magetypes/src/powf/test_vectors.rs'
+OUTPUT = ROOT / 'magemath/tests/data/powf.rs'
 ONE, INF = 0x3f800000, 0x7f800000
 
 

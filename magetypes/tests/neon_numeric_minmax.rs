@@ -1,5 +1,6 @@
 //! NEON numeric min/max: quiet NaNs select the number, including reductions.
 //! Signaling NaNs follow native FMINNM/FMAXNM rather than Rust's scalar max.
+#![allow(deprecated)] // Intentional coverage of retained Magetypes compatibility APIs.
 #![forbid(unsafe_code)]
 #![cfg(target_arch = "aarch64")]
 use archmage::{NeonToken, SimdToken};

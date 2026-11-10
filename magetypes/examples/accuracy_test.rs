@@ -10,6 +10,8 @@
 //! cargo run --example accuracy_test --release
 //! ```
 
+#![allow(deprecated)] // Measures the published flat methods during their deprecation.
+
 // x86-only example - stub main for other platforms
 #[cfg(not(target_arch = "x86_64"))]
 fn main() {}

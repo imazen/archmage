@@ -3,6 +3,7 @@
 //! Tests against std::f32 functions and known exact values.
 //! Verifies both X64V3Token (AVX2+FMA) and ScalarToken backends.
 
+#![allow(deprecated)] // Intentional coverage of retained Magetypes compatibility APIs.
 #[cfg(target_arch = "x86_64")]
 mod tests {
     use archmage::{ScalarToken, SimdToken, X64V3Token};
