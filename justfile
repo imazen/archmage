@@ -974,3 +974,6 @@ magemath-miri-log1p:
 magemath-compat-clippy:
     cargo clippy --locked --manifest-path benchmarks/powf_validation/Cargo.toml --all-features --all-targets -- -D warnings
     cargo clippy --locked --manifest-path benchmarks/powf_validation/Cargo.toml --no-default-features --features w512 --all-targets -- -D warnings
+
+magemath-legacy-remap-wasm:
+    RUSTFLAGS="-C target-feature=+simd128" CARGO_TARGET_WASM32_WASIP1_RUNNER=wasmtime cargo test -p magetypes --features "std avx512" --target wasm32-wasip1 --test powf_engine_remap -- --nocapture

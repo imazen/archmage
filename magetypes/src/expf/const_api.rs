@@ -267,14 +267,30 @@ macro_rules! approximate {
             input: crate::simd::generic::$v<T>,
         ) -> crate::simd::generic::$v<T> {
             let result = if LOWP {
-                graph::$profile::<T, { ExpfOptions::ASSUME | ExpfOptions::LOWP }>(token, input)
+                graph::$profile::<
+                    T,
+                    {
+                        ExpfOptions::ASSUME
+                            | ExpfOptions::LOWP
+                            | ExpfOptions::BACKEND
+                            | ExpfOptions::LEGACY
+                    },
+                >(token, input)
             } else if CHECKED {
                 graph::$profile::<
                     T,
                     { ExpfOptions::ASSUME | ExpfOptions::BACKEND | ExpfOptions::LEGACY },
                 >(token, input)
             } else {
-                graph::$profile::<T, { ExpfOptions::ASSUME | graph::CLAMP }>(token, input)
+                graph::$profile::<
+                    T,
+                    {
+                        ExpfOptions::ASSUME
+                            | graph::CLAMP
+                            | ExpfOptions::BACKEND
+                            | ExpfOptions::LEGACY
+                    },
+                >(token, input)
             };
             match result {
                 Ok(value) => value,
