@@ -68,6 +68,17 @@ fn bounded_widths_and_tails(token: Token) {
     fn eval_tail<const FLAGS: u32>(token: Token, x: f32, n: f32) -> f32 {
         magetypes::powf::try_powf_with_token::<FLAGS, _>(token, x, n).unwrap()
     }
+    fn scalar_bits<const FLAGS: u32>(token: Token, x: f32, n: f32) -> u32 {
+        let result = eval_tail::<FLAGS>(token, x, n);
+        assert_eq!(
+            result.to_bits(),
+            eval4::<FLAGS>(token, [x; 4], n)[0].to_bits()
+        );
+        if FLAGS & CALLER == 0 || FLAGS & BACKEND == 0 {
+            assert_eq!(eval_scalar::<FLAGS>(x, n).to_bits(), result.to_bits());
+        }
+        result.to_bits()
+    }
     fn check<const FLAGS: u32>(token: Token) {
         let mut state = 0x9e37_79b9_u32;
         for n in [0.0_f32, -0.0, 0.5, 2.4, 4.0] {
@@ -81,17 +92,6 @@ fn bounded_widths_and_tails(token: Token) {
                     f32::from_bits(0x3780_0000 + state % 0x1000_0001)
                 }
             });
-            let single = input.map(|x| {
-                let result = eval_tail::<FLAGS>(token, x, n);
-                assert_eq!(
-                    result.to_bits(),
-                    eval4::<FLAGS>(token, [x; 4], n)[0].to_bits()
-                );
-                if FLAGS & CALLER == 0 || FLAGS & BACKEND == 0 {
-                    assert_eq!(eval_scalar::<FLAGS>(x, n).to_bits(), result.to_bits());
-                }
-                result.to_bits()
-            });
             macro_rules! width {
                 ($eval:ident, $lanes:literal) => {
                     for length in (0..=33).chain([64, 65, 127, 255, 511, 512, 513]) {
@@ -100,12 +100,16 @@ fn bounded_widths_and_tails(token: Token) {
                         for chunk in chunks.by_ref() {
                             let result = $eval::<FLAGS>(token, chunk.try_into().unwrap(), n)
                                 .map(f32::to_bits);
-                            assert_eq!(&result, &single[offset..offset + $lanes]);
+                            // Compare each pack immediately; retain no full
+                            // reference-output buffer for this policy/width.
+                            for (&x, actual) in chunk.iter().zip(result) {
+                                assert_eq!(actual, scalar_bits::<FLAGS>(token, x, n));
+                            }
                             offset += $lanes;
                         }
                         for &x in chunks.remainder() {
                             let result = eval_tail::<FLAGS>(token, x, n);
-                            assert_eq!(result.to_bits(), single[offset]);
+                            assert_eq!(result.to_bits(), scalar_bits::<FLAGS>(token, x, n));
                             offset += 1;
                         }
                         assert_eq!(offset, length);
