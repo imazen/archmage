@@ -1,5 +1,8 @@
 # Independent expf/logf audit
 
+The subsequent [PR148 review](PR148.md) and [focused Magemath ownership study](MAGEMATH-LAYER.md)
+retain separate source identities and evidence. The historical PR147 report below remains unchanged.
+
 This unpublished workspace reviews [PR147](https://github.com/imazen/archmage/pull/147)
 at `0464774e7c5c63a398041ddaa131b9bd4f7035c7`, against merged main
 `91a13739b73f46213ecfe7083c77297c531fc8ad`. It adds review tools and failing

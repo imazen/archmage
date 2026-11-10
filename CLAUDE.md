@@ -1216,6 +1216,15 @@ fn process(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 
 ## Known Bugs
 
+Unmerged expf/logf review (2026-11-10, PR148 frozen at a052a8cc): no_std
+compilation fails; 32/64 valid const configurations panic in debug and runtime
+adapters reject 54/64 configurations per family. Full/Specials with AssumeValid
+incorrectly drops exceptional-result handling, and log1p has signed-zero/lane-mask
+failures. LOWP log1p inherits the rational log2 bias near zero. An independent
+review branch tests an ordered-comparison NaN classification fix and restricted
+normal-output exp2 kernels; neither makes the submitted PR ready. See
+`benchmarks/expf_logf_audit/PR148.md` and `MAGEMATH-LAYER.md` there.
+
 Canonical HIGHP packed performance (2026-11-09, draft held): the first M6
 32-cell exploratory matrix has 24 Full packed cells within the 2% std cost
 bound by the cost-only interval and eight exceeding it. None is promotion
