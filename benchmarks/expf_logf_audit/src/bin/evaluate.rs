@@ -1,4 +1,5 @@
 //! Hex protocol for independent rational-graph and MPFR checks.
+#![forbid(unsafe_code)]
 #[cfg(any(
     target_arch = "x86_64",
     target_arch = "aarch64",
@@ -109,7 +110,7 @@ fn main() {
         })
         .collect();
     assert_eq!(rows.len() % 16, 0);
-    for chunk in rows.chunks_exact(16) {
+    for chunk in rows.as_chunks::<16>().0 {
         let log = chunk[0].0;
         assert!(chunk.iter().all(|r| r.0 == log));
         let xs: [f32; 16] = core::array::from_fn(|i| chunk[i].1);

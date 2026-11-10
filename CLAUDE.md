@@ -1329,6 +1329,18 @@ FMA path. All retained versions, flag rankings and admission status are in
 
 ### Open
 
+- **Unmerged PR147 expf/logf audit (2026-11-10):** head `0464774e` fails
+  no_std compilation, panics in 32/64 debug const policies per family, rejects
+  54/64 runtime builder policies, and mishandles signed zero, accepted specials
+  under AssumeValid, and the scalar log1p error mask. Qualified V3 x4/64-stream
+  legacy log2_midp costs +10.14–11.02%; canonical LOWP BackendDependent
+  AssumeValid Automatic costs +19.33–20.27% versus main legacy LOWP. The refits
+  have useful sampled accuracy improvements, but the advertised quadratic exp2
+  LOWP branch is unreachable. Production sources are unchanged by the audit.
+  Contracts, witnesses, codegen and retained cost bounds:
+  `benchmarks/expf_logf_audit/REVIEW.md`. These findings describe the unmerged
+  head, not main `91a13739`.
+
 - **Original runtime-options bounded powf cost gate (2026-11-07, held):**
   the historical implementation at `56059d2c` is additive; existing power
   methods are unchanged. Against its identical

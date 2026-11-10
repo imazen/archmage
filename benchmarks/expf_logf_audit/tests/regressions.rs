@@ -1,4 +1,5 @@
 //! Intended contracts. These deliberately fail on the frozen PR147 head.
+#![forbid(unsafe_code)]
 use magetypes::{expf::*, logf::*};
 
 #[test]

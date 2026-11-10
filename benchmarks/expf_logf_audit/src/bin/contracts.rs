@@ -1,4 +1,5 @@
 //! Review protocol, deliberately outside human-facing examples and default tests.
+#![forbid(unsafe_code)]
 use magetypes::{expf::*, logf::*};
 use std::panic::{UnwindSafe, catch_unwind};
 

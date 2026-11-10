@@ -1,4 +1,5 @@
 //! Frozen-source comparison protocol: compile this unchanged at each revision.
+#![forbid(unsafe_code)]
 use archmage::SimdToken;
 use magetypes::simd::generic::f32x4;
 #[path = "../frozen.rs"]
@@ -48,7 +49,7 @@ fn main() {
         state ^= state << 5;
         inputs.push(state);
     }
-    for xs in inputs.chunks_exact(4) {
+    for xs in inputs.as_chunks::<4>().0 {
         let a = [xs[0], xs[1], xs[2], xs[3]].map(f32::from_bits);
         let out = match context.as_str() {
             "scalar" => evaluate_scalar(archmage::ScalarToken, a),

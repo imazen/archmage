@@ -5,13 +5,14 @@ accuracy improvements, but the policy implementation has executable correctness
 failures and qualified performance regressions. This review is for
 `0464774e7c5c63a398041ddaa131b9bd4f7035c7`; the separate main reference is
 `91a13739b73f46213ecfe7083c77297c531fc8ad`. Production sources were left unchanged.
+Raw evidence and immutable source identities: [ARTIFACTS.md](ARTIFACTS.md).
 
 Missing evidence comes first: no_std is blocked by a compile failure; quiet Intel,
 ARM Linux and WASM timing matrices are absent. Thirty-eight of 96 AMD timing
 cells fail cleanliness. The M6 timings are exploratory because its OS scheduler
 does not provide verified core-class confinement. Numerical coverage is sampled,
 not an exhaustive proof over all f32 inputs. Bit-distributed and exceptional-input
-timing matrices, log1p accuracy sweeps, first-use dispatch costs and a matched
+timing matrices, cross-ISA wrapper accuracy sweeps, first-use dispatch costs and a matched
 consumer binary-size comparison remain absent. These gaps prevent an unqualified
 promotion claim independently of the demonstrated failures below.
 
@@ -24,7 +25,8 @@ promotion claim independently of the demonstrated failures below.
 2. **Make valid options work in both profiles.** There are 64 builder encodings
    per family. The debug shared-kernel table masks in LEGACY but has no LEGACY
    arms: 32/64 const configurations panic per family. It also drops BACKEND,
-   so debug calls no longer select the requested relaxed arithmetic provider.
+   so debug calls no longer select the requested relaxed arithmetic provider;
+   the non-legacy corpus reproduces 867 debug/release output differences.
    Both runtime adapters recognize only 10/64 configurations; Caller, legacy
    precision and many valid combinations return UnsupportedOptions. Generate
    the complete table from the option axes and test all encodings against const
@@ -80,7 +82,7 @@ fused/separate arithmetic. Each family has 3,088 structured/random inputs and
 eight precision/arithmetic configurations. This includes powers-of-two,
 near-one values, exponent boundaries and the documented exp2 rails.
 
-The same outputs replay on AMD V3, AMD V4x, real M6 NEON, i686, strict WASM,
+The graph expectations also replay on AMD V3, AMD V4x, real M6 NEON, i686, strict WASM,
 relaxed WASM with hardware fusion, relaxed WASM with FMA generation disabled,
 and a no-FMA Nehalem CPU emulator. Automatic widths 1/4/8/16 agree with the
 explicit native scalar token; BitExact also agrees with ScalarToken Caller.
@@ -143,6 +145,9 @@ legacy method with its own documented validation and exceptional semantics.
 The unchecked speedup is a different contract; it does not excuse a slowdown
 in a remapped existing checked method.
 
+See [retained zenbench bars and full ns tables](BARS.md). Full labels distinguish
+the contracts even where the terminal display abbreviates a long name.
+
 Across the 58 qualified cells, PR147 legacy methods have 52 PASS, four FAIL and
 two INCONCLUSIVE verdicts. Canonical BitExact checked has 22 PASS/36 FAIL;
 BitExact AssumeValid has 30 PASS/28 FAIL; BackendDependent AssumeValid has
@@ -159,6 +164,31 @@ alignment padding; these are consumer probes, not an explanation of every timing
 difference. Cargo asm could not locate the thin-LTO assembly artifact; executable
 objdump disassembly supplied the preserved source-identified bodies instead.
 
+## Wrappers and M6 exploratory timings
+
+The exp, ln, log10 and log1p wrappers each have an additional 2,064-input AMD V3
+sample, with all eight precision/arithmetic combinations and all six output
+contexts. Their exact rational composition models match every output; portable
+width and scalar-tail comparisons also have zero mismatches. MPFR sampled native
+MIDP maxima are 135.831148 ULP for exp (57.602857 over the narrower [-87,88.4]
+sample), 1.180643 for ln, 1.811892 for log10 and 2.783612 for log1p. The exp
+wrapper's multiplication by log2(e) remains a material error source even when
+the exp2 kernel improves. LOWP log1p reaches 4.003792 ULP in this sample. These
+results include tiny positive/negative log1p inputs and the immediate f32
+neighbor above -1; they do not excuse its independently failing negative-zero
+contract. LegacyLowp log1p retains a nonzero bias at zero, so its near-zero
+accuracy claim must be qualified by precision policy. Wrapper checks here are
+native V3, not cross-ISA mathematical coverage.
+
+The real M6 also completed all 96 cells and 50 pairs per cell. Every cell is
+resource-flagged, and placement is explicitly unrestricted: **0/96 is promotion
+evidence**. For NEON x4/64 streams, main legacy log2_midp is 18.685 ns versus
+PR147 legacy 24.058 ns (exploratory paired interval +28.21% to +29.44%). Canonical
+MIDP BackendDependent AssumeValid Automatic is 12.936 ns. Main legacy log2_lowp
+is 11.152 ns versus canonical LOWP BackendDependent AssumeValid Automatic
+12.089 ns (exploratory +7.34% to +9.55%). These measurements show a useful direction
+to investigate; they establish no qualified ARM speed or regression claim.
+
 ## Build diagnostics and resources
 
 Three alternating target-cold default dev builds per revision, same rustc 1.99.1 /
@@ -172,7 +202,8 @@ Resource-wrapper summaries: initial validation 39 s / peak 2.40 GiB; native
 protocol builds 66 s / 2.71 GiB; cross-target build/run 14 s / 0.45 GiB;
 AMD timings 163 s / 0.26 GiB, minimum available 43,163 MiB, peak load 1.56;
 three-pair cold builds 19 s / 0.38 GiB. M6 numerical build/run 12 s / peak
-0.77 GiB. All run logs, inadmissible rounds, failed orchestration and raw results
+0.77 GiB; exploratory M6 timings 90 s / 0.02 GiB, minimum available proxy
+10,094 MiB, peak load 2.41. All run logs, inadmissible rounds, failed orchestration and raw results
 are retained. Performance facts apply to their named host, caller, width, workload
 and contract; they are not extrapolated to other ISAs.
 
