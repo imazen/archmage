@@ -1,7 +1,7 @@
 //! Actual bounded public methods, including token-preserving single-lane tails.
 #![forbid(unsafe_code)]
 use archmage::SimdToken;
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/midlow_generated.rs"));
+include!(concat!(env!("OUT_DIR"), "/midlow_generated.rs"));
 fn normalize(x: f32) -> f32 {
     f32::from_bits(0x3f000000 | (x.to_bits() & 0x007fffff))
 }

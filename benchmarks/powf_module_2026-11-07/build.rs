@@ -12,6 +12,11 @@ fn main() {
             .success()
     );
     println!("cargo:rerun-if-changed=providers_prepare.py");
+    for generator in ["midlow_prepare.py", "remap_probes.py"] {
+        assert!(Command::new("python3").arg(directory.join(generator)).arg(&output)
+            .status().unwrap().success());
+        println!("cargo:rerun-if-changed={generator}");
+    }
     assert!(
         Command::new("python3")
             .arg(directory.join("policy_prepare.py"))

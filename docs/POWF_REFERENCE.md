@@ -1,5 +1,7 @@
 # Magetypes powf portability accuracy and performance
 
+
+The [fresh local follow-up](../benchmarks/powf_module_2026-11-07/QUIET-LOCAL.md) records the final scalar-only optimization, clean ns/bar comparisons, rejected native conversion experiment and remaining software-FMA cost.
 Updated 2026-11-09. The replacement API remains in [draft PR144](https://github.com/imazen/archmage/pull/144), with promotion held. Canonical HIGHP now has scalar and packed implementations. Legacy power methods retain their behavior. Performance observations below identify the actual implementation and machine; exploratory intervals cannot satisfy the promotion gate.
 
 ## Relationship to the earlier portability PRs

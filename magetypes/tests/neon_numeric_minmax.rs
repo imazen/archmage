@@ -97,3 +97,37 @@ width!(
     0x7ff8_0000_0000_0000,
     0x7ff0_0000_0000_0001
 );
+
+// Named feature bodies keep the primitive lowering reviewable in cargo asm.
+#[archmage::arcane]
+#[inline(never)]
+fn numeric_min4(token: NeonToken, a: [f32; 4], b: [f32; 4]) -> [f32; 4] {
+    use magetypes::simd::generic::f32x4;
+    f32x4::from_array_t(token, a)
+        .min(f32x4::from_array_t(token, b))
+        .to_array()
+}
+#[archmage::arcane]
+#[inline(never)]
+fn numeric_max4(token: NeonToken, a: [f32; 4], b: [f32; 4]) -> [f32; 4] {
+    use magetypes::simd::generic::f32x4;
+    f32x4::from_array_t(token, a)
+        .max(f32x4::from_array_t(token, b))
+        .to_array()
+}
+#[test]
+fn named_codegen_bodies() {
+    let t = NeonToken::summon().unwrap();
+    let a = black_box([-1., 0., f32::NAN, 3.]);
+    let b = black_box([0., 1., 2., f32::NAN]);
+    assert_eq!(numeric_min4(t, a, b), [-1., 0., 2., 3.]);
+    assert_eq!(numeric_max4(t, a, b), [0., 1., 2., 3.]);
+    let signaling = black_box(f32::from_bits(0x7f80_0001));
+    let quiet = magetypes::simd::generic::f32x4::splat_t(t, black_box(f32::NAN));
+    println!(
+        "observed std-max(sNaN,1)={:08x} NEON-exp2-midp(qNaN)={:08x} NEON-exp2-lowp(qNaN)={:08x}",
+        signaling.max(black_box(1.)).to_bits(),
+        quiet.exp2_midp().to_array()[0].to_bits(),
+        quiet.exp2_lowp().to_array()[0].to_bits(),
+    );
+}

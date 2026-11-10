@@ -1,5 +1,7 @@
 # Bounded MIDP / LOWP implementations and replacement costs
 
+
+The [fresh local follow-up](QUIET-LOCAL.md) records the final scalar-only optimization, clean ns/bar comparisons, rejected native conversion experiment and remaining software-FMA cost.
 The 2026-11-09 implementation has all four families: portable/backend-dependent
 MIDP/LOWP, each with four domains, checked/assumed validation and automatic/caller
 execution: 64 bounded encodings. `PositiveGamma` excludes zero from Gamma's

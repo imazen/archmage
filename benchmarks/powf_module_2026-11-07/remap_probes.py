@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Retain paired old-composition/shared-engine probes through LLVM merging."""
 from pathlib import Path
-s='#![forbid(unsafe_code)]\n#![allow(dead_code,non_snake_case)]\n'
+import sys
+s=''
 s+='type Probe<T,const N:usize>=fn(T,&[f32;N],f32,&mut[f32;N]);\n'
 for n in [4,8,16]:
  for kind in ['lowp','midp','midp_unchecked']:
@@ -18,4 +19,4 @@ fn {name}(token:Token,x:&[f32;{n}],n:f32,out:&mut[f32;{n}]){{use magetypes::simd
     if cfg:s+=f'#[cfg({cfg})]\n'
     s+=f'#[used]\nstatic REMAPTABLE_X{n}_{kind.upper()}_{known.upper()}_{tier.upper()}: [Probe<archmage::{ty},{n}>;2]=[remap_original_{kind}_x{n}_{known}_{tier},remap_shared_{kind}_x{n}_{known}_{tier}];\n'
 s+='fn main(){}\n'
-Path(__file__).with_name('src').joinpath('bin/remap_codegen.rs').write_text(s)
+(Path(sys.argv[1]) / 'remap_codegen.rs').write_text(s)

@@ -255,3 +255,13 @@ all 72 scalar/V3/V4/V4x literal/dynamic probes are identical, with data constant
 operands, branches, calls and instruction order retained. This introduces no
 arithmetic or dispatch overhead in those probes. Backend-dependent scalar math
 continues to permit separate multiplication/addition.
+
+## Test tiers
+
+Default tests replay directed rational-oracle boundary cases and six representative
+encodings per MIDP/LOWP portability family, including every tail remainder through
+length 33. `cargo test -p magetypes --features exhaustive-tests` restores all 2247
+frozen rational fixtures and all 64 bounded encodings at lengths 0..33 plus
+64/65/127/255/511/512/513. `just powf-test-exhaustive` also enables AVX-512.
+Both tiers retain identical expected bits, rejection assertions and bounds.
+The full feature is included by `--all-features`; Miri uses directed checks.

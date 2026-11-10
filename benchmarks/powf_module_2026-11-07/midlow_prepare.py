@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Generate literal const public API arms; preserve the token in scalar tails."""
 from pathlib import Path
+import sys
 flags=[f for f in range(64) if f&3!=3]+[f for f in range(128,192) if f&3==2]
 labels=[f'{"backend" if f&16 else "portable"}/{"lowp" if f&8 else "midp"}/{("positive-gamma" if f&128 else ["positive","nonnegative","gamma"][f&3])}/{"assume" if f&32 else "checked"}/{"caller" if f&4 else "auto"}'for f in flags]+['legacy/pow_lowp','legacy/pow_midp','legacy/pow_midp_unchecked']
 s='const LABELS: &[&str] = &'+repr(labels).replace("'",'"')+';\n'
@@ -72,4 +73,4 @@ fn register(suite:&mut zenbench::Suite){
  });
 }
 '''
-Path(__file__).with_name('midlow_generated.rs').write_text(s)
+(Path(sys.argv[1]) / 'midlow_generated.rs').write_text(s)

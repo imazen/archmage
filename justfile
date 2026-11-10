@@ -896,7 +896,6 @@ powf-canonical-highp-bars directory output:
 
 # Bounded replacement matrix with token-preserving tails and literal flags.
 powf-midlow-build:
-    python3 -B benchmarks/powf_module_2026-11-07/midlow_prepare.py
     cargo build --release --locked --manifest-path benchmarks/powf_module_2026-11-07/Cargo.toml --features avx512 --bin midlow_bench
 
 powf-midlow-verify binary:
@@ -924,7 +923,6 @@ powf-midlow-assembly-compare before after output *options:
     python3 -B benchmarks/powf_module_2026-11-07/midlow_assembly_compare.py "{{before}}" "{{after}}" "{{output}}" {{options}}
 
 powf-remap-probes:
-    python3 -B benchmarks/powf_module_2026-11-07/remap_probes.py
     cargo rustc --release --locked --manifest-path benchmarks/powf_module_2026-11-07/Cargo.toml --features avx512 --bin remap_codegen -- --emit=asm
 
 powf-remap-codegen assembly output *options:
@@ -934,3 +932,8 @@ powf-remap-codegen assembly output *options:
 powf-test-exhaustive:
     cargo test -p magetypes --features exhaustive-tests,avx512 --lib powf::
     cargo test -p magetypes --features exhaustive-tests,avx512 --test powf_tails_portable_midp --test powf_tails_portable_lowp --test powf_tails_backend_midp --test powf_tails_backend_lowp
+
+# Focused ordinary-test tier; no test-name filter leaks into integration tests.
+powf-test-spot:
+    cargo test -p magetypes --lib powf::
+    cargo test -p magetypes --test powf_tails_portable_midp --test powf_tails_portable_lowp --test powf_tails_backend_midp --test powf_tails_backend_lowp
