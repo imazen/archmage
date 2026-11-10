@@ -170,3 +170,43 @@ pub fn try_powf_f32x16_with<const OPTIONS: u32, T: magetypes::simd::backends::F3
 ) -> Result<magetypes::simd::generic::f32x16<T>, PowfError> {
     const_api::run16::<T, OPTIONS>(token, input, exponent)
 }
+
+/// Power on a 4-lane vector with runtime options, retaining the caller proof.
+/// Prefer the const-options entry when the profile is known at compile time.
+#[inline(always)]
+pub fn try_powf_f32x4_runtime<T: magetypes::simd::backends::F32x4Convert>(
+    token: T,
+    input: magetypes::simd::generic::f32x4<T>,
+    exponent: f32,
+    options: PowfOptions,
+) -> Result<magetypes::simd::generic::f32x4<T>, PowfError> {
+    try_powf_token_runtime(token, input.to_array(), exponent, options)
+        .map(|v| magetypes::simd::generic::f32x4::from_array_t(token, v))
+}
+
+/// Power on a 8-lane vector with runtime options, retaining the caller proof.
+/// Prefer the const-options entry when the profile is known at compile time.
+#[inline(always)]
+pub fn try_powf_f32x8_runtime<T: magetypes::simd::backends::F32x8Convert>(
+    token: T,
+    input: magetypes::simd::generic::f32x8<T>,
+    exponent: f32,
+    options: PowfOptions,
+) -> Result<magetypes::simd::generic::f32x8<T>, PowfError> {
+    try_powf_token_runtime(token, input.to_array(), exponent, options)
+        .map(|v| magetypes::simd::generic::f32x8::from_array_t(token, v))
+}
+
+/// Power on a 16-lane vector with runtime options, retaining the caller proof.
+/// Prefer the const-options entry when the profile is known at compile time.
+#[cfg(feature = "w512")]
+#[inline(always)]
+pub fn try_powf_f32x16_runtime<T: magetypes::simd::backends::F32x16Convert>(
+    token: T,
+    input: magetypes::simd::generic::f32x16<T>,
+    exponent: f32,
+    options: PowfOptions,
+) -> Result<magetypes::simd::generic::f32x16<T>, PowfError> {
+    try_powf_token_runtime(token, input.to_array(), exponent, options)
+        .map(|v| magetypes::simd::generic::f32x16::from_array_t(token, v))
+}

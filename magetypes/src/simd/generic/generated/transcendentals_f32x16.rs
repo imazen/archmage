@@ -23,6 +23,8 @@
 //!   whole range; the other `_midp_precise` names are aliases of the plain
 //!   forms, queued for removal
 
+#![allow(deprecated)] // Compatibility implementations call their retained aliases.
+
 use crate::simd::backends::{F32x16Backend, F32x16Convert, I32x16Backend};
 use crate::simd::generic::{f32x16, i32x16};
 
@@ -45,6 +47,10 @@ impl<T: F32x16Convert> f32x16<T> {
     ///
     /// Uses rational polynomial approximation on the mantissa.
     /// Result is undefined for x <= 0.
+    #[deprecated(
+        since = "0.9.32",
+        note = "use magemath::logf::try_log2_f32x16_with with explicit options and the caller token; see docs/MAGEMATH-MIGRATION.md"
+    )]
     #[inline(always)]
     pub fn log2_lowp(self) -> Self {
         crate::logf::const_api::approximate_log2!(f32x16, T, self, approximate16, true, false, {
@@ -71,6 +77,10 @@ impl<T: F32x16Convert> f32x16<T> {
     }
 
     /// Low-precision base-2 logarithm, no edge case handling.
+    #[deprecated(
+        since = "0.9.32",
+        note = "use magemath::logf::try_log2_f32x16_with with explicit options and the caller token; see docs/MAGEMATH-MIGRATION.md"
+    )]
     #[inline(always)]
     pub fn log2_lowp_unchecked(self) -> Self {
         self.log2_lowp()
@@ -78,6 +88,10 @@ impl<T: F32x16Convert> f32x16<T> {
 
     /// Low-precision base-2 exponential: relative error at most 0.56% for x up
     /// to 127.99 and 1.23% above, where the input is clamped to 127.99.
+    #[deprecated(
+        since = "0.9.32",
+        note = "use magemath::expf::try_exp2_f32x16_with with explicit options and the caller token; see docs/MAGEMATH-MIGRATION.md"
+    )]
     #[inline(always)]
     pub fn exp2_lowp(self) -> Self {
         crate::expf::const_api::approximate_exp2!(f32x16, T, self, approximate16, true, true, {
@@ -100,36 +114,60 @@ impl<T: F32x16Convert> f32x16<T> {
     }
 
     /// Low-precision base-2 exponential, no edge case handling.
+    #[deprecated(
+        since = "0.9.32",
+        note = "use magemath::expf::try_exp2_f32x16_with with explicit options and the caller token; see docs/MAGEMATH-MIGRATION.md"
+    )]
     #[inline(always)]
     pub fn exp2_lowp_unchecked(self) -> Self {
         self.exp2_lowp()
     }
 
     /// Low-precision natural logarithm.
+    #[deprecated(
+        since = "0.9.32",
+        note = "use magemath::logf::try_ln_f32x16_with with explicit options and the caller token; see docs/MAGEMATH-MIGRATION.md"
+    )]
     #[inline(always)]
     pub fn ln_lowp(self) -> Self {
         self.log2_lowp() * splat_f32::<T>(self.1, core::f32::consts::LN_2)
     }
 
     /// Low-precision natural logarithm, no edge case handling.
+    #[deprecated(
+        since = "0.9.32",
+        note = "use magemath::logf::try_ln_f32x16_with with explicit options and the caller token; see docs/MAGEMATH-MIGRATION.md"
+    )]
     #[inline(always)]
     pub fn ln_lowp_unchecked(self) -> Self {
         self.ln_lowp()
     }
 
     /// Low-precision natural exponential.
+    #[deprecated(
+        since = "0.9.32",
+        note = "use magemath::expf::try_exp_f32x16_with with explicit options and the caller token; see docs/MAGEMATH-MIGRATION.md"
+    )]
     #[inline(always)]
     pub fn exp_lowp(self) -> Self {
         (self * splat_f32::<T>(self.1, core::f32::consts::LOG2_E)).exp2_lowp()
     }
 
     /// Low-precision natural exponential, no edge case handling.
+    #[deprecated(
+        since = "0.9.32",
+        note = "use magemath::expf::try_exp_f32x16_with with explicit options and the caller token; see docs/MAGEMATH-MIGRATION.md"
+    )]
     #[inline(always)]
     pub fn exp_lowp_unchecked(self) -> Self {
         self.exp_lowp()
     }
 
     /// Low-precision base-10 logarithm.
+    #[deprecated(
+        since = "0.9.32",
+        note = "use magemath::logf::try_log10_f32x16_with with explicit options and the caller token; see docs/MAGEMATH-MIGRATION.md"
+    )]
     #[inline(always)]
     pub fn log10_lowp(self) -> Self {
         self.log2_lowp()
@@ -137,12 +175,20 @@ impl<T: F32x16Convert> f32x16<T> {
     }
 
     /// Low-precision base-10 logarithm, no edge case handling.
+    #[deprecated(
+        since = "0.9.32",
+        note = "use magemath::logf::try_log10_f32x16_with with explicit options and the caller token; see docs/MAGEMATH-MIGRATION.md"
+    )]
     #[inline(always)]
     pub fn log10_lowp_unchecked(self) -> Self {
         self.log10_lowp()
     }
 
     /// Low-precision power function: `self^n`. Returns 0 for zero input.
+    #[deprecated(
+        since = "0.9.32",
+        note = "use magemath::powf::try_powf_f32x16_with with explicit options and the caller token; see docs/MAGEMATH-MIGRATION.md"
+    )]
     #[inline(always)]
     pub fn pow_lowp(self, n: f32) -> Self {
         let result = crate::powf::const_api::approximate_power!(
@@ -159,6 +205,10 @@ impl<T: F32x16Convert> f32x16<T> {
     }
 
     /// Low-precision power function, no edge case handling.
+    #[deprecated(
+        since = "0.9.32",
+        note = "use magemath::powf::try_powf_f32x16_with with explicit options and the caller token; see docs/MAGEMATH-MIGRATION.md"
+    )]
     #[inline(always)]
     pub fn pow_lowp_unchecked(self, n: f32) -> Self {
         self.pow_lowp(n)
@@ -170,6 +220,10 @@ impl<T: F32x16Convert> f32x16<T> {
     ///
     /// Uses (a-1)/(a+1) transform with odd polynomial evaluation.
     /// Result is undefined for x <= 0.
+    #[deprecated(
+        since = "0.9.32",
+        note = "use magemath::logf::try_log2_f32x16_with with explicit options and the caller token; see docs/MAGEMATH-MIGRATION.md"
+    )]
     #[inline(always)]
     pub fn log2_midp_unchecked(self) -> Self {
         crate::logf::const_api::approximate_log2!(f32x16, T, self, approximate16, false, false, {
@@ -200,6 +254,10 @@ impl<T: F32x16Convert> f32x16<T> {
     /// Mid-precision base-2 logarithm with edge case handling.
     ///
     /// Returns -inf for 0, NaN for negative values, +inf for +inf.
+    #[deprecated(
+        since = "0.9.32",
+        note = "use magemath::logf::try_log2_f32x16_with with explicit options and the caller token; see docs/MAGEMATH-MIGRATION.md"
+    )]
     #[inline(always)]
     pub fn log2_midp(self) -> Self {
         crate::logf::const_api::approximate_log2!(f32x16, T, self, approximate16, false, true, {
@@ -210,7 +268,7 @@ impl<T: F32x16Convert> f32x16<T> {
                 splat_f32::<T>(self.1, f32::NEG_INFINITY),
                 result,
             );
-            let result = Self::blend(self.simd_lt(zero), splat_f32::<T>(self.1, f32::NAN), result);
+            let result = Self::blend(self.simd_ge(zero), result, splat_f32::<T>(self.1, f32::NAN));
             let inf = splat_f32::<T>(self.1, f32::INFINITY);
             Self::blend(self.simd_eq(inf), inf, result)
         })
@@ -219,6 +277,10 @@ impl<T: F32x16Convert> f32x16<T> {
     /// Same as [`log2_midp`](Self::log2_midp). Subnormal inputs are **not**
     /// handled: they return about -127 (for 1e-42 the true value is -139.5).
     /// Queued for removal.
+    #[deprecated(
+        since = "0.9.32",
+        note = "use magemath::logf::try_log2_f32x16_with with explicit options and the caller token; see docs/MAGEMATH-MIGRATION.md"
+    )]
     #[inline(always)]
     pub fn log2_midp_precise(self) -> Self {
         self.log2_midp()
@@ -229,6 +291,10 @@ impl<T: F32x16Convert> f32x16<T> {
     ///
     /// Uses round-to-nearest splitting to keep |frac| <= 0.5, giving
     /// ~1000x less polynomial truncation error than floor-based splitting.
+    #[deprecated(
+        since = "0.9.32",
+        note = "use magemath::expf::try_exp2_f32x16_with with explicit options and the caller token; see docs/MAGEMATH-MIGRATION.md"
+    )]
     #[inline(always)]
     pub fn exp2_midp_unchecked(self) -> Self {
         crate::expf::const_api::approximate_exp2!(f32x16, T, self, approximate16, false, false, {
@@ -258,6 +324,10 @@ impl<T: F32x16Convert> f32x16<T> {
     /// At most 1.9 ULP for x below 127.5 and up to 134.1 ULP in [127.5, 128).
     /// Returns 0 for x < -126 (denormal results can't be constructed),
     /// inf for x >= 128.
+    #[deprecated(
+        since = "0.9.32",
+        note = "use magemath::expf::try_exp2_f32x16_with with explicit options and the caller token; see docs/MAGEMATH-MIGRATION.md"
+    )]
     #[inline(always)]
     pub fn exp2_midp(self) -> Self {
         crate::expf::const_api::approximate_exp2!(f32x16, T, self, approximate16, false, true, {
@@ -276,18 +346,30 @@ impl<T: F32x16Convert> f32x16<T> {
 
     /// Same as [`exp2_midp`](Self::exp2_midp), which covers every input:
     /// a subnormal input is just close to zero. Queued for removal.
+    #[deprecated(
+        since = "0.9.32",
+        note = "use magemath::expf::try_exp2_f32x16_with with explicit options and the caller token; see docs/MAGEMATH-MIGRATION.md"
+    )]
     #[inline(always)]
     pub fn exp2_midp_precise(self) -> Self {
         self.exp2_midp()
     }
 
     /// Mid-precision natural logarithm (at most 4.1 ULP).
+    #[deprecated(
+        since = "0.9.32",
+        note = "use magemath::logf::try_ln_f32x16_with with explicit options and the caller token; see docs/MAGEMATH-MIGRATION.md"
+    )]
     #[inline(always)]
     pub fn ln_midp(self) -> Self {
         self.log2_midp() * splat_f32::<T>(self.1, core::f32::consts::LN_2)
     }
 
     /// Mid-precision natural logarithm, no edge case handling.
+    #[deprecated(
+        since = "0.9.32",
+        note = "use magemath::logf::try_ln_f32x16_with with explicit options and the caller token; see docs/MAGEMATH-MIGRATION.md"
+    )]
     #[inline(always)]
     pub fn ln_midp_unchecked(self) -> Self {
         self.log2_midp_unchecked() * splat_f32::<T>(self.1, core::f32::consts::LN_2)
@@ -296,6 +378,10 @@ impl<T: F32x16Convert> f32x16<T> {
     /// Same as [`ln_midp`](Self::ln_midp). Subnormal inputs are **not**
     /// handled: they return about -88 (for 1e-42 the true value is -96.7).
     /// Queued for removal.
+    #[deprecated(
+        since = "0.9.32",
+        note = "use magemath::logf::try_ln_f32x16_with with explicit options and the caller token; see docs/MAGEMATH-MIGRATION.md"
+    )]
     #[inline(always)]
     pub fn ln_midp_precise(self) -> Self {
         self.ln_midp()
@@ -307,12 +393,20 @@ impl<T: F32x16Convert> f32x16<T> {
     /// with |x|: at most 2.0 ULP for |x| <= 1, 8.2 ULP for |x| <= 10,
     /// 31.3 ULP for |x| <= 40, 64.1 ULP over [-87, 88.5] and 197.1 ULP above
     /// 88.5, where the product nears 128 (see `exp2_midp`).
+    #[deprecated(
+        since = "0.9.32",
+        note = "use magemath::expf::try_exp_f32x16_with with explicit options and the caller token; see docs/MAGEMATH-MIGRATION.md"
+    )]
     #[inline(always)]
     pub fn exp_midp(self) -> Self {
         (self * splat_f32::<T>(self.1, core::f32::consts::LOG2_E)).exp2_midp()
     }
 
     /// Mid-precision natural exponential, no edge case handling.
+    #[deprecated(
+        since = "0.9.32",
+        note = "use magemath::expf::try_exp_f32x16_with with explicit options and the caller token; see docs/MAGEMATH-MIGRATION.md"
+    )]
     #[inline(always)]
     pub fn exp_midp_unchecked(self) -> Self {
         (self * splat_f32::<T>(self.1, core::f32::consts::LOG2_E)).exp2_midp_unchecked()
@@ -320,6 +414,10 @@ impl<T: F32x16Convert> f32x16<T> {
 
     /// Same as [`exp_midp`](Self::exp_midp), which covers every input:
     /// a subnormal input is just close to zero. Queued for removal.
+    #[deprecated(
+        since = "0.9.32",
+        note = "use magemath::expf::try_exp_f32x16_with with explicit options and the caller token; see docs/MAGEMATH-MIGRATION.md"
+    )]
     #[inline(always)]
     pub fn exp_midp_precise(self) -> Self {
         self.exp_midp()
@@ -356,6 +454,10 @@ impl<T: F32x16Convert> f32x16<T> {
     }
 
     /// Mid-precision base-10 logarithm (at most 4.5 ULP).
+    #[deprecated(
+        since = "0.9.32",
+        note = "use magemath::logf::try_log10_f32x16_with with explicit options and the caller token; see docs/MAGEMATH-MIGRATION.md"
+    )]
     #[inline(always)]
     pub fn log10_midp(self) -> Self {
         self.log2_midp()
@@ -363,6 +465,10 @@ impl<T: F32x16Convert> f32x16<T> {
     }
 
     /// Mid-precision base-10 logarithm, no edge case handling.
+    #[deprecated(
+        since = "0.9.32",
+        note = "use magemath::logf::try_log10_f32x16_with with explicit options and the caller token; see docs/MAGEMATH-MIGRATION.md"
+    )]
     #[inline(always)]
     pub fn log10_midp_unchecked(self) -> Self {
         self.log2_midp_unchecked()
@@ -372,6 +478,10 @@ impl<T: F32x16Convert> f32x16<T> {
     /// Same as [`log10_midp`](Self::log10_midp). Subnormal inputs are **not**
     /// handled: they return about -38.2 (for 1e-42 the true value is -42.0).
     /// Queued for removal.
+    #[deprecated(
+        since = "0.9.32",
+        note = "use magemath::logf::try_log10_f32x16_with with explicit options and the caller token; see docs/MAGEMATH-MIGRATION.md"
+    )]
     #[inline(always)]
     pub fn log10_midp_precise(self) -> Self {
         self.log10_midp()
@@ -382,12 +492,20 @@ impl<T: F32x16Convert> f32x16<T> {
     /// Computed as `exp2(n * log2(self))`, so the error grows with
     /// |n * log2(self)|. Measured for n = 2.4: at most 27.8 ULP (mean 3.7) on
     /// [2^-8, 2^8], 64.8 ULP on [2^-20, 2^20] and 144.9 ULP on [2^-50, 2^50].
+    #[deprecated(
+        since = "0.9.32",
+        note = "use magemath::powf::try_powf_f32x16_with with explicit options and the caller token; see docs/MAGEMATH-MIGRATION.md"
+    )]
     #[inline(always)]
     pub fn pow_midp(self, n: f32) -> Self {
         crate::powf::const_api::approximate_power!(f32x16, T, self, n, approximate16, false, true)
     }
 
     /// Mid-precision power function, no edge case handling.
+    #[deprecated(
+        since = "0.9.32",
+        note = "use magemath::powf::try_powf_f32x16_with with explicit options and the caller token; see docs/MAGEMATH-MIGRATION.md"
+    )]
     #[inline(always)]
     pub fn pow_midp_unchecked(self, n: f32) -> Self {
         crate::powf::const_api::approximate_power!(f32x16, T, self, n, approximate16, false, false)
@@ -396,6 +514,10 @@ impl<T: F32x16Convert> f32x16<T> {
     /// Same as [`pow_midp`](Self::pow_midp). Subnormal inputs are **not**
     /// handled: `pow_midp_precise(1e-42, 0.5)` returns about 7.7e-20, not
     /// 1.0e-21. Queued for removal.
+    #[deprecated(
+        since = "0.9.32",
+        note = "use magemath::powf::try_powf_f32x16_with with explicit options and the caller token; see docs/MAGEMATH-MIGRATION.md"
+    )]
     #[inline(always)]
     pub fn pow_midp_precise(self, n: f32) -> Self {
         self.pow_midp(n)

@@ -134,9 +134,7 @@ macro_rules! graph {
                 }
             };
             let result = if OPTIONS & PowfOptions::LOWP != 0 {
-                let log = if OPTIONS & CLAMP != 0 {
-                    input.log2_lowp()
-                } else {
+                let log = {
                     let xb = x.bitcast_to_i32();
                     let offset = ip(0x3f2a_aaab_u32 as i32);
                     let shifted = (xb - offset).shr_arithmetic_const::<23>();
@@ -191,9 +189,7 @@ macro_rules! graph {
                 // Coefficients and arithmetic order from the existing midp log2
                 // and exp2 graph; BitExact rounds every madd once, while the
                 // infallible approximation retains its caller's relaxed arithmetic.
-                let log = if OPTIONS & INPUT_EDGES != 0 {
-                    input.log2_midp()
-                } else {
+                let log = {
                     let adjusted = x.bitcast_to_i32() + ip((0x3f80_0000_u32 - 0x3f35_04f3) as i32);
                     let n = (adjusted.shr_arithmetic_const::<23>() - ip(127)).to_f32();
                     let a = ((adjusted & ip(0x007f_ffff)) + ip(0x3f35_04f3)).bitcast_to_f32();

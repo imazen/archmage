@@ -5,6 +5,7 @@
 //! The struct delegates all operations to the [`F32x4Backend`] trait.
 
 #![allow(clippy::should_implement_trait)]
+#![allow(deprecated)] // Retained compatibility methods call their deprecated module.
 
 use core::ops::{
     Add, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Div, DivAssign,
@@ -352,6 +353,10 @@ impl<T: F32x4Backend> f32x4<T> {
 
     /// Bounded, bit-consistent power in the default positive-normal domain.
     /// See [`crate::powf`] for rejection, rounding and accuracy contracts.
+    #[deprecated(
+        since = "0.9.32",
+        note = "use magemath::powf::try_powf_f32x4_with with explicit options and the caller token"
+    )]
     #[inline(always)]
     pub fn try_powf(self, exponent: f32) -> Result<Self, crate::powf::PowfError>
     where
@@ -363,6 +368,10 @@ impl<T: F32x4Backend> f32x4<T> {
     /// Configurable power with integer const flags carried through the caller.
     /// Build `PowfOptions` in const evaluation and supply `.bits()`;
     /// see [`crate::powf`]. Any rejected lane rejects the whole vector.
+    #[deprecated(
+        since = "0.9.32",
+        note = "use magemath::powf::try_powf_f32x4_with with explicit options and the caller token"
+    )]
     #[inline(always)]
     pub fn try_powf_with<const OPTIONS: u32>(
         self,
@@ -377,6 +386,10 @@ impl<T: F32x4Backend> f32x4<T> {
     /// Configurable power with runtime portability, precision and validation.
     /// Any rejected lane rejects the whole vector. Automatic selection
     /// may enter a more capable backend for the complete power graph.
+    #[deprecated(
+        since = "0.9.32",
+        note = "use magemath::powf::try_powf_f32x4_with with explicit options and the caller token"
+    )]
     #[inline(always)]
     pub fn try_powf_runtime(
         self,
