@@ -1,4 +1,5 @@
 //! Regression witnesses for the exp/log policy boundaries inherited from the stack.
+#![allow(deprecated)] // Intentional coverage of retained Magetypes compatibility APIs.
 #![forbid(unsafe_code)]
 use magetypes::{expf::*, logf::*};
 

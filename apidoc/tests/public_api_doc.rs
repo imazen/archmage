@@ -55,7 +55,7 @@ const TARGETS: &[(&str, &str)] = &[
 
 /// Explicit crate list: archmage-macros surfaces through archmage's
 /// re-exports; xtask + tests/no-features-crate are internal.
-const CRATES: [&str; 2] = ["archmage", "magetypes"];
+const CRATES: [&str; 3] = ["archmage", "magetypes", "magemath"];
 
 /// Snapshot file suffixes zenutils-apidoc writes per crate.
 const SUFFIXES: [&str; 3] = [".txt", ".features.txt", ".internal.txt"];

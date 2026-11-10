@@ -1,9 +1,9 @@
 //! Apply a checked power curve to four samples and one scalar.
 //!
-//! Run: cargo run -p magetypes --example bounded_powf
+//! Run: cargo run -p magemath --features std --example bounded_powf
 #![forbid(unsafe_code)]
 
-use magetypes::powf::{PowfError, PowfOptions, try_powf_array_with, try_powf_with};
+use magemath::powf::{PowfError, PowfOptions, try_powf_array_with, try_powf_with};
 
 // Gamma accepts +0 or bases in [2^-16, 2^16]. The exponent must be zero
 // or a normal floating-point value in [0, 4]. This preset checks those bounds

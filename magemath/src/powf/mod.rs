@@ -10,7 +10,7 @@
 //! by restricted Checked presets. Full HIGHP permits all f32 inputs/results; NaN payloads are unspecified.
 //! PositiveGamma excludes zero from Gamma and removes its result masks.
 //! AssumeValid omits numerical checks while retaining memory safety.
-//! Existing `pow_lowp`/`pow_midp` methods retain their existing behavior.
+//! Legacy Magetypes power methods remain available during deprecation.
 //!
 //! ```
 //! use magemath::powf::{try_powf, try_powf_with, PowfDomain, PowfOptions};

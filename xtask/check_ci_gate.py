@@ -54,6 +54,11 @@ def check_contract(ci, publish):
             require(any('--test fma_contract' in line and '--no-default-features' not in line
                         for cmd in commands for line in cmd.splitlines()),
                     f'{job} must enforce the std FMA contract')
+    for job in ('test-x64', 'test-aarch64', 'test-cross', 'test-wasm'):
+        commands = [step.get('run', '') for step in jobs[job]['steps']
+                    if 'if' not in step and step.get('continue-on-error', 'false') == 'false']
+        require(any('test -p magemath' in cmd and '--no-default-features' in cmd
+                    for cmd in commands), f'{job} must enforce Magemath std/no_std contracts')
     require(any(step.get('run') == 'python3 xtask/fma_vectors.py --check'
                 for step in jobs['workflow-contracts']['steps']),
             'Exact-rational FMA fixtures must be checked independently')

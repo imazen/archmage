@@ -27,6 +27,7 @@
 //! `just check-generated` catches the mistake locally. See CLAUDE.md,
 //! "FIX THE GENERATOR, NOT ITS OUTPUT".
 
+#![allow(deprecated)] // Intentional coverage of retained Magetypes compatibility APIs.
 use magetypes::simd::backends::{F32x4Convert, F32x8Convert, F64x2Backend, F64x4Backend};
 use magetypes::simd::generic::{f32x4, f32x8, f64x2, f64x4};
 #[cfg(feature = "w512")]

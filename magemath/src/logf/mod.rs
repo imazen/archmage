@@ -6,7 +6,7 @@
 //! rejects `x <= 0`, subnormals, NaN and infinities under Checked; `Specials`
 //! returns the IEEE specials (`0 -> -inf`, `<0 -> NaN`, NaN -> NaN,
 //! `+inf -> +inf`). `AssumeValid` omits checks while retaining memory safety.
-//! Existing `log2_lowp`/`log2_midp` methods retain their existing behavior.
+//! Legacy Magetypes logarithm methods remain available during deprecation.
 
 pub(crate) mod const_api;
 mod dispatch;

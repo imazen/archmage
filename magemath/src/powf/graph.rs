@@ -10,12 +10,11 @@ pub(super) const RELAXED: usize = 4;
 // Internal approximate-power configurations. These are not accepted public
 // option encodings: the existing infallible methods select them at compile time.
 pub(super) const CLAMP: u32 = 256;
-pub(super) const INPUT_EDGES: u32 = 512;
 // Dispatch and domain flags have already selected the provider and ZERO/GAMMA
 // parameters. Keeping them in the arithmetic instantiation duplicates identical
 // debug graphs for Caller/Automatic and portable/backend-dependent adapters.
 #[cfg(debug_assertions)]
-const KERNEL_FLAGS: u32 = PowfOptions::LOWP | PowfOptions::ASSUME | CLAMP | INPUT_EDGES;
+const KERNEL_FLAGS: u32 = PowfOptions::LOWP | PowfOptions::ASSUME;
 #[cfg(target_arch = "wasm32")]
 pub(super) const WASM_SOFTWARE: usize = 3;
 #[cfg(all(feature = "std", not(miri)))]
@@ -32,8 +31,6 @@ macro_rules! shared_kernel {
             8 => $vector::<$t, $arithmetic, $zero, $gamma, 8>($token, $input, $exponent),
             32 => $vector::<$t, $arithmetic, $zero, $gamma, 32>($token, $input, $exponent),
             40 => $vector::<$t, $arithmetic, $zero, $gamma, 40>($token, $input, $exponent),
-            296 => $vector::<$t, $arithmetic, $zero, $gamma, 296>($token, $input, $exponent),
-            800 => $vector::<$t, $arithmetic, $zero, $gamma, 800>($token, $input, $exponent),
             _ => unreachable!("private arithmetic flags are validated at the boundary"),
         }
     };

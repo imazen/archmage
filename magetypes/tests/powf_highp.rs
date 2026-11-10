@@ -1,4 +1,5 @@
 //! Canonical HIGHP values come from an independent exact-rational graph oracle.
+#![allow(deprecated)] // Intentional coverage of retained Magetypes compatibility APIs.
 use magetypes::powf::{self, PowfErrorKind, PowfExecution, PowfOptions};
 mod fixtures {
     include!("common/highp_vectors.rs");

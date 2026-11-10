@@ -1,6 +1,7 @@
 //! `exp2_lowp`, and `exp_lowp` through it, keep the lowp error up to the top of
 //! the f32 range. The input used to be clamped to 126.0, so every x in [126, 128)
 //! returned 2^126: 50% low at x = 127 and 75% low near 128.
+#![allow(deprecated)] // Intentional coverage of retained Magetypes compatibility APIs.
 #![forbid(unsafe_code)]
 use archmage::{ScalarToken, incant, magetypes};
 

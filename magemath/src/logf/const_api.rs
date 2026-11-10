@@ -61,7 +61,9 @@ pub(super) fn log1p_parts(x: f32) -> (f32, f32) {
     };
     (u, c)
 }
-/// Scalar log1p: `ln(1+x)`, accurate near x = 0 via the correction term.
+/// Scalar log1p: `ln(1+x)`, with a correction for rounding `1+x`.
+/// MIDP handles tiny inputs; LOWP retains the log2 fit bias near zero and
+/// can return a negative approximation for a tiny positive input.
 /// Domain checks apply to `u = 1+x` — the Positive domain rejects x <= -1.
 #[inline(always)]
 pub fn try_log1p_with<const OPTIONS: u32>(x: f32) -> Result<f32, LogfError> {

@@ -1,7 +1,7 @@
 # Powf validation tools
 
 These programs are machine-facing research and regression tools. Human-facing
-usage is taught by [the bounded-power example](../../magetypes/examples/bounded_powf.rs).
+usage is taught by [the bounded-power example](../../magemath/examples/bounded_powf.rs).
 This package is outside the release workspace and is not published. Its `std`,
 `w512` and `avx512` features forward to the library being evaluated. A CLI binary
 still uses Rust std for I/O when the library's `std` feature is disabled.

@@ -947,8 +947,21 @@ powf-validation-build:
     cargo build --release --locked --manifest-path benchmarks/powf_validation/Cargo.toml --all-features --bins
 
 powf-tutorial:
-    cargo run -p magetypes --example bounded_powf
+    cargo run -p magemath --features std --example bounded_powf
 
 powf-validation-check:
     cargo clippy --locked --manifest-path benchmarks/powf_validation/Cargo.toml --all-features --all-targets -- -D warnings
     cargo clippy --locked --manifest-path benchmarks/powf_validation/Cargo.toml --no-default-features --features w512 --all-targets -- -D warnings
+
+# Finite validation for the focused configurable-math migration.
+magemath-check:
+    cargo test -p magemath --features "std avx512"
+    cargo test -p magemath --no-default-features --features w512
+    cargo test -p magemath --release --features "std avx512" --test contracts
+    cargo clippy -p magemath --all-targets --features "std avx512" -- -D warnings
+    cargo test -p magetypes --test expf_logf_contracts
+    cargo fmt -p magemath -p magetypes -p xtask -- --check
+
+magemath-check-wasm:
+    RUSTFLAGS="-C target-feature=+simd128" CARGO_TARGET_WASM32_WASIP1_RUNNER=wasmtime cargo test -p magemath --features "std w512" --target wasm32-wasip1
+

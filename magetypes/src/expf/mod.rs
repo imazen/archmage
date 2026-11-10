@@ -7,7 +7,7 @@
 //! arithmetic. `Bounded` rejects NaN and infinities under Checked; `Full`
 //! propagates them to their natural results (NaN -> NaN, `+inf` -> `+inf`,
 //! `-inf` -> `+0`). `AssumeValid` omits checks while retaining memory safety.
-//! Existing `exp2_lowp`/`exp2_midp` methods retain their existing behavior.
+//! Legacy Magetypes exponential methods remain available during deprecation.
 
 pub(crate) mod const_api;
 mod dispatch;

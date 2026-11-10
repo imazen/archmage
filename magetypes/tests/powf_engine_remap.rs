@@ -1,4 +1,5 @@
 //! Independent composition oracle from the pre-remap power methods (main 6bfd83d7).
+#![allow(deprecated)] // Intentional coverage of retained Magetypes compatibility APIs.
 #![forbid(unsafe_code)]
 #[cfg(any(
     target_arch = "x86_64",
