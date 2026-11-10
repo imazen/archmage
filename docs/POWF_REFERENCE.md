@@ -34,8 +34,8 @@ Automatic preserves a capable caller or upgrades the whole operation. Caller pre
 
 | Family | FMA-capable matching caller | ScalarCaller / nonfusing backend | Single values and tails |
 |---|---|---|---|
-| BitExact MIDP | Ten native fused nodes | Exact software fused nodes | Same selected graph via `try_powf_with_token` |
-| BitExact LOWP | Seven native fused nodes | Exact software fused nodes | Same selected graph via `try_powf_with_token` |
+| BitExact MIDP | Ten native fused nodes | Compile-proven FMA, otherwise exact software nodes | Same selected graph via `try_powf_with_token` |
+| BitExact LOWP | Seven native fused nodes | Compile-proven FMA, otherwise exact software nodes | Same selected graph via `try_powf_with_token` |
 | BackendDependent MIDP | Ten native fused nodes | Separate multiply/add | Same token required for identical bits |
 | BackendDependent LOWP | Seven native fused nodes | Separate multiply/add | Same token required for identical bits |
 

@@ -911,8 +911,14 @@ powf-midlow-analyze binary *files:
 powf-midlow-cross directory:
     bash benchmarks/powf_module_2026-11-07/midlow_cross.sh "{{directory}}"
 
+powf-midlow-emulated directory:
+    bash benchmarks/powf_module_2026-11-07/midlow_emulated.sh "{{directory}}"
+
 powf-midlow-codegen binary directory:
     python3 -B benchmarks/powf_module_2026-11-07/midlow_codegen.py "{{binary}}" "{{directory}}"
+
+powf-midlow-bars directory output:
+    python3 -B benchmarks/powf_module_2026-11-07/midlow_bars.py "{{directory}}" "{{output}}"
 
 powf-remap-probes:
     python3 -B benchmarks/powf_module_2026-11-07/remap_probes.py
