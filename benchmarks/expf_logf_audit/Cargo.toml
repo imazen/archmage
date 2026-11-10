@@ -43,3 +43,7 @@ required-features = ["bench"]
 [[bin]]
 name = "nan_scan"
 required-features = ["bench"]
+
+[[bin]]
+name = "normal_range"
+required-features = ["bench"]

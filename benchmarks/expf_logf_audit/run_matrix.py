@@ -12,13 +12,16 @@ p=argparse.ArgumentParser(description=__doc__)
 p.add_argument('binary',type=Path);p.add_argument('output',type=Path)
 p.add_argument('--exploratory',action='store_true')
 p.add_argument('--policies',action='store_true',help='64 policy-ablation cells, 25 explicitly named implementations')
+p.add_argument('--normal-range',action='store_true',help='eight experimental range-contract cells at width 8')
 a=p.parse_args();a.output.mkdir(parents=True,exist_ok=False)
 binary=a.binary.resolve()
 cells=[f'{op}/{precision}/{width}/{context}/{size}/{work}'
        for op in ['exp2','log2']for precision in ['midp','lowp']
        for width in ([4,8]if a.policies else[4,8,16])for context in ['native','scalar']
        for size in [64,4096]for work in ['stream','chain']]
-assert len(cells)==(64 if a.policies else 96)
+assert not(a.normal_range and a.policies)
+if a.normal_range:cells=[f'exp2/normal-range/8/{context}/{size}/{work}'for context in ['native','scalar']for size in [64,4096]for work in ['stream','chain']]
+assert len(cells)==(8 if a.normal_range else 64 if a.policies else 96)
 manifest=dict(binary=str(binary),sha256=hashlib.sha256(binary.read_bytes()).hexdigest(),
               cells=cells,pairs=50,exploratory=a.exploratory,
               thresholds=dict(no_regression_ci95_upper=1.02,optimization_ci95_upper=1.00),
