@@ -991,12 +991,13 @@ magemath-public-boundary:
 
 # Scalar sqrt routes and retained portable software controls.
 sqrt-check:
+    python3 -B xtask/sqrt_vectors.py --check
     cargo test -p magetypes --features "std avx512" --test sqrt_portability --test precise_reciprocals
     cargo test -p magetypes --no-default-features --features w512 --test sqrt_portability
     cargo clippy -p magetypes --all-targets --features "std avx512" -- -D warnings
 
-sqrt-bench:
-    ZENBENCH_LAUNCHER_PIDS=$$ cargo bench -p magetypes --bench sqrt_paths --features std
+sqrt-bench *ARGS:
+    ARCHMAGE_SQRT_MEASURE=1 ZENBENCH_LAUNCHER_PIDS=$$ cargo bench -p magetypes --bench sqrt_paths --features std -- {{ARGS}}
 
 # Explicit opt-in, constant-memory comparison of all f32 input patterns.
 sqrt-check-exhaustive:
@@ -1005,3 +1006,7 @@ sqrt-check-exhaustive:
 sqrt-check-wasm:
     RUSTFLAGS="-C target-feature=+simd128" CARGO_TARGET_WASM32_WASIP1_RUNNER=wasmtime cargo test -p magetypes --target wasm32-wasip1 --features "std w512" --test sqrt_portability
     RUSTFLAGS="-C target-feature=+simd128" CARGO_TARGET_WASM32_WASIP1_RUNNER=wasmtime cargo test -p magetypes --target wasm32-wasip1 --no-default-features --features w512 --test sqrt_portability
+
+sqrt-codegen:
+    cargo rustc -p magetypes --release --features std --bench sqrt_paths -- --emit=asm
+    cargo rustc -p magetypes --release --no-default-features --features w512 --test sqrt_portability -- --emit=asm

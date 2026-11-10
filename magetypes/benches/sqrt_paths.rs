@@ -101,7 +101,7 @@ fn register(suite: &mut Suite) {
     black_box(scalar64_one as fn(f64) -> f64);
 }
 
-fn main() {
+fn measure() {
     let results = zenbench::run_gated(GateConfig::strict(), register);
     if let Ok(path) = std::env::var("ARCHMAGE_SQRT_RESULTS") {
         results.save(path).unwrap();
@@ -113,5 +113,34 @@ fn main() {
             group.samples.iter().all(|s| s.gate_clean == Some(true)),
             "sqrt timing has flagged or unqualified rounds"
         );
+    }
+}
+
+fn main() {
+    // Measurement is opt-in at the caller. Cargo invokes harness-free benches
+    // without a distinguishing test argument under `cargo test --all-targets`.
+    if std::env::var("ARCHMAGE_SQRT_MEASURE").as_deref() != Ok("1") {
+        let input32 = core::array::from_fn(|i| (i + 1) as f32 * 0.125);
+        let input64 = core::array::from_fn(|i| (i + 1) as f64 * 0.125);
+        macro_rules! check {
+            ($stream:ident,$input:ident,$chain:ident) => {{
+                let mut reference = [0.; N];
+                $stream::<0>(&$input, &mut reference);
+                let mut output = [0.; N];
+                $stream::<1>(&$input, &mut output);
+                assert_eq!(output, reference);
+                $stream::<2>(&$input, &mut output);
+                assert_eq!(output, reference);
+                $stream::<3>(&$input, &mut output);
+                assert_eq!(output, reference);
+                assert_eq!($chain::<0>(0.75), $chain::<1>(0.75));
+                assert_eq!($chain::<0>(0.75), $chain::<2>(0.75));
+            }};
+        }
+        check!(stream32, input32, chain32);
+        check!(stream64, input64, chain64);
+        eprintln!("sqrt kernel checks passed; use `just sqrt-bench` for timings");
+    } else {
+        measure();
     }
 }
