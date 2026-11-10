@@ -47,3 +47,7 @@ required-features = ["bench"]
 [[bin]]
 name = "normal_range"
 required-features = ["bench"]
+
+[[bin]]
+name = "analyze_normal"
+required-features = ["bench"]
