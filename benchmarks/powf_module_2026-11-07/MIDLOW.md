@@ -177,3 +177,9 @@ numerical result while retaining exact bits for every canonical graph.
 The [sealed evidence inventory](MIDLOW-ARTIFACTS.md) records file identities and
 the independently verified mirror, including all 118 final cells and every
 earlier source/run version.
+
+The [integration review](MIDLOW-REVIEW.md) records the range proofs, compiler
+differences, exact validation scope and remaining promotion evidence. All 19
+local CI stages pass in 675 s on the final library code; the later test-import
+cleanup passes all 24 warning configurations. Benchmark Clippy and the final
+64-policy harness verifier pass. Promotion remains held.
