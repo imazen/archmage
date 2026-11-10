@@ -861,6 +861,35 @@ const MIRI_SKIPPED_TESTS: &[(&str, Option<&str>, &str)] = &[
         None,
         "a range sweep over [126, 128) (12 s under Miri): safe code only",
     ),
+    (
+        "powf_tails_portable_midp",
+        None,
+        "new numerical policy/tail grid; safe scalar math, with memory paths covered by \
+         generic_all_types and exact primitives by fma_contract; native and WASM run every case",
+    ),
+    (
+        "powf_tails_portable_lowp",
+        None,
+        "new numerical policy/tail grid; safe scalar math, with memory paths covered by \
+         generic_all_types and exact primitives by fma_contract; native and WASM run every case",
+    ),
+    (
+        "powf_tails_backend_midp",
+        None,
+        "new numerical policy/tail grid; safe scalar math, with memory paths covered by \
+         generic_all_types and exact primitives by fma_contract; native and WASM run every case",
+    ),
+    (
+        "powf_tails_backend_lowp",
+        None,
+        "new numerical policy/tail grid; safe scalar math, with memory paths covered by \
+         generic_all_types and exact primitives by fma_contract; native and WASM run every case",
+    ),
+    (
+        "powf_engine_remap",
+        None,
+        "new numerical composition grid; safe scalar math; native and WASM run the grid, while fma_contract and generic_all_types retain the memory paths under Miri",
+    ),
 ];
 
 /// magetypes integration-test targets, minus the binaries [`MIRI_SKIPPED_TESTS`]

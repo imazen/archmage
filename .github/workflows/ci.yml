@@ -368,14 +368,14 @@ jobs:
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
 
-      # Pin the version. Unpinned, install.sh resolves "latest" by scraping the
-      # unauthenticated api.github.com releases endpoint, which is rate-limited
-      # on Actions runners; the rate-limit JSON then sed's down to a bare "{" and
-      # the step dies with `Could not download Wasmtime version '{'` (run
-      # 33271901730). Pinning skips that API call entirely.
+      # Keep the same engine pin and verify its immutable release asset.
+      # Release-page redirects returned HTTP 504 before tests could start.
       - name: Install wasmtime
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          curl https://wasmtime.dev/install.sh -sSf | bash -s -- --version v48.0.1
+          python3 -B xtask/test_wasmtime_installer.py
+          bash xtask/install-wasmtime-ci.sh
           echo "$HOME/.wasmtime/bin" >> $GITHUB_PATH
           "$HOME/.wasmtime/bin/wasmtime" --version
 
@@ -664,6 +664,11 @@ jobs:
       - name: Clippy (macro consumer crates)
         run: cargo clippy -p archmage-no-features-test -p archmage-clippy-consumer --all-targets -- -D warnings
 
+      - name: Clippy (powf validation tools, std and no_std library)
+        run: |
+          cargo clippy --locked --manifest-path benchmarks/powf_validation/Cargo.toml --all-features --all-targets -- -D warnings
+          cargo clippy --locked --manifest-path benchmarks/powf_validation/Cargo.toml --no-default-features --features w512 --all-targets -- -D warnings
+
   # ==========================================================================
   # Clippy on aarch64 — the NEON backend impls are cfg'd out on x86, so
   # lints inside them were unreachable from the ubuntu-latest lane above.
@@ -708,6 +713,11 @@ jobs:
 
       - name: Clippy (macro consumer crates)
         run: cargo clippy -p archmage-no-features-test -p archmage-clippy-consumer --all-targets -- -D warnings
+
+      - name: Clippy (powf validation tools, std and no_std library)
+        run: |
+          cargo clippy --locked --manifest-path benchmarks/powf_validation/Cargo.toml --all-features --all-targets -- -D warnings
+          cargo clippy --locked --manifest-path benchmarks/powf_validation/Cargo.toml --no-default-features --features w512 --all-targets -- -D warnings
 
   # ==========================================================================
   # Warning sweep: clippy -D warnings semantics over every target, feature and
@@ -921,7 +931,7 @@ jobs:
   # ==========================================================================
   sde:
     name: SDE ${{ matrix.cpu.name }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.cpu.runner }}
     # Emulation runs the full magetypes suite in ~2.5 min per lane; anything
     # dramatically slower means a subprocess-spawning binary slipped past the
     # skip list (soundness_exploits once burned 19 emulated minutes on one
@@ -933,13 +943,16 @@ jobs:
         cpu:
           # Pentium 4 (-p4) removed: SDE's Pentium 4 model is 32-bit only
           # and cannot run 64-bit test binaries.
-          - { name: "Nehalem (SSE4.2)", flag: "-nhm" }
-          - { name: "Haswell (AVX2+FMA)", flag: "-hsw" }
-          - { name: "Skylake-X (AVX-512)", flag: "-skx" }
-          - { name: "Ice Lake (AVX-512 VBMI2)", flag: "-icl" }
+          # Ubuntu 26.04 cloud images default to amd64v3; their loader can
+          # execute AVX before Nehalem tests start. Use a baseline userland.
+          # https://ubuntu.com/cloud/public-cloud/docs/all-clouds-explanation/architecture-variants/
+          - { name: "Nehalem (SSE4.2)", flag: "-nhm", runner: "ubuntu-24.04" }
+          - { name: "Haswell (AVX2+FMA)", flag: "-hsw", runner: "ubuntu-latest" }
+          - { name: "Skylake-X (AVX-512)", flag: "-skx", runner: "ubuntu-latest" }
+          - { name: "Ice Lake (AVX-512 VBMI2)", flag: "-icl", runner: "ubuntu-latest" }
           # The only lane where Avx512Fp16Token summons, so the only one that
           # executes tests/avx512fp16_intrinsics.rs.
-          - { name: "Sapphire Rapids (AVX-512 FP16)", flag: "-spr" }
+          - { name: "Sapphire Rapids (AVX-512 FP16)", flag: "-spr", runner: "ubuntu-latest" }
 
     steps:
       - uses: actions/checkout@v7
@@ -1158,9 +1171,11 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Install semver checker
-        uses: taiki-e/install-action@v2
-        with:
-          tool: cargo-semver-checks@0.51.0
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 -B xtask/test_wasmtime_installer.py
+          bash xtask/install-semver-ci.sh
 
       - name: Check semver and concrete target features
         run: python3 -B xtask/check_semver.py ${{ matrix.crate }}

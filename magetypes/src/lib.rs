@@ -107,6 +107,9 @@ pub use types::SimdTypes;
 // Cross-tier casting utilities
 pub mod cast;
 
+/// Configurable f32 power with explicit portability, precision and validation.
+pub mod powf;
+
 // Platform-appropriate types via prelude
 pub mod prelude;
 

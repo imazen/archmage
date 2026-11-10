@@ -1,0 +1,43 @@
+[package]
+name = "archmage-powf-provider-comparison"
+version = "0.0.0"
+edition = "2024"
+publish = false
+autobins = false
+
+[workspace]
+
+[features]
+avx512 = ["archmage/avx512", "magetypes/avx512"]
+
+[dependencies]
+archmage = { path = "../.." }
+magetypes = { path = "../../magetypes" }
+sleef = "=0.3.3"
+libm = "=0.2.16"
+serde_json = "1.0.151"
+zenbench = "0.1.11"
+
+[profile.release]
+codegen-units = 1
+lto = "thin"
+
+[[bin]]
+name = "rust_provider_worker"
+path = "src/worker.rs"
+
+[[bin]]
+name = "external_providers_bench"
+path = "src/bench.rs"
+
+[[bin]]
+name = "external_providers_analyze"
+path = "src/analyze.rs"
+
+[[bin]]
+name = "arm_codegen"
+path = "src/arm_codegen.rs"
+
+[[bin]]
+name = "arm_eval"
+path = "src/arm_eval.rs"

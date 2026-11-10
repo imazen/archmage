@@ -75,11 +75,11 @@ impl F32x4Backend for NeonToken {
     }
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn min(self, a: float32x4_t, b: float32x4_t) -> float32x4_t {
-        vminq_f32(a, b)
+        vminnmq_f32(a, b)
     }
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn max(self, a: float32x4_t, b: float32x4_t) -> float32x4_t {
-        vmaxq_f32(a, b)
+        vmaxnmq_f32(a, b)
     }
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn sqrt(self, a: float32x4_t) -> float32x4_t {
@@ -164,8 +164,8 @@ impl F32x4Backend for NeonToken {
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn reduce_min(self, a: float32x4_t) -> f32 {
         {
-            let pair = vpminq_f32(a, a);
-            let pair = vpminq_f32(pair, pair);
+            let pair = vpminnmq_f32(a, a);
+            let pair = vpminnmq_f32(pair, pair);
             vgetq_lane_f32::<0>(pair)
         }
     }
@@ -173,8 +173,8 @@ impl F32x4Backend for NeonToken {
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn reduce_max(self, a: float32x4_t) -> f32 {
         {
-            let pair = vpmaxq_f32(a, a);
-            let pair = vpmaxq_f32(pair, pair);
+            let pair = vpmaxnmq_f32(a, a);
+            let pair = vpmaxnmq_f32(pair, pair);
             vgetq_lane_f32::<0>(pair)
         }
     }
@@ -360,12 +360,12 @@ impl F32x8Backend for NeonToken {
 
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn min(self, a: [float32x4_t; 2], b: [float32x4_t; 2]) -> [float32x4_t; 2] {
-        [vminq_f32(a[0], b[0]), vminq_f32(a[1], b[1])]
+        [vminnmq_f32(a[0], b[0]), vminnmq_f32(a[1], b[1])]
     }
 
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn max(self, a: [float32x4_t; 2], b: [float32x4_t; 2]) -> [float32x4_t; 2] {
-        [vmaxq_f32(a[0], b[0]), vmaxq_f32(a[1], b[1])]
+        [vmaxnmq_f32(a[0], b[0]), vmaxnmq_f32(a[1], b[1])]
     }
 
     #[arcane(suppress_const_test, _self = NeonToken)]
@@ -519,9 +519,9 @@ impl F32x8Backend for NeonToken {
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn reduce_min(self, a: [float32x4_t; 2]) -> f32 {
         {
-            let m = vminq_f32(a[0], a[1]);
-            let pair = vpminq_f32(m, m);
-            let pair = vpminq_f32(pair, pair);
+            let m = vminnmq_f32(a[0], a[1]);
+            let pair = vpminnmq_f32(m, m);
+            let pair = vpminnmq_f32(pair, pair);
             vgetq_lane_f32::<0>(pair)
         }
     }
@@ -529,9 +529,9 @@ impl F32x8Backend for NeonToken {
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn reduce_max(self, a: [float32x4_t; 2]) -> f32 {
         {
-            let m = vmaxq_f32(a[0], a[1]);
-            let pair = vpmaxq_f32(m, m);
-            let pair = vpmaxq_f32(pair, pair);
+            let m = vmaxnmq_f32(a[0], a[1]);
+            let pair = vpmaxnmq_f32(m, m);
+            let pair = vpmaxnmq_f32(pair, pair);
             vgetq_lane_f32::<0>(pair)
         }
     }
@@ -707,11 +707,11 @@ impl F64x2Backend for NeonToken {
     }
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn min(self, a: float64x2_t, b: float64x2_t) -> float64x2_t {
-        vminq_f64(a, b)
+        vminnmq_f64(a, b)
     }
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn max(self, a: float64x2_t, b: float64x2_t) -> float64x2_t {
-        vmaxq_f64(a, b)
+        vmaxnmq_f64(a, b)
     }
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn sqrt(self, a: float64x2_t) -> float64x2_t {
@@ -795,7 +795,7 @@ impl F64x2Backend for NeonToken {
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn reduce_min(self, a: float64x2_t) -> f64 {
         {
-            let pair = vpminq_f64(a, a);
+            let pair = vpminnmq_f64(a, a);
             vgetq_lane_f64::<0>(pair)
         }
     }
@@ -803,7 +803,7 @@ impl F64x2Backend for NeonToken {
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn reduce_max(self, a: float64x2_t) -> f64 {
         {
-            let pair = vpmaxq_f64(a, a);
+            let pair = vpmaxnmq_f64(a, a);
             vgetq_lane_f64::<0>(pair)
         }
     }
@@ -959,12 +959,12 @@ impl F64x4Backend for NeonToken {
 
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn min(self, a: [float64x2_t; 2], b: [float64x2_t; 2]) -> [float64x2_t; 2] {
-        [vminq_f64(a[0], b[0]), vminq_f64(a[1], b[1])]
+        [vminnmq_f64(a[0], b[0]), vminnmq_f64(a[1], b[1])]
     }
 
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn max(self, a: [float64x2_t; 2], b: [float64x2_t; 2]) -> [float64x2_t; 2] {
-        [vmaxq_f64(a[0], b[0]), vmaxq_f64(a[1], b[1])]
+        [vmaxnmq_f64(a[0], b[0]), vmaxnmq_f64(a[1], b[1])]
     }
 
     #[arcane(suppress_const_test, _self = NeonToken)]
@@ -1117,8 +1117,8 @@ impl F64x4Backend for NeonToken {
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn reduce_min(self, a: [float64x2_t; 2]) -> f64 {
         {
-            let m = vminq_f64(a[0], a[1]);
-            let pair = vpminq_f64(m, m);
+            let m = vminnmq_f64(a[0], a[1]);
+            let pair = vpminnmq_f64(m, m);
             vgetq_lane_f64::<0>(pair)
         }
     }
@@ -1126,8 +1126,8 @@ impl F64x4Backend for NeonToken {
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn reduce_max(self, a: [float64x2_t; 2]) -> f64 {
         {
-            let m = vmaxq_f64(a[0], a[1]);
-            let pair = vpmaxq_f64(m, m);
+            let m = vmaxnmq_f64(a[0], a[1]);
+            let pair = vpmaxnmq_f64(m, m);
             vgetq_lane_f64::<0>(pair)
         }
     }

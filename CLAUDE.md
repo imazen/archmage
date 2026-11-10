@@ -45,6 +45,14 @@ requirement for rewritten calls. Tag only after full CI is green on the
 release commit and the user has reviewed the READMEs and said to publish.
 For 0.9.31 stable, rerun ARM after this week's FMA changes.
 
+## Examples
+
+New `magetypes/examples/` programs are tutorial-quality code for people: explain
+one use case, show the API and its input contract, and produce readable output.
+Protocol drivers, raw-bit dumpers, exhaustive scans and benchmark diagnostics
+belong under `benchmarks/` in standalone packages, outside default workspace
+tests. Keep their callers and reproducibility instructions with the tools.
+
 ## CRITICAL: Every Conversation Health Check
 
 **Run these checks at the start of every conversation, even if the user doesn't ask:**
@@ -1208,14 +1216,140 @@ fn process(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 
 ## Known Bugs
 
+Canonical HIGHP packed performance (2026-11-09, draft held): the first M6
+32-cell exploratory matrix has 24 Full packed cells within the 2% std cost
+bound by the cost-only interval and eight exceeding it. None is promotion
+eligible: all fifty rounds per cell are flagged and class confinement is
+unverified. Gamma zero restoration also adds work: x8/4096 stream 2.4 takes
+1,450,365.67 ns per 1,048,576 powers in the assumed packed graph versus
+1,372,896.49 ns in the prior scalar Gamma graph. A separately frozen pack-zero
+predicate iteration is under comparison; preserve both. See
+`benchmarks/powf_providers_2026-11-09/HIGHP-SIMD.md`.
+
+AArch64 Miri coverage gap (2026-11-09): native M6 `just ci` reaches the
+unsupported interpreter intrinsic `llvm.aarch64.neon.sshl.v4i32` from the
+automatic powf preset test. Both pinned nightly-2026-10-06 and current
+nightly-2026-11-07 reproduce it. Native ARM tests and sampled canonical result
+comparisons pass; x86 Miri passes. No test is skipped or expectation relaxed.
+The existing variable-shift lowering preserves the established N=0 contract;
+do not replace it with an unguarded immediate intrinsic to work around Miri.
+See `benchmarks/powf_providers_2026-11-09/M6-NEON.md`.
+
+Experimental Arm scalar powf port (2026-11-09, benchmark package only): the
+first array::from_fn callback was outlined outside its V3 caller and performed
+nine indirect FMA calls per ordinary lane. Explicit inline array iteration
+preserves the feature context; frozen actual-worker cargo asm and perf counters
+verify the correction. Native Zen 5 compilation also vectorizes the full loop
+into a different graph layout with gathers; fewer instructions did not imply
+lower measured cycle cost. Preserve both iterations and the separate native
+diagnostic. See `benchmarks/powf_providers_2026-11-09/ARM-RESULTS.md`.
+
+Benchmark provider range observations (2026-11-09): Rust SLEEF 0.3.3 vector
+u10 returns infinity for f32 MAX raised to 1 on the measured builds. AOCL-LibM
+OSE 5.3.2 vector x4/x8 returns 1fb504f2 for +0^0.5 on the measured AMD build,
+and x4 special-input results can depend on neighboring lanes. These are
+benchmark-only providers; no production admission or threshold change follows.
+Finite-output ULP maxima do not describe their exceptional/range behavior.
+Complete outputs, flags, source identity and scope are documented in
+`benchmarks/powf_providers_2026-11-09/README.md`.
+
+Benchmark Rust libm range observation (2026-11-09): pinned Rust libm 0.2.16
+`powf` returns +inf for base bits 3f7ffff6, exponent bits cd000001, on Intel and
+M6. Directed MPFR 256 encloses the finite result in
+[5.5408073257725465e34,5.540807325772547e34]; rounded f32 bits 792abd43 match
+std on both machines. One unique pair repeats under two corpus domain tags.
+This exceeds the Gamma exponent domain; libm remains a benchmark-only direct
+dependency. Its finite-output sampled ULP maximum must not hide this overflow.
+See `benchmarks/powf_module_2026-11-07/PROVIDERS-PLAN.md`.
+
+Powf debug runtime fanout (2026-11-08, corrected in draft): forcing all 64
+policy arms into each unoptimized caller exhausts the default WASM linear
+stack in the existing payload/mask test. Debug builds retain separate runtime
+decoder and selected-graph frames. Optimized builds keep their existing
+always-inline policy; no stack limit, expectation or input coverage changes.
+Use `just powf-policy-debug-wasm` with the normal WASM runner.
+
+Std Full HIGHP special values (2026-11-08): signaling-NaN bits `7f800001`
+raised to +0 or -0 yield NaN on Linux x86 and 1 on Apple ARM. BackendDependent Full HIGHP
+inherits that std classification. Restricted Checked
+presets reject the NaN base before std delegation. Canonical Full BitExact/HIGHP
+preserves the Arm graph classification, including signaling NaN raised to zero;
+NaN payload/sign are unspecified. See `docs/POWF.md`.
+
+
+Draft powf option families (2026-11-08): LOWP options inherit the exponent-bias
+limitation below; Gamma presets explicitly bound inputs and validate the whole
+vector. MIDP/LOWP/HIGHP names are quality families, not global ULP guarantees.
+Std HIGHP is BackendDependent only. AssumeValid removes numerical checks but
+never relaxes width or option validity. Native FMA policies can intentionally
+compile to identical graphs; inspect the public policy protocol and measured
+instruction/timing comparisons in `benchmarks/powf_module_2026-11-07/POLICY-PLAN.md`.
+
+
+Backend-dependent LOWP range limitation (2026-11-08): a normal computed output
+does not establish accuracy for unrestricted exponents. At base `3f7fffff`,
+exponent `cb317217`, both fused and separate LOWP return `4ad3af2c` while
+MPFR power is approximately 1.99999992591481. Explicit exponent bounds are
+required for a LOWP accuracy preset. The controlled Gamma study leaves all
+production math and pre-existing thresholds unchanged; see
+`benchmarks/powf_module_2026-11-07/NONFUSED.md` for measured errors, all retained
+timings, unavailable coverage and the exploratory M6 cost tradeoff.
+
+Benchmark-only LOWP zero guard (2026-11-08, corrected): its experimental
+NonNegativeNormal path rejected +0 with n=2^30 or f32::MAX because its biased
+log2(1) entered the computed-range check. The guard now excludes admitted zero
+lanes, preserving the independent oracle's +0 result. Gamma timing kernels
+and production library code are unchanged. Full-width/mixed-lane validation
+includes the reproducer; see the controlled rounding report above.
+
+Draft bounded powf accuracy (2026-11-08): the fixed fused midp graph has no
+whole-domain ULP guarantee. Adaptive search plus directed MPFR confirmation
+found measured errors up to 438.504 ULP (PositiveNormal), 416.579
+(NonNegativeNormal), and 47.902 (Gamma), exceeding the original random-sample
+maxima. Do not treat its bit-consistency contract as std-level accuracy.
+Actual legacy/std comparisons and held performance gates are recorded in
+`benchmarks/powf_module_2026-11-07/REPLACEMENTS.md`. Existing legacy coefficients
+are unchanged.
+
+Powf debug compiler footprint (2026-11-09): the expanded const-policy unit
+crate previously peaks at 9.54 GiB during strict-WASM compilation. Debug-only
+arithmetic sharing and chunk-local tests retain all cases; a fresh complete
+CI-equivalent run passes under a 6 GiB cap at 3.28 GiB peak RSS. This is compiler
+memory, not an array of all numerical results. Optimized code retains its
+original graph; 373 emitted x86 loop bodies match. Details and all failed
+resource trials: `benchmarks/powf_module_2026-11-07/MIDLOW-DEBUG.md`.
+
+Bounded powf replacement costs (2026-11-09): zero-capable Gamma MIDP has measured
+cases above the 2% bound against legacy `pow_midp_unchecked`, despite gains over
+checked legacy MIDP. PositiveGamma explicitly excludes zero and removes those
+masks, preserving Gamma bits for positive inputs. Portable ScalarCaller still
+pays exact software-FMA cost when upgrades are declined; never label it a native
+FMA path. All retained versions, flag rankings and admission status are in
+`benchmarks/powf_module_2026-11-07/MIDLOW.md`. Existing legacy behavior is unchanged.
+
 ### Open
+
+- **Original runtime-options bounded powf cost gate (2026-11-07, held):**
+  the historical implementation at `56059d2c` is additive; existing power
+  methods are unchanged. Against its identical
+  prevalidated fused graph, the clean Neoverse-N1 x4/64 Gamma stream Caller
+  costs +37.64% (paired 95% CI +36.65–38.25%). All 72 matching-NEON Automatic
+  cells fail the 2% bound; all 96 scalar-context Automatic cells pass through
+  whole-operation acceleration. Quiet full AMD/Intel/WASM coverage is missing.
+  These ratios describe the original runtime-options caller boundary. The
+  caller-visible const route and actual legacy/std controls have separate
+  evidence in `benchmarks/powf_module_2026-11-07/REPLACEMENTS.md`; promotion
+  remains held. Historical data: `benchmarks/powf_module_2026-11-07/README.md`.
 
 - **magetypes transcendentals mishandle NaN inputs (2026-11-05, open):** the
   docs claimed NaN → NaN for logs. Measured on scalar, V3, NEON and WASM:
   `log2_midp(NaN)` is -383.4 everywhere, `pow_midp(NaN, 2.4)` is 0, and
-  `exp2_midp(NaN)` is 2^-126 on x86 and scalar but NaN on NEON and WASM, because
-  it clamps with `max`/`min`. Docs corrected in `docs/transcendentals.md`; the
-  methods are unchanged, since any fix needs its own bit-contract review.
+  The NEON numeric min/max change for issue145 now makes quiet-NaN
+  `exp2_midp`/`exp_midp`/`exp2_lowp` clamp to 2^-126 on NEON, matching
+  x86/scalar; strict WASM still propagates NaN. The owner accepts this named
+  consistency change (2026-11-09). Signaling NaNs retain native ARM propagation.
+  No general exponential NaN fix is promoted; bounded powf rejects NaNs with
+  validation enabled. See `docs/transcendentals.md` and `neon_numeric_minmax`.
 
 - **Portable FMA rounding and Miri (2026-10-12, fixed locally; CI pending):**
   The all-target f32 round-to-odd fallback fixes the independent subnormal

@@ -118,17 +118,24 @@ log and pow functions also have `_unchecked`; the midp tier adds `_precise`.
 
 **Edge cases**: 0 → -inf, negative → NaN, +inf → +inf for the midp log functions. The lowp logs have no edge handling: results for 0 and negatives are finite and meaningless.
 
-**NaN inputs are not handled, and the results differ by backend** (measured 2026-11-05): among the operations listed below, only `cbrt_midp` returns NaN on all four measured backends.
+**Quiet NaN inputs are not handled uniformly.** The 2026-11-09 NEON numeric
+min/max change makes the exponential clamps agree with scalar/x86 for quiet
+NaNs; strict WASM still propagates NaN. The other rows retain the 2026-11-05
+observations. Payloads and signaling NaNs are separate from this table.
 
-| Function, NaN input | Scalar, x86 V3 | NEON, WASM |
-|---------------------|----------------|------------|
-| `exp2_midp`, `exp_midp`, `exp2_lowp` | 2^-126 | NaN |
-| `log2_midp` | -383.4 | -383.4 |
-| `ln_midp` | -265.8 | -265.8 |
-| `log10_midp` | -115.4 | -115.4 |
-| `log2_lowp` | 128.6 | 128.6 |
-| `pow_midp(NaN, 2.4)` | 0 | 0 |
-| `cbrt_midp` | NaN | NaN |
+| Function, quiet NaN input | Scalar, x86 V3 | NEON | Strict WASM |
+|---------------------------|----------------|------|-------------|
+| `exp2_midp`, `exp_midp`, `exp2_lowp` | 2^-126 | 2^-126 | NaN |
+| `log2_midp` | -383.4 | -383.4 | -383.4 |
+| `ln_midp` | -265.8 | -265.8 | -265.8 |
+| `log10_midp` | -115.4 | -115.4 | -115.4 |
+| `log2_lowp` | 128.6 | 128.6 | 128.6 |
+| `pow_midp(NaN, 2.4)` | 0 | 0 | 0 |
+| `cbrt_midp` | NaN | NaN | NaN |
+
+This aligns the named legacy exponential quiet-NaN outputs on NEON, scalar and
+x86; it is not a claim of mathematically correct exponential NaN handling.
+The new bounded powf API rejects NaN inputs when validation is enabled.
 
 **Denormals**: only `cbrt_midp_precise` handles subnormal inputs, by rescaling. The other `_midp_precise` functions are the plain forms under another name, queued for removal, and do not: for 1e-42, `log2_midp_precise` returns about -127 instead of -139.5.
 

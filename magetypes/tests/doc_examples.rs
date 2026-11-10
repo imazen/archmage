@@ -984,10 +984,10 @@ mod isa_quirks {
     #[test]
     fn neon_tables() {
         let t = archmage::NeonToken::summon().expect("NEON test runner");
-        check_float!(t, f32x4, 4, 1);
-        check_float!(t, f32x8, 8, 1);
+        check_float!(t, f32x4, 4, 2);
+        check_float!(t, f32x8, 8, 2);
         #[cfg(feature = "w512")]
-        check_float!(t, f32x16, 16, 1);
+        check_float!(t, f32x16, 16, 2);
     }
 
     #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
