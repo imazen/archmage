@@ -39,3 +39,7 @@ required-features = ["bench"]
 [[bin]]
 name = "analyze_policies"
 required-features = ["bench"]
+
+[[bin]]
+name = "nan_scan"
+required-features = ["bench"]
