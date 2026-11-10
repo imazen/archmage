@@ -104,7 +104,7 @@ fn log1p_basics() {
     // array + runtime parity
     assert_eq!(
         try_log1p_array_with::<CALLER, 1>([0.5]),
-        Ok([0.5f32.ln_1p()])
+        Ok([f32::from_bits(0x3ecf_991f)]) // MPFR256 RNE log1p(0.5); std is an approximate oracle under Miri.
     );
     assert_eq!(
         try_log1p_runtime(1.0, LogfOptions::new()).unwrap(),

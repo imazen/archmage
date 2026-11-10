@@ -122,3 +122,7 @@ The existing CI matrices also run Magemath on x86, ARM64, Windows ARM64, macOS
 ARM64, cross targets including i686, and strict WASM. Numerical fits and the
 unchanged primitive implementations reuse their existing evidence; this PR
 makes no new whole-matrix speed-promotion claim.
+
+The legacy log1p test uses a fixed MPFR256-rounded `log1p(0.5)` reference
+(`0x3ecf991f`) rather than an approximate std call under Miri. This retains the
+native expected bits and exact assertion; no error threshold is relaxed.

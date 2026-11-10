@@ -964,4 +964,9 @@ magemath-check:
 
 magemath-check-wasm:
     RUSTFLAGS="-C target-feature=+simd128" CARGO_TARGET_WASM32_WASIP1_RUNNER=wasmtime cargo test -p magemath --features "std w512" --target wasm32-wasip1
+    RUSTFLAGS="-C target-feature=+simd128" CARGO_TARGET_WASM32_WASIP1_RUNNER=wasmtime cargo test -p magemath --no-default-features --features w512 --target wasm32-wasip1
 
+
+# Deterministic MPFR log1p fixture, including Miri's approximate std math shim.
+magemath-miri-log1p:
+    cargo +nightly-2026-10-06 miri test -p magetypes --features avx512 --lib logf::tests::log1p_basics
