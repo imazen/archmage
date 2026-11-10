@@ -11,9 +11,6 @@ pub(super) const RELAXED: usize = 4;
 // option encodings: the existing infallible methods select them at compile time.
 pub(super) const CLAMP: u32 = 256;
 pub(super) const INPUT_EDGES: u32 = 512;
-// Preserve established release wrapper instructions. Public bounded graphs
-// already produced integral xi and can use the cheaper truncating conversion.
-pub(super) const KEEP_RNE_CAST: u32 = if cfg!(debug_assertions) { 0 } else { 1024 };
 // Dispatch and domain flags have already selected the provider and ZERO/GAMMA
 // parameters. Keeping them in the arithmetic instantiation duplicates identical
 // debug graphs for Caller/Automatic and portable/backend-dependent adapters.
@@ -179,10 +176,14 @@ macro_rules! graph {
                 let p = madd(p, xf, sp(1.0));
                 // floor made xi integral. All admitted lanes, including the
                 // Gamma zero sentinel, fit i32; truncation and RNE agree.
-                let integer = if OPTIONS & KEEP_RNE_CAST != 0 {
-                    xi.to_i32_round()
-                } else {
+                let integer = if core::any::TypeId::of::<T>()
+                    == core::any::TypeId::of::<archmage::ScalarToken>()
+                {
                     xi.to_i32()
+                } else {
+                    // Native conversions already cost one instruction. Keep
+                    // their measured dependency-chain shape unchanged.
+                    xi.to_i32_round()
                 };
                 p * (integer + ip(127)).shl_const::<23>().bitcast_to_f32()
             } else {
@@ -237,10 +238,14 @@ macro_rules! graph {
                 let p = madd(p, xf, sp(core::f32::consts::LN_2));
                 let p = madd(p, xf, sp(1.0));
                 // round already made xi integral in the admitted range.
-                let integer = if OPTIONS & KEEP_RNE_CAST != 0 {
-                    xi.to_i32_round()
-                } else {
+                let integer = if core::any::TypeId::of::<T>()
+                    == core::any::TypeId::of::<archmage::ScalarToken>()
+                {
                     xi.to_i32()
+                } else {
+                    // Native conversions already cost one instruction. Keep
+                    // their measured dependency-chain shape unchanged.
+                    xi.to_i32_round()
                 };
                 let scale = (integer + ip(127)).shl_const::<23>().bitcast_to_f32();
                 let result = p * scale;

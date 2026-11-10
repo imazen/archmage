@@ -255,30 +255,16 @@ macro_rules! approximate {
                 graph::$profile::<
                     T,
                     { graph::NATIVE },
-                    {
-                        PowfOptions::ASSUME
-                            | PowfOptions::LOWP
-                            | graph::CLAMP
-                            | graph::KEEP_RNE_CAST
-                    },
+                    { PowfOptions::ASSUME | PowfOptions::LOWP | graph::CLAMP },
                 >(token, input, n)
             } else if CHECKED {
                 graph::$profile::<
                     T,
                     { graph::NATIVE },
-                    {
-                        PowfOptions::ASSUME
-                            | graph::CLAMP
-                            | graph::INPUT_EDGES
-                            | graph::KEEP_RNE_CAST
-                    },
+                    { PowfOptions::ASSUME | graph::CLAMP | graph::INPUT_EDGES },
                 >(token, input, n)
             } else {
-                graph::$profile::<
-                    T,
-                    { graph::NATIVE },
-                    { PowfOptions::ASSUME | graph::KEEP_RNE_CAST },
-                >(token, input, n)
+                graph::$profile::<T, { graph::NATIVE }, { PowfOptions::ASSUME }>(token, input, n)
             };
             match result {
                 Ok(value) => value,
