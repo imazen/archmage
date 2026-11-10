@@ -173,3 +173,7 @@ all published means are unchanged. The earlier unnormalized diagnostic and
 every source/run version remain preserved. Repeated std-backed HIGHP calls
 are not a bit oracle: the new PositiveGamma fixture checks their ordinary
 numerical result while retaining exact bits for every canonical graph.
+
+The [sealed evidence inventory](MIDLOW-ARTIFACTS.md) records file identities and
+the independently verified mirror, including all 118 final cells and every
+earlier source/run version.
