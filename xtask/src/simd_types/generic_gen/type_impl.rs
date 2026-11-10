@@ -625,7 +625,8 @@ fn gen_float_math() -> String {
 
             /// Correctly rounded square root under round-to-nearest with gradual underflow.
             /// Non-NaN result bits, including signed zero, agree across backends.
-            /// NaN payloads/signs and floating exception flags are not specified.
+            /// NaN inputs and negative nonzero inputs produce NaN; NaN payloads,
+            /// signs, signaling encodings and floating exception flags are unspecified.
             /// Native SIMD uses hardware sqrt. ScalarToken uses std when enabled;
             /// without std it internally summons compile-time-proven SSE2, NEON
             /// or WASM SIMD128 tokens, otherwise using integer software.
