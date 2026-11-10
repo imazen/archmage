@@ -477,6 +477,9 @@ jobs:
           CARGO_TARGET_WASM32_WASIP1_RUNNER: "wasmtime -W relaxed-simd-deterministic=n -C cranelift-has-fma=false --env ARCHMAGE_EXPECT_RELAXED_FUSION=no"
         run: cargo test -p magetypes --features "${{ env.FEATURES }}" --target wasm32-wasip1 --lib --test fma_contract --test fused_arithmetic --test doc_examples --test scalar_parity
 
+      - name: Test WASM selection and disabled fallbacks
+        run: bash xtask/test_wasm_selection.sh
+
       - name: Run arch exercise (WASM)
         if: always()
         env:
