@@ -79,7 +79,11 @@ fn bounded_widths_and_tails(token: Token) {
         }
         result.to_bits()
     }
-    const INPUT_LEN: usize = if cfg!(feature = "exhaustive-tests") { 513 } else { 33 };
+    const INPUT_LEN: usize = if cfg!(feature = "exhaustive-tests") {
+        513
+    } else {
+        33
+    };
     fn check<const FLAGS: u32>(token: Token) {
         let mut state = 0x9e37_79b9_u32;
         for n in [0.0_f32, -0.0, 0.5, 2.4, 4.0] {

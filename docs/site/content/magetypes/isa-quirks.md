@@ -140,17 +140,28 @@ These are observable implementation differences, including differences between
 widths on the same backend. They are compatibility constraints to review, not
 recommendations to depend on unusual NaN behavior.
 
-| Expression | x86 V3, all supported widths | Native V4/V4x f32x16 | NEON / WASM | Scalar f32x4/f32x8 | Scalar f32x16 |
-|---|---|---|---|---|---|
-| `min(NaN, 1)` and `max(NaN, 1)` | `1` | `1` | `NaN` | `1` | `1` |
-| `min(1, NaN)` and `max(1, NaN)` | `NaN` | `NaN` | `NaN` | `1` | `NaN` |
+| Expression | x86 V3, all supported widths | Native V4/V4x f32x16 | NEON | WASM | Scalar f32x4/f32x8 | Scalar f32x16 |
+|---|---|---|---|---|---|---|
+| `min(qNaN, 1)` and `max(qNaN, 1)` | `1` | `1` | `1` | `NaN` | `1` | `1` |
+| `min(1, qNaN)` and `max(1, qNaN)` | `NaN` | `NaN` | `1` | `NaN` | `1` | `NaN` |
 
 x86 min/max select the second operand when a NaN is involved. NEON uses
-`vminq`/`vmaxq`, and WASM uses `min`/`max`, which propagate NaNs. Smaller scalar
+`vminnmq`/`vmaxnmq`, and its float reductions use the corresponding numeric
+pairwise operations at every stage. One quiet NaN yields the number in either
+operand order; all-quiet-NaN reductions yield NaN. Numeric min selects negative
+zero and numeric max positive zero when opposite signed zeros tie.
+
+NEON signaling NaNs still propagate under the normal floating-point environment.
+This is the native ARM numeric instruction contract; it does not implement Rust's
+scalar rule of ignoring both quiet and signaling NaNs. No global FPCR change or
+extra mask is inserted. WASM uses `min`/`max`, which propagate NaNs. Smaller scalar
 vectors use Rust's numeric min/max; scalar f32x16 currently uses comparisons and
 selects the second operand when the comparison is false. Rust's numeric min/max
 ignore a single NaN and do not promise which equal signed zero is returned.
 [The scalar contract is documented by Rust](https://doc.rust-lang.org/std/primitive.f32.html#method.min).
+
+The NEON change addresses [issue145](https://github.com/imazen/archmage/issues/145).
+It does not make min/max bit-identical across every ISA.
 
 Float `simd_ne` is unordered on every backend, matching Rust's `!=`:
 a lane is true when either operand is NaN. Its mask is the bitwise inverse

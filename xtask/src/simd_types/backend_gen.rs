@@ -2937,8 +2937,8 @@ fn generate_neon_float_impl(ty: &FloatVecType) -> String {
         mul_body = binary_op(&format!("vmulq_{ns}")),
         div_body = binary_op(&format!("vdivq_{ns}")),
         neg_body = unary_op(&format!("vnegq_{ns}")),
-        min_body = binary_op(&format!("vminq_{ns}")),
-        max_body = binary_op(&format!("vmaxq_{ns}")),
+        min_body = binary_op(&format!("vminnmq_{ns}")),
+        max_body = binary_op(&format!("vmaxnmq_{ns}")),
         sqrt_body = unary_op(&format!("vsqrtq_{ns}")),
         abs_body = unary_op(&format!("vabsq_{ns}")),
         floor_body = unary_op(&format!("vrndmq_{ns}")),
@@ -2964,8 +2964,8 @@ fn generate_neon_float_impl(ty: &FloatVecType) -> String {
         ge_body = cmp_op(&format!("vcgeq_{ns}")),
         blend_body = blend_op(),
         reduce_add_body = reduce_combine(&format!("vaddq_{ns}"), &format!("vpaddq_{ns}")),
-        reduce_min_body = reduce_combine(&format!("vminq_{ns}"), &format!("vpminq_{ns}")),
-        reduce_max_body = reduce_combine(&format!("vmaxq_{ns}"), &format!("vpmaxq_{ns}")),
+        reduce_min_body = reduce_combine(&format!("vminnmq_{ns}"), &format!("vpminnmq_{ns}")),
+        reduce_max_body = reduce_combine(&format!("vmaxnmq_{ns}"), &format!("vpmaxnmq_{ns}")),
         sub_trait = format!("F{}x{}Backend", &elem[1..], if elem == "f32" { 4 } else { 2 }),
         not_body = bitwise_not_op(),
         and_body = bitwise_binary_op(&format!("vandq_u{}", if elem == "f32" { 32 } else { 64 })),
@@ -3150,9 +3150,9 @@ fn generate_neon_native_impl(ty: &FloatVecType) -> String {
             {arcane}
             fn neg(self, a: {repr}) -> {repr} {{ vnegq_{ns}(a) }}
             {arcane}
-            fn min(self, a: {repr}, b: {repr}) -> {repr} {{ vminq_{ns}(a, b) }}
+            fn min(self, a: {repr}, b: {repr}) -> {repr} {{ vminnmq_{ns}(a, b) }}
             {arcane}
-            fn max(self, a: {repr}, b: {repr}) -> {repr} {{ vmaxq_{ns}(a, b) }}
+            fn max(self, a: {repr}, b: {repr}) -> {repr} {{ vmaxnmq_{ns}(a, b) }}
             {arcane}
             fn sqrt(self, a: {repr}) -> {repr} {{ vsqrtq_{ns}(a) }}
             {arcane}
@@ -3298,8 +3298,8 @@ fn generate_neon_native_impl(ty: &FloatVecType) -> String {
         }}
     "#,
         reduce_add = reduce_pairwise(&format!("vpaddq_{ns}")),
-        reduce_min = reduce_pairwise(&format!("vpminq_{ns}")),
-        reduce_max = reduce_pairwise(&format!("vpmaxq_{ns}")),
+        reduce_min = reduce_pairwise(&format!("vpminnmq_{ns}")),
+        reduce_max = reduce_pairwise(&format!("vpmaxnmq_{ns}")),
     }
 }
 

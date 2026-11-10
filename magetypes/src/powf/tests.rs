@@ -7,13 +7,15 @@ mod fixtures;
 // invocation replay the full cross-product. Both tiers use the same oracle and
 // assertions; the explicit exhaustive-tests feature restores every row.
 fn oracle_rows() -> impl Iterator<Item = &'static [u32; 5]> {
-    fixtures::POWF.iter().enumerate().filter_map(|(index, row)| {
-        let [base, exponent, _, _, _] = *row;
-        let directed = exponent == 0x4019_999a || exponent == 0x3f00_0000
-            || base == 0x3f80_0000;
-        (cfg!(feature = "exhaustive-tests") || directed || index % 97 == 0)
-            .then_some(row)
-    })
+    fixtures::POWF
+        .iter()
+        .enumerate()
+        .filter_map(|(index, row)| {
+            let [base, exponent, _, _, _] = *row;
+            let directed =
+                exponent == 0x4019_999a || exponent == 0x3f00_0000 || base == 0x3f80_0000;
+            (cfg!(feature = "exhaustive-tests") || directed || index % 97 == 0).then_some(row)
+        })
 }
 
 fn options(domain: u32) -> PowfOptions {

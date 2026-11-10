@@ -627,12 +627,22 @@ fn gen_math(ty: &SimdType) -> String {
 fn gen_float_math() -> String {
     formatdoc! {"
         \x20   /// Lane-wise minimum.
+            ///
+            /// NaN and signed-zero behavior follows the backend. NEON uses native
+            /// numeric min/max: a quiet NaN yields the other operand, while a
+            /// signaling NaN propagates. NaN payloads are unspecified. See
+            /// <https://github.com/imazen/archmage/blob/main/docs/site/content/magetypes/isa-quirks.md>.
             #[inline(always)]
             pub fn min(self, other: Self) -> Self {{
                 Self(T::min(self.1, self.0, other.0), self.1)
             }}
 
             /// Lane-wise maximum.
+            ///
+            /// NaN and signed-zero behavior follows the backend. NEON uses native
+            /// numeric min/max: a quiet NaN yields the other operand, while a
+            /// signaling NaN propagates. NaN payloads are unspecified. See
+            /// <https://github.com/imazen/archmage/blob/main/docs/site/content/magetypes/isa-quirks.md>.
             #[inline(always)]
             pub fn max(self, other: Self) -> Self {{
                 Self(T::max(self.1, self.0, other.0), self.1)
