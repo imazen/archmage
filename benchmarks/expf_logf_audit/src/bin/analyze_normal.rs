@@ -13,8 +13,20 @@ fn main() {
                 && group.samples.len() == 50
                 && group.samples.iter().all(|r| r.gate_clean == Some(true));
             for (numerator, denominator) in [
-                (3,2),(4,3),(5,3),(7,6),(8,7),(9,8),(10,8),
-                (3,0),(4,0),(7,1),(8,1),(9,1),(11,3),(12,7),
+                (3, 2),
+                (4, 3),
+                (5, 3),
+                (7, 6),
+                (8, 7),
+                (9, 8),
+                (10, 8),
+                (3, 0),
+                (4, 0),
+                (7, 1),
+                (8, 1),
+                (9, 1),
+                (11, 3),
+                (12, 7),
             ] {
                 let ratios: Vec<_> = group
                     .samples
