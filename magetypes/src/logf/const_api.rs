@@ -96,7 +96,11 @@ pub fn try_log1p_with_token<const OPTIONS: u32, T: crate::simd::backends::F32x4C
 ) -> Result<f32, LogfError> {
     let (u, c) = log1p_parts(x);
     run4::<T, OPTIONS>(token, crate::simd::generic::f32x4::splat_t(token, u))
-        .map(|v| v.to_array()[0].mul_add(core::f32::consts::LN_2, c))
+        .map(|v| log1p_finish(v.to_array()[0], c, x))
+        .map_err(|error| LogfError {
+            lane_mask: 1,
+            ..error
+        })
 }
 /// Scalar log10 retaining the vector caller's feature proof.
 #[inline(always)]
@@ -194,7 +198,7 @@ pub fn try_log1p_array_with<const OPTIONS: u32, const N: usize>(
     try_log2_array_with::<OPTIONS, N>(u).map(|o| {
         let mut out = o;
         for i in 0..N {
-            out[i] = o[i].mul_add(core::f32::consts::LN_2, c[i]);
+            out[i] = log1p_finish(o[i], c[i], inputs[i]);
         }
         out
     })
@@ -231,7 +235,7 @@ pub fn try_log1p_array_runtime<const N: usize>(
     try_log2_array_runtime::<N>(u, options).map(|o| {
         let mut out = o;
         for i in 0..N {
-            out[i] = o[i].mul_add(core::f32::consts::LN_2, c[i]);
+            out[i] = log1p_finish(o[i], c[i], inputs[i]);
         }
         out
     })
@@ -271,31 +275,70 @@ fn token_array<T: archmage::SimdToken, const N: usize>(
         };
     }
     match options {
-        o if o == LogfOptions::DEFAULT => dispatch!(0),
-        o if o == (LogfOptions::DEFAULT | LogfOptions::SPECIALS) => dispatch!(1),
-        o if o == (LogfOptions::DEFAULT | LogfOptions::LOWP) => dispatch!(8),
-        o if o == (LogfOptions::DEFAULT | LogfOptions::LOWP | LogfOptions::SPECIALS) => {
-            dispatch!(9)
-        }
-        o if o == (LogfOptions::DEFAULT | LogfOptions::BACKEND) => dispatch!(16),
-        o if o == (LogfOptions::DEFAULT | LogfOptions::BACKEND | LogfOptions::LOWP) => {
-            dispatch!(24)
-        }
-        o if o == (LogfOptions::DEFAULT | LogfOptions::ASSUME) => dispatch!(32),
-        o if o == (LogfOptions::DEFAULT | LogfOptions::ASSUME | LogfOptions::LOWP) => {
-            dispatch!(40)
-        }
-        o if o == (LogfOptions::DEFAULT | LogfOptions::ASSUME | LogfOptions::BACKEND) => {
-            dispatch!(48)
-        }
-        o if o
-            == (LogfOptions::DEFAULT
-                | LogfOptions::ASSUME
-                | LogfOptions::BACKEND
-                | LogfOptions::LOWP) =>
-        {
-            dispatch!(56)
-        }
+        0 => dispatch!(0),
+        1 => dispatch!(1),
+        4 => dispatch!(4),
+        5 => dispatch!(5),
+        8 => dispatch!(8),
+        9 => dispatch!(9),
+        12 => dispatch!(12),
+        13 => dispatch!(13),
+        16 => dispatch!(16),
+        17 => dispatch!(17),
+        20 => dispatch!(20),
+        21 => dispatch!(21),
+        24 => dispatch!(24),
+        25 => dispatch!(25),
+        28 => dispatch!(28),
+        29 => dispatch!(29),
+        32 => dispatch!(32),
+        33 => dispatch!(33),
+        36 => dispatch!(36),
+        37 => dispatch!(37),
+        40 => dispatch!(40),
+        41 => dispatch!(41),
+        44 => dispatch!(44),
+        45 => dispatch!(45),
+        48 => dispatch!(48),
+        49 => dispatch!(49),
+        52 => dispatch!(52),
+        53 => dispatch!(53),
+        56 => dispatch!(56),
+        57 => dispatch!(57),
+        60 => dispatch!(60),
+        61 => dispatch!(61),
+        64 => dispatch!(64),
+        65 => dispatch!(65),
+        68 => dispatch!(68),
+        69 => dispatch!(69),
+        72 => dispatch!(72),
+        73 => dispatch!(73),
+        76 => dispatch!(76),
+        77 => dispatch!(77),
+        80 => dispatch!(80),
+        81 => dispatch!(81),
+        84 => dispatch!(84),
+        85 => dispatch!(85),
+        88 => dispatch!(88),
+        89 => dispatch!(89),
+        92 => dispatch!(92),
+        93 => dispatch!(93),
+        96 => dispatch!(96),
+        97 => dispatch!(97),
+        100 => dispatch!(100),
+        101 => dispatch!(101),
+        104 => dispatch!(104),
+        105 => dispatch!(105),
+        108 => dispatch!(108),
+        109 => dispatch!(109),
+        112 => dispatch!(112),
+        113 => dispatch!(113),
+        116 => dispatch!(116),
+        117 => dispatch!(117),
+        120 => dispatch!(120),
+        121 => dispatch!(121),
+        124 => dispatch!(124),
+        125 => dispatch!(125),
         _ => {
             let _ = token;
             Err(LogfError {
@@ -366,3 +409,18 @@ macro_rules! approximate_log2 {
     }};
 }
 pub(crate) use approximate_log2;
+
+#[inline(always)]
+fn log1p_finish(log2: f32, correction: f32, input: f32) -> f32 {
+    if input == 0.0 {
+        return input;
+    }
+    #[cfg(feature = "std")]
+    {
+        log2.mul_add(core::f32::consts::LN_2, correction)
+    }
+    #[cfg(not(feature = "std"))]
+    {
+        crate::soft_fma::fmaf_soft_lanes([log2], [core::f32::consts::LN_2], [correction])[0]
+    }
+}

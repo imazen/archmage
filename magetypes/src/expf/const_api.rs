@@ -178,29 +178,70 @@ fn token_array<T: archmage::SimdToken, const N: usize>(
         };
     }
     match options {
-        o if o == ExpfOptions::DEFAULT => dispatch!(0),
-        o if o == (ExpfOptions::DEFAULT | ExpfOptions::FULL) => dispatch!(1),
-        o if o == (ExpfOptions::DEFAULT | ExpfOptions::LOWP) => dispatch!(8),
-        o if o == (ExpfOptions::DEFAULT | ExpfOptions::LOWP | ExpfOptions::FULL) => dispatch!(9),
-        o if o == (ExpfOptions::DEFAULT | ExpfOptions::BACKEND) => dispatch!(16),
-        o if o == (ExpfOptions::DEFAULT | ExpfOptions::BACKEND | ExpfOptions::LOWP) => {
-            dispatch!(24)
-        }
-        o if o == (ExpfOptions::DEFAULT | ExpfOptions::ASSUME) => dispatch!(32),
-        o if o == (ExpfOptions::DEFAULT | ExpfOptions::ASSUME | ExpfOptions::LOWP) => {
-            dispatch!(40)
-        }
-        o if o == (ExpfOptions::DEFAULT | ExpfOptions::ASSUME | ExpfOptions::BACKEND) => {
-            dispatch!(48)
-        }
-        o if o
-            == (ExpfOptions::DEFAULT
-                | ExpfOptions::ASSUME
-                | ExpfOptions::BACKEND
-                | ExpfOptions::LOWP) =>
-        {
-            dispatch!(56)
-        }
+        0 => dispatch!(0),
+        1 => dispatch!(1),
+        4 => dispatch!(4),
+        5 => dispatch!(5),
+        8 => dispatch!(8),
+        9 => dispatch!(9),
+        12 => dispatch!(12),
+        13 => dispatch!(13),
+        16 => dispatch!(16),
+        17 => dispatch!(17),
+        20 => dispatch!(20),
+        21 => dispatch!(21),
+        24 => dispatch!(24),
+        25 => dispatch!(25),
+        28 => dispatch!(28),
+        29 => dispatch!(29),
+        32 => dispatch!(32),
+        33 => dispatch!(33),
+        36 => dispatch!(36),
+        37 => dispatch!(37),
+        40 => dispatch!(40),
+        41 => dispatch!(41),
+        44 => dispatch!(44),
+        45 => dispatch!(45),
+        48 => dispatch!(48),
+        49 => dispatch!(49),
+        52 => dispatch!(52),
+        53 => dispatch!(53),
+        56 => dispatch!(56),
+        57 => dispatch!(57),
+        60 => dispatch!(60),
+        61 => dispatch!(61),
+        64 => dispatch!(64),
+        65 => dispatch!(65),
+        68 => dispatch!(68),
+        69 => dispatch!(69),
+        72 => dispatch!(72),
+        73 => dispatch!(73),
+        76 => dispatch!(76),
+        77 => dispatch!(77),
+        80 => dispatch!(80),
+        81 => dispatch!(81),
+        84 => dispatch!(84),
+        85 => dispatch!(85),
+        88 => dispatch!(88),
+        89 => dispatch!(89),
+        92 => dispatch!(92),
+        93 => dispatch!(93),
+        96 => dispatch!(96),
+        97 => dispatch!(97),
+        100 => dispatch!(100),
+        101 => dispatch!(101),
+        104 => dispatch!(104),
+        105 => dispatch!(105),
+        108 => dispatch!(108),
+        109 => dispatch!(109),
+        112 => dispatch!(112),
+        113 => dispatch!(113),
+        116 => dispatch!(116),
+        117 => dispatch!(117),
+        120 => dispatch!(120),
+        121 => dispatch!(121),
+        124 => dispatch!(124),
+        125 => dispatch!(125),
         _ => {
             let _ = token;
             Err(ExpfError {

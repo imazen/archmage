@@ -1,35 +1,23 @@
 //! Const-configured log2 graphs, instantiated per width and arithmetic provider.
+#![allow(clippy::excessive_precision)] // Preserve the fitted f32 coefficient spellings.
 use super::{LogfError, LogfErrorKind, LogfOptions};
-
-#[cfg(debug_assertions)]
-const KERNEL_FLAGS: u32 =
-    LogfOptions::LOWP | LogfOptions::ASSUME | LogfOptions::SPECIALS | LogfOptions::LEGACY;
-
-#[cfg(debug_assertions)]
-macro_rules! shared_kernel {
-    ($vector:ident, $t:ty, $options:ident, $token:ident, $input:ident) => {
-        match $options & KERNEL_FLAGS {
-            0 => $vector::<$t, 0>($token, $input),
-            1 => $vector::<$t, 1>($token, $input),
-            8 => $vector::<$t, 8>($token, $input),
-            9 => $vector::<$t, 9>($token, $input),
-            32 => $vector::<$t, 32>($token, $input),
-            33 => $vector::<$t, 33>($token, $input),
-            40 => $vector::<$t, 40>($token, $input),
-            41 => $vector::<$t, 41>($token, $input),
-            _ => unreachable!("private arithmetic flags are validated at the boundary"),
-        }
-    };
-}
 
 macro_rules! graph {
     ($vector:ident, $profile:ident, $const_entry:ident, $float:ident, $int:ident, $bound:ident, $lanes:literal) => {
         #[cfg_attr(debug_assertions, inline(never))]
         #[cfg_attr(not(debug_assertions), inline(always))]
-        fn $vector<T: crate::simd::backends::$bound, const OPTIONS: u32>(
+        fn $vector<T: crate::simd::backends::$bound, const FIXED_OPTIONS: u32>(
             token: T,
             input: crate::simd::generic::$float<T>,
+            options: u32,
         ) -> Result<crate::simd::generic::$float<T>, LogfError> {
+            // Debug shares one graph per token/width without discarding any flag.
+            // Optimized builds keep the integer const through the arithmetic.
+            #[cfg(not(debug_assertions))]
+            let options = {
+                let _ = options;
+                FIXED_OPTIONS
+            };
             use crate::simd::generic::{$float as V, $int as I};
             let sp = |x| V::splat_t(token, x);
             let ip = |x| I::splat_t(token, x);
@@ -42,8 +30,8 @@ macro_rules! graph {
                 LogfError { kind, lane_mask }
             };
             let bits = input.bitcast_to_i32();
-            let assume = OPTIONS & LogfOptions::ASSUME != 0;
-            if !assume && OPTIONS & LogfOptions::SPECIALS == 0 {
+            let assume = options & LogfOptions::ASSUME != 0;
+            if !assume && options & LogfOptions::SPECIALS == 0 {
                 // Positive domain: x <= 0, subnormal, NaN, infinite are invalid.
                 // bits <= 0 covers -0..=0 and every negative; exponent 0 covers
                 // subnormals; exponent 0x7f80 covers NaN/inf.
@@ -56,13 +44,13 @@ macro_rules! graph {
                 }
             }
             let madd = |a: V<T>, b: V<T>, c: V<T>| -> V<T> {
-                if OPTIONS & LogfOptions::BACKEND != 0 {
+                if options & LogfOptions::BACKEND != 0 {
                     a.mul_add_relaxed(b, c)
                 } else {
                     a.mul_add_fused(b, c)
                 }
             };
-            let result = if OPTIONS & LogfOptions::LOWP != 0 {
+            let result = if options & LogfOptions::LOWP != 0 {
                 // Rational P2/Q2 — beats the deg-2 atanh alternative on
                 // measured speed (~20% slower on Zen5 and NEON) while the
                 // atanh's accuracy edge is unneeded at this tier.
@@ -83,7 +71,7 @@ macro_rules! graph {
                 let a = ((adjusted & ip(0x007f_ffff)) + ip(0x3f35_04f3)).bitcast_to_f32();
                 let y = (a - sp(1.0)) / (a + sp(1.0));
                 let y2 = y * y;
-                let (c3, c2, c1, c0) = if OPTIONS & LogfOptions::LEGACY != 0 {
+                let (c3, c2, c1, c0) = if options & LogfOptions::LEGACY != 0 {
                     (0.434_411_97, 0.576_974_45, 0.961_800_76, 2.885_39)
                 } else {
                     (
@@ -98,7 +86,7 @@ macro_rules! graph {
                 let p = madd(p, y2, sp(c0));
                 madd(p, y, n)
             };
-            let result = if OPTIONS & LogfOptions::SPECIALS != 0 && !assume {
+            let result = if options & LogfOptions::SPECIALS != 0 {
                 // Specials domain: 0 -> -inf, <0 -> NaN, NaN -> NaN,
                 // +inf -> +inf (the raw exponent bias the polynomial
                 // produces for an infinite input is replaced).
@@ -123,9 +111,9 @@ macro_rules! graph {
             input: crate::simd::generic::$float<T>,
         ) -> Result<crate::simd::generic::$float<T>, LogfError> {
             #[cfg(debug_assertions)]
-            return shared_kernel!($vector, T, OPTIONS, token, input);
+            return $vector::<T, 0>(token, input, OPTIONS);
             #[cfg(not(debug_assertions))]
-            $vector::<T, OPTIONS>(token, input)
+            $vector::<T, OPTIONS>(token, input, OPTIONS)
         }
 
         #[archmage::magetypes(v4x(cfg(avx512)), v4(cfg(avx512)), v3, neon, wasm128, scalar)]
