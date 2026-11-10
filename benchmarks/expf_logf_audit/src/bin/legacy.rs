@@ -2,6 +2,7 @@
 use archmage::SimdToken;
 use magetypes::simd::generic::f32x4;
 #[path = "../frozen.rs"]
+#[allow(dead_code)] // Other widths are exercised by the timing binary.
 mod frozen;
 
 #[archmage::magetypes(v4x(cfg(avx512)), v4(cfg(avx512)), v3, neon, wasm128, scalar)]

@@ -1,4 +1,9 @@
 //! Hex protocol for independent rational-graph and MPFR checks.
+#[cfg(any(
+    target_arch = "x86_64",
+    target_arch = "aarch64",
+    target_arch = "wasm32"
+))]
 use archmage::SimdToken;
 use magetypes::{expf::*, logf::*};
 use std::io::Read;
