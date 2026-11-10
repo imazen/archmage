@@ -10,6 +10,14 @@ use std::io::Read;
 
 #[archmage::magetypes(v4x(cfg(avx512)), v4(cfg(avx512)), v3, neon, wasm128, scalar)]
 fn token_value<const O: u32>(token: Token, x: f32, log: bool) -> f32 {
+    match std::env::var("AUDIT_WRAPPER").unwrap_or_default().as_str() {
+        "exp" => return try_exp_with_token::<O, _>(token, x).unwrap(),
+        "ln" => return try_ln_with_token::<O, _>(token, x).unwrap(),
+        "log10" => return try_log10_with_token::<O, _>(token, x).unwrap(),
+        "log1p" => return try_log1p_with_token::<O, _>(token, x).unwrap(),
+        "" => {}
+        _ => panic!("unknown wrapper"),
+    }
     if log {
         try_log2_with_token::<O, _>(token, x).unwrap()
     } else {
@@ -52,6 +60,14 @@ fn native<const O: u32>(x: f32, log: bool) -> f32 {
 }
 
 fn array<const O: u32, const N: usize>(x: [f32; N], log: bool) -> [f32; N] {
+    match std::env::var("AUDIT_WRAPPER").unwrap_or_default().as_str() {
+        "exp" => return try_exp_array_with::<O, N>(x).unwrap(),
+        "ln" => return try_ln_array_with::<O, N>(x).unwrap(),
+        "log10" => return try_log10_array_with::<O, N>(x).unwrap(),
+        "log1p" => return try_log1p_array_with::<O, N>(x).unwrap(),
+        "" => {}
+        _ => panic!("unknown wrapper"),
+    }
     if log {
         try_log2_array_with::<O, N>(x).unwrap()
     } else {

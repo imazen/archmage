@@ -14,14 +14,15 @@ import accuracy
 import rounding_oracle as model
 fp = model.fp
 mp, P = accuracy.mp, accuracy.P
-for name in ["exp2", "log2"]:
+WRAPPER = None
+for name in ["exp2", "log2", "exp", "log", "log10", "log1p"]:
     fn = getattr(mp, "mpfr_" + name)
     fn.argtypes, fn.restype = [P, P, C.c_int], C.c_int
 mp.mpfr_get_exp.argtypes, mp.mpfr_get_exp.restype = [P], C.c_long
 mp.mpfr_zero_p.argtypes, mp.mpfr_zero_p.restype = [P], C.c_int
 
 
-def mirror(op, raw, flags, fused):
+def core_mirror(op, raw, flags, fused):
     low, legacy = bool(flags & 8), bool(flags & 64)
     if op == "E":
         x = fp.value(raw)
@@ -55,13 +56,24 @@ def mirror(op, raw, flags, fused):
     return model.madd(p,y,fp.bits(float(whole)),fused)
 
 
+def mirror(op,raw,flags,fused):
+    if WRAPPER is None:return core_mirror(op,raw,flags,fused)
+    if WRAPPER=='exp':return core_mirror('E',fp.mul(raw,fp.bits(math.log2(math.e))),flags,fused)
+    if WRAPPER in ['ln','log10']:
+        return fp.mul(core_mirror('L',raw,flags,fused),fp.bits(math.log(2)if WRAPPER=='ln'else math.log10(2)))
+    u=fp.add(raw,fp.ONE)
+    c=fp.divide(fp.sub(fp.ONE,fp.sub(u,raw))if fp.value(u)>=2 else fp.sub(raw,fp.sub(u,fp.ONE)),u)
+    return fp.fma(core_mirror('L',u,flags,fused),fp.bits(math.log(2)),c)
+
+
 def reference(op, raw):
     a,b = accuracy.MP(),accuracy.MP()
     for v in [a,b]: mp.mpfr_init2(C.byref(v),256)
     mp.mpfr_set_d(C.byref(a),fp.value(raw),0)
     bounds, quanta = [], []
     for rounding in [3,2]:
-        getattr(mp,"mpfr_" + ("exp2" if op == "E" else "log2"))(C.byref(b),C.byref(a),rounding)
+        fn = ("log"if WRAPPER=='ln'else WRAPPER)if WRAPPER else("exp2"if op=='E'else'log2')
+        getattr(mp,"mpfr_" + fn)(C.byref(b),C.byref(a),rounding)
         bounds.append(mp.mpfr_get_d(C.byref(b),rounding))
         quanta.append(-149 if mp.mpfr_zero_p(C.byref(b)) else max(mp.mpfr_get_exp(C.byref(b))-24,-149))
     for v in [a,b]: mp.mpfr_clear(C.byref(v))
@@ -71,10 +83,12 @@ def reference(op, raw):
 
 
 def main():
+    global WRAPPER
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument("actual",type=Path);p.add_argument("output",type=Path)
     p.add_argument("--native-separate",action="store_true",help="strict/nonfusing WASM or a scalar-only automatic backend")
-    args=p.parse_args();assert not args.output.exists()
+    p.add_argument("--wrapper",choices=['exp','ln','log10','log1p'])
+    args=p.parse_args();WRAPPER=args.wrapper;assert not args.output.exists()
     report=dict(mpfr=mp.mpfr_get_version().decode(),precision=256,claim="sampled maxima, not exhaustive bounds",graph_mismatches=[],portable_mismatches=[],token_width_mismatches=[],stats={})
     refs={}
     for line in args.actual.read_text().splitlines():
@@ -98,7 +112,7 @@ def main():
             if ulp>stats['max_ulp_upper']:stats.update(max_ulp_upper=ulp,worst=f'{raw:08x}')
             stats['max_relative_upper']=max(relative,stats['max_relative_upper'])
             stats['max_absolute_upper']=max(float(error),stats['max_absolute_upper'])
-            core = op == 'L' or (-126 <= fp.value(raw) <= 127.99 if flags&8 else -126 <= fp.value(raw) < 127.5)
+            core = (-87 <= fp.value(raw) <= 88.4)if WRAPPER=='exp'else WRAPPER is not None or op == 'L' or (-126 <= fp.value(raw) <= 127.99 if flags&8 else -126 <= fp.value(raw) < 127.5)
             if core:
                 stats['max_core_ulp_upper']=max(ulp,stats['max_core_ulp_upper'])
                 stats['max_core_relative_upper']=max(relative,stats['max_core_relative_upper'])
