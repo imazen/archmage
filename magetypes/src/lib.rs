@@ -107,6 +107,12 @@ pub use types::SimdTypes;
 // Cross-tier casting utilities
 pub mod cast;
 
+/// Configurable f32 exponentials with explicit portability, precision and validation.
+pub mod expf;
+
+/// Configurable f32 logarithms with explicit portability, precision and validation.
+pub mod logf;
+
 /// Configurable f32 power with explicit portability, precision and validation.
 pub mod powf;
 
