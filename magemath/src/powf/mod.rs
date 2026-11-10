@@ -34,6 +34,8 @@ mod highp_scalar;
 ))]
 mod highp_simd;
 mod std_probe;
+#[cfg(test)]
+mod tests;
 #[cfg(target_arch = "wasm32")]
 mod wasm;
 

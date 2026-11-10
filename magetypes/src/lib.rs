@@ -118,30 +118,6 @@ pub use types::SimdTypes;
 // Cross-tier casting utilities
 pub mod cast;
 
-/// Configurable f32 exponentials with explicit portability, precision and validation.
-#[deprecated(
-    since = "0.9.32",
-    note = "use magemath::expf; this compatibility implementation remains available during migration"
-)]
-#[allow(deprecated)]
-pub mod expf;
-
-/// Configurable f32 logarithms with explicit portability, precision and validation.
-#[deprecated(
-    since = "0.9.32",
-    note = "use magemath::logf; this compatibility implementation remains available during migration"
-)]
-#[allow(deprecated)]
-pub mod logf;
-
-/// Configurable f32 power with explicit portability, precision and validation.
-#[deprecated(
-    since = "0.9.32",
-    note = "use magemath::powf; this compatibility implementation remains available during migration"
-)]
-#[allow(deprecated)]
-pub mod powf;
-
 // Platform-appropriate types via prelude
 pub mod prelude;
 

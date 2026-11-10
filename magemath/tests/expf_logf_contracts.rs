@@ -1,7 +1,7 @@
 //! Regression witnesses for the exp/log policy boundaries inherited from the stack.
 #![allow(deprecated)] // Intentional coverage of retained Magetypes compatibility APIs.
 #![forbid(unsafe_code)]
-use magetypes::{expf::*, logf::*};
+use magemath::{expf::*, logf::*};
 
 #[test]
 fn negative_zero_log_is_negative_infinity() {
@@ -64,12 +64,4 @@ fn assume_valid_specials_retains_valid_zero_semantics() {
         .with_validation(LogfValidation::AssumeValid)
         .bits();
     assert_eq!(try_log2_with::<OPTIONS>(0.0).unwrap(), f32::NEG_INFINITY);
-}
-
-#[test]
-fn valid_legacy_precision_does_not_panic() {
-    const OPTIONS: u32 = ExpfOptions::new()
-        .with_precision(ExpfPrecision::LegacyMidp)
-        .bits();
-    assert_eq!(try_exp2_with::<OPTIONS>(1.0), Ok(2.0));
 }

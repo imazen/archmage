@@ -861,35 +861,6 @@ const MIRI_SKIPPED_TESTS: &[(&str, Option<&str>, &str)] = &[
         None,
         "a range sweep over [126, 128) (12 s under Miri): safe code only",
     ),
-    (
-        "powf_tails_portable_midp",
-        None,
-        "new numerical policy/tail grid; safe scalar math, with memory paths covered by \
-         generic_all_types and exact primitives by fma_contract; native and WASM run every case",
-    ),
-    (
-        "powf_tails_portable_lowp",
-        None,
-        "new numerical policy/tail grid; safe scalar math, with memory paths covered by \
-         generic_all_types and exact primitives by fma_contract; native and WASM run every case",
-    ),
-    (
-        "powf_tails_backend_midp",
-        None,
-        "new numerical policy/tail grid; safe scalar math, with memory paths covered by \
-         generic_all_types and exact primitives by fma_contract; native and WASM run every case",
-    ),
-    (
-        "powf_tails_backend_lowp",
-        None,
-        "new numerical policy/tail grid; safe scalar math, with memory paths covered by \
-         generic_all_types and exact primitives by fma_contract; native and WASM run every case",
-    ),
-    (
-        "powf_engine_remap",
-        None,
-        "new numerical composition grid; safe scalar math; native and WASM run the grid, while fma_contract and generic_all_types retain the memory paths under Miri",
-    ),
 ];
 
 /// magetypes integration-test targets, minus the binaries [`MIRI_SKIPPED_TESTS`]
@@ -1071,6 +1042,28 @@ fn run_miri() -> Result<()> {
             bail!("Miri tests in {bin} failed; see diagnostics above");
         }
         println!("  miri: {bin} {:.0} s", started.elapsed().as_secs_f64());
+    }
+    // The unpublished numerical framework moved out of Magetypes. Preserve
+    // its previous unit/highp/error coverage at the actual owner.
+    let migrated = Command::new("cargo")
+        .args([
+            &toolchain,
+            "miri",
+            "test",
+            "-p",
+            "magemath",
+            "--features",
+            "std avx512",
+            "--lib",
+            "--test",
+            "powf_highp",
+            "--test",
+            "expf_logf_contracts",
+        ])
+        .status()
+        .context("Failed to run migrated Magemath Miri contracts")?;
+    if !migrated.success() {
+        bail!("Migrated Magemath Miri contracts failed");
     }
     let started = std::time::Instant::now();
     // Cargo cannot mix --doc with explicit targets, so the doctests that the

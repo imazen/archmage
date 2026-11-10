@@ -550,10 +550,10 @@ powf-fixtures-check:
     python3 -B xtask/powf_vectors.py --check
 
 powf-contract tier="scalar":
-    ARCHMAGE_POWF_TIER={{tier}} cargo test --release -p magetypes --features avx512 --lib powf::
+    ARCHMAGE_POWF_TIER={{tier}} cargo test --release -p magemath --features avx512 --lib powf::
 
 powf-payloads tier="scalar" stride="65537":
-    ARCHMAGE_POWF_TIER={{tier}} ARCHMAGE_NAN_STRIDE={{stride}} cargo test --release -p magetypes --features avx512 --lib powf::tests::nan_sign_payload
+    ARCHMAGE_POWF_TIER={{tier}} ARCHMAGE_NAN_STRIDE={{stride}} cargo test --release -p magemath --features avx512 --lib powf::tests::nan_sign_payload
 
 # Build the frozen bounded-powf study (distribution target flags only).
 powf-study-build target="x86_64-unknown-linux-gnu":
@@ -574,11 +574,11 @@ powf-study-analyze *files:
     cargo run --release --manifest-path benchmarks/powf_module_2026-11-07/Cargo.toml --bin analyze -- {{files}}
 
 powf-contract-target target:
-    cargo test --release -p magetypes --target {{target}} --lib powf::
+    cargo test --release -p magemath --target {{target}} --lib powf::
 
 powf-wasm-build:
-    RUSTFLAGS="-C target-feature=+simd128" CARGO_TARGET_DIR=target/powf-wasm-strict cargo test --release -p magetypes --target wasm32-wasip1 --lib powf:: --no-run
-    RUSTFLAGS="-C target-feature=+simd128,+relaxed-simd" CARGO_TARGET_DIR=target/powf-wasm-relaxed cargo test --release -p magetypes --target wasm32-wasip1 --lib powf:: --no-run
+    RUSTFLAGS="-C target-feature=+simd128" CARGO_TARGET_DIR=target/powf-wasm-strict cargo test --release -p magemath --target wasm32-wasip1 --lib powf:: --no-run
+    RUSTFLAGS="-C target-feature=+simd128,+relaxed-simd" CARGO_TARGET_DIR=target/powf-wasm-relaxed cargo test --release -p magemath --target wasm32-wasip1 --lib powf:: --no-run
 
 powf-wasm-contract:
     bash benchmarks/powf_module_2026-11-07/verify_wasm.sh
@@ -615,8 +615,8 @@ powf-rounding-check:
 
 powf-policy-check:
     cargo fmt -p magetypes --check
-    cargo test --release -p magetypes --all-features --lib powf::
-    cargo test --release -p magetypes --no-default-features --features w512 --lib powf::
+    cargo test --release -p magemath --all-features --lib powf::
+    cargo test --release -p magemath --no-default-features --features w512 --lib powf::
     cargo test --doc -p magetypes --all-features
     cargo clippy -p magetypes --all-features --all-targets -- -D warnings
 
@@ -736,7 +736,7 @@ powf-policy-avx512-check fixtures sde:
     {{sde}} -icx -- benchmarks/powf_module_2026-11-07/target/release/policy_widths v4x < "{{fixtures}}"
 
 powf-policy-miri-highp:
-    cargo +$(cat xtask/miri-nightly.txt) miri test -p magetypes --features avx512 --lib powf::tests::std_highp_full_domain_and_restricted_masks
+    cargo +$(cat xtask/miri-nightly.txt) miri test -p magemath --features avx512 --lib powf::tests::std_highp_full_domain_and_restricted_masks
 
 powf-highp-cross directory fixtures sde wasm_runner="wasmtime":
     bash benchmarks/powf_module_2026-11-07/highp_cross.sh "{{directory}}" "{{fixtures}}" "{{sde}}" "{{wasm_runner}}"
@@ -867,8 +867,8 @@ powf-highp-eval-build:
     cargo build --release --locked --manifest-path benchmarks/powf_validation/Cargo.toml --bin powf_highp_eval
 
 powf-highp-test:
-    cargo test -p magetypes --test powf_highp
-    cargo test -p magetypes --no-default-features --test powf_highp
+    cargo test -p magemath --test powf_highp
+    cargo test -p magemath --no-default-features --test powf_highp
 
 powf-highp-verify expected directory command *options:
     python3 -B benchmarks/powf_providers_2026-11-09/highp_verify.py "{{expected}}" "{{directory}}" --command '{{command}}' {{options}}
@@ -930,13 +930,13 @@ powf-remap-codegen assembly output *options:
 
 # Full numerical replay is explicit; ordinary cargo test retains spot checks.
 powf-test-exhaustive:
-    cargo test -p magetypes --features _exhaustive-tests,avx512 --lib powf::
-    cargo test -p magetypes --features _exhaustive-tests,avx512 --test powf_tails_portable_midp --test powf_tails_portable_lowp --test powf_tails_backend_midp --test powf_tails_backend_lowp
+    cargo test -p magemath --features _exhaustive-tests,avx512 --lib powf::
+    cargo test -p magemath --features _exhaustive-tests,avx512 --test powf_tails_portable_midp --test powf_tails_portable_lowp --test powf_tails_backend_midp --test powf_tails_backend_lowp
 
 # Focused ordinary-test tier; no test-name filter leaks into integration tests.
 powf-test-spot:
-    cargo test -p magetypes --lib powf::
-    cargo test -p magetypes --test powf_tails_portable_midp --test powf_tails_portable_lowp --test powf_tails_backend_midp --test powf_tails_backend_lowp
+    cargo test -p magemath --lib powf::
+    cargo test -p magemath --test powf_tails_portable_midp --test powf_tails_portable_lowp --test powf_tails_backend_midp --test powf_tails_backend_lowp
 
 # Directed before/after exceptional-value ledger; no timing loop.
 powf-legacy-edge-variance:
@@ -959,7 +959,7 @@ magemath-check:
     cargo test -p magemath --no-default-features --features w512
     cargo test -p magemath --release --features "std avx512" --test contracts
     cargo clippy -p magemath --all-targets --features "std avx512" -- -D warnings
-    cargo test -p magetypes --test expf_logf_contracts
+    cargo test -p magemath --test expf_logf_contracts
     cargo fmt -p magemath -p magetypes -p xtask -- --check
 
 magemath-check-wasm:
@@ -977,3 +977,7 @@ magemath-compat-clippy:
 
 magemath-legacy-remap-wasm:
     RUSTFLAGS="-C target-feature=+simd128" CARGO_TARGET_WASM32_WASIP1_RUNNER=wasmtime cargo test -p magetypes --features "std avx512" --target wasm32-wasip1 --test powf_engine_remap -- --nocapture
+
+# Published method arithmetic stays in Magetypes; configured math belongs above it.
+check-published-math:
+    python3 -B xtask/check_published_math.py

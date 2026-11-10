@@ -8,7 +8,7 @@
     target_arch = "wasm32"
 ))]
 use archmage::SimdToken;
-use magetypes::powf::{PowfDomain, PowfExecution, PowfOptions, PowfPortability, try_powf_with};
+use magemath::powf::{PowfDomain, PowfExecution, PowfOptions, PowfPortability, try_powf_with};
 const CALLER: u32 = PowfOptions::new()
     .with_execution(PowfExecution::Caller)
     .bits();
@@ -41,25 +41,34 @@ fn bounded_widths_and_tails(token: Token) {
     // of WASM debug compiler memory without adding coverage.
     #[inline(never)]
     fn eval4<const FLAGS: u32>(token: Token, x: [f32; 4], n: f32) -> [f32; 4] {
-        f32x4::from_array_t(token, x)
-            .try_powf_with::<FLAGS>(n)
-            .unwrap()
-            .to_array()
+        magemath::powf::try_powf_f32x4_with::<FLAGS, _>(
+            token,
+            magetypes::simd::generic::f32x4::from_array_t(token, x),
+            n,
+        )
+        .unwrap()
+        .to_array()
     }
     #[inline(never)]
     fn eval8<const FLAGS: u32>(token: Token, x: [f32; 8], n: f32) -> [f32; 8] {
-        f32x8::from_array_t(token, x)
-            .try_powf_with::<FLAGS>(n)
-            .unwrap()
-            .to_array()
+        magemath::powf::try_powf_f32x8_with::<FLAGS, _>(
+            token,
+            magetypes::simd::generic::f32x8::from_array_t(token, x),
+            n,
+        )
+        .unwrap()
+        .to_array()
     }
     #[cfg(feature = "w512")]
     #[inline(never)]
     fn eval16<const FLAGS: u32>(token: Token, x: [f32; 16], n: f32) -> [f32; 16] {
-        magetypes::simd::generic::f32x16::from_array_t(token, x)
-            .try_powf_with::<FLAGS>(n)
-            .unwrap()
-            .to_array()
+        magemath::powf::try_powf_f32x16_with::<FLAGS, _>(
+            token,
+            magetypes::simd::generic::f32x16::from_array_t(token, x),
+            n,
+        )
+        .unwrap()
+        .to_array()
     }
     #[inline(never)]
     fn eval_scalar<const FLAGS: u32>(x: f32, n: f32) -> f32 {
@@ -67,7 +76,7 @@ fn bounded_widths_and_tails(token: Token) {
     }
     #[inline(never)]
     fn eval_tail<const FLAGS: u32>(token: Token, x: f32, n: f32) -> f32 {
-        magetypes::powf::try_powf_with_token::<FLAGS, _>(token, x, n).unwrap()
+        magemath::powf::try_powf_with_token::<FLAGS, _>(token, x, n).unwrap()
     }
     fn scalar_bits<const FLAGS: u32>(token: Token, x: f32, n: f32) -> u32 {
         let result = eval_tail::<FLAGS>(token, x, n);

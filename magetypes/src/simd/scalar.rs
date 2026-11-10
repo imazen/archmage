@@ -4,7 +4,6 @@
 //! allowing `#[magetypes]`-generated code to compile for the scalar fallback.
 
 #![allow(non_camel_case_types)]
-#![allow(deprecated)] // Retained compatibility delegates.
 
 use archmage::ScalarToken;
 use core::ops::{Add, Div, Mul, Neg, Sub};
@@ -15,43 +14,6 @@ use core::ops::{Add, Div, Mul, Neg, Sub};
 pub struct f32x1(pub f32);
 
 impl f32x1 {
-    /// Bounded, bit-consistent power in the default positive-normal domain.
-    #[inline]
-    #[deprecated(
-        since = "0.9.32",
-        note = "use magemath::powf scalar entry points with explicit options"
-    )]
-    pub fn try_powf(self, exponent: f32) -> Result<Self, crate::powf::PowfError> {
-        crate::powf::try_powf(self.0, exponent).map(Self)
-    }
-
-    /// Bounded power with integer const flags; see [`crate::powf`].
-    #[inline(always)]
-    #[deprecated(
-        since = "0.9.32",
-        note = "use magemath::powf scalar entry points with explicit options"
-    )]
-    pub fn try_powf_with<const OPTIONS: u32>(
-        self,
-        exponent: f32,
-    ) -> Result<Self, crate::powf::PowfError> {
-        crate::powf::try_powf_with::<OPTIONS>(self.0, exponent).map(Self)
-    }
-
-    /// Bounded power with explicit domain/execution options; see [`crate::powf`].
-    #[inline]
-    #[deprecated(
-        since = "0.9.32",
-        note = "use magemath::powf scalar entry points with explicit options"
-    )]
-    pub fn try_powf_runtime(
-        self,
-        exponent: f32,
-        options: crate::powf::PowfOptions,
-    ) -> Result<Self, crate::powf::PowfError> {
-        crate::powf::try_powf_runtime(self.0, exponent, options).map(Self)
-    }
-
     /// Number of lanes (always 1 for scalar).
     pub const LANES: usize = 1;
 

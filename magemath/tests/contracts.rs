@@ -262,31 +262,3 @@ fn vectors_and_tails_reuse_the_same_caller_graph() {
         check_tails_wasm128(t);
     }
 }
-
-#[test]
-#[allow(deprecated)] // Independent compatibility implementation is the migration control.
-fn canonical_highp_migration_retains_existing_bits() {
-    const OPTIONS: u32 = p::PowfOptions::PORTABLE_HIGHP.bits();
-    for x in [
-        f32::from_bits(1),
-        0.,
-        -0.,
-        0.5,
-        1.,
-        2.,
-        f32::MAX,
-        -2.,
-        f32::INFINITY,
-        f32::NAN,
-    ] {
-        for n in [0., 0.5, 1., 2.4, -1.] {
-            let a = p::try_powf_with::<OPTIONS>(x, n).unwrap();
-            let b = magetypes::powf::try_powf_with::<OPTIONS>(x, n).unwrap();
-            if a.is_nan() {
-                assert!(b.is_nan());
-            } else {
-                assert_eq!(a.to_bits(), b.to_bits());
-            }
-        }
-    }
-}
