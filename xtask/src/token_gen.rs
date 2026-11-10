@@ -150,11 +150,18 @@ fn gen_real_tokens(
     // Atomic imports for native detection and WASM test-only suppression.
     if !tokens.is_empty() {
         if arch == "wasm" {
-            // With every WASM tier enabled and testing off, all reads/writes
-            // fold away. Partial-feature and testing builds still use Ordering.
-            out.push_str("#[allow(unused_imports)] // WASM compile-time-only builds need no atomic operations\n");
+            let features: Vec<&str> = tokens
+                .iter()
+                .flat_map(|token| token.features.iter().map(String::as_str))
+                .collect();
+            let all_features = cfg_all_features(&features);
+            out.push_str("use core::sync::atomic::{AtomicBool, AtomicU8};\n");
+            out.push_str(&format!(
+                "#[cfg(not(all({all_features}, not(feature = \"testable_dispatch\"))))]\nuse core::sync::atomic::Ordering;\n"
+            ));
+        } else {
+            out.push_str("use core::sync::atomic::{AtomicBool, AtomicU8, Ordering};\n");
         }
-        out.push_str("use core::sync::atomic::{AtomicBool, AtomicU8, Ordering};\n");
     }
 
     // Collect all trait names used by tokens in this file

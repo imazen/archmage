@@ -5,8 +5,14 @@
 #[allow(deprecated)]
 use crate::tokens::Has128BitSimd;
 use crate::tokens::SimdToken;
-#[allow(unused_imports)] // WASM compile-time-only builds need no atomic operations
-use core::sync::atomic::{AtomicBool, AtomicU8, Ordering};
+#[cfg(not(all(
+    target_feature = "simd128",
+    target_feature = "simd128",
+    target_feature = "relaxed-simd",
+    not(feature = "testable_dispatch")
+)))]
+use core::sync::atomic::Ordering;
+use core::sync::atomic::{AtomicBool, AtomicU8};
 
 // Cache statics: 0 = unknown, 1 = unavailable, 2 = available
 #[allow(dead_code)]
