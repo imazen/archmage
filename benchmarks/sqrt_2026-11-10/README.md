@@ -184,10 +184,9 @@ run-heavy: done rc=0 20s | peak-RSS 0.41GiB | min-avail 41772MiB | peak-load 0.5
 The complete timing runs are still flagged unreliable as described above; this
 assembly approval does not promote unqualified timing cells.
 
-Reproduce the original inventory or check the approved gate at the PR head:
+Check the approved gate and inventory at the PR head:
 
 ```sh
-just codegen-diff bd83f034 4deedd1c # original rejected expectation at that head
 just codegen-diff bd83f034 HEAD # approved std-reference checks at the current head
 python3 -B benchmarks/sqrt_2026-11-10/codegen_inventory.py RUN_DIRECTORY OUTPUT_JSON
 ```
