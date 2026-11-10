@@ -30,3 +30,10 @@ flags are not cross-backend contracts. Correctness observations do not establish
 performance, and sampled f64 tests do not constitute an exhaustive proof.
 
 Results and supported-target coverage will be recorded here after validation.
+
+Admission setup correction: initial zenbench 0.1.10 runs counted benchmark CPU
+as foreign activity. They remain retained and unqualified. The measurement
+harness now uses published zenbench 0.1.11 (source `983eafaa49ce`) with owned
+launcher registration and trace evidence. All thresholds, 50 retained rounds
+and the all-rounds-clean requirement stay unchanged. Both numerical paths are
+interleaved under the corrected harness; production math is unchanged.

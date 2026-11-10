@@ -996,7 +996,7 @@ sqrt-check:
     cargo clippy -p magetypes --all-targets --features "std avx512" -- -D warnings
 
 sqrt-bench:
-    cargo bench -p magetypes --bench sqrt_paths --features std
+    ZENBENCH_LAUNCHER_PIDS=$$ cargo bench -p magetypes --bench sqrt_paths --features std
 
 # Explicit opt-in, constant-memory comparison of all f32 input patterns.
 sqrt-check-exhaustive:
