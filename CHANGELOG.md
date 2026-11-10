@@ -155,6 +155,10 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 
 ### [Unreleased]
 
+#### Performance
+
+- Use std sqrt for ScalarToken vectors and one-lane wrappers when std is enabled, preserving non-NaN results and retaining the integer no_std fallback. Add independent rational fixtures, a streaming opt-in full f32 comparison and named interleaved software/std controls (42a31313).
+
 #### Deprecated
 
 - Deprecate pow/exp/log approximation suffix methods in favor of Magemath with an explicit numerical profile. Published flat methods remain available; cube root, sigmoid, SiLU and reciprocal/root primitives are unchanged (d873dc89).

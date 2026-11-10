@@ -623,7 +623,11 @@ fn gen_float_math() -> String {
                 Self(T::clamp(self.1, self.0, lo.0, hi.0), self.1)
             }}
 
-            /// Square root.
+            /// Correctly rounded square root under round-to-nearest with gradual underflow.
+            /// Non-NaN result bits, including signed zero, agree across backends.
+            /// NaN payloads/signs and floating exception flags are not specified.
+            /// Native SIMD uses hardware sqrt; ScalarToken uses std sqrt when
+            /// enabled and the retained integer software fallback without std.
             #[inline(always)]
             pub fn sqrt(self) -> Self {{
                 Self(T::sqrt(self.1, self.0), self.1)

@@ -108,8 +108,10 @@ and no Magemath dependency is added to Magetypes.
 ## Reciprocal and square root boundary
 
 Keep basic `sqrt` in Magetypes: it is a vector primitive used by higher-level
-math. A policy-driven approximation belongs above it only when a measured
-algorithm needs a different contract.
+math. Its [scalar routing and portability study](../benchmarks/sqrt_2026-11-10/README.md)
+records the std hardware route, retained no_std fallback and numerical assumptions.
+A policy-driven approximation belongs above it only when a measured algorithm
+needs a different contract.
 
 Reciprocal and reciprocal square root are plausible next Magemath families:
 there are already estimate, refinement and precise-composition choices with
