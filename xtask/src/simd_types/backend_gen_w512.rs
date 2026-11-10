@@ -1038,18 +1038,18 @@ fn generate_scalar_float_impl(ty: &W512Type) -> String {
             #[inline(always)]
             fn recip(self, a: {array}) -> {array} {{ core::array::from_fn(|i| 1.0 / a[i]) }}
             #[inline(always)]
-            fn rsqrt(self, a: {array}) -> {array} {{ core::array::from_fn(|i| 1.0 / crate::nostd_math::{sqrt_fn}(a[i])) }}
+            fn rsqrt(self, a: {array}) -> {array} {{ core::array::from_fn(|i| 1.0 / crate::scalar_sqrt::{sqrt_fn}(a[i])) }}
         "#}
     } else {
         formatdoc! {r#"
             #[inline(always)]
             fn rcp_approx(self, a: {array}) -> {array} {{ core::array::from_fn(|i| 1.0 / a[i]) }}
             #[inline(always)]
-            fn rsqrt_approx(self, a: {array}) -> {array} {{ core::array::from_fn(|i| 1.0 / crate::nostd_math::{sqrt_fn}(a[i])) }}
+            fn rsqrt_approx(self, a: {array}) -> {array} {{ core::array::from_fn(|i| 1.0 / crate::scalar_sqrt::{sqrt_fn}(a[i])) }}
             #[inline(always)]
             fn recip(self, a: {array}) -> {array} {{ core::array::from_fn(|i| 1.0 / a[i]) }}
             #[inline(always)]
-            fn rsqrt(self, a: {array}) -> {array} {{ core::array::from_fn(|i| 1.0 / crate::nostd_math::{sqrt_fn}(a[i])) }}
+            fn rsqrt(self, a: {array}) -> {array} {{ core::array::from_fn(|i| 1.0 / crate::scalar_sqrt::{sqrt_fn}(a[i])) }}
         "#}
     };
 
@@ -1098,7 +1098,7 @@ fn generate_scalar_float_impl(ty: &W512Type) -> String {
 
             #[inline(always)]
             fn sqrt(self, a: {array}) -> {array} {{
-                core::array::from_fn(|i| crate::nostd_math::{sqrt_fn}(a[i]))
+                core::array::from_fn(|i| crate::scalar_sqrt::{sqrt_fn}(a[i]))
             }}
 
 {recip_section}

@@ -2002,14 +2002,14 @@ fn generate_scalar_impls(types: &[FloatVecType]) -> String {
         if seen_elems.insert(ty.elem) {
             let (sqrt_fn, floor_fn, ceil_fn, round_fn) = if ty.elem == "f32" {
                 (
-                    "crate::nostd_math::sqrtf",
+                    "crate::scalar_sqrt::sqrtf",
                     "crate::nostd_math::floorf",
                     "crate::nostd_math::ceilf",
                     "crate::nostd_math::roundevenf",
                 )
             } else {
                 (
-                    "crate::nostd_math::sqrt",
+                    "crate::scalar_sqrt::sqrt",
                     "crate::nostd_math::floor",
                     "crate::nostd_math::ceil",
                     "crate::nostd_math::roundeven",

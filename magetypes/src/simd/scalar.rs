@@ -92,7 +92,7 @@ impl f32x1 {
     /// Element-wise square root.
     #[inline(always)]
     pub fn sqrt(self) -> Self {
-        Self(crate::nostd_math::sqrtf(self.0))
+        Self(crate::scalar_sqrt::sqrtf(self.0))
     }
 
     /// Element-wise absolute value.
@@ -282,7 +282,7 @@ impl f64x1 {
     /// Element-wise square root.
     #[inline(always)]
     pub fn sqrt(self) -> Self {
-        Self(crate::nostd_math::sqrt(self.0))
+        Self(crate::scalar_sqrt::sqrt(self.0))
     }
 
     /// Element-wise absolute value.
