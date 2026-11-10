@@ -145,7 +145,7 @@ launcher registration and trace evidence. All thresholds, 50 retained rounds
 and the all-rounds-clean requirement stay unchanged. Both numerical paths are
 interleaved under the corrected harness; production math is unchanged.
 
-## Existing assembly gate: approval pending
+## Approved assembly expectation
 
 CI at `4deedd1c` rejects the intentional scalar sqrt assembly changes. An
 independent inventory of all 3,211 probes finds exactly six changed x86 probes;
@@ -164,20 +164,38 @@ work estimates (the old wide software kernels contain loops).
 
 The new bodies contain only pointer moves, contiguous vector loads/stores,
 `sqrtps`/`sqrtpd` and return. No std work is hidden outside these counts.
-The proposed expectation is equality with independently generated direct-std
-sqrt reference kernels for exactly these six probes, retaining every other
-assembly expectation and every numerical bound. A separate consumer build confirms that all six new bodies already match
-those direct-std reference kernels exactly. The existing equality gate
-has not been changed; accepting this intentional codegen difference awaits
-owner approval. PR152 is not merge-ready while that check fails.
+The owner approved replacing old-software equality with independently generated
+direct-std sqrt references for exactly these six probes on 2026-11-10. The gate
+now requires exact expanded-body equality to those references, even when the
+before/after implementations agree. Reference functions must be present on both
+sides and cannot call the SIMD sqrt method or scalar selection helper.
 
-Reproduce the inventory without changing the gate:
+The full gate passes: six reviewed x86 differences and zero ARM/WASM differences;
+all other 3,205 primary probes are identical. Adversarial checks reject missing
+references, wrong sqrt precision/operations, wrong memory offsets, missing stores,
+extra calls and any widening of the six-probe/target scope. Every numerical bound
+and all other assembly expectations remain intact. No production arithmetic or
+timed kernel changed in this gate update.
+
+```text
+run-heavy: done rc=0 20s | peak-RSS 0.41GiB | min-avail 41772MiB | peak-load 0.50
+```
+
+The complete timing runs are still flagged unreliable as described above; this
+assembly approval does not promote unqualified timing cells.
+
+Reproduce the original inventory or check the approved gate at the PR head:
 
 ```sh
-just codegen-diff bd83f034 4deedd1c
+just codegen-diff bd83f034 4deedd1c # original rejected expectation at that head
+just codegen-diff bd83f034 HEAD # approved std-reference checks at the current head
 python3 -B benchmarks/sqrt_2026-11-10/codegen_inventory.py RUN_DIRECTORY OUTPUT_JSON
 ```
 
 The full failing-gate logs, expanded instructions and reference experiment are
 preserved in `sqrt-study-2026-11-10-followup` beneath the same local/mirrored
 output roots. The first evidence archive remains immutable.
+
+Approved-gate logs, generated references, assembly, source snapshot and SHA-256
+index are preserved in `sqrt-study-2026-11-10-approved-gate` beneath the same
+local/mirrored output roots. Earlier evidence archives remain immutable.
