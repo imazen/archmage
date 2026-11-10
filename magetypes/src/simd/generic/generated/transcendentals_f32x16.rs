@@ -17,7 +17,8 @@
 //!   function gives its figures.
 //!
 //! Variant suffixes:
-//! - `_unchecked`: No edge case handling (fastest, undefined for ≤0/NaN/Inf)
+//! - `_unchecked`: lowp names are aliases of the plain forms; midp
+//!   log/exp/pow forms omit their edge checks and require valid inputs.
 //! - (normal): Basic edge case handling (0→-inf, negative→NaN for log)
 //! - `_precise`: `cbrt_midp_precise` also handles subnormal inputs and the
 //!   whole range; the other `_midp_precise` names are aliases of the plain
@@ -81,6 +82,7 @@ impl<T: F32x16Convert> f32x16<T> {
 
     /// Low-precision base-2 exponential: relative error at most 0.56% for x up
     /// to 127.99 and 1.23% above, where the input is clamped to 127.99.
+    /// NaN inputs return NaN; payload and sign are unspecified.
     #[inline(always)]
     pub fn exp2_lowp(self) -> Self {
         const C0: f32 = 1.0;
@@ -90,9 +92,16 @@ impl<T: F32x16Convert> f32x16<T> {
 
         // floor(x) <= 127 keeps the bit trick (n+127)<<23 in range; at 127.99
         // the result stays below f32::MAX despite the polynomial's error.
-        let x = self
-            .max(splat_f32::<T>(self.1, -126.0))
-            .min(splat_f32::<T>(self.1, 127.99));
+        // x86 min/max select the second operand on NaN; NEON and
+        // WASM propagate NaN. Put the value second at both clamps.
+        let lower = splat_f32::<T>(self.1, -126.0);
+        let upper = splat_f32::<T>(self.1, 127.99);
+        let x = if core::any::TypeId::of::<T>() == core::any::TypeId::of::<archmage::ScalarToken>()
+        {
+            Self::from_array_t(self.1, self.to_array().map(|x| x.clamp(-126.0, 127.99)))
+        } else {
+            upper.min(lower.max(self))
+        };
         let xi = x.floor();
         let xf = x - xi;
 
@@ -105,7 +114,8 @@ impl<T: F32x16Convert> f32x16<T> {
         poly * scale_bits.bitcast_to_f32()
     }
 
-    /// Low-precision base-2 exponential, no edge case handling.
+    /// Alias of [`exp2_lowp`](f32x16::exp2_lowp), including its clamps
+    /// and NaN classification.
     #[inline(always)]
     pub fn exp2_lowp_unchecked(self) -> Self {
         self.exp2_lowp()
@@ -129,7 +139,8 @@ impl<T: F32x16Convert> f32x16<T> {
         (self * splat_f32::<T>(self.1, core::f32::consts::LOG2_E)).exp2_lowp()
     }
 
-    /// Low-precision natural exponential, no edge case handling.
+    /// Alias of [`exp_lowp`](f32x16::exp_lowp), including its clamps
+    /// and NaN classification.
     #[inline(always)]
     pub fn exp_lowp_unchecked(self) -> Self {
         self.exp_lowp()
@@ -269,14 +280,19 @@ impl<T: F32x16Convert> f32x16<T> {
     ///
     /// At most 1.9 ULP for x below 127.5 and up to 134.1 ULP in [127.5, 128).
     /// Returns 0 for x < -126 (denormal results can't be constructed),
-    /// inf for x >= 128.
+    /// inf for x >= 128, and NaN for NaN inputs (payload/sign unspecified).
     #[inline(always)]
     pub fn exp2_midp(self) -> Self {
         let underflow_limit = splat_f32::<T>(self.1, -126.0);
         let overflow_limit = splat_f32::<T>(self.1, 128.0);
 
         // Clamp to prevent overflow in intermediate calculations
-        let clamped = self.max(underflow_limit).min(overflow_limit);
+        let clamped =
+            if core::any::TypeId::of::<T>() == core::any::TypeId::of::<archmage::ScalarToken>() {
+                Self::from_array_t(self.1, self.to_array().map(|x| x.clamp(-126.0, 128.0)))
+            } else {
+                overflow_limit.min(underflow_limit.max(self))
+            };
         let result = clamped.exp2_midp_unchecked();
 
         // Handle edge cases: large negative → 0, large positive → inf

@@ -143,6 +143,15 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 - Planned: make `w512` non-default in magetypes; users who need 512-bit types would add `features = ["w512"]`. This patch keeps the existing default features.
 - Remove `cast::Upcast` and `cast::Downcast`, and with them the `cast` module, which holds nothing else. Both are deprecated in 0.9.30 and were never implemented (b1b2ff67).
 
+#### Fixed
+
+- Clamped generic exp2/exp helpers preserve NaN classification on scalar and x86,
+  matching NEON and WASM. Sigmoid/SiLU and internally generated checked-pow NaNs
+  inherit the correction; lowp pow's zero precedence remains (8c57665c).
+  Ordinary polynomial rounding remains relaxed. See
+  [the portability study](benchmarks/math_portability_fma_2026-11-07/README.md)
+  for measured costs and the candidate's failed performance promotion gate.
+
 ### [0.9.31] - 2026-11-07
 
 #### Changed

@@ -1210,12 +1210,43 @@ fn process(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 
 ### Open
 
-- **magetypes transcendentals mishandle NaN inputs (2026-11-05, open):** the
-  docs claimed NaN → NaN for logs. Measured on scalar, V3, NEON and WASM:
-  `log2_midp(NaN)` is -383.4 everywhere, `pow_midp(NaN, 2.4)` is 0, and
-  `exp2_midp(NaN)` is 2^-126 on x86 and scalar but NaN on NEON and WASM, because
-  it clamps with `max`/`min`. Docs corrected in `docs/transcendentals.md`; the
-  methods are unchanged, since any fix needs its own bit-contract review.
+- **magetypes log/pow NaN inputs (2026-11-05, partly open):**
+  `log2_midp(NaN)` can return about -383.4 and `pow_midp(NaN, 2.4)` can
+  return zero; those shared legacy defects remain. The portability candidate
+  corrects the clamped exp2 boundary locally: reversed native min/max operands
+  and scalar `f32::clamp` preserve NaNs without changing the ordinary graph.
+  Exp aliases/activations and NaNs created by checked pow inherit the fix.
+  Ordinary rounding stays relaxed. Numerical contracts and cascades are in
+  `docs/transcendentals.md`; isolated performance candidates and evidence live
+  under `benchmarks/math_portability_fma_2026-11-07/`.
+
+- **Exp portability candidate cost (2026-11-07, not promoted):** the NaN
+  correction fails the 2% performance gate on real Neoverse-N1 ScalarToken
+  callers: x4/64 ordinary streams measured exp2_midp R=1.194328
+  (95% CI 1.191663–1.196972), exp_midp R=1.217332
+  (1.214774–1.219837), and the combined patch R=1.149418
+  (1.145333–1.153668). Matching NEON cells do not offset scalar failures.
+  [PR143](https://github.com/imazen/archmage/pull/143) keeps this tradeoff
+  reviewable; fixed-fused polynomial rounding remains experimental. Full
+  cell evidence is in `benchmarks/math_portability_fma_2026-11-07/README.md`.
+
+- **Direct std f32 diagnostic (2026-11-07, external implementation):**
+  The independent FMA fixtures expose two subnormal mismatches in direct
+  `std::f32::mul_add` under no-FMA Nehalem; the added std comparison also failed
+  on ARMv7 and strict WASM CI. Magetypes' own software paths pass those inputs.
+  `just std-fma-oracle` preserves an explicit failing reproducer, separate
+  from library contract tests. No fixtures or Magetypes assertions were relaxed.
+  Nehalem's f64 diagnostic passes all 128 cases; that sampled result does not
+  establish full-domain correctness or performance for the std prototype.
+
+- **Below-V3 std f64 prototype (2026-11-07, not integrated):** safe std
+  `f64::mul_add` executed FMA3 with AVX2 disabled and passed the independent
+  fixtures. Production candidate 68320dbd changed six x86 scalar-f64 codegen
+  probes, so the unchanged assembly gate rejected it; quiet hardware/no-FMA
+  costs are also missing. The optional std-delegate benchmark arm and the
+  preserved candidate remain reviewable. Production FMA stays on main's
+  implementation until the codegen expectation and costs are accepted.
+  No structural guard, proof API or codegen exception was weakened.
 
 - **Portable FMA rounding and Miri (2026-10-12, fixed locally; CI pending):**
   The all-target f32 round-to-odd fallback fixes the independent subnormal

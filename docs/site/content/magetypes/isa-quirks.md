@@ -39,7 +39,7 @@ CPU, width, compiler, baseline, and workload.
 | Same narrowing methods on [`i16x32`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.i16x32.html) / [`i32x16`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.i32x16.html) | Native AVX-512 | Narrow each input to a half and insert/concatenate. Unsigned destinations clamp signed inputs to zero before unsigned conversion. | Two zero clamps for unsigned output, plus the two conversions and concatenation needed for the operation. |
 | Same narrowing families at 128 bits; NEON / WASM widths | Native halves | Native signed-source saturating narrows already have the desired lane order. | No AVX2-style lane-order repair; polyfills still require composition. |
 | `v.shl_const::<N>()`, `v.shr_logical_const::<N>()`, `v.shr_arithmetic_const::<N>()` | Every backend | Const assertions reject invalid counts before execution. | **No runtime assertion.** Constant byte shifts can still require shift/mask emulation. |
-| `a.mul_add_fused(b, c)` / `a.mul_sub_fused(b, c)` (also spelled `mul_add_portable` / `mul_sub_portable`) on every float type | Scalar backend; WASM | Native hardware backends use FMA directly. The scalar backend uses the FMA instruction when the build guarantees one (and for x86_64 f64 with `std`, when a cached runtime check finds it), else software. Relaxed-SIMD WASM uses relaxed madd when a cached probe shows the engine fuses it, else software; strict WASM always uses software. Software f32 rounds once through f64 (WASM SIMD f32 rounds to odd); software f64 uses a double-double product. Both check rare lanes into an exact path. | The software forms have no per-lane branch, so they vectorize on SSE2 and WASM SIMD. Two cached checks run once per call: the x86_64 `std` f64 CPU flag, and the relaxed-WASM fusion probe (per element type). Nothing else detects. Measurements are below; see [Fused arithmetic](#fused-arithmetic-and-reductions). |
+| `a.mul_add_fused(b, c)` / `a.mul_sub_fused(b, c)` (also spelled `mul_add_portable` / `mul_sub_portable`) on every float type | Scalar backend; WASM | Native hardware backends use FMA directly. The scalar backend uses the FMA instruction when the build guarantees one (and for x86_64 f64 with `std`, when a cached runtime check finds it), else software. Relaxed-SIMD WASM uses relaxed madd when a cached probe shows the engine fuses it, else software; strict WASM always uses software. Software f32 rounds once through f64 (WASM SIMD f32 rounds to odd); software f64 uses a double-double product. Both check rare lanes into an exact path. | The software forms have no per-lane branch, so they vectorize on SSE2 and WASM SIMD. Magetypes caches the full-V3 check for x86_64 std f64 and the relaxed-WASM projection per element type. Below V3, the production implementation retains its array software fallback. A safe std-delegation alternative is benchmark-only pending codegen review and quiet costs. WASM fusion probes apply to token-backed packed operations; ScalarToken and one-lane wrappers keep their array software paths. Measurements are below; see [Fused arithmetic](#fused-arithmetic-and-reductions). |
 
 `abs_diff`, `madd_adjacent`, `pairwise_widen_add`, saturating arithmetic, and
 `reduce_add_u32` sometimes need several instructions because an ISA lacks that
@@ -244,9 +244,13 @@ Scalar helpers use the FMA instruction when the build guarantees it: with
 `std`, AArch64 NEON or x86 FMA-enabled builds use Rust's `mul_add`; without
 `std`, V3 or NEON target features let a compile-time token reach the
 intrinsic. For f64 on x86_64 with `std`, a cached runtime check (archmage's V3
-token, once per call) also selects the instruction on CPUs that have it: on a
-Ryzen 9 7900X and a Core Ultra 7 265K that took 0.09–0.43× the software path's
-time. f32 stays in software without a compile-time guarantee, because its
+token, once per call) selects the paired helper on full-V3 CPUs: on a
+Ryzen 9 7900X and a Core Ultra 7 265K that previously took 0.09–0.43× the
+software time. A below-V3 std-delegation prototype is benchmark-only: its
+numerical checks pass, but intentional assembly changes need a reviewed
+codegen exception and quiet costs are unmeasured; see the
+[portability study](https://github.com/imazen/archmage/blob/main/benchmarks/math_portability_fma_2026-11-07/README.md).
+f32 stays in software without a compile-time guarantee, because its
 vectorized software path measured as fast as a per-call hardware path or
 faster. Results are identical on every path. Native vector backends retain
 their token-proven FMA intrinsics. Strict WASM portable operations use
@@ -345,3 +349,10 @@ Integer contracts are covered by `int_widen_narrow.rs`,
 respective fixups. `xtask/codegen.py` checks per-ISA consumer assembly, direct
 storage access, and integer formulations. These gates check the tested shapes
 and contexts; they do not establish optimal codegen for every possible caller.
+
+The clamped generic `exp2_lowp` and checked `exp2_midp` preserve original
+NaN classification at their clamps, so every backend returns NaN. Exp aliases and
+activation helpers inherit this behavior. Checked power also preserves
+NaNs produced by a negative base entering log. Payload/sign remain
+unspecified, and ordinary polynomial rounding remains relaxed. See the
+[transcendental contracts](https://github.com/imazen/archmage/blob/main/docs/transcendentals.md).

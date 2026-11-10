@@ -118,11 +118,15 @@ log and pow functions also have `_unchecked`; the midp tier adds `_precise`.
 
 **Edge cases**: 0 → -inf, negative → NaN, +inf → +inf for the midp log functions. The lowp logs have no edge handling: results for 0 and negatives are finite and meaningless.
 
-**NaN inputs are not handled, and the results differ by backend** (measured 2026-11-05): among the operations listed below, only `cbrt_midp` returns NaN on all four measured backends.
+**NaN classification at the clamped exponential boundary is portable.**
+`exp2_lowp` and checked `exp2_midp` return NaN for every NaN input; their
+exp aliases and the sigmoid/SiLU helpers inherit this. NaN payload and sign
+are unspecified. Polynomial rounding remains backend-dependent. Other
+transcendental NaN defects remain, including the log and pow cases below.
 
 | Function, NaN input | Scalar, x86 V3 | NEON, WASM |
 |---------------------|----------------|------------|
-| `exp2_midp`, `exp_midp`, `exp2_lowp` | 2^-126 | NaN |
+| `exp2_midp`, `exp_midp`, `exp2_lowp`, `exp_lowp` | NaN | NaN |
 | `log2_midp` | -383.4 | -383.4 |
 | `ln_midp` | -265.8 | -265.8 |
 | `log10_midp` | -115.4 | -115.4 |
@@ -191,6 +195,15 @@ transcendentals.
 - Use `_unchecked` variants in hot loops when inputs are guaranteed valid (e.g., already clamped to [0, 1])
 - Use `cbrt_midp_precise` when inputs may be subnormal or above `f32::MAX / 3`; the other `_precise` names add nothing
 - For perfect precision, use std::f32 (scalar) at ~4-5x slower throughput
+
+The exp correction also propagates internally produced NaNs: checked
+`pow_midp` on a negative base now returns NaN, as do power calls whose
+exponent is NaN or whose logarithm-times-exponent is invalid (for example
+`pow_midp(1, inf)` and `pow_midp(0, 0)`). The existing lowp zero mask
+still takes precedence: `pow_lowp(0, NaN)` is +0. This does not establish
+full `powf` semantics; NaN bases still enter the legacy bitwise log.
+Unchecked midp exp/log/pow paths keep their existing restricted domains.
+
 
 ## Algorithms
 

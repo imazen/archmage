@@ -526,6 +526,10 @@ fma-contract:
     cargo test -p magetypes --features avx512 --test fma_contract --test fused_arithmetic
     cargo test -p magetypes --no-default-features --features w512 --test fma_contract --test fused_arithmetic
 
+# Explicit diagnostic of std itself; exits nonzero on independent-oracle mismatches.
+std-fma-oracle:
+    cargo run -p magetypes --example std_fma_oracle
+
 # Exercise the native software fallback on x86 without FMA.
 fma-no-hardware:
     CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER="qemu-x86_64 -cpu Nehalem" cargo test -p magetypes --target x86_64-unknown-linux-gnu --test fma_contract --test fused_arithmetic
@@ -544,3 +548,63 @@ release-compat-recheck source output inventory:
 
 release-compat-audit directory source *options:
     python3 xtask/release_compat/audit.py {{directory}} --source {{source}} {{options}}
+
+# Read-only literal-call inventory of explicitly selected local checkouts.
+portability-usage output *roots:
+    python3 benchmarks/math_portability_fma_2026-11-07/usage_inventory.py {{quote(output)}} {{roots}}
+
+# Exp-boundary exceptional-value classification, with an explicit required tier.
+portability-nan tier="scalar" stride="65537":
+    ARCHMAGE_NAN_STRIDE={{stride}} ARCHMAGE_TEST_TIER={{tier}} cargo test --release -p magetypes --features avx512 --test transcendental_nan
+
+# Frozen-main/live exceptional/fixed-fused comparison; output is required.
+portability-build:
+    cargo build --release --manifest-path benchmarks/math_portability_fma_2026-11-07/Cargo.toml --bin archmage-portability-study
+
+portability-bench output filter="" contexts="scalar,scalar-v3,v3,baseline-v3":
+    STUDY_OUTPUT={{quote(output)}} STUDY_FILTER={{quote(filter)}} STUDY_CONTEXTS={{quote(contexts)}} benchmarks/math_portability_fma_2026-11-07/target/release/archmage-portability-study
+
+# Assert the actual CPU model, then run the independent exact FMA fixtures.
+portability-fma-context context cpu:
+    ARCHMAGE_FMA_CONTEXT={{context}} CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER="qemu-x86_64 -cpu {{cpu}}" cargo test -p magetypes --target x86_64-unknown-linux-gnu --test fma_contract --test fused_arithmetic
+
+# Three cold linked-consumer builds per source, alternating order, unique targets.
+portability-cold-build output candidate:
+    python3 benchmarks/math_portability_fma_2026-11-07/cold_build.py {{quote(output)}} {{candidate}}
+
+# Runner explicitly forwards tier/probe expectations into the WASI guest.
+portability-wasm flags runner:
+    RUSTFLAGS="-Ctarget-feature={{flags}}" CARGO_TARGET_WASM32_WASIP1_RUNNER={{quote(runner)}} cargo test --release -p magetypes --target wasm32-wasip1 --lib --test fma_contract --test fused_arithmetic --test transcendental_nan
+
+portability-wasm-nostd flags runner:
+    RUSTFLAGS="-Ctarget-feature={{flags}}" CARGO_TARGET_WASM32_WASIP1_RUNNER={{quote(runner)}} cargo test --release -p magetypes --no-default-features --features w512 --target wasm32-wasip1 --test fma_contract --test fused_arithmetic --test transcendental_nan
+
+portability-analyze *files:
+    cargo run --release --manifest-path benchmarks/math_portability_fma_2026-11-07/Cargo.toml --bin analyze -- {{files}}
+
+portability-clamp-profile output before after:
+    python3 benchmarks/math_portability_fma_2026-11-07/profile_clamp.py {{quote(output)}} {{quote(before)}} {{quote(after)}}
+
+# Keep Rust's unique guest symbols; select explicit linker exports without unsafe attributes.
+portability-guest output mode:
+    python3 benchmarks/math_portability_fma_2026-11-07/build_guest.py {{quote(output)}} {{mode}}
+
+# Exact graph mirror plus independent MPFR-directed error samples.
+portability-oracle output *inputs:
+    python3 -B benchmarks/math_portability_fma_2026-11-07/oracle.py {{inputs}} > {{quote(output)}}
+
+# Counters include startup; they are not a primitive-latency timing gate.
+portability-first-use binary output:
+    python3 -B benchmarks/math_portability_fma_2026-11-07/first_use.py {{quote(binary)}} {{quote(output)}}
+
+# Output transport avoids filling worker disks; the normal common gates stay active.
+portability-stream worker output mode filter:
+    python3 -B benchmarks/math_portability_fma_2026-11-07/stream_worker.py {{quote(worker)}} {{quote(output)}} {{quote(mode)}} {{quote(filter)}}
+
+# The per-operation supervisor records every process; dirty modes stop.
+portability-stream-series worker output:
+    python3 -B benchmarks/math_portability_fma_2026-11-07/stream_series.py {{quote(worker)}} {{quote(output)}}
+
+# The original and single appended packets must total exactly200 pairs.
+portability-first-use-pool original appended:
+    cargo run --release --manifest-path benchmarks/math_portability_fma_2026-11-07/Cargo.toml --bin pool_first_use -- {{quote(original)}} {{quote(appended)}}
