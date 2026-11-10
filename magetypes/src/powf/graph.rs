@@ -14,6 +14,7 @@ pub(super) const INPUT_EDGES: u32 = 512;
 // Dispatch and domain flags have already selected the provider and ZERO/GAMMA
 // parameters. Keeping them in the arithmetic instantiation duplicates identical
 // debug graphs for Caller/Automatic and portable/backend-dependent adapters.
+#[cfg(debug_assertions)]
 const KERNEL_FLAGS: u32 = PowfOptions::LOWP | PowfOptions::ASSUME | CLAMP | INPUT_EDGES;
 #[cfg(target_arch = "wasm32")]
 pub(super) const WASM_SOFTWARE: usize = 3;
@@ -22,6 +23,7 @@ pub(super) const STD: usize = 2;
 
 // Literal arms also support the MSRV: generic const expressions cannot mask
 // another const argument. The match folds before the release arithmetic graph.
+#[cfg(debug_assertions)]
 macro_rules! shared_kernel {
     ($vector:ident, $t:ty, $arithmetic:ident, $zero:literal, $gamma:literal,
      $options:ident, $token:ident, $input:ident, $exponent:ident) => {
@@ -266,7 +268,8 @@ macro_rules! graph {
             input: crate::simd::generic::$float<T>,
             exponent: f32,
         ) -> Result<crate::simd::generic::$float<T>, PowfError> {
-            match OPTIONS & 3 {
+            #[cfg(debug_assertions)]
+            return match OPTIONS & 3 {
                 0 => shared_kernel!(
                     $vector, T, ARITHMETIC, false, false, OPTIONS, token, input, exponent
                 ),
@@ -282,6 +285,19 @@ macro_rules! graph {
                         shared_kernel!(
                             $vector, T, ARITHMETIC, true, true, OPTIONS, token, input, exponent
                         )
+                    }
+                }
+                _ => unreachable!("validated const domain"),
+            };
+            #[cfg(not(debug_assertions))]
+            match OPTIONS & 3 {
+                0 => $vector::<T, ARITHMETIC, false, false, OPTIONS>(token, input, exponent),
+                1 => $vector::<T, ARITHMETIC, true, false, OPTIONS>(token, input, exponent),
+                2 => {
+                    if OPTIONS & PowfOptions::POSITIVE != 0 {
+                        $vector::<T, ARITHMETIC, false, true, OPTIONS>(token, input, exponent)
+                    } else {
+                        $vector::<T, ARITHMETIC, true, true, OPTIONS>(token, input, exponent)
                     }
                 }
                 _ => unreachable!("validated const domain"),
