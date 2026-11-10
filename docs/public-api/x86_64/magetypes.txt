@@ -6,31 +6,33 @@
 # impls omitted; re-export duplicates annotated `[also: path]`.
 # DO NOT EDIT BY HAND — commit regenerated changes with the code.
 #
-# files: magetypes.txt 2753 lines (supported surface) | magetypes.features.txt 96 added (features: avx512,std,w512) | magetypes.internal.txt 52 lines (64 hidden + 0 excluded-feature)
+# files: magetypes.txt 2887 lines (supported surface) | magetypes.features.txt 96 added (features: avx512,std,w512) | magetypes.internal.txt 84 lines (96 hidden + 0 excluded-feature)
 
 ## summary
 #
-#   pub modules                                13
-#   pub types (struct/enum/trait/alias)       385
-#   pub consts/statics                        247
-#   free functions                           3916
+#   pub modules                                15
+#   pub types (struct/enum/trait/alias)       401
+#   pub consts/statics                        273
+#   free functions                           3946
 #   inherent methods                         1251
-#   struct fields                               7
-#   enum variants                              20
+#   struct fields                              21
+#   enum variants                              50
 #   re-exports                                  2
-#   trait roster entries (type × trait)       790
+#   trait roster entries (type × trait)       886
 #   conditional trait impls (verbatim)        120
-#   auto-trait-complete types                  18
+#   auto-trait-complete types                  34
 #   auto-trait exceptions                      30
 #
 # per-module pub lines:
-#   (root)                          329
+#   (root)                          345
 #   cast                              3
+#   expf                             46
+#   logf                             56
 #   powf                             52
 #   prelude                        3740
 #   simd                           1717
 
-## items (2521 lines)
+## items (2639 lines)
 
 pub mod magetypes
 pub use archmage
@@ -39,6 +41,124 @@ pub trait cast::Downcast<T>
 pub fn cast::Downcast::downcast(self) -> T
 pub trait cast::Upcast<T>
 pub unsafe fn cast::Upcast::upcast(self) -> T
+pub mod expf
+pub enum expf::ExpfDomain
+pub expf::ExpfDomain::Bounded
+pub expf::ExpfDomain::Full
+#[non_exhaustive] pub enum expf::ExpfErrorKind
+pub expf::ExpfErrorKind::InvalidInput
+pub expf::ExpfErrorKind::UnsupportedOptions
+pub expf::ExpfErrorKind::UnsupportedWidth
+pub enum expf::ExpfExecution
+pub expf::ExpfExecution::Automatic
+pub expf::ExpfExecution::Caller
+pub enum expf::ExpfPortability
+pub expf::ExpfPortability::BackendDependent
+pub expf::ExpfPortability::BitExact
+pub enum expf::ExpfPrecision
+pub expf::ExpfPrecision::LegacyLowp
+pub expf::ExpfPrecision::LegacyMidp
+pub expf::ExpfPrecision::Lowp
+pub expf::ExpfPrecision::Midp
+pub enum expf::ExpfValidation
+pub expf::ExpfValidation::AssumeValid
+pub expf::ExpfValidation::Checked
+pub struct expf::ExpfError
+pub expf::ExpfError::kind: expf::ExpfErrorKind
+pub expf::ExpfError::lane_mask: u16
+pub struct expf::ExpfOptions
+pub expf::ExpfOptions::domain: expf::ExpfDomain
+pub expf::ExpfOptions::execution: expf::ExpfExecution
+pub expf::ExpfOptions::portability: expf::ExpfPortability
+pub expf::ExpfOptions::precision: expf::ExpfPrecision
+pub expf::ExpfOptions::validation: expf::ExpfValidation
+pub const expf::ExpfOptions::BACKEND_MIDP: Self
+pub const expf::ExpfOptions::PORTABLE_LOWP: Self
+pub const expf::ExpfOptions::PORTABLE_MIDP: Self
+pub const expf::ExpfOptions::PORTABLE_MIDP_FULL: Self
+pub const expf::ExpfOptions::UNCHECKED_LOWP: Self
+pub const expf::ExpfOptions::UNCHECKED_MIDP: Self
+pub const fn expf::ExpfOptions::bits(self) -> u32
+pub const fn expf::ExpfOptions::new() -> Self
+pub const fn expf::ExpfOptions::with_domain(self, expf::ExpfDomain) -> Self
+pub const fn expf::ExpfOptions::with_execution(self, expf::ExpfExecution) -> Self
+pub const fn expf::ExpfOptions::with_portability(self, expf::ExpfPortability) -> Self
+pub const fn expf::ExpfOptions::with_precision(self, expf::ExpfPrecision) -> Self
+pub const fn expf::ExpfOptions::with_validation(self, expf::ExpfValidation) -> Self
+pub fn expf::try_exp(f32) -> core::result::Result<f32, expf::ExpfError>
+pub fn expf::try_exp2(f32) -> core::result::Result<f32, expf::ExpfError>
+pub fn expf::try_exp2_array_with<const OPTIONS: u32, const N: usize>([f32; N]) -> core::result::Result<[f32; N], expf::ExpfError>
+pub fn expf::try_exp2_runtime(f32, expf::ExpfOptions) -> core::result::Result<f32, expf::ExpfError>
+pub fn expf::try_exp2_with<const OPTIONS: u32>(f32) -> core::result::Result<f32, expf::ExpfError>
+pub fn expf::try_exp2_with_token<const OPTIONS: u32, T: simd::backends::F32x4Convert>(T, f32) -> core::result::Result<f32, expf::ExpfError>
+pub fn expf::try_exp_array_with<const OPTIONS: u32, const N: usize>([f32; N]) -> core::result::Result<[f32; N], expf::ExpfError>
+pub fn expf::try_exp_runtime(f32, expf::ExpfOptions) -> core::result::Result<f32, expf::ExpfError>
+pub fn expf::try_exp_with<const OPTIONS: u32>(f32) -> core::result::Result<f32, expf::ExpfError>
+pub fn expf::try_exp_with_token<const OPTIONS: u32, T: simd::backends::F32x4Convert>(T, f32) -> core::result::Result<f32, expf::ExpfError>
+pub mod logf
+pub enum logf::LogfDomain
+pub logf::LogfDomain::Positive
+pub logf::LogfDomain::Specials
+#[non_exhaustive] pub enum logf::LogfErrorKind
+pub logf::LogfErrorKind::InvalidInput
+pub logf::LogfErrorKind::UnsupportedOptions
+pub logf::LogfErrorKind::UnsupportedWidth
+pub enum logf::LogfExecution
+pub logf::LogfExecution::Automatic
+pub logf::LogfExecution::Caller
+pub enum logf::LogfPortability
+pub logf::LogfPortability::BackendDependent
+pub logf::LogfPortability::BitExact
+pub enum logf::LogfPrecision
+pub logf::LogfPrecision::LegacyLowp
+pub logf::LogfPrecision::LegacyMidp
+pub logf::LogfPrecision::Lowp
+pub logf::LogfPrecision::Midp
+pub enum logf::LogfValidation
+pub logf::LogfValidation::AssumeValid
+pub logf::LogfValidation::Checked
+pub struct logf::LogfError
+pub logf::LogfError::kind: logf::LogfErrorKind
+pub logf::LogfError::lane_mask: u16
+pub struct logf::LogfOptions
+pub logf::LogfOptions::domain: logf::LogfDomain
+pub logf::LogfOptions::execution: logf::LogfExecution
+pub logf::LogfOptions::portability: logf::LogfPortability
+pub logf::LogfOptions::precision: logf::LogfPrecision
+pub logf::LogfOptions::validation: logf::LogfValidation
+pub const logf::LogfOptions::BACKEND_MIDP: Self
+pub const logf::LogfOptions::PORTABLE_LOWP: Self
+pub const logf::LogfOptions::PORTABLE_MIDP: Self
+pub const logf::LogfOptions::PORTABLE_MIDP_SPECIALS: Self
+pub const logf::LogfOptions::UNCHECKED_LOWP: Self
+pub const logf::LogfOptions::UNCHECKED_MIDP: Self
+pub const fn logf::LogfOptions::bits(self) -> u32
+pub const fn logf::LogfOptions::new() -> Self
+pub const fn logf::LogfOptions::with_domain(self, logf::LogfDomain) -> Self
+pub const fn logf::LogfOptions::with_execution(self, logf::LogfExecution) -> Self
+pub const fn logf::LogfOptions::with_portability(self, logf::LogfPortability) -> Self
+pub const fn logf::LogfOptions::with_precision(self, logf::LogfPrecision) -> Self
+pub const fn logf::LogfOptions::with_validation(self, logf::LogfValidation) -> Self
+pub fn logf::try_ln(f32) -> core::result::Result<f32, logf::LogfError>
+pub fn logf::try_ln_array_with<const OPTIONS: u32, const N: usize>([f32; N]) -> core::result::Result<[f32; N], logf::LogfError>
+pub fn logf::try_ln_runtime(f32, logf::LogfOptions) -> core::result::Result<f32, logf::LogfError>
+pub fn logf::try_ln_with<const OPTIONS: u32>(f32) -> core::result::Result<f32, logf::LogfError>
+pub fn logf::try_ln_with_token<const OPTIONS: u32, T: simd::backends::F32x4Convert>(T, f32) -> core::result::Result<f32, logf::LogfError>
+pub fn logf::try_log10(f32) -> core::result::Result<f32, logf::LogfError>
+pub fn logf::try_log10_array_with<const OPTIONS: u32, const N: usize>([f32; N]) -> core::result::Result<[f32; N], logf::LogfError>
+pub fn logf::try_log10_runtime(f32, logf::LogfOptions) -> core::result::Result<f32, logf::LogfError>
+pub fn logf::try_log10_with<const OPTIONS: u32>(f32) -> core::result::Result<f32, logf::LogfError>
+pub fn logf::try_log10_with_token<const OPTIONS: u32, T: simd::backends::F32x4Convert>(T, f32) -> core::result::Result<f32, logf::LogfError>
+pub fn logf::try_log1p_array_runtime<const N: usize>([f32; N], logf::LogfOptions) -> core::result::Result<[f32; N], logf::LogfError>
+pub fn logf::try_log1p_array_with<const OPTIONS: u32, const N: usize>([f32; N]) -> core::result::Result<[f32; N], logf::LogfError>
+pub fn logf::try_log1p_runtime(f32, logf::LogfOptions) -> core::result::Result<f32, logf::LogfError>
+pub fn logf::try_log1p_with<const OPTIONS: u32>(f32) -> core::result::Result<f32, logf::LogfError>
+pub fn logf::try_log1p_with_token<const OPTIONS: u32, T: simd::backends::F32x4Convert>(T, f32) -> core::result::Result<f32, logf::LogfError>
+pub fn logf::try_log2(f32) -> core::result::Result<f32, logf::LogfError>
+pub fn logf::try_log2_array_with<const OPTIONS: u32, const N: usize>([f32; N]) -> core::result::Result<[f32; N], logf::LogfError>
+pub fn logf::try_log2_runtime(f32, logf::LogfOptions) -> core::result::Result<f32, logf::LogfError>
+pub fn logf::try_log2_with<const OPTIONS: u32>(f32) -> core::result::Result<f32, logf::LogfError>
+pub fn logf::try_log2_with_token<const OPTIONS: u32, T: simd::backends::F32x4Convert>(T, f32) -> core::result::Result<f32, logf::LogfError>
 pub mod powf
 pub enum powf::PowfDomain
 pub powf::PowfDomain::Full
@@ -2554,7 +2674,7 @@ pub fn WidthDispatch::u8x64_load(self, &[u8; 64]) -> Self::U8x64
 pub fn WidthDispatch::u8x64_splat(self, u8) -> Self::U8x64
 pub fn WidthDispatch::u8x64_zero(self) -> Self::U8x64
 
-## trait impls (81 types)
+## trait impls (97 types)
 
 [f32; 16]: From<prelude::f32x16<T>>
 [f32; 4]: From<prelude::f32x4<T>>
@@ -2589,6 +2709,22 @@ pub fn WidthDispatch::u8x64_zero(self) -> Self::U8x64
 archmage::tokens::ScalarToken: SimdTypes, prelude::F16Convert, prelude::F32x16FromHalves, prelude::F32x8FromHalves, simd::backends::F32x16Backend, simd::backends::F32x16Convert, simd::backends::F32x4Backend, simd::backends::F32x4Convert, simd::backends::F32x8Backend, simd::backends::F32x8Convert, simd::backends::F64x2Backend, simd::backends::F64x4Backend, simd::backends::F64x8Backend, simd::backends::I16x16Backend, simd::backends::I16x16Bitcast, simd::backends::I16x32Backend, simd::backends::I16x8Backend, simd::backends::I16x8Bitcast, simd::backends::I32x16Backend, simd::backends::I32x4Backend, simd::backends::I32x8Backend, simd::backends::I64x2Backend, simd::backends::I64x2Bitcast, simd::backends::I64x4Backend, simd::backends::I64x4Bitcast, simd::backends::I64x8Backend, simd::backends::I8x16Backend, simd::backends::I8x16Bitcast, simd::backends::I8x32Backend, simd::backends::I8x32Bitcast, simd::backends::I8x64Backend, simd::backends::U16x16Backend, simd::backends::U16x32Backend, simd::backends::U16x8Backend, simd::backends::U32x16Backend, simd::backends::U32x4Backend, simd::backends::U32x4Bitcast, simd::backends::U32x8Backend, simd::backends::U32x8Bitcast, simd::backends::U64x2Backend, simd::backends::U64x2Bitcast, simd::backends::U64x4Backend, simd::backends::U64x4Bitcast, simd::backends::U64x8Backend, simd::backends::U8x16Backend, simd::backends::U8x32Backend, simd::backends::U8x64Backend
 archmage::tokens::generated::x86::X64V2Token: SimdTypes
 archmage::tokens::generated::x86::X64V3Token: SimdTypes, WidthDispatch, prelude::F16Convert, prelude::F32x16FromHalves, prelude::F32x8FromHalves, simd::backends::F32x16Backend, simd::backends::F32x16Convert, simd::backends::F32x4Backend, simd::backends::F32x4Convert, simd::backends::F32x8Backend, simd::backends::F32x8Convert, simd::backends::F64x2Backend, simd::backends::F64x4Backend, simd::backends::F64x8Backend, simd::backends::I16x16Backend, simd::backends::I16x16Bitcast, simd::backends::I16x32Backend, simd::backends::I16x8Backend, simd::backends::I16x8Bitcast, simd::backends::I32x16Backend, simd::backends::I32x4Backend, simd::backends::I32x8Backend, simd::backends::I64x2Backend, simd::backends::I64x2Bitcast, simd::backends::I64x4Backend, simd::backends::I64x4Bitcast, simd::backends::I64x8Backend, simd::backends::I8x16Backend, simd::backends::I8x16Bitcast, simd::backends::I8x32Backend, simd::backends::I8x32Bitcast, simd::backends::I8x64Backend, simd::backends::U16x16Backend, simd::backends::U16x32Backend, simd::backends::U16x8Backend, simd::backends::U32x16Backend, simd::backends::U32x4Backend, simd::backends::U32x4Bitcast, simd::backends::U32x8Backend, simd::backends::U32x8Bitcast, simd::backends::U64x2Backend, simd::backends::U64x2Bitcast, simd::backends::U64x4Backend, simd::backends::U64x4Bitcast, simd::backends::U64x8Backend, simd::backends::U8x16Backend, simd::backends::U8x32Backend, simd::backends::U8x64Backend
+expf::ExpfDomain: Clone, Copy, Debug, Default, Eq, PartialEq
+expf::ExpfError: Clone, Copy, Debug, Display, Eq, Error, PartialEq
+expf::ExpfErrorKind: Clone, Copy, Debug, Eq, PartialEq
+expf::ExpfExecution: Clone, Copy, Debug, Default, Eq, PartialEq
+expf::ExpfOptions: Clone, Copy, Debug, Default, Eq, PartialEq
+expf::ExpfPortability: Clone, Copy, Debug, Default, Eq, PartialEq
+expf::ExpfPrecision: Clone, Copy, Debug, Default, Eq, PartialEq
+expf::ExpfValidation: Clone, Copy, Debug, Default, Eq, PartialEq
+logf::LogfDomain: Clone, Copy, Debug, Default, Eq, PartialEq
+logf::LogfError: Clone, Copy, Debug, Display, Eq, Error, PartialEq
+logf::LogfErrorKind: Clone, Copy, Debug, Eq, PartialEq
+logf::LogfExecution: Clone, Copy, Debug, Default, Eq, PartialEq
+logf::LogfOptions: Clone, Copy, Debug, Default, Eq, PartialEq
+logf::LogfPortability: Clone, Copy, Debug, Default, Eq, PartialEq
+logf::LogfPrecision: Clone, Copy, Debug, Default, Eq, PartialEq
+logf::LogfValidation: Clone, Copy, Debug, Default, Eq, PartialEq
 powf::PowfDomain: Clone, Copy, Debug, Default, Eq, PartialEq
 powf::PowfError: Clone, Copy, Debug, Display, Eq, Error, PartialEq
 powf::PowfErrorKind: Clone, Copy, Debug, Eq, PartialEq
@@ -2760,7 +2896,7 @@ impl<T: core::marker::Copy + simd::backends::U8x64Backend> core::marker::Copy fo
 
 ## auto traits
 
-18 types implement all of: Freeze, RefUnwindSafe, Send, Sync, Unpin, UnwindSafe
+34 types implement all of: Freeze, RefUnwindSafe, Send, Sync, Unpin, UnwindSafe
 prelude::f32x16<T>: !Freeze !RefUnwindSafe !Send !Sync !Unpin !UnwindSafe
 prelude::f32x4<T>: !Freeze !RefUnwindSafe !Send !Sync !Unpin !UnwindSafe
 prelude::f32x8<T>: !Freeze !RefUnwindSafe !Send !Sync !Unpin !UnwindSafe

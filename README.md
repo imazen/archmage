@@ -37,6 +37,11 @@ The [unified macro guide](https://github.com/imazen/archmage/blob/main/docs/ATTU
 covers the selector grammar, call and proof rules, inline policies, a legacy-attribute
 mapping, and current restrictions.
 
+Configurable f32 power, exponential and logarithm approximations live in the
+[Magemath crate](magemath), above Magetypes. See the
+[math migration guide](docs/MAGEMATH-MIGRATION.md) for replacing deprecated
+approximation methods with explicit numerical profiles.
+
 ## Quick start
 
 ```toml

@@ -12,18 +12,36 @@
 #   pub modules                                 2
 #   pub types (struct/enum/trait/alias)         1
 #   free functions                             29
-#   inherent methods                            8
-#   trait roster entries (type × trait)        22
+#   inherent methods                           24
+#   trait roster entries (type × trait)        38
 #
 # per-module pub lines:
 #   (root)                            2
 #   bypass_adversarial                1
+#   expf                              8
+#   logf                              8
 #   nostd_math                       21
 #   powf                              8
 #   simd                              8
 
-## items (33 lines)
+## items (49 lines)
 
+pub fn expf::ExpfDomain::assert_fields_are_eq(&self)
+pub fn expf::ExpfError::assert_fields_are_eq(&self)
+pub fn expf::ExpfErrorKind::assert_fields_are_eq(&self)
+pub fn expf::ExpfExecution::assert_fields_are_eq(&self)
+pub fn expf::ExpfOptions::assert_fields_are_eq(&self)
+pub fn expf::ExpfPortability::assert_fields_are_eq(&self)
+pub fn expf::ExpfPrecision::assert_fields_are_eq(&self)
+pub fn expf::ExpfValidation::assert_fields_are_eq(&self)
+pub fn logf::LogfDomain::assert_fields_are_eq(&self)
+pub fn logf::LogfError::assert_fields_are_eq(&self)
+pub fn logf::LogfErrorKind::assert_fields_are_eq(&self)
+pub fn logf::LogfExecution::assert_fields_are_eq(&self)
+pub fn logf::LogfOptions::assert_fields_are_eq(&self)
+pub fn logf::LogfPortability::assert_fields_are_eq(&self)
+pub fn logf::LogfPrecision::assert_fields_are_eq(&self)
+pub fn logf::LogfValidation::assert_fields_are_eq(&self)
 pub fn nostd_math::cbrt_lowp_f32(f32) -> f32
 pub fn nostd_math::cbrt_midp_f32(f32) -> f32
 pub fn nostd_math::ceil(f64) -> f64
@@ -58,9 +76,25 @@ pub mod bypass_adversarial
 pub mod nostd_math
 pub struct bypass_adversarial::BypassAdversarialProofs
 
-## trait impls (19 types)
+## trait impls (35 types)
 
 bypass_adversarial::BypassAdversarialProofs: Clone, Copy, Debug, TrivialClone
+expf::ExpfDomain: TrivialClone
+expf::ExpfError: TrivialClone
+expf::ExpfErrorKind: TrivialClone
+expf::ExpfExecution: TrivialClone
+expf::ExpfOptions: TrivialClone
+expf::ExpfPortability: TrivialClone
+expf::ExpfPrecision: TrivialClone
+expf::ExpfValidation: TrivialClone
+logf::LogfDomain: TrivialClone
+logf::LogfError: TrivialClone
+logf::LogfErrorKind: TrivialClone
+logf::LogfExecution: TrivialClone
+logf::LogfOptions: TrivialClone
+logf::LogfPortability: TrivialClone
+logf::LogfPrecision: TrivialClone
+logf::LogfValidation: TrivialClone
 powf::PowfDomain: TrivialClone
 powf::PowfError: TrivialClone
 powf::PowfErrorKind: TrivialClone

@@ -1,0 +1,35 @@
+# magemath public API — additions from non-default features
+# features: avx512,std,w512
+# (regenerated on every `cargo test` by zenutils-apidoc; ZEN_API_DOC=check verifies, =off skips).
+# Encodings: crate-name prefix stripped; auto traits collapse to a
+# count + exceptions; trait impls collapse to one roster line per
+# type (method signatures live at the trait definition); blanket
+# impls omitted; re-export duplicates annotated `[also: path]`.
+# DO NOT EDIT BY HAND — commit regenerated changes with the code.
+
+## summary
+#
+#   free functions                              8
+#   trait roster entries (type × trait)         3
+#
+# per-module pub lines:
+#   expf                              2
+#   logf                              4
+#   powf                              2
+
+## items (8 lines)
+
+pub fn expf::try_exp2_f32x16_with<const OPTIONS: u32, T: magetypes::simd::backends::convert::F32x16Convert>(T, magetypes::simd::generic::generated::f32x16_impl::f32x16<T>) -> core::result::Result<magetypes::simd::generic::generated::f32x16_impl::f32x16<T>, expf::ExpfError>
+pub fn expf::try_exp_f32x16_with<const OPTIONS: u32, T: magetypes::simd::backends::convert::F32x16Convert>(T, magetypes::simd::generic::generated::f32x16_impl::f32x16<T>) -> core::result::Result<magetypes::simd::generic::generated::f32x16_impl::f32x16<T>, expf::ExpfError>
+pub fn logf::try_ln_f32x16_with<const OPTIONS: u32, T: magetypes::simd::backends::convert::F32x16Convert>(T, magetypes::simd::generic::generated::f32x16_impl::f32x16<T>) -> core::result::Result<magetypes::simd::generic::generated::f32x16_impl::f32x16<T>, logf::LogfError>
+pub fn logf::try_log10_f32x16_with<const OPTIONS: u32, T: magetypes::simd::backends::convert::F32x16Convert>(T, magetypes::simd::generic::generated::f32x16_impl::f32x16<T>) -> core::result::Result<magetypes::simd::generic::generated::f32x16_impl::f32x16<T>, logf::LogfError>
+pub fn logf::try_log1p_f32x16_with<const OPTIONS: u32, T: magetypes::simd::backends::convert::F32x16Convert>(T, magetypes::simd::generic::generated::f32x16_impl::f32x16<T>) -> core::result::Result<magetypes::simd::generic::generated::f32x16_impl::f32x16<T>, logf::LogfError>
+pub fn logf::try_log2_f32x16_with<const OPTIONS: u32, T: magetypes::simd::backends::convert::F32x16Convert>(T, magetypes::simd::generic::generated::f32x16_impl::f32x16<T>) -> core::result::Result<magetypes::simd::generic::generated::f32x16_impl::f32x16<T>, logf::LogfError>
+pub fn powf::try_powf_f32x16_runtime<T: magetypes::simd::backends::convert::F32x16Convert>(T, magetypes::simd::generic::generated::f32x16_impl::f32x16<T>, f32, powf::PowfOptions) -> core::result::Result<magetypes::simd::generic::generated::f32x16_impl::f32x16<T>, powf::PowfError>
+pub fn powf::try_powf_f32x16_with<const OPTIONS: u32, T: magetypes::simd::backends::convert::F32x16Convert>(T, magetypes::simd::generic::generated::f32x16_impl::f32x16<T>, f32) -> core::result::Result<magetypes::simd::generic::generated::f32x16_impl::f32x16<T>, powf::PowfError>
+
+## trait impls (3 types)
+
+expf::ExpfError: Error
+logf::LogfError: Error
+powf::PowfError: Error

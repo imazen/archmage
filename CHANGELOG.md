@@ -5,6 +5,19 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 `0.9.31-beta.2` entries changes since `0.9.31-beta.1`. The earlier
 `0.9.31-beta` version was prepared but never published.
 
+## magemath
+
+### [Unreleased]
+
+#### QUEUED BREAKING CHANGES
+
+(none)
+
+#### Added
+
+- Introduce the no_std-first configurable f32 powf, expf and logf owner, with const integer profiles, caller-preserving vector entries and scalar tail APIs (862951ef).
+- Keep existing powf coefficients/contracts and omit predecessor-fit selectors from the new exp/log precision enums; retain separate compatibility implementations in Magetypes (862951ef).
+
 ## archmage
 
 ### [Unreleased]
@@ -134,8 +147,13 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 
 ### [Unreleased]
 
+#### Deprecated
+
+- Pow/exp/log approximation suffix methods, configured math modules and configured power delegates: migrate to Magemath with an explicit numerical profile. Methods remain available; cube root, sigmoid, SiLU and reciprocal/root primitives are unchanged (d873dc89).
+
 #### Fixed
 
+- Retain every exp/log policy bit in debug graphs, cover all runtime encodings, restore no_std log1p compilation, preserve signed zero and scalar lane masks, and keep Full/Specials result handling under AssumeValid (ef1b9428).
 - NEON float min/max and their reductions use native numeric instructions, selecting a number over a quiet NaN. Signaling NaNs retain native ARM propagation; this does not promise global ISA equality.
 
 #### Changed
