@@ -1,10 +1,27 @@
 //! Frozen-source comparison protocol: compile this unchanged at each revision.
 use archmage::SimdToken;
 use magetypes::simd::generic::f32x4;
+#[path = "../frozen.rs"]
+mod frozen;
 
 #[archmage::magetypes(v4x(cfg(avx512)), v4(cfg(avx512)), v3, neon, wasm128, scalar)]
 fn evaluate(token: Token, xs: [f32; 4]) -> [[f32; 4]; 8] {
     let x = f32x4::from_array_t(token, xs);
+    if std::env::var_os("AUDIT_FROZEN").is_some() {
+        use frozen::x4::Frozen;
+        return [
+            x.old_exp2_midp(token).to_array(),
+            x.old_exp2_lowp(token).to_array(),
+            x.old_exp2_midp_unchecked(token).to_array(),
+            x.old_log2_midp(token).to_array(),
+            x.old_log2_lowp(token).to_array(),
+            x.old_log2_midp_unchecked(token).to_array(),
+            (x * f32x4::splat_t(token, core::f32::consts::LOG2_E))
+                .old_exp2_midp(token)
+                .to_array(),
+            (x.old_log2_midp(token) * f32x4::splat_t(token, core::f32::consts::LN_2)).to_array(),
+        ];
+    }
     [
         x.exp2_midp().to_array(),
         x.exp2_lowp().to_array(),

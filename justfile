@@ -60,6 +60,19 @@ fmt-check:
     cargo fmt -- --check
 
 # Run Miri tests (token logic only, no SIMD) - legacy alias
+# Independent PR147 scientific review tools, outside normal workspace tests.
+expf-logf-audit-build PROFILE="release":
+    cargo build --profile {{PROFILE}} --manifest-path benchmarks/expf_logf_audit/Cargo.toml --features bench --bins
+
+expf-logf-audit-contracts PROFILE="release":
+    cargo run --profile {{PROFILE}} --manifest-path benchmarks/expf_logf_audit/Cargo.toml --bin contracts
+
+expf-logf-audit-quality ACTUAL OUTPUT:
+    python3 -B benchmarks/expf_logf_audit/analyze_quality.py {{ACTUAL}} {{OUTPUT}}
+
+expf-logf-audit-timings BINARY OUTPUT:
+    python3 -B benchmarks/expf_logf_audit/run_matrix.py {{BINARY}} {{OUTPUT}}
+
 miri-tokens:
     rustup run "$(tr -d '[:space:]' < xtask/miri-nightly.txt)" cargo miri test --test miri_safe --all-features
 

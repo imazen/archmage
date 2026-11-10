@@ -3,7 +3,7 @@ use archmage::SimdToken;
 use magetypes::{expf::*, logf::*};
 use std::io::Read;
 
-#[archmage::magetypes(v3, neon, wasm128, scalar)]
+#[archmage::magetypes(v4x(cfg(avx512)), v4(cfg(avx512)), v3, neon, wasm128, scalar)]
 fn token_value<const O: u32>(token: Token, x: f32, log: bool) -> f32 {
     if log {
         try_log2_with_token::<O, _>(token, x).unwrap()
@@ -13,6 +13,17 @@ fn token_value<const O: u32>(token: Token, x: f32, log: bool) -> f32 {
 }
 
 fn native<const O: u32>(x: f32, log: bool) -> f32 {
+    if std::env::var_os("AUDIT_SOFTWARE_TEST").is_some() {
+        return token_value_scalar::<O>(archmage::ScalarToken, x, log);
+    }
+    #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+    if std::env::var_os("AUDIT_V4X").is_some() {
+        return token_value_v4x::<O>(
+            archmage::X64V4xToken::summon().expect("V4x required"),
+            x,
+            log,
+        );
+    }
     #[cfg(target_arch = "x86_64")]
     return token_value_v3::<O>(archmage::X64V3Token::summon().expect("V3 required"), x, log);
     #[cfg(target_arch = "aarch64")]
@@ -85,9 +96,11 @@ fn main() {
         policy::<8, 12>(&xs, log);
         policy::<16, 20>(&xs, log);
         policy::<24, 28>(&xs, log);
-        policy::<64, 68>(&xs, log);
-        policy::<72, 76>(&xs, log);
-        policy::<80, 84>(&xs, log);
-        policy::<88, 92>(&xs, log);
+        if std::env::var_os("AUDIT_NO_LEGACY").is_none() {
+            policy::<64, 68>(&xs, log);
+            policy::<72, 76>(&xs, log);
+            policy::<80, 84>(&xs, log);
+            policy::<88, 92>(&xs, log);
+        }
     }
 }

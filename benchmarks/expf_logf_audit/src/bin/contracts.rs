@@ -78,6 +78,21 @@ fn policy<const O: u32>() {
     probe(&format!("log.runtime.{O}"), || {
         try_log2_runtime(1.375, lo).map(f32::to_bits)
     });
+    if O & 1 != 0 {
+        for (label, x) in [
+            ("nan", f32::NAN),
+            ("zero", 0.0),
+            ("negzero", -0.0),
+            ("inf", f32::INFINITY),
+        ] {
+            probe(&format!("exp.full.{O}.{label}"), || {
+                try_exp2_with::<O>(x).map(f32::to_bits)
+            });
+            probe(&format!("log.specials.{O}.{label}"), || {
+                try_log2_with::<O>(x).map(f32::to_bits)
+            });
+        }
+    }
 }
 
 fn main() {

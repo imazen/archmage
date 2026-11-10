@@ -18,6 +18,7 @@ for name in ["exp2", "log2"]:
     fn = getattr(mp, "mpfr_" + name)
     fn.argtypes, fn.restype = [P, P, C.c_int], C.c_int
 mp.mpfr_get_exp.argtypes, mp.mpfr_get_exp.restype = [P], C.c_long
+mp.mpfr_zero_p.argtypes, mp.mpfr_zero_p.restype = [P], C.c_int
 
 
 def mirror(op, raw, flags, fused):
@@ -62,7 +63,7 @@ def reference(op, raw):
     for rounding in [3,2]:
         getattr(mp,"mpfr_" + ("exp2" if op == "E" else "log2"))(C.byref(b),C.byref(a),rounding)
         bounds.append(mp.mpfr_get_d(C.byref(b),rounding))
-        quanta.append(max(mp.mpfr_get_exp(C.byref(b))-24,-149))
+        quanta.append(-149 if mp.mpfr_zero_p(C.byref(b)) else max(mp.mpfr_get_exp(C.byref(b))-24,-149))
     for v in [a,b]: mp.mpfr_clear(C.byref(v))
     if bounds == [0.,0.]: return bounds, -149
     assert quanta[0] == quanta[1], (op,raw,bounds,quanta)
@@ -72,12 +73,13 @@ def reference(op, raw):
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument("actual",type=Path);p.add_argument("output",type=Path)
+    p.add_argument("--native-separate",action="store_true",help="strict/nonfusing WASM or a scalar-only automatic backend")
     args=p.parse_args();assert not args.output.exists()
     report=dict(mpfr=mp.mpfr_get_version().decode(),precision=256,claim="sampled maxima, not exhaustive bounds",graph_mismatches=[],portable_mismatches=[],token_width_mismatches=[],stats={})
     refs={}
     for line in args.actual.read_text().splitlines():
         op,raw,flags,*out=line.split();raw=int(raw,16);flags=int(flags);out=[int(x,16)for x in out]
-        expected=[mirror(op,raw,flags,not bool(flags&16))]+[mirror(op,raw,flags,True)]*5
+        expected=[mirror(op,raw,flags,not bool(flags&16))]+[mirror(op,raw,flags,not bool(flags&16) or not args.native_separate)]*5
         for context,(got,want)in enumerate(zip(out,expected)):
             if got!=want:report['graph_mismatches'].append([op,f'{raw:08x}',flags,context,f'{got:08x}',f'{want:08x}'])
         if flags&16==0 and len(set(out))!=1:report['portable_mismatches'].append([op,f'{raw:08x}',flags,out])
@@ -86,7 +88,7 @@ def main():
         if key not in refs:refs[key]=reference(op,raw)
         bounds,q=refs[key]
         for context,got in enumerate(out[:2]):
-            stats=report['stats'].setdefault(f'{op}/{flags}/'+('scalar'if context==0 else'native'),dict(count=0,max_ulp_upper=0.,max_relative_upper=0.,worst=None))
+            stats=report['stats'].setdefault(f'{op}/{flags}/'+('scalar'if context==0 else'native'),dict(count=0,max_ulp_upper=0.,max_relative_upper=0.,max_absolute_upper=0.,max_core_ulp_upper=0.,max_core_relative_upper=0.,worst=None))
             stats['count']+=1
             value=fp.value(got)
             if not all(map(math.isfinite,[value,*bounds])):continue
@@ -95,6 +97,11 @@ def main():
             relative=float(error/min(abs(Fraction(v))for v in bounds))if all(bounds)else 0.
             if ulp>stats['max_ulp_upper']:stats.update(max_ulp_upper=ulp,worst=f'{raw:08x}')
             stats['max_relative_upper']=max(relative,stats['max_relative_upper'])
+            stats['max_absolute_upper']=max(float(error),stats['max_absolute_upper'])
+            core = op == 'L' or (-126 <= fp.value(raw) <= 127.99 if flags&8 else -126 <= fp.value(raw) < 127.5)
+            if core:
+                stats['max_core_ulp_upper']=max(ulp,stats['max_core_ulp_upper'])
+                stats['max_core_relative_upper']=max(relative,stats['max_core_relative_upper'])
     args.output.write_text(json.dumps(report,indent=2)+'\n')
     print(json.dumps({k:len(v)if isinstance(v,list)else v for k,v in report.items()if k!='stats'}))
     for k,s in report['stats'].items():print(k,s)

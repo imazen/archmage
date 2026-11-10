@@ -101,6 +101,10 @@ macro_rules! width {
                         };
                         V::from_array_t(token, a)
                     }
+                    5 => V::from_array_t(
+                        token,
+                        x.to_array().map(|v| if LOG { v.log2() } else { v.exp2() }),
+                    ),
                     _ => unreachable!(),
                 };
                 *ys = y.to_array();
@@ -223,6 +227,7 @@ fn register<const LOG: bool, const LOW: bool>(
         arm!(2, "PR147_canonical_BitExact_Checked_Automatic");
         arm!(3, "PR147_canonical_BitExact_AssumeValid_Automatic");
         arm!(4, "PR147_canonical_BackendDependent_AssumeValid_Automatic");
+        arm!(5, "std_f32_per_lane");
     });
 }
 
