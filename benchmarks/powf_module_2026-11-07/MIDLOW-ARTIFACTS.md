@@ -41,3 +41,10 @@ composition comparisons remain separate from the actual-before compiler oracle.
 Final CI, warning-sweep and publication records are additive closing evidence;
 they do not overwrite or reseal this core. Earlier HIGHP/provider studies retain
 their [separate inventories](../powf_providers_2026-11-09/ARTIFACTS.md).
+
+The 61 closing files also verify on the mirror. `CLOSING.json`, indexing
+`closing/`, has SHA-256
+`68dc055f5dc0dffaf6b5effcee41fd3cfb2a12916278aaa1250e8bc735eb5774`.
+It retains the successful 19-stage CI/Miri log, all 24 clean warning records,
+initial warning/lint failures, the corrected benchmark verifier, Cargo locks,
+compiler observations and tracked-source archive through `58870fcb`.

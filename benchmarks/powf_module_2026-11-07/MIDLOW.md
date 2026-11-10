@@ -29,6 +29,13 @@ cells have fully clean admission; all M6 cells remain exploratory. No overall
 performance promotion is claimed. The full run plan and all earlier source
 versions remain in [MIDLOW-PLAN.md](MIDLOW-PLAN.md).
 
+The 64-cell dev run reports 149 s, peak RSS 0.26 GiB, minimum available
+44,152 MiB and peak load 3.00. The 42-cell M6 run reports 79 s, peak RSS
+0.02 GiB, minimum reclaimable proxy 10,082 MiB and peak load 2.45. The
+additional 12 M6 ScalarCaller cells report 17 s, peak RSS 0.02 GiB,
+minimum reclaimable proxy 9,845 MiB and peak load 1.85. macOS RSS is the
+resource wrapper's monitored process-tree measurement, with no cgroup cap.
+
 Portable positive-Gamma MIDP beats unchecked legacy MIDP in 39/40 native cost
 intervals, with one inconclusive. Backend-dependent MIDP has 37/40 within the
 2% bound, two above and one inconclusive; the failing cells are flagged for
