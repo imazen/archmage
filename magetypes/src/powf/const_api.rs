@@ -213,6 +213,29 @@ fn select<T: archmage::SimdToken, const OPTIONS: u32>(
     }
 }
 
+// Expand the scalar composition in the caller's frame. In particular, wide
+// AArch64 scalar arrays otherwise acquire a different register/spill schedule.
+// The type predicate folds away; this performs no runtime CPU detection.
+macro_rules! approximate_power {
+    ($float:ident,$t:ty,$input:expr,$n:expr,$kernel:ident,$lowp:literal,$checked:literal) => {{
+        if core::any::TypeId::of::<$t>() == core::any::TypeId::of::<archmage::ScalarToken>() {
+            if $lowp {
+                ($input.log2_lowp() * crate::simd::generic::$float::splat_t($input.1, $n))
+                    .exp2_lowp()
+            } else if $checked {
+                ($input.log2_midp() * crate::simd::generic::$float::splat_t($input.1, $n))
+                    .exp2_midp()
+            } else {
+                ($input.log2_midp_unchecked() * crate::simd::generic::$float::splat_t($input.1, $n))
+                    .exp2_midp_unchecked()
+            }
+        } else {
+            crate::powf::const_api::$kernel::<$t, $lowp, $checked>($input.1, $input, $n)
+        }
+    }};
+}
+pub(crate) use approximate_power;
+
 // Existing infallible power methods use the same polynomial engine. Their
 // clamp and edge policy is a private const configuration; no runtime decoder,
 // validation Result, autonomous dispatch or portable-FMA cost enters this path.
@@ -228,19 +251,6 @@ macro_rules! approximate {
             input: crate::simd::generic::$v<T>,
             n: f32,
         ) -> crate::simd::generic::$v<T> {
-            // Keep the scalar backend's existing log/exp composition: LLVM's
-            // scalar rounding expansion is sensitive to the aggregate's live
-            // ranges. This is a monomorphized type choice, not CPU detection.
-            if core::any::TypeId::of::<T>() == core::any::TypeId::of::<archmage::ScalarToken>() {
-                use crate::simd::generic::$v as V;
-                return if LOWP {
-                    (input.log2_lowp() * V::splat_t(token, n)).exp2_lowp()
-                } else if CHECKED {
-                    (input.log2_midp() * V::splat_t(token, n)).exp2_midp()
-                } else {
-                    (input.log2_midp_unchecked() * V::splat_t(token, n)).exp2_midp_unchecked()
-                };
-            }
             let result = if LOWP {
                 graph::$profile::<
                     T,

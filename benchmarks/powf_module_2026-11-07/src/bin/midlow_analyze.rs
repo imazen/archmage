@@ -63,7 +63,10 @@ fn main() {
                 let deltas: Vec<_> = g
                     .samples
                     .iter()
-                    .map(|s| s.compensated_ns[i] as f64 - s.compensated_ns[j] as f64)
+                    .map(|s| {
+                        (s.compensated_ns[i] as f64 - s.compensated_ns[j] as f64)
+                            / s.iterations as f64
+                    })
                     .collect();
                 let delta = zenbench::MeanCi::from_samples(&deltas, 100_000).unwrap();
                 println!(

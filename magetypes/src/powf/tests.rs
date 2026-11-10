@@ -679,25 +679,37 @@ fn positive_gamma_preserves_nonzero_graph_and_rejects_zero() {
             },
         };
         assert_eq!(options.bits(), FLAGS);
+        let compare = |left: [f32; 4], right: [f32; 4]| {
+            if FLAGS & (PowfOptions::HIGHP | PowfOptions::BACKEND)
+                == PowfOptions::HIGHP | PowfOptions::BACKEND
+            {
+                // This provider delegates to std::powf, whose precision is
+                // unspecified and can vary between calls under Miri. This
+                // fixture checks ordinary results, not a portable std graph.
+                for (a, b) in left.into_iter().zip(right) {
+                    assert!(a.is_normal() && b.is_normal());
+                    assert!((a - b).abs() <= a.abs() * 0.000_01);
+                }
+            } else {
+                assert_eq!(
+                    left.map(f32::to_bits),
+                    right.map(f32::to_bits),
+                    "flags={FLAGS}"
+                );
+            }
+        };
         for n in [0., -0., 0.5, 2.4, 4.] {
             let input = [1.0 / 65_536.0, 0.75, 1., 65_536.0];
             let got = try_powf_array_with::<FLAGS, 4>(input, n).unwrap();
             let gamma = try_powf_array_with::<GAMMA_FLAGS, 4>(input, n).unwrap();
-            assert_eq!(got.map(f32::to_bits), gamma.map(f32::to_bits));
+            compare(got, gamma);
             for (x, y) in input.into_iter().zip(got) {
-                assert_eq!(
-                    try_powf_with_token::<FLAGS, _>(archmage::ScalarToken, x, n)
-                        .unwrap()
-                        .to_bits(),
-                    y.to_bits()
+                compare(
+                    [try_powf_with_token::<FLAGS, _>(archmage::ScalarToken, x, n).unwrap(); 4],
+                    [y; 4],
                 );
             }
-            assert_eq!(
-                got.map(f32::to_bits),
-                try_powf_array_runtime(input, n, options)
-                    .unwrap()
-                    .map(f32::to_bits)
-            );
+            compare(got, try_powf_array_runtime(input, n, options).unwrap());
             if options.validation == PowfValidation::Checked {
                 for x in [0., -0., f32::from_bits(1), f32::NAN, f32::INFINITY] {
                     assert_eq!(
