@@ -1,0 +1,33 @@
+[package]
+name = "archmage-expf-logf-audit"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[workspace]
+resolver = "3"
+
+[features]
+default = ["std", "w512"]
+std = ["archmage/std", "magetypes/std"]
+w512 = ["magetypes/w512"]
+avx512 = ["w512", "archmage/avx512", "magetypes/avx512"]
+bench = ["dep:zenbench", "dep:serde_json"]
+
+[dependencies]
+archmage = { path = "../..", default-features = false }
+magetypes = { path = "../../magetypes", default-features = false }
+zenbench = { version = "=0.1.11", optional = true }
+serde_json = { version = "=1.0.151", optional = true }
+
+[[bin]]
+name = "timing"
+required-features = ["bench"]
+
+[profile.release]
+codegen-units = 1
+lto = "thin"
+
+[[bin]]
+name = "analyze_timing"
+required-features = ["bench"]
