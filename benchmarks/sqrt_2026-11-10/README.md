@@ -140,3 +140,39 @@ harness now uses published zenbench 0.1.11 (source `983eafaa49ce`) with owned
 launcher registration and trace evidence. All thresholds, 50 retained rounds
 and the all-rounds-clean requirement stay unchanged. Both numerical paths are
 interleaved under the corrected harness; production math is unchanged.
+
+## Existing assembly gate: approval pending
+
+CI at `4deedd1c` rejects the intentional scalar sqrt assembly changes. An
+independent inventory of all 3,211 probes finds exactly six changed x86 probes;
+the other 3,205 are identical, including all 794 ARM and all 794 WASM probes.
+These are expanded static instruction entries, excluding labels, not dynamic
+work estimates (the old wide software kernels contain loops).
+
+| Changed x86 probe | Before | After |
+|---|---:|---:|
+| Scalar f32x4 sqrt | 274 | 5 |
+| Scalar f32x8 sqrt | 88 | 8 |
+| Scalar f32x16 sqrt | 89 | 14 |
+| Scalar f64x2 sqrt | 177 | 5 |
+| Scalar f64x4 sqrt | 116 | 8 |
+| Scalar f64x8 sqrt | 117 | 14 |
+
+The new bodies contain only pointer moves, contiguous vector loads/stores,
+`sqrtps`/`sqrtpd` and return. No std work is hidden outside these counts.
+The proposed expectation is equality with independently generated direct-std
+sqrt reference kernels for exactly these six probes, retaining every other
+assembly expectation and every numerical bound. The existing equality gate
+has not been changed; accepting this intentional codegen difference awaits
+owner approval. PR152 is not merge-ready while that check fails.
+
+Reproduce the inventory without changing the gate:
+
+```sh
+just codegen-diff bd83f034 4deedd1c
+python3 -B benchmarks/sqrt_2026-11-10/codegen_inventory.py RUN_DIRECTORY OUTPUT_JSON
+```
+
+The full failing-gate logs, expanded instructions and reference experiment are
+preserved in `sqrt-study-2026-11-10-followup` beneath the same local/mirrored
+output roots. The first evidence archive remains immutable.
