@@ -153,6 +153,7 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 
 #### Fixed
 
+- Keep the deprecated exponential delegates on their legacy coefficients and backend arithmetic, preserving the existing power/composition contract on strict WASM (640c07fd).
 - Retain every exp/log policy bit in debug graphs, cover all runtime encodings, restore no_std log1p compilation, preserve signed zero and scalar lane masks, and keep Full/Specials result handling under AssumeValid (ef1b9428).
 - NEON float min/max and their reductions use native numeric instructions, selecting a number over a quiet NaN. Signaling NaNs retain native ARM propagation; this does not promise global ISA equality.
 

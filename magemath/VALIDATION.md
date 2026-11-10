@@ -65,3 +65,28 @@ Logs and the source archive are preserved outside Git at
 The preceding [ownership compile study](https://github.com/imazen/archmage/blob/1662daa4d14f/benchmarks/expf_logf_audit/MAGEMATH-LAYER.md)
 is separate evidence with its own controls and source identities. It is not
 presented as a timing run of this final extraction.
+
+## Compatibility composition follow-up
+
+The subsequent CI WASM job exposed the stack's legacy power-composition mismatch.
+Commit `640c07fd` restores legacy coefficients and backend arithmetic in the
+retained Magetypes LOWP and unchecked MIDP exponential delegates. Magemath's
+configured canonical fits are unchanged. The existing `powf_engine_remap`
+bit assertions pass on strict WASM after this correction; no expectation was
+changed. The test now includes operation/exponent/input diagnostics on failure.
+This supersedes the earlier note that follow-ups only changed test/lint files:
+the new compatibility-only change is explicit and separately validated.
+
+The strict-WASM targeted run reports:
+
+```text
+run-heavy: done rc=0 2s | peak-RSS 0.37GiB | min-avail 39305MiB | peak-load 0.15
+```
+
+The same unchanged composition test and policy regression witnesses pass on
+native x86 after the compatibility correction (3s, peak RSS 0.63 GiB,
+minimum available 38741 MiB, peak load 0.34). ARM verification of this
+compatibility-only follow-up remains with CI; the earlier native M6 evidence
+covers the unchanged Magemath production engine. Separate follow-up logs and
+source identity are preserved under `magemath-migration-2026-11-10-followup`
+in the same local/mirrored output roots; the first archive remains immutable.
