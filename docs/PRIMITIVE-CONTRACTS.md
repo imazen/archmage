@@ -1,0 +1,120 @@
+# Configurable min/max, reciprocal and reciprocal square root
+
+Magemath owns the policy families. Magetypes keeps its existing primitive methods
+and basic `sqrt`; this addition does not deprecate or change them. Min/max covers
+f32 and f64. Reciprocal/rsqrt currently covers f32 only.
+
+## Contracts
+
+Every builder ends in `.bits()`, carried as a `u32` const through the public
+entry, vector delegate and feature kernel. Full-domain defaults are checked in
+the sense that every input is supported; they need no input validation branch.
+Restricted Checked profiles reject the whole operation and return every invalid
+lane in `PrimitiveError::lane_mask`. AssumeValid removes that check; violating
+its precondition gives unspecified numerical output, never memory UB.
+
+| Family / profile | Domain | Numerical contract |
+|---|---|---|
+| MinMax PORTABLE_NUMBER | Full | Prefer a number over either quiet/signaling NaN; two NaNs yield NaN. Min orders opposite zeros to -0, max to +0. |
+| MinMax PORTABLE_PROPAGATE | Full | Either NaN yields NaN; ordered zeros. |
+| MinMax RELAXED | Full | Backend NaN choice and zero sign. With one NaN either number or NaN is permitted; two NaNs yield NaN. |
+| MinMax NORMAL / UNCHECKED_NORMAL | Finite normal operands | Checked / AssumeValid; one native comparison/min/max graph, no NaN/zero repairs. |
+| Recip HIGHP | Full | Rounded `1/x`; rsqrt is rounded `1 / rounded_sqrt(x)`, **not** correctly rounded mathematical rsqrt. |
+| Recip PORTABLE_LOWP | 2^-125 ≤ abs(x) ≤ 2^125; positive for rsqrt | Fixed integer seed, one separate mul/sub Newton step; relative error ≤ 6e-3. |
+| Recip PORTABLE_MIDP | Same | Two separate Newton steps; relative error ≤ 1e-4. |
+| Recip BACKEND_LOWP / BACKEND_MIDP | Same | Same error bounds, ISA-dependent estimates/refinement and bits. |
+
+`MinMaxDomain::Finite` also permits subnormals and signed zeros and rejects
+infinities/NaNs. Individual NaN and zero policies can be combined with it. All
+restricted presets check by default except the explicitly named UNCHECKED_NORMAL.
+For reciprocal, add `.with_validation(RecipValidation::AssumeValid)` explicitly.
+NaN payload/sign/signaling encoding and floating exception flags are unspecified
+throughout. Non-NaN bit portability assumes round-to-nearest and gradual underflow.
+
+NaN choices collapse on finite domains; both NaN/zero choices collapse on normal
+domains. Full-domain validation and HIGHP portability choices also canonicalize
+away in `.bits()`, avoiding duplicate instantiations for equivalent policies.
+These are semantic axes; min/max does not have a meaningless precision selector.
+
+## Callers and tails
+
+Typed vector entries retain the supplied token and never independently upgrade.
+Arrays select once for the whole operation unless Execution::Caller is selected.
+Scalar portable reciprocal and min/max need no feature detection; backend
+reciprocal estimates may select a native backend. `no_std` cannot dynamically
+detect optional x86 features; supply a proof or compile-time feature support.
+
+A native estimate may differ between logical widths even with the same token
+(for example, an AVX-512 16-lane seed versus its 4-lane seed). Use the matching
+width-specific tail entry:
+
+```rust
+use archmage::ScalarToken;
+use magetypes::simd::generic::f32x8;
+use magemath::recip::{RecipOptions, try_recip_f32x8_with, try_recip_f32x8_lane_with};
+const FLAGS: u32 = RecipOptions::PORTABLE_MIDP.bits();
+let t = ScalarToken;
+let packed = try_recip_f32x8_with::<FLAGS, _>(t, f32x8::splat_t(t, 3.0)).unwrap();
+let tail = try_recip_f32x8_lane_with::<FLAGS, _>(t, 3.0).unwrap();
+assert_eq!(packed.to_array()[0].to_bits(), tail.to_bits());
+```
+
+Portable profiles agree across widths and scalar/vector entries. Native profiles
+promise their matching-width tail, not equality with autonomous scalar dispatch.
+Array widths are 1/4/8/(16 with w512) for f32, 1/2/4/(8 with w512) for f64.
+Other widths return UnsupportedWidth. Slice scheduling belongs to the caller.
+
+## ISA implementations
+
+| ISA | Min/max | Backend LOWP → MIDP reciprocal / rsqrt | Validation evidence | Timing |
+|---|---|---|---|---|
+| x86 V3 | Normal aliases existing native min/max; portable repairs for Full | rcp/rsqrt estimate → one relaxed-FMA refinement | Native directed f32/f64, width/tail checks; x4 full mantissas [1,4) | Zen 5 V3 x8 study below; overall unqualified |
+| x86 V4/V4x | Same semantic graph; native widths | Existing width's estimate → refinement | Native directed x4/x8/x16 and f64 x2/x4/x8 | Not measured |
+| ARM NEON | Ordered Propagate uses fmin/fmax; Normal aliases existing fminnm/fmaxnm | Raw frecpe/frsqrte → one existing NEON refinement | Native M6 std/no_std directed and x4 mantissa scan | Not measured for these final graphs |
+| WASM SIMD128 | Propagate uses strict min/max; Number uses repairs | Reciprocal division; rsqrt fixed two-step estimate for both grades | Wasmtime strict/relaxed std/no_std directed | Not measured |
+| WASM relaxed SIMD | Normal or explicitly permissive policies may use relaxed min/max | No standardized reciprocal/rsqrt estimate instruction | Compiled opcode probes; relaxed token disabling tested | Not measured |
+| Scalar | Comparison/select plus requested repairs | Division / two-step rsqrt estimate, both grades alias | Exact-rational HIGHP fixtures; directed and x4 mantissa scan | Not separately measured |
+
+Relaxed WASM selection requires a module compiled with relaxed SIMD and an
+internal `Wasm128RelaxedToken::summon()`; module validation establishes feature
+availability. `testable_dispatch` can suppress that selection. This is an
+explicitly disclosed internal token lookup, not runtime discovery of a feature
+missing from a loaded module. It optimizes away in ordinary relaxed builds.
+
+Scalar/WASM native LOWP and MIDP alias where no cheaper useful estimate exists.
+HIGHP can beat approximations on a particular CPU; the grades specify numerical
+bounds, not a universal timing order. NEON LOWP now uses the actual raw seed;
+MIDP avoids the unnecessary second refinement found during codegen review.
+
+## Evidence and costs
+
+See the [frozen study](../benchmarks/primitive_variants_2026-11-10/README.md) for
+all arms, ns, paired intervals and admission failures. No legacy replacement is
+promoted from this study. Portable MIDP has a measurable cost on the clean Zen 5
+chain cells: reciprocal 225.792 ns versus legacy `recip()` 158.832 ns; rsqrt
+320.346 ns versus legacy `rsqrt()` 217.749 ns, per 64 eight-lane dependent steps.
+Native unchecked MIDP takes 125.766 ns and 187.771 ns respectively. Checked
+validation has a separate cost and is not hidden in the unchecked comparisons.
+
+`just primitive-verify` runs exact fixture regeneration checks, API generation
+checks, strict Clippy and fast std/no_std directed tests. `primitive-cross`
+exercises strict/relaxed WASM and compiles ARM; `primitive-wasm-token-testing`
+checks relaxed selection suppression. `primitive-codegen` emits compile-only
+probes. `primitive-accuracy` is an explicit full-mantissa scan, outside ordinary
+cargo test: fixed four-lane storage, all 16,777,216 f32 values in [1,4), both
+exponent parity classes, against f64 references. Directed tests cover edge
+exponents and signed reciprocal inputs. This is not an exhaustive enumeration
+of the entire normal domain or a proof for every future native CPU estimate.
+
+The full x4 scan on Zen 5 found portable LOWP maxima 3.362332798595e-3
+(reciprocal) / 1.752338672098e-3 (rsqrt), and MIDP 1.144745716896e-5 /
+4.732987923610e-6. V3 backend LOWP maxima were 3.152981953462e-4 /
+2.586608049593e-4; MIDP 1.538581244089e-7 / 2.108307648628e-7.
+The independent exact-rational fixtures distinguish mathematical rsqrt from
+sqrt-then-divide; the public HIGHP contract intentionally names the latter.
+
+On the native M6 x4 scan, raw NEON LOWP maxima are 2.853393554688e-3 /
+3.276822880217e-3; one-refinement MIDP maxima are 8.228816000135e-6 /
+1.618327600566e-5. These pass the same bounds and confirm that a second NEON
+refinement is unnecessary for this MIDP contract on this CPU. No final-graph
+NEON timing or Neoverse result is claimed.

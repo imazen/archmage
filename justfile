@@ -1047,3 +1047,50 @@ workflow-contract-check:
 
 sqrt-token-miri:
     cargo +$(tr -d '[:space:]' < xtask/miri-nightly.txt) miri test -p magetypes --no-default-features --features "w512 archmage/testable_dispatch" --test sqrt_token_testing
+
+primitive-generate:
+    python3 -B xtask/primitive_api.py
+    cargo fmt -p magemath
+
+primitive-check:
+    cargo test -p magemath --features "std avx512" --test primitive_contracts
+    cargo test -p magemath --no-default-features --features w512 --test primitive_contracts
+
+primitive-type-check:
+    cargo check -p magemath --features "std avx512"
+    RUSTFLAGS="-Ctarget-feature=+simd128,+relaxed-simd" cargo check -p magemath --target wasm32-wasip1 --features "std w512"
+
+primitive-verify:
+    python3 -B xtask/primitive_api.py --check
+    python3 -B xtask/reciprocal_vectors.py --check
+    cargo clippy -p magemath --lib --test primitive_contracts --features "std avx512" -- -D warnings
+    just primitive-check
+
+primitive-cross:
+    RUSTFLAGS="-Ctarget-feature=+simd128" CARGO_TARGET_WASM32_WASIP1_RUNNER=wasmtime cargo test -p magemath --target wasm32-wasip1 --features "std w512" --test primitive_contracts
+    RUSTFLAGS="-Ctarget-feature=+simd128,+relaxed-simd" CARGO_TARGET_WASM32_WASIP1_RUNNER=wasmtime cargo test -p magemath --target wasm32-wasip1 --features "std w512" --test primitive_contracts
+    RUSTFLAGS="-Ctarget-feature=+simd128,+relaxed-simd" CARGO_TARGET_WASM32_WASIP1_RUNNER=wasmtime cargo test -p magemath --target wasm32-wasip1 --no-default-features --features w512 --test primitive_contracts
+    cargo check -p magemath --target aarch64-unknown-linux-gnu --features "std w512"
+
+primitive-study-build:
+    cargo build --release --manifest-path benchmarks/primitive_variants_2026-11-10/Cargo.toml --bin archmage-primitive-study
+
+primitive-study-check:
+    cargo run --manifest-path benchmarks/primitive_variants_2026-11-10/Cargo.toml --bin archmage-primitive-study
+    cargo clippy --manifest-path benchmarks/primitive_variants_2026-11-10/Cargo.toml --all-targets -- -D warnings
+
+primitive-linear-inventory:
+    cargo run --release --manifest-path benchmarks/primitive_variants_2026-11-10/Cargo.toml --bin linear_inventory
+
+primitive-linear-original checkout output:
+    python3 -B benchmarks/primitive_variants_2026-11-10/linear_original.py "{{checkout}}" "{{output}}"
+
+primitive-codegen target="x86_64-unknown-linux-gnu" flags="":
+    RUSTFLAGS="{{flags}}" cargo rustc --release --lib --manifest-path benchmarks/primitive_variants_2026-11-10/Cargo.toml --target {{target}} -- --emit=asm
+
+primitive-wasm-token-testing:
+    RUSTFLAGS="-Ctarget-feature=+simd128,+relaxed-simd" CARGO_TARGET_WASM32_WASIP1_RUNNER=wasmtime cargo test -p magemath --features "std w512 archmage/testable_dispatch" --target wasm32-wasip1 --lib primitive_wasm::tests::
+
+# Opt-in full mantissa coverage in two exponent parity classes; constant memory.
+primitive-accuracy:
+    cargo run --release --manifest-path benchmarks/primitive_variants_2026-11-10/Cargo.toml --bin accuracy -- --exhaustive

@@ -1225,9 +1225,9 @@ assertions and the existing baseline tests. `just sqrt-token-miri` passes.
 Magemath migration (2026-11-10): LOWP log1p retains the rational log2 fit's bias
 near zero; a tiny positive input can produce a negative approximation. MIDP
 remains available. This refactor does not introduce a new small-x LOWP graph or
-promote the experimental normal-output exp2 range. Reciprocal/root primitives
-remain in Magetypes until separately implemented and measured replacements
-exist. See `docs/MAGEMATH-MIGRATION.md`.
+promote the experimental normal-output exp2 range. Existing reciprocal/root primitives remain in Magetypes. The additive Magemath
+policy families and their measured tradeoffs are in `docs/PRIMITIVE-CONTRACTS.md`;
+they do not promote a blanket legacy replacement. See `docs/MAGEMATH-MIGRATION.md`.
 
 Canonical HIGHP packed performance (2026-11-09, draft held): the first M6
 32-cell exploratory matrix has 24 Full packed cells within the 2% std cost

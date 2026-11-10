@@ -113,13 +113,12 @@ records the std hardware route, retained no_std fallback and numerical assumptio
 A policy-driven approximation belongs above it only when a measured algorithm
 needs a different contract.
 
-Reciprocal and reciprocal square root are plausible next Magemath families:
-there are already estimate, refinement and precise-composition choices with
-real ISA-dependent costs. This PR does not change or deprecate those methods.
-A future proposal must define its canonical result and domain first. In
-particular correctly rounded mathematical rsqrt and rounded `1/sqrt(x)`
-composition are different contracts. Existing Magetypes tests and bounds stay
-in force until a replacement is implemented and measured.
+[Configurable primitive families](PRIMITIVE-CONTRACTS.md) now provide f32
+reciprocal/rsqrt and f32/f64 min/max. They preserve the existing Magetypes methods;
+no primitive deprecation or blanket replacement is made. HIGHP rsqrt names the
+rounded sqrt-then-divide composition. Native width-specific tail entries retain
+the vector seed; portable profiles keep a fixed graph. See the reference for
+measured wins, portability costs and unmeasured ISA cells.
 
 ## Migration validation
 

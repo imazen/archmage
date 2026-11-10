@@ -1,4 +1,4 @@
-//! Configurable f32 pow, exponential and logarithm approximations.
+//! Configurable pow, exponential, logarithm, min/max and reciprocal families.
 //!
 //! Each family has an operation-specific const builder ending in `.bits()`.
 //! Profiles name precision, range, validation and portability; these are not
@@ -19,7 +19,9 @@
 //! ```
 //!
 //! Magemath depends on Magetypes and Archmage. It does not replace vector storage
-//! or primitive arithmetic, and Magetypes does not depend on Magemath.
+//! or primitive arithmetic storage, and Magetypes does not depend on Magemath.
+//! Min/max supports f32/f64; reciprocal and rsqrt currently support f32.
+//! Reciprocal native-estimate tails must use the matching vector-width lane API.
 #![no_std]
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
@@ -34,3 +36,15 @@ mod soft_fma;
 #[cfg(target_arch = "wasm32")]
 #[allow(dead_code)] // The copy also contains vector-primitive helpers not used here.
 mod wasm_fma;
+
+mod primitive;
+pub use primitive::{PrimitiveError, PrimitiveErrorKind};
+/// Configurable min/max policies for f32 and f64.
+pub mod minmax;
+#[cfg(all(target_arch = "wasm32", target_feature = "relaxed-simd"))]
+mod primitive_wasm;
+/// Configurable reciprocal and reciprocal square root for f32.
+pub mod recip;
+
+#[cfg(target_arch = "aarch64")]
+mod primitive_neon;

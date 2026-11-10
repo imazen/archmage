@@ -439,6 +439,15 @@ jobs:
           CARGO_TARGET_WASM32_WASIP1_RUNNER: "wasmtime"
         run: cargo test -p magetypes --features "${{ env.FEATURES }}" --target wasm32-wasip1
 
+      - name: Configurable primitives on relaxed WASM
+        env:
+          RUSTFLAGS: "-C target-feature=+simd128,+relaxed-simd"
+          CARGO_TARGET_WASM32_WASIP1_RUNNER: "wasmtime"
+        run: |
+          cargo test -p magemath --features "${{ env.FEATURES }}" --target wasm32-wasip1 --test primitive_contracts
+          cargo test -p magemath --no-default-features --features w512 --target wasm32-wasip1 --test primitive_contracts
+          cargo test -p magemath --features "std w512 archmage/testable_dispatch" --target wasm32-wasip1 --lib primitive_wasm::tests::
+
       - name: Magemath contracts on strict WASM
         env:
           RUSTFLAGS: "-C target-feature=+simd128"
@@ -513,6 +522,8 @@ jobs:
         run: |
           cargo fetch
           cargo run -p xtask -- generate
+          python3 -B xtask/primitive_api.py --check
+          python3 -B xtask/reciprocal_vectors.py --check
 
       - name: Check for differences
         run: |
@@ -699,6 +710,11 @@ jobs:
         run: |
           cargo clippy --locked --manifest-path benchmarks/powf_validation/Cargo.toml --all-features --all-targets -- -D warnings
           cargo clippy --locked --manifest-path benchmarks/powf_validation/Cargo.toml --no-default-features --features w512 --all-targets -- -D warnings
+      - name: Primitive study kernel smoke and lint
+        run: |
+          cargo run --locked --manifest-path benchmarks/primitive_variants_2026-11-10/Cargo.toml --bin archmage-primitive-study
+          cargo run --locked --release --manifest-path benchmarks/primitive_variants_2026-11-10/Cargo.toml --bin accuracy
+          cargo clippy --locked --manifest-path benchmarks/primitive_variants_2026-11-10/Cargo.toml --all-targets -- -D warnings
       - name: Sqrt study kernel smoke and lint
         run: |
           cargo run --locked --manifest-path benchmarks/sqrt_2026-11-10/Cargo.toml
@@ -756,6 +772,11 @@ jobs:
         run: |
           cargo clippy --locked --manifest-path benchmarks/powf_validation/Cargo.toml --all-features --all-targets -- -D warnings
           cargo clippy --locked --manifest-path benchmarks/powf_validation/Cargo.toml --no-default-features --features w512 --all-targets -- -D warnings
+      - name: Primitive study kernel smoke and lint
+        run: |
+          cargo run --locked --manifest-path benchmarks/primitive_variants_2026-11-10/Cargo.toml --bin archmage-primitive-study
+          cargo run --locked --release --manifest-path benchmarks/primitive_variants_2026-11-10/Cargo.toml --bin accuracy
+          cargo clippy --locked --manifest-path benchmarks/primitive_variants_2026-11-10/Cargo.toml --all-targets -- -D warnings
       - name: Sqrt study kernel smoke and lint
         run: |
           cargo run --locked --manifest-path benchmarks/sqrt_2026-11-10/Cargo.toml

@@ -6,26 +6,28 @@
 # impls omitted; re-export duplicates annotated `[also: path]`.
 # DO NOT EDIT BY HAND — commit regenerated changes with the code.
 #
-# files: magemath.txt 216 lines (supported surface) | magemath.features.txt 11 added (features: avx512,std,w512) | magemath.internal.txt 48 lines (48 hidden + 0 excluded-feature)
+# files: magemath.txt 343 lines (supported surface) | magemath.features.txt 24 added (features: avx512,std,w512) | magemath.internal.txt 76 lines (76 hidden + 0 excluded-feature)
 
 ## summary
 #
-#   pub modules                                 4
-#   pub types (struct/enum/trait/alias)        24
-#   pub consts/statics                         45
-#   free functions                             52
-#   struct fields                              21
-#   enum variants                              45
-#   trait roster entries (type × trait)       141
-#   auto-trait-complete types                  24
+#   pub modules                                 6
+#   pub types (struct/enum/trait/alias)        38
+#   pub consts/statics                         69
+#   free functions                             88
+#   struct fields                              33
+#   enum variants                              70
+#   trait roster entries (type × trait)       224
+#   auto-trait-complete types                  38
 #
 # per-module pub lines:
-#   (root)                           25
+#   (root)                           47
 #   expf                             48
 #   logf                             62
+#   minmax                           52
 #   powf                             56
+#   recip                            39
 
-## items (191 lines)
+## items (304 lines)
 
 pub mod magemath
 pub mod expf
@@ -154,6 +156,66 @@ pub fn logf::try_log2_f32x8_with<const OPTIONS: u32, T: magetypes::simd::backend
 pub fn logf::try_log2_runtime(f32, logf::LogfOptions) -> core::result::Result<f32, logf::LogfError>
 pub fn logf::try_log2_with<const OPTIONS: u32>(f32) -> core::result::Result<f32, logf::LogfError>
 pub fn logf::try_log2_with_token<const OPTIONS: u32, T: magetypes::simd::backends::convert::F32x4Convert>(T, f32) -> core::result::Result<f32, logf::LogfError>
+pub mod minmax
+pub enum minmax::MinMaxDomain
+pub minmax::MinMaxDomain::Finite
+pub minmax::MinMaxDomain::Full
+pub minmax::MinMaxDomain::Normal
+pub enum minmax::MinMaxExecution
+pub minmax::MinMaxExecution::Automatic
+pub minmax::MinMaxExecution::Caller
+pub enum minmax::MinMaxNaN
+pub minmax::MinMaxNaN::Backend
+pub minmax::MinMaxNaN::Number
+pub minmax::MinMaxNaN::Propagate
+pub enum minmax::MinMaxValidation
+pub minmax::MinMaxValidation::AssumeValid
+pub minmax::MinMaxValidation::Checked
+pub enum minmax::MinMaxZero
+pub minmax::MinMaxZero::Backend
+pub minmax::MinMaxZero::Ordered
+pub struct minmax::MinMaxOptions
+pub minmax::MinMaxOptions::domain: minmax::MinMaxDomain
+pub minmax::MinMaxOptions::execution: minmax::MinMaxExecution
+pub minmax::MinMaxOptions::nan: minmax::MinMaxNaN
+pub minmax::MinMaxOptions::validation: minmax::MinMaxValidation
+pub minmax::MinMaxOptions::zero: minmax::MinMaxZero
+pub const minmax::MinMaxOptions::NORMAL: Self
+pub const minmax::MinMaxOptions::PORTABLE_NUMBER: Self
+pub const minmax::MinMaxOptions::PORTABLE_PROPAGATE: Self
+pub const minmax::MinMaxOptions::RELAXED: Self
+pub const minmax::MinMaxOptions::UNCHECKED_NORMAL: Self
+pub const fn minmax::MinMaxOptions::bits(self) -> u32
+pub const fn minmax::MinMaxOptions::new() -> Self
+pub const fn minmax::MinMaxOptions::with_domain(self, minmax::MinMaxDomain) -> Self
+pub const fn minmax::MinMaxOptions::with_execution(self, minmax::MinMaxExecution) -> Self
+pub const fn minmax::MinMaxOptions::with_nan(self, minmax::MinMaxNaN) -> Self
+pub const fn minmax::MinMaxOptions::with_validation(self, minmax::MinMaxValidation) -> Self
+pub const fn minmax::MinMaxOptions::with_zero(self, minmax::MinMaxZero) -> Self
+pub fn minmax::try_max_array_with<const O: u32, const N: usize>([f32; N], [f32; N]) -> core::result::Result<[f32; N], PrimitiveError>
+pub fn minmax::try_max_f32x4_lane_with<const O: u32, T: magetypes::simd::backends::f32x4::F32x4Backend>(T, f32, f32) -> core::result::Result<f32, PrimitiveError>
+pub fn minmax::try_max_f32x4_with<const O: u32, T: magetypes::simd::backends::f32x4::F32x4Backend>(T, magetypes::simd::generic::generated::f32x4_impl::f32x4<T>, magetypes::simd::generic::generated::f32x4_impl::f32x4<T>) -> core::result::Result<magetypes::simd::generic::generated::f32x4_impl::f32x4<T>, PrimitiveError>
+pub fn minmax::try_max_f32x8_lane_with<const O: u32, T: magetypes::simd::backends::f32x8::F32x8Backend>(T, f32, f32) -> core::result::Result<f32, PrimitiveError>
+pub fn minmax::try_max_f32x8_with<const O: u32, T: magetypes::simd::backends::f32x8::F32x8Backend>(T, magetypes::simd::generic::generated::f32x8_impl::f32x8<T>, magetypes::simd::generic::generated::f32x8_impl::f32x8<T>) -> core::result::Result<magetypes::simd::generic::generated::f32x8_impl::f32x8<T>, PrimitiveError>
+pub fn minmax::try_max_f64_array_with<const O: u32, const N: usize>([f64; N], [f64; N]) -> core::result::Result<[f64; N], PrimitiveError>
+pub fn minmax::try_max_f64_with<const O: u32>(f64, f64) -> core::result::Result<f64, PrimitiveError>
+pub fn minmax::try_max_f64x2_lane_with<const O: u32, T: magetypes::simd::backends::f64x2::F64x2Backend>(T, f64, f64) -> core::result::Result<f64, PrimitiveError>
+pub fn minmax::try_max_f64x2_with<const O: u32, T: magetypes::simd::backends::f64x2::F64x2Backend>(T, magetypes::simd::generic::generated::f64x2_impl::f64x2<T>, magetypes::simd::generic::generated::f64x2_impl::f64x2<T>) -> core::result::Result<magetypes::simd::generic::generated::f64x2_impl::f64x2<T>, PrimitiveError>
+pub fn minmax::try_max_f64x4_lane_with<const O: u32, T: magetypes::simd::backends::f64x4::F64x4Backend>(T, f64, f64) -> core::result::Result<f64, PrimitiveError>
+pub fn minmax::try_max_f64x4_with<const O: u32, T: magetypes::simd::backends::f64x4::F64x4Backend>(T, magetypes::simd::generic::generated::f64x4_impl::f64x4<T>, magetypes::simd::generic::generated::f64x4_impl::f64x4<T>) -> core::result::Result<magetypes::simd::generic::generated::f64x4_impl::f64x4<T>, PrimitiveError>
+pub fn minmax::try_max_with<const O: u32>(f32, f32) -> core::result::Result<f32, PrimitiveError>
+pub fn minmax::try_min_array_with<const O: u32, const N: usize>([f32; N], [f32; N]) -> core::result::Result<[f32; N], PrimitiveError>
+pub fn minmax::try_min_f32x4_lane_with<const O: u32, T: magetypes::simd::backends::f32x4::F32x4Backend>(T, f32, f32) -> core::result::Result<f32, PrimitiveError>
+pub fn minmax::try_min_f32x4_with<const O: u32, T: magetypes::simd::backends::f32x4::F32x4Backend>(T, magetypes::simd::generic::generated::f32x4_impl::f32x4<T>, magetypes::simd::generic::generated::f32x4_impl::f32x4<T>) -> core::result::Result<magetypes::simd::generic::generated::f32x4_impl::f32x4<T>, PrimitiveError>
+pub fn minmax::try_min_f32x8_lane_with<const O: u32, T: magetypes::simd::backends::f32x8::F32x8Backend>(T, f32, f32) -> core::result::Result<f32, PrimitiveError>
+pub fn minmax::try_min_f32x8_with<const O: u32, T: magetypes::simd::backends::f32x8::F32x8Backend>(T, magetypes::simd::generic::generated::f32x8_impl::f32x8<T>, magetypes::simd::generic::generated::f32x8_impl::f32x8<T>) -> core::result::Result<magetypes::simd::generic::generated::f32x8_impl::f32x8<T>, PrimitiveError>
+pub fn minmax::try_min_f64_array_with<const O: u32, const N: usize>([f64; N], [f64; N]) -> core::result::Result<[f64; N], PrimitiveError>
+pub fn minmax::try_min_f64_with<const O: u32>(f64, f64) -> core::result::Result<f64, PrimitiveError>
+pub fn minmax::try_min_f64x2_lane_with<const O: u32, T: magetypes::simd::backends::f64x2::F64x2Backend>(T, f64, f64) -> core::result::Result<f64, PrimitiveError>
+pub fn minmax::try_min_f64x2_with<const O: u32, T: magetypes::simd::backends::f64x2::F64x2Backend>(T, magetypes::simd::generic::generated::f64x2_impl::f64x2<T>, magetypes::simd::generic::generated::f64x2_impl::f64x2<T>) -> core::result::Result<magetypes::simd::generic::generated::f64x2_impl::f64x2<T>, PrimitiveError>
+pub fn minmax::try_min_f64x4_lane_with<const O: u32, T: magetypes::simd::backends::f64x4::F64x4Backend>(T, f64, f64) -> core::result::Result<f64, PrimitiveError>
+pub fn minmax::try_min_f64x4_with<const O: u32, T: magetypes::simd::backends::f64x4::F64x4Backend>(T, magetypes::simd::generic::generated::f64x4_impl::f64x4<T>, magetypes::simd::generic::generated::f64x4_impl::f64x4<T>) -> core::result::Result<magetypes::simd::generic::generated::f64x4_impl::f64x4<T>, PrimitiveError>
+pub fn minmax::try_min_with<const O: u32>(f32, f32) -> core::result::Result<f32, PrimitiveError>
 pub mod powf
 pub enum powf::PowfDomain
 pub powf::PowfDomain::Full
@@ -218,9 +280,64 @@ pub fn powf::try_powf_f32x8_with<const OPTIONS: u32, T: magetypes::simd::backend
 pub fn powf::try_powf_runtime(f32, f32, powf::PowfOptions) -> core::result::Result<f32, powf::PowfError>
 pub fn powf::try_powf_with<const OPTIONS: u32>(f32, f32) -> core::result::Result<f32, powf::PowfError>
 pub fn powf::try_powf_with_token<const OPTIONS: u32, T: magetypes::simd::backends::convert::F32x4Convert>(T, f32, f32) -> core::result::Result<f32, powf::PowfError>
+pub mod recip
+pub enum recip::RecipDomain
+pub recip::RecipDomain::Full
+pub recip::RecipDomain::Normal
+pub enum recip::RecipExecution
+pub recip::RecipExecution::Automatic
+pub recip::RecipExecution::Caller
+pub enum recip::RecipPortability
+pub recip::RecipPortability::BackendDependent
+pub recip::RecipPortability::BitExact
+pub enum recip::RecipPrecision
+pub recip::RecipPrecision::Highp
+pub recip::RecipPrecision::Lowp
+pub recip::RecipPrecision::Midp
+pub enum recip::RecipValidation
+pub recip::RecipValidation::AssumeValid
+pub recip::RecipValidation::Checked
+pub struct recip::RecipOptions
+pub recip::RecipOptions::domain: recip::RecipDomain
+pub recip::RecipOptions::execution: recip::RecipExecution
+pub recip::RecipOptions::portability: recip::RecipPortability
+pub recip::RecipOptions::precision: recip::RecipPrecision
+pub recip::RecipOptions::validation: recip::RecipValidation
+pub const recip::RecipOptions::BACKEND_LOWP: Self
+pub const recip::RecipOptions::BACKEND_MIDP: Self
+pub const recip::RecipOptions::HIGHP: Self
+pub const recip::RecipOptions::PORTABLE_LOWP: Self
+pub const recip::RecipOptions::PORTABLE_MIDP: Self
+pub const fn recip::RecipOptions::bits(self) -> u32
+pub const fn recip::RecipOptions::new() -> Self
+pub const fn recip::RecipOptions::with_domain(self, recip::RecipDomain) -> Self
+pub const fn recip::RecipOptions::with_execution(self, recip::RecipExecution) -> Self
+pub const fn recip::RecipOptions::with_portability(self, recip::RecipPortability) -> Self
+pub const fn recip::RecipOptions::with_precision(self, recip::RecipPrecision) -> Self
+pub const fn recip::RecipOptions::with_validation(self, recip::RecipValidation) -> Self
+pub fn recip::try_recip_array_with<const O: u32, const N: usize>([f32; N]) -> core::result::Result<[f32; N], PrimitiveError>
+pub fn recip::try_recip_f32x4_lane_with<const O: u32, T: magetypes::simd::backends::convert::F32x4Convert>(T, f32) -> core::result::Result<f32, PrimitiveError>
+pub fn recip::try_recip_f32x4_with<const O: u32, T: magetypes::simd::backends::convert::F32x4Convert>(T, magetypes::simd::generic::generated::f32x4_impl::f32x4<T>) -> core::result::Result<magetypes::simd::generic::generated::f32x4_impl::f32x4<T>, PrimitiveError>
+pub fn recip::try_recip_f32x8_lane_with<const O: u32, T: magetypes::simd::backends::convert::F32x8Convert>(T, f32) -> core::result::Result<f32, PrimitiveError>
+pub fn recip::try_recip_f32x8_with<const O: u32, T: magetypes::simd::backends::convert::F32x8Convert>(T, magetypes::simd::generic::generated::f32x8_impl::f32x8<T>) -> core::result::Result<magetypes::simd::generic::generated::f32x8_impl::f32x8<T>, PrimitiveError>
+pub fn recip::try_recip_with<const O: u32>(f32) -> core::result::Result<f32, PrimitiveError>
+pub fn recip::try_rsqrt_array_with<const O: u32, const N: usize>([f32; N]) -> core::result::Result<[f32; N], PrimitiveError>
+pub fn recip::try_rsqrt_f32x4_lane_with<const O: u32, T: magetypes::simd::backends::convert::F32x4Convert>(T, f32) -> core::result::Result<f32, PrimitiveError>
+pub fn recip::try_rsqrt_f32x4_with<const O: u32, T: magetypes::simd::backends::convert::F32x4Convert>(T, magetypes::simd::generic::generated::f32x4_impl::f32x4<T>) -> core::result::Result<magetypes::simd::generic::generated::f32x4_impl::f32x4<T>, PrimitiveError>
+pub fn recip::try_rsqrt_f32x8_lane_with<const O: u32, T: magetypes::simd::backends::convert::F32x8Convert>(T, f32) -> core::result::Result<f32, PrimitiveError>
+pub fn recip::try_rsqrt_f32x8_with<const O: u32, T: magetypes::simd::backends::convert::F32x8Convert>(T, magetypes::simd::generic::generated::f32x8_impl::f32x8<T>) -> core::result::Result<magetypes::simd::generic::generated::f32x8_impl::f32x8<T>, PrimitiveError>
+pub fn recip::try_rsqrt_with<const O: u32>(f32) -> core::result::Result<f32, PrimitiveError>
+#[non_exhaustive] pub enum PrimitiveErrorKind
+pub PrimitiveErrorKind::InvalidInput
+pub PrimitiveErrorKind::UnsupportedWidth
+pub struct PrimitiveError
+pub PrimitiveError::kind: PrimitiveErrorKind
+pub PrimitiveError::lane_mask: u16
 
-## trait impls (24 types)
+## trait impls (38 types)
 
+PrimitiveError: Clone, Copy, Debug, Display, Eq, PartialEq
+PrimitiveErrorKind: Clone, Copy, Debug, Eq, PartialEq
 expf::ExpfDomain: Clone, Copy, Debug, Default, Eq, PartialEq
 expf::ExpfError: Clone, Copy, Debug, Display, Eq, PartialEq
 expf::ExpfErrorKind: Clone, Copy, Debug, Eq, PartialEq
@@ -237,6 +354,12 @@ logf::LogfOptions: Clone, Copy, Debug, Default, Eq, PartialEq
 logf::LogfPortability: Clone, Copy, Debug, Default, Eq, PartialEq
 logf::LogfPrecision: Clone, Copy, Debug, Default, Eq, PartialEq
 logf::LogfValidation: Clone, Copy, Debug, Default, Eq, PartialEq
+minmax::MinMaxDomain: Clone, Copy, Debug, Default, Eq, PartialEq
+minmax::MinMaxExecution: Clone, Copy, Debug, Default, Eq, PartialEq
+minmax::MinMaxNaN: Clone, Copy, Debug, Default, Eq, PartialEq
+minmax::MinMaxOptions: Clone, Copy, Debug, Default, Eq, PartialEq
+minmax::MinMaxValidation: Clone, Copy, Debug, Default, Eq, PartialEq
+minmax::MinMaxZero: Clone, Copy, Debug, Default, Eq, PartialEq
 powf::PowfDomain: Clone, Copy, Debug, Default, Eq, PartialEq
 powf::PowfError: Clone, Copy, Debug, Display, Eq, PartialEq
 powf::PowfErrorKind: Clone, Copy, Debug, Eq, PartialEq
@@ -245,7 +368,13 @@ powf::PowfOptions: Clone, Copy, Debug, Default, Eq, PartialEq
 powf::PowfPortability: Clone, Copy, Debug, Default, Eq, PartialEq
 powf::PowfPrecision: Clone, Copy, Debug, Default, Eq, PartialEq
 powf::PowfValidation: Clone, Copy, Debug, Default, Eq, PartialEq
+recip::RecipDomain: Clone, Copy, Debug, Default, Eq, PartialEq
+recip::RecipExecution: Clone, Copy, Debug, Default, Eq, PartialEq
+recip::RecipOptions: Clone, Copy, Debug, Default, Eq, PartialEq
+recip::RecipPortability: Clone, Copy, Debug, Default, Eq, PartialEq
+recip::RecipPrecision: Clone, Copy, Debug, Default, Eq, PartialEq
+recip::RecipValidation: Clone, Copy, Debug, Default, Eq, PartialEq
 
 ## auto traits
 
-24 types implement all of: Freeze, RefUnwindSafe, Send, Sync, Unpin, UnwindSafe
+38 types implement all of: Freeze, RefUnwindSafe, Send, Sync, Unpin, UnwindSafe

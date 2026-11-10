@@ -1,0 +1,594 @@
+{
+  "source": "results.json",
+  "unreliable": true,
+  "rows": [
+    {
+      "group": "min/f32x8/stream64",
+      "implementation": "legacy native min",
+      "ns": 1.5363071210029773,
+      "ratio": 1.0,
+      "ci95": [
+        1.0,
+        1.0
+      ],
+      "clean_rounds": 50,
+      "retained_rounds": 50,
+      "bootstrap_pairs": 10000,
+      "outlier_removal": false
+    },
+    {
+      "group": "min/f32x8/stream64",
+      "implementation": "portable number ordered",
+      "ns": 2.487644314452148,
+      "ratio": 1.6192363365653677,
+      "ci95": [
+        1.412681346558819,
+        1.8407439562656942
+      ],
+      "clean_rounds": 50,
+      "retained_rounds": 50,
+      "bootstrap_pairs": 10000,
+      "outlier_removal": false
+    },
+    {
+      "group": "min/f32x8/stream64",
+      "implementation": "portable propagate ordered",
+      "ns": 2.769816891939839,
+      "ratio": 1.8029057172706233,
+      "ci95": [
+        1.6004189145524002,
+        1.9863788627045404
+      ],
+      "clean_rounds": 50,
+      "retained_rounds": 50,
+      "bootstrap_pairs": 10000,
+      "outlier_removal": false
+    },
+    {
+      "group": "min/f32x8/stream64",
+      "implementation": "backend NaN and zero",
+      "ns": 1.5988494638485684,
+      "ratio": 1.0407095313108752,
+      "ci95": [
+        0.8823779422791037,
+        1.221389312654381
+      ],
+      "clean_rounds": 50,
+      "retained_rounds": 50,
+      "bootstrap_pairs": 10000,
+      "outlier_removal": false
+    },
+    {
+      "group": "min/f32x8/stream64",
+      "implementation": "normal checked",
+      "ns": 7.586459509502574,
+      "ratio": 4.938113874359808,
+      "ci95": [
+        4.419147934383946,
+        5.3609831408529685
+      ],
+      "clean_rounds": 50,
+      "retained_rounds": 50,
+      "bootstrap_pairs": 10000,
+      "outlier_removal": false
+    },
+    {
+      "group": "min/f32x8/stream64",
+      "implementation": "normal assume valid",
+      "ns": 1.2885761727403326,
+      "ratio": 0.8387490724504918,
+      "ci95": [
+        0.7518372651642554,
+        0.9117501174754052
+      ],
+      "clean_rounds": 50,
+      "retained_rounds": 50,
+      "bootstrap_pairs": 10000,
+      "outlier_removal": false
+    },
+    {
+      "group": "min/f32x8/chain64",
+      "implementation": "legacy native min",
+      "ns": 28.60749051555643,
+      "ratio": 1.0,
+      "ci95": [
+        1.0,
+        1.0
+      ],
+      "clean_rounds": 50,
+      "retained_rounds": 50,
+      "bootstrap_pairs": 10000,
+      "outlier_removal": false
+    },
+    {
+      "group": "min/f32x8/chain64",
+      "implementation": "portable number ordered",
+      "ns": 104.92343158306707,
+      "ratio": 3.6676908632028,
+      "ci95": [
+        3.662617108198792,
+        3.672793450470757
+      ],
+      "clean_rounds": 50,
+      "retained_rounds": 50,
+      "bootstrap_pairs": 10000,
+      "outlier_removal": false
+    },
+    {
+      "group": "min/f32x8/chain64",
+      "implementation": "portable propagate ordered",
+      "ns": 111.58031357182087,
+      "ratio": 3.900388029881361,
+      "ci95": [
+        3.8803321981142496,
+        3.9212588404223023
+      ],
+      "clean_rounds": 50,
+      "retained_rounds": 50,
+      "bootstrap_pairs": 10000,
+      "outlier_removal": false
+    },
+    {
+      "group": "min/f32x8/chain64",
+      "implementation": "backend NaN and zero",
+      "ns": 28.598274106667716,
+      "ratio": 0.9996778323186474,
+      "ci95": [
+        0.9978428175851741,
+        1.0015047510511943
+      ],
+      "clean_rounds": 50,
+      "retained_rounds": 50,
+      "bootstrap_pairs": 10000,
+      "outlier_removal": false
+    },
+    {
+      "group": "min/f32x8/chain64",
+      "implementation": "normal checked",
+      "ns": 79.31576894094832,
+      "ratio": 2.7725524857840047,
+      "ci95": [
+        2.7692146087724456,
+        2.7758028215368684
+      ],
+      "clean_rounds": 50,
+      "retained_rounds": 50,
+      "bootstrap_pairs": 10000,
+      "outlier_removal": false
+    },
+    {
+      "group": "min/f32x8/chain64",
+      "implementation": "normal assume valid",
+      "ns": 28.649742128847016,
+      "ratio": 1.0014769423157759,
+      "ci95": [
+        0.9995085239813096,
+        1.003417545876123
+      ],
+      "clean_rounds": 50,
+      "retained_rounds": 50,
+      "bootstrap_pairs": 10000,
+      "outlier_removal": false
+    },
+    {
+      "group": "recip/f32x8/stream64",
+      "implementation": "legacy working recip",
+      "ns": 2.515072156283294,
+      "ratio": 1.0,
+      "ci95": [
+        1.0,
+        1.0
+      ],
+      "clean_rounds": 18,
+      "retained_rounds": 50,
+      "bootstrap_pairs": 10000,
+      "outlier_removal": false
+    },
+    {
+      "group": "recip/f32x8/stream64",
+      "implementation": "highp division",
+      "ns": 3.5018496967904778,
+      "ratio": 1.3923456184117664,
+      "ci95": [
+        1.305484345922432,
+        1.4573523152919892
+      ],
+      "clean_rounds": 18,
+      "retained_rounds": 50,
+      "bootstrap_pairs": 10000,
+      "outlier_removal": false
+    },
+    {
+      "group": "recip/f32x8/stream64",
+      "implementation": "portable midp unchecked",
+      "ns": 3.0999592274566155,
+      "ratio": 1.2325527996133725,
+      "ci95": [
+        1.1449611992672113,
+        1.3104412368372307
+      ],
+      "clean_rounds": 18,
+      "retained_rounds": 50,
+      "bootstrap_pairs": 10000,
+      "outlier_removal": false
+    },
+    {
+      "group": "recip/f32x8/stream64",
+      "implementation": "portable lowp unchecked",
+      "ns": 2.0327232863245386,
+      "ratio": 0.8082166872414677,
+      "ci95": [
+        0.7067520555337453,
+        0.926435320320025
+      ],
+      "clean_rounds": 18,
+      "retained_rounds": 50,
+      "bootstrap_pairs": 10000,
+      "outlier_removal": false
+    },
+    {
+      "group": "recip/f32x8/stream64",
+      "implementation": "native midp unchecked",
+      "ns": 2.35687987254436,
+      "ratio": 0.9371022881615031,
+      "ci95": [
+        0.8303896051975603,
+        1.0604639638924038
+      ],
+      "clean_rounds": 18,
+      "retained_rounds": 50,
+      "bootstrap_pairs": 10000,
+      "outlier_removal": false
+    },
+    {
+      "group": "recip/f32x8/stream64",
+      "implementation": "native lowp unchecked",
+      "ns": 1.5776944993236488,
+      "ratio": 0.6272959188793706,
+      "ci95": [
+        0.5602187794640207,
+        0.7044406529016703
+      ],
+      "clean_rounds": 18,
+      "retained_rounds": 50,
+      "bootstrap_pairs": 10000,
+      "outlier_removal": false
+    },
+    {
+      "group": "recip/f32x8/stream64",
+      "implementation": "native midp checked",
+      "ns": 3.3820396842000764,
+      "ratio": 1.344708809149223,
+      "ci95": [
+        1.2563264654710748,
+        1.433827488639852
+      ],
+      "clean_rounds": 18,
+      "retained_rounds": 50,
+      "bootstrap_pairs": 10000,
+      "outlier_removal": false
+    },
+    {
+      "group": "recip/f32x8/chain64",
+      "implementation": "legacy working recip",
+      "ns": 158.83187870798307,
+      "ratio": 1.0,
+      "ci95": [
+        1.0,
+        1.0
+      ],
+      "clean_rounds": 50,
+      "retained_rounds": 50,
+      "bootstrap_pairs": 10000,
+      "outlier_removal": false
+    },
+    {
+      "group": "recip/f32x8/chain64",
+      "implementation": "highp division",
+      "ns": 86.48305964166146,
+      "ratio": 0.5444943442409507,
+      "ci95": [
+        0.5309853860663581,
+        0.5569730301528413
+      ],
+      "clean_rounds": 50,
+      "retained_rounds": 50,
+      "bootstrap_pairs": 10000,
+      "outlier_removal": false
+    },
+    {
+      "group": "recip/f32x8/chain64",
+      "implementation": "portable midp unchecked",
+      "ns": 225.792110812914,
+      "ratio": 1.4215792991282261,
+      "ci95": [
+        1.4205537482667527,
+        1.4226075285557254
+      ],
+      "clean_rounds": 50,
+      "retained_rounds": 50,
+      "bootstrap_pairs": 10000,
+      "outlier_removal": false
+    },
+    {
+      "group": "recip/f32x8/chain64",
+      "implementation": "portable lowp unchecked",
+      "ns": 124.97417643739936,
+      "ratio": 0.7868330807014374,
+      "ci95": [
+        0.7861982789549641,
+        0.7874520608316503
+      ],
+      "clean_rounds": 50,
+      "retained_rounds": 50,
+      "bootstrap_pairs": 10000,
+      "outlier_removal": false
+    },
+    {
+      "group": "recip/f32x8/chain64",
+      "implementation": "native midp unchecked",
+      "ns": 125.76574884942613,
+      "ratio": 0.7918167931555481,
+      "ci95": [
+        0.791342477638209,
+        0.7923191909452169
+      ],
+      "clean_rounds": 50,
+      "retained_rounds": 50,
+      "bootstrap_pairs": 10000,
+      "outlier_removal": false
+    },
+    {
+      "group": "recip/f32x8/chain64",
+      "implementation": "native lowp unchecked",
+      "ns": 40.5136360366049,
+      "ratio": 0.2550724474593062,
+      "ci95": [
+        0.2514711983116273,
+        0.25917454246957655
+      ],
+      "clean_rounds": 50,
+      "retained_rounds": 50,
+      "bootstrap_pairs": 10000,
+      "outlier_removal": false
+    },
+    {
+      "group": "recip/f32x8/chain64",
+      "implementation": "native midp checked",
+      "ns": 155.68352366297557,
+      "ratio": 0.980178065822694,
+      "ci95": [
+        0.979667033769467,
+        0.9806986673799785
+      ],
+      "clean_rounds": 50,
+      "retained_rounds": 50,
+      "bootstrap_pairs": 10000,
+      "outlier_removal": false
+    },
+    {
+      "group": "rsqrt/f32x8/stream64",
+      "implementation": "legacy working rsqrt",
+      "ns": 3.5810482609734784,
+      "ratio": 1.0,
+      "ci95": [
+        1.0,
+        1.0
+      ],
+      "clean_rounds": 50,
+      "retained_rounds": 50,
+      "bootstrap_pairs": 10000,
+      "outlier_removal": false
+    },
+    {
+      "group": "rsqrt/f32x8/stream64",
+      "implementation": "highp sqrt then divide",
+      "ns": 10.441114651362936,
+      "ratio": 2.915658737457117,
+      "ci95": [
+        2.8269722611443395,
+        2.984576902109194
+      ],
+      "clean_rounds": 50,
+      "retained_rounds": 50,
+      "bootstrap_pairs": 10000,
+      "outlier_removal": false
+    },
+    {
+      "group": "rsqrt/f32x8/stream64",
+      "implementation": "portable midp unchecked",
+      "ns": 5.348665456828775,
+      "ratio": 1.4936032879307761,
+      "ci95": [
+        1.4480392387813845,
+        1.5280392881997793
+      ],
+      "clean_rounds": 50,
+      "retained_rounds": 50,
+      "bootstrap_pairs": 10000,
+      "outlier_removal": false
+    },
+    {
+      "group": "rsqrt/f32x8/stream64",
+      "implementation": "portable lowp unchecked",
+      "ns": 2.9852304664640896,
+      "ratio": 0.8336191664874629,
+      "ci95": [
+        0.7885504322847816,
+        0.889776812327288
+      ],
+      "clean_rounds": 50,
+      "retained_rounds": 50,
+      "bootstrap_pairs": 10000,
+      "outlier_removal": false
+    },
+    {
+      "group": "rsqrt/f32x8/stream64",
+      "implementation": "native midp unchecked",
+      "ns": 2.812851279906617,
+      "ratio": 0.7854826505862188,
+      "ci95": [
+        0.752633816757082,
+        0.8269702890714791
+      ],
+      "clean_rounds": 50,
+      "retained_rounds": 50,
+      "bootstrap_pairs": 10000,
+      "outlier_removal": false
+    },
+    {
+      "group": "rsqrt/f32x8/stream64",
+      "implementation": "native lowp unchecked",
+      "ns": 1.4769927934487872,
+      "ratio": 0.4124470506430089,
+      "ci95": [
+        0.37739900575784663,
+        0.4649917959052019
+      ],
+      "clean_rounds": 50,
+      "retained_rounds": 50,
+      "bootstrap_pairs": 10000,
+      "outlier_removal": false
+    },
+    {
+      "group": "rsqrt/f32x8/stream64",
+      "implementation": "native midp checked",
+      "ns": 3.7965803172057297,
+      "ratio": 1.0601868616463885,
+      "ci95": [
+        1.0146493481387688,
+        1.1134203982279671
+      ],
+      "clean_rounds": 50,
+      "retained_rounds": 50,
+      "bootstrap_pairs": 10000,
+      "outlier_removal": false
+    },
+    {
+      "group": "rsqrt/f32x8/chain64",
+      "implementation": "legacy working rsqrt",
+      "ns": 217.7491249011494,
+      "ratio": 1.0,
+      "ci95": [
+        1.0,
+        1.0
+      ],
+      "clean_rounds": 50,
+      "retained_rounds": 50,
+      "bootstrap_pairs": 10000,
+      "outlier_removal": false
+    },
+    {
+      "group": "rsqrt/f32x8/chain64",
+      "implementation": "highp sqrt then divide",
+      "ns": 237.648674726086,
+      "ratio": 1.0913875076833044,
+      "ci95": [
+        1.0908548819151078,
+        1.0919040772475197
+      ],
+      "clean_rounds": 50,
+      "retained_rounds": 50,
+      "bootstrap_pairs": 10000,
+      "outlier_removal": false
+    },
+    {
+      "group": "rsqrt/f32x8/chain64",
+      "implementation": "portable midp unchecked",
+      "ns": 320.3462759662514,
+      "ratio": 1.4711713588363562,
+      "ci95": [
+        1.4700327699921807,
+        1.4726040638437707
+      ],
+      "clean_rounds": 50,
+      "retained_rounds": 50,
+      "bootstrap_pairs": 10000,
+      "outlier_removal": false
+    },
+    {
+      "group": "rsqrt/f32x8/chain64",
+      "implementation": "portable lowp unchecked",
+      "ns": 187.52615197049496,
+      "ratio": 0.8612027812080778,
+      "ci95": [
+        0.8606481704177154,
+        0.861745060428277
+      ],
+      "clean_rounds": 50,
+      "retained_rounds": 50,
+      "bootstrap_pairs": 10000,
+      "outlier_removal": false
+    },
+    {
+      "group": "rsqrt/f32x8/chain64",
+      "implementation": "native midp unchecked",
+      "ns": 187.77107040884,
+      "ratio": 0.8623275546759676,
+      "ci95": [
+        0.8611292243634482,
+        0.8634493519067891
+      ],
+      "clean_rounds": 50,
+      "retained_rounds": 50,
+      "bootstrap_pairs": 10000,
+      "outlier_removal": false
+    },
+    {
+      "group": "rsqrt/f32x8/chain64",
+      "implementation": "native lowp unchecked",
+      "ns": 40.84289553669611,
+      "ratio": 0.1875685863501742,
+      "ci95": [
+        0.18468141590255344,
+        0.19073716757446058
+      ],
+      "clean_rounds": 50,
+      "retained_rounds": 50,
+      "bootstrap_pairs": 10000,
+      "outlier_removal": false
+    },
+    {
+      "group": "rsqrt/f32x8/chain64",
+      "implementation": "native midp checked",
+      "ns": 210.13695547484565,
+      "ratio": 0.9650415613391814,
+      "ci95": [
+        0.9642863778862001,
+        0.9656371272315972
+      ],
+      "clean_rounds": 50,
+      "retained_rounds": 50,
+      "bootstrap_pairs": 10000,
+      "outlier_removal": false
+    },
+    {
+      "group": "log2/f32x8/stream64",
+      "implementation": "linear-srgb graph mirror",
+      "ns": 5.765597121382103,
+      "ratio": 1.0,
+      "ci95": [
+        1.0,
+        1.0
+      ],
+      "clean_rounds": 50,
+      "retained_rounds": 50,
+      "bootstrap_pairs": 10000,
+      "outlier_removal": false
+    },
+    {
+      "group": "log2/f32x8/stream64",
+      "implementation": "configured lowp unchecked",
+      "ns": 5.712657922321802,
+      "ratio": 0.9908180890988771,
+      "ci95": [
+        0.9780262836138721,
+        1.0002265607154572
+      ],
+      "clean_rounds": 50,
+      "retained_rounds": 50,
+      "bootstrap_pairs": 10000,
+      "outlier_removal": false
+    }
+  ]
+}
