@@ -37,13 +37,16 @@ rsqrt compositions. Native SIMD is unchanged. The public integer software
 functions remain unchanged as the no_std fallback and regression controls.
 No public signature, dependency of the shipped library, or accuracy bound changes.
 
-The no_std hardware prototype was not promoted: the existing structural
-soundness gate prohibits hidden token summons inside scalar operations. That gate
-is unchanged. A native no_std caller can retain its existing token for a tail:
-`f32x4::splat_t(token, x).sqrt().to_array()[0]` (f64 uses f64x2). ScalarToken
-without std still uses the integer algorithm. A general hardware route there
-needs a separately reviewed proof-boundary solution; runtime detection per lane
-would be the wrong cost model.
+The owner approved disclosed internal summons on 2026-11-10. The no_std
+selector now uses SSE2, NEON or WASM SIMD128 only where target features prove
+availability. Without that proof it keeps integer software. In ordinary builds
+these summons are constants; `archmage/testable_dispatch` can disable them and
+exercise the software fallback. No runtime CPU upgrade occurs. WASM sqrt does
+not require relaxed-SIMD. The std path continues to use primitive sqrt directly.
+
+The public `nostd_math::{sqrtf,sqrt}` functions remain software controls. The
+[WASM relaxed support audit](../../docs/WASM-RELAXED.md) records token testing,
+existing FMA selection and the proposed operation-specific relaxed contracts.
 
 ## Correctness and codegen
 
@@ -198,3 +201,36 @@ output roots. The first evidence archive remains immutable.
 Approved-gate logs, generated references, assembly, source snapshot and SHA-256
 index are preserved in `sqrt-study-2026-11-10-approved-gate` beneath the same
 local/mirrored output roots. Earlier evidence archives remain immutable.
+
+## no_std and WASM follow-up (2026-11-10)
+
+The disclosed no_std selector passes all 4,294,967,296 f32 inputs against
+hardware/std and the retained integer control (7.78 seconds for the streaming
+comparison). F64 remains directed/sampled. Native Apple M6 no_std fixture/width
+checks and enabled/disabled/re-enabled scalar checks also pass. The fixed WASM
+matrix covers no-SIMD, SIMD128 and relaxed-SIMD builds, std/no_std, baseline and
+relaxed token permutations, and fusing/nonfusing Wasmtime configurations.
+
+Compile-only no_std probes contain no token load, branch or software call:
+x86-64 uses `sqrtss/sqrtsd` and `sqrtps/sqrtpd`; AArch64 uses scalar/vector
+`fsqrt`; relaxed-WASM emits scalar `f32.sqrt/f64.sqrt` and vector
+`f32x4.sqrt/f64x2.sqrt`. Relaxed FMA selectors retain their existing fusion probe;
+the extra disabled-token check is compiled away outside `testable_dispatch`.
+No new timings for no_std or the other proposed relaxed families were collected.
+
+Public API snapshots were regenerated for the added WASM disabling methods.
+Generation, structural soundness, focused Clippy, Rust 1.89 no_std native/WASM
+checks and the full 3,211-probe comparison pass. The latter still has exactly the
+six approved x86 differences. No numerical or assembly bounds were relaxed.
+A broader optional WASM all-tests Clippy invocation reported two `single_match`
+lints in the unchanged `int_widen_narrow` test; focused affected tests are clean.
+
+The native M6 correctness/build wrapper reports:
+`run-heavy: done rc=0 7s | peak-RSS 0.37GiB | min-avail 8696MiB | peak-load 2.01`.
+Tool/codegen/workflow checks report:
+`run-heavy: done rc=0 5s | peak-RSS 0.33GiB | min-avail 39895MiB | peak-load 0.79`.
+These are complete wrapper runs, not per-operation memory measurements.
+
+Source snapshots, all attempt logs (including setup failures), assembly and
+manifest are retained in `sqrt-study-2026-11-10-no-std-wasm` beneath the same
+local and mirrored output roots as the preceding evidence archives.

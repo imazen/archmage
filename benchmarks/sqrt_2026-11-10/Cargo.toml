@@ -16,4 +16,6 @@ avx512 = ["w512", "archmage/avx512", "magetypes/avx512"]
 [dependencies]
 archmage = { path = "../..", default-features = false }
 magetypes = { path = "../../magetypes", default-features = false }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 zenbench = "0.1.11"
