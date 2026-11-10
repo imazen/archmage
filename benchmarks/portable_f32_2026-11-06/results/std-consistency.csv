@@ -1,0 +1,17 @@
+candidate,op,a,b,n,mismatches,max_finite_steps,special_mismatch,zero_sign,example
+std,exp,arm-neon,x86-native,275909,0,0,0,0,
+std,exp,wasm-strict,x86-native,275909,0,0,0,0,
+std,exp,x86-native,x86-nehalem,275909,0,0,0,0,
+std,exp,x86-native,x86-v3,275909,0,0,0,0,
+std,ln,arm-neon,x86-native,204353,0,0,0,0,
+std,ln,wasm-strict,x86-native,204353,0,0,0,0,
+std,ln,x86-native,x86-nehalem,204353,0,0,0,0,
+std,ln,x86-native,x86-v3,204353,0,0,0,0,
+std,log2,arm-neon,x86-native,204353,0,0,0,0,
+std,log2,wasm-strict,x86-native,204353,0,0,0,0,
+std,log2,x86-native,x86-nehalem,204353,0,0,0,0,
+std,log2,x86-native,x86-v3,204353,0,0,0,0,
+std,pow,arm-neon,x86-native,791134,0,0,0,0,
+std,pow,wasm-strict,x86-native,791134,28,0,28,0,"7f800001,00000000,3f800000,7fc00001"
+std,pow,x86-native,x86-nehalem,791134,0,0,0,0,
+std,pow,x86-native,x86-v3,791134,0,0,0,0,

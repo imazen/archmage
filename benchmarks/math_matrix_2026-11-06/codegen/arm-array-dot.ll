@@ -1,0 +1,29 @@
+; Selected arithmetic from arm/math_matrix_study-107ee31fd7b8ef38.ll
+; Symbol _RNCNvNtCsffbGKKrTuqY_17math_matrix_study9algebraic9cases_f32sd_0B5_
+%5 = fmul reassoc nsz arcp contract <16 x float> %wide.vec15, %wide.vec
+%7 = fadd reassoc nsz arcp contract <2 x float> %6, %vec.phi7
+%8 = fmul reassoc nsz arcp contract <16 x float> %wide.vec15, %wide.vec
+%10 = fadd reassoc nsz arcp contract <2 x float> %9, %vec.phi6
+%11 = fmul reassoc nsz arcp contract <16 x float> %wide.vec15, %wide.vec
+%13 = fadd reassoc nsz arcp contract <2 x float> %12, %vec.phi5
+%14 = fmul reassoc nsz arcp contract <16 x float> %wide.vec15, %wide.vec
+%16 = fadd reassoc nsz arcp contract <2 x float> %15, %vec.phi4
+%17 = fmul reassoc nsz arcp contract <16 x float> %wide.vec15, %wide.vec
+%19 = fadd reassoc nsz arcp contract <2 x float> %18, %vec.phi3
+%20 = fmul reassoc nsz arcp contract <16 x float> %wide.vec15, %wide.vec
+%22 = fadd reassoc nsz arcp contract <2 x float> %21, %vec.phi2
+%23 = fmul reassoc nsz arcp contract <16 x float> %wide.vec15, %wide.vec
+%25 = fadd reassoc nsz arcp contract <2 x float> %24, %vec.phi1
+%26 = fmul reassoc nsz arcp contract <16 x float> %wide.vec15, %wide.vec
+%28 = fadd reassoc nsz arcp contract <2 x float> %27, %vec.phi
+%30 = tail call reassoc nsz arcp contract float @llvm.vector.reduce.fadd.v2f32(float 0.000000e+00, <2 x float> %28)
+%31 = tail call reassoc nsz arcp contract float @llvm.vector.reduce.fadd.v2f32(float 0.000000e+00, <2 x float> %25)
+%32 = tail call reassoc nsz arcp contract float @llvm.vector.reduce.fadd.v2f32(float 0.000000e+00, <2 x float> %22)
+%33 = tail call reassoc nsz arcp contract float @llvm.vector.reduce.fadd.v2f32(float 0.000000e+00, <2 x float> %19)
+%34 = tail call reassoc nsz arcp contract float @llvm.vector.reduce.fadd.v2f32(float 0.000000e+00, <2 x float> %16)
+%35 = tail call reassoc nsz arcp contract float @llvm.vector.reduce.fadd.v2f32(float 0.000000e+00, <2 x float> %13)
+%36 = tail call reassoc nsz arcp contract float @llvm.vector.reduce.fadd.v2f32(float 0.000000e+00, <2 x float> %10)
+%37 = tail call reassoc nsz arcp contract float @llvm.vector.reduce.fadd.v2f32(float 0.000000e+00, <2 x float> %7)
+%50 = fmul reassoc nsz arcp contract <8 x float> %49, %48
+%51 = fadd reassoc nsz arcp contract <8 x float> %50, %46
+%53 = tail call reassoc nsz arcp contract float @llvm.vector.reduce.fadd.v8f32(float 0.000000e+00, <8 x float> %52)

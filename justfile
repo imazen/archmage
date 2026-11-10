@@ -333,7 +333,12 @@ docs-test:
     python3 xtask/check_docs.py
     python3 xtask/check_docs.py --features avx512
 
-# Test Markdown examples using the selected target and configured Cargo runner.
+# Math guide examples use algebraic float methods (Rust 1.98+).
+math-docs-test:
+    python3 xtask/check_docs.py docs/site/content/magetypes/math/choosing-math.md docs/site/content/magetypes/operations/reductions.md
+    python3 xtask/check_docs.py --features avx512 docs/site/content/magetypes/math/choosing-math.md docs/site/content/magetypes/operations/reductions.md
+
+# Test Markdown examples on another target using its configured Cargo runner.
 docs-test-target target *pages:
     python3 xtask/check_docs.py --target {{target}} {{pages}}
 
@@ -544,3 +549,158 @@ release-compat-recheck source output inventory:
 
 release-compat-audit directory source *options:
     python3 xtask/release_compat/audit.py {{directory}} --source {{source}} {{options}}
+
+# ====== zenmath / magemath ======
+
+# Portable-kernel contract on this host: every tier against the mirrors, with no
+# tolerance. A tier this CPU lacks fails unless MAGEMATH_SKIP_TIERS names it. On an
+# ARM box (no AVX-512 there, so v4x is compiled out) this is the NEON run too.
+test-magemath:
+    cargo test -p zenmath
+    cargo test -p zenmath --features std
+    cargo test -p magemath
+    cargo test -p magemath --features avx512
+    cargo test -p magemath --features avx512 --release
+    cargo test -p magemath --features zenmath/std --test golden --test parity
+
+# Same on WASM: strict, relaxed on an engine that fuses, relaxed on one that rounds
+# twice (the kernels' cached probe must send it to software), and no SIMD.
+test-magemath-wasm:
+    RUSTFLAGS="-Ctarget-feature=+simd128" CARGO_TARGET_WASM32_WASIP1_RUNNER="wasmtime run" cargo test -p magemath --target wasm32-wasip1 --tests
+    RUSTFLAGS="-Ctarget-feature=+simd128,+relaxed-simd" CARGO_TARGET_WASM32_WASIP1_RUNNER="wasmtime run --env MAGEMATH_EXPECT_RELAXED_ROUNDING=once" cargo test -p magemath --target wasm32-wasip1 --tests
+    RUSTFLAGS="-Ctarget-feature=+simd128,+relaxed-simd" CARGO_TARGET_WASM32_WASIP1_RUNNER="wasmtime run --env MAGEMATH_EXPECT_RELAXED_ROUNDING=twice -W relaxed-simd-deterministic=n -C cranelift-has-fma=false" cargo test -p magemath --target wasm32-wasip1 --tests
+    CARGO_TARGET_WASM32_WASIP1_RUNNER="wasmtime run" cargo test -p magemath --target wasm32-wasip1 --tests
+    CARGO_TARGET_WASM32_WASIP1_RUNNER="wasmtime run" cargo test -p zenmath --target wasm32-wasip1 --tests
+
+# Same on x86 without FMA: the dispatchers must fall to the scalar tier and agree.
+test-magemath-no-fma:
+    MAGEMATH_SKIP_TIERS=v3,v4x CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER="qemu-x86_64 -cpu Nehalem" cargo test -p magemath --target x86_64-unknown-linux-gnu --tests
+
+# Same on 32-bit x86, which has only the scalar tier. Cross supplies its C runtime.
+test-magemath-i686:
+    cross test -p magemath --target i686-unknown-linux-gnu --tests
+
+# Same with FMA and AVX2 compiled in: the scalar tier then uses hardware FMA.
+test-magemath-v3-build:
+    RUSTFLAGS="-Ctarget-cpu=x86-64-v3" cargo test -p magemath --tests
+
+# Every 2^32 input, every op, every tier: minutes on many cores, so not on dev.
+# Run through run-heavy.
+magemath-exhaustive:
+    cargo test -p magemath --features avx512 --release --test exhaustive -- --ignored --nocapture --test-threads=1
+
+# Rewrite the golden files from the mirrors after an intentional kernel change.
+# Review the edges.txt diff: it shows every special-case result that moved.
+magemath-golden-regen:
+    cargo test -p magemath --test golden regenerate -- --ignored
+
+# Fused, unfused prototype, relaxed kernels, unchecked forms and magetypes methods. Not on dev.
+magemath-bench:
+    cargo bench -p magemath --bench portable_cost
+
+# The same forms on WASM, where zenbench does not build.
+magemath-bench-wasm:
+    @echo 'Strict SIMD'
+    RUSTFLAGS="-Ctarget-feature=+simd128" cargo build -p magemath --example wasm_cost --release --target wasm32-wasip1
+    wasmtime run target/wasm32-wasip1/release/examples/wasm_cost.wasm
+    RUSTFLAGS="-Ctarget-feature=+simd128,+relaxed-simd" cargo build -p magemath --example wasm_cost --release --target wasm32-wasip1
+    @echo 'Relaxed SIMD, default engine'
+    wasmtime run target/wasm32-wasip1/release/examples/wasm_cost.wasm
+    @echo 'Relaxed SIMD, forced non-fusing engine'
+    wasmtime run -W relaxed-simd-deterministic=n -C cranelift-has-fma=false target/wasm32-wasip1/release/examples/wasm_cost.wasm
+
+# Rebuild the compile-time table in magemath/docs/DESIGN.md. Not on dev.
+magemath-compile-time scratch:
+    benchmarks/magemath_portable_cost_2026-11-05/compile_time.sh . {{scratch}}
+
+# Independent FMA regressions, including the WASI std implementation boundary.
+test-zenmath-fma:
+    cargo test -p zenmath --test scalar fmaf_independent -- --nocapture
+    cargo test -p zenmath --features std --test scalar fmaf_independent -- --nocapture
+    cargo test -p zenmath --target wasm32-wasip1 --test scalar fmaf_independent -- --nocapture
+    cargo test -p zenmath --features std --target wasm32-wasip1 --test scalar fmaf_independent -- --nocapture
+    CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER="qemu-x86_64 -cpu Nehalem" cargo test -p zenmath --features std --target x86_64-unknown-linux-gnu --test scalar fmaf_independent -- --nocapture
+
+# Standalone CORE-MATH research; run on an eligible benchmark host under run-heavy.
+core-math-study-build upstream output:
+    bash benchmarks/core_math_cost_2026-11-05/build.sh {{upstream}} {{output}}
+
+core-math-study-run output:
+    bash benchmarks/core_math_cost_2026-11-05/run.sh {{output}}
+
+core-math-study-rust output:
+    bash benchmarks/core_math_cost_2026-11-05/rust.sh {{output}}
+
+core-math-study-tuning output:
+    bash benchmarks/core_math_cost_2026-11-05/tuning.sh {{output}}
+
+core-math-study-analyze csv analyzer:
+    python3 benchmarks/core_math_cost_2026-11-05/analyze.py {{csv}} {{analyzer}}
+
+# Exact-bit checks against externally generated MPFR records; use run-heavy on an eligible host.
+zenmath-core-check records:
+    bash zenmath/tools/check-core-math.sh '{{records}}'
+
+# Scalar CORE-MATH stream costs; std is a comparison, not an accuracy oracle.
+zenmath-core-bench output:
+    cargo run --release --manifest-path benchmarks/core_math_rust_2026-11-05/Cargo.toml -- '{{output}}'
+
+zenmath-core-bench-hardware output:
+    cargo run --release --features std --manifest-path benchmarks/core_math_rust_2026-11-05/Cargo.toml -- '{{output}}'
+
+zenmath-core-hard-cases records:
+    bash zenmath/tools/check-core-hard-cases.sh '{{records}}'
+
+# Correct-rounding vector checks and cost study (run-heavy on eligible hosts).
+magemath-core-check function records:
+    cargo run -p magemath --release --example core_math_vector_check -- '{{function}}' '{{records}}'
+
+magemath-core-cost output:
+    cargo run -p magemath --release --example core_math_vector_cost -- '{{output}}'
+
+magemath-core-exhaustive:
+    cargo test -p magemath --release --test core_exhaustive -- --ignored --nocapture
+
+# Summarize paired CORE-MATH vector measurements (one or more JSON files).
+magemath-core-summary +files:
+    python3 benchmarks/core_math_vector_2026-11-06/summarize.py {{files}}
+
+# Same-input comparison of distinct math accuracy contracts; pow exponent is 2.4.
+magemath-core-comparison output:
+    cargo run -p magemath --release --example core_math_comparison -- {{output}}
+
+magemath-core-comparison-summary +files:
+    python3 benchmarks/core_math_comparison_2026-11-06/summarize.py {{files}}
+
+# Optional intrinsic-only math; all CPU work runs on admitted remote hosts.
+zenmath-dispatch-generate:
+    python3 zenmath/tools/generate-primitives.py
+    cargo fmt -p zenmath
+
+zenmath-dispatch-check:
+    cargo test -p zenmath --features archmage --test acceleration
+    cargo test -p zenmath --features runtime-dispatch,avx512 --test acceleration
+    cargo test -p magemath --all-features --tests
+
+zenmath-dispatch-unification:
+    cargo rustc --manifest-path benchmarks/zenmath_dispatch_2026-11-06/compile-consumer/Cargo.toml --release --features unified-std -- --emit=llvm-ir
+    cargo run --manifest-path benchmarks/zenmath_dispatch_2026-11-06/compile-consumer/Cargo.toml --release --features unified-std
+    python3 benchmarks/zenmath_dispatch_2026-11-06/check-unification.py benchmarks/zenmath_dispatch_2026-11-06/compile-consumer/target/release/deps/zenmath_compile_consumer-*.ll
+
+# Regenerate wrappers from canonical Magemath arithmetic; no deprecated source input.
+magemath-generate:
+    python3 magemath/tools/generate-legacy.py
+    python3 magemath/tools/generate-legacy-parity.py
+    python3 magemath/tools/generate-width-parity.py
+    cargo fmt -p magemath
+
+magemath-superset-check tiers:
+    LEGACY_REQUIRE_TIERS={{tiers}} cargo test -p magemath --all-features --release --test legacy_superset --test width_parity -- --nocapture
+
+# Debug frames must fit the target's default stack; uses its configured runner.
+magemath-superset-debug-check target tiers:
+    LEGACY_REQUIRE_TIERS={{tiers}} cargo test --locked -p magemath --all-features --target {{target}} --test legacy_superset --test width_parity -- --nocapture
+
+zenmath-gamma-generate:
+    python3 zenmath/tools/generate-gamma-tables.py
+    cargo fmt -p zenmath

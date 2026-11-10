@@ -1,3 +1,5 @@
+// Exercises retained legacy transcendental contracts during migration.
+#![allow(deprecated)]
 //! Test that doc examples from SAFETY-AND-IDIOMS.md compile.
 //!
 //! This file verifies that the examples in the documentation are syntactically

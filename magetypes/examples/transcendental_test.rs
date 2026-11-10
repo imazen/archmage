@@ -1,3 +1,5 @@
+// Exercises retained legacy transcendental contracts during migration.
+#![allow(deprecated)]
 //! Quick test for transcendental functions (lowp variants)
 //!
 //! Run with: `cargo run --example transcendental_test --release`

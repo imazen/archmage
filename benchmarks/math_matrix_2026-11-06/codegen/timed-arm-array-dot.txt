@@ -1,0 +1,126 @@
+# Actual timed binary, SHA256 retained in artifact timed-codegen folder
+# arm/timed-codegen/algebraic-timed-arm.disasm:34332
+000000000002c99c <math_matrix_study::algebraic::cases_f32::{closure#15}>:
+   2c99c:	d100c3ff 	sub	sp, sp, #0x30
+   2c9a0:	a9027bfd 	stp	x29, x30, [sp, #32]
+   2c9a4:	910083fd 	add	x29, sp, #0x20
+   2c9a8:	eb04005f 	cmp	x2, x4
+   2c9ac:	f90007e2 	str	x2, [sp, #8]
+   2c9b0:	f81f83a4 	stur	x4, [x29, #-8]
+   2c9b4:	54000b21 	b.ne	2cb18 <math_matrix_study::algebraic::cases_f32::{closure#15}+0x17c>  // b.any
+   2c9b8:	eb06005f 	cmp	x2, x6
+   2c9bc:	f81f83a2 	stur	x2, [x29, #-8]
+   2c9c0:	f9000be6 	str	x6, [sp, #16]
+   2c9c4:	54000b81 	b.ne	2cb34 <math_matrix_study::algebraic::cases_f32::{closure#15}+0x198>  // b.any
+   2c9c8:	f2400848 	ands	x8, x2, #0x7
+   2c9cc:	f81f83a8 	stur	x8, [x29, #-8]
+   2c9d0:	54000c01 	b.ne	2cb50 <math_matrix_study::algebraic::cases_f32::{closure#15}+0x1b4>  // b.any
+   2c9d4:	b4000ce2 	cbz	x2, 2cb70 <math_matrix_study::algebraic::cases_f32::{closure#15}+0x1d4>
+   2c9d8:	d343fc48 	lsr	x8, x2, #3
+   2c9dc:	f100405f 	cmp	x2, #0x10
+   2c9e0:	540000a2 	b.cs	2c9f4 <math_matrix_study::algebraic::cases_f32::{closure#15}+0x58>  // b.hs, b.nlast
+   2c9e4:	6f00e404 	movi	v4.2d, #0x0
+   2c9e8:	6f00e405 	movi	v5.2d, #0x0
+   2c9ec:	aa1f03e9 	mov	x9, xzr
+   2c9f0:	14000039 	b	2cad4 <math_matrix_study::algebraic::cases_f32::{closure#15}+0x138>
+   2c9f4:	2f00e400 	movi	d0, #0x0
+   2c9f8:	2f00e402 	movi	d2, #0x0
+   2c9fc:	927fe109 	and	x9, x8, #0x3fffffffffffffe
+   2ca00:	2f00e404 	movi	d4, #0x0
+   2ca04:	2f00e405 	movi	d5, #0x0
+   2ca08:	aa0103ea 	mov	x10, x1
+   2ca0c:	2f00e401 	movi	d1, #0x0
+   2ca10:	2f00e403 	movi	d3, #0x0
+   2ca14:	aa0303eb 	mov	x11, x3
+   2ca18:	2f00e406 	movi	d6, #0x0
+   2ca1c:	2f00e407 	movi	d7, #0x0
+   2ca20:	927fe10c 	and	x12, x8, #0x3fffffffffffffe
+   2ca24:	ad414550 	ldp	q16, q17, [x10, #32]
+   2ca28:	f100098c 	subs	x12, x12, #0x2
+   2ca2c:	ad415972 	ldp	q18, q22, [x11, #32]
+   2ca30:	acc25d73 	ldp	q19, q23, [x11], #64
+   2ca34:	acc25554 	ldp	q20, q21, [x10], #64
+   2ca38:	6e30de50 	fmul	v16.4s, v18.4s, v16.4s
+   2ca3c:	6e31ded1 	fmul	v17.4s, v22.4s, v17.4s
+   2ca40:	6e34de73 	fmul	v19.4s, v19.4s, v20.4s
+   2ca44:	6e35def2 	fmul	v18.4s, v23.4s, v21.4s
+   2ca48:	4e905a74 	uzp2	v20.4s, v19.4s, v16.4s
+   2ca4c:	4e915a55 	uzp2	v21.4s, v18.4s, v17.4s
+   2ca50:	0e903a76 	zip1	v22.2s, v19.2s, v16.2s
+   2ca54:	0e907a77 	zip2	v23.2s, v19.2s, v16.2s
+   2ca58:	4e907a70 	zip2	v16.4s, v19.4s, v16.4s
+   2ca5c:	0e913a58 	zip1	v24.2s, v18.2s, v17.2s
+   2ca60:	4e935a93 	uzp2	v19.4s, v20.4s, v19.4s
+   2ca64:	0e917a54 	zip2	v20.2s, v18.2s, v17.2s
+   2ca68:	4e917a51 	zip2	v17.4s, v18.4s, v17.4s
+   2ca6c:	4e925ab2 	uzp2	v18.4s, v21.4s, v18.4s
+   2ca70:	0e27d6c7 	fadd	v7.2s, v22.2s, v7.2s
+   2ca74:	0e26d6e6 	fadd	v6.2s, v23.2s, v6.2s
+   2ca78:	0e23d603 	fadd	v3.2s, v16.2s, v3.2s
+   2ca7c:	0e25d705 	fadd	v5.2s, v24.2s, v5.2s
+   2ca80:	0e21d661 	fadd	v1.2s, v19.2s, v1.2s
+   2ca84:	0e24d684 	fadd	v4.2s, v20.2s, v4.2s
+   2ca88:	0e22d622 	fadd	v2.2s, v17.2s, v2.2s
+   2ca8c:	0e20d640 	fadd	v0.2s, v18.2s, v0.2s
+   2ca90:	54fffca1 	b.ne	2ca24 <math_matrix_study::algebraic::cases_f32::{closure#15}+0x88>  // b.any
+   2ca94:	7e30d890 	faddp	s16, v4.2s
+   2ca98:	7e30d8a5 	faddp	s5, v5.2s
+   2ca9c:	eb09011f 	cmp	x8, x9
+   2caa0:	7e30d8c6 	faddp	s6, v6.2s
+   2caa4:	7e30d8e4 	faddp	s4, v7.2s
+   2caa8:	7e30d842 	faddp	s2, v2.2s
+   2caac:	7e30d863 	faddp	s3, v3.2s
+   2cab0:	7e30d800 	faddp	s0, v0.2s
+   2cab4:	7e30d821 	faddp	s1, v1.2s
+   2cab8:	6e0c0605 	mov	v5.s[1], v16.s[0]
+   2cabc:	6e0c04c4 	mov	v4.s[1], v6.s[0]
+   2cac0:	6e140445 	mov	v5.s[2], v2.s[0]
+   2cac4:	6e140464 	mov	v4.s[2], v3.s[0]
+   2cac8:	6e1c0405 	mov	v5.s[3], v0.s[0]
+   2cacc:	6e1c0424 	mov	v4.s[3], v1.s[0]
+   2cad0:	54000160 	b.eq	2cafc <math_matrix_study::algebraic::cases_f32::{closure#15}+0x160>  // b.none
+   2cad4:	d37be92b 	lsl	x11, x9, #5
+   2cad8:	cb090108 	sub	x8, x8, x9
+   2cadc:	8b0b002a 	add	x10, x1, x11
+   2cae0:	8b0b006b 	add	x11, x3, x11
+   2cae4:	acc10141 	ldp	q1, q0, [x10], #32
+   2cae8:	acc10963 	ldp	q3, q2, [x11], #32
+   2caec:	f1000508 	subs	x8, x8, #0x1
+   2caf0:	4e20cc45 	fmla	v5.4s, v2.4s, v0.4s
+   2caf4:	4e21cc64 	fmla	v4.4s, v3.4s, v1.4s
+   2caf8:	54ffff61 	b.ne	2cae4 <math_matrix_study::algebraic::cases_f32::{closure#15}+0x148>  // b.any
+   2cafc:	4e25d480 	fadd	v0.4s, v4.4s, v5.4s
+   2cb00:	6e20d400 	faddp	v0.4s, v0.4s, v0.4s
+   2cb04:	7e30d800 	faddp	s0, v0.2s
+   2cb08:	bd0000a0 	str	s0, [x5]
+   2cb0c:	a9427bfd 	ldp	x29, x30, [sp, #32]
+   2cb10:	9100c3ff 	add	sp, sp, #0x30
+   2cb14:	d65f03c0 	ret
+   2cb18:	b0000ae5 	adrp	x5, 189000 <anon.6ed746b935a2aebb3edd32184b16382f.2.llvm.2381214369136146560+0x4b8>
+   2cb1c:	910340a5 	add	x5, x5, #0xd0
+   2cb20:	910023e1 	add	x1, sp, #0x8
+   2cb24:	d10023a2 	sub	x2, x29, #0x8
+   2cb28:	2a1f03e0 	mov	w0, wzr
+   2cb2c:	aa1f03e3 	mov	x3, xzr
+   2cb30:	97ff810e 	bl	cf68 <core::panicking::assert_failed::<usize, usize>>
+   2cb34:	b0000ae5 	adrp	x5, 189000 <anon.6ed746b935a2aebb3edd32184b16382f.2.llvm.2381214369136146560+0x4b8>
+   2cb38:	9103a0a5 	add	x5, x5, #0xe8
+   2cb3c:	d10023a1 	sub	x1, x29, #0x8
+   2cb40:	910043e2 	add	x2, sp, #0x10
+   2cb44:	2a1f03e0 	mov	w0, wzr
+   2cb48:	aa1f03e3 	mov	x3, xzr
+   2cb4c:	97ff8107 	bl	cf68 <core::panicking::assert_failed::<usize, usize>>
+   2cb50:	b0000842 	adrp	x2, 135000 <anon.31da665b0c03f451510e3fae87f833e2.37.llvm.11862216782044322464+0x130>
+   2cb54:	910c4042 	add	x2, x2, #0x310
+   2cb58:	b0000ae5 	adrp	x5, 189000 <anon.6ed746b935a2aebb3edd32184b16382f.2.llvm.2381214369136146560+0x4b8>
+   2cb5c:	910460a5 	add	x5, x5, #0x118
+   2cb60:	d10023a1 	sub	x1, x29, #0x8
+   2cb64:	2a1f03e0 	mov	w0, wzr
+   2cb68:	aa1f03e3 	mov	x3, xzr
+   2cb6c:	97ff80ff 	bl	cf68 <core::panicking::assert_failed::<usize, usize>>
+   2cb70:	b0000ae2 	adrp	x2, 189000 <anon.6ed746b935a2aebb3edd32184b16382f.2.llvm.2381214369136146560+0x4b8>
+   2cb74:	91040042 	add	x2, x2, #0x100
+   2cb78:	aa1f03e0 	mov	x0, xzr
+   2cb7c:	aa1f03e1 	mov	x1, xzr
+   2cb80:	97ff814b 	bl	d0ac <core::panicking::panic_bounds_check>
+

@@ -1,0 +1,62 @@
+# arm/timed-codegen/thin.disasm:18698
+# Binary hash: d41a3b6feb21b2d68461ce4d20d9af46a491bb356a334269ae5823b9c8fc59d2  target-thin/release/timing
+000000000001f74c <algebraic_ext_consumer::generated::cases_f32::{closure#15}>:
+   1f74c:	d100c3ff 	sub	sp, sp, #0x30
+   1f750:	a9027bfd 	stp	x29, x30, [sp, #32]
+   1f754:	910083fd 	add	x29, sp, #0x20
+   1f758:	eb04005f 	cmp	x2, x4
+   1f75c:	f90007e2 	str	x2, [sp, #8]
+   1f760:	f81f83a4 	stur	x4, [x29, #-8]
+   1f764:	54000321 	b.ne	1f7c8 <algebraic_ext_consumer::generated::cases_f32::{closure#15}+0x7c>  // b.any
+   1f768:	eb06005f 	cmp	x2, x6
+   1f76c:	f81f83a2 	stur	x2, [x29, #-8]
+   1f770:	f9000be6 	str	x6, [sp, #16]
+   1f774:	54000381 	b.ne	1f7e4 <algebraic_ext_consumer::generated::cases_f32::{closure#15}+0x98>  // b.any
+   1f778:	f2400848 	ands	x8, x2, #0x7
+   1f77c:	f81f83a8 	stur	x8, [x29, #-8]
+   1f780:	54000401 	b.ne	1f800 <algebraic_ext_consumer::generated::cases_f32::{closure#15}+0xb4>  // b.any
+   1f784:	b40004e2 	cbz	x2, 1f820 <algebraic_ext_consumer::generated::cases_f32::{closure#15}+0xd4>
+   1f788:	6f00e400 	movi	v0.2d, #0x0
+   1f78c:	6f00e401 	movi	v1.2d, #0x0
+   1f790:	d343fc48 	lsr	x8, x2, #3
+   1f794:	acc10823 	ldp	q3, q2, [x1], #32
+   1f798:	acc11065 	ldp	q5, q4, [x3], #32
+   1f79c:	f1000508 	subs	x8, x8, #0x1
+   1f7a0:	4e22cc80 	fmla	v0.4s, v4.4s, v2.4s
+   1f7a4:	4e23cca1 	fmla	v1.4s, v5.4s, v3.4s
+   1f7a8:	54ffff61 	b.ne	1f794 <algebraic_ext_consumer::generated::cases_f32::{closure#15}+0x48>  // b.any
+   1f7ac:	4e20d420 	fadd	v0.4s, v1.4s, v0.4s
+   1f7b0:	6e20d400 	faddp	v0.4s, v0.4s, v0.4s
+   1f7b4:	7e30d800 	faddp	s0, v0.2s
+   1f7b8:	bd0000a0 	str	s0, [x5]
+   1f7bc:	a9427bfd 	ldp	x29, x30, [sp, #32]
+   1f7c0:	9100c3ff 	add	sp, sp, #0x30
+   1f7c4:	d65f03c0 	ret
+   1f7c8:	90000bc5 	adrp	x5, 197000 <anon.135c5ada040a2615b756b32359d13779.2.llvm.183516181582875585+0xb70>
+   1f7cc:	9101e0a5 	add	x5, x5, #0x78
+   1f7d0:	910023e1 	add	x1, sp, #0x8
+   1f7d4:	d10023a2 	sub	x2, x29, #0x8
+   1f7d8:	2a1f03e0 	mov	w0, wzr
+   1f7dc:	aa1f03e3 	mov	x3, xzr
+   1f7e0:	97ffbce7 	bl	eb7c <core::panicking::assert_failed::<usize, usize>>
+   1f7e4:	90000bc5 	adrp	x5, 197000 <anon.135c5ada040a2615b756b32359d13779.2.llvm.183516181582875585+0xb70>
+   1f7e8:	910240a5 	add	x5, x5, #0x90
+   1f7ec:	d10023a1 	sub	x1, x29, #0x8
+   1f7f0:	910043e2 	add	x2, sp, #0x10
+   1f7f4:	2a1f03e0 	mov	w0, wzr
+   1f7f8:	aa1f03e3 	mov	x3, xzr
+   1f7fc:	97ffbce0 	bl	eb7c <core::panicking::assert_failed::<usize, usize>>
+   1f800:	90000922 	adrp	x2, 143000 <anon.1590d67402e28d23175d1891a862b11b.188.llvm.354879623456601867+0x659>
+   1f804:	91304042 	add	x2, x2, #0xc10
+   1f808:	90000bc5 	adrp	x5, 197000 <anon.135c5ada040a2615b756b32359d13779.2.llvm.183516181582875585+0xb70>
+   1f80c:	910300a5 	add	x5, x5, #0xc0
+   1f810:	d10023a1 	sub	x1, x29, #0x8
+   1f814:	2a1f03e0 	mov	w0, wzr
+   1f818:	aa1f03e3 	mov	x3, xzr
+   1f81c:	97ffbcd8 	bl	eb7c <core::panicking::assert_failed::<usize, usize>>
+   1f820:	90000bc2 	adrp	x2, 197000 <anon.135c5ada040a2615b756b32359d13779.2.llvm.183516181582875585+0xb70>
+   1f824:	9102a042 	add	x2, x2, #0xa8
+   1f828:	aa1f03e0 	mov	x0, xzr
+   1f82c:	aa1f03e1 	mov	x1, xzr
+   1f830:	97ffbd24 	bl	ecc0 <core::panicking::panic_bounds_check>
+

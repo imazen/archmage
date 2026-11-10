@@ -2,6 +2,57 @@
 
 This document describes the algorithms, accuracy, and benchmark results for transcendental function implementations in archmage's SIMD types.
 
+The [2026-11-06 math matrix](../benchmarks/math_matrix_2026-11-06/README.md)
+compares current scalar and vector APIs with std and other implementations on
+x86, AArch64 and strict WASM. The accuracy study below retains its original scope.
+
+## Migration to Zenmath and Magemath
+
+Magetypes' lowp and midp transcendental methods are deprecated in the local
+math draft. They retain their existing implementations and numerical behavior
+through the migration; deprecation does not change their rounding, exceptional
+inputs, or accuracy. This includes the unchecked and precise variants, sigmoid,
+and SiLU. Basic arithmetic, rounding, square root, reciprocal and FMA stay in
+Magetypes.
+
+Zenmath owns scalar and intrinsic-only math. Magemath provides math over
+Magetypes vectors. High-precision, normal std/libm-style, and configurable
+transcendentals have separate feature-selection requirements; precision and
+cross-ISA consistency remain distinct contracts. Cargo features are additive:
+they select available implementations, while named APIs and per-call policies
+select behavior. Feature unification must not change existing result bits.
+Correct rounding is a more specific contract than the phrase "high precision".
+A method with the same name
+is not necessarily a bit-compatible replacement: compare its NaN, subnormal,
+and fused/separate rounding rules before migrating.
+
+The intended dependency graph lets Magetypes and Zenmath compile independently
+after their shared dependencies, with Magemath depending on both. A temporary
+Magetypes dependency on Zenmath is permitted if needed during migration; remove
+it when the legacy methods retire. Deprecation itself adds no dependency.
+Zenmath and Magemath are unpublished drafts, so this is a migration plan rather
+than a recommendation to switch a released consumer immediately.
+
+The draft now covers all 35 deprecated names at widths four, eight and
+sixteen, including cbrt implementations owned by Magemath. Width sixteen
+requires `w512` (also enabled by `avx512`). See the
+[complete migration inventory](../magemath/docs/MIGRATION.md).
+
+| Surface | Draft destination | Review before migration |
+|---|---|---|
+| Existing lowp/midp methods, all three widths | Magemath `legacy` kernels and array/slice forms | Preserves the original backend rounding and exceptional behavior; NaN payloads remain unspecified |
+| Explicit portable/relaxed/unfused approximations | Matching Magemath family, all three widths | Select the intended rounding and exceptional-value contract |
+| Scalar transcendental math | Zenmath scalar functions | Select `correct-rounding`, `normal`, or `configurable`; normal currently shares the precise implementation |
+
+Replacement coverage does not authorize removal of the published methods.
+Keep deprecation and eventual removal with the API migration review.
+
+Deprecation validation (2026-11-06): regeneration, registry validation, token
+validation and intrinsic soundness passed. Magetypes all-target Clippy with
+`std avx512` and the `generic_transcendentals`, `sigmoid_silu`, and
+`exp2_lowp_range` tests passed on Ryzen 5900XT with Rust 1.99.1. The change adds
+attributes and migration documentation; arithmetic bodies are unchanged.
+
 ## Accuracy Summary
 
 Measured over every f32 input in each band against an f64 `std` reference, on
@@ -15,6 +66,14 @@ ULP) and for about 11% of `pow_midp` results (by up to 178 ULP for n = 2.4 on
 [2^-50, 2^50]). Their maxima against the true value differ by at most 0.43 ULP.
 `cbrt` uses no `mul_add` and returned the same bits on both. NEON fuses like
 AVX2 and strict WASM rounds twice like the scalar backend; neither was measured.
+
+For the same bits on every backend, use `magemath::portable`: these polynomials
+with `mul_add_fused` and NaN out for NaN in. Its accuracy stays within the figures
+below on every band tested (`magemath/tests/reference.rs`).
+`magemath::relaxed` exposes the same operations and NaN handling with the backend's
+rounding choice; the draft `unfused` experiment uses two roundings everywhere.
+All three surfaces are tested against these same bounds. The contracts and
+rounding decision are recorded in [`magemath/docs/DESIGN.md`](../magemath/docs/DESIGN.md).
 
 ### midp tier
 
@@ -118,7 +177,7 @@ log and pow functions also have `_unchecked`; the midp tier adds `_precise`.
 
 **Edge cases**: 0 → -inf, negative → NaN, +inf → +inf for the midp log functions. The lowp logs have no edge handling: results for 0 and negatives are finite and meaningless.
 
-**NaN inputs are not handled, and the results differ by backend** (measured 2026-11-05): among the operations listed below, only `cbrt_midp` returns NaN on all four measured backends.
+**NaN inputs are not handled, and the results differ by backend** (measured 2026-11-05): among the operations listed below, only `cbrt_midp` returns NaN on all four measured backends. `magemath::portable` returns NaN for all of these on every backend.
 
 | Function, NaN input | Scalar, x86 V3 | NEON, WASM |
 |---------------------|----------------|------------|

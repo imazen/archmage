@@ -1,3 +1,5 @@
+// Exercises retained legacy transcendental contracts during migration.
+#![allow(deprecated)]
 //! Tests for generic transcendental math functions on f32x4<T>, f32x8<T>, and f32x16<T>.
 //!
 //! Tests against std::f32 functions and known exact values.

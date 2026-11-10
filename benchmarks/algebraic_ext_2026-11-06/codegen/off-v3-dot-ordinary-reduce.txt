@@ -1,0 +1,97 @@
+# native/timed-codegen/off.disasm:290993
+# Binary hash: bdae74f6a8744582a06768f2335a1d0a669bc37ba0a5eee5783abe1b39ebcee3  target-off/release/timing
+000000000017a7c0 <algebraic_ext_consumer::generated::__attune_dot_index_ordinary_reduce_f32_v3>:
+  17a7c0:	48 83 ec 18          	sub    $0x18,%rsp
+  17a7c4:	48 89 74 24 08       	mov    %rsi,0x8(%rsp)
+  17a7c9:	48 89 0c 24          	mov    %rcx,(%rsp)
+  17a7cd:	48 39 ce             	cmp    %rcx,%rsi
+  17a7d0:	0f 85 03 01 00 00    	jne    17a8d9 <algebraic_ext_consumer::generated::__attune_dot_index_ordinary_reduce_f32_v3+0x119>
+  17a7d6:	48 89 34 24          	mov    %rsi,(%rsp)
+  17a7da:	4c 89 4c 24 10       	mov    %r9,0x10(%rsp)
+  17a7df:	4c 39 ce             	cmp    %r9,%rsi
+  17a7e2:	0f 85 0a 01 00 00    	jne    17a8f2 <algebraic_ext_consumer::generated::__attune_dot_index_ordinary_reduce_f32_v3+0x132>
+  17a7e8:	48 89 f0             	mov    %rsi,%rax
+  17a7eb:	48 83 e0 07          	and    $0x7,%rax
+  17a7ef:	48 89 04 24          	mov    %rax,(%rsp)
+  17a7f3:	0f 85 12 01 00 00    	jne    17a90b <algebraic_ext_consumer::generated::__attune_dot_index_ordinary_reduce_f32_v3+0x14b>
+  17a7f9:	48 83 fe 08          	cmp    $0x8,%rsi
+  17a7fd:	0f 84 84 00 00 00    	je     17a887 <algebraic_ext_consumer::generated::__attune_dot_index_ordinary_reduce_f32_v3+0xc7>
+  17a803:	48 85 f6             	test   %rsi,%rsi
+  17a806:	0f 84 1a 01 00 00    	je     17a926 <algebraic_ext_consumer::generated::__attune_dot_index_ordinary_reduce_f32_v3+0x166>
+  17a80c:	48 89 f0             	mov    %rsi,%rax
+  17a80f:	48 c1 e8 03          	shr    $0x3,%rax
+  17a813:	48 b9 fe ff ff ff ff 	movabs $0x3fffffffffffffe,%rcx
+  17a81a:	ff ff 03 
+  17a81d:	48 21 c1             	and    %rax,%rcx
+  17a820:	c5 f0 57 c9          	vxorps %xmm1,%xmm1,%xmm1
+  17a824:	c5 f8 57 c0          	vxorps %xmm0,%xmm0,%xmm0
+  17a828:	41 b9 20 00 00 00    	mov    $0x20,%r9d
+  17a82e:	31 c0                	xor    %eax,%eax
+  17a830:	c4 a1 78 10 54 0a e0 	vmovups -0x20(%rdx,%r9,1),%xmm2
+  17a837:	c4 a1 78 10 5c 0a f0 	vmovups -0x10(%rdx,%r9,1),%xmm3
+  17a83e:	c4 a1 78 10 24 0a    	vmovups (%rdx,%r9,1),%xmm4
+  17a844:	c4 a2 69 b8 44 0f e0 	vfmadd231ps -0x20(%rdi,%r9,1),%xmm2,%xmm0
+  17a84b:	c4 a1 78 10 6c 0a 10 	vmovups 0x10(%rdx,%r9,1),%xmm5
+  17a852:	c4 e3 7d 19 ca 01    	vextractf128 $0x1,%ymm1,%xmm2
+  17a858:	c4 a2 61 b8 54 0f f0 	vfmadd231ps -0x10(%rdi,%r9,1),%xmm3,%xmm2
+  17a85f:	c4 a2 59 b8 04 0f    	vfmadd231ps (%rdi,%r9,1),%xmm4,%xmm0
+  17a865:	c4 a2 51 b8 54 0f 10 	vfmadd231ps 0x10(%rdi,%r9,1),%xmm5,%xmm2
+  17a86c:	c4 e3 7d 18 ca 01    	vinsertf128 $0x1,%xmm2,%ymm0,%ymm1
+  17a872:	48 83 c0 02          	add    $0x2,%rax
+  17a876:	49 83 c1 40          	add    $0x40,%r9
+  17a87a:	48 39 c1             	cmp    %rax,%rcx
+  17a87d:	75 b1                	jne    17a830 <algebraic_ext_consumer::generated::__attune_dot_index_ordinary_reduce_f32_v3+0x70>
+  17a87f:	40 f6 c6 08          	test   $0x8,%sil
+  17a883:	75 0c                	jne    17a891 <algebraic_ext_consumer::generated::__attune_dot_index_ordinary_reduce_f32_v3+0xd1>
+  17a885:	eb 30                	jmp    17a8b7 <algebraic_ext_consumer::generated::__attune_dot_index_ordinary_reduce_f32_v3+0xf7>
+  17a887:	c5 f0 57 c9          	vxorps %xmm1,%xmm1,%xmm1
+  17a88b:	c5 f8 57 c0          	vxorps %xmm0,%xmm0,%xmm0
+  17a88f:	31 c0                	xor    %eax,%eax
+  17a891:	48 c1 e0 05          	shl    $0x5,%rax
+  17a895:	c5 f8 10 1c 02       	vmovups (%rdx,%rax,1),%xmm3
+  17a89a:	c5 f8 10 64 02 10    	vmovups 0x10(%rdx,%rax,1),%xmm4
+  17a8a0:	c4 e2 79 98 1c 07    	vfmadd132ps (%rdi,%rax,1),%xmm0,%xmm3
+  17a8a6:	c4 e3 7d 19 ca 01    	vextractf128 $0x1,%ymm1,%xmm2
+  17a8ac:	c4 e2 59 b8 54 07 10 	vfmadd231ps 0x10(%rdi,%rax,1),%xmm4,%xmm2
+  17a8b3:	c5 f8 28 c3          	vmovaps %xmm3,%xmm0
+  17a8b7:	c5 f8 58 c2          	vaddps %xmm2,%xmm0,%xmm0
+  17a8bb:	c5 fa 16 c8          	vmovshdup %xmm0,%xmm1
+  17a8bf:	c5 f8 58 c1          	vaddps %xmm1,%xmm0,%xmm0
+  17a8c3:	c5 f9 c6 c8 01       	vshufpd $0x1,%xmm0,%xmm0,%xmm1
+  17a8c8:	c5 fa 58 c1          	vaddss %xmm1,%xmm0,%xmm0
+  17a8cc:	c4 c1 7a 11 00       	vmovss %xmm0,(%r8)
+  17a8d1:	48 83 c4 18          	add    $0x18,%rsp
+  17a8d5:	c5 f8 77             	vzeroupper
+  17a8d8:	c3                   	ret
+  17a8d9:	4c 8d 0d 58 54 06 00 	lea    0x65458(%rip),%r9        # 1dfd38 <anon.dab8cf20f06930b135f7f94115c7b92a.12.llvm.13025722987067152333+0x1398>
+  17a8e0:	48 8d 74 24 08       	lea    0x8(%rsp),%rsi
+  17a8e5:	48 89 e2             	mov    %rsp,%rdx
+  17a8e8:	31 ff                	xor    %edi,%edi
+  17a8ea:	31 c9                	xor    %ecx,%ecx
+  17a8ec:	ff 15 6e a8 06 00    	call   *0x6a86e(%rip)        # 1e5160 <_DYNAMIC+0xc98>
+  17a8f2:	4c 8d 0d 57 54 06 00 	lea    0x65457(%rip),%r9        # 1dfd50 <anon.dab8cf20f06930b135f7f94115c7b92a.12.llvm.13025722987067152333+0x13b0>
+  17a8f9:	48 89 e6             	mov    %rsp,%rsi
+  17a8fc:	48 8d 54 24 10       	lea    0x10(%rsp),%rdx
+  17a901:	31 ff                	xor    %edi,%edi
+  17a903:	31 c9                	xor    %ecx,%ecx
+  17a905:	ff 15 55 a8 06 00    	call   *0x6a855(%rip)        # 1e5160 <_DYNAMIC+0xc98>
+  17a90b:	48 8d 15 26 fb ea ff 	lea    -0x1504da(%rip),%rdx        # 2a438 <anon.d80063126ca473c03f1b9a4e1d212d3d.204.llvm.8653011292040670968>
+  17a912:	4c 8d 0d 67 54 06 00 	lea    0x65467(%rip),%r9        # 1dfd80 <anon.dab8cf20f06930b135f7f94115c7b92a.12.llvm.13025722987067152333+0x13e0>
+  17a919:	48 89 e6             	mov    %rsp,%rsi
+  17a91c:	31 ff                	xor    %edi,%edi
+  17a91e:	31 c9                	xor    %ecx,%ecx
+  17a920:	ff 15 3a a8 06 00    	call   *0x6a83a(%rip)        # 1e5160 <_DYNAMIC+0xc98>
+  17a926:	48 8d 15 3b 54 06 00 	lea    0x6543b(%rip),%rdx        # 1dfd68 <anon.dab8cf20f06930b135f7f94115c7b92a.12.llvm.13025722987067152333+0x13c8>
+  17a92d:	31 ff                	xor    %edi,%edi
+  17a92f:	31 f6                	xor    %esi,%esi
+  17a931:	ff 15 39 a2 06 00    	call   *0x6a239(%rip)        # 1e4b70 <_DYNAMIC+0x6a8>
+  17a937:	cc                   	int3
+  17a938:	cc                   	int3
+  17a939:	cc                   	int3
+  17a93a:	cc                   	int3
+  17a93b:	cc                   	int3
+  17a93c:	cc                   	int3
+  17a93d:	cc                   	int3
+  17a93e:	cc                   	int3
+  17a93f:	cc                   	int3
+

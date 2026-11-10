@@ -1,3 +1,5 @@
+// Exercises retained legacy transcendental contracts during migration.
+#![allow(deprecated)]
 //! Accuracy analysis for archmage transcendental functions
 //!
 //! Measures ULP errors and round-trip accuracy for sRGB color processing

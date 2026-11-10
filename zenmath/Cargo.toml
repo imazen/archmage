@@ -1,0 +1,55 @@
+[package]
+name = "zenmath"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+description = "Portable scalar math: safe Rust CORE-MATH ports, rounding primitives and bounded-error approximations. Dependency-free by default, no_std."
+include = [
+    "src/**",
+    "Cargo.toml",
+    "README.md",
+    "LICENSE*",
+]
+
+[features]
+# `no_std` scalar core with no dependencies.
+default = ["correct-rounding", "normal", "configurable"]
+# Availability only: arithmetic/precision stays with the named API or policy.
+correct-rounding = []
+normal = []
+configurable = []
+# With compile-time x86 FMA or AArch64 NEON, fmaf uses hardware mul_add.
+# Otherwise it stays in software, even with std, to preserve subnormal rounding.
+std = []
+# Proof and compile-time acceleration; CPU probes require runtime-dispatch.
+archmage = ["dep:archmage"]
+runtime-dispatch = ["std", "archmage", "archmage/std"]
+avx512 = ["archmage", "archmage/avx512"]
+# Scalar special functions (erf/erfc/gamma/beta/Student-t, ...). Empty today; only
+# zenmetrics-style consumers will need them.
+special = []
+# Bit-exact libm-convention ports (fdlibm/msun and glibc algorithms), for callers
+# whose contract is "same bits as a named libm on every platform". Empty today.
+exact = []
+
+[dependencies]
+archmage = { version = "0.9.31", path = "..", default-features = false, optional = true }
+
+[[test]]
+name="scalar"
+required-features=["configurable"]
+
+[[test]]
+name="core_math"
+required-features=["correct-rounding"]
+
+[[test]]
+name="pow_policy"
+required-features=["configurable"]
+
+[[test]]
+name="acceleration"
+required-features=["archmage","correct-rounding","configurable"]

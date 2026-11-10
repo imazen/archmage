@@ -1216,6 +1216,7 @@ fn process(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
   `exp2_midp(NaN)` is 2^-126 on x86 and scalar but NaN on NEON and WASM, because
   it clamps with `max`/`min`. Docs corrected in `docs/transcendentals.md`; the
   methods are unchanged, since any fix needs its own bit-contract review.
+  `magemath::portable` returns NaN on every backend.
 
 - **Portable FMA rounding and Miri (2026-10-12, fixed locally; CI pending):**
   The all-target f32 round-to-odd fallback fixes the independent subnormal
@@ -1291,6 +1292,15 @@ Documented accuracy limits, left unfixed because every fix measured slower on ev
 
 ### Resolved (each with its regression coverage)
 
+- **Draft Magemath WASM debug legacy-parity stack exhaustion (2026-11-07):**
+  the width-16 scalar test function exceeded WASM's default stack before its
+  comparisons completed. The generator now gives each method a non-inlined
+  feature-context helper. The corpus, 210 direct comparisons, 212 assertions,
+  exponent sets and every slice tail remain unchanged. Reproduce all widths
+  with `just magemath-superset-debug-check wasm32-wasip1 scalar,wasm128`,
+  with `RUSTFLAGS="-C target-feature=+simd128"` and a configured WASM runner.
+  No math implementation or test expectation changed.
+
 - **Float negation bits (#135):** x86 uses sign-bit XOR instead of zero minus
   the input. `float_negation` requires exact sign, payload and signalling-bit
   preservation across every generic float width; generated scalar parity no longer
@@ -1302,6 +1312,41 @@ Documented accuracy limits, left unfixed because every fix measured slower on ev
   generated scalar parity include NaNs. `float_inequality` checks exact masks
   and the complement of equality for all generic float widths, including signalling
   NaNs; the documented x86 behavior change is recorded in the changelog.
+
+- **Draft Magemath debug width-parity stack overflow (2026-11-07):** the
+  generated test put 105 operation checks in each width function. Split them
+  into non-inlined per-operation feature-context helpers; all 210 input and
+  assertion blocks remain identical. The all-feature debug library, integration
+  and example suite passes with the default test-thread stack. Generator:
+  `magemath/tools/generate-width-parity.py`; test: `width_parity`.
+
+- **Draft generic power policy bypassed acceleration (2026-11-06):** ordinary
+  `scalar::powf_with` reused the reference policy evaluator and therefore called
+  software CORE power even when `runtime-dispatch` accelerated ordinary `powf`.
+  A private evaluator now accepts a statically specialized correct-core strategy;
+  the facade selects its ordinary core while `scalar::reference::powf_with` and
+  the shared bridge retain non-dispatch evaluation. Exact arbitrary-bit policy
+  parity, default/std/archmage/runtime configurations and MSRV checks cover this.
+
+
+- **Draft zenmath std software FMA (2026-11-05):** Rust 1.99.1 WASI
+  and native x86 under Nehalem emulation
+  `f32::mul_add` returns `0x00010002` for the independent subnormal case
+  whose correctly rounded answer is `0x00010001`. zenmath now uses its
+  software FMA unless std and compile-time x86 FMA or AArch64 NEON
+  guarantee hardware fusion. No new runtime probe is added.
+  Regression: `zenmath/tests/scalar.rs::fmaf_independent_rounding_edges`;
+  native, Nehalem emulation, global V3, and WASM checks pass.
+  No magetypes source changed.
+
+- **Draft magemath WASM all-target clippy (2026-11-05):** its native zenbench
+  benchmark was compiled on WASM even though zenbench is a non-WASM dependency.
+  The benchmark items are now target-gated; invoking that executable on WASM
+  fails with a pointer to `just magemath-bench-wasm`. That recipe runs strict,
+  fusing relaxed and forced non-fusing relaxed SIMD. WASM all-target clippy
+  and rustdoc pass with warnings denied. The parity runner can pin engine
+  rounding with `MAGEMATH_EXPECT_RELAXED_ROUNDING=once|twice`; the recipe sets it
+  through the wasmtime runner so a misconfigured engine cannot silently pass.
 
 - **Warnings in macro output and on untested targets (2026-10-23):** body
   rewrites spliced dispatch calls, so named `incant`/`attuned`/`reattune`

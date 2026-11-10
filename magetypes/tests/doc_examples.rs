@@ -1,3 +1,5 @@
+// Exercises retained legacy transcendental contracts during migration.
+#![allow(deprecated)]
 //! Compiled tests for every code example in the magetypes documentation.
 //!
 //! Each module corresponds to a doc page under `docs/site/content/magetypes/`.

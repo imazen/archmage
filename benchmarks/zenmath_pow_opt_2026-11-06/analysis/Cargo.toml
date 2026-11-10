@@ -1,0 +1,17 @@
+[package]
+name = "zenmath-pow-analysis"
+version = "0.0.0"
+edition = "2024"
+publish = false
+default-run="zenmath-pow-analysis"
+[workspace]
+[features]
+wat-dump=["dep:wasmprinter"]
+[dependencies]
+wasmprinter={version="=0.258.3",optional=true}
+zenbench = {version="=0.1.11", default-features=false}
+
+[[bin]]
+name="wat-dump"
+path="src/bin/wat-dump.rs"
+required-features=["wat-dump"]

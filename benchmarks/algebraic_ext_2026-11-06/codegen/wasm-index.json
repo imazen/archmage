@@ -1,0 +1,80 @@
+[
+  {
+    "mode": "off",
+    "form": "index",
+    "symbol": "  (func $_RNvNtCs8LqNwVhyf0y_22algebraic_ext_consumer9generated31___attune_poly_index_f32_wasm128B3_ (;75;) (type 24) (param i32 i32 i32 i32 i32 i32)",
+    "line": 5538,
+    "packed_mul": 6,
+    "packed_add": 6,
+    "calls": [
+      "$_RINvNtCsjyCYk6C1TV_4core9panicking13assert_failedjjEB4_",
+      "$_RINvNtCsjyCYk6C1TV_4core9panicking13assert_failedjjEB4_",
+      "$_RINvNtCsjyCYk6C1TV_4core9panicking13assert_failedjjEB4_"
+    ]
+  },
+  {
+    "mode": "off",
+    "form": "token",
+    "symbol": "  (func $_RNvNtCs8LqNwVhyf0y_22algebraic_ext_consumer9generated31___attune_poly_token_f32_wasm128B3_ (;79;) (type 24) (param i32 i32 i32 i32 i32 i32)",
+    "line": 6038,
+    "packed_mul": 6,
+    "packed_add": 6,
+    "calls": [
+      "$_RINvNtCsjyCYk6C1TV_4core9panicking13assert_failedjjEB4_",
+      "$_RINvNtCsjyCYk6C1TV_4core9panicking13assert_failedjjEB4_",
+      "$_RINvNtCsjyCYk6C1TV_4core9panicking13assert_failedjjEB4_"
+    ]
+  },
+  {
+    "mode": "off",
+    "form": "map",
+    "symbol": "  (func $_RNvNtCs8LqNwVhyf0y_22algebraic_ext_consumer9generated29___attune_poly_map_f32_wasm128B3_ (;83;) (type 24) (param i32 i32 i32 i32 i32 i32)",
+    "line": 6538,
+    "packed_mul": 6,
+    "packed_add": 6,
+    "calls": [
+      "$_RINvNtCsjyCYk6C1TV_4core9panicking13assert_failedjjEB4_",
+      "$_RINvNtCsjyCYk6C1TV_4core9panicking13assert_failedjjEB4_",
+      "$_RINvNtCsjyCYk6C1TV_4core9panicking13assert_failedjjEB4_"
+    ]
+  },
+  {
+    "mode": "thin",
+    "form": "index",
+    "symbol": "  (func $_RNvNtCsjbQoMZwQfxY_22algebraic_ext_consumer9generated31___attune_poly_index_f32_wasm128B3_ (;157;) (type 24) (param i32 i32 i32 i32 i32 i32)",
+    "line": 5970,
+    "packed_mul": 6,
+    "packed_add": 6,
+    "calls": [
+      "$_RINvNtCsjyCYk6C1TV_4core9panicking13assert_failedjjEB4_",
+      "$_RINvNtCsjyCYk6C1TV_4core9panicking13assert_failedjjEB4_",
+      "$_RINvNtCsjyCYk6C1TV_4core9panicking13assert_failedjjEB4_"
+    ]
+  },
+  {
+    "mode": "thin",
+    "form": "token",
+    "symbol": "  (func $_RNvNtCsjbQoMZwQfxY_22algebraic_ext_consumer9generated31___attune_poly_token_f32_wasm128B3_ (;161;) (type 24) (param i32 i32 i32 i32 i32 i32)",
+    "line": 6470,
+    "packed_mul": 6,
+    "packed_add": 6,
+    "calls": [
+      "$_RINvNtCsjyCYk6C1TV_4core9panicking13assert_failedjjEB4_",
+      "$_RINvNtCsjyCYk6C1TV_4core9panicking13assert_failedjjEB4_",
+      "$_RINvNtCsjyCYk6C1TV_4core9panicking13assert_failedjjEB4_"
+    ]
+  },
+  {
+    "mode": "thin",
+    "form": "map",
+    "symbol": "  (func $_RNvNtCsjbQoMZwQfxY_22algebraic_ext_consumer9generated29___attune_poly_map_f32_wasm128B3_ (;165;) (type 24) (param i32 i32 i32 i32 i32 i32)",
+    "line": 6970,
+    "packed_mul": 6,
+    "packed_add": 6,
+    "calls": [
+      "$_RINvNtCsjyCYk6C1TV_4core9panicking13assert_failedjjEB4_",
+      "$_RINvNtCsjyCYk6C1TV_4core9panicking13assert_failedjjEB4_",
+      "$_RINvNtCsjyCYk6C1TV_4core9panicking13assert_failedjjEB4_"
+    ]
+  }
+]

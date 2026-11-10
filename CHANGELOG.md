@@ -134,6 +134,10 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 
 ### [Unreleased]
 
+#### Deprecated
+
+- Legacy lowp/midp transcendental methods, including unchecked/precise variants, sigmoid and SiLU, in the unpublished math draft. Behavior stays unchanged while callers migrate to Zenmath/Magemath; no dependency is added to Magetypes.
+
 #### QUEUED BREAKING CHANGES
 
 - Planned: `mul_add`/`mul_sub` become the fused, single-rounding operations, matching `f32::mul_add`. Step one is in this release: `mul_add_relaxed`/`mul_sub_relaxed` (the previous `mul_add`: fused where the hardware fuses, multiply then add on the scalar backend and strict WASM, the engine's madd with relaxed SIMD) and `mul_add_fused`/`mul_sub_fused` (the same operation as `mul_add_portable`/`mul_sub_portable`, which stay), with `mul_add`/`mul_sub` deprecated pointing at both (#138). After the deprecation has shipped through a full release (0.10), `mul_add`/`mul_sub` return undeprecated as the fused forms (0.11). Calls still on `mul_add` then round once everywhere, at software-FMA cost on the scalar backend without FMA hardware and on strict WASM. Neither form is fastest everywhere: separate multiply-add is faster for single-accumulator reductions, fused for Horner chains (`benchmarks/fused_vs_separate_2026-10-25.md`).
@@ -232,6 +236,24 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 #### QUEUED BREAKING CHANGES
 
 (none)
+
+#### Added
+
+- Optional intrinsic-only Zenmath accurate exp/ln/log2/pow kernels shared by Magemath, preserving existing public signatures and numerical policies; explicit primitive/context APIs and selectively accelerated ordinary scalar names retain independent reference access (820ec097, 5a9cc685, 907e91ed, 20281eac).
+- Dispatch study with matched branch/pointer controls, actual V3/V4x widths, native/NEON/WASM validation and cold consumer build costs; automatic x86 packed routing prefers measured V3 width (9b8282bb).
+
+- Prototype algebraic vector extension traits in an independent unpublished crate, compatible with published Magetypes 0.9.30 and 0.9.31-beta.2; retain the production API and MSRV (c07166bc).
+- Complete the available scalar/vector math benchmark matrix across x86, AArch64 and strict WASM: 5,091 measured cells, independent MPFR checks, algebraic codegen evidence and explicit missing/failed cases (2fe299eb).
+- Add a math guide covering numerical contracts, matched-feature std comparisons, Rust 1.98 algebraic operations and measured vector lowering; keep the production MSRV at 1.89 (62779f4b, f6d28a1a).
+- Draft magemath adds correctly rounded packed f32 exp, ln, log2 and pow array/slice APIs, with per-lane accurate fallback and once-per-buffer dispatch (42fa8553, 5c9335d4).
+- Draft zenmath adds 17 f32 and 16 f64 safe Rust CORE-MATH ports, with independent MPFR regressions and ARM/WASM/i686/no-FMA validation (0cbf7740).
+- `magemath::relaxed` shares the portable operations and special-value handling with backend-dependent rounding. `magemath::unfused` and `zenmath::scalar::unfused` are experiments pending the portable-rounding decision (71015113).
+- `zenmath` and `magemath`, unpublished draft crates. `zenmath` holds scalar math with defined bits on every target. `magemath::portable` holds `f32x8` kernels with the same bits on every tier and as the `zenmath` functions, with slice and fixed-array dispatchers.
+
+#### Fixed
+
+- Draft zenmath delegates FMA to std only with compile-time x86 FMA or AArch64 NEON; software elsewhere preserves independently checked subnormal rounding, including WASM and native no-FMA builds (ceb21505).
+- `docs/transcendentals.md` no longer says the log functions return NaN for NaN. They return a finite value on every backend, and `exp2_midp` returns 2^-126 on x86 and the scalar backend but NaN on NEON and WASM. The page now tables the measured results.
 
 ### [0.9.31] - 2026-11-07
 
@@ -1163,3 +1185,41 @@ Initial release.
 - **Zero overhead** — identical assembly to hand-written `unsafe` code
 - **`#[forbid(unsafe_code)]` compatible** — all unsafety is inside the macro expansion
 - **`no_std` + `alloc` by default** — `std` opt-in via feature flag
+
+## zenmath
+
+### [Unreleased]
+
+#### QUEUED BREAKING CHANGES
+
+- Draft no-default-features consumers must select a math family explicitly; primitives stay available (24118cd6).
+
+#### Added
+
+- Additive correct-rounding, normal and configurable families; normal uses explicit namespaces and currently shares precise implementations (24118cd6).
+- Certified two-exponent gamma candidates with independent original reference power and complete fallback (4aabb1b5).
+
+#### Fixed
+
+- Ordinary generic power policies use the accelerated correct core where selected, while reference policy calls remain non-dispatch (329fdc54).
+- Positive-normal power takes a compact guard into unchanged common arithmetic (168b7b67).
+- Scalar approximation contexts share fused/separate polynomial order and avoid per-step proof calls; measured NEON separate floor selection preserves bits (3dc19ce2, fbb72c5c).
+
+- Generate the exact certified packed gamma DAG without coefficient map calls
+  or an addressable Estrin scratch array (`4da80e0a`); retain the independent
+  reference and all bounds, tables and separate arithmetic.
+- Select measured gamma guard placement and all-admitted packed routing
+  (`f7b5f136`), with general-path and whole-transfer counterexamples documented.
+
+## magemath
+
+### [Unreleased]
+
+#### QUEUED BREAKING CHANGES
+
+- Draft no-default-features consumers must select their transcendental family (24118cd6).
+
+#### Added
+
+- All 35 deprecated Magetypes transcendental names at widths four/eight and optional sixteen, including compatibility aliases and an exact legacy contract namespace (9f466de6).
+- Shared width-specific vector bodies and cbrt implementations owned by Magemath, with no deprecated method delegation or Magetypes visibility change (9f466de6).
