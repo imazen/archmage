@@ -146,11 +146,9 @@ macro_rules! graph {
             };
             let result = if OPTIONS & ExpfOptions::FULL != 0 && OPTIONS & ExpfOptions::ASSUME == 0 {
                 // Full domain: non-finite inputs produce specials, not errors.
-                let nan = abs.simd_gt(ip(0x7f80_0000)).bitcast_to_f32();
-                let pos_inf = bits.simd_eq(ip(0x7f80_0000)).bitcast_to_f32();
-                let neg_inf = bits
-                    .simd_eq(ip(0xff80_0000_u32 as i32))
-                    .bitcast_to_f32();
+                let nan = input.simd_ne(input);
+                let pos_inf = input.simd_eq(sp(f32::INFINITY));
+                let neg_inf = input.simd_eq(sp(f32::NEG_INFINITY));
                 let result = V::blend(nan, sp(f32::NAN), result);
                 let result = V::blend(pos_inf, sp(f32::INFINITY), result);
                 V::blend(neg_inf, sp(0.0), result)

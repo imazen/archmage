@@ -43,7 +43,6 @@ macro_rules! graph {
                 LogfError { kind, lane_mask }
             };
             let bits = input.bitcast_to_i32();
-            let abs = bits & ip(0x7fff_ffff_u32 as i32);
             let assume = OPTIONS & LogfOptions::ASSUME != 0;
             if !assume && OPTIONS & LogfOptions::SPECIALS == 0 {
                 // Positive domain: x <= 0, subnormal, NaN, infinite are invalid.
@@ -64,10 +63,10 @@ macro_rules! graph {
                     a.mul_add_fused(b, c)
                 }
             };
-            let result = if OPTIONS & LogfOptions::LOWP != 0
-                && OPTIONS & LogfOptions::LEGACY != 0
-            {
-                // Same coefficients and arithmetic order as log2_lowp.
+            let result = if OPTIONS & LogfOptions::LOWP != 0 {
+                // Rational P2/Q2 — beats the deg-2 atanh alternative on
+                // measured speed (~20% slower on Zen5 and NEON) while the
+                // atanh's accuracy edge is unneeded at this tier.
                 let offset = ip(0x3f2a_aaab_u32 as i32);
                 let exp_bits_v = bits - offset;
                 let exp_shifted = exp_bits_v.shr_arithmetic_const::<23>();
@@ -78,18 +77,6 @@ macro_rules! graph {
                 let yq = madd(sp(0.174_093_43), m, sp(1.009_671_8));
                 let yq = madd(yq, m, sp(0.990_328_14));
                 yp / yq + exp_shifted.to_f32()
-            } else if OPTIONS & LogfOptions::LOWP != 0 {
-                // Canonical LOWP: deg-2 atanh fit — strictly better than the
-                // legacy rational (max abs 3.98e-6 vs 6.35e-6, worst 7 ULP vs
-                // unbounded near x=1, one fewer madd). Exhaustive f32 sweep.
-                let adjusted = bits + ip((0x3f80_0000_u32 - 0x3f35_04f3) as i32);
-                let n = (adjusted.shr_arithmetic_const::<23>() - ip(127)).to_f32();
-                let a = ((adjusted & ip(0x007f_ffff)) + ip(0x3f35_04f3)).bitcast_to_f32();
-                let y = (a - sp(1.0)) / (a + sp(1.0));
-                let y2 = y * y;
-                let p = madd(sp(0.593_650_952_404_196_9), y2, sp(0.961_649_289_428_803_5));
-                let p = madd(p, y2, sp(2.885_390_081_777_926_8));
-                madd(p, y, n)
             } else {
                 // Same coefficients and arithmetic order as log2_midp.
                 let adjusted = bits + ip((0x3f80_0000_u32 - 0x3f35_04f3) as i32);
@@ -116,12 +103,14 @@ macro_rules! graph {
                 // Specials domain: 0 -> -inf, <0 -> NaN, NaN -> NaN,
                 // +inf -> +inf (the raw exponent bias the polynomial
                 // produces for an infinite input is replaced).
-                let zero = bits.simd_eq(ip(0)).bitcast_to_f32();
-                let neg = bits.simd_lt(ip(0));
-                let nan = abs.simd_gt(ip(0x7f80_0000));
-                let pos_inf = bits.simd_eq(ip(0x7f80_0000)).bitcast_to_f32();
+                // Float-side masks, same op profile as the generated method.
+                // simd_ne(x,x) catches NaN without an abs/bitcount pass.
+                let zero = input.simd_eq(sp(0.0));
+                let neg = input.simd_lt(sp(0.0));
+                let nan = input.simd_ne(input);
+                let pos_inf = input.simd_eq(sp(f32::INFINITY));
                 let result = V::blend(zero, sp(f32::NEG_INFINITY), result);
-                let result = V::blend((neg | nan).bitcast_to_f32(), sp(f32::NAN), result);
+                let result = V::blend(neg | nan, sp(f32::NAN), result);
                 V::blend(pos_inf, sp(f32::INFINITY), result)
             } else {
                 result
