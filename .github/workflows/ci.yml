@@ -696,6 +696,10 @@ jobs:
         run: |
           cargo clippy --locked --manifest-path benchmarks/powf_validation/Cargo.toml --all-features --all-targets -- -D warnings
           cargo clippy --locked --manifest-path benchmarks/powf_validation/Cargo.toml --no-default-features --features w512 --all-targets -- -D warnings
+      - name: Sqrt study kernel smoke and lint
+        run: |
+          cargo run --locked --manifest-path benchmarks/sqrt_2026-11-10/Cargo.toml
+          cargo clippy --locked --manifest-path benchmarks/sqrt_2026-11-10/Cargo.toml --all-targets -- -D warnings
 
   # ==========================================================================
   # Clippy on aarch64 — the NEON backend impls are cfg'd out on x86, so
@@ -749,6 +753,10 @@ jobs:
         run: |
           cargo clippy --locked --manifest-path benchmarks/powf_validation/Cargo.toml --all-features --all-targets -- -D warnings
           cargo clippy --locked --manifest-path benchmarks/powf_validation/Cargo.toml --no-default-features --features w512 --all-targets -- -D warnings
+      - name: Sqrt study kernel smoke and lint
+        run: |
+          cargo run --locked --manifest-path benchmarks/sqrt_2026-11-10/Cargo.toml
+          cargo clippy --locked --manifest-path benchmarks/sqrt_2026-11-10/Cargo.toml --all-targets -- -D warnings
 
   # ==========================================================================
   # Warning sweep: clippy -D warnings semantics over every target, feature and

@@ -65,9 +65,13 @@ Production routing was introduced at `42a31313`; fixtures and the initial
 harness at `9dbb5a83`; the corrected benchmark dependency at `57b4aedf`.
 Later fixture-gate, documentation and explicit benchmark measurement-opt-in edits leave
 the timed kernels unchanged; reported timing binaries retain the source
-identities above. `cargo test --all-targets` checks the benchmark kernels without
-launching a strict timing study. Run timings with `just sqrt-bench`, or set
-`ARCHMAGE_SQRT_MEASURE=1` explicitly when invoking the benchmark.
+identities above. The final measurement tool is a workspace-excluded package here, leaving the
+workspace's existing zenbench dependency and Cargo.lock unchanged. Its own
+manifest uses 0.1.11. This avoids changing existing benchmark admission behavior
+or adding timing work to `cargo test --all-targets`. `just sqrt-bench-check`
+checks its kernels without timing; `just sqrt-bench` explicitly opts into timing.
+The relocation leaves timed kernel source unchanged; old binary/source identities
+remain attached to the recorded observations.
 
 ## Timing observations
 
