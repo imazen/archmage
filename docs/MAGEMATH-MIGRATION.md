@@ -2,9 +2,11 @@
 
 Magemath owns the configurable f32 pow, exponential and logarithm families.
 It depends on Magetypes vectors and Archmage feature proofs. Magetypes does not
-depend on Magemath and cannot forward back into it. Existing Magetypes math
-implementations remain available during deprecation; they are compatibility code,
-not the place to add new profiles.
+depend on Magemath and cannot forward back into it.
+Magetypes retains the flat implementations actually published in 0.9.31, with
+deprecation metadata for methods that have replacements. Their arithmetic bodies
+are unchanged. The unpublished configured modules and receiver delegates exist
+only in Magemath; there is no duplicate configured compatibility implementation.
 
 This migration does not replace libm wholesale. It adds no global floating-point
 policy and no new polynomial fits. Options remain operation-specific const
@@ -14,9 +16,9 @@ builders ending in `.bits()`, specialized through the caller and kernel.
 
 | Existing API | Configurable owner |
 |---|---|
-| `magetypes::powf` and vector/scalar `try_powf*` | `magemath::powf` |
-| `magetypes::expf` | `magemath::expf` |
-| `magetypes::logf` | `magemath::logf` |
+| Unpublished configured power API and `try_powf*` delegates | `magemath::powf` |
+| Unpublished configured exponentials | `magemath::expf` |
+| Unpublished configured logarithms | `magemath::logf` |
 | `pow_lowp*`, `pow_midp*` | `magemath::powf::try_powf_f32xN_with` |
 | `exp2_lowp*`, `exp2_midp*` | `magemath::expf::try_exp2_f32xN_with` |
 | `exp_lowp*`, `exp_midp*` | `magemath::expf::try_exp_f32xN_with` |
@@ -26,12 +28,16 @@ builders ending in `.bits()`, specialized through the caller and kernel.
 
 `N` is 4 or 8, and 16 with `w512`. Each family also has scalar and array entry
 points. The new crate's exp/log precision enum contains MIDP and LOWP, without
-predecessor-fit selectors. Existing Magetypes encodings remain supported.
+predecessor-fit selectors. Unpublished Magetypes module paths and configured
+receiver methods are removed, rather than deprecated or forwarded.
 
 Only these six operation families are deprecated now: 30 legacy suffix names
-on each f32 vector width, plus the existing configurable APIs. Cube root,
+on each f32 vector width, while the unpublished configurable APIs are rehomed. Cube root,
 sigmoid and SiLU have no new replacements in this PR and are not deprecated.
-No existing method or module is removed. Removal needs a later breaking release.
+No published flat method is removed. The unpublished `magetypes::powf`,
+`magetypes::expf`, `magetypes::logf` modules and `try_powf*` receiver methods
+are absent from the Magetypes public API. Removing published flat methods needs
+a later breaking release.
 
 ## Choosing the contract
 
@@ -124,6 +130,18 @@ ARM64, cross targets including i686, and strict WASM. Numerical fits and the
 unchanged primitive implementations reuse their existing evidence; this PR
 makes no new whole-matrix speed-promotion claim.
 
-The legacy log1p test uses a fixed MPFR256-rounded `log1p(0.5)` reference
+The moved log1p test uses a fixed MPFR256-rounded `log1p(0.5)` reference
 (`0x3ecf991f`) rather than an approximate std call under Miri. This retains the
 native expected bits and exact assertion; no error threshold is relaxed.
+
+## Published implementation boundary
+
+The crates.io 0.9.31 archive records source commit
+`6bfd83d744e41259ec758054631dcb0928fc4ea1`, matching tag `v0.9.31`.
+`just check-published-math` compares every published flat transcendental body
+on f32x4/x8/x16 with hashes taken from that archive. It ignores whitespace,
+comments and external deprecation metadata while retaining arithmetic tokens.
+It also rejects configured modules or `try_powf*` receiver APIs in Magetypes.
+The frozen hashes live in `xtask/published_math_0_9_31.json`; the check requires
+no network access in CI. This is source-body preservation, not a new assertion
+that different compilers or primitive implementations always produce equal bits.

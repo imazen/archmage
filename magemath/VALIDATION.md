@@ -1,92 +1,80 @@
-# Extraction validation — 2026-11-10
+# Ownership validation — 2026-11-10
 
-Scope: configurable f32 powf, expf and logf ownership, explicit caller/vector
-entry points, and deprecation of the corresponding retained Magetypes APIs.
-No reciprocal/root replacement, new polynomial fit, new range profile or
-whole-matrix performance promotion is part of this PR.
+Scope: rehome the unpublished configurable f32 powf, expf and logf framework,
+its tests and oracle drivers into Magemath. Magetypes retains the flat math
+implementations actually published in 0.9.31, with deprecation metadata for
+replaced families. No configurable compatibility copy remains in Magetypes.
 
-Missing evidence first: the complete 19-step `just ci` gate was not rerun after
-correcting its inherited Miri oracle failure. That run passed steps 1–14 and
-stopped at step 15; steps 16–19 did not execute in that run. Windows ARM64 and
-i686 checks are represented in CI, not claimed as local native executions.
-No new wall-clock performance comparison was collected for this extraction.
+No new wall-clock comparison was collected for this ownership correction.
+The complete repository `just ci` gate has not been rerun locally. Native
+M6 results from the earlier extraction revision do not qualify the corrected
+Magetypes boundary; current ARM execution remains with CI. Windows ARM64 and
+i686 are likewise CI checks, not claimed as local executions.
 
-Completed checks:
+## Current checks
 
-- `just magemath-check`: std/no_std, debug/release contracts, strict Clippy,
-  canonical powf fixture selection, all 32 new exp/log const/runtime encodings,
-  exact rejection masks and caller-preserving vector/scalar tails.
-- Native Apple M6 std and no_std tests, including its NEON entries.
-- Strict WASM std and no_std tests, including its SIMD entries.
-- Public API snapshots generated for x86-64, ARM64 and WASM.
-- Magetypes compile-fail deprecation documentation, plus its retained policy
-  regression witnesses.
-- The failed Miri `logf::tests::log1p_basics` test passes after pinning the
-  MPFR256-rounded f32 `log1p(0.5)` reference to `0x3ecf991f`. The assertion
-  remains bit exact; its native expected value is unchanged.
-- Both strict compatibility-driver Clippy commands pass after marking their
-  intentional deprecated-API coverage. That addresses the first CI run's
-  three Clippy job failures; it does not hide numerical test failures.
+The implementation boundary was corrected in `f6df3ec0`. Subsequent edits remove
+unused imports in relocated tests/tools, annotate intentional deprecated flat
+method diagnostics, and update documentation/API snapshots.
 
-Source identities: native ARM production/tests were checked at `4b2ecd25`.
-`2aa028a6` then changed only the deterministic test oracle, its recipe and
-migration documentation. `640a0de6` adds compatibility-driver lint annotations
-and their recipe/documentation; production math sources are unchanged by these
-follow-ups. Existing precision fixtures and thresholds remain intact.
+- Magemath's complete default test selection and doctests pass with `std avx512`
+  and without std (`--no-default-features --features w512`). This includes the
+  relocated independent power fixtures, HIGHP fixtures, policy rejection masks,
+  const/runtime exp/log contracts and scalar/vector/tail identity checks.
+- `just magemath-public-boundary` passes: published-body/source-boundary guard,
+  retained Magetypes flat-math and power-composition tests, doctests including
+  configured-module absence, and strict all-target Clippy for both crates.
+- The retained power-composition assertions also pass on strict SIMD WASM via
+  `just magemath-legacy-remap-wasm`. No expected bits or error bounds changed.
+- `just magemath-compat-clippy` passes for the moved oracle drivers with std
+  and without std. Configured drivers call Magemath; the legacy exceptional-value
+  driver continues to call Magetypes flat methods.
+- Public API listings were regenerated for x86-64, ARM64 and WASM. None of the
+  Magetypes supported, feature-added or internal listings contains configured
+  powf/expf/logf modules, `PowfOptions` or `try_powf*` receivers. Magemath owns
+  those operation modules and explicit token-taking vector functions.
+- FMA, bounded-power and HIGHP fixture generators pass their unchanged `--check`
+  comparisons at their new owner paths. Formatting and CI workflow contracts pass.
 
-Recorded resource-wrapper lines:
+The published-body guard compares all 35 flat transcendental bodies on each
+f32x4/x8/x16 width against the crates.io 0.9.31 archive. Its source provenance is
+commit `6bfd83d744e41259ec758054631dcb0928fc4ea1`, also tag `v0.9.31`.
+The hash normalization removes comments/whitespace and external deprecation
+metadata; it retains arithmetic tokens. This establishes body preservation,
+not equivalence across arbitrary compilers or changes to lower-level primitives.
 
-```text
-Scoped native/std/no_std + strict-WASM checks:
-run-heavy: done rc=0 47s | peak-RSS 2.83GiB | min-avail 36310MiB | peak-load 1.79
-Strict WASM no_std:
-run-heavy: done rc=0 15s | peak-RSS 3.16GiB | min-avail 36243MiB | peak-load 4.05
-Apple M6 std/no_std:
-run-heavy: done rc=0 14s | peak-RSS 1.02GiB | min-avail 8604MiB | peak-load 1.95
-Focused Miri correction + native oracle + deprecation doctests:
-run-heavy: done rc=0 8s | peak-RSS 0.67GiB | min-avail 38708MiB | peak-load 0.73
-Compatibility diagnostics Clippy:
-run-heavy: done rc=0 4s | peak-RSS 0.44GiB | min-avail 39019MiB | peak-load 0.42
-```
+The moved Miri unit/HIGHP/error suites are selected at Magemath in `cargo xtask
+miri`; the existing numerical assertions remain intact. Full Miri execution is
+not claimed for this final correction. The moved log1p fixture retains the
+MPFR256-rounded `log1p(0.5)` bits `0x3ecf991f` instead of using Miri's approximate
+std-math shim as its oracle.
 
-The Mac uses a monitored process-tree RSS guard, not a Linux cgroup hard cap;
-its available-memory value is the wrapper's labeled reclaimable-page proxy.
-These are validation resource records, not kernel performance comparisons.
-
-Logs and the source archive are preserved outside Git at
-`/mnt/v/output/archmage/magemath-migration-2026-11-10`, mirrored to
-`/mnt/tower/output/archmage/magemath-migration-2026-11-10`.
-`MANIFEST.json` covers 37 files / 34,744,324 bytes, excluding itself; SHA-256:
+Final driver-Clippy, formatting and strict-WASM resource-wrapper record:
 
 ```text
-208a19b3619d5dbc6143dffb1f839353a8bcc960fd41b20905318e3c31ede66d
+run-heavy: done rc=0 5s | peak-RSS 0.45GiB | min-avail 41743MiB | peak-load 1.13
 ```
 
-The preceding [ownership compile study](https://github.com/imazen/archmage/blob/1662daa4d14f/benchmarks/expf_logf_audit/MAGEMATH-LAYER.md)
-is separate evidence with its own controls and source identities. It is not
-presented as a timing run of this final extraction.
+This is a validation resource record, not a math-kernel speed comparison.
+Current logs are preserved in `magemath-public-boundary-2026-11-10` under the
+local/mirrored output roots named below, with a source archive and SHA-256 index.
 
-## Compatibility composition follow-up
+## Earlier evidence and limits
 
-The subsequent CI WASM job exposed the stack's legacy power-composition mismatch.
-Commit `640c07fd` restores legacy coefficients and backend arithmetic in the
-retained Magetypes LOWP and unchecked MIDP exponential delegates. Magemath's
-configured canonical fits are unchanged. The existing `powf_engine_remap`
-bit assertions pass on strict WASM after this correction; no expectation was
-changed. The test now includes operation/exponent/input diagnostics on failure.
-This supersedes the earlier note that follow-ups only changed test/lint files:
-the new compatibility-only change is explicit and separately validated.
+The earlier extraction retained unpublished configured modules in Magetypes.
+Its native M6 and strict-WASM runs, compatibility follow-up and source archives
+remain preserved under `magemath-migration-2026-11-10` and
+`magemath-migration-2026-11-10-followup`, beneath
+`/mnt/v/output/archmage` and `/mnt/tower/output/archmage`. They describe their
+recorded source revisions and are not presented as new runs of this correction.
 
-The strict-WASM targeted run reports:
+The [ownership compile study](https://github.com/imazen/archmage/blob/1662daa4d14f/benchmarks/expf_logf_audit/MAGEMATH-LAYER.md)
+is separate evidence, with its own implementations and source identities.
+No compile-time or runtime ratio is projected from that prototype onto the final
+crate boundary. Historical benchmark harnesses must be replayed at their recorded
+source revisions; their old Magetypes module paths are not current Magemath APIs.
 
-```text
-run-heavy: done rc=0 2s | peak-RSS 0.37GiB | min-avail 39305MiB | peak-load 0.15
-```
-
-The same unchanged composition test and policy regression witnesses pass on
-native x86 after the compatibility correction (3s, peak RSS 0.63 GiB,
-minimum available 38741 MiB, peak load 0.34). ARM verification of this
-compatibility-only follow-up remains with CI; the earlier native M6 evidence
-covers the unchanged Magemath production engine. Separate follow-up logs and
-source identity are preserved under `magemath-migration-2026-11-10-followup`
-in the same local/mirrored output roots; the first archive remains immutable.
+LOWP log1p's near-zero bias, Specials subnormal limitations, and the distinction
+between component and composed accuracy remain documented in the
+[migration guide](../docs/MAGEMATH-MIGRATION.md). This change does not refit or
+promote numerical profiles, add reciprocal/root families, or publish a crate.

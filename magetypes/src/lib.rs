@@ -67,6 +67,12 @@
 //! let _ = input.exp_midp();
 //! ```
 //!
+//! Configured math lives in Magemath. The unpublished module is not exported:
+//!
+//! ```compile_fail
+//! use magetypes::powf::PowfOptions;
+//! ```
+//!
 //! ## Safety
 //!
 //! Using magetypes takes no `unsafe` in your code, so your crate can keep

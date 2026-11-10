@@ -32,6 +32,7 @@ but its full exhaustive run is not repeated for a file move. Evidence on dev is
 `/mnt/v/output/archmage/powf-example-cleanup-2026-11-10/`, independently mirrored
 and SHA-256 indexed by `CORE.json`.
 
-These drivers deliberately retain the deprecated Magetypes entry points as
-compatibility controls. New Magemath contracts live in `magemath/tests`;
-deprecation-warning checks remain in the Magetypes doctests.
+Configured power drivers now call Magemath, where that unpublished framework
+lives. The flat-method variance driver continues to exercise the published
+Magetypes methods. No numerical oracle, corpus or threshold changes with the
+namespace move.

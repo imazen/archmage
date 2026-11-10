@@ -20,6 +20,6 @@ Use `try_*_f32x4_with` / `try_*_f32x8_with` (and x16 with `w512`) in typed kerne
 passing the existing feature token explicitly. Use the corresponding scalar
 `*_with_token` call for tails with the same flags and token.
 
-See [migration and scope](../docs/MAGEMATH-MIGRATION.md). Existing Magetypes
-methods remain available during deprecation. Primitive `sqrt` stays in Magetypes;
+See [migration and scope](../docs/MAGEMATH-MIGRATION.md). Published flat Magetypes methods retain their arithmetic during deprecation;
+the unpublished configured modules and delegates live only in Magemath. Primitive `sqrt` stays in Magetypes;
 reciprocal and reciprocal-square-root policy families are possible later work.

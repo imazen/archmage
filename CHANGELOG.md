@@ -16,7 +16,15 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 #### Added
 
 - Introduce the no_std-first configurable f32 powf, expf and logf owner, with const integer profiles, caller-preserving vector entries and scalar tail APIs (862951ef).
-- Keep existing powf coefficients/contracts and omit predecessor-fit selectors from the new exp/log precision enums; retain separate compatibility implementations in Magetypes (862951ef).
+- Keep existing powf coefficients/contracts and omit predecessor-fit selectors from the new exp/log precision enums; retain the published flat implementations in Magetypes (862951ef).
+
+#### Fixed
+
+- Retain every exp/log policy bit in debug graphs, cover all runtime encodings, restore no_std log1p compilation, preserve signed zero and scalar lane masks, and keep Full/Specials result handling under AssumeValid (ef1b9428).
+
+#### Changed
+
+- Default configured-power tests retain directed cases; `_exhaustive-tests` restores full rational-fixture and policy/tail sweeps in Magemath.
 
 ## archmage
 
@@ -149,40 +157,25 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 
 #### Deprecated
 
-- Pow/exp/log approximation suffix methods, configured math modules and configured power delegates: migrate to Magemath with an explicit numerical profile. Methods remain available; cube root, sigmoid, SiLU and reciprocal/root primitives are unchanged (d873dc89).
+- Deprecate pow/exp/log approximation suffix methods in favor of Magemath with an explicit numerical profile. Published flat methods remain available; cube root, sigmoid, SiLU and reciprocal/root primitives are unchanged (d873dc89).
 
 #### Fixed
 
-- Keep the deprecated exponential delegates on their legacy coefficients and backend arithmetic, preserving the existing power/composition contract on strict WASM (640c07fd).
-- Retain every exp/log policy bit in debug graphs, cover all runtime encodings, restore no_std log1p compilation, preserve signed zero and scalar lane masks, and keep Full/Specials result handling under AssumeValid (ef1b9428).
 - NEON float min/max and their reductions use native numeric instructions, selecting a number over a quiet NaN. Signaling NaNs retain native ARM propagation; this does not promise global ISA equality.
 
 #### Changed
 
-- Default powf tests retain directed cases; the explicit `_exhaustive-tests` feature restores full rational-fixture and policy/tail sweeps.
-
+- Preserve all published 0.9.31 flat transcendental bodies; configurable math, its tests and opt-in exhaustive fixtures now belong solely to Magemath (f6df3ec0).
 
 #### QUEUED BREAKING CHANGES
 
+- Rehome the unpublished configured powf/expf/logf modules, `try_powf*` receiver delegates and `_exhaustive-tests` machinery to Magemath. These APIs were never in crates.io 0.9.31; published flat transcendental bodies remain unchanged (f6df3ec0).
 - Planned: `mul_add`/`mul_sub` become the fused, single-rounding operations, matching `f32::mul_add`. Step one is in this release: `mul_add_relaxed`/`mul_sub_relaxed` (the previous `mul_add`: fused where the hardware fuses, multiply then add on the scalar backend and strict WASM, the engine's madd with relaxed SIMD) and `mul_add_fused`/`mul_sub_fused` (the same operation as `mul_add_portable`/`mul_sub_portable`, which stay), with `mul_add`/`mul_sub` deprecated pointing at both (#138). After the deprecation has shipped through a full release (0.10), `mul_add`/`mul_sub` return undeprecated as the fused forms (0.11). Calls still on `mul_add` then round once everywhere, at software-FMA cost on the scalar backend without FMA hardware and on strict WASM. Neither form is fastest everywhere: separate multiply-add is faster for single-accumulator reductions, fused for Horner chains (`benchmarks/fused_vs_separate_2026-10-25.md`).
 - Planned magetypes 0.10: deprecate the one-lane wrappers `f32x1`, `f64x1`, `i8x1`, `u8x1`, `i16x1`, `u16x1`, `i32x1`, `u32x1`, `i64x1`, `u64x1` (no production users across the zen checkouts; the scalar tier uses the generic `*<ScalarToken>` types and tails get plain slices), the comparison traits `SimdEq`, `SimdNe`, `SimdLt`, `SimdLe`, `SimdGt`, `SimdGe` (never implemented; the vector types have inherent `simd_*` methods), and `SimdTypes` and `WidthDispatch` (no users, tests or docs). Removal follows in a later breaking release.
 - Planned magetypes 0.10: reserve short constructor names for matching feature contexts; `_t(token, ...)` provides the preparatory migration spelling in 0.9. No constructor signatures change in this patch (772ef504).
 - Remove the six no-op `*_midp_precise` aliases (`exp2`/`exp`/`ln`/`log2`/`log10`/`pow` — each is literally `self.*_midp()`); `cbrt_midp_precise` stays, it does real denormal/zero handling. With the reciprocal tiers settling on `_portable` as the precise tier, a `_precise` suffix that does nothing is a naming lie.
 - Planned: make `w512` non-default in magetypes; users who need 512-bit types would add `features = ["w512"]`. This patch keeps the existing default features.
 - Remove `cast::Upcast` and `cast::Downcast`, and with them the `cast` module, which holds nothing else. Both are deprecated in 0.9.30 and were never implemented (b1b2ff67).
-
-#### Added
-
-- Route existing approximate power methods through the const-configured engine, retaining their per-backend arithmetic and preserving all 72 x86 before/after caller probe bodies.
-- Add `try_powf_with_token` for single values and tails retaining the vector caller's proof, including backend-dependent Caller rounding.
-- Add checked positive-only Gamma presets for portable and backend-dependent MIDP/LOWP; assumed configurations remove zero masks and redundant range work while preserving Gamma result bits on positive inputs. Verify all 64 bounded encodings across scalar, vector and tail forms.
-
-- Keep unoptimized powf runtime policy frames separate to avoid default WASM stack exhaustion; release inlining is unchanged (354be602).
-
-- Add canonical BitExact HIGHP power, including Full and Gamma presets, with a safe Arm graph port, exact-rational fixtures and no_std fallback. BackendDependent HIGHP retains std delegation.
-- Add bounded, bit-consistent f32 power through `magetypes::powf` and scalar/vector `try_powf_with` delegates, with explicit domains, whole-vector rejection and whole-operation fused dispatch. Existing power methods are unchanged; mathematical accuracy and admission costs remain separately measured (56059d2c).
-- Add independent const portability, MIDP/LOWP/std HIGHP precision, domain and validation choices, with six complete presets. BackendDependent can use separate rounding; AssumeValid removes numerical checks. Default fused MIDP and legacy methods are unchanged (b357e019).
-- Carry bounded-power options as caller-visible integer const flags, produced by `PowfOptions::new().with_domain(...).with_execution(...).bits()`; retain explicitly named runtime adapters and compare actual legacy/std methods separately (7bdcaf84, e4fad9b3).
 
 ### [0.9.31] - 2026-11-07
 

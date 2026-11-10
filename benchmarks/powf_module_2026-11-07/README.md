@@ -6,11 +6,12 @@ MIDP/LOWP replacement comparisons are in [MIDLOW.md](MIDLOW.md), with
 [resource measurements](MIDLOW-DEBUG.md), [review](MIDLOW-REVIEW.md),
 [frozen plans](MIDLOW-PLAN.md), and [artifact identities](MIDLOW-ARTIFACTS.md).
 
-The current harness benchmarks the actual library through literal const options,
-including token-preserving scalar tails. Build with `just powf-midlow-build`;
-verify with `just powf-midlow-verify BINARY`; run the frozen matrix with
-`just powf-midlow-matrix BINARY DIRECTORY`. Generated probes live in Cargo's
-output directory. Source checkout generation is unnecessary.
+The archived harness benchmarks the pre-extraction Magetypes framework through
+literal const options, including token-preserving scalar tails. Its source and
+generator paths require the revisions recorded in the linked artifact inventories;
+they are not current Magemath benchmark entry points. Reproduce those measurements
+at their recorded source revision. Maintained contract/oracle drivers now live
+in [powf_validation](../powf_validation/README.md) and call Magemath.
 
 Ordinary tests retain directed oracle and policy checks. Use
 `just powf-test-exhaustive` for all frozen rational fixtures and all 64 bounded
