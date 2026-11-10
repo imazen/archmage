@@ -58,7 +58,7 @@ fn register<const LOG: bool>(
         {
             let input: Vec<f32> = (0..size).map(|i| 0.5 + (i % 256) as f32 / 512.).collect();
             let context = context.to_owned();
-            g.bench(&format!("bits{flags:03}/{}", label(flags)), move |b| {
+            g.bench(format!("bits{flags:03}/{}", label(flags)), move |b| {
                 let mut output = vec![0.; size];
                 b.iter(|| {
                     execute::<LOG>(

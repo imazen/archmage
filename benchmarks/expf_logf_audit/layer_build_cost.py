@@ -38,6 +38,7 @@ for profile in ['dev','release','thin']:
                         if expected is None:expected=digest
                         assert digest==expected,(mode,profile,stage,digest,expected)
                         (root/f'{stage}.outputs').write_bytes(output)
+                        (root/f'{stage}.executable').write_bytes(binary.read_bytes())
                         row.update(output_sha256=digest,binary_bytes=binary.stat().st_size,binary_sha256=hashlib.sha256(binary.read_bytes()).hexdigest(),rlib_bytes={name:sum(f.stat().st_size for f in (binary.parent/'deps').glob('lib'+name+'-*.rlib'))for name in ['archmage','magetypes','magemath']})
                     rows.append(row);(a.output/'builds.json').write_text(json.dumps(rows,indent=2)+'\n');print(json.dumps(row),flush=True)
                     if run.returncode:raise SystemExit(run.returncode)
