@@ -3,6 +3,19 @@ extern crate std;
 #[path = "test_vectors.rs"]
 mod fixtures;
 
+// Keep full frozen fixtures available without making every ordinary test/Miri
+// invocation replay the full cross-product. Both tiers use the same oracle and
+// assertions; the explicit exhaustive-tests feature restores every row.
+fn oracle_rows() -> impl Iterator<Item = &'static [u32; 5]> {
+    fixtures::POWF.iter().enumerate().filter_map(|(index, row)| {
+        let [base, exponent, _, _, _] = *row;
+        let directed = exponent == 0x4019_999a || exponent == 0x3f00_0000
+            || base == 0x3f80_0000;
+        (cfg!(feature = "exhaustive-tests") || directed || index % 97 == 0)
+            .then_some(row)
+    })
+}
+
 fn options(domain: u32) -> PowfOptions {
     PowfOptions {
         domain: match domain {
@@ -144,7 +157,7 @@ macro_rules! check {
                 }
             }
         }
-        for &[base, exponent, expected, error, allow_zero] in &fixtures::POWF {
+        for &[base, exponent, expected, error, allow_zero] in oracle_rows() {
             let b = f32::from_bits(std::hint::black_box(base));
             let n = f32::from_bits(std::hint::black_box(exponent));
             let options = options(allow_zero);
@@ -196,7 +209,7 @@ macro_rules! check {
 
 #[test]
 fn scalar_array_and_auto_have_identical_graph() {
-    for &[base, exponent, expected, error, allow_zero] in &fixtures::POWF {
+    for &[base, exponent, expected, error, allow_zero] in oracle_rows() {
         let b = f32::from_bits(std::hint::black_box(base));
         let n = f32::from_bits(std::hint::black_box(exponent));
         for execution in [PowfExecution::Caller, PowfExecution::Automatic] {

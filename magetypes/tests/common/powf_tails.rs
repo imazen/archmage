@@ -79,10 +79,11 @@ fn bounded_widths_and_tails(token: Token) {
         }
         result.to_bits()
     }
+    const INPUT_LEN: usize = if cfg!(feature = "exhaustive-tests") { 513 } else { 33 };
     fn check<const FLAGS: u32>(token: Token) {
         let mut state = 0x9e37_79b9_u32;
         for n in [0.0_f32, -0.0, 0.5, 2.4, 4.0] {
-            let input: [f32; 513] = core::array::from_fn(|i| {
+            let input: [f32; INPUT_LEN] = core::array::from_fn(|i| {
                 state ^= state << 13;
                 state ^= state >> 17;
                 state ^= state << 5;
@@ -94,7 +95,11 @@ fn bounded_widths_and_tails(token: Token) {
             });
             macro_rules! width {
                 ($eval:ident, $lanes:literal) => {
-                    for length in (0..=33).chain([64, 65, 127, 255, 511, 512, 513]) {
+                    for length in (0..=33).chain(
+                        [64, 65, 127, 255, 511, 512, 513]
+                            .into_iter()
+                            .filter(|_| cfg!(feature = "exhaustive-tests")),
+                    ) {
                         let mut chunks = input[..length].chunks_exact($lanes);
                         let mut offset = 0;
                         for chunk in chunks.by_ref() {

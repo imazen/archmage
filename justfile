@@ -929,3 +929,8 @@ powf-remap-probes:
 
 powf-remap-codegen assembly output *options:
     python3 -B benchmarks/powf_module_2026-11-07/remap_codegen_audit.py "{{assembly}}" "{{output}}" {{options}}
+
+# Full numerical replay is explicit; ordinary cargo test retains spot checks.
+powf-test-exhaustive:
+    cargo test -p magetypes --features exhaustive-tests,avx512 --lib powf::
+    cargo test -p magetypes --features exhaustive-tests,avx512 --test powf_tails_portable_midp --test powf_tails_portable_lowp --test powf_tails_backend_midp --test powf_tails_backend_lowp
