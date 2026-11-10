@@ -190,3 +190,7 @@ differences, exact validation scope and remaining promotion evidence. All 19
 local CI stages pass in 675 s on the final library code; the later test-import
 cleanup passes all 24 warning configurations. Benchmark Clippy and the final
 64-policy harness verifier pass. Promotion remains held.
+
+The [debug compiler footprint addendum](MIDLOW-DEBUG.md) records the later
+chunk-local verifier, fresh CI-equivalent WASM resource measurement, unchanged
+optimized loops and retained compiler/runner failures.

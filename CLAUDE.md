@@ -1303,6 +1303,14 @@ Actual legacy/std comparisons and held performance gates are recorded in
 `benchmarks/powf_module_2026-11-07/REPLACEMENTS.md`. Existing legacy coefficients
 are unchanged.
 
+Powf debug compiler footprint (2026-11-09): the expanded const-policy unit
+crate previously peaks at 9.54 GiB during strict-WASM compilation. Debug-only
+arithmetic sharing and chunk-local tests retain all cases; a fresh complete
+CI-equivalent run passes under a 6 GiB cap at 3.28 GiB peak RSS. This is compiler
+memory, not an array of all numerical results. Optimized code retains its
+original graph; 373 emitted x86 loop bodies match. Details and all failed
+resource trials: `benchmarks/powf_module_2026-11-07/MIDLOW-DEBUG.md`.
+
 Bounded powf replacement costs (2026-11-09): zero-capable Gamma MIDP has measured
 cases above the 2% bound against legacy `pow_midp_unchecked`, despite gains over
 checked legacy MIDP. PositiveGamma explicitly excludes zero and removes those

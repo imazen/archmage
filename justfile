@@ -920,8 +920,8 @@ powf-midlow-codegen binary directory:
 powf-midlow-bars directory output:
     python3 -B benchmarks/powf_module_2026-11-07/midlow_bars.py "{{directory}}" "{{output}}"
 
-powf-midlow-assembly-compare before after output:
-    python3 -B benchmarks/powf_module_2026-11-07/midlow_assembly_compare.py "{{before}}" "{{after}}" "{{output}}"
+powf-midlow-assembly-compare before after output *options:
+    python3 -B benchmarks/powf_module_2026-11-07/midlow_assembly_compare.py "{{before}}" "{{after}}" "{{output}}" {{options}}
 
 powf-remap-probes:
     python3 -B benchmarks/powf_module_2026-11-07/remap_probes.py

@@ -60,6 +60,8 @@ methods, paired intervals, zenbench bars, all policy rankings and logged cost
 failures. Native Intel, N1, strict/relaxed WASM and i686 have no latest bounded
 timing result; their correctness coverage must not be read as a speed claim.
 
+The later [debug compiler resource addendum](../benchmarks/powf_module_2026-11-07/MIDLOW-DEBUG.md) keeps release arithmetic unchanged: the fresh complete strict-WASM CI command passes at 3.28 GiB peak RSS under a 6 GiB cap. Tests compare packed and scalar outputs chunk by chunk.
+
 ## ISA implementations and measured coverage
 
 | ISA or caller context | Canonical HIGHP implementation | Correctness coverage | New library timing status |

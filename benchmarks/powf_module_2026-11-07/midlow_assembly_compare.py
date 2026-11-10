@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Compare frozen complete power loops with the existing exact asm normalizer."""
 import argparse
+import hashlib
 import importlib.util
 import json
 import re
@@ -10,14 +11,38 @@ p = argparse.ArgumentParser(description=__doc__)
 p.add_argument('before', type=Path)
 p.add_argument('after', type=Path)
 p.add_argument('output', type=Path)
+p.add_argument('--before-imports', type=Path, required=True)
+p.add_argument('--after-imports', type=Path, required=True)
 a = p.parse_args()
 spec = importlib.util.spec_from_file_location(
     'codegen', Path(__file__).resolve().parents[2] / 'xtask/codegen.py')
 codegen = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(codegen)
 
-def load(path):
+def load(path, imports):
     source = path.read_text()
+    imported = imports.read_text()
+    objects = {}
+    for match in re.finditer(
+            r'^([^:\s]+):[^\n]*\n(.*?)^\s*\.size\s+\1,\s*([^\n]+)$',
+            imported, re.M | re.S):
+        name, body, size = match.groups()
+        if not re.search(r'^\s*\.type\s+' + re.escape(name) + r',[@%]object$', imported, re.M):
+            continue
+        alignment = re.search(r'(\.p2align[^\n]*)\n\s*$', imported[:match.start()])
+        contents = (alignment[1] + '\n' if alignment else '') + body.strip() + '\nSIZE ' + size
+        if name.startswith('anon.'):
+            stable = '.Lanon_import_' + hashlib.sha256(contents.encode()).hexdigest()
+            source = source.replace(name, stable)
+            source += '\n' + (alignment[1] + '\n' if alignment else '') + stable + ':\n' + body
+        else:
+            stable = re.sub(r'Cs[0-9a-zA-Z]+_', 'CsHASH_', re.sub(r'\.llvm\.\d+', '.llvm.MODULE', name))
+        assert stable not in objects
+        objects[stable] = contents
+    assert objects, 'imported data was not inspected'
+    # ThinLTO's numeric module disambiguators are identities, not instructions.
+    # Named object initializers and anonymous object contents are checked above.
+    source = re.sub(r'\.llvm\.\d+', '.llvm.MODULE', source)
     # The benchmark includes unwinding tables between functions. Extract only
     # declared function bodies so GCC_except_table labels cannot consume the
     # next function in the consumer parser's label-to-size matcher. Retain
@@ -62,9 +87,11 @@ def load(path):
             assert key not in loops, key
             loops[key] = codegen.expand(name, functions)
     assert len(loops) == 373, ('unexpected emitted loop inventory', len(loops))
-    return loops
+    return loops, objects
 
-before, after = load(a.before), load(a.after)
+before, before_objects = load(a.before, a.before_imports)
+after, after_objects = load(a.after, a.after_imports)
+assert before_objects == after_objects, 'imported constant or state initializer changed'
 assert before.keys() == after.keys()
 rows = [{'loop': name, 'equal': before[name] == after[name],
          'before': before[name], 'after': after[name]} for name in sorted(before)]

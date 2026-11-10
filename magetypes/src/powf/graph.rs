@@ -21,8 +21,8 @@ pub(super) const WASM_SOFTWARE: usize = 3;
 #[cfg(all(feature = "std", not(miri)))]
 pub(super) const STD: usize = 2;
 
-// Literal arms also support the MSRV: generic const expressions cannot mask
-// another const argument. The match folds before the release arithmetic graph.
+// Literal arms support the MSRV without generic const expressions. Only debug
+// builds use this adapter; release keeps the original caller-visible flags.
 #[cfg(debug_assertions)]
 macro_rules! shared_kernel {
     ($vector:ident, $t:ty, $arithmetic:ident, $zero:literal, $gamma:literal,
