@@ -31,3 +31,11 @@ lto = "thin"
 [[bin]]
 name = "analyze_timing"
 required-features = ["bench"]
+
+[[bin]]
+name = "policies"
+required-features = ["bench"]
+
+[[bin]]
+name = "analyze_policies"
+required-features = ["bench"]

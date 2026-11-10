@@ -11,18 +11,23 @@ import subprocess
 p=argparse.ArgumentParser(description=__doc__)
 p.add_argument('binary',type=Path);p.add_argument('output',type=Path)
 p.add_argument('--exploratory',action='store_true')
+p.add_argument('--policies',action='store_true',help='64 policy-ablation cells, 25 explicitly named implementations')
 a=p.parse_args();a.output.mkdir(parents=True,exist_ok=False)
 binary=a.binary.resolve()
 cells=[f'{op}/{precision}/{width}/{context}/{size}/{work}'
        for op in ['exp2','log2']for precision in ['midp','lowp']
-       for width in [4,8,16]for context in ['native','scalar']
+       for width in ([4,8]if a.policies else[4,8,16])for context in ['native','scalar']
        for size in [64,4096]for work in ['stream','chain']]
-assert len(cells)==96
+assert len(cells)==(64 if a.policies else 96)
 manifest=dict(binary=str(binary),sha256=hashlib.sha256(binary.read_bytes()).hexdigest(),
               cells=cells,pairs=50,exploratory=a.exploratory,
               thresholds=dict(no_regression_ci95_upper=1.02,optimization_ci95_upper=1.00),
               input='0.5+(i%256)/512; chain renormalizes result mantissa to [0.5,1)',
               claim='ordinary-input matrix; bit-distributed and exceptional timing coverage absent')
+if a.policies:
+    manifest.update(policy_bits=[f for f in range(128)if not f&2 and not(f&1 and f&32)],
+        excluded_reason='Full/Specials+AssumeValid fail accepted-domain correctness; retained in contract witnesses, excluded from speed promotion',
+        token_arm='BitExact Finite/Positive AssumeValid Caller, scalar lane map preserving actual caller token')
 (a.output/'MATRIX.json').write_text(json.dumps(manifest,indent=2)+'\n')
 for index,cell in enumerate(cells):
     progress=dict(pid=os.getpid(),stage='running',index=index,required=len(cells),cell=cell,
