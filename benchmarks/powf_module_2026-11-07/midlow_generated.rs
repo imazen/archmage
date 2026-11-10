@@ -71,6 +71,8 @@ fn execute1(arm:usize,_context:&str,input:&[f32],output:&mut[f32],n:f32,chain:bo
 66=>loop1::<0,3>(input,output,n,chain),
 _=>unreachable!()}}
 #[archmage::magetypes(v4x(cfg(avx512)),v3,neon,wasm128,scalar)]
+// Preserve the measured chunk-iterator loop shape in the frozen study.
+#[allow(clippy::chunks_exact_to_as_chunks)]
 #[inline(never)]
 fn loop4<const FLAGS:u32,const ARM:usize>(token:Token,input:&[f32],output:&mut[f32],n:f32,chain:bool) {
  use magetypes::simd::generic::{f32x4 as V, f32x4 as Tail};
@@ -167,6 +169,8 @@ _=>unreachable!()}}}
  }
 }
 #[archmage::magetypes(v4x(cfg(avx512)),v3,neon,wasm128,scalar)]
+// Preserve the measured chunk-iterator loop shape in the frozen study.
+#[allow(clippy::chunks_exact_to_as_chunks)]
 #[inline(never)]
 fn loop8<const FLAGS:u32,const ARM:usize>(token:Token,input:&[f32],output:&mut[f32],n:f32,chain:bool) {
  use magetypes::simd::generic::{f32x8 as V, f32x4 as Tail};
@@ -263,6 +267,8 @@ _=>unreachable!()}}}
  }
 }
 #[archmage::magetypes(v4x(cfg(avx512)),v3,neon,wasm128,scalar)]
+// Preserve the measured chunk-iterator loop shape in the frozen study.
+#[allow(clippy::chunks_exact_to_as_chunks)]
 #[inline(never)]
 fn loop16<const FLAGS:u32,const ARM:usize>(token:Token,input:&[f32],output:&mut[f32],n:f32,chain:bool) {
  use magetypes::simd::generic::{f32x16 as V, f32x4 as Tail};
@@ -428,14 +434,14 @@ fn execute(width:usize,arm:usize,context:&str,input:&[f32],output:&mut[f32],n:f3
 fn contexts()->Vec<&'static str>{let mut v=vec!["scalar"];#[cfg(target_arch="x86_64")]v.push("v3");#[cfg(all(target_arch="x86_64",feature="avx512"))]v.push("v4x");#[cfg(target_arch="aarch64")]v.push("neon");#[cfg(target_arch="wasm32")]v.push("wasm128");v}
 fn verify(){
  let mut state=0x9e3779b9u32;
- for context in contexts(){for arm in 0..64{for n in [0.,-0.,0.5,2.4,4.]{
+ for context in contexts(){for (arm,&label) in LABELS.iter().take(64).enumerate(){for n in [0.,-0.,0.5,2.4,4.]{
   let input:Vec<f32>=(0..513).map(|i|{state^=state<<13;state^=state>>17;state^=state<<5;
    if arm<48 && arm%3!=0 && i%17==0{0.}else{f32::from_bits(0x37800000+state%0x10000001)}}).collect();
   let mut reference=vec![0.;input.len()];
   for (x,y) in input.iter().zip(&mut reference){execute(4,arm,context,core::slice::from_ref(x),core::slice::from_mut(y),n,false);}
-  for width in [4,8,16]{for length in (0..=33).chain([64,65,127,255,511,512,513]){let mut out=vec![0.;length];execute(width,arm,context,&input[..length],&mut out,n,false);assert_eq!(out.iter().map(|x|x.to_bits()).collect::<Vec<_>>(),reference[..length].iter().map(|x|x.to_bits()).collect::<Vec<_>>(),"{context} {} x{width} len{length} exponent{n}",LABELS[arm]);}}
+  for width in [4,8,16]{for length in (0..=33).chain([64,65,127,255,511,512,513]){let mut out=vec![0.;length];execute(width,arm,context,&input[..length],&mut out,n,false);assert_eq!(out.iter().map(|x|x.to_bits()).collect::<Vec<_>>(),reference[..length].iter().map(|x|x.to_bits()).collect::<Vec<_>>(),"{context} {label} x{width} len{length} exponent{n}");}}
   // Automatic scalar API must use the same selected graph as automatic vectors.
-  if (arm<48 && arm%6<3)||(arm>=48 && arm%2==0) {for (&x,&expected) in input.iter().zip(&reference){assert_eq!(scalar_api(arm,x,n).to_bits(),expected.to_bits(),"public scalar {} {context}",LABELS[arm]);}}
+  if (arm<48 && arm%6<3)||(arm>=48 && arm%2==0) {for (&x,&expected) in input.iter().zip(&reference){assert_eq!(scalar_api(arm,x,n).to_bits(),expected.to_bits(),"public scalar {label} {context}");}}
  }}}
  println!("all 64 const policies: single-lane/vector/tails agree at lengths 0..33, 5 exponents, every selected context");
 }

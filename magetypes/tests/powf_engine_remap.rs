@@ -1,5 +1,10 @@
 //! Independent composition oracle from the pre-remap power methods (main 6bfd83d7).
 #![forbid(unsafe_code)]
+#[cfg(any(
+    target_arch = "x86_64",
+    target_arch = "aarch64",
+    target_arch = "wasm32"
+))]
 use archmage::SimdToken;
 #[archmage::magetypes(v4x(cfg(avx512)), v3, neon, wasm128, scalar)]
 fn check(token: Token) {
