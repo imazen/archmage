@@ -103,14 +103,14 @@ macro_rules! graph {
                 // Specials domain: 0 -> -inf, <0 -> NaN, NaN -> NaN,
                 // +inf -> +inf (the raw exponent bias the polynomial
                 // produces for an infinite input is replaced).
-                // Float-side masks, same op profile as the generated method.
-                // simd_ne(x,x) catches NaN without an abs/bitcount pass.
+                // Ordered >= accepts both zero signs and positive inputs.
+                // Selecting NaN on its false side also covers every NaN:
+                // one comparison replaces separate negative/NaN predicates.
                 let zero = input.simd_eq(sp(0.0));
-                let neg = input.simd_lt(sp(0.0));
-                let nan = input.simd_ne(input);
+                let nonnegative = input.simd_ge(sp(0.0));
                 let pos_inf = input.simd_eq(sp(f32::INFINITY));
                 let result = V::blend(zero, sp(f32::NEG_INFINITY), result);
-                let result = V::blend(neg | nan, sp(f32::NAN), result);
+                let result = V::blend(nonnegative, result, sp(f32::NAN));
                 V::blend(pos_inf, sp(f32::INFINITY), result)
             } else {
                 result

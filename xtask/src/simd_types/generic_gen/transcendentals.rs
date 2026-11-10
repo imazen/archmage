@@ -214,8 +214,9 @@ pub(super) fn gen_transcendentals(
                         splat_f32::<T>(self.1,f32::NEG_INFINITY),
                         result,
                     );
+                    // Ordered >= rejects negatives and NaNs with one mask.
                     let result =
-                        Self::blend(self.simd_lt(zero), splat_f32::<T>(self.1,f32::NAN), result);
+                        Self::blend(self.simd_ge(zero), result, splat_f32::<T>(self.1,f32::NAN));
                     let inf = splat_f32::<T>(self.1,f32::INFINITY);
                     Self::blend(self.simd_eq(inf), inf, result)
                 }})
