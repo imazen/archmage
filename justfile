@@ -988,3 +988,20 @@ magemath-public-boundary:
     cargo test -p magetypes --features "std avx512" --test powf_engine_remap --test generic_transcendentals
     cargo test -p magetypes --features "std avx512" --doc
     cargo clippy -p magetypes -p magemath --features "std avx512" --all-targets -- -D warnings
+
+# Scalar sqrt routes and retained portable software controls.
+sqrt-check:
+    cargo test -p magetypes --features "std avx512" --test sqrt_portability --test precise_reciprocals
+    cargo test -p magetypes --no-default-features --features w512 --test sqrt_portability
+    cargo clippy -p magetypes --all-targets --features "std avx512" -- -D warnings
+
+sqrt-bench:
+    cargo bench -p magetypes --bench sqrt_paths --features std
+
+# Explicit opt-in, constant-memory comparison of all f32 input patterns.
+sqrt-check-exhaustive:
+    ARCHMAGE_SQRT_F32_STRIDE=1 cargo test --release -p magetypes --test sqrt_portability f32_stream_matches_hardware_and_retained_software -- --nocapture
+
+sqrt-check-wasm:
+    RUSTFLAGS="-C target-feature=+simd128" CARGO_TARGET_WASM32_WASIP1_RUNNER=wasmtime cargo test -p magetypes --target wasm32-wasip1 --features "std w512" --test sqrt_portability
+    RUSTFLAGS="-C target-feature=+simd128" CARGO_TARGET_WASM32_WASIP1_RUNNER=wasmtime cargo test -p magetypes --target wasm32-wasip1 --no-default-features --features w512 --test sqrt_portability
