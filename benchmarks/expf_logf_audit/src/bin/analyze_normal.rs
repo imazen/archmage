@@ -21,9 +21,11 @@ fn main() {
                 (9, 8),
                 (10, 8),
                 (3, 0),
+                (5, 0), // Additional backend-dependent vs frozen-main contrast.
                 (4, 0),
                 (7, 1),
                 (8, 1),
+                (10, 1), // Retain the original analysis alongside this expansion.
                 (9, 1),
                 (11, 3),
                 (12, 7),
