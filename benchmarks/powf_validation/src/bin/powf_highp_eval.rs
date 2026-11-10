@@ -1,4 +1,5 @@
 //! Stdin numerical evaluator. Explicit contexts never silently fall back.
+#![allow(deprecated)] // Deliberately validates the retained Magetypes compatibility implementation.
 #![forbid(unsafe_code)]
 #[cfg(any(
     target_arch = "x86_64",

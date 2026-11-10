@@ -31,3 +31,7 @@ std/no_std compilation pass on native and cross targets. The NaN scan is compile
 but its full exhaustive run is not repeated for a file move. Evidence on dev is
 `/mnt/v/output/archmage/powf-example-cleanup-2026-11-10/`, independently mirrored
 and SHA-256 indexed by `CORE.json`.
+
+These drivers deliberately retain the deprecated Magetypes entry points as
+compatibility controls. New Magemath contracts live in `magemath/tests`;
+deprecation-warning checks remain in the Magetypes doctests.

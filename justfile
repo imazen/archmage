@@ -970,3 +970,7 @@ magemath-check-wasm:
 # Deterministic MPFR log1p fixture, including Miri's approximate std math shim.
 magemath-miri-log1p:
     cargo +nightly-2026-10-06 miri test -p magetypes --features avx512 --lib logf::tests::log1p_basics
+
+magemath-compat-clippy:
+    cargo clippy --locked --manifest-path benchmarks/powf_validation/Cargo.toml --all-features --all-targets -- -D warnings
+    cargo clippy --locked --manifest-path benchmarks/powf_validation/Cargo.toml --no-default-features --features w512 --all-targets -- -D warnings
