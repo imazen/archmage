@@ -3,7 +3,15 @@ use super::*;
 #[test]
 fn log2_midp_matches_method() {
     for x in [0.5, 0.99, 1.0, 1.01, 2.0, 3.7, 1e10, 6e37] {
-        let via = try_log2_with::<{ LogfOptions::DEFAULT | LogfOptions::BACKEND | LogfOptions::CALLER | LogfOptions::LEGACY }>(x).unwrap();
+        let via = try_log2_with::<
+            {
+                LogfOptions::DEFAULT
+                    | LogfOptions::BACKEND
+                    | LogfOptions::CALLER
+                    | LogfOptions::LEGACY
+            },
+        >(x)
+        .unwrap();
         let scalar = f32x4::splat_t(archmage::ScalarToken, x);
         let via_method = scalar.log2_midp().to_array()[0];
         assert_eq!(via, via_method, "log2_midp({x})");
@@ -13,7 +21,12 @@ fn log2_midp_matches_method() {
 #[test]
 fn log2_lowp_matches_method() {
     for x in [0.5, 1.0, 2.0, 3.7, 1e10] {
-        let via = try_log2_with::<{ LogfOptions::LOWP | LogfOptions::BACKEND | LogfOptions::CALLER | LogfOptions::LEGACY }>(x).unwrap();
+        let via = try_log2_with::<
+            {
+                LogfOptions::LOWP | LogfOptions::BACKEND | LogfOptions::CALLER | LogfOptions::LEGACY
+            },
+        >(x)
+        .unwrap();
         let scalar = f32x4::splat_t(archmage::ScalarToken, x);
         let via_method = scalar.log2_lowp().to_array()[0];
         assert_eq!(via, via_method, "log2_lowp({x})");
@@ -63,7 +76,10 @@ use crate::simd::generic::f32x4;
 fn log1p_basics() {
     const CALLER: u32 = LogfOptions::DEFAULT | LogfOptions::CALLER;
     assert_eq!(try_log1p_with::<CALLER>(0.0), Ok(0.0));
-    assert_eq!(try_log1p_with::<CALLER>(1.0).unwrap() - core::f32::consts::LN_2, 0.0);
+    assert_eq!(
+        try_log1p_with::<CALLER>(1.0).unwrap() - core::f32::consts::LN_2,
+        0.0
+    );
     assert!((try_log1p_with::<CALLER>(-0.5).unwrap() + core::f32::consts::LN_2).abs() < 1e-6);
     // correction recovers what u = 1+x rounds away for tiny x
     for x in [1e-8f32, -1e-8, 1e-20, 2.5e-5, -0.4142] {
@@ -90,5 +106,8 @@ fn log1p_basics() {
         try_log1p_array_with::<CALLER, 1>([0.5]),
         Ok([0.5f32.ln_1p()])
     );
-    assert_eq!(try_log1p_runtime(1.0, LogfOptions::new()).unwrap(), core::f32::consts::LN_2);
+    assert_eq!(
+        try_log1p_runtime(1.0, LogfOptions::new()).unwrap(),
+        core::f32::consts::LN_2
+    );
 }

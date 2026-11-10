@@ -91,13 +91,11 @@ impl ExpfOptions {
     /// BitExact MIDP accepting every f32 input, checked.
     pub const PORTABLE_MIDP_FULL: Self = Self::new().with_domain(ExpfDomain::Full);
     /// Backend-dependent MIDP, bounded domain, checked.
-    pub const BACKEND_MIDP: Self =
-        Self::new().with_portability(ExpfPortability::BackendDependent);
+    pub const BACKEND_MIDP: Self = Self::new().with_portability(ExpfPortability::BackendDependent);
     /// BitExact MIDP, bounded domain, unchecked.
     pub const UNCHECKED_MIDP: Self = Self::new().with_validation(ExpfValidation::AssumeValid);
     /// BitExact LOWP, bounded domain, unchecked.
-    pub const UNCHECKED_LOWP: Self =
-        Self::UNCHECKED_MIDP.with_precision(ExpfPrecision::Lowp);
+    pub const UNCHECKED_LOWP: Self = Self::UNCHECKED_MIDP.with_precision(ExpfPrecision::Lowp);
 
     /// Build a configuration.
     pub const fn new() -> Self {
@@ -115,19 +113,31 @@ impl ExpfOptions {
     }
     /// Select backend execution.
     pub const fn with_execution(self, v: ExpfExecution) -> Self {
-        Self { execution: v, ..self }
+        Self {
+            execution: v,
+            ..self
+        }
     }
     /// Select portability.
     pub const fn with_portability(self, v: ExpfPortability) -> Self {
-        Self { portability: v, ..self }
+        Self {
+            portability: v,
+            ..self
+        }
     }
     /// Select precision.
     pub const fn with_precision(self, v: ExpfPrecision) -> Self {
-        Self { precision: v, ..self }
+        Self {
+            precision: v,
+            ..self
+        }
     }
     /// Select validation.
     pub const fn with_validation(self, v: ExpfValidation) -> Self {
-        Self { validation: v, ..self }
+        Self {
+            validation: v,
+            ..self
+        }
     }
 
     /// Encode as option bits for const-generic entry points.
@@ -139,10 +149,16 @@ impl ExpfOptions {
         if matches!(self.execution, ExpfExecution::Caller) {
             bits |= Self::CALLER;
         }
-        if matches!(self.precision, ExpfPrecision::Lowp | ExpfPrecision::LegacyLowp) {
+        if matches!(
+            self.precision,
+            ExpfPrecision::Lowp | ExpfPrecision::LegacyLowp
+        ) {
             bits |= Self::LOWP;
         }
-        if matches!(self.precision, ExpfPrecision::LegacyMidp | ExpfPrecision::LegacyLowp) {
+        if matches!(
+            self.precision,
+            ExpfPrecision::LegacyMidp | ExpfPrecision::LegacyLowp
+        ) {
             bits |= Self::LEGACY;
         }
         if matches!(self.portability, ExpfPortability::BackendDependent) {

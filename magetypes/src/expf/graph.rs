@@ -109,7 +109,13 @@ macro_rules! graph {
                     madd(p, xf, sp(1.0))
                 } else {
                     let (c6, c5, c4, c3, c2) = if OPTIONS & ExpfOptions::LEGACY != 0 {
-                        (0.000_154_47, 0.001_333_37, 0.009_618_055, 0.055_504_545, 0.240_226_46)
+                        (
+                            0.000_154_47,
+                            0.001_333_37,
+                            0.009_618_055,
+                            0.055_504_545,
+                            0.240_226_46,
+                        )
                     } else {
                         (
                             0.000_152_527_896_498_79,
@@ -183,7 +189,31 @@ macro_rules! graph {
     };
 }
 
-graph!(vector4, profile4, kernel4_with, f32x4, i32x4, F32x4Convert, 4);
-graph!(vector8, profile8, kernel8_with, f32x8, i32x8, F32x8Convert, 8);
+graph!(
+    vector4,
+    profile4,
+    kernel4_with,
+    f32x4,
+    i32x4,
+    F32x4Convert,
+    4
+);
+graph!(
+    vector8,
+    profile8,
+    kernel8_with,
+    f32x8,
+    i32x8,
+    F32x8Convert,
+    8
+);
 #[cfg(feature = "w512")]
-graph!(vector16, profile16, kernel16_with, f32x16, i32x16, F32x16Convert, 16);
+graph!(
+    vector16,
+    profile16,
+    kernel16_with,
+    f32x16,
+    i32x16,
+    F32x16Convert,
+    16
+);

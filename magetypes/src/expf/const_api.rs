@@ -74,8 +74,8 @@ pub fn try_exp_with_token<const OPTIONS: u32, T: crate::simd::backends::F32x4Con
 pub fn try_exp2_array_with<const OPTIONS: u32, const N: usize>(
     inputs: [f32; N],
 ) -> Result<[f32; N], ExpfError> {
-    use archmage::ScalarToken;
     use crate::simd::generic::{f32x4, f32x8};
+    use archmage::ScalarToken;
     const {
         assert!(ExpfOptions::valid(OPTIONS), "invalid expf const options");
     }
@@ -97,15 +97,13 @@ pub fn try_exp2_array_with<const OPTIONS: u32, const N: usize>(
         let mut input = [0.0; 4];
         input.copy_from_slice(&inputs);
         output.copy_from_slice(
-            &run4::<_, OPTIONS>(ScalarToken, f32x4::from_array_t(ScalarToken, input))?
-                .to_array(),
+            &run4::<_, OPTIONS>(ScalarToken, f32x4::from_array_t(ScalarToken, input))?.to_array(),
         );
     } else if N == 8 {
         let mut input = [0.0; 8];
         input.copy_from_slice(&inputs);
         output.copy_from_slice(
-            &run8::<_, OPTIONS>(ScalarToken, f32x8::from_array_t(ScalarToken, input))?
-                .to_array(),
+            &run8::<_, OPTIONS>(ScalarToken, f32x8::from_array_t(ScalarToken, input))?.to_array(),
         );
     } else {
         #[cfg(feature = "w512")]
@@ -219,21 +217,23 @@ fn token_array<T: archmage::SimdToken, const N: usize>(
 macro_rules! approximate {
     ($name:ident, $profile:ident, $v:ident, $bound:ident) => {
         #[inline(always)]
-        pub(crate) fn $name<T: crate::simd::backends::$bound, const LOWP: bool, const CHECKED: bool>(
+        pub(crate) fn $name<
+            T: crate::simd::backends::$bound,
+            const LOWP: bool,
+            const CHECKED: bool,
+        >(
             token: T,
             input: crate::simd::generic::$v<T>,
         ) -> crate::simd::generic::$v<T> {
             let result = if LOWP {
-                graph::$profile::<
-                    T,
-                    { ExpfOptions::ASSUME | ExpfOptions::LOWP }>(token, input)
+                graph::$profile::<T, { ExpfOptions::ASSUME | ExpfOptions::LOWP }>(token, input)
             } else if CHECKED {
-                graph::$profile::<T, { ExpfOptions::ASSUME | ExpfOptions::BACKEND | ExpfOptions::LEGACY }>(token, input)
-            } else {
                 graph::$profile::<
                     T,
-                    { ExpfOptions::ASSUME | graph::CLAMP },
+                    { ExpfOptions::ASSUME | ExpfOptions::BACKEND | ExpfOptions::LEGACY },
                 >(token, input)
+            } else {
+                graph::$profile::<T, { ExpfOptions::ASSUME | graph::CLAMP }>(token, input)
             };
             match result {
                 Ok(value) => value,

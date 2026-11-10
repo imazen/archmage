@@ -16,8 +16,8 @@ mod options;
 #[cfg(test)]
 mod tests;
 pub use const_api::{
-    try_exp2_array_with, try_exp2_runtime, try_exp2_with, try_exp2_with_token, try_exp_array_with,
-    try_exp_runtime, try_exp_with, try_exp_with_token,
+    try_exp_array_with, try_exp_runtime, try_exp_with, try_exp_with_token, try_exp2_array_with,
+    try_exp2_runtime, try_exp2_with, try_exp2_with_token,
 };
 pub use options::{
     ExpfDomain, ExpfExecution, ExpfOptions, ExpfPortability, ExpfPrecision, ExpfValidation,

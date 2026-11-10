@@ -3,7 +3,15 @@ use super::*;
 #[test]
 fn exp2_midp_matches_method() {
     for x in [-88.0, -1.5, -0.5, 0.0, 0.5, 1.0, 8.25, 64.0, 126.9, 127.9] {
-        let via = try_exp2_with::<{ ExpfOptions::DEFAULT | ExpfOptions::BACKEND | ExpfOptions::CALLER | ExpfOptions::LEGACY }>(x).unwrap();
+        let via = try_exp2_with::<
+            {
+                ExpfOptions::DEFAULT
+                    | ExpfOptions::BACKEND
+                    | ExpfOptions::CALLER
+                    | ExpfOptions::LEGACY
+            },
+        >(x)
+        .unwrap();
         let scalar = f32x4::splat_t(archmage::ScalarToken, x);
         let via_method = scalar.exp2_midp().to_array()[0];
         assert_eq!(via, via_method, "exp2_midp({x})");
@@ -13,7 +21,12 @@ fn exp2_midp_matches_method() {
 #[test]
 fn exp2_lowp_matches_method() {
     for x in [-88.0, -1.5, 0.0, 0.5, 1.0, 64.0, 126.9] {
-        let via = try_exp2_with::<{ ExpfOptions::LOWP | ExpfOptions::BACKEND | ExpfOptions::CALLER | ExpfOptions::LEGACY }>(x).unwrap();
+        let via = try_exp2_with::<
+            {
+                ExpfOptions::LOWP | ExpfOptions::BACKEND | ExpfOptions::CALLER | ExpfOptions::LEGACY
+            },
+        >(x)
+        .unwrap();
         let scalar = f32x4::splat_t(archmage::ScalarToken, x);
         let via_method = scalar.exp2_lowp().to_array()[0];
         assert_eq!(via, via_method, "exp2_lowp({x})");
@@ -48,7 +61,10 @@ fn full_domain_specials() {
 fn edges_and_alias() {
     assert_eq!(try_exp2(-200.0), Ok(0.0));
     assert_eq!(try_exp2(200.0), Ok(f32::INFINITY));
-    assert_eq!(try_exp(1.0), try_exp2_with::<{ ExpfOptions::DEFAULT }>(core::f32::consts::LOG2_E));
+    assert_eq!(
+        try_exp(1.0),
+        try_exp2_with::<{ ExpfOptions::DEFAULT }>(core::f32::consts::LOG2_E)
+    );
 }
 
 #[test]

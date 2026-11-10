@@ -89,13 +89,11 @@ impl LogfOptions {
     /// BitExact MIDP with IEEE specials, checked.
     pub const PORTABLE_MIDP_SPECIALS: Self = Self::new().with_domain(LogfDomain::Specials);
     /// Backend-dependent MIDP, positive domain, checked.
-    pub const BACKEND_MIDP: Self =
-        Self::new().with_portability(LogfPortability::BackendDependent);
+    pub const BACKEND_MIDP: Self = Self::new().with_portability(LogfPortability::BackendDependent);
     /// BitExact MIDP, positive domain, unchecked.
     pub const UNCHECKED_MIDP: Self = Self::new().with_validation(LogfValidation::AssumeValid);
     /// BitExact LOWP, positive domain, unchecked.
-    pub const UNCHECKED_LOWP: Self =
-        Self::UNCHECKED_MIDP.with_precision(LogfPrecision::Lowp);
+    pub const UNCHECKED_LOWP: Self = Self::UNCHECKED_MIDP.with_precision(LogfPrecision::Lowp);
 
     /// Build a configuration.
     pub const fn new() -> Self {
@@ -113,19 +111,31 @@ impl LogfOptions {
     }
     /// Select backend execution.
     pub const fn with_execution(self, v: LogfExecution) -> Self {
-        Self { execution: v, ..self }
+        Self {
+            execution: v,
+            ..self
+        }
     }
     /// Select portability.
     pub const fn with_portability(self, v: LogfPortability) -> Self {
-        Self { portability: v, ..self }
+        Self {
+            portability: v,
+            ..self
+        }
     }
     /// Select precision.
     pub const fn with_precision(self, v: LogfPrecision) -> Self {
-        Self { precision: v, ..self }
+        Self {
+            precision: v,
+            ..self
+        }
     }
     /// Select validation.
     pub const fn with_validation(self, v: LogfValidation) -> Self {
-        Self { validation: v, ..self }
+        Self {
+            validation: v,
+            ..self
+        }
     }
 
     /// Encode as option bits for const-generic entry points.
@@ -137,10 +147,16 @@ impl LogfOptions {
         if matches!(self.execution, LogfExecution::Caller) {
             bits |= Self::CALLER;
         }
-        if matches!(self.precision, LogfPrecision::Lowp | LogfPrecision::LegacyLowp) {
+        if matches!(
+            self.precision,
+            LogfPrecision::Lowp | LogfPrecision::LegacyLowp
+        ) {
             bits |= Self::LOWP;
         }
-        if matches!(self.precision, LogfPrecision::LegacyMidp | LogfPrecision::LegacyLowp) {
+        if matches!(
+            self.precision,
+            LogfPrecision::LegacyMidp | LogfPrecision::LegacyLowp
+        ) {
             bits |= Self::LEGACY;
         }
         if matches!(self.portability, LogfPortability::BackendDependent) {

@@ -1,7 +1,6 @@
 //! Const-configured log2 graphs, instantiated per width and arithmetic provider.
 use super::{LogfError, LogfErrorKind, LogfOptions};
 
-
 #[cfg(debug_assertions)]
 const KERNEL_FLAGS: u32 =
     LogfOptions::LOWP | LogfOptions::ASSUME | LogfOptions::SPECIALS | LogfOptions::LEGACY;
@@ -143,7 +142,31 @@ macro_rules! graph {
     };
 }
 
-graph!(vector4, profile4, kernel4_with, f32x4, i32x4, F32x4Convert, 4);
-graph!(vector8, profile8, kernel8_with, f32x8, i32x8, F32x8Convert, 8);
+graph!(
+    vector4,
+    profile4,
+    kernel4_with,
+    f32x4,
+    i32x4,
+    F32x4Convert,
+    4
+);
+graph!(
+    vector8,
+    profile8,
+    kernel8_with,
+    f32x8,
+    i32x8,
+    F32x8Convert,
+    8
+);
 #[cfg(feature = "w512")]
-graph!(vector16, profile16, kernel16_with, f32x16, i32x16, F32x16Convert, 16);
+graph!(
+    vector16,
+    profile16,
+    kernel16_with,
+    f32x16,
+    i32x16,
+    F32x16Convert,
+    16
+);
