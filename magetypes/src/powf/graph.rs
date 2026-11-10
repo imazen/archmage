@@ -11,14 +11,39 @@ pub(super) const RELAXED: usize = 4;
 // option encodings: the existing infallible methods select them at compile time.
 pub(super) const CLAMP: u32 = 256;
 pub(super) const INPUT_EDGES: u32 = 512;
+// Dispatch and domain flags have already selected the provider and ZERO/GAMMA
+// parameters. Keeping them in the arithmetic instantiation duplicates identical
+// debug graphs for Caller/Automatic and portable/backend-dependent adapters.
+const KERNEL_FLAGS: u32 = PowfOptions::LOWP | PowfOptions::ASSUME | CLAMP | INPUT_EDGES;
 #[cfg(target_arch = "wasm32")]
 pub(super) const WASM_SOFTWARE: usize = 3;
 #[cfg(all(feature = "std", not(miri)))]
 pub(super) const STD: usize = 2;
 
+// Literal arms also support the MSRV: generic const expressions cannot mask
+// another const argument. The match folds before the release arithmetic graph.
+macro_rules! shared_kernel {
+    ($vector:ident, $t:ty, $arithmetic:ident, $zero:literal, $gamma:literal,
+     $options:ident, $token:ident, $input:ident, $exponent:ident) => {
+        match $options & KERNEL_FLAGS {
+            0 => $vector::<$t, $arithmetic, $zero, $gamma, 0>($token, $input, $exponent),
+            8 => $vector::<$t, $arithmetic, $zero, $gamma, 8>($token, $input, $exponent),
+            32 => $vector::<$t, $arithmetic, $zero, $gamma, 32>($token, $input, $exponent),
+            40 => $vector::<$t, $arithmetic, $zero, $gamma, 40>($token, $input, $exponent),
+            296 => $vector::<$t, $arithmetic, $zero, $gamma, 296>($token, $input, $exponent),
+            800 => $vector::<$t, $arithmetic, $zero, $gamma, 800>($token, $input, $exponent),
+            _ => unreachable!("private arithmetic flags are validated at the boundary"),
+        }
+    };
+}
+
 macro_rules! graph {
     ($core:ident, $vector:ident, $profile:ident, $entry:ident, $const_entry:ident, $float:ident, $int:ident, $bound:ident, $lanes:literal) => {
-        #[inline(always)]
+        // Debug callers share each instantiated graph rather than duplicating
+        // every Horner node through the const/runtime adapters. Release keeps
+        // the caller-visible graph and its measured feature-region inlining.
+        #[cfg_attr(debug_assertions, inline(never))]
+        #[cfg_attr(not(debug_assertions), inline(always))]
         fn $vector<
             T: crate::simd::backends::$bound,
             const ARITHMETIC: usize,
@@ -242,13 +267,21 @@ macro_rules! graph {
             exponent: f32,
         ) -> Result<crate::simd::generic::$float<T>, PowfError> {
             match OPTIONS & 3 {
-                0 => $vector::<T, ARITHMETIC, false, false, OPTIONS>(token, input, exponent),
-                1 => $vector::<T, ARITHMETIC, true, false, OPTIONS>(token, input, exponent),
+                0 => shared_kernel!(
+                    $vector, T, ARITHMETIC, false, false, OPTIONS, token, input, exponent
+                ),
+                1 => shared_kernel!(
+                    $vector, T, ARITHMETIC, true, false, OPTIONS, token, input, exponent
+                ),
                 2 => {
                     if OPTIONS & PowfOptions::POSITIVE != 0 {
-                        $vector::<T, ARITHMETIC, false, true, OPTIONS>(token, input, exponent)
+                        shared_kernel!(
+                            $vector, T, ARITHMETIC, false, true, OPTIONS, token, input, exponent
+                        )
                     } else {
-                        $vector::<T, ARITHMETIC, true, true, OPTIONS>(token, input, exponent)
+                        shared_kernel!(
+                            $vector, T, ARITHMETIC, true, true, OPTIONS, token, input, exponent
+                        )
                     }
                 }
                 _ => unreachable!("validated const domain"),
