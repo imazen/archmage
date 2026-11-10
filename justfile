@@ -1043,3 +1043,7 @@ sqrt-selection-validate:
 
 workflow-contract-check:
     python3 -m unittest xtask/check_ci_gate.py
+
+
+sqrt-token-miri:
+    cargo +$(tr -d '[:space:]' < xtask/miri-nightly.txt) miri test -p magetypes --no-default-features --features "w512 archmage/testable_dispatch" --test sqrt_token_testing

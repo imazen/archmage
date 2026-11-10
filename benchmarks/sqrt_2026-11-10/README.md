@@ -234,3 +234,12 @@ These are complete wrapper runs, not per-operation memory measurements.
 Source snapshots, all attempt logs (including setup failures), assembly and
 manifest are retained in `sqrt-study-2026-11-10-no-std-wasm` beneath the same
 local and mirrored output roots as the preceding evidence archives.
+
+The first follow-up CI run exposed a Miri orchestration error: its manually
+enumerated baseline targets included the new feature-gated token test without
+those features. The runner now executes that test separately with no_std and
+token testing; all existing assertions and baseline tests remain. The focused
+Miri invocation passes (0.84 seconds interpreted); its build/check wrapper
+reports `run-heavy: done rc=0 5s | peak-RSS 0.36GiB | min-avail 40362MiB | peak-load 0.30`.
+The original failed CI log and repair evidence are retained in
+`sqrt-study-2026-11-10-no-std-wasm-miri` under the same output roots.
