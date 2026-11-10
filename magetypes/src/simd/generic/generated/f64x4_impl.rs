@@ -216,8 +216,10 @@ impl<T: F64x4Backend> f64x4<T> {
     /// Correctly rounded square root under round-to-nearest with gradual underflow.
     /// Non-NaN result bits, including signed zero, agree across backends.
     /// NaN payloads/signs and floating exception flags are not specified.
-    /// Native SIMD uses hardware sqrt; ScalarToken uses std sqrt when
-    /// enabled and the retained integer software fallback without std.
+    /// Native SIMD uses hardware sqrt. ScalarToken uses std when enabled;
+    /// without std it internally summons compile-time-proven SSE2, NEON
+    /// or WASM SIMD128 tokens, otherwise using integer software.
+    /// Token testing can disable those internal no_std selections.
     #[inline(always)]
     pub fn sqrt(self) -> Self {
         Self(T::sqrt(self.1, self.0), self.1)

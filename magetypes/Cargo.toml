@@ -123,3 +123,8 @@ all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 # Build docs for multiple targets to show all platform-specific types
 targets = ["x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu", "wasm32-unknown-unknown"]
+
+# Caller-visible opt-in: these assertions deliberately require token disabling.
+[[test]]
+name = "sqrt_token_testing"
+required-features = ["archmage/testable_dispatch"]
