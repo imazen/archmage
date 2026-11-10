@@ -14,7 +14,7 @@
 #![warn(missing_docs)]
 #[cfg(test)]
 extern crate alloc;
-#[cfg(feature = "std")]
+#[cfg(any(feature = "std", test))]
 extern crate std;
 pub mod expf;
 pub mod logf;

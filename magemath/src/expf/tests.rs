@@ -48,5 +48,3 @@ fn array_widths_and_runtime() {
         try_exp2_with::<{ ExpfOptions::LOWP }>(1.0)
     );
 }
-
-use magetypes::simd::generic::f32x4;

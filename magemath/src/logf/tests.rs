@@ -37,8 +37,6 @@ fn aliases_and_runtime() {
     assert_eq!(try_log2_runtime(8.0, LogfOptions::new()), Ok(3.0));
 }
 
-use magetypes::simd::generic::f32x4;
-
 #[test]
 fn log1p_basics() {
     const CALLER: u32 = LogfOptions::DEFAULT | LogfOptions::CALLER;
