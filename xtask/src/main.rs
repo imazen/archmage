@@ -1068,21 +1068,23 @@ fn run_miri() -> Result<()> {
     let started = std::time::Instant::now();
     // Cargo cannot mix --doc with explicit targets, so the doctests that the
     // former all-targets invocation covered get their own run.
-    let doc = Command::new("cargo")
-        .args([
-            &toolchain,
-            "miri",
-            "test",
-            "-p",
-            "magetypes",
-            "--features",
-            "avx512",
-            "--doc",
-        ])
-        .status()
-        .context("Failed to run Miri doctests")?;
-    if !doc.success() {
-        bail!("Miri doctests failed; see diagnostics above");
+    for (package, features) in [("magetypes", "avx512"), ("magemath", "std avx512")] {
+        let doc = Command::new("cargo")
+            .args([
+                &toolchain,
+                "miri",
+                "test",
+                "-p",
+                package,
+                "--features",
+                features,
+                "--doc",
+            ])
+            .status()
+            .with_context(|| format!("Failed to run {package} Miri doctests"))?;
+        if !doc.success() {
+            bail!("{package} Miri doctests failed; see diagnostics above");
+        }
     }
     println!("  miri: doctests {:.0} s", started.elapsed().as_secs_f64());
     println!("Miri tests passed for native raw interop, the baseline suite, and the doctests");
