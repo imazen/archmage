@@ -1,5 +1,4 @@
 //! Exhaustive NaN-family classification, bounded to one f32 operand at a time.
-#![allow(deprecated)] // Deliberately validates the retained Magetypes compatibility implementation.
 #![forbid(unsafe_code)]
 #[cfg(any(
     target_arch = "x86_64",

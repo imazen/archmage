@@ -1,5 +1,4 @@
 //! Stdin numerical evaluator. Explicit contexts never silently fall back.
-#![allow(deprecated)] // Deliberately validates the retained Magetypes compatibility implementation.
 #![forbid(unsafe_code)]
 #[cfg(any(
     target_arch = "x86_64",
@@ -14,7 +13,7 @@ const FLAGS: u32 = PowfOptions::PORTABLE_HIGHP
     .bits();
 #[archmage::magetypes(v4x(cfg(avx512)), v4(cfg(avx512)), v3, neon, wasm128, scalar)]
 fn values<const N: usize>(token: Token, x: [f32; N], n: f32) -> [f32; N] {
-    use magetypes::simd::generic::{f32x4, f32x8};
+    use magetypes::simd::generic::f32x4;
     let mut out = [0.; N];
     if N == 1 {
         out[0] =

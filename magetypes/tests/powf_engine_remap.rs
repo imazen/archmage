@@ -69,7 +69,7 @@ fn check(token: Token) {
     width!(f32x16, 16);
 }
 #[test]
-fn configured_engine_matches_frozen_composition() {
+fn published_power_matches_frozen_composition() {
     check_scalar(archmage::ScalarToken);
     #[cfg(target_arch = "x86_64")]
     {

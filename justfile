@@ -969,7 +969,7 @@ magemath-check-wasm:
 
 # Deterministic MPFR log1p fixture, including Miri's approximate std math shim.
 magemath-miri-log1p:
-    cargo +nightly-2026-10-06 miri test -p magetypes --features avx512 --lib logf::tests::log1p_basics
+    cargo +nightly-2026-10-06 miri test -p magemath --features avx512 --lib logf::tests::log1p_basics
 
 magemath-compat-clippy:
     cargo clippy --locked --manifest-path benchmarks/powf_validation/Cargo.toml --all-features --all-targets -- -D warnings
@@ -981,3 +981,10 @@ magemath-legacy-remap-wasm:
 # Published method arithmetic stays in Magetypes; configured math belongs above it.
 check-published-math:
     python3 -B xtask/check_published_math.py
+
+# Verify the published implementation/API boundary and the remaining legacy calls.
+magemath-public-boundary:
+    python3 -B xtask/check_published_math.py
+    cargo test -p magetypes --features "std avx512" --test powf_engine_remap --test generic_transcendentals
+    cargo test -p magetypes --features "std avx512" --doc
+    cargo clippy -p magetypes -p magemath --features "std avx512" --all-targets -- -D warnings

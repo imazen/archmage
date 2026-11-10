@@ -1,6 +1,5 @@
 //! Shared scalar/vector/tail verifier. Cases are split by numerical family
 //! so debug WASM compilation does not materialize all 64 graphs in one crate.
-#![allow(deprecated)] // Intentional coverage of retained Magetypes compatibility APIs.
 #![allow(dead_code)]
 #[cfg(any(
     target_arch = "x86_64",
@@ -35,7 +34,6 @@ fn bounded_widths_and_tails(token: Token) {
             <Token as archmage::SimdToken>::NAME
         );
     }
-    use magetypes::simd::generic::{f32x4, f32x8};
     // Keep each graph in one test frame. The production API intentionally
     // forces inlining; duplicating it inside every verifier loop costs gigabytes
     // of WASM debug compiler memory without adding coverage.

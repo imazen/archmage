@@ -1,5 +1,4 @@
 //! Read `base_bits exponent_bits domain` rows; emit actual bounded powf results.
-#![allow(deprecated)] // Deliberately validates the retained Magetypes compatibility implementation.
 #![forbid(unsafe_code)]
 use magemath::powf::{PowfDomain, PowfExecution, PowfOptions, try_powf_runtime};
 use std::io::{self, BufRead};
