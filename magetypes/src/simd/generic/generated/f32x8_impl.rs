@@ -203,12 +203,22 @@ impl<T: F32x8Backend> f32x8<T> {
     // ====== Math ======
 
     /// Lane-wise minimum.
+    ///
+    /// NaN and signed-zero behavior follows the backend. NEON uses native
+    /// numeric min/max: a quiet NaN yields the other operand, while a
+    /// signaling NaN propagates. NaN payloads are unspecified. See
+    /// <https://github.com/imazen/archmage/blob/main/docs/site/content/magetypes/isa-quirks.md>.
     #[inline(always)]
     pub fn min(self, other: Self) -> Self {
         Self(T::min(self.1, self.0, other.0), self.1)
     }
 
     /// Lane-wise maximum.
+    ///
+    /// NaN and signed-zero behavior follows the backend. NEON uses native
+    /// numeric min/max: a quiet NaN yields the other operand, while a
+    /// signaling NaN propagates. NaN payloads are unspecified. See
+    /// <https://github.com/imazen/archmage/blob/main/docs/site/content/magetypes/isa-quirks.md>.
     #[inline(always)]
     pub fn max(self, other: Self) -> Self {
         Self(T::max(self.1, self.0, other.0), self.1)
@@ -355,6 +365,43 @@ impl<T: F32x8Backend> f32x8<T> {
     #[inline(always)]
     pub fn mul_sub(self, a: Self, b: Self) -> Self {
         self.mul_sub_relaxed(a, b)
+    }
+
+    /// Bounded, bit-consistent power in the default positive-normal domain.
+    /// See [`crate::powf`] for rejection, rounding and accuracy contracts.
+    #[inline(always)]
+    pub fn try_powf(self, exponent: f32) -> Result<Self, crate::powf::PowfError>
+    where
+        T: crate::simd::backends::F32x8Convert,
+    {
+        self.try_powf_with::<{ crate::powf::PowfOptions::DEFAULT }>(exponent)
+    }
+
+    /// Configurable power with integer const flags carried through the caller.
+    /// Build `PowfOptions` in const evaluation and supply `.bits()`;
+    /// see [`crate::powf`]. Any rejected lane rejects the whole vector.
+    #[inline(always)]
+    pub fn try_powf_with<const OPTIONS: u32>(
+        self,
+        exponent: f32,
+    ) -> Result<Self, crate::powf::PowfError>
+    where
+        T: crate::simd::backends::F32x8Convert,
+    {
+        crate::powf::const_api::run8::<T, OPTIONS>(self.1, self, exponent)
+    }
+
+    /// Configurable power with runtime portability, precision and validation.
+    /// Any rejected lane rejects the whole vector. Automatic selection
+    /// may enter a more capable backend for the complete power graph.
+    #[inline(always)]
+    pub fn try_powf_runtime(
+        self,
+        exponent: f32,
+        options: crate::powf::PowfOptions,
+    ) -> Result<Self, crate::powf::PowfError> {
+        crate::powf::try_powf_token_runtime(self.1, self.to_array(), exponent, options)
+            .map(|result| Self::from_array_t(self.1, result))
     }
 
     // ====== Comparisons ======

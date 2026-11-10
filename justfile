@@ -544,3 +544,411 @@ release-compat-recheck source output inventory:
 
 release-compat-audit directory source *options:
     python3 xtask/release_compat/audit.py {{directory}} --source {{source}} {{options}}
+
+# Bounded, fixed-fused powf: independent graph fixtures and required backend.
+powf-fixtures-check:
+    python3 -B xtask/powf_vectors.py --check
+
+powf-contract tier="scalar":
+    ARCHMAGE_POWF_TIER={{tier}} cargo test --release -p magetypes --features avx512 --lib powf::
+
+powf-payloads tier="scalar" stride="65537":
+    ARCHMAGE_POWF_TIER={{tier}} ARCHMAGE_NAN_STRIDE={{stride}} cargo test --release -p magetypes --features avx512 --lib powf::tests::nan_sign_payload
+
+# Build the frozen bounded-powf study (distribution target flags only).
+powf-study-build target="x86_64-unknown-linux-gnu":
+    cargo build --release --manifest-path benchmarks/powf_module_2026-11-07/Cargo.toml --target {{target}}
+
+# Strict zenbench admission; output must not already exist.
+powf-study result filter="":
+    POWF_RESULT="{{result}}" POWF_FILTER="{{filter}}" cargo run --release --manifest-path benchmarks/powf_module_2026-11-07/Cargo.toml
+
+powf-accuracy output:
+    cargo build --release --locked --manifest-path benchmarks/powf_validation/Cargo.toml --bin powf_contract_dump
+    python3 -B benchmarks/powf_module_2026-11-07/accuracy.py benchmarks/powf_validation/target/release/powf_contract_dump "{{output}}"
+
+powf-study-matrix directory native="v3":
+    python3 -B benchmarks/powf_module_2026-11-07/run_matrix.py benchmarks/powf_module_2026-11-07/target/release/archmage-powf-study "{{directory}}" --native {{native}}
+
+powf-study-analyze *files:
+    cargo run --release --manifest-path benchmarks/powf_module_2026-11-07/Cargo.toml --bin analyze -- {{files}}
+
+powf-contract-target target:
+    cargo test --release -p magetypes --target {{target}} --lib powf::
+
+powf-wasm-build:
+    RUSTFLAGS="-C target-feature=+simd128" CARGO_TARGET_DIR=target/powf-wasm-strict cargo test --release -p magetypes --target wasm32-wasip1 --lib powf:: --no-run
+    RUSTFLAGS="-C target-feature=+simd128,+relaxed-simd" CARGO_TARGET_DIR=target/powf-wasm-relaxed cargo test --release -p magetypes --target wasm32-wasip1 --lib powf:: --no-run
+
+powf-wasm-contract:
+    bash benchmarks/powf_module_2026-11-07/verify_wasm.sh
+
+powf-study-cold directory base candidate:
+    python3 -B benchmarks/powf_module_2026-11-07/cold_build.py "{{directory}}" --base {{base}} --candidate {{candidate}}
+
+powf-study-wasm-build directory mode:
+    python3 -B benchmarks/powf_module_2026-11-07/build_guest.py "{{directory}}" {{mode}}
+
+powf-study-wasm-host:
+    cargo build --release --manifest-path benchmarks/powf_module_2026-11-07/Cargo.toml --features wasm-host --bin wasm_host
+
+powf-study-lint:
+    cargo clippy --manifest-path benchmarks/powf_module_2026-11-07/Cargo.toml --all-targets --all-features -- -D warnings
+
+powf-study-wasm-verify wasm mode:
+    POWF_WASM="{{wasm}}" POWF_WASM_MODE={{mode}} POWF_VERIFY_ONLY=1 benchmarks/powf_module_2026-11-07/target/release/wasm_host
+
+powf-sde-contract sde cpu="-nhm" expected="software":
+    python3 -B benchmarks/powf_module_2026-11-07/sde_contract.py "{{sde}}" --cpu={{cpu}} --expected={{expected}}
+
+# Actual legacy/std controls, const options, and explicitly labeled diagnostics.
+powf-replacement-build:
+    cargo build --release --locked --manifest-path benchmarks/powf_module_2026-11-07/Cargo.toml --bin replacement --bin replacement_eval --bin replacement_analyze
+
+# Controlled benchmark-only rounding study; public fused defaults unchanged.
+powf-rounding-build:
+    cargo build --release --locked --manifest-path benchmarks/powf_module_2026-11-07/Cargo.toml --bin rounding_bench --bin rounding_eval --bin rounding_analyze --bin rounding_codegen --bin rounding_widths --lib
+
+powf-rounding-check:
+    cargo test --release --locked --manifest-path benchmarks/powf_module_2026-11-07/Cargo.toml --lib
+    POWF_VERIFY_ONLY=1 benchmarks/powf_module_2026-11-07/target/release/rounding_bench
+
+powf-policy-check:
+    cargo fmt -p magetypes --check
+    cargo test --release -p magetypes --all-features --lib powf::
+    cargo test --release -p magetypes --no-default-features --features w512 --lib powf::
+    cargo test --doc -p magetypes --all-features
+    cargo clippy -p magetypes --all-features --all-targets -- -D warnings
+
+powf-policy-build:
+    cargo build --release --locked --manifest-path benchmarks/powf_module_2026-11-07/Cargo.toml --bin policy_widths --bin policy_bench --bin policy_codegen --bin policy_analyze --bin highp_eval
+
+powf-policy-widths fixtures:
+    benchmarks/powf_module_2026-11-07/target/release/policy_widths scalar < "{{fixtures}}"
+    benchmarks/powf_module_2026-11-07/target/release/policy_widths native < "{{fixtures}}"
+
+powf-rounding-matrix directory *options:
+    python3 -B benchmarks/powf_module_2026-11-07/replacement_matrix.py benchmarks/powf_module_2026-11-07/target/release/rounding_bench "{{directory}}" --rounding {{options}}
+
+powf-rounding-accuracy inputs output *options:
+    python3 -B benchmarks/powf_module_2026-11-07/rounding_accuracy.py benchmarks/powf_module_2026-11-07/target/release/rounding_eval "{{inputs}}" "{{output}}" {{options}}
+
+powf-rounding-codegen:
+    cargo rustc --release --locked --manifest-path benchmarks/powf_module_2026-11-07/Cargo.toml --bin rounding_codegen -- --emit=asm
+
+powf-rounding-codegen-audit assembly output *options:
+    python3 -B benchmarks/powf_module_2026-11-07/rounding_codegen_audit.py "{{assembly}}" "{{output}}" {{options}}
+
+powf-rounding-matrix-analyze directory *runs:
+    python3 -B benchmarks/powf_module_2026-11-07/analyze_replacement_matrix.py benchmarks/powf_module_2026-11-07/target/release/rounding_analyze "{{directory}}" {{runs}} --require-cells 96
+
+powf-rounding-search-build source directory:
+    python3 -B benchmarks/powf_module_2026-11-07/error_search.py build "{{source}}" benchmarks/powf_module_2026-11-07/target/release/libarchmage_powf_study.a "{{directory}}" --rounding
+
+powf-rounding-search binary directory:
+    python3 -B benchmarks/powf_module_2026-11-07/error_search.py run "{{binary}}" "{{directory}}" --rounding
+
+powf-rounding-replay binary inputs reference output *options:
+    python3 -B benchmarks/powf_module_2026-11-07/rounding_replay.py "{{binary}}" "{{inputs}}" "{{reference}}" "{{output}}" {{options}}
+
+powf-rounding-widths fixtures:
+    benchmarks/powf_module_2026-11-07/target/release/rounding_widths scalar < "{{fixtures}}"
+    benchmarks/powf_module_2026-11-07/target/release/rounding_widths native < "{{fixtures}}"
+
+powf-rounding-widths-i686 fixtures:
+    cargo build --release --locked --manifest-path benchmarks/powf_module_2026-11-07/Cargo.toml --target i686-unknown-linux-gnu --bin rounding_widths
+    benchmarks/powf_module_2026-11-07/target/i686-unknown-linux-gnu/release/rounding_widths scalar < "{{fixtures}}"
+
+powf-rounding-wasm-build flags="+simd128":
+    RUSTFLAGS="-Ctarget-feature={{flags}}" cargo build --release --locked --manifest-path benchmarks/powf_module_2026-11-07/Cargo.toml --target wasm32-wasip1 --bin rounding_eval
+
+powf-rounding-wasm-codegen flags="+simd128":
+    RUSTFLAGS="-Ctarget-feature={{flags}}" cargo rustc --release --locked --manifest-path benchmarks/powf_module_2026-11-07/Cargo.toml --target wasm32-wasip1 --bin rounding_codegen -- --emit=asm
+
+powf-replacement-matrix directory *options:
+    python3 -B benchmarks/powf_module_2026-11-07/replacement_matrix.py benchmarks/powf_module_2026-11-07/target/release/replacement "{{directory}}" {{options}}
+
+powf-replacement-analyze *files:
+    benchmarks/powf_module_2026-11-07/target/release/replacement_analyze {{files}}
+
+powf-replacement-codegen:
+    cargo rustc --release --locked --manifest-path benchmarks/powf_module_2026-11-07/Cargo.toml --bin replacement_codegen -- --emit=asm
+
+powf-replacement-accuracy inputs output *options:
+    python3 -B benchmarks/powf_module_2026-11-07/replacement_accuracy.py benchmarks/powf_module_2026-11-07/target/release/replacement_eval "{{inputs}}" "{{output}}" {{options}}
+
+# Check a later build against preserved actual outputs without changing its oracle.
+powf-replacement-replay inputs before output:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    for tier in scalar native; do
+        test ! -e "{{output}}.$tier.actual"
+        benchmarks/powf_module_2026-11-07/target/release/replacement_eval "$tier" < "{{inputs}}" > "{{output}}.$tier.actual"
+        cmp "{{before}}.$tier.actual" "{{output}}.$tier.actual"
+    done
+
+powf-replacement-search-build source directory:
+    python3 -B benchmarks/powf_module_2026-11-07/error_search.py build "{{source}}" benchmarks/powf_module_2026-11-07/target/release/libarchmage_powf_study.a "{{directory}}"
+
+powf-replacement-search binary directory *options:
+    python3 -B benchmarks/powf_module_2026-11-07/error_search.py run "{{binary}}" "{{directory}}" {{options}}
+
+powf-replacement-wasm-build directory mode:
+    python3 -B benchmarks/powf_module_2026-11-07/build_guest.py "{{directory}}" {{mode}} replacement_guest
+
+powf-replacement-wasm-host:
+    cargo build --release --locked --manifest-path benchmarks/powf_module_2026-11-07/Cargo.toml --features wasm-host --bin replacement_wasm_host
+
+powf-replacement-matrix-analyze directory cells *runs:
+    python3 -B benchmarks/powf_module_2026-11-07/analyze_replacement_matrix.py benchmarks/powf_module_2026-11-07/target/release/replacement_analyze "{{directory}}" {{runs}} --require-cells {{cells}}
+
+powf-replacement-codegen-audit assembly output *options:
+    python3 -B benchmarks/powf_module_2026-11-07/codegen_audit.py "{{assembly}}" "{{output}}" {{options}}
+
+wasmtime-ci-installer-check:
+    bash -n xtask/install-wasmtime-ci.sh
+    bash -n xtask/install-semver-ci.sh
+    python3 -B xtask/test_wasmtime_installer.py
+
+powf-policy-codegen:
+    cargo rustc --release --locked --manifest-path benchmarks/powf_module_2026-11-07/Cargo.toml --bin policy_codegen -- --emit=asm
+
+powf-policy-matrix directory *options:
+    python3 -B benchmarks/powf_module_2026-11-07/replacement_matrix.py benchmarks/powf_module_2026-11-07/target/release/policy_bench "{{directory}}" --policies {{options}}
+
+powf-policy-matrix-analyze directory *runs:
+    python3 -B benchmarks/powf_module_2026-11-07/analyze_replacement_matrix.py benchmarks/powf_module_2026-11-07/target/release/policy_analyze "{{directory}}" {{runs}} --require-cells 56
+
+powf-policy-codegen-audit assembly output *options:
+    python3 -B benchmarks/powf_module_2026-11-07/policy_codegen_audit.py "{{assembly}}" "{{output}}" {{options}}
+
+powf-highp-accuracy fixtures output *options:
+    python3 -B benchmarks/powf_module_2026-11-07/highp_accuracy.py benchmarks/powf_module_2026-11-07/target/release/highp_eval "{{fixtures}}" "{{output}}" {{options}}
+
+powf-policy-cross directory fixtures sde wasm_runner="wasmtime":
+    bash benchmarks/powf_module_2026-11-07/policy_cross.sh "{{directory}}" "{{fixtures}}" "{{sde}}" "{{wasm_runner}}"
+
+powf-policy-avx512-build:
+    cargo build --release --locked --manifest-path benchmarks/powf_module_2026-11-07/Cargo.toml --features avx512 --bin policy_widths
+
+powf-policy-avx512-check fixtures sde:
+    {{sde}} -icx -- benchmarks/powf_module_2026-11-07/target/release/policy_widths v4 < "{{fixtures}}"
+    {{sde}} -icx -- benchmarks/powf_module_2026-11-07/target/release/policy_widths v4x < "{{fixtures}}"
+
+powf-policy-miri-highp:
+    cargo +$(cat xtask/miri-nightly.txt) miri test -p magetypes --features avx512 --lib powf::tests::std_highp_full_domain_and_restricted_masks
+
+powf-highp-cross directory fixtures sde wasm_runner="wasmtime":
+    bash benchmarks/powf_module_2026-11-07/highp_cross.sh "{{directory}}" "{{fixtures}}" "{{sde}}" "{{wasm_runner}}"
+
+# Preserve default linker/engine stack limits while exercising debug policy fanout.
+powf-policy-debug-wasm:
+    cargo test -p magetypes --features 'std avx512' --target wasm32-wasip1
+
+powf-policy-codegen-identity before after output:
+    python3 -B benchmarks/powf_module_2026-11-07/policy_identity.py "{{before}}" "{{after}}" "{{output}}"
+
+powf-providers-build:
+    cargo build --release --locked --manifest-path benchmarks/powf_module_2026-11-07/Cargo.toml --bin providers_bench --bin providers_eval --bin providers_analyze
+
+powf-providers-matrix directory *options:
+    python3 -B benchmarks/powf_module_2026-11-07/replacement_matrix.py benchmarks/powf_module_2026-11-07/target/release/providers_bench "{{directory}}" --providers {{options}}
+
+powf-providers-analyze directory *runs:
+    python3 -B benchmarks/powf_module_2026-11-07/analyze_replacement_matrix.py benchmarks/powf_module_2026-11-07/target/release/providers_analyze "{{directory}}" {{runs}} --require-cells 56
+
+powf-providers-accuracy fixtures output tier *options:
+    python3 -B benchmarks/powf_module_2026-11-07/providers_accuracy.py benchmarks/powf_module_2026-11-07/target/release/providers_eval "{{fixtures}}" "{{output}}" --tier {{tier}} {{options}}
+
+powf-providers-compare output *actuals:
+    python3 -B benchmarks/powf_module_2026-11-07/providers_compare.py "{{output}}" {{actuals}}
+
+powf-providers-trace trace output:
+    python3 -B benchmarks/powf_module_2026-11-07/providers_trace.py "{{trace}}" "{{output}}"
+
+powf-external-build:
+    cargo +nightly-2026-10-06 build --release --locked --manifest-path benchmarks/powf_providers_2026-11-09/Cargo.toml
+
+powf-external-native-build output:
+    c++ -std=c++17 -O3 -Wall -Wextra -Werror -fno-fast-math -ffp-contract=off -pthread benchmarks/powf_providers_2026-11-09/native_worker.cpp -o "{{output}}" $(if test "$(uname -s)" = Linux; then echo -ldl; fi)
+
+powf-providers-cross directory fixtures sde wasm_runner="wasmtime":
+    bash benchmarks/powf_module_2026-11-07/providers_cross.sh "{{directory}}" "{{fixtures}}" "{{sde}}" "{{wasm_runner}}"
+
+powf-external-discover rust native output *options:
+    python3 -B benchmarks/powf_providers_2026-11-09/external.py discover "{{rust}}" "{{native}}" "{{output}}" {{options}}
+
+powf-external-accuracy manifest fixtures directory *options:
+    python3 -B benchmarks/powf_providers_2026-11-09/accuracy.py "{{manifest}}" "{{fixtures}}" "{{directory}}" {{options}}
+
+powf-external-traces manifest directory:
+    python3 -B benchmarks/powf_providers_2026-11-09/traces.py "{{manifest}}" "{{directory}}"
+
+powf-external-matrix manifest directory *options:
+    python3 -B benchmarks/powf_providers_2026-11-09/external.py run benchmarks/powf_providers_2026-11-09/target/release/external_providers_bench "{{manifest}}" "{{directory}}" {{options}}
+
+powf-external-verify directory fixtures tier="baseline":
+    bash benchmarks/powf_providers_2026-11-09/verify.sh "{{directory}}" "{{fixtures}}" "{{tier}}"
+
+powf-external-format:
+    cargo +nightly-2026-10-06 fmt --manifest-path benchmarks/powf_providers_2026-11-09/Cargo.toml
+
+powf-external-analyze *runs:
+    cargo +nightly-2026-10-06 run --release --locked --manifest-path benchmarks/powf_providers_2026-11-09/Cargo.toml --bin external_providers_analyze -- {{runs}}
+
+powf-external-inventory directory *runs:
+    python3 -B benchmarks/powf_providers_2026-11-09/inventory.py "{{directory}}" {{runs}}
+
+powf-policy-cold-build base patched directory toolchain:
+    python3 -B benchmarks/powf_providers_2026-11-09/cold_build.py "{{base}}" "{{patched}}" "{{directory}}" --toolchain "{{toolchain}}"
+
+powf-core-math-prepare crate directory:
+    python3 -B benchmarks/powf_providers_2026-11-09/core_math_prepare.py "{{crate}}" "{{directory}}"
+
+powf-glibc-history repository directory:
+    python3 -B benchmarks/powf_providers_2026-11-09/glibc_history.py "{{repository}}" "{{directory}}"
+
+powf-core-math-manifest rust native output:
+    python3 -B benchmarks/powf_providers_2026-11-09/core_math_manifest.py "{{rust}}" "{{native}}" "{{output}}"
+
+powf-core-worst crate directory *options:
+    python3 -B benchmarks/powf_providers_2026-11-09/core_worst.py "{{crate}}" "{{directory}}" {{options}}
+
+powf-core-emulation manifest fixtures directory:
+    python3 -B benchmarks/powf_providers_2026-11-09/core_emulation.py "{{manifest}}" "{{fixtures}}" "{{directory}}"
+
+powf-glibc-binding output:
+    cc -std=c11 -O2 -Wall -Wextra -Werror benchmarks/powf_providers_2026-11-09/glibc_binding.c -ldl -o "{{output}}"
+
+powf-external-helpers native directory:
+    python3 -B benchmarks/powf_providers_2026-11-09/verify_helpers.py "{{native}}" "{{directory}}"
+
+powf-core-trace trace *options:
+    python3 -B benchmarks/powf_providers_2026-11-09/core_trace.py "{{trace}}" {{options}}
+
+powf-provider-artifacts mode directory manifest:
+    python3 -B benchmarks/powf_providers_2026-11-09/artifact_manifest.py {{mode}} "{{directory}}" "{{manifest}}"
+
+powf-arm-c-prepare repository directory *options:
+    python3 -B benchmarks/powf_providers_2026-11-09/arm_powf_prepare.py "{{repository}}" "{{directory}}" {{options}}
+
+powf-arm-c-manifest rust native build output *options:
+    python3 -B benchmarks/powf_providers_2026-11-09/arm_c_manifest.py "{{rust}}" "{{native}}" "{{build}}" "{{output}}" {{options}}
+
+powf-arm-c-flags manifest fixtures directory:
+    python3 -B benchmarks/powf_providers_2026-11-09/arm_c_flags.py "{{manifest}}" "{{fixtures}}" "{{directory}}"
+
+powf-arm-data build output:
+    python3 -B benchmarks/powf_providers_2026-11-09/arm_data.py "{{build}}" "{{output}}"
+
+powf-arm-port-manifest c_manifest rust output *options:
+    python3 -B benchmarks/powf_providers_2026-11-09/arm_port_manifest.py "{{c_manifest}}" "{{rust}}" "{{output}}" {{options}}
+
+powf-arm-port-asm function *options:
+    cargo +nightly-2026-10-06 asm --manifest-path benchmarks/powf_providers_2026-11-09/Cargo.toml --bin arm_codegen --locked --no-color --asm {{options}} "{{function}}"
+
+powf-arm-profile manifest directory *methods:
+    python3 -B benchmarks/powf_providers_2026-11-09/arm_profile.py "{{manifest}}" "{{directory}}" {{methods}}
+
+powf-arm-frozen-asm binary function:
+    cargo +nightly-2026-10-06 asm --file "{{binary}}" --disasm --no-color "{{function}}"
+
+powf-arm-contexts reference contexts directory:
+    python3 -B benchmarks/powf_providers_2026-11-09/arm_context_manifest.py "{{reference}}" "{{contexts}}" "{{directory}}"
+
+powf-arm-eval-test:
+    cargo +nightly-2026-10-06 test --release --locked --manifest-path benchmarks/powf_providers_2026-11-09/Cargo.toml --bin arm_eval
+
+# Canonical HIGHP graph oracle and physical/cross evaluator.
+powf-highp-oracle *options:
+    python3 -B xtask/highp_powf_vectors.py {{options}}
+
+powf-highp-eval-build:
+    cargo build --release --locked --manifest-path benchmarks/powf_validation/Cargo.toml --bin powf_highp_eval
+
+powf-highp-test:
+    cargo test -p magetypes --test powf_highp
+    cargo test -p magetypes --no-default-features --test powf_highp
+
+powf-highp-verify expected directory command *options:
+    python3 -B benchmarks/powf_providers_2026-11-09/highp_verify.py "{{expected}}" "{{directory}}" --command '{{command}}' {{options}}
+
+powf-highp-manifest worker output source:
+    python3 -B benchmarks/powf_providers_2026-11-09/highp_manifest.py "{{worker}}" "{{output}}" --source "{{source}}"
+
+powf-canonical-highp-cross directory expected wasmtime:
+    bash benchmarks/powf_providers_2026-11-09/highp_cross.sh "{{directory}}" "{{expected}}" "{{wasmtime}}"
+
+powf-canonical-highp-fusion-modes directory expected modules wasmtime:
+    bash benchmarks/powf_providers_2026-11-09/highp_fusion_modes.sh "{{directory}}" "{{expected}}" "{{modules}}" "{{wasmtime}}"
+
+powf-canonical-highp-fusion-probe directory wasmtime:
+    bash benchmarks/powf_providers_2026-11-09/highp_fusion_probe.sh "{{directory}}" "{{wasmtime}}"
+
+powf-canonical-highp-nan-build:
+    cargo build --release --locked --manifest-path benchmarks/powf_validation/Cargo.toml --bin powf_highp_nan_scan
+
+powf-canonical-highp-nan-scan binary context:
+    "{{binary}}" "{{context}}"
+
+powf-canonical-highp-bars directory output:
+    python3 -B benchmarks/powf_providers_2026-11-09/highp_bars.py "{{directory}}" "{{output}}"
+
+# Bounded replacement matrix with token-preserving tails and literal flags.
+powf-midlow-build:
+    cargo build --release --locked --manifest-path benchmarks/powf_module_2026-11-07/Cargo.toml --features avx512 --bin midlow_bench
+
+powf-midlow-verify binary:
+    MIDLOW_VERIFY=1 {{binary}}
+
+powf-midlow-matrix binary directory *options:
+    python3 -B benchmarks/powf_module_2026-11-07/midlow_matrix.py "{{binary}}" "{{directory}}" {{options}}
+
+powf-midlow-analyze binary *files:
+    {{binary}} {{files}}
+
+powf-midlow-cross directory:
+    bash benchmarks/powf_module_2026-11-07/midlow_cross.sh "{{directory}}"
+
+powf-midlow-emulated directory:
+    bash benchmarks/powf_module_2026-11-07/midlow_emulated.sh "{{directory}}"
+
+powf-midlow-codegen binary directory:
+    python3 -B benchmarks/powf_module_2026-11-07/midlow_codegen.py "{{binary}}" "{{directory}}"
+
+powf-midlow-bars directory output:
+    python3 -B benchmarks/powf_module_2026-11-07/midlow_bars.py "{{directory}}" "{{output}}"
+
+powf-midlow-assembly-compare before after output *options:
+    python3 -B benchmarks/powf_module_2026-11-07/midlow_assembly_compare.py "{{before}}" "{{after}}" "{{output}}" {{options}}
+
+powf-remap-probes:
+    cargo rustc --release --locked --manifest-path benchmarks/powf_module_2026-11-07/Cargo.toml --features avx512 --bin remap_codegen -- --emit=asm
+
+powf-remap-codegen assembly output *options:
+    python3 -B benchmarks/powf_module_2026-11-07/remap_codegen_audit.py "{{assembly}}" "{{output}}" {{options}}
+
+# Full numerical replay is explicit; ordinary cargo test retains spot checks.
+powf-test-exhaustive:
+    cargo test -p magetypes --features _exhaustive-tests,avx512 --lib powf::
+    cargo test -p magetypes --features _exhaustive-tests,avx512 --test powf_tails_portable_midp --test powf_tails_portable_lowp --test powf_tails_backend_midp --test powf_tails_backend_lowp
+
+# Focused ordinary-test tier; no test-name filter leaks into integration tests.
+powf-test-spot:
+    cargo test -p magetypes --lib powf::
+    cargo test -p magetypes --test powf_tails_portable_midp --test powf_tails_portable_lowp --test powf_tails_backend_midp --test powf_tails_backend_lowp
+
+# Directed before/after exceptional-value ledger; no timing loop.
+powf-legacy-edge-variance:
+    cargo run --release --locked --manifest-path benchmarks/powf_validation/Cargo.toml --bin legacy_edge_variance
+
+# Machine-facing powf validators are deliberately outside the examples/workspace.
+powf-validation-build:
+    cargo build --release --locked --manifest-path benchmarks/powf_validation/Cargo.toml --all-features --bins
+
+powf-tutorial:
+    cargo run -p magetypes --example bounded_powf
+
+powf-validation-check:
+    cargo clippy --locked --manifest-path benchmarks/powf_validation/Cargo.toml --all-features --all-targets -- -D warnings
+    cargo clippy --locked --manifest-path benchmarks/powf_validation/Cargo.toml --no-default-features --features w512 --all-targets -- -D warnings

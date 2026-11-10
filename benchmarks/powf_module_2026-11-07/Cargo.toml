@@ -1,0 +1,70 @@
+[package]
+name = "archmage-powf-study"
+version = "0.0.0"
+edition = "2024"
+publish = false
+build = "build.rs"
+default-run = "archmage-powf-study"
+
+[workspace]
+
+[features]
+default = ["std"]
+std = ["archmage/std", "magetypes/std"]
+wasm-guest = []
+wasm-host = ["zenbench/wasm"]
+avx512 = ["archmage/avx512", "magetypes/avx512"]
+
+[dependencies]
+archmage = { path = "../..", default-features = false, features = ["macros"] }
+magetypes = { path = "../../magetypes", default-features = false, features = ["w512"] }
+serde_json = "1.0.151"
+# Explicit Rust provider comparison; preserve the frozen source version.
+libm = "=0.2.16"
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+zenbench = "0.1.11"
+
+[profile.release]
+codegen-units = 1
+lto = "thin"
+
+[[bin]]
+name = "powf_guest"
+path = "src/bin/powf_guest.rs"
+required-features = ["wasm-guest"]
+
+[[bin]]
+name = "wasm_host"
+path = "src/bin/wasm_host.rs"
+required-features = ["wasm-host"]
+
+[[bin]]
+name = "replacement"
+path = "src/bin/replacement.rs"
+
+[[bin]]
+name = "replacement_codegen"
+path = "src/bin/replacement_codegen.rs"
+
+[lib]
+path = "src/lib.rs"
+crate-type = ["rlib", "staticlib"]
+
+[[bin]]
+name = "replacement_eval"
+path = "src/bin/replacement_eval.rs"
+
+[[bin]]
+name = "rounding_eval"
+path = "src/bin/rounding_eval.rs"
+
+[[bin]]
+name = "replacement_guest"
+path = "src/bin/replacement_guest.rs"
+required-features = ["wasm-guest"]
+
+[[bin]]
+name = "replacement_wasm_host"
+path = "src/bin/replacement_wasm_host.rs"
+required-features = ["wasm-host"]

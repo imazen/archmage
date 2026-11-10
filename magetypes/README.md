@@ -107,6 +107,9 @@ chunks and a tail. You need no aligned allocator and no padding.
   [gather and scatter](https://imazen.github.io/archmage/magetypes/memory/gather-scatter/)
   on `u32x16`, `i32x16` and `f32x16`.
 
+The [bounded-power example](examples/bounded_powf.rs) teaches checked scalar and
+array calls. Domain and portability details are in the [powf contract](../docs/POWF.md).
+
 ## Naming: `<name>_<tier>`
 
 `incant!(scale_plane_impl(…), [v3, scalar])` calls `scale_plane_impl_v3(token, …)` or

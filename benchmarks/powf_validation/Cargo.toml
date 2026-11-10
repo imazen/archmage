@@ -1,0 +1,22 @@
+[package]
+name = "archmage-powf-validation"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.89"
+publish = false
+license = "MIT OR Apache-2.0"
+
+# Standalone so protocol drivers and exhaustive scans do not enter ordinary
+# workspace tests or the human-facing examples collection.
+[workspace]
+resolver = "3"
+
+[features]
+default = ["std", "w512"]
+std = ["archmage/std", "magetypes/std"]
+w512 = ["magetypes/w512"]
+avx512 = ["w512", "archmage/avx512", "magetypes/avx512"]
+
+[dependencies]
+archmage = { path = "../..", default-features = false }
+magetypes = { path = "../../magetypes", default-features = false }

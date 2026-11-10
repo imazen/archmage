@@ -163,8 +163,7 @@ pub(super) fn gen_transcendentals(
             /// Low-precision power function: `self^n`. Returns 0 for zero input.
             #[inline(always)]
             pub fn pow_lowp(self, n: f32) -> Self {{
-                let result = (self.log2_lowp() * splat_f32::<T>(self.1,n)).exp2_lowp();
-                // Zero masking: pow(0, n) = 0 for n > 0
+                let result = crate::powf::const_api::approximate_power!({float_type}, T, self, n, approximate{lanes}, true, false);
                 let is_zero = self.simd_eq(splat_f32::<T>(self.1,0.0));
                 Self::blend(is_zero, splat_f32::<T>(self.1,0.0), result)
             }}
@@ -411,13 +410,13 @@ pub(super) fn gen_transcendentals(
             /// [2^-8, 2^8], 64.8 ULP on [2^-20, 2^20] and 144.9 ULP on [2^-50, 2^50].
             #[inline(always)]
             pub fn pow_midp(self, n: f32) -> Self {{
-                (self.log2_midp() * splat_f32::<T>(self.1,n)).exp2_midp()
+                crate::powf::const_api::approximate_power!({float_type}, T, self, n, approximate{lanes}, false, true)
             }}
 
             /// Mid-precision power function, no edge case handling.
             #[inline(always)]
             pub fn pow_midp_unchecked(self, n: f32) -> Self {{
-                (self.log2_midp_unchecked() * splat_f32::<T>(self.1,n)).exp2_midp_unchecked()
+                crate::powf::const_api::approximate_power!({float_type}, T, self, n, approximate{lanes}, false, false)
             }}
 
             /// Same as [`pow_midp`](Self::pow_midp). Subnormal inputs are **not**
