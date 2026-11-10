@@ -147,8 +147,13 @@ fn gen_real_tokens(
         use crate::tokens::SimdToken;
     "});
 
-    // Atomic imports (for tokens with runtime detection)
-    if arch != "wasm" && !tokens.is_empty() {
+    // Atomic imports for native detection and WASM test-only suppression.
+    if !tokens.is_empty() {
+        if arch == "wasm" {
+            // With every WASM tier enabled and testing off, all reads/writes
+            // fold away. Partial-feature and testing builds still use Ordering.
+            out.push_str("#[allow(unused_imports)] // WASM compile-time-only builds need no atomic operations\n");
+        }
         out.push_str("use core::sync::atomic::{AtomicBool, AtomicU8, Ordering};\n");
     }
 
@@ -187,8 +192,9 @@ fn gen_real_tokens(
 
     out.push('\n');
 
-    // Generate cache and disabled statics (skip WASM - it's compile-time only)
-    if arch != "wasm" {
+    // WASM uses the disabled flag for testable_dispatch; ordinary builds
+    // retain compile-time-only selection and optimize these statics away.
+    if !tokens.is_empty() {
         out.push_str("// Cache statics: 0 = unknown, 1 = unavailable, 2 = available\n");
         for token in tokens {
             let cache_name = cache_var_name(&token.name);
@@ -298,10 +304,8 @@ fn gen_real_token_struct(
     // Extraction methods
     gen_extraction_methods(out, reg, token);
 
-    // Disable/getter methods (not for WASM — compile-time only)
-    if arch != "wasm" {
-        gen_disable_methods(out, reg, token, all_tokens_in_file);
-    }
+    // WASM participates in the same test-only disabling hierarchy.
+    gen_disable_methods(out, reg, token, all_tokens_in_file);
 }
 
 /// Generate the public `from_context()` constructor.
@@ -448,10 +452,12 @@ fn gen_compiled_with(token: &TokenDef, arch: &str) -> String {
             "}
         }
         "wasm" => {
-            // No testable_dispatch guard for WASM — compile-time only,
-            // no runtime detection to toggle.
+            // Testing may suppress a compile-time-proven WASM tier.
             let check_features: Vec<&str> = token.features.iter().map(|s| s.as_str()).collect();
-            let all_conditions = cfg_all_features(&check_features);
+            let all_conditions = format!(
+                "{}, not(feature = \"testable_dispatch\")",
+                cfg_all_features(&check_features)
+            );
             formatdoc! {"
                 {INDENT}#[inline]
                 {INDENT}fn compiled_with() -> Option<bool> {{
@@ -684,10 +690,11 @@ fn gen_summon_cold_aarch64(token: &TokenDef) -> String {
 }
 
 fn gen_summon_wasm(token: &TokenDef) -> String {
-    // No testable_dispatch guard for WASM — compile-time only,
-    // no runtime detection to toggle.
+    // Availability is proved at module load; the only dynamic check is an
+    // explicit testable_dispatch override, never hardware discovery.
     let check_features: Vec<&str> = token.features.iter().map(|s| s.as_str()).collect();
     let all_conditions = cfg_all_features(&check_features);
+    let disabled_name = disabled_var_name(&token.name);
     formatdoc! {"
         {INDENT}#[inline]
         {INDENT}fn summon() -> Option<Self> {{
@@ -697,6 +704,10 @@ fn gen_summon_wasm(token: &TokenDef) -> String {
         {INDENT}        // runtime that validated this module supports them (wasm has
         {INDENT}        // no runtime feature detection). wasm32 `#[target_feature]`
         {INDENT}        // functions are safe to call, so no `unsafe` is needed.
+        {INDENT}        #[cfg(feature = \"testable_dispatch\")]
+        {INDENT}        if {disabled_name}.load(Ordering::Relaxed) {{
+        {INDENT}            return None;
+        {INDENT}        }}
         {INDENT}        Some(Self::from_context())
         {INDENT}    }}
         {INDENT}    #[cfg(not(all(target_arch = \"wasm32\", {all_conditions})))]

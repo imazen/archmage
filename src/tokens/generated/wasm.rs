@@ -5,6 +5,18 @@
 #[allow(deprecated)]
 use crate::tokens::Has128BitSimd;
 use crate::tokens::SimdToken;
+#[allow(unused_imports)] // WASM compile-time-only builds need no atomic operations
+use core::sync::atomic::{AtomicBool, AtomicU8, Ordering};
+
+// Cache statics: 0 = unknown, 1 = unavailable, 2 = available
+#[allow(dead_code)]
+pub(super) static WASM128_CACHE: AtomicU8 = AtomicU8::new(0);
+#[allow(dead_code)]
+pub(super) static WASM128_DISABLED: AtomicBool = AtomicBool::new(false);
+#[allow(dead_code)]
+pub(super) static WASM128_RELAXED_CACHE: AtomicU8 = AtomicU8::new(0);
+#[allow(dead_code)]
+pub(super) static WASM128_RELAXED_DISABLED: AtomicBool = AtomicBool::new(false);
 
 /// Proof that WASM SIMD128 is available.
 #[derive(Clone, Copy, Debug)]
@@ -22,11 +34,19 @@ impl SimdToken for Wasm128Token {
 
     #[inline]
     fn compiled_with() -> Option<bool> {
-        #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
+        #[cfg(all(
+            target_arch = "wasm32",
+            target_feature = "simd128",
+            not(feature = "testable_dispatch")
+        ))]
         {
             Some(true)
         }
-        #[cfg(not(all(target_arch = "wasm32", target_feature = "simd128")))]
+        #[cfg(not(all(
+            target_arch = "wasm32",
+            target_feature = "simd128",
+            not(feature = "testable_dispatch")
+        )))]
         {
             None
         }
@@ -40,6 +60,10 @@ impl SimdToken for Wasm128Token {
             // runtime that validated this module supports them (wasm has
             // no runtime feature detection). wasm32 `#[target_feature]`
             // functions are safe to call, so no `unsafe` is needed.
+            #[cfg(feature = "testable_dispatch")]
+            if WASM128_DISABLED.load(Ordering::Relaxed) {
+                return None;
+            }
             Some(Self::from_context())
         }
         #[cfg(not(all(target_arch = "wasm32", target_feature = "simd128")))]
@@ -102,9 +126,65 @@ impl Wasm128Token {
     }
 }
 
+impl Wasm128Token {
+    /// Disable this token process-wide for testing and benchmarking.
+    ///
+    /// When disabled, `summon()` will return `None` even if the CPU supports
+    /// the required features.
+    ///
+    /// Returns `Err` when all required features are compile-time enabled
+    /// (e.g., via `-Ctarget-cpu=native`), since the compiler has already
+    /// elided the runtime checks.
+    ///
+    /// **Cascading:** Also affects descendants:
+    /// - `Wasm128RelaxedToken`
+    #[allow(clippy::needless_return)]
+    pub fn dangerously_disable_token_process_wide(
+        disabled: bool,
+    ) -> Result<(), crate::tokens::CompileTimeGuaranteedError> {
+        #[cfg(all(target_feature = "simd128", not(feature = "testable_dispatch")))]
+        {
+            let _ = disabled;
+            return Err(crate::tokens::CompileTimeGuaranteedError {
+                token_name: Self::NAME,
+                target_features: Self::TARGET_FEATURES,
+                disable_flags: Self::DISABLE_TARGET_FEATURES,
+            });
+        }
+        #[cfg(not(all(target_feature = "simd128", not(feature = "testable_dispatch"))))]
+        {
+            WASM128_DISABLED.store(disabled, Ordering::Relaxed);
+            let v = if disabled { 1 } else { 0 };
+            WASM128_CACHE.store(v, Ordering::Relaxed);
+            WASM128_RELAXED_DISABLED.store(disabled, Ordering::Relaxed);
+            WASM128_RELAXED_CACHE.store(v, Ordering::Relaxed);
+            Ok(())
+        }
+    }
+
+    /// Check if this token has been manually disabled process-wide.
+    ///
+    /// Returns `Err` when all required features are compile-time enabled.
+    #[allow(clippy::needless_return)]
+    pub fn manually_disabled() -> Result<bool, crate::tokens::CompileTimeGuaranteedError> {
+        #[cfg(all(target_feature = "simd128", not(feature = "testable_dispatch")))]
+        {
+            return Err(crate::tokens::CompileTimeGuaranteedError {
+                token_name: Self::NAME,
+                target_features: Self::TARGET_FEATURES,
+                disable_flags: Self::DISABLE_TARGET_FEATURES,
+            });
+        }
+        #[cfg(not(all(target_feature = "simd128", not(feature = "testable_dispatch"))))]
+        {
+            Ok(WASM128_DISABLED.load(Ordering::Relaxed))
+        }
+    }
+}
+
 /// Proof that WASM Relaxed SIMD is available.
 ///
-/// Relaxed SIMD (Wasm 3.0) provides 28 instructions that trade strict
+/// Relaxed SIMD (Wasm 3.0) provides 20 instructions that trade strict
 /// cross-platform determinism for performance: FMA, relaxed lane-select,
 /// relaxed min/max, dot products, and relaxed truncation.
 ///
@@ -131,7 +211,8 @@ impl SimdToken for Wasm128RelaxedToken {
         #[cfg(all(
             target_arch = "wasm32",
             target_feature = "simd128",
-            target_feature = "relaxed-simd"
+            target_feature = "relaxed-simd",
+            not(feature = "testable_dispatch")
         ))]
         {
             Some(true)
@@ -139,7 +220,8 @@ impl SimdToken for Wasm128RelaxedToken {
         #[cfg(not(all(
             target_arch = "wasm32",
             target_feature = "simd128",
-            target_feature = "relaxed-simd"
+            target_feature = "relaxed-simd",
+            not(feature = "testable_dispatch")
         )))]
         {
             None
@@ -158,6 +240,10 @@ impl SimdToken for Wasm128RelaxedToken {
             // runtime that validated this module supports them (wasm has
             // no runtime feature detection). wasm32 `#[target_feature]`
             // functions are safe to call, so no `unsafe` is needed.
+            #[cfg(feature = "testable_dispatch")]
+            if WASM128_RELAXED_DISABLED.load(Ordering::Relaxed) {
+                return None;
+            }
             Some(Self::from_context())
         }
         #[cfg(not(all(
@@ -233,6 +319,73 @@ impl Wasm128RelaxedToken {
         // Holding `self` proves WASM Relaxed SIMD's feature set, a superset
         // of WASM SIMD128's; wasm32 target-feature calls are safe.
         Wasm128Token::from_context()
+    }
+}
+
+impl Wasm128RelaxedToken {
+    /// Disable this token process-wide for testing and benchmarking.
+    ///
+    /// When disabled, `summon()` will return `None` even if the CPU supports
+    /// the required features.
+    ///
+    /// Returns `Err` when all required features are compile-time enabled
+    /// (e.g., via `-Ctarget-cpu=native`), since the compiler has already
+    /// elided the runtime checks.
+    #[allow(clippy::needless_return)]
+    pub fn dangerously_disable_token_process_wide(
+        disabled: bool,
+    ) -> Result<(), crate::tokens::CompileTimeGuaranteedError> {
+        #[cfg(all(
+            target_feature = "simd128",
+            target_feature = "relaxed-simd",
+            not(feature = "testable_dispatch")
+        ))]
+        {
+            let _ = disabled;
+            return Err(crate::tokens::CompileTimeGuaranteedError {
+                token_name: Self::NAME,
+                target_features: Self::TARGET_FEATURES,
+                disable_flags: Self::DISABLE_TARGET_FEATURES,
+            });
+        }
+        #[cfg(not(all(
+            target_feature = "simd128",
+            target_feature = "relaxed-simd",
+            not(feature = "testable_dispatch")
+        )))]
+        {
+            WASM128_RELAXED_DISABLED.store(disabled, Ordering::Relaxed);
+            let v = if disabled { 1 } else { 0 };
+            WASM128_RELAXED_CACHE.store(v, Ordering::Relaxed);
+            Ok(())
+        }
+    }
+
+    /// Check if this token has been manually disabled process-wide.
+    ///
+    /// Returns `Err` when all required features are compile-time enabled.
+    #[allow(clippy::needless_return)]
+    pub fn manually_disabled() -> Result<bool, crate::tokens::CompileTimeGuaranteedError> {
+        #[cfg(all(
+            target_feature = "simd128",
+            target_feature = "relaxed-simd",
+            not(feature = "testable_dispatch")
+        ))]
+        {
+            return Err(crate::tokens::CompileTimeGuaranteedError {
+                token_name: Self::NAME,
+                target_features: Self::TARGET_FEATURES,
+                disable_flags: Self::DISABLE_TARGET_FEATURES,
+            });
+        }
+        #[cfg(not(all(
+            target_feature = "simd128",
+            target_feature = "relaxed-simd",
+            not(feature = "testable_dispatch")
+        )))]
+        {
+            Ok(WASM128_RELAXED_DISABLED.load(Ordering::Relaxed))
+        }
     }
 }
 

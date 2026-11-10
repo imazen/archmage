@@ -57,7 +57,8 @@ safe_unaligned_simd = []
 # Make token disabling work even when compiled with -Ctarget-cpu=native.
 # Without this, the compiler bakes summon() into a no-op and tokens can't be
 # disabled at runtime. With this, compiled_with() returns None and summon()
-# uses runtime detection + cache, so dangerously_disable_token_process_wide()
+# uses runtime detection + cache (a disabled flag for compile-time WASM), so
+# dangerously_disable_token_process_wide()
 # and for_each_token_permutation() always work.
 #
 # Cost: every summon() becomes a cache read, even X64V1Token's on x86-64,
