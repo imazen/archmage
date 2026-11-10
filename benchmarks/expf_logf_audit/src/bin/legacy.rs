@@ -1,4 +1,5 @@
 //! Frozen-source comparison protocol: compile this unchanged at each revision.
+use archmage::SimdToken;
 use magetypes::simd::generic::f32x4;
 
 #[archmage::magetypes(v4x(cfg(avx512)), v4(cfg(avx512)), v3, neon, wasm128, scalar)]
