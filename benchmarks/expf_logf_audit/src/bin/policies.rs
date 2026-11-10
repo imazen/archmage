@@ -98,6 +98,9 @@ fn register<const LOG: bool>(
     });
 }
 fn main() {
+    if let Ok(prefix)=std::env::var("POLICY_VERIFY_PREFIX"){
+        verify(std::path::Path::new(&prefix));return;
+    }
     let cell = std::env::var("AUDIT_CELL").expect("frozen cell required");
     let p: Vec<_> = cell.split('/').collect();
     assert_eq!(p.len(), 6);
@@ -114,4 +117,25 @@ fn main() {
     })
     .save(std::path::Path::new(&output))
     .unwrap();
+}
+
+fn verify(prefix:&std::path::Path){
+    use std::io::Write;
+    let data=prefix.with_extension("bin");let meta=prefix.with_extension("json");
+    assert!(!data.exists()&&!meta.exists());
+    let mut writer=std::io::BufWriter::new(std::fs::File::create(data).unwrap());
+    let mut segments=Vec::new();let mut offset=0u64;
+    for log in [false,true]{for low in [false,true]{
+        let mut cases:Vec<_>=(0..128).filter(|f|f&2==0&&((f&8!=0)==low)&&!(f&1!=0&&f&32!=0)).map(|f|(f,false)).collect();
+        cases.push((if low{44}else{36},true));
+        for (flags,token_lanes)in cases{for width in [4,8]{for context in ["scalar","native"]{for size in [64,4096]{for chain in [false,true]{
+            let input:Vec<f32>=(0..size).map(|i|0.5+(i%256)as f32/512.).collect();let mut output=vec![0.;size];
+            if log{execute::<true>(width,flags,context,&input,&mut output,chain,token_lanes)}else{execute::<false>(width,flags,context,&input,&mut output,chain,token_lanes)}
+            for value in output{writer.write_all(&value.to_bits().to_le_bytes()).unwrap();}
+            segments.push(serde_json::json!({"log":log,"flags":flags,"token_lanes":token_lanes,"width":width,"context":context,"size":size,"chain":chain,"offset":offset}));
+            offset+=size as u64*4;
+        }}}}}
+    }}}
+    writer.flush().unwrap();std::fs::write(meta,serde_json::to_vec_pretty(&segments).unwrap()).unwrap();
+    println!("{} segments, {} output bytes",segments.len(),offset);
 }
