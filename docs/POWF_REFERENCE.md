@@ -49,6 +49,17 @@ Declining automatic upgrades can make portable software FMA expensive.
 See the [complete bounded replacement report](../benchmarks/powf_module_2026-11-07/MIDLOW.md)
 for scalar, packed, tail and fallback costs on each measured ISA.
 
+The latest bounded matrix retains 118 cells with 50 paired rounds each. At
+4096 values, exponent 2.4, PositiveGamma/AssumeValid/Caller, measured portable
+MIDP/LOWP are 1396.06/958.29 ns on V3 x8, 684.07/490.94 ns on V4x x16, and
+1942.70/1568.92 ns on M6 NEON x8. These representative cells are flagged.
+Baseline x86 ScalarCaller uses software FMA and costs 37103.36/29076.13 ns;
+M6 ScalarCaller uses compile-proven FMA and costs 17368.98/13211.03 ns.
+The report includes the corresponding named legacy and backend-dependent
+methods, paired intervals, zenbench bars, all policy rankings and logged cost
+failures. Native Intel, N1, strict/relaxed WASM and i686 have no latest bounded
+timing result; their correctness coverage must not be read as a speed claim.
+
 ## ISA implementations and measured coverage
 
 | ISA or caller context | Canonical HIGHP implementation | Correctness coverage | New library timing status |
