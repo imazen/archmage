@@ -223,10 +223,10 @@ fn register<const LOG: bool, const LOW: bool>(
             }};
         }
         arm!(0, "main_91a13739_legacy");
-        arm!(1, "PR147_legacy_method");
-        arm!(2, "PR147_canonical_BitExact_Checked_Automatic");
-        arm!(3, "PR147_canonical_BitExact_AssumeValid_Automatic");
-        arm!(4, "PR147_canonical_BackendDependent_AssumeValid_Automatic");
+        arm!(1, "PR148_legacy_method");
+        arm!(2, "PR148_canonical_BitExact_Checked_Automatic");
+        arm!(3, "PR148_canonical_BitExact_AssumeValid_Automatic");
+        arm!(4, "PR148_canonical_BackendDependent_AssumeValid_Automatic");
         arm!(5, "std_f32_per_lane");
     });
 }

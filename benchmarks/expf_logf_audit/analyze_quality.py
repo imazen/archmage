@@ -15,6 +15,7 @@ import rounding_oracle as model
 fp = model.fp
 mp, P = accuracy.mp, accuracy.P
 WRAPPER = None
+LOG_LOWP_RATIONAL = False
 for name in ["exp2", "log2", "exp", "log", "log10", "log1p"]:
     fn = getattr(mp, "mpfr_" + name)
     fn.argtypes, fn.restype = [P, P, C.c_int], C.c_int
@@ -38,7 +39,7 @@ def core_mirror(op, raw, flags, fused):
             if x < -126: return 0
             if x >= 128: return fp.INF
         return value
-    if low and legacy:
+    if low and (legacy or LOG_LOWP_RATIONAL):
         delta = raw - 0x3f2aaaab
         whole = delta >> 23
         m = fp.sub(raw - (whole << 23), fp.ONE)
@@ -83,12 +84,13 @@ def reference(op, raw):
 
 
 def main():
-    global WRAPPER
+    global WRAPPER, LOG_LOWP_RATIONAL
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument("actual",type=Path);p.add_argument("output",type=Path)
     p.add_argument("--native-separate",action="store_true",help="strict/nonfusing WASM or a scalar-only automatic backend")
     p.add_argument("--wrapper",choices=['exp','ln','log10','log1p'])
-    args=p.parse_args();WRAPPER=args.wrapper;assert not args.output.exists()
+    p.add_argument("--log-lowp-rational",action="store_true",help="PR148 canonical LOWP uses the frozen rational graph")
+    args=p.parse_args();WRAPPER=args.wrapper;LOG_LOWP_RATIONAL=args.log_lowp_rational;assert not args.output.exists()
     report=dict(mpfr=mp.mpfr_get_version().decode(),precision=256,claim="sampled maxima, not exhaustive bounds",graph_mismatches=[],portable_mismatches=[],token_width_mismatches=[],stats={})
     refs={}
     for line in args.actual.read_text().splitlines():
