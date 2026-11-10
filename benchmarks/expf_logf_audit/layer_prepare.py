@@ -58,7 +58,12 @@ archmage={path="../archmage",default-features=false}
             for family in ['powf','expf','logf']:
                 shutil.copytree(vectors/'src'/family,math/'src'/family)
                 f=math/'src'/family/'const_api.rs';s=f.read_text();marker='// Expand the scalar composition'if family=='powf'else'// Existing infallible methods use'
-                if marker in s:s=s[:s.index(marker)]
+                if marker in s:
+                    start=s.index(marker)
+                    if family=='powf':
+                        end=s.index('// The runtime adapter shares literal const instantiations',start)
+                        s=s[:start]+s[end:]
+                    else:s=s[:start]
                 if family=='logf':
                     # log1p_finish was appended after the compatibility helpers.
                     full=(vectors/'src/logf/const_api.rs').read_text();s+=full[full.index('\n#[inline(always)]\nfn log1p_finish'):]
@@ -72,6 +77,7 @@ archmage={path="../archmage",default-features=false}
 extern crate alloc;
 mod simd{pub use magetypes::simd::*;}
 mod math_primitive_adapter;
+#[cfg(target_arch="wasm32")]
 mod soft_fma{pub(crate) use crate::math_primitive_adapter::{fma_lanes,fmaf_soft_lanes};}
 #[cfg(target_arch="wasm32")] mod wasm_fma;
 #[cfg(test)] mod nostd_math{pub fn fmaf_soft(a:f32,b:f32,c:f32)->f32{crate::math_primitive_adapter::fmaf_soft_lanes([a],[b],[c])[0]}}

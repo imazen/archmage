@@ -1,4 +1,5 @@
 //! Study adapter using existing public vector FMA primitives; no new vector API.
+#![allow(dead_code)] // Width and precision use depends on the selected consumer.
 use archmage::ScalarToken;
 
 #[inline(always)]
@@ -9,7 +10,7 @@ pub(crate) fn fmaf_soft_lanes<const N:usize>(a:[f32;N],b:[f32;N],c:[f32;N])->[f3
         let r=V::from_array_t(ScalarToken,core::array::from_fn(|i|a[i]))
             .mul_add_fused(V::from_array_t(ScalarToken,core::array::from_fn(|i|b[i])),V::from_array_t(ScalarToken,core::array::from_fn(|i|c[i]))).to_array();
         out.copy_from_slice(&r);return out;
-    }}};
+    }}}
     width!(4,f32x4);width!(8,f32x8);
     #[cfg(feature="w512")]
     width!(16,f32x16);
@@ -26,7 +27,7 @@ pub(crate) fn fma_lanes<const N:usize>(a:[f64;N],b:[f64;N],c:[f64;N])->[f64;N]{
         let r=V::from_array_t(ScalarToken,core::array::from_fn(|i|a[i]))
             .mul_add_fused(V::from_array_t(ScalarToken,core::array::from_fn(|i|b[i])),V::from_array_t(ScalarToken,core::array::from_fn(|i|c[i]))).to_array();
         out.copy_from_slice(&r);return out;
-    }}};
+    }}}
     width!(2,f64x2);width!(4,f64x4);
     #[cfg(feature="w512")]
     width!(8,f64x8);

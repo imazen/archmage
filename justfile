@@ -969,3 +969,10 @@ powf-tutorial:
 powf-validation-check:
     cargo clippy --locked --manifest-path benchmarks/powf_validation/Cargo.toml --all-features --all-targets -- -D warnings
     cargo clippy --locked --manifest-path benchmarks/powf_validation/Cargo.toml --no-default-features --features w512 --all-targets -- -D warnings
+
+# Matched crate-boundary and actual math-ownership build study.
+expf-logf-layer-prepare REVISION OUTPUT:
+    python3 -B benchmarks/expf_logf_audit/layer_prepare.py {{REVISION}} {{OUTPUT}}
+
+expf-logf-layer-builds SOURCES OUTPUT:
+    python3 -B benchmarks/expf_logf_audit/layer_build_cost.py {{SOURCES}} {{OUTPUT}}
