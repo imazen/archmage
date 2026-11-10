@@ -36,6 +36,10 @@
 //! - [`WarnStderr`](CompileTimePolicy::WarnStderr): same, but also prints to stderr
 //! - [`Fail`](CompileTimePolicy::Fail): panic — use in CI with the
 //!   `testable_dispatch` feature enabled for full coverage
+//!
+//! WASM includes SIMD128 and its relaxed descendant. Availability is fixed by
+//! module features; testing only suppresses selection, preserving module load
+//! requirements and the validity of previously obtained proof tokens.
 
 use std::sync::{Mutex, MutexGuard};
 
@@ -238,9 +242,15 @@ fn build_token_slots() -> Vec<TokenSlot> {
         slots.push(token_slot!(crate::Arm64V3Token, &[]));
     }
 
-    // WASM: Wasm128Token is compile-time only (can't be disabled).
-    // ScalarToken: always available (can't be disabled).
-    // Neither contributes to permutations.
+    // WASM module features are fixed, but testable_dispatch can suppress
+    // selection. Disabling SIMD128 also disables its relaxed descendant.
+    #[cfg(target_arch = "wasm32")]
+    {
+        slots.push(token_slot!(crate::Wasm128Token, &[1]));
+        slots.push(token_slot!(crate::Wasm128RelaxedToken, &[]));
+    }
+
+    // ScalarToken is always available and does not contribute to permutations.
 
     slots
 }

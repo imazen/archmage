@@ -30,6 +30,10 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 
 ### [Unreleased]
 
+#### Added
+
+- WASM tokens support `testable_dispatch` disabling and participate in token permutations; disabling SIMD128 cascades to relaxed SIMD without changing module requirements (09e35a47).
+
 #### QUEUED BREAKING CHANGES
 
 - Remove `guaranteed()` from `SimdToken` trait — use `compiled_with()` instead (deprecated since 0.6.0, zero callers)
@@ -155,6 +159,11 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 
 ### [Unreleased]
 
+#### Performance
+
+- Use compile-time-proven SSE2, NEON or WASM SIMD128 sqrt in no_std scalar wrappers; disclosed internal summons support test-time software fallback (34158bf5).
+- Use std sqrt for ScalarToken vectors and one-lane wrappers when std is enabled, preserving non-NaN results and retaining the integer no_std fallback. Add independent rational fixtures, a streaming opt-in full f32 comparison and named interleaved software/std controls (42a31313).
+
 #### Deprecated
 
 - Deprecate pow/exp/log approximation suffix methods in favor of Magemath with an explicit numerical profile. Published flat methods remain available; cube root, sigmoid, SiLU and reciprocal/root primitives are unchanged (d873dc89).
@@ -165,6 +174,7 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 
 #### Changed
 
+- Relaxed WASM arithmetic honors token-testing disables, retaining exact software fallbacks for fused methods (5dc4546c).
 - Preserve all published 0.9.31 flat transcendental bodies; configurable math, its tests and opt-in exhaustive fixtures now belong solely to Magemath (f6df3ec0).
 
 #### QUEUED BREAKING CHANGES

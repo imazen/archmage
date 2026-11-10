@@ -108,6 +108,7 @@ pub use archmage;
 // Pure-Rust math functions for no_std scalar backends
 #[doc(hidden)]
 pub mod nostd_math;
+mod scalar_sqrt;
 
 // Correctly rounded FMA over lane arrays: hardware when guaranteed, else software.
 mod soft_fma;

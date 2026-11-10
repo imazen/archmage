@@ -918,7 +918,7 @@ fn miri_test_targets() -> Result<Vec<String>> {
         .collect())
 }
 
-/// Run native raw tests with their required virtual CPU, then the baseline
+/// Run token-selected no_std sqrt, native raw tests with their virtual CPU, then the baseline
 /// suite (unit tests and the integration tests [`MIRI_SKIPPED_TESTS`] does not
 /// skip), then the doctests.
 fn run_miri() -> Result<()> {
@@ -932,7 +932,34 @@ fn run_miri() -> Result<()> {
         bail!("Miri is unavailable for {toolchain}; install its miri component");
     }
 
-    let targets = miri_test_targets()?;
+    let mut targets = miri_test_targets()?;
+    // This opt-in binary requires token disabling. Execute it with those
+    // features instead of adding it to the ordinary baseline invocation.
+    // Keep every assertion and exercise the no_std hardware/software selector.
+    let token_sqrt = targets
+        .iter()
+        .position(|t| t == "sqrt_token_testing")
+        .context("sqrt_token_testing must remain in the Miri target inventory")?;
+    targets.remove(token_sqrt);
+    if !Command::new("cargo")
+        .args([
+            &toolchain,
+            "miri",
+            "test",
+            "-p",
+            "magetypes",
+            "--no-default-features",
+            "--features",
+            "w512,archmage/testable_dispatch",
+            "--test",
+            "sqrt_token_testing",
+        ])
+        .status()
+        .context("Failed to run no_std token-selected sqrt under Miri")?
+        .success()
+    {
+        bail!("Token-selected sqrt Miri test failed; see diagnostics above");
+    }
     println!("Not run under Miri (unsafe paths covered by retained tests; native CI runs them):");
     for (bin, test, why) in MIRI_SKIPPED_TESTS {
         match test {

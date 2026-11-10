@@ -174,6 +174,30 @@ def expand(name, functions, depth=0):
     return result
 
 
+SCALAR_SQRT_STD_PROBES = frozenset(
+    f"scalar_{ty}_sqrt"
+    for ty in ("f32x4", "f32x8", "f32x16", "f64x2", "f64x4", "f64x8")
+)
+SCALAR_SQRT_STD_PREFIX = "__sqrt_std_reference_"
+
+
+def scalar_sqrt_std_reference(target, name):
+    # Owner-approved replacement expectation for exactly six x86 probes.
+    # ARM/WASM and every other primitive retain their existing comparisons.
+    if target == "x86_64-unknown-linux-gnu" and name in SCALAR_SQRT_STD_PROBES:
+        return SCALAR_SQRT_STD_PREFIX + name
+    return None
+
+
+def scalar_sqrt_std_equivalent(target, name, body, functions):
+    reference = scalar_sqrt_std_reference(target, name)
+    return (
+        reference is not None
+        and reference in functions
+        and body == expand(reference, functions)
+    )
+
+
 def aligned_store_equivalent(before, after, name):
     if "from_bytes" not in name:
         return before == after
@@ -793,6 +817,32 @@ def self_test():
         assert canonical != neon_widen_mul_operands(
             [line.replace(old, new) for line in mul]
         )
+    target = "x86_64-unknown-linux-gnu"
+    name = "scalar_f32x4_sqrt"
+    reference = scalar_sqrt_std_reference(target, name)
+    hardware = ["movups\t(%rsi), %xmm0", "sqrtps\t%xmm0, %xmm0",
+                "movups\t%xmm0, (%rdi)", "retq"]
+    references = {reference: hardware}
+    assert len(SCALAR_SQRT_STD_PROBES) == 6
+    for probe in SCALAR_SQRT_STD_PROBES:
+        ref = scalar_sqrt_std_reference(target, probe)
+        assert scalar_sqrt_std_equivalent(target, probe, hardware, {ref: hardware})
+    assert scalar_sqrt_std_equivalent(target, name, hardware, references)
+    assert not scalar_sqrt_std_equivalent(target, name, hardware, {})
+    for wrong in (
+        [line.replace("sqrtps", "rsqrtps") for line in hardware],
+        [line.replace("sqrtps", "sqrtpd") for line in hardware],
+        [line.replace("(%rsi)", "16(%rsi)") for line in hardware],
+        [line.replace("(%rdi)", "16(%rdi)") for line in hardware],
+        hardware[:-2] + hardware[-1:],
+        ["callq\tunknown"] + hardware,
+    ):
+        assert not scalar_sqrt_std_equivalent(target, name, wrong, references)
+    for wrong_target in ("aarch64-unknown-linux-gnu", "wasm32-unknown-unknown"):
+        assert not scalar_sqrt_std_equivalent(wrong_target, name, hardware, references)
+    for wrong_name in ("scalar_f32x1_sqrt", "scalar_f32x4_sqrt_plain",
+                       "scalar_f32x4_recip", "v3_f32x4_sqrt", "scalar_f64x16_sqrt"):
+        assert not scalar_sqrt_std_equivalent(target, wrong_name, hardware, references)
     print("codegen adversarial self-tests passed")
 
 
@@ -2018,6 +2068,14 @@ def main():
                             parts.append(
                                 f"#[unsafe(no_mangle)]\n{attr}#[inline(never)]\npub fn {name}_{op}(token: {token}, {args}) -> {result} {{ {body} }}\n"
                             )
+                            reference = scalar_sqrt_std_reference(target, f"{name}_{op}")
+                            if reference is not None:
+                                # A separate direct primitive reference: do not call
+                                # the SIMD sqrt or the scalar selection helper here.
+                                parts.append(
+                                    f"#[unsafe(no_mangle)]\n#[inline(never)]\npub fn {reference}(token: {token}, {args}) -> {result} {{ "
+                                    f"{ty}::<{token}>::from_array_t(token, a.to_array().map({elem}::sqrt)) }}\n"
+                                )
                             count += 1
                             assert f"{name}_{op}" not in probe_names
                             probe_names.add(f"{name}_{op}")
@@ -2092,13 +2150,28 @@ def compare(root, expected):
             "missing or unexpected probes",
             names ^ expected[target],
         )
+        references = {
+            reference for name in names
+            if (reference := scalar_sqrt_std_reference(target, name)) is not None
+        }
+        for functions in (a, b):
+            assert {n for n in functions if n.startswith(SCALAR_SQRT_STD_PREFIX)} == references
         changes = []
         for n in sorted(names):
             old, new = expand(n, a), expand(n, b)
+            reference = scalar_sqrt_std_reference(target, n)
+            if reference is not None:
+                # Check even if old == new: reverting to the old software kernel
+                # must not silently satisfy the replacement expectation.
+                assert scalar_sqrt_std_equivalent(target, n, new, b), (
+                    target, n, "differs from direct std sqrt", new, expand(reference, b)
+                )
             if old == new:
                 continue
             kind = "stronger destination alignment"
-            if target.startswith("aarch64") and n.removesuffix("_plain") in [
+            if reference is not None:
+                kind = "exactly matches independent direct std sqrt reference"
+            elif target.startswith("aarch64") and n.removesuffix("_plain") in [
                 "neon_f32x8_fma",
                 "neon_f64x4_fma",
             ]:

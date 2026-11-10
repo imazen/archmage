@@ -47,6 +47,7 @@ jobs:
       - run: python3 -m pip install PyYAML==6.0.3
       - run: python3 xtask/check_ci_gate.py --test
       - run: python3 xtask/fma_vectors.py --check
+      - run: python3 -B xtask/sqrt_vectors.py --check
       - run: python3 -B xtask/check_published_math.py
       - run: python3 -B -m unittest discover -s xtask -p test_target_features.py -v
       - uses: dtolnay/rust-toolchain@stable
@@ -476,6 +477,9 @@ jobs:
           CARGO_TARGET_WASM32_WASIP1_RUNNER: "wasmtime -W relaxed-simd-deterministic=n -C cranelift-has-fma=false --env ARCHMAGE_EXPECT_RELAXED_FUSION=no"
         run: cargo test -p magetypes --features "${{ env.FEATURES }}" --target wasm32-wasip1 --lib --test fma_contract --test fused_arithmetic --test doc_examples --test scalar_parity
 
+      - name: Test WASM selection and disabled fallbacks
+        run: bash xtask/test_wasm_selection.sh
+
       - name: Run arch exercise (WASM)
         if: always()
         env:
@@ -695,6 +699,10 @@ jobs:
         run: |
           cargo clippy --locked --manifest-path benchmarks/powf_validation/Cargo.toml --all-features --all-targets -- -D warnings
           cargo clippy --locked --manifest-path benchmarks/powf_validation/Cargo.toml --no-default-features --features w512 --all-targets -- -D warnings
+      - name: Sqrt study kernel smoke and lint
+        run: |
+          cargo run --locked --manifest-path benchmarks/sqrt_2026-11-10/Cargo.toml
+          cargo clippy --locked --manifest-path benchmarks/sqrt_2026-11-10/Cargo.toml --all-targets -- -D warnings
 
   # ==========================================================================
   # Clippy on aarch64 — the NEON backend impls are cfg'd out on x86, so
@@ -748,6 +756,10 @@ jobs:
         run: |
           cargo clippy --locked --manifest-path benchmarks/powf_validation/Cargo.toml --all-features --all-targets -- -D warnings
           cargo clippy --locked --manifest-path benchmarks/powf_validation/Cargo.toml --no-default-features --features w512 --all-targets -- -D warnings
+      - name: Sqrt study kernel smoke and lint
+        run: |
+          cargo run --locked --manifest-path benchmarks/sqrt_2026-11-10/Cargo.toml
+          cargo clippy --locked --manifest-path benchmarks/sqrt_2026-11-10/Cargo.toml --all-targets -- -D warnings
 
   # ==========================================================================
   # Warning sweep: clippy -D warnings semantics over every target, feature and

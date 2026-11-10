@@ -13,6 +13,11 @@
 //! (MIT license, origin: musl `src/math/sqrt.c`). It uses pure integer arithmetic
 //! — no floating-point division — making it much faster than Newton-Raphson on
 //! targets without hardware sqrt.
+//!
+//! Square root promises NaN classification only: NaN inputs and negative
+//! nonzero inputs produce NaN, with no promise about payload, sign or signaling
+//! encoding. Signed zeros are preserved. Hardware and software non-NaN results
+//! agree under round-to-nearest with gradual underflow.
 
 // ============================================================================
 // Square root — Goldschmidt iteration
@@ -52,7 +57,9 @@ static RSQRT_TAB: [u16; 128] = [
     0xba91, 0xb9cc, 0xb90a, 0xb84a, 0xb78c, 0xb6d0, 0xb617, 0xb560,
 ];
 
-/// f32 square root — correctly rounded, bit-exact with hardware sqrtss.
+/// Correctly rounded f32 square root; non-NaN bits agree with hardware.
+/// NaN inputs and negative nonzero inputs produce NaN; NaN payload/sign and
+/// signaling encoding are unspecified. The sign of zero is preserved.
 ///
 /// Goldschmidt iteration in u32 integer arithmetic: table lookup for initial
 /// `1/sqrt(m)` estimate, then 3 iterations computing `sqrt(m)` and `1/sqrt(m)`
@@ -144,7 +151,9 @@ pub fn sqrtf(x: f32) -> f32 {
     f32::from_bits(result)
 }
 
-/// f64 square root — correctly rounded, bit-exact with hardware sqrtsd.
+/// Correctly rounded f64 square root; non-NaN bits agree with hardware.
+/// NaN inputs and negative nonzero inputs produce NaN; NaN payload/sign and
+/// signaling encoding are unspecified. The sign of zero is preserved.
 ///
 /// Goldschmidt iteration: 2 rounds at u32 width, then 2 rounds at u64 width.
 /// Uses a 128-entry reciprocal sqrt lookup table for the initial estimate.

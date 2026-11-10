@@ -19,7 +19,7 @@ use crate::simd::backends::*;
 // Uses crate::nostd_math for no_std compatibility.
 #[inline(always)]
 fn f32_sqrt(x: f32) -> f32 {
-    crate::nostd_math::sqrtf(x)
+    crate::scalar_sqrt::sqrtf(x)
 }
 #[inline(always)]
 fn f32_floor(x: f32) -> f32 {
@@ -40,7 +40,7 @@ fn f32_round(x: f32) -> f32 {
 // Uses crate::nostd_math for no_std compatibility.
 #[inline(always)]
 fn f64_sqrt(x: f64) -> f64 {
-    crate::nostd_math::sqrt(x)
+    crate::scalar_sqrt::sqrt(x)
 }
 #[inline(always)]
 fn f64_floor(x: f64) -> f64 {
@@ -9382,7 +9382,7 @@ impl F32x16Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn sqrt(self, a: [f32; 16]) -> [f32; 16] {
-        core::array::from_fn(|i| crate::nostd_math::sqrtf(a[i]))
+        core::array::from_fn(|i| crate::scalar_sqrt::sqrtf(a[i]))
     }
 
     #[inline(always)]
@@ -9405,7 +9405,7 @@ impl F32x16Backend for archmage::ScalarToken {
     }
     #[inline(always)]
     fn rsqrt(self, a: [f32; 16]) -> [f32; 16] {
-        core::array::from_fn(|i| 1.0 / crate::nostd_math::sqrtf(a[i]))
+        core::array::from_fn(|i| 1.0 / crate::scalar_sqrt::sqrtf(a[i]))
     }
 
     #[inline(always)]
@@ -9639,7 +9639,7 @@ impl F64x8Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn sqrt(self, a: [f64; 8]) -> [f64; 8] {
-        core::array::from_fn(|i| crate::nostd_math::sqrt(a[i]))
+        core::array::from_fn(|i| crate::scalar_sqrt::sqrt(a[i]))
     }
 
     #[inline(always)]
@@ -9648,7 +9648,7 @@ impl F64x8Backend for archmage::ScalarToken {
     }
     #[inline(always)]
     fn rsqrt_approx(self, a: [f64; 8]) -> [f64; 8] {
-        core::array::from_fn(|i| 1.0 / crate::nostd_math::sqrt(a[i]))
+        core::array::from_fn(|i| 1.0 / crate::scalar_sqrt::sqrt(a[i]))
     }
     #[inline(always)]
     fn recip(self, a: [f64; 8]) -> [f64; 8] {
@@ -9656,7 +9656,7 @@ impl F64x8Backend for archmage::ScalarToken {
     }
     #[inline(always)]
     fn rsqrt(self, a: [f64; 8]) -> [f64; 8] {
-        core::array::from_fn(|i| 1.0 / crate::nostd_math::sqrt(a[i]))
+        core::array::from_fn(|i| 1.0 / crate::scalar_sqrt::sqrt(a[i]))
     }
 
     #[inline(always)]

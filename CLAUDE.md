@@ -1216,6 +1216,12 @@ fn process(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 
 ## Known Bugs
 
+Resolved 2026-11-10: the Miri target enumerator explicitly selected the new
+`sqrt_token_testing` binary without its required token-testing feature, so
+Cargo refused before running the baseline suite. The runner now executes that
+binary separately with no_std and `archmage/testable_dispatch`, retaining all
+assertions and the existing baseline tests. `just sqrt-token-miri` passes.
+
 Magemath migration (2026-11-10): LOWP log1p retains the rational log2 fit's bias
 near zero; a tiny positive input can produce a negative approximation. MIDP
 remains available. This refactor does not introduce a new small-x LOWP graph or

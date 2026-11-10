@@ -988,3 +988,62 @@ magemath-public-boundary:
     cargo test -p magetypes --features "std avx512" --test powf_engine_remap --test generic_transcendentals
     cargo test -p magetypes --features "std avx512" --doc
     cargo clippy -p magetypes -p magemath --features "std avx512" --all-targets -- -D warnings
+
+# Scalar sqrt routes and retained portable software controls.
+sqrt-check:
+    python3 -B xtask/sqrt_vectors.py --check
+    cargo test -p magetypes --features "std avx512" --test sqrt_portability --test precise_reciprocals
+    cargo test -p magetypes --no-default-features --features w512 --test sqrt_portability
+    cargo clippy -p magetypes --all-targets --features "std avx512" -- -D warnings
+
+sqrt-bench *ARGS:
+    ARCHMAGE_SQRT_MEASURE=1 ZENBENCH_LAUNCHER_PIDS=$$ cargo run --release --manifest-path benchmarks/sqrt_2026-11-10/Cargo.toml -- {{ARGS}}
+
+# Explicit opt-in, constant-memory comparison of all f32 input patterns.
+sqrt-check-exhaustive:
+    ARCHMAGE_SQRT_F32_STRIDE=1 cargo test --release -p magetypes --test sqrt_portability f32_stream_matches_hardware_and_retained_software -- --nocapture
+
+sqrt-check-wasm:
+    RUSTFLAGS="-C target-feature=+simd128" CARGO_TARGET_WASM32_WASIP1_RUNNER=wasmtime cargo test -p magetypes --target wasm32-wasip1 --features "std w512" --test sqrt_portability
+    RUSTFLAGS="-C target-feature=+simd128" CARGO_TARGET_WASM32_WASIP1_RUNNER=wasmtime cargo test -p magetypes --target wasm32-wasip1 --no-default-features --features w512 --test sqrt_portability
+
+sqrt-codegen:
+    cargo rustc --release --manifest-path benchmarks/sqrt_2026-11-10/Cargo.toml --bin archmage-sqrt-study -- --emit=asm
+    cargo rustc -p magetypes --release --no-default-features --features w512 --test sqrt_portability -- --emit=asm
+
+sqrt-bench-check:
+    cargo run --manifest-path benchmarks/sqrt_2026-11-10/Cargo.toml
+    cargo clippy --manifest-path benchmarks/sqrt_2026-11-10/Cargo.toml --all-targets -- -D warnings
+
+# Explicit token-disabling coverage; normal cargo test retains sqrt spot checks.
+sqrt-token-testing:
+    cargo test -p magetypes --no-default-features --features "w512 archmage/testable_dispatch" --test sqrt_token_testing
+
+wasm-selection-check:
+    bash xtask/test_wasm_selection.sh
+
+# Ordinary no_std assembly must not contain token loads or software sqrt calls.
+sqrt-selection-codegen target="x86_64-unknown-linux-gnu" flags="":
+    RUSTFLAGS="{{flags}}" cargo rustc --manifest-path benchmarks/sqrt_2026-11-10/Cargo.toml --release --lib --no-default-features --features w512 --target {{target}} -- --emit=asm
+
+sqrt-check-exhaustive-no-std:
+    ARCHMAGE_SQRT_F32_STRIDE=1 cargo test --release -p magetypes --no-default-features --features w512 --test sqrt_portability f32_stream_matches_hardware_and_retained_software -- --nocapture
+
+# Focused cross-target checks, without broadening into unrelated WASM test lints.
+sqrt-selection-validate:
+    cargo fmt -p xtask -p magetypes -p archmage --check
+    just generate
+    just validate-tokens
+    just soundness
+    cargo clippy -p magetypes --lib --test sqrt_portability --test sqrt_token_testing --no-default-features --features "w512 archmage/testable_dispatch" -- -D warnings
+    RUSTFLAGS="-Ctarget-feature=+simd128,+relaxed-simd" cargo clippy --target wasm32-wasip1 -p magetypes --lib --test sqrt_portability --test sqrt_token_testing --test fused_arithmetic --no-default-features --features "w512 archmage/testable_dispatch" -- -D warnings
+    RUSTFLAGS="-Ctarget-feature=+simd128,+relaxed-simd" cargo clippy --target wasm32-wasip1 -p archmage --test wasm_token_testing --features testable_dispatch -- -D warnings
+    just api-doc
+    just codegen-diff bd83f034 WORKTREE
+
+workflow-contract-check:
+    python3 -m unittest xtask/check_ci_gate.py
+
+
+sqrt-token-miri:
+    cargo +$(tr -d '[:space:]' < xtask/miri-nightly.txt) miri test -p magetypes --no-default-features --features "w512 archmage/testable_dispatch" --test sqrt_token_testing

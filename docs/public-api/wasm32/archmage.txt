@@ -6,7 +6,7 @@
 # impls omitted; re-export duplicates annotated `[also: path]`.
 # DO NOT EDIT BY HAND — commit regenerated changes with the code.
 #
-# files: archmage.txt 392 lines (supported surface) | archmage.features.txt 0 added (features: avx512,forge-token-api,macros,safe_unaligned_simd,std,testable_dispatch) | archmage.internal.txt 81 lines (81 hidden + 0 excluded-feature)
+# files: archmage.txt 404 lines (supported surface) | archmage.features.txt 0 added (features: avx512,forge-token-api,macros,safe_unaligned_simd,std,testable_dispatch) | archmage.internal.txt 81 lines (81 hidden + 0 excluded-feature)
 
 ## summary
 #
@@ -14,7 +14,7 @@
 #   pub types (struct/enum/trait/alias)       114
 #   pub consts/statics                         18
 #   free functions                              4
-#   inherent methods                          180
+#   inherent methods                          192
 #   struct fields                              12
 #   enum variants                              48
 #   re-exports                                 60
@@ -27,9 +27,9 @@
 #   intrinsics                       19
 #   prelude                          90
 #   testing                          13
-#   tokens                          182
+#   tokens                          194
 
-## items (366 lines)
+## items (378 lines)
 
 pub mod archmage
 pub use arcane
@@ -120,9 +120,13 @@ pub fn tokens::ScalarToken::dangerously_disable_token_process_wide(bool) -> core
 pub fn tokens::ScalarToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
 pub const fn tokens::ScalarToken::forge_token_dangerously() -> Self [also: (root)]
 pub const fn tokens::ScalarToken::from_context() -> Self [also: (root)]
+pub fn tokens::Wasm128RelaxedToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
+pub fn tokens::Wasm128RelaxedToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
 pub fn tokens::Wasm128RelaxedToken::forge_token_dangerously() -> Self
 pub fn tokens::Wasm128RelaxedToken::from_context() -> Self
 pub fn tokens::Wasm128RelaxedToken::wasm128(self) -> tokens::Wasm128Token
+pub fn tokens::Wasm128Token::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
+pub fn tokens::Wasm128Token::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
 pub fn tokens::Wasm128Token::forge_token_dangerously() -> Self
 pub fn tokens::Wasm128Token::from_context() -> Self
 pub fn tokens::X64CryptoToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
@@ -218,9 +222,13 @@ pub fn tokens::NeonToken::manually_disabled() -> core::result::Result<bool, toke
 pub unsafe fn tokens::NeonToken::forge_token_dangerously() -> Self
 pub fn tokens::ScalarToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
 pub fn tokens::ScalarToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub fn tokens::Wasm128RelaxedToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
+pub fn tokens::Wasm128RelaxedToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
 pub fn tokens::Wasm128RelaxedToken::forge_token_dangerously() -> Self
 pub fn tokens::Wasm128RelaxedToken::from_context() -> Self
 pub fn tokens::Wasm128RelaxedToken::wasm128(self) -> tokens::Wasm128Token
+pub fn tokens::Wasm128Token::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
+pub fn tokens::Wasm128Token::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
 pub fn tokens::Wasm128Token::forge_token_dangerously() -> Self
 pub fn tokens::Wasm128Token::from_context() -> Self
 pub fn tokens::X64CryptoToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
@@ -313,10 +321,14 @@ pub struct ScalarToken [also: prelude, tokens]
 pub fn tokens::ScalarToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
 pub fn tokens::ScalarToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
 pub struct Wasm128RelaxedToken [also: prelude, tokens]
+pub fn tokens::Wasm128RelaxedToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
+pub fn tokens::Wasm128RelaxedToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
 pub fn tokens::Wasm128RelaxedToken::forge_token_dangerously() -> Self
 pub fn tokens::Wasm128RelaxedToken::from_context() -> Self
 pub fn tokens::Wasm128RelaxedToken::wasm128(self) -> tokens::Wasm128Token
 pub struct Wasm128Token [also: prelude, tokens]
+pub fn tokens::Wasm128Token::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
+pub fn tokens::Wasm128Token::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
 pub fn tokens::Wasm128Token::forge_token_dangerously() -> Self
 pub fn tokens::Wasm128Token::from_context() -> Self
 pub struct X64CryptoToken [also: prelude, tokens]
