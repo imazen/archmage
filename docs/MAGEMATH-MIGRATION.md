@@ -118,7 +118,8 @@ in force until a replacement is implemented and measured.
 `just magemath-check` checks std/no_std, debug/release contracts, strict Clippy,
 whole-vector error masks, signed zero, the independent powf fixtures and typed
 vector/scalar-tail identity. `just magemath-check-wasm` checks strict WASM.
-The existing CI matrices also run Magemath on x86, ARM64, Windows ARM64, macOS
+See the [extraction validation record](../magemath/VALIDATION.md) for actual
+completed checks and gaps. The existing CI matrices also run Magemath on x86, ARM64, Windows ARM64, macOS
 ARM64, cross targets including i686, and strict WASM. Numerical fits and the
 unchanged primitive implementations reuse their existing evidence; this PR
 makes no new whole-matrix speed-promotion claim.
