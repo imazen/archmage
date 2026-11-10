@@ -162,7 +162,8 @@ The new bodies contain only pointer moves, contiguous vector loads/stores,
 `sqrtps`/`sqrtpd` and return. No std work is hidden outside these counts.
 The proposed expectation is equality with independently generated direct-std
 sqrt reference kernels for exactly these six probes, retaining every other
-assembly expectation and every numerical bound. The existing equality gate
+assembly expectation and every numerical bound. A separate consumer build confirms that all six new bodies already match
+those direct-std reference kernels exactly. The existing equality gate
 has not been changed; accepting this intentional codegen difference awaits
 owner approval. PR152 is not merge-ready while that check fails.
 
