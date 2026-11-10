@@ -2,6 +2,18 @@
 
 Updated 2026-11-09. The replacement API remains in [draft PR144](https://github.com/imazen/archmage/pull/144), with promotion held. Canonical HIGHP now has scalar and packed implementations. Legacy power methods retain their behavior. Performance observations below identify the actual implementation and machine; exploratory intervals cannot satisfy the promotion gate.
 
+## Relationship to the earlier portability PRs
+
+[PR144](https://github.com/imazen/archmage/pull/144) is independently based on
+main. Neither [PR128](https://github.com/imazen/archmage/pull/128) nor
+[PR143](https://github.com/imazen/archmage/pull/143) is included by commit
+ancestry. The configurable power module is the successor to PR128's portable
+pow direction; PR128's portable log/ln/log10/exp/exp2 methods are not included.
+PR143's general exp/exp2 NaN corrections remain separate and held by the owner;
+this PR does not silently accept their measured cost. Its experimental global
+f64 FMA fallback remains unpromoted. Research informed the power design, but
+PR144 does not supersede either complete PR.
+
 ## Numerical contracts and bounds
 
 | Precision and portability | Arithmetic | Numerical promise |
