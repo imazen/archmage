@@ -1,5 +1,7 @@
 //! Fixed 64-value/step kernels. No corpus materialization; timing is opt-in.
 #![forbid(unsafe_code)]
+mod rcp14;
+mod recip_perf;
 mod seed_graphs;
 use archmage::{ScalarToken, SimdToken};
 use magemath::{minmax::*, recip::*};
@@ -210,6 +212,22 @@ fn register_corrections(suite: &mut Suite) {
     correction_groups!(suite, ScalarToken, stream_scalar, chain_scalar);
 }
 fn main() {
+    if std::env::args().any(|a| a == "--recip-qualification") {
+        recip_perf::run();
+        return;
+    }
+
+    if std::env::args().any(|a| a == "--gate-check") {
+        let monitor = zenbench::platform::SystemMonitor::new();
+        for _ in 0..10 {
+            println!(
+                "{:?}",
+                monitor.snapshot_excluding_processes(&[std::process::id()])
+            );
+        }
+        return;
+    }
+
     if std::env::args().any(|a| a == "--cpu-set") {
         let topology = zenbench::platform::detect_cpu_topology();
         let mut classes = topology.classes;

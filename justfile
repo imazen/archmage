@@ -1110,3 +1110,27 @@ primitive-seed-study *ARGS:
 
 primitive-correction-analyze results:
     python3 -B benchmarks/primitive_variants_2026-11-10/correction_analysis.py "{{results}}"
+
+# Resource admission diagnostic only: no timings and no baseline/promotion.
+primitive-gate-check:
+    ZENBENCH_GATE_TRACE=1 cargo run --release --manifest-path benchmarks/primitive_variants_2026-11-10/Cargo.toml --bin archmage-primitive-study -- --gate-check
+
+primitive-rcp14-reference output:
+    mkdir -p "{{output}}"
+    cc -O3 -std=c11 -fno-strict-aliasing -ffp-contract=off -fno-fast-math benchmarks/primitive_variants_2026-11-10/rcp14_reference.c -lm -o "{{output}}/rcp14-reference"
+    "{{output}}/rcp14-reference"
+
+primitive-recip-reference-data output:
+    mkdir -p "{{output}}"
+    cc -O3 -std=c11 -fno-strict-aliasing -ffp-contract=off -fno-fast-math benchmarks/primitive_variants_2026-11-10/rcp14_reference.c -lm -o "{{output}}/rcp14-reference"
+    "{{output}}/rcp14-reference" --emit "{{output}}/recip-reference.u32le"
+    sha256sum "{{output}}/recip-reference.u32le"
+
+primitive-recip-qualify reference tier *ARGS:
+    cargo run --release --manifest-path benchmarks/primitive_variants_2026-11-10/Cargo.toml --bin recip_qualification -- --reference "{{reference}}" --tier {{tier}} {{ARGS}}
+
+primitive-recip-qualify-wasm reference:
+    bash benchmarks/primitive_variants_2026-11-10/qualify_wasm.sh "{{reference}}"
+
+primitive-recip-qualify-perf binary tier:
+    python3 -B benchmarks/primitive_variants_2026-11-10/run_local.py "{{binary}}" --recip-qualification --qual-tier "{{tier}}"

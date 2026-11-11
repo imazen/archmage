@@ -37,3 +37,6 @@ macro_rules! graphs {
 }
 graphs!(recip4, rsqrt4, f32x4, i32x4, F32x4Convert);
 graphs!(recip8, rsqrt8, f32x8, i32x8, F32x8Convert);
+
+#[cfg(feature = "w512")]
+graphs!(recip16, rsqrt16, f32x16, i32x16, F32x16Convert);
