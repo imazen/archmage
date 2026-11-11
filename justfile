@@ -1145,3 +1145,15 @@ primitive-recip-qualification-process-analyze results:
 primitive-study-source-check base:
     python3 -c 'import hashlib,pathlib; assert hashlib.sha256(pathlib.Path("benchmarks/primitive_variants_2026-11-10/reference/RECIP14.c").read_bytes()).hexdigest() == "4cb551b434f65928e97b062b1a4718809c955da6ab8d650f19593c72679b21e9"'
     git diff "{{base}}" --check -- . ':!benchmarks/primitive_variants_2026-11-10/reference/RECIP14.c'
+
+primitive-recip-round-reference output:
+    mkdir -p "{{output}}"
+    cc -O3 -std=c11 -ffp-contract=off -fno-fast-math benchmarks/primitive_variants_2026-11-10/recip_round_reference.c -lm -o "{{output}}/recip-round-reference"
+    "{{output}}/recip-round-reference" "{{output}}/recip-round-reference.u32le"
+    sha256sum "{{output}}/recip-round-reference.u32le"
+
+primitive-recip-round-check reference tier *ARGS:
+    cargo run --release --manifest-path benchmarks/primitive_variants_2026-11-10/Cargo.toml --bin recip_round_check -- --reference "{{reference}}" --tier {{tier}} {{ARGS}}
+
+primitive-recip-round-wasm reference density="--dense":
+    bash benchmarks/primitive_variants_2026-11-10/qualify_wasm.sh "{{reference}}" "{{density}}" recip_round_check

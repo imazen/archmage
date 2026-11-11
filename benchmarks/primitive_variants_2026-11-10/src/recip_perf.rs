@@ -10,7 +10,7 @@ const HIGH: u32 = RecipOptions::HIGHP
     .with_execution(RecipExecution::Caller)
     .bits();
 macro_rules! kernels {
-    ($op:ident,$stream:ident,$chain:ident,$v:ident,$bound:ident,$w:literal,$parallel:ident,$emulate:ident,$native14:ident,$current:ident) => {
+    ($op:ident,$stream:ident,$chain:ident,$v:ident,$bound:ident,$w:literal,$parallel:ident,$emulate:ident,$native14:ident,$current:ident,$bounded:ident,$canonical:ident) => {
         #[inline(always)]
         fn $op<T: magetypes::simd::backends::$bound, const MODE: u8>(
             t: T,
@@ -27,6 +27,18 @@ macro_rules! kernels {
             }
             if MODE == 3 {
                 return magemath::recip::$current::<HIGH, _>(t, x).unwrap();
+            }
+            if MODE == 10 {
+                return crate::recip_research::$bounded::<2, _>(t, x);
+            }
+            if MODE == 11 {
+                return crate::recip_research::$canonical::<14, 0, _>(t, x);
+            }
+            if MODE == 12 {
+                return crate::recip_research::$canonical::<14, 1, _>(t, x);
+            }
+            if MODE == 13 {
+                return crate::recip_research::$canonical::<14, 2, _>(t, x);
             }
             #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
             {
@@ -79,7 +91,9 @@ kernels!(
     recip4,
     emulate4,
     native4,
-    try_recip_f32x4_with
+    try_recip_f32x4_with,
+    bounded4,
+    canonical4
 );
 kernels!(
     op8,
@@ -91,7 +105,9 @@ kernels!(
     recip8,
     emulate8,
     native8,
-    try_recip_f32x8_with
+    try_recip_f32x8_with,
+    bounded8,
+    canonical8
 );
 #[cfg(feature = "w512")]
 kernels!(
@@ -104,16 +120,15 @@ kernels!(
     recip16,
     emulate16,
     native16,
-    try_recip_f32x16_with
+    try_recip_f32x16_with,
+    bounded16,
+    canonical16
 );
 macro_rules! group {
-    ($suite:ident,$name:expr,$t:ident,$stream:ident,$chain:ident,$n:literal,$dependent:literal) => {{
+    ($suite:ident,$name:expr,$t:ident,$stream:ident,$chain:ident,$n:literal,$dependent:literal,$distribution:literal) => {{
         $suite.group($name, |g| {
             g.config().min_rounds(50).max_rounds(50).auto_rounds(false);
-            let input: [f32; $n] = core::array::from_fn(|i| {
-                let x = 0.25 + ((i % 64 + 1) as f32) * 0.03125;
-                if i % 3 == 1 { -x } else { x }
-            });
+            let input: [f32; $n] = core::array::from_fn(|i| input(i, $distribution));
             macro_rules! arm {
                 ($label:literal,$mode:literal) => {
                     g.bench($label, move |b| {
@@ -130,10 +145,19 @@ macro_rules! group {
                 };
             }
             arm!("magetypes recip", 0);
-            arm!("portable parallel MIDP", 1);
-            arm!("portable serial MIDP", 2);
-            arm!("portable HIGHP division", 3);
-            arm!("canonical RCP14", 4);
+            if std::env::args().any(|a| a == "--certified-study") {
+                arm!("portable serial MIDP", 2);
+                arm!("bounded f64 MIDP (same fused bits)", 10);
+                arm!("portable HIGHP division", 3);
+                arm!("RN14 native always certified", 11);
+                arm!("RN14 native guarded", 12);
+                arm!("RN14 division guarded", 13);
+            } else {
+                arm!("portable parallel MIDP", 1);
+                arm!("portable serial MIDP", 2);
+                arm!("portable HIGHP division", 3);
+                arm!("canonical RCP14", 4);
+            }
         });
     }};
 }
@@ -146,7 +170,8 @@ macro_rules! width {
             $stream,
             $chain,
             64,
-            false
+            false,
+            0
         );
         group!(
             $suite,
@@ -155,7 +180,8 @@ macro_rules! width {
             $stream,
             $chain,
             4096,
-            false
+            false,
+            0
         );
         group!(
             $suite,
@@ -164,7 +190,8 @@ macro_rules! width {
             $stream,
             $chain,
             64,
-            true
+            true,
+            0
         );
     }};
 }
@@ -175,7 +202,72 @@ macro_rules! matrix {
         width!($suite, $tier, t, $s8, $c8, 8);
         #[cfg(feature = "w512")]
         width!($suite, $tier, t, $s16, $c16, 16);
+        if std::env::args().any(|a| a == "--certified-study") {
+            group!(
+                $suite,
+                format!("{}/f32x8/bits64", $tier),
+                t,
+                $s8,
+                $c8,
+                64,
+                false,
+                1
+            );
+            group!(
+                $suite,
+                format!("{}/f32x8/bits4096", $tier),
+                t,
+                $s8,
+                $c8,
+                4096,
+                false,
+                1
+            );
+            group!(
+                $suite,
+                format!("{}/f32x8/boundary64", $tier),
+                t,
+                $s8,
+                $c8,
+                64,
+                false,
+                2
+            );
+            group!(
+                $suite,
+                format!("{}/f32x8/boundary4096", $tier),
+                t,
+                $s8,
+                $c8,
+                4096,
+                false,
+                2
+            );
+        }
     }};
+}
+pub(crate) fn input(i: usize, distribution: u8) -> f32 {
+    let x = match distribution {
+        0 => 0.25 + ((i % 64 + 1) as f32) * 0.03125,
+        1 => {
+            if i.is_multiple_of(257) {
+                f32::from_bits(252 << 23)
+            } else {
+                f32::from_bits(
+                    ((2 + (i as u32 * 73) % 250) << 23)
+                        | ((i as u32).wrapping_mul(0x9e3779b9) & 0x7fffff),
+                )
+            }
+        }
+        2 => {
+            let k = 8192 + (i as u64 % 8191);
+            let den = 2 * k + 1;
+            let m = ((1_u64 << 38) + den / 2) / den;
+            f32::from_bits(0x3f800000 + (m as u32 - 0x800000))
+        }
+        _ => panic!("distribution"),
+    };
+    if i % 3 == 1 { -x } else { x }
 }
 pub(crate) fn run() {
     let args: Vec<_> = std::env::args().collect();
@@ -207,8 +299,14 @@ pub(crate) fn run() {
         plan.rounds = Some(50);
         plan.margin_pct = 2.0;
         plan.confidence = 0.95;
-        plan.workload_id =
-            Some("recip-normal-signed-period64-stream64-stream4096-positive-chain64-v1".into());
+        plan.workload_id = Some(
+            if std::env::args().any(|a| a == "--certified-study") {
+                "recip-certified-normal-signed-ordinary-bits-boundary64-4096-chain64-v1"
+            } else {
+                "recip-normal-signed-period64-stream64-stream4096-positive-chain64-v1"
+            }
+            .into(),
+        );
         plan.scope = Some(format!("recip-qualification-{tier}"));
         match tier.as_str() {
             "scalar" => matrix!(

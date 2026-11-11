@@ -3,6 +3,7 @@
 #![forbid(unsafe_code)]
 use magemath::{minmax::*, recip::*};
 mod rcp14;
+mod recip_research;
 mod seed_graphs;
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 #[archmage::arcane]
@@ -48,6 +49,27 @@ pub fn scalar_normal_min(a: f32, b: f32) -> f32 {
 }
 macro_rules! probes {
     ($token:ident) => {
+        #[archmage::arcane]
+        pub fn native_bounded(t: archmage::$token, x: [f32; 8]) -> [f32; 8] {
+            recip_research::bounded8::<2, _>(t, magetypes::simd::generic::f32x8::from_array_t(t, x))
+                .to_array()
+        }
+        #[inline(never)]
+        pub fn probe_bounded(t: archmage::$token, x: [f32; 8]) -> [f32; 8] {
+            native_bounded(t, x)
+        }
+        #[archmage::arcane]
+        pub fn native_rn14(t: archmage::$token, x: [f32; 8]) -> [f32; 8] {
+            recip_research::canonical8::<14, 1, _>(
+                t,
+                magetypes::simd::generic::f32x8::from_array_t(t, x),
+            )
+            .to_array()
+        }
+        #[inline(never)]
+        pub fn probe_rn14(t: archmage::$token, x: [f32; 8]) -> [f32; 8] {
+            native_rn14(t, x)
+        }
         #[archmage::arcane]
         pub fn native_recip_parallel(t: archmage::$token, x: [f32; 8]) -> [f32; 8] {
             seed_graphs::recip8(t, magetypes::simd::generic::f32x8::from_array_t(t, x)).to_array()
@@ -238,4 +260,11 @@ pub fn scalar_representation_midp_automatic(x: [f32; 4]) -> [f32; 4] {
     )
     .unwrap()
     .to_array()
+}
+
+#[inline(never)]
+pub fn scalar_bounded8(x: [f32; 8]) -> [f32; 8] {
+    let t = archmage::ScalarToken;
+    recip_research::bounded8::<2, _>(t, magetypes::simd::generic::f32x8::from_array_t(t, x))
+        .to_array()
 }
