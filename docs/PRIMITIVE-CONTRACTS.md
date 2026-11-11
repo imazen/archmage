@@ -73,8 +73,8 @@ Other widths return UnsupportedWidth. Slice scheduling belongs to the caller.
 | x86 V3 | Normal aliases existing native min/max; portable repairs for Full | rcp/rsqrt estimate → one relaxed-FMA refinement | Native directed f32/f64, width/tail checks; x4 full mantissas [1,4) | Zen 5 and Intel E-core x4/x8/x16 studies; overall unqualified |
 | x86 V4/V4x | Same semantic graph; native widths | Existing width's estimate → refinement | Native directed x4/x8/x16 and f64 x2/x4/x8 | Zen 5 x4/x8/x16 measured; overall unqualified |
 | ARM NEON | Ordered Propagate uses fmin/fmax; Normal aliases existing fminnm/fmaxnm | Raw frecpe/frsqrte → one existing NEON refinement | Native M6 std/no_std directed and x4 mantissa scan | M6 exploratory x4/x8/x16; every round resource-flagged |
-| WASM SIMD128 | Propagate uses strict min/max; Number uses repairs | Reciprocal division; rsqrt fixed two-step estimate for both grades | Wasmtime strict/relaxed std/no_std directed | Not measured |
-| WASM relaxed SIMD | Normal or explicitly permissive policies may use relaxed min/max | No standardized reciprocal/rsqrt estimate instruction | Compiled opcode probes; relaxed token disabling tested | Not measured |
+| WASM SIMD128 | Propagate uses strict min/max; Number uses repairs | Reciprocal division; rsqrt fixed two-step estimate for both grades | Wasmtime strict/relaxed std/no_std directed | Hosted reciprocal x4/x8/x16 measured; strict suites fail admission; min/max and rsqrt not measured |
+| WASM relaxed SIMD | Normal or explicitly permissive policies may use relaxed min/max | No standardized reciprocal/rsqrt estimate instruction | Compiled opcode probes; relaxed token disabling tested | Hosted fusing/nonfusing reciprocal measured; strict suites fail admission |
 | Scalar | Comparison/select plus requested repairs | Division / two-step rsqrt estimate, both grades alias | Exact-rational HIGHP fixtures; directed and x4 mantissa scan | Zen 5 Caller x4/x8/x16; overall unqualified |
 
 The latest timing matrix measures current portable MIDP reciprocal and HIGHP
@@ -164,3 +164,12 @@ every whole strict suite fails admission. A clean Zen 5 AVX2 x8 long stream
 regresses from 154.399 to 189.541 ns with parallel correction, while clean Intel
 E-core cells improve. M6 remains unconfined and 0/50 clean in every group.
 The original evidence is retained; numerical tests and public graphs are unchanged.
+
+The [bounded-widening and canonical-rounding study](../benchmarks/primitive_variants_2026-11-10/CERTIFIED-RECIP.md)
+keeps two further reciprocal designs benchmark-only. Specialized f64 evaluation
+matches the existing fused LOWP/MIDP bits and reduces software-only costs; retain
+native FMA when available. Exact RN14/RN8 agrees across tested ISAs, using guarded
+correction rather than merely masking an estimate. RN14 spends accuracy and its
+correction costs can exceed HIGHP division. The study names every implementation,
+provides all widths/workloads in ns, and retains failed admission. Neither design
+changes the public graph or qualifies a faster-than-native portable replacement.

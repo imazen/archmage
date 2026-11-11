@@ -2,6 +2,9 @@
 
 This is the historical **unfused portable** graph. The current implementation
 and separately measured comparison are in [FUSION.md](FUSION.md).
+The later [bounded/canonical reciprocal study](CERTIFIED-RECIP.md) uses patched
+zenbench, independent streamed oracles, and hosted WASM comparisons. Its research
+graphs remain outside public profiles.
 
 **The overall Zen 5 timing run failed admission. No blanket legacy replacement
 is performance-qualified.** Six comparison groups retain 50/50 clean rounds;

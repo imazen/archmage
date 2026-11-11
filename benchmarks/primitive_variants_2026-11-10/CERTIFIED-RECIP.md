@@ -133,6 +133,8 @@ The first matrix is complete. Every strict suite fails admission. Ten of its
 91 strict groups have all 250 observations clean individually, all on Intel;
 none of the 13 M6 groups has a clean round. M6 remains exploratory regardless
 of the packet's aggregate flag. All 104 groups and every timing round are kept.
+The [complete first matrix](CERTIFIED-RECIP-FIRST-TIMINGS.md) includes every
+width, ordinary stream/chain and bit/boundary-stress result.
 The corrective matrix below is still finishing; its final costs are reported
 separately, rather than replacing the first measurements.
 
@@ -203,6 +205,13 @@ integer certificate only for uncertain vectors. It compares the normalized
 24-bit input significand times each midpoint numerator against a power of two;
 these products fit in u64. Original inline and new cold variants are both
 retained. Their independent oracle targets are identical.
+
+For the inspected Scalar x8 division-proposal stream64 function, the explicit
+stack allocation decreases from `0x468` (1128) to `0x68` (104) bytes. This is
+compiler stack reservation, not a heap/RSS measurement. The cold call is behind
+the uncertainty branch and the hot loop has no float-to-int repair conversion.
+Both disassemblies and the exact executable are preserved. This establishes the
+codegen change; timings still determine whether it helps each workload.
 
 This is a new source qualification, not a timing retry. The corrective matrix
 uses the same 13 groups, five processes and 50 rounds, with six named arms:

@@ -1216,6 +1216,14 @@ fn process(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 
 ## Known Bugs
 
+Reciprocal research costs, 2026-11-11: bounded f64 Newton correction preserves
+current fused bits and reduces software-only timing, but regresses native-FMA
+comparisons. Canonical RN14 rounding adds work beyond HIGHP division; its cold
+integer repair improves Scalar fast paths but worsens frequent-repair boundary
+streams on Intel/NEON. These are benchmark-only graphs, not public defaults.
+All admission failures remain visible in
+`benchmarks/primitive_variants_2026-11-10/CERTIFIED-RECIP.md`.
+
 Configurable reciprocal performance, 2026-11-11: fused portable MIDP improves
 its own unfused chains, but still costs 11.54% reciprocal / 25.92% rsqrt versus
 the existing native Magetypes graphs on clean Zen 5 x8 chain comparisons. The

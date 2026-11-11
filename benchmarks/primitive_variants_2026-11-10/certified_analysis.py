@@ -37,8 +37,13 @@ for context in contexts:
     packet = json.loads(gzip.decompress((root / (context + ".json.gz")).read_bytes()))
     replicates = packet.get("replicates") or [packet]
     assert len(replicates) == (1 if context == "mac/neon" else 5)
-    family = sum(len(g["analyses"]) for g in replicates[0]["comparisons"])
-    assert family > 0
+    assert all(len(r["comparisons"]) == 13 for r in replicates)
+    # Include the explicitly reported non-baseline comparisons too: widened /
+    # serial, or the two cold / inline pairs. Baseline-only multiplicity alone
+    # would undercount the family of intervals printed by this analysis.
+    family = sum(len(g["benchmarks"]) - 1 + (2 if cold else 1)
+                 for g in replicates[0]["comparisons"])
+    assert family == 91
     for gi, group in enumerate(replicates[0]["comparisons"]):
         groups = [r["comparisons"][gi] for r in replicates]
         names = [b["name"] for b in group["benchmarks"]]
@@ -46,6 +51,12 @@ for context in contexts:
         assert all(g["group_name"] == group["group_name"] for g in groups)
         assert all([b["name"] for b in g["benchmarks"]] == names for g in groups)
         assert all(len(g["samples"]) == 50 for g in groups)
+        assert all(not g["config"]["auto_rounds"] and g["config"]["max_rounds"] == 50
+                   and g["completed_rounds"] == 50 for g in groups)
+        assert all(s["iterations"] > 0 and len(s["compensated_ns"]) == len(names)
+                   and len(s["elapsed_ns"]) == len(names)
+                   and sorted(s["execution_order"]) == list(range(len(names)))
+                   for g in groups for s in g["samples"])
         batch = (4096 if group["group_name"].endswith("64")
                  and "/chain" not in group["group_name"] else 256) if context.startswith("wasm/") else 1
         values = np.array([[[s["compensated_ns"][i] / s["iterations"] / batch
