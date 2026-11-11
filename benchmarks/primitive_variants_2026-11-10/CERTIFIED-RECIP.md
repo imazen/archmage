@@ -259,3 +259,93 @@ and 27.896 → 45.349 ns on exploratory M6. Moving repair out of line is not a
 universal improvement. Boundary-heavy input makes cold calls frequent; both
 cold variants are substantially slower there on Intel/NEON. No variant is
 promoted on the strength of a favorable average or the Scalar stack reduction.
+
+## Validation, reproduction and resources
+
+The benchmark package passes strict Clippy with std/defaults, no-default w512,
+and the optional native WASM host. Its default targets pass MSRV1.89; the
+optional Wasmtime49 host was built/tested with Rust1.99.1. Dense i686 Scalar
+checks pass at all three widths. The i686 probe/import warnings found during
+qualification were fixed with target cfgs; no lint or assertion was relaxed.
+WASM numerical CLI tests use Wasmtime40.0.1, while hosted timing/verification
+uses Wasmtime49.0.5. Those engine identities are deliberately separate.
+
+The no_std x86 baseline correctly refuses to summon V3 dynamically. Its Scalar
+check passes; the V3 no_std check passes when compiled explicitly for x86-64-v3.
+This correctness build is not a target-cpu=native timing run. M6 no_std and all
+five WASM std/no_std/engine-choice numerical checks pass unchanged expectations.
+The oracle and test readers use fixed buffers, and timings reuse fixed short/long
+inputs in paired interleaved rounds; they do not allocate an input-space array.
+
+Library, generator, workspace manifest/lockfile, workflow and existing test
+sources are unchanged from complete [green CI67dead91](https://github.com/imazen/archmage/actions/runs/42956052496).
+The separate worker replay passes generation, registry/token validation,
+soundness and the first 14 full-suite stages. Its redundant unchanged-library
+Miri run was stopped and its partial log retained; a fresh complete local suite
+is not claimed. The new unpublished package's exactness/codegen/lint evidence is
+recorded separately above. The PR's new-head CI runs separately.
+
+Reproduction entry points (use a new external output directory for the 128 MiB
+reference; preserve existing fixtures):
+
+```text
+just primitive-recip-round-reference REF_DIR
+just primitive-recip-round-audit REF_DIR/recip-round-reference.u32le REF_DIR
+just primitive-recip-round-check REF_DIR/recip-round-reference.u32le scalar --dense
+just primitive-recip-round-check REF_DIR/recip-round-reference.u32le v3 --dense
+just primitive-recip-round-wasm REF_DIR/recip-round-reference.u32le
+just primitive-recip-guest GUEST_DIR strict
+just primitive-recip-guest GUEST_DIR relaxed
+just primitive-recip-wasm-host-build
+just primitive-recip-certified-analyze RESULT_DIR first
+just primitive-recip-certified-analyze COLD_RESULT_DIR cold
+just primitive-recip-certified-table RESULT_DIR
+```
+
+`--certified-study` selects the seven-arm matrix; `--cold-study` selects the
+six-arm repair ablation. `run_certified_matrix.py` expects already frozen native
+and host binaries, strict/relaxed guests and SOURCE.json. Supply the absolute
+resource-wrapper path through ARCHMAGE_HEAVY_WRAPPER; zenbench still owns
+admission and benchmark serialization. Every failed cell and its return code is
+kept, with no automatic retry. Analysis writes a new file and refuses overwrite.
+
+Each timing job has an 8 GiB Linux cgroup cap; M6 uses its monitored RSS guard
+and BSD-time peak, without a cgroup hard-cap claim. These are the actual wrapper
+resource summaries, separate from stack reservations and source buffer sizes:
+
+| Context | First study seconds / peak-RSS GiB | Cold ablation seconds / peak-RSS GiB |
+|---|---:|---:|
+| zen5/scalar | 135 / 0.27 | 122 / 0.27 |
+| zen5/v3 | 141 / 0.26 | 139 / 0.26 |
+| zen5/v4 | 143 / 0.26 | 146 / 0.27 |
+| i265/v3 | 114 / 0.03 | 101 / 0.03 |
+| mac/neon | 23 / 0.02 | 19 / 0.02 |
+| wasm/strict | 250 / 0.28 | 215 / 0.28 |
+| wasm/fusing | 229 / 0.28 | 209 / 0.28 |
+| wasm/nonfusing | 248 / 0.28 | 210 / 0.28 |
+
+The initial optional-host build used 193 s / 2.14 GiB peak-RSS. Cold-variant
+multi-ISA qualification used 36 s / 0.53 GiB; the final i686 build and dense
+check used 14 s / 0.45 GiB (its following documentation whitespace check was
+corrected). Final std/no_std/host Clippy, fmt and source integrity checks pass
+in 3 s / 0.33 GiB. No cold-build speedup or binary-size comparison is claimed.
+
+## Artifacts and source identity
+
+First frozen inputs: `d5026a6d4a40aecec00df4c6ac196baffdcedac3`.
+Cold-repair inputs: `29f36d84dd258d4cab64f412cc08027f52c67e6a`.
+Later changes add analysis/docs and scope imports/probes on i686; the timed math
+and frozen binaries are unchanged. Zenbench's git field comes from the launcher
+checkout, not the compiled source. SOURCE.json, source.tar, binary/module hashes
+and per-host compiler records identify the actual inputs.
+
+External directories:
+
+- `/mnt/v/output/archmage/recip-certified-2026-11-11/`
+- `/mnt/v/output/archmage/recip-certified-cold-2026-11-11/`
+
+They preserve source archives, exact binaries/modules, the C reference, compiler
+and flags, complete paired packets, child-process logs, all failures, disassembly,
+all-retained-round analysis and resource lines. The earlier analysis with only
+78 baseline comparisons is retained as v1; final intervals correctly include
+all 91 reported comparisons. No timing data changed for that correction.
