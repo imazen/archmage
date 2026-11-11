@@ -15,6 +15,7 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 
 #### Added
 
+- Add const-configured f32/f64 min/max and f32 reciprocal/rsqrt in Magemath, with whole-vector domain validation, native estimates and portable fixed graphs, and width-specific scalar tails; retain existing Magetypes methods (7b29667c).
 - Introduce the no_std-first configurable f32 powf, expf and logf owner, with const integer profiles, caller-preserving vector entries and scalar tail APIs (862951ef).
 - Keep existing powf coefficients/contracts and omit predecessor-fit selectors from the new exp/log precision enums; retain the published flat implementations in Magetypes (862951ef).
 
