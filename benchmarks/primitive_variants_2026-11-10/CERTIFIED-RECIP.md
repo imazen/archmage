@@ -1,6 +1,6 @@
 # Bounded widening and canonical reciprocal rounding — 2026-11-11
 
-This is an unpublished, benchmark-only study. Public Magemath graphs, options,
+This is a benchmark-only study in an unpublished Cargo package. Public Magemath graphs, options,
 accuracy expectations and Magetypes methods are unchanged.
 
 **The numerical approach works; a faster-than-native portable replacement is
@@ -349,3 +349,10 @@ and flags, complete paired packets, child-process logs, all failures, disassembl
 all-retained-round analysis and resource lines. The earlier analysis with only
 78 baseline comparisons is retained as v1; final intervals correctly include
 all 91 reported comparisons. No timing data changed for that correction.
+
+Verified NAS mirrors use the same two directory names under
+`/mnt/tower/output/archmage/`. Every file was read back and checked against its
+SHA256 manifest on 2026-11-11:
+
+- `recip-certified-2026-11-11`: 110 files; manifest SHA256 `7d44379dbc7247e2557f875fe353b15c217d62182eebeca191392555aa87a30e`.
+- `recip-certified-cold-2026-11-11`: 94 files; manifest SHA256 `c64c541696a427a72e9dae9f329df311f76560facee539541abe12bd23899557`.
