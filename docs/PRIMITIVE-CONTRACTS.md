@@ -70,12 +70,12 @@ Other widths return UnsupportedWidth. Slice scheduling belongs to the caller.
 
 | ISA | Min/max | Backend LOWP → MIDP reciprocal / rsqrt | Validation evidence | Timing |
 |---|---|---|---|---|
-| x86 V3 | Normal aliases existing native min/max; portable repairs for Full | rcp/rsqrt estimate → one relaxed-FMA refinement | Native directed f32/f64, width/tail checks; x4 full mantissas [1,4) | Zen 5 V3 x8 study below; overall unqualified |
-| x86 V4/V4x | Same semantic graph; native widths | Existing width's estimate → refinement | Native directed x4/x8/x16 and f64 x2/x4/x8 | Not measured |
-| ARM NEON | Ordered Propagate uses fmin/fmax; Normal aliases existing fminnm/fmaxnm | Raw frecpe/frsqrte → one existing NEON refinement | Native M6 std/no_std directed and x4 mantissa scan | Not measured for these final graphs |
+| x86 V3 | Normal aliases existing native min/max; portable repairs for Full | rcp/rsqrt estimate → one relaxed-FMA refinement | Native directed f32/f64, width/tail checks; x4 full mantissas [1,4) | Zen 5 and Intel E-core x4/x8/x16 studies; overall unqualified |
+| x86 V4/V4x | Same semantic graph; native widths | Existing width's estimate → refinement | Native directed x4/x8/x16 and f64 x2/x4/x8 | Zen 5 x4/x8/x16 measured; overall unqualified |
+| ARM NEON | Ordered Propagate uses fmin/fmax; Normal aliases existing fminnm/fmaxnm | Raw frecpe/frsqrte → one existing NEON refinement | Native M6 std/no_std directed and x4 mantissa scan | M6 exploratory x4/x8/x16; every round resource-flagged |
 | WASM SIMD128 | Propagate uses strict min/max; Number uses repairs | Reciprocal division; rsqrt fixed two-step estimate for both grades | Wasmtime strict/relaxed std/no_std directed | Not measured |
 | WASM relaxed SIMD | Normal or explicitly permissive policies may use relaxed min/max | No standardized reciprocal/rsqrt estimate instruction | Compiled opcode probes; relaxed token disabling tested | Not measured |
-| Scalar | Comparison/select plus requested repairs | Division / two-step rsqrt estimate, both grades alias | Exact-rational HIGHP fixtures; directed and x4 mantissa scan | Not separately measured |
+| Scalar | Comparison/select plus requested repairs | Division / two-step rsqrt estimate, both grades alias | Exact-rational HIGHP fixtures; directed and x4 mantissa scan | Zen 5 Caller x4/x8/x16; overall unqualified |
 
 Relaxed WASM selection requires a module compiled with relaxed SIMD and an
 internal `Wasm128RelaxedToken::summon()`; module validation establishes feature
@@ -132,3 +132,22 @@ The [portable seed/correction study](../benchmarks/primitive_variants_2026-11-10
 records real masking/rounding counterexamples and two benchmark-only deterministic
 MIDP alternatives. Their numerical scans pass, but every new timing group failed
 admission; neither changes the public graph or qualifies a legacy replacement.
+
+
+The later [reciprocal qualification](../benchmarks/primitive_variants_2026-11-10/RECIP-QUALIFICATION.md)
+keeps both prototypes outside public profiles. Parallel correction matches an
+independent streamed C fused graph in Scalar/x86/NEON/strict and relaxed WASM;
+its full normalized x4 maximum relative error is 1.145700113618e-5. It improves
+some clean Intel E-core and Zen 5 dependency cells, but regresses other streams.
+Six of 36 strict groups have all 250 rounds clean; no whole strict suite passes.
+
+A separate canonical RCP14 prototype uses one native AVX-512 instruction at
+x4/x8/x16 and reproduces the same bits using a 256-byte integer coefficient
+table elsewhere. Its measured maximum relative error, 5.438657899502e-5, meets
+MIDP but is less accurate than the current portable graph. Native Zen 5 matches
+Intel's published C reference; physical Intel AVX-512 remains unmeasured.
+Emulation on AVX2/NEON is substantially slower, so it is an explicit asymmetric
+tradeoff, not a newly selected public default. Existing HIGHP division remains
+the simple bit-portable alternative and can be cheaper for dependency chains.
+The linked report retains every width/workload time in ns and all admission
+limits, including unconfined, resource-flagged M6 exploratory timings.

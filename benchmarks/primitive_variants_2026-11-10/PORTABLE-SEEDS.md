@@ -3,8 +3,10 @@
 **No public arithmetic graph changes.** This study tests whether masking native
 estimates can make a common seed, and evaluates two deterministic MIDP graph
 alternatives. Both alternatives remain benchmark-only. Numerical scans pass;
-**every timing group failed admission**, so no speed or replacement promotion
-is qualified by this run.
+**every timing group in this historical run failed admission**, so it qualifies
+no speed or replacement promotion. The later [reciprocal qualification](RECIP-QUALIFICATION.md)
+adds signed/edge/cross-ISA oracle checks, independent processes and RCP14
+emulation. It finds clean-cell wins, while universal replacement remains held.
 
 ## Accuracy bits are not common prefix bits
 
