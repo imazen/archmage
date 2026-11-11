@@ -47,6 +47,11 @@ pub fn scalar_highp_rsqrt(x: f32) -> f32 {
 pub fn scalar_normal_min(a: f32, b: f32) -> f32 {
     try_min_with::<{ MinMaxOptions::UNCHECKED_NORMAL.bits() }>(a, b).unwrap()
 }
+#[cfg(any(
+    target_arch = "x86_64",
+    target_arch = "aarch64",
+    target_arch = "wasm32"
+))]
 macro_rules! probes {
     ($token:ident) => {
         #[archmage::arcane]
