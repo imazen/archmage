@@ -1168,3 +1168,6 @@ primitive-recip-round-audit reference output:
     cc -O3 -std=c11 -ffp-contract=off -fno-fast-math benchmarks/primitive_variants_2026-11-10/recip_round_reference.c -lm -o "{{output}}/recip-round-audit"
     "{{output}}/recip-round-audit" --audit
     python3 -B benchmarks/primitive_variants_2026-11-10/oracle_spotcheck.py "{{reference}}"
+
+primitive-recip-certified-analyze results study:
+    python3 -B benchmarks/primitive_variants_2026-11-10/certified_analysis.py "{{results}}" {{study}}
