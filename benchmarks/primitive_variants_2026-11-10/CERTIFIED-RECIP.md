@@ -1,0 +1,124 @@
+# Bounded widening and canonical reciprocal rounding — 2026-11-11
+
+This is an unpublished, benchmark-only study. Public Magemath graphs, options,
+accuracy expectations and Magetypes methods are unchanged.
+
+## Target and independent checks
+
+The domain is **2^-125 ≤ abs(x) ≤ 2^125**, round-to-nearest-even and gradual
+underflow. The widened graph must match current portable LOWP/MIDP fused bits.
+The new canonical targets are the mathematical reciprocal rounded directly to
+14 or 8 significant binary digits, encoded as f32. Their relative bounds are
+2^-14 / 2^-8 on this domain, inside MIDP1e-4 / LOWP6e-3 respectively.
+These are separate targets; canonical rounding does not preserve Newton bits.
+
+The streamed C oracle writes four columns: libc-fmaf MIDP, libc-fmaf LOWP,
+integer-division RN14, integer-division RN8. It holds 8,388,608 positive
+normalized inputs in a 128 MiB file, generated with a fixed 16 KiB buffer and
+read with a 64 KiB buffer. No input-space-sized array is allocated.
+SHA256: `7f48c84de3459ab75da0ffe7ba63c69556fe89a76ff3085065c6c1a18ebafc4d`.
+The repository's independent Fraction-based FMA rounder and rational reciprocal
+rounder agree with all four C columns on 1,029 directed/random inputs.
+
+Dense x4/x8/x16 checks enumerate every signed normalized mantissa, plus directed
+mantissas at every accepted exponent and both-sign same-width tails. The lane
+counts per context are 16,787,220 / 16,797,224 / 16,817,232, excluding additional
+tail evaluations. They pass Scalar, V3, V4, V4x, physical Intel V3, native M6
+NEON std/no_std, Wasmtime strict/relaxed, forced non-FMA and no_std modules.
+Normalized enumeration plus exact power-of-two homogeneity covers the exponent
+reduction; this is not a literal full-domain sweep at every exponent.
+
+Maximum measured relative errors, using the exact f64 product x*y minus one:
+current/widened MIDP **1.1415493993638393e-5**, RN14
+**6.1027705669403076e-5**, RN8 **0.003891050349920988**. All observed widened
+and certified output bits match their respective independent C columns.
+
+## Why bounded widening is exact
+
+A binary32 product has at most 48 significant bits. The exact product x*y in
+each Newton correction lies in [0.5,2], so subtracting it from two needs at
+most 49 significant bits. Both operations therefore fit exactly in binary64;
+only conversion back to binary32 rounds. The following multiplication by y
+remains binary32, preserving the original graph's rounding points.
+
+The C audit enumerates the seed and first refinement and records these exact
+product intervals:
+
+- Seed: `[0x1.e24fd4p-1, 0x1.0a2a0b6690f2p+0]`.
+- First refinement: `[0x1.fe474b094p-1, 0x1.000001cabd6p+0]`.
+
+The bit seed scales inversely with the input exponent, so the products are
+invariant under normal-domain power-of-two scaling. Rounded outputs remain
+normal. This justifies the exponent reduction and the second step by induction.
+This specialized computation is not a general-purpose f32 FMA replacement.
+
+WASM uses explicit packed promote/multiply/subtract/demote/shuffle operations.
+The initial automatic-vectorization version emitted scalar extract/demote/insert
+sequences. Both versions pass the same oracle; their binaries are retained.
+Hardware-FMA contexts are measured as comparisons, but the intended use of
+widening is a software fallback, not replacement of native FMA.
+
+## Why canonical correction is necessary
+
+Division then naïve bit rounding disagrees with direct mathematical rounding
+on **3,980 RN14 inputs** and **54 RN8 inputs** in the normalized scan. Retained
+witnesses include input `3ffffc00` / `3fff00ff`. The new paths correct these
+rather than treating a finite probe as a universal guarantee.
+
+All three implementations select the same canonical result:
+
+1. Native working `recip()` proposal, certify every vector.
+2. Native working proposal, certify vectors with any lane within 16 binary32
+   encoding units of a coarse midpoint. This conservative guard relies on the
+   existing working reciprocal's ≤4-ULP normal-domain contract; the guard and
+   proposal error are much smaller than an RN14/RN8 bin.
+3. Correctly rounded division proposal, certify only coarse midpoint results,
+   which are the ambiguous double-rounding cases.
+
+Certification normalizes x and the proposed rounded answer. Midpoints then
+have at most 16 significant bits. A hardware FMA computes the sign of
+`1 - x*midpoint`; the smallest nonzero normalized residual is well above f32
+underflow, so rounding cannot erase its sign. Without FMA, the ≤40-bit product
+and subtraction are exact in f64. The sign chooses the adjacent bin; parity
+handling retains RNE at equality. Input/output scaling is restored with integer
+bit operations. Each width and scalar tail targets the same integer quotient /
+remainder result, regardless of the original estimate bits.
+
+## Frozen measurement plan
+
+Use zenbench pinned to **73302a1c115836b2646f6a9adc32058c20d1a66f**, including
+observer-affinity and macOS CPU-counter fixes. No target-cpu=native. Strict
+confirmation uses five independent processes and exactly 50 retained paired
+rounds, a 2% margin and family confidence95%. Promotion requires every mandatory
+ordinary-input cell clean and upper95 ratio≤1.02; an optimization claim also
+requires upper95<1 in an intended cell. Dirty and boundary-stress results remain
+visible. There is one fixed run per source/context, with no favorable retries.
+
+Seven named implementations:
+
+- Existing Magetypes `recip()`.
+- Current portable serial MIDP, Normal, AssumeValid, Caller.
+- Bounded f64 MIDP, same fused graph bits.
+- HIGHP division, Caller.
+- RN14 native always certified.
+- RN14 native guarded.
+- RN14 division guarded.
+
+Each context has 13 groups: x4/x8/x16 ordinary signed streams64/4096 and positive
+chain64; x8 bit-distributed streams64/4096 over the normal domain, and x8 streams
+concentrated at RN14 rounding boundaries. The latter deliberately exercise the
+correction path. RN8 is numerically qualified here; this phase times RN14 only.
+Contexts: Zen5 Scalar/V3/V4, Intel Skymont E V3, M6 NEON exploratory, and hosted
+WASM strict/fusing/forced-nonfusing. M6 remains excluded from strict promotion
+because macOS does not enforce one core class.
+
+The WASM host uses patched zenbench and Wasmtime49.0.5. Compilation and instance
+setup are outside samples. Calls batch 4096 complete short-stream workloads or
+256 long-stream/chain workloads, with guest black_box barriers inside every
+repetition. Tables report ns/workload after dividing by that fixed batch;
+raw packets/bars retain ns/host call, including host-call and guest-lock costs.
+The actual relaxed-FMA probes are 0/1/0 for strict/fusing/nonfusing respectively.
+Before timing, the guest checks every result lane for every arm and workload.
+
+Timing results pending. This document will retain the complete matrix, bounds,
+codegen findings and any material regressions after the fixed runs finish.
