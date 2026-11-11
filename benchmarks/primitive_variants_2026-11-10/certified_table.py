@@ -33,7 +33,7 @@ for context in dict.fromkeys(r["context"] for r in rows):
               str(sum(r["all_rounds_clean"] for r in subset)) + "/13 groups have all observations clean.", ""]
 destination = root / "timings.md"
 assert not destination.exists(), destination
-text = "\n".join(lines) + "\n"
+text = "\n".join(lines).rstrip() + "\n"
 assert len(text.encode()) <= 30000
 destination.write_text(text)
 print(destination)

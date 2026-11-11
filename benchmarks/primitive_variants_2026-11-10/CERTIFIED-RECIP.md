@@ -149,28 +149,28 @@ none of the 13 M6 groups has a clean round. M6 remains exploratory regardless
 of the packet's aggregate flag. All 104 groups and every timing round are kept.
 The [complete first matrix](CERTIFIED-RECIP-FIRST-TIMINGS.md) includes every
 width, ordinary stream/chain and bit/boundary-stress result.
-The corrective matrix below is still finishing; its final costs are reported
-separately, rather than replacing the first measurements.
+The corrective matrix is complete and reported separately, rather than
+replacing the first measurements.
 
 ### First matrix: same fused graph, different implementation
 
 All values below are ns per **64-element ordinary stream**, logical x8, including
 the stream's loads/stores. Intervals compare bounded f64 with current portable
 serial MIDP, using all retained data and five independent-process log means,
-family-adjusted Student-t intervals plus the timer floor. These are diagnostic
+Student-t intervals adjusted over all 91 reported comparisons plus the timer floor. These are diagnostic
 intervals on failed suites, not confirmed optimization claims. M6 has one
 exploratory process, so no independent-process interval is available.
 
 | Context | Current portable serial MIDP | Bounded f64 MIDP | HIGHP division | Bounded / current family95 interval | Clean pairs |
 |---|---:|---:|---:|---:|---:|
-| Zen 5 Scalar Caller | 109.341 | 27.608 | 7.097 | 0.249882–0.255133 | 200/250 |
-| Zen 5 V3 | 2.823 | 19.876 | 3.495 | 6.545061–7.578227 | 140/250 |
-| Zen 5 V4 | 2.887 | 9.916 | 3.566 | 2.921904–4.042039 | 199/250 |
-| Intel Skymont E V3 | 7.802 | 30.883 | 17.254 | 3.872576–4.045857 | 250/250 |
+| Zen 5 Scalar Caller | 109.341 | 27.608 | 7.097 | 0.249777–0.255241 | 200/250 |
+| Zen 5 V3 | 2.823 | 19.876 | 3.495 | 6.525589–7.600840 | 140/250 |
+| Zen 5 V4 | 2.887 | 9.916 | 3.566 | 2.902692–4.068793 | 199/250 |
+| Intel Skymont E V3 | 7.802 | 30.883 | 17.254 | 3.869132–4.049459 | 250/250 |
 | M6 NEON exploratory | 5.789 | 18.007 | 3.240 | Not measured across processes | 0/50 |
-| WASM strict | 231.842 | 70.194 | 7.309 | 0.298295–0.307308 | 148/250 |
-| WASM relaxed, fusing | 53.666 | 70.678 | 7.360 | 1.232660–1.407261 | 169/250 |
-| WASM relaxed, nonfusing | 268.096 | 87.311 | 7.299 | 0.322290–0.329087 | 133/250 |
+| WASM strict | 231.842 | 70.194 | 7.309 | 0.298115–0.307494 | 148/250 |
+| WASM relaxed, fusing | 53.666 | 70.678 | 7.360 | 1.229345–1.411055 | 169/250 |
+| WASM relaxed, nonfusing | 268.096 | 87.311 | 7.299 | 0.322154–0.329227 | 133/250 |
 
 This is a **software fallback specialization**: preserve native FMA and the
 cached fusing relaxed-WASM provider. Replacing those paths with widening is a
@@ -231,3 +231,31 @@ This is a new source qualification, not a timing retry. The corrective matrix
 uses the same 13 groups, five processes and 50 rounds, with six named arms:
 existing recip, HIGHP division, native/division guarded inline, and native/division
 guarded cold. It covers the same contexts and retains the original study data.
+
+### Cold integer repair: measured tradeoff
+
+All values below are ns per x8 ordinary stream64. Intervals compare cold
+division-proposal repair with inline division-proposal repair, using the same
+91-comparison family correction. Every strict suite fails admission; only one
+of 91 strict groups is individually all-clean (V4 x4 chain64). M6 has 0/50
+clean rounds per group and remains exploratory. The [complete corrective
+matrix](CERTIFIED-RECIP-COLD-TIMINGS.md) retains all 104 groups and all six arms.
+
+| Context | HIGHP division | RN14 division inline | RN14 division cold | Cold / inline family95 interval | Clean pairs |
+|---|---:|---:|---:|---:|---:|
+| Zen 5 Scalar Caller | 7.067 | 107.428 | 13.284 | 0.122528–0.124784 | 183/250 |
+| Zen 5 V3 | 3.470 | 6.820 | 6.826 | 0.995840–1.005859 | 141/250 |
+| Zen 5 V4 | 3.494 | 6.935 | 6.576 | 0.931150–0.965701 | 212/250 |
+| Intel Skymont E V3 | 17.219 | 19.471 | 19.773 | 1.009395–1.021705 | 82/250 |
+| M6 NEON exploratory | 3.302 | 9.671 | 9.597 | One exploratory process | 0/50 |
+| WASM strict | 7.333 | 17.069 | 14.694 | 0.853794–0.867999 | 169/250 |
+| WASM relaxed, fusing | 7.337 | 17.154 | 14.734 | 0.850199–0.867712 | 140/250 |
+| WASM relaxed, nonfusing | 7.329 | 18.411 | 15.135 | 0.815570–0.828635 | 178/250 |
+
+Cold division repair helps the Scalar hot path, but HIGHP division still costs
+less. Cold **working-recip proposal** repair regresses ordinary x8 streams:
+20.399 → 72.034 ns on Zen 5 V3, 58.078 → 107.544 ns on Intel Skymont E,
+and 27.896 → 45.349 ns on exploratory M6. Moving repair out of line is not a
+universal improvement. Boundary-heavy input makes cold calls frequent; both
+cold variants are substantially slower there on Intel/NEON. No variant is
+promoted on the strength of a favorable average or the Scalar stack reduction.

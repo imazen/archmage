@@ -34,7 +34,7 @@ Source/commands, numerical bounds, admission rules, bars and interpretation: [st
 | f32x8/boundary64 | 7.142 | 84.553 | 27.766 | 7.135 | 100.863 | 110.747 | 108.711 | 71/250 |
 | f32x8/boundary4096 | 466.606 | 5412.846 | 1786.743 | 466.935 | 6418.280 | 7044.944 | 6936.527 | 150/250 |
 
-Suite valid: **False**; 0/13 groups have all observations clean.
+Aggregate incomplete/unreliable flags clear: **False**; 0/13 groups have all observations clean.
 
 ## zen5/v3
 
@@ -54,7 +54,7 @@ Suite valid: **False**; 0/13 groups have all observations clean.
 | f32x8/boundary64 | 2.424 | 2.807 | 19.791 | 3.553 | 29.545 | 31.166 | 27.139 | 233/250 |
 | f32x8/boundary4096 | 154.134 | 186.691 | 1290.504 | 232.603 | 1880.551 | 2074.569 | 1784.314 | 200/250 |
 
-Suite valid: **False**; 0/13 groups have all observations clean.
+Aggregate incomplete/unreliable flags clear: **False**; 0/13 groups have all observations clean.
 
 ## zen5/v4
 
@@ -74,7 +74,7 @@ Suite valid: **False**; 0/13 groups have all observations clean.
 | f32x8/boundary64 | 2.484 | 2.838 | 9.905 | 3.598 | 29.493 | 30.984 | 25.907 | 179/250 |
 | f32x8/boundary4096 | 156.325 | 186.806 | 640.248 | 233.238 | 1881.555 | 2082.307 | 1718.947 | 145/250 |
 
-Suite valid: **False**; 0/13 groups have all observations clean.
+Aggregate incomplete/unreliable flags clear: **False**; 0/13 groups have all observations clean.
 
 ## i265/v3
 
@@ -94,7 +94,7 @@ Suite valid: **False**; 0/13 groups have all observations clean.
 | f32x8/boundary64 | 10.058 | 7.829 | 30.857 | 17.248 | 75.576 | 83.211 | 72.649 | 234/250 |
 | f32x8/boundary4096 | 671.753 | 500.749 | 2141.431 | 1114.468 | 4769.349 | 5168.390 | 4460.067 | 250/250 |
 
-Suite valid: **False**; 10/13 groups have all observations clean.
+Aggregate incomplete/unreliable flags clear: **False**; 10/13 groups have all observations clean.
 
 ## mac/neon
 
@@ -114,7 +114,7 @@ Suite valid: **False**; 10/13 groups have all observations clean.
 | f32x8/boundary64 | 4.399 | 5.818 | 18.200 | 3.322 | 40.140 | 42.064 | 37.252 | 0/50 |
 | f32x8/boundary4096 | 298.007 | 386.770 | 1176.150 | 220.925 | 2569.660 | 2702.854 | 2381.112 | 0/50 |
 
-Suite valid: **True**; 0/13 groups have all observations clean.
+Aggregate incomplete/unreliable flags clear: **True**; 0/13 groups have all observations clean.
 
 ## wasm/strict
 
@@ -134,7 +134,7 @@ Suite valid: **True**; 0/13 groups have all observations clean.
 | f32x8/boundary64 | 7.266 | 231.092 | 69.662 | 7.269 | 142.107 | 147.120 | 145.121 | 183/250 |
 | f32x8/boundary4096 | 464.899 | 14731.030 | 4350.648 | 465.037 | 9094.039 | 9323.067 | 9233.094 | 195/250 |
 
-Suite valid: **False**; 0/13 groups have all observations clean.
+Aggregate incomplete/unreliable flags clear: **False**; 0/13 groups have all observations clean.
 
 ## wasm/fusing
 
@@ -154,7 +154,7 @@ Suite valid: **False**; 0/13 groups have all observations clean.
 | f32x8/boundary64 | 7.351 | 53.286 | 70.506 | 7.343 | 143.151 | 148.310 | 146.202 | 154/250 |
 | f32x8/boundary4096 | 468.926 | 3183.161 | 4333.605 | 469.697 | 9131.555 | 9375.764 | 9509.432 | 161/250 |
 
-Suite valid: **False**; 0/13 groups have all observations clean.
+Aggregate incomplete/unreliable flags clear: **False**; 0/13 groups have all observations clean.
 
 ## wasm/nonfusing
 
@@ -174,5 +174,4 @@ Suite valid: **False**; 0/13 groups have all observations clean.
 | f32x8/boundary64 | 7.312 | 268.720 | 87.511 | 7.307 | 156.134 | 164.506 | 158.566 | 139/250 |
 | f32x8/boundary4096 | 468.117 | 17197.807 | 5501.545 | 467.951 | 9966.749 | 10412.605 | 10072.922 | 112/250 |
 
-Suite valid: **False**; 0/13 groups have all observations clean.
-
+Aggregate incomplete/unreliable flags clear: **False**; 0/13 groups have all observations clean.
