@@ -63,7 +63,7 @@ fn main() {
     ] {
         cells.push((8, kind, n, dist, 0));
     }
-    let arms = [
+    let arms = vec![
         (0, "magetypes recip"),
         (2, "portable serial MIDP"),
         (10, "bounded f64 MIDP (same fused bits)"),
@@ -72,6 +72,7 @@ fn main() {
         (12, "RN14 native guarded"),
         (13, "RN14 division guarded"),
     ];
+    let arms=if std::env::args().any(|x|x=="--cold-study") {vec![(0,"magetypes recip"),(3,"portable HIGHP division"),(12,"RN14 native guarded inline"),(13,"RN14 division guarded inline"),(14,"RN14 native guarded cold"),(15,"RN14 division guarded cold")]} else {arms};
     for &(w, _, n, dist, chain) in &cells {
         check.call::<_, ()>(&prepare, (n, dist)).unwrap();
         for &(arm, _) in &arms {

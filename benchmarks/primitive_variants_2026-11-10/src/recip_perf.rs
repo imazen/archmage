@@ -23,7 +23,13 @@ macro_rules! group {
                 };
             }
             arm!("magetypes recip", 0);
-            if std::env::args().any(|a| a == "--certified-study") {
+            if std::env::args().any(|a| a == "--cold-study") {
+                arm!("portable HIGHP division",3);
+                arm!("RN14 native guarded inline",12);
+                arm!("RN14 division guarded inline",13);
+                arm!("RN14 native guarded cold",14);
+                arm!("RN14 division guarded cold",15);
+            } else if std::env::args().any(|a| a == "--certified-study" || a == "--cold-study") {
                 arm!("portable serial MIDP", 2);
                 arm!("bounded f64 MIDP (same fused bits)", 10);
                 arm!("portable HIGHP division", 3);
@@ -80,7 +86,7 @@ macro_rules! matrix {
         width!($suite, $tier, t, $s8, $c8, 8);
         #[cfg(feature = "w512")]
         width!($suite, $tier, t, $s16, $c16, 16);
-        if std::env::args().any(|a| a == "--certified-study") {
+        if std::env::args().any(|a| a == "--certified-study" || a == "--cold-study") {
             group!(
                 $suite,
                 format!("{}/f32x8/bits64", $tier),
@@ -155,7 +161,7 @@ pub(crate) fn run() {
         plan.margin_pct = 2.0;
         plan.confidence = 0.95;
         plan.workload_id = Some(
-            if std::env::args().any(|a| a == "--certified-study") {
+            if std::env::args().any(|a| a == "--certified-study" || a == "--cold-study") {
                 "recip-certified-normal-signed-ordinary-bits-boundary64-4096-chain64-v1"
             } else {
                 "recip-normal-signed-period64-stream64-stream4096-positive-chain64-v1"

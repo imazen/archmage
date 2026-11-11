@@ -94,6 +94,25 @@ mod wasm {
     }
 }
 
+/// Opaque cold repair prevents speculative float-to-int conversion and keeps
+/// large fallback state out of the ordinary SIMD loop. Products fit in u64.
+#[cold]
+#[inline(never)]
+fn repair<const P:u32,const N:usize>(input:[f32;N], rounded:[i32;N])->[f32;N] {
+    core::array::from_fn(|i| {
+        let bits=input[i].to_bits();let e=(bits>>23)&255;
+        let shift=((e as i32-127)<<23) as u32;
+        let q=(rounded[i] as u32).wrapping_add(shift);
+        let mut k=if q==0x3f800000 {1_u64<<P} else {(1_u64<<(P-1))+u64::from((q&0x7fffff)>>(24-P))};
+        let m=u64::from((bits&0x7fffff)|0x800000);
+        let target=1_u64<<(24+P);let low=m*(2*k-1);let high=m*(2*k+1);
+        if low>target || (low==target && k&1==1) {k-=1;}
+        else if high<target || (high==target && k&1==1) {k+=1;}
+        let normalized=0x3f000000+((k as u32-(1<<(P-1)))<<(24-P));
+        f32::from_bits(normalized.wrapping_sub(shift)|(bits&0x80000000))
+    })
+}
+
 macro_rules! kernels {
     ($bounded:ident,$canonical:ident,$v:ident,$i:ident,$bound:ident,$n:literal) => {
         #[inline(always)]
@@ -114,7 +133,8 @@ macro_rules! kernels {
 
         /// MODE 0: certify every native proposal; 1: certify native proposals
         /// within 16 binary32 encoding units of a coarse midpoint; 2: division
-        /// proposals, certifying only double-rounding midpoints. Same target bits.
+        /// proposals, certifying only double-rounding midpoints. Modes 3/4 use the
+        /// same native/division guards with a cold integer certificate. Same target bits.
         #[inline(always)]
         pub(crate) fn $canonical<
             const P: u32,
@@ -126,12 +146,12 @@ macro_rules! kernels {
         ) -> magetypes::simd::generic::$v<T> {
             const {
                 assert!(P == 8 || P == 14);
-                assert!(MODE <= 2);
+                assert!(MODE <= 4);
             }
             use magetypes::simd::generic::{$i as I, $v as V};
             let sp = |x| V::splat_t(t, x);
             let ip = |x| I::splat_t(t, x);
-            let proposal = if MODE == 2 { sp(1.0) / x } else { x.recip() };
+            let proposal = if MODE == 2 || MODE == 4 { sp(1.0) / x } else { x.recip() };
             let bits = proposal.bitcast_to_i32();
             let abs = bits & ip(i32::MAX);
             let drop = 24 - P;
@@ -142,13 +162,16 @@ macro_rules! kernels {
             let result = round | (bits & ip(i32::MIN));
             if MODE != 0 {
                 let low = abs & ip(mask);
-                let uncertain = if MODE == 2 {
+                let uncertain = if MODE == 2 || MODE == 4 {
                     low.simd_eq(ip(half))
                 } else {
                     (low - ip(half)).abs().simd_le(ip(16))
                 };
                 if !uncertain.any_true() {
                     return result.bitcast_to_f32();
+                }
+                if MODE >= 3 {
+                    return V::from_array_t(t,repair::<P,$n>(x.to_array(),round.to_array()));
                 }
             }
             // Only normalize in the correction path. This avoids subnormal

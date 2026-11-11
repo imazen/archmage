@@ -107,6 +107,7 @@ mod guest {
             11 => call!(11),
             12 => call!(12),
             13 => call!(13),
+            14=>call!(14),15=>call!(15),
             _ => panic!("arm"),
         }
         i64::from(s.output[0].to_bits())

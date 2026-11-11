@@ -39,6 +39,8 @@ macro_rules! kernels {
             if MODE == 13 {
                 return crate::recip_research::$canonical::<14, 2, _>(t, x);
             }
+            if MODE == 14 {return crate::recip_research::$canonical::<14,3,_>(t,x);}
+            if MODE == 15 {return crate::recip_research::$canonical::<14,4,_>(t,x);}
             #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
             {
                 let any = &t as &dyn core::any::Any;
