@@ -19,12 +19,20 @@ static uint32_t rounded(uint32_t input,unsigned p) {
 int main(int argc,char **argv) {
     if(argc!=2){fputs("explicit output file required\n",stderr);return 2;}
     if(fesetround(FE_TONEAREST)){return 3;}
-    FILE *f=fopen(argv[1],"wb");if(!f){perror(argv[1]);return 1;}
+    int audit=!strcmp(argv[1],"--audit");
+    FILE *f=audit?NULL:fopen(argv[1],"wb");if(!audit && !f){perror(argv[1]);return 1;}
+    double pmin[2]={INFINITY,INFINITY},pmax[2]={0,0};
     unsigned char block[16384];uint64_t double_round[2]={0,0};uint32_t witness[2]={0,0};
     for(uint32_t start=0x3f800000u;start<0x40000000u;start+=1024) {
         for(unsigned i=0;i<1024;i++) {
             uint32_t in=start+i;float x=value(in),y=value(0x7ef127eau-in);
+            double p0=(double)x*(double)y;
+            if(p0<pmin[0])pmin[0]=p0;if(p0>pmax[0])pmax[0]=p0;
+            if(!(p0>=0.5 && p0<=2.0)){fputs("seed product outside exact-widening proof\n",stderr);return 1;}
             y=y*fmaf(-x,y,2.0f);uint32_t low=bits(y);
+            double p1=(double)x*(double)y;
+            if(p1<pmin[1])pmin[1]=p1;if(p1>pmax[1])pmax[1]=p1;
+            if(!(p1>=0.5 && p1<=2.0)){fputs("refined product outside exact-widening proof\n",stderr);return 1;}
             y=y*fmaf(-x,y,2.0f);
             uint32_t words[4]={bits(y),low,rounded(in,14),rounded(in,8)};
             for(unsigned j=0;j<2;j++) {
@@ -34,9 +42,10 @@ int main(int argc,char **argv) {
             }
             for(unsigned w=0;w<4;w++)for(unsigned b=0;b<4;b++)block[i*16+w*4+b]=(unsigned char)(words[w]>>(b*8));
         }
-        if(fwrite(block,1,sizeof(block),f)!=sizeof(block)){perror("write");return 1;}
+        if(f && fwrite(block,1,sizeof(block),f)!=sizeof(block)){perror("write");return 1;}
     }
-    if(fclose(f))return 1;
+    if(f && fclose(f))return 1;
+    printf("Exact-widening product ranges: initial=[%a,%a] refined=[%a,%a]\n",pmin[0],pmax[0],pmin[1],pmax[1]);
     printf("8388608 normalized inputs; 128 MiB LE oracle; fixed 16384-byte buffer\n");
     printf("Naive division-then-quantization mismatches: RN14=%llu witness=%08x; RN8=%llu witness=%08x\n",(unsigned long long)double_round[0],witness[0],(unsigned long long)double_round[1],witness[1]);
     return 0;

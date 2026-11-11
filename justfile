@@ -1157,3 +1157,14 @@ primitive-recip-round-check reference tier *ARGS:
 
 primitive-recip-round-wasm reference density="--dense":
     bash benchmarks/primitive_variants_2026-11-10/qualify_wasm.sh "{{reference}}" "{{density}}" recip_round_check
+
+primitive-recip-guest output mode:
+    python3 -B benchmarks/primitive_variants_2026-11-10/build_guest.py "{{output}}" {{mode}}
+
+primitive-recip-wasm-host-build:
+    cargo build --release --manifest-path benchmarks/primitive_variants_2026-11-10/Cargo.toml --features wasm-host --bin recip_wasm_host
+
+primitive-recip-round-audit reference output:
+    cc -O3 -std=c11 -ffp-contract=off -fno-fast-math benchmarks/primitive_variants_2026-11-10/recip_round_reference.c -lm -o "{{output}}/recip-round-audit"
+    "{{output}}/recip-round-audit" --audit
+    python3 -B benchmarks/primitive_variants_2026-11-10/oracle_spotcheck.py "{{reference}}"
