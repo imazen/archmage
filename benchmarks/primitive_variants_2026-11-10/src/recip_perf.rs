@@ -1,7 +1,11 @@
 //! Fixed independent-process qualification matrix. All results are retained.
 use crate::recip_workload::*;
 use archmage::ScalarToken;
-#[cfg(any(target_arch = "x86_64", target_arch = "aarch64", target_arch = "wasm32"))]
+#[cfg(any(
+    target_arch = "x86_64",
+    target_arch = "aarch64",
+    target_arch = "wasm32"
+))]
 use archmage::SimdToken;
 use zenbench::{GateConfig, black_box};
 macro_rules! group {
