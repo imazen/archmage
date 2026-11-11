@@ -1,4 +1,9 @@
 //! Shared diagnostics and one-time primitive backend selection.
+#[cfg(any(
+    target_arch = "x86_64",
+    target_arch = "aarch64",
+    target_arch = "wasm32"
+))]
 use archmage::SimdToken;
 
 /// Why a whole primitive operation was rejected.

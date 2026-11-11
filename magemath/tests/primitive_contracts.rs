@@ -1,6 +1,12 @@
 //! Semantic references are independent of the configured vector graphs.
 #![forbid(unsafe_code)]
-use archmage::{ScalarToken, SimdToken};
+use archmage::ScalarToken;
+#[cfg(any(
+    target_arch = "x86_64",
+    target_arch = "aarch64",
+    target_arch = "wasm32"
+))]
+use archmage::SimdToken;
 use magemath::{PrimitiveErrorKind, minmax::*, recip::*};
 #[path = "data/reciprocal_vectors.rs"]
 mod fixtures;
