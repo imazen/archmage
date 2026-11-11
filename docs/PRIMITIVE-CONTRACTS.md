@@ -157,7 +157,10 @@ the simple bit-portable alternative and can be cheaper for dependency chains.
 The linked report retains every width/workload time in ns and all admission
 limits, including unconfined, resource-flagged M6 exploratory timings.
 
-Harness correction: the reciprocal qualification above used registry zenbench
-0.1.11 without the later observer-affinity/macOS-counter fixes. Its admission
-conclusions are provisional while the frozen matrix is repeated with pinned
-patched source. This does not change the numerical tests or error bounds.
+The [current patched-zenbench repeat](../benchmarks/primitive_variants_2026-11-10/RECIP-PATCHED-ZENBENCH.md)
+pins observer-affinity and macOS-counter fixes at `73302a1c`, absent from the
+registry release used above. Five of 36 strict groups have all 250 rounds clean;
+every whole strict suite fails admission. A clean Zen 5 AVX2 x8 long stream
+regresses from 154.399 to 189.541 ns with parallel correction, while clean Intel
+E-core cells improve. M6 remains unconfined and 0/50 clean in every group.
+The original evidence is retained; numerical tests and public graphs are unchanged.

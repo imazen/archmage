@@ -2,8 +2,9 @@
 
 **Harness correction:** these timings used published zenbench 0.1.11 (`983eafaa`),
 without 13 later main commits, including observer-affinity and macOS CPU-counter
-fixes. Their admission conclusions are provisional. Patched-source requalification
-is in progress; all original results remain retained. Numerical tests are unaffected.
+fixes. The [patched-source repeat](RECIP-PATCHED-ZENBENCH.md) is complete and is
+the current performance assessment. All original results remain retained;
+numerical tests are unaffected.
 
 **Neither research graph is promoted.** Both are bit-portable on the tested
 normal domain. Parallel fused correction wins some clean Intel/Zen 5 cells,
