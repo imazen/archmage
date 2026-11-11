@@ -10,6 +10,64 @@
 //! and one/two canonically fused Newton steps. Backend profiles may use native estimates.
 //! Native estimate bits can differ across widths even with the same token;
 //! use the matching width-specific lane entry for scalar tails.
+//!
+//! # Presets and supported combinations
+//!
+//! Every preset defaults to [`RecipValidation::Checked`] and
+//! [`RecipExecution::Automatic`]. Use `.with_validation(...)` or
+//! `.with_execution(...)` to change those choices before `.bits()`.
+//!
+//! | [`RecipOptions`] preset | Domain | Result agreement | Accuracy / graph |
+//! |---|---|---|---|
+//! | `HIGHP` (also `new()`) | Full | BitExact, excluding NaN encoding | Rounded division; rsqrt is rounded sqrt then division |
+//! | `PORTABLE_MIDP` | Normal | Same non-NaN bits across ISAs and widths | Fixed seed, two fused Newton steps; relative error ≤1e-4 |
+//! | `PORTABLE_LOWP` | Normal | Same non-NaN bits across ISAs and widths | Fixed seed, one fused Newton step; relative error ≤6e-3 |
+//! | `BACKEND_MIDP` | Normal | ISA/width-dependent bits; matching-width tails agree | Backend estimate/refinement; relative error ≤1e-4 |
+//! | `BACKEND_LOWP` | Normal | ISA/width-dependent bits; matching-width tails agree | Backend approximation; relative error ≤6e-3 |
+//!
+//! Normal means **2^-125 ≤ abs(x) ≤ 2^125**, with **x > 0** for rsqrt.
+//! Zeros, subnormals, infinities and NaNs are outside that domain. Checked
+//! rejects the whole operation and reports every invalid lane. AssumeValid
+//! removes those numerical checks; violations give unspecified output, never UB.
+//!
+//! | Domain | HIGHP | MIDP / LOWP |
+//! |---|---|---|
+//! | Full | Supported | Unsupported: const API compilation fails |
+//! | Normal | Supported, with the same restricted-domain validation | Supported |
+//!
+//! BitExact / BackendDependent can be selected for either approximation grade.
+//! HIGHP has one graph, so both portability choices encode identically.
+//! Full-domain Checked / AssumeValid also encode identically: every input is
+//! supported. Normal-domain validation choices remain distinct. Both execution
+//! choices are supported; explicit vector and lane entries retain their supplied
+//! token, while scalar/array Caller entries stay scalar. Without `std`, optional
+//! x86 features need a caller proof or compile-time target support.
+//!
+//! BitExact uses hardware FMA when available; it does not force software math.
+//! Its existing fallback is exact software FMA. Bounded-f64 evaluation and
+//! canonical RN14/RN8 are research implementations, not selectable API presets.
+//! Lower precision and omitted checks do not guarantee a speedup on every ISA.
+//!
+//! # Const configuration and matching tails
+//!
+//! ```
+//! use archmage::ScalarToken;
+//! use magetypes::simd::generic::f32x4;
+//! use magemath::recip::{
+//!     RecipExecution, RecipOptions, RecipValidation,
+//!     try_recip_f32x4_with, try_recip_f32x4_lane_with,
+//! };
+//! const FLAGS: u32 = RecipOptions::PORTABLE_MIDP
+//!     .with_validation(RecipValidation::AssumeValid)
+//!     .with_execution(RecipExecution::Caller)
+//!     .bits();
+//! // All lanes meet the selected Normal-domain precondition.
+//! let t = ScalarToken;
+//! let x = f32x4::from_array_t(t, [1.0, 2.0, 3.0, 4.0]);
+//! let y = try_recip_f32x4_with::<FLAGS, _>(t, x).unwrap();
+//! let tail = try_recip_f32x4_lane_with::<FLAGS, _>(t, 3.0).unwrap();
+//! assert_eq!(y.to_array()[2].to_bits(), tail.to_bits());
+//! ```
 mod api;
 mod options;
 use crate::{PrimitiveError, PrimitiveErrorKind};

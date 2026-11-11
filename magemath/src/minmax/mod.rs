@@ -8,6 +8,34 @@
 //!
 //! Typed vector and width-specific lane entries retain their caller's token.
 //! Scalar/array entries select once unless configured for Caller execution.
+//!
+//! # Presets and policy permutations
+//!
+//! | [`MinMaxOptions`] preset | Domain | NaN policy | Opposite-zero tie | Validation |
+//! |---|---|---|---|---|
+//! | `PORTABLE_NUMBER` (also `new()`) | Full | Prefer the number; two NaNs yield NaN | Min -0, max +0 | Checked; no domain rejection needed |
+//! | `PORTABLE_PROPAGATE` | Full | Either NaN yields NaN | Min -0, max +0 | Checked; no domain rejection needed |
+//! | `RELAXED` | Full | Backend-dependent | Backend-dependent | Checked; no domain rejection needed |
+//! | `NORMAL` | Normal | No NaNs admitted | No zeros admitted | Checked |
+//! | `UNCHECKED_NORMAL` | Normal | No NaNs admitted | No zeros admitted | AssumeValid |
+//!
+//! All presets default to Automatic execution. Builders can independently select
+//! any [`MinMaxNaN`], [`MinMaxZero`], [`MinMaxDomain`], [`MinMaxValidation`] and
+//! [`MinMaxExecution`] combination, then encode it with `.bits()`.
+//!
+//! | Domain | Accepted inputs | Distinct result policies |
+//! |---|---|---|
+//! | Full | Every floating-point value | All three NaN × both zero choices |
+//! | Finite | Includes signed zeros and subnormals; excludes infinities/NaNs | Both zero choices; NaN choices encode identically |
+//! | Normal | Finite normal values; excludes zeros/subnormals/infinities/NaNs | NaN and zero choices all encode identically |
+//!
+//! Full-domain validation choices encode identically. On Finite/Normal,
+//! Checked rejects the whole vector with an invalid-lane mask; AssumeValid
+//! removes validation. Automatic / Caller execution is separate from result
+//! policy: a portable result may use one hardware instruction on a suitable
+//! ISA. Relaxed behavior permits ISA-dependent results; it is not a speed claim.
+//! Min/max has no precision or FMA selector because neither describes this
+//! operation's numerical choices.
 mod api;
 mod options;
 use crate::{PrimitiveError, PrimitiveErrorKind};
