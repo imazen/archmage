@@ -2,7 +2,38 @@
 #![no_std]
 #![forbid(unsafe_code)]
 use magemath::{minmax::*, recip::*};
+mod rcp14;
 mod seed_graphs;
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[archmage::arcane]
+pub fn native_rcp14_hardware(t: archmage::X64V4Token, x: [f32; 8]) -> [f32; 8] {
+    rcp14::native::native8(t, x)
+}
+#[cfg(target_arch = "x86_64")]
+#[archmage::arcane]
+pub fn native_rcp14_emulated(t: archmage::X64V3Token, x: [f32; 8]) -> [f32; 8] {
+    rcp14::emulate8(t, magetypes::simd::generic::f32x8::from_array_t(t, x)).to_array()
+}
+#[cfg(target_arch = "aarch64")]
+#[archmage::arcane]
+pub fn native_rcp14_emulated(t: archmage::NeonToken, x: [f32; 8]) -> [f32; 8] {
+    rcp14::emulate8(t, magetypes::simd::generic::f32x8::from_array_t(t, x)).to_array()
+}
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[inline(never)]
+pub fn probe_rcp14_hardware(t: archmage::X64V4Token, x: [f32; 8]) -> [f32; 8] {
+    native_rcp14_hardware(t, x)
+}
+#[cfg(target_arch = "x86_64")]
+#[inline(never)]
+pub fn probe_rcp14_emulated(t: archmage::X64V3Token, x: [f32; 8]) -> [f32; 8] {
+    native_rcp14_emulated(t, x)
+}
+#[cfg(target_arch = "aarch64")]
+#[inline(never)]
+pub fn probe_rcp14_emulated(t: archmage::NeonToken, x: [f32; 8]) -> [f32; 8] {
+    native_rcp14_emulated(t, x)
+}
 #[inline(never)]
 pub fn scalar_highp_recip(x: f32) -> f32 {
     try_recip_with::<{ RecipOptions::HIGHP.bits() }>(x).unwrap()

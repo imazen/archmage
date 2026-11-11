@@ -2,6 +2,7 @@
 # Stream the same independent C oracle in strict, relaxed and no-FMA engines.
 set -euo pipefail
 reference=$(realpath "$1")
+density=${2:---dense}
 manifest=benchmarks/primitive_variants_2026-11-10/Cargo.toml
 for mode in strict relaxed relaxed-no-fma no-std-strict no-std-relaxed; do
     flags=+simd128
@@ -12,5 +13,5 @@ for mode in strict relaxed relaxed-no-fma no-std-strict no-std-relaxed; do
     case "$mode" in relaxed-no-fma) engine=(-W relaxed-simd-deterministic=n -C cranelift-has-fma=false);; esac
     echo "QUALIFICATION mode=$mode flags=$flags features=${features[*]} engine=${engine[*]}"
     RUSTFLAGS="-Ctarget-feature=$flags" cargo build --release --target wasm32-wasip1 --manifest-path "$manifest" --bin recip_qualification "${features[@]}"
-    wasmtime "${engine[@]}" --dir "$(dirname "$reference")::/refs" benchmarks/primitive_variants_2026-11-10/target/wasm32-wasip1/release/recip_qualification.wasm --reference "/refs/$(basename "$reference")" --tier wasm --dense
+    wasmtime "${engine[@]}" --dir "$(dirname "$reference")::/refs" benchmarks/primitive_variants_2026-11-10/target/wasm32-wasip1/release/recip_qualification.wasm --reference "/refs/$(basename "$reference")" --tier wasm "$density"
 done

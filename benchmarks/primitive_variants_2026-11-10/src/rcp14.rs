@@ -85,7 +85,7 @@ vector!(emulate8, f32x8, i32x8, F32x8Convert, 8);
 #[cfg(feature = "w512")]
 vector!(emulate16, f32x16, i32x16, F32x16Convert, 16);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-mod native {
+pub(crate) mod native {
     use archmage::X64V4Token;
     use core::arch::x86_64 as x;
     macro_rules! entry {
@@ -101,5 +101,3 @@ mod native {
     entry!(native8, F32x8Backend, _mm256_rcp14_ps, 8);
     entry!(native16, F32x16Backend, _mm512_rcp14_ps, 16);
 }
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-pub(crate) use native::{native4, native8, native16};

@@ -34,13 +34,13 @@ macro_rules! kernels {
                 if let Some(proof) = any.downcast_ref::<archmage::X64V4Token>() {
                     return magetypes::simd::generic::$v::from_array_t(
                         t,
-                        crate::rcp14::$native14(*proof, x.to_array()),
+                        crate::rcp14::native::$native14(*proof, x.to_array()),
                     );
                 }
                 if let Some(proof) = any.downcast_ref::<archmage::X64V4xToken>() {
                     return magetypes::simd::generic::$v::from_array_t(
                         t,
-                        crate::rcp14::$native14(proof.v4(), x.to_array()),
+                        crate::rcp14::native::$native14(proof.v4(), x.to_array()),
                     );
                 }
             }
@@ -185,10 +185,25 @@ pub(crate) fn run() {
         .and_then(|i| args.get(i + 1))
         .expect("--qual-tier required")
         .clone();
-    let result = zenbench::run_gated(GateConfig::strict(), |suite| {
+    let exploratory = args.iter().any(|a| a == "--exploratory-macos");
+    assert!(
+        !exploratory || cfg!(target_os = "macos"),
+        "exploratory mode is only for the explicitly unconfined macOS study"
+    );
+    let mut gate = GateConfig::strict();
+    // macOS cannot enforce heterogeneous core classes. Retain all monitoring and
+    // dirty rounds, but classify these user-authorized timings as exploratory.
+    if exploratory {
+        gate.strict = false;
+    }
+    let result = zenbench::run_gated(gate, |suite| {
         let plan = suite.plan();
-        plan.mode = zenbench::BenchmarkMode::Confirm;
-        plan.processes = 5;
+        plan.mode = if exploratory {
+            zenbench::BenchmarkMode::Iterate
+        } else {
+            zenbench::BenchmarkMode::Confirm
+        };
+        plan.processes = if exploratory { 1 } else { 5 };
         plan.rounds = Some(50);
         plan.margin_pct = 2.0;
         plan.confidence = 0.95;
@@ -265,6 +280,10 @@ pub(crate) fn run() {
         .save(std::env::var("ARCHMAGE_PRIMITIVE_RESULTS").expect("durable result path"))
         .unwrap();
     result.print_report();
+    if exploratory {
+        eprintln!("EXPLORATORY: macOS scheduler chooses core class; excluded from promotion gate");
+        return;
+    }
     let issues = result.confirmation_issues();
     assert!(
         issues.is_empty(),

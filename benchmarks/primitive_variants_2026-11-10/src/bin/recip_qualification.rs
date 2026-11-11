@@ -54,7 +54,7 @@ macro_rules! check {
                 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
                 if let Some(proof) = native {
                     assert_eq!(
-                        rcp14::$native(proof, input).map(f32::to_bits),
+                        rcp14::native::$native(proof, input).map(f32::to_bits),
                         r,
                         "native RCP14"
                     );
@@ -80,14 +80,16 @@ macro_rules! check {
                     summary.lanes += 1;
                 }
                 if tail {
-                    assert_eq!(
-                        parallel::$par(t, V::splat_t(t, input[0])).to_array()[0].to_bits(),
-                        p[0]
-                    );
-                    assert_eq!(
-                        rcp14::$em(t, V::splat_t(t, input[0])).to_array()[0].to_bits(),
-                        r[0]
-                    );
+                    for i in 0..2 {
+                        assert_eq!(
+                            parallel::$par(t, V::splat_t(t, input[i])).to_array()[0].to_bits(),
+                            p[i]
+                        );
+                        assert_eq!(
+                            rcp14::$em(t, V::splat_t(t, input[i])).to_array()[0].to_bits(),
+                            r[i]
+                        );
+                    }
                 }
             };
             while base < 8388608 {

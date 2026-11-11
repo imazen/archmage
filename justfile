@@ -1129,8 +1129,14 @@ primitive-recip-reference-data output:
 primitive-recip-qualify reference tier *ARGS:
     cargo run --release --manifest-path benchmarks/primitive_variants_2026-11-10/Cargo.toml --bin recip_qualification -- --reference "{{reference}}" --tier {{tier}} {{ARGS}}
 
-primitive-recip-qualify-wasm reference:
-    bash benchmarks/primitive_variants_2026-11-10/qualify_wasm.sh "{{reference}}"
+primitive-recip-qualify-wasm reference density="--dense":
+    bash benchmarks/primitive_variants_2026-11-10/qualify_wasm.sh "{{reference}}" "{{density}}"
 
 primitive-recip-qualify-perf binary tier:
     python3 -B benchmarks/primitive_variants_2026-11-10/run_local.py "{{binary}}" --recip-qualification --qual-tier "{{tier}}"
+
+primitive-recip-qualification-analyze results:
+    python3 -B benchmarks/primitive_variants_2026-11-10/qualification_analysis.py "{{results}}"
+
+primitive-recip-qualification-process-analyze results:
+    python3 -B benchmarks/primitive_variants_2026-11-10/qualification_process_analysis.py "{{results}}"
