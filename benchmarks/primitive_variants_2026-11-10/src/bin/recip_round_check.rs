@@ -31,10 +31,10 @@ macro_rules! check {
                 let a = research::$canonical::<14, 0, _>(t, x).to_array();
                 let b = research::$canonical::<14, 1, _>(t, x).to_array();
                 let c = research::$canonical::<14, 2, _>(t, x).to_array();
-                let cold_native=research::$canonical::<14,3,_>(t,x).to_array();
-                let cold_division=research::$canonical::<14,4,_>(t,x).to_array();
-                let cold_native8=research::$canonical::<8,3,_>(t,x).to_array();
-                let cold_division8=research::$canonical::<8,4,_>(t,x).to_array();
+                let cold_native = research::$canonical::<14, 3, _>(t, x).to_array();
+                let cold_division = research::$canonical::<14, 4, _>(t, x).to_array();
+                let cold_native8 = research::$canonical::<8, 3, _>(t, x).to_array();
+                let cold_division8 = research::$canonical::<8, 4, _>(t, x).to_array();
                 let d = research::$canonical::<8, 0, _>(t, x).to_array();
                 let e = research::$canonical::<8, 1, _>(t, x).to_array();
                 let f = research::$canonical::<8, 2, _>(t, x).to_array();
@@ -54,7 +54,9 @@ macro_rules! check {
                     for (label, y) in [
                         ("native-certified14", a[i]),
                         ("native-guarded14", b[i]),
-                        ("division-guarded14", c[i]),("cold-native14",cold_native[i]),("cold-division14",cold_division[i]),
+                        ("division-guarded14", c[i]),
+                        ("cold-native14", cold_native[i]),
+                        ("cold-division14", cold_division[i]),
                     ] {
                         assert_eq!(
                             y.to_bits(),
@@ -66,7 +68,9 @@ macro_rules! check {
                     for (label, y) in [
                         ("native-certified8", d[i]),
                         ("native-guarded8", e[i]),
-                        ("division-guarded8", f[i]),("cold-native8",cold_native8[i]),("cold-division8",cold_division8[i]),
+                        ("division-guarded8", f[i]),
+                        ("cold-native8", cold_native8[i]),
+                        ("cold-division8", cold_division8[i]),
                     ] {
                         assert_eq!(
                             y.to_bits(),
@@ -102,8 +106,14 @@ macro_rules! check {
                             research::$canonical::<14, 2, _>(t, x).to_array()[0].to_bits(),
                             expected[2][i]
                         );
-                        assert_eq!(research::$canonical::<14,3,_>(t,x).to_array()[0].to_bits(),expected[2][i]);
-                        assert_eq!(research::$canonical::<14,4,_>(t,x).to_array()[0].to_bits(),expected[2][i]);
+                        assert_eq!(
+                            research::$canonical::<14, 3, _>(t, x).to_array()[0].to_bits(),
+                            expected[2][i]
+                        );
+                        assert_eq!(
+                            research::$canonical::<14, 4, _>(t, x).to_array()[0].to_bits(),
+                            expected[2][i]
+                        );
                     }
                 }
             };

@@ -52,9 +52,10 @@ invariant under normal-domain power-of-two scaling. Rounded outputs remain
 normal. This justifies the exponent reduction and the second step by induction.
 This specialized computation is not a general-purpose f32 FMA replacement.
 
-WASM uses explicit packed promote/multiply/subtract/demote/shuffle operations.
-The initial automatic-vectorization version emitted scalar extract/demote/insert
-sequences. Both versions pass the same oracle; their binaries are retained.
+WASM expresses packed promote/multiply/subtract/demote/shuffle operations.
+The inspected LLVM output still contains scalar extract/demote/insert sequences;
+the source spelling does not establish the emitted instruction count. Both
+versions pass the same oracle; their binaries are retained.
 Hardware-FMA contexts are measured as comparisons, but the intended use of
 widening is a software fallback, not replacement of native FMA.
 
@@ -122,3 +123,19 @@ Before timing, the guest checks every result lane for every arm and workload.
 
 Timing results pending. This document will retain the complete matrix, bounds,
 codegen findings and any material regressions after the fixed runs finish.
+
+
+## Corrective implementation ablation
+
+The first scalar assembly speculates normalization and saturating float-to-int
+conversions before the guard, with a large stack frame. The corrective version
+keeps the same proposal and rounding guard, but invokes a cold, non-inlined
+integer certificate only for uncertain vectors. It compares the normalized
+24-bit input significand times each midpoint numerator against a power of two;
+these products fit in u64. Original inline and new cold variants are both
+retained. Their independent oracle targets are identical.
+
+This is a new source qualification, not a timing retry. The corrective matrix
+uses the same 13 groups, five processes and 50 rounds, with six named arms:
+existing recip, HIGHP division, native/division guarded inline, and native/division
+guarded cold. It covers the same contexts and retains the original study data.

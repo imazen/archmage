@@ -46,14 +46,16 @@ fn correction<const TWO: bool, T: archmage::SimdToken, const N: usize>(
 #[cfg(target_arch = "wasm32")]
 mod wasm {
     use core::arch::wasm32 as w;
-    /// Explicit demotion avoids scalar extract/demote/insert sequences observed
-    /// in the automatic vectorizer. Arithmetic is unchanged and exact in f64.
+    /// Express packed demotion explicitly. LLVM may still lower these to scalar
+    /// extract/demote/insert sequences; inspect the compiled artifact before
+    /// making an instruction-count claim. Arithmetic remains exact in f64.
     #[archmage::rite]
     pub(super) fn lanes<const TWO: bool, const N: usize>(
         t: archmage::Wasm128Token,
         x: [f32; N],
         y: [f32; N],
     ) -> [f32; N] {
+        let _ = t;
         assert_eq!(N % 4, 0);
         let mut out = [0.; N];
         for ((x, y), out) in x
@@ -98,18 +100,28 @@ mod wasm {
 /// large fallback state out of the ordinary SIMD loop. Products fit in u64.
 #[cold]
 #[inline(never)]
-fn repair<const P:u32,const N:usize>(input:[f32;N], rounded:[i32;N])->[f32;N] {
+fn repair<const P: u32, const N: usize>(input: [f32; N], rounded: [i32; N]) -> [f32; N] {
     core::array::from_fn(|i| {
-        let bits=input[i].to_bits();let e=(bits>>23)&255;
-        let shift=((e as i32-127)<<23) as u32;
-        let q=(rounded[i] as u32).wrapping_add(shift);
-        let mut k=if q==0x3f800000 {1_u64<<P} else {(1_u64<<(P-1))+u64::from((q&0x7fffff)>>(24-P))};
-        let m=u64::from((bits&0x7fffff)|0x800000);
-        let target=1_u64<<(24+P);let low=m*(2*k-1);let high=m*(2*k+1);
-        if low>target || (low==target && k&1==1) {k-=1;}
-        else if high<target || (high==target && k&1==1) {k+=1;}
-        let normalized=0x3f000000+((k as u32-(1<<(P-1)))<<(24-P));
-        f32::from_bits(normalized.wrapping_sub(shift)|(bits&0x80000000))
+        let bits = input[i].to_bits();
+        let e = (bits >> 23) & 255;
+        let shift = ((e as i32 - 127) << 23) as u32;
+        let q = (rounded[i] as u32).wrapping_add(shift);
+        let mut k = if q == 0x3f800000 {
+            1_u64 << P
+        } else {
+            (1_u64 << (P - 1)) + u64::from((q & 0x7fffff) >> (24 - P))
+        };
+        let m = u64::from((bits & 0x7fffff) | 0x800000);
+        let target = 1_u64 << (24 + P);
+        let low = m * (2 * k - 1);
+        let high = m * (2 * k + 1);
+        if low > target || (low == target && k & 1 == 1) {
+            k -= 1;
+        } else if high < target || (high == target && k & 1 == 1) {
+            k += 1;
+        }
+        let normalized = 0x3f000000 + ((k as u32 - (1 << (P - 1))) << (24 - P));
+        f32::from_bits(normalized.wrapping_sub(shift) | (bits & 0x80000000))
     })
 }
 
@@ -151,7 +163,11 @@ macro_rules! kernels {
             use magetypes::simd::generic::{$i as I, $v as V};
             let sp = |x| V::splat_t(t, x);
             let ip = |x| I::splat_t(t, x);
-            let proposal = if MODE == 2 || MODE == 4 { sp(1.0) / x } else { x.recip() };
+            let proposal = if MODE == 2 || MODE == 4 {
+                sp(1.0) / x
+            } else {
+                x.recip()
+            };
             let bits = proposal.bitcast_to_i32();
             let abs = bits & ip(i32::MAX);
             let drop = 24 - P;
@@ -171,7 +187,7 @@ macro_rules! kernels {
                     return result.bitcast_to_f32();
                 }
                 if MODE >= 3 {
-                    return V::from_array_t(t,repair::<P,$n>(x.to_array(),round.to_array()));
+                    return V::from_array_t(t, repair::<P, $n>(x.to_array(), round.to_array()));
                 }
             }
             // Only normalize in the correction path. This avoids subnormal

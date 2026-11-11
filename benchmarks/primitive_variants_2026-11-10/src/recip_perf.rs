@@ -24,11 +24,11 @@ macro_rules! group {
             }
             arm!("magetypes recip", 0);
             if std::env::args().any(|a| a == "--cold-study") {
-                arm!("portable HIGHP division",3);
-                arm!("RN14 native guarded inline",12);
-                arm!("RN14 division guarded inline",13);
-                arm!("RN14 native guarded cold",14);
-                arm!("RN14 division guarded cold",15);
+                arm!("portable HIGHP division", 3);
+                arm!("RN14 native guarded inline", 12);
+                arm!("RN14 division guarded inline", 13);
+                arm!("RN14 native guarded cold", 14);
+                arm!("RN14 division guarded cold", 15);
             } else if std::env::args().any(|a| a == "--certified-study" || a == "--cold-study") {
                 arm!("portable serial MIDP", 2);
                 arm!("bounded f64 MIDP (same fused bits)", 10);
