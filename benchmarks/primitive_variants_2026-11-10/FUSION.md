@@ -38,7 +38,9 @@ BackendDependent estimate graphs bypass this portable-fusion selector.
 
 Native x86 and M6 std/no_std directed tests pass. Full x4 mantissa scans over
 all 16,777,216 floats in [1,4) agree on portable maxima and witnesses across
-Scalar, V3 and NEON:
+Scalar, V3 and NEON. The final scanner also checks every portable result bit
+against a scalar fused-graph reference; Scalar Caller exercises the software
+provider on baseline x86:
 
 | Graph | Maximum relative error | Input bits |
 |---|---:|---|
@@ -62,7 +64,7 @@ relaxed madd operations for two chunks/two steps, with no per-FMA probe call.
 
 Validation resource records: initial cross/scan run 9 s, peak-RSS 0.43 GiB;
 final native/cross/lint/codegen/MSRV run 18 s, peak-RSS 0.51 GiB; subsequent
-WASM adapter/full-suite/API review 29 s, peak-RSS 2.00 GiB. The M6 run reports
+WASM adapter/full-suite/API review 29 s, peak-RSS 2.00 GiB. The initial M6 run reports
 9 s and a wrapper RSS rounded to 0.00 GiB, which is not a zero-memory claim.
 
 ## One frozen timing run
@@ -122,3 +124,9 @@ minimum available 41975 MiB, peak load 0.73. Raw evidence lives under
 `run_local.py BINARY --fusion-study` retains the same strict placement/admission
 rules. `just primitive-fusion-analyze RESULTS` computes the all-pair intervals;
 `primitive-recip-fusion-wasm` exercises fusing/non-fusing engines and suppression.
+
+The final pointwise scan plus study lint and ARM lint passes in 3 s, peak-RSS
+0.20 GiB. It keeps fixed vector storage and compares each portable result with
+the scalar graph, in addition to tracking error maxima. The same scanner passes
+on native M6. Ordinary tests retain their directed checks; this full scan stays
+explicitly opt-in.

@@ -1216,6 +1216,16 @@ fn process(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 
 ## Known Bugs
 
+Configurable reciprocal performance, 2026-11-11: fused portable MIDP improves
+its own unfused chains, but still costs 11.54% reciprocal / 25.92% rsqrt versus
+the existing native Magetypes graphs on clean Zen 5 x8 chain comparisons. The
+whole new timing run fails admission (rsqrt stream 22/50 clean); no blanket
+legacy replacement is promoted. See `benchmarks/primitive_variants_2026-11-10/FUSION.md`.
+
+Resolved 2026-11-11: the new primitive dispatch and integration tests imported
+SimdToken on i686, where those code paths do not exist. Imports are now scoped
+to their dispatch targets; strict i686 Clippy passes (935193fc).
+
 Adjacent crate finding, 2026-11-10: clean linear-srgb 8900ffc uses f32 rational
 intermediates in sRGB SIMD chunks and f64 in scalar tails. An isolated build
 reproduces `[0.125;17]` producing chunk `3c6b22d7` versus tail `3c6b22d8`.

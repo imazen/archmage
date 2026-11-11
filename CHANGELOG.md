@@ -25,6 +25,7 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 
 #### Changed
 
+- Use canonical fused Newton graphs for portable reciprocal/rsqrt, selecting hardware, cached relaxed-WASM fusion or exact software once per operation; preserve bounds and cross-ISA bits, with measured portability costs (24d358c4).
 - Default configured-power tests retain directed cases; `_exhaustive-tests` restores full rational-fixture and policy/tail sweeps in Magemath.
 
 ## archmage

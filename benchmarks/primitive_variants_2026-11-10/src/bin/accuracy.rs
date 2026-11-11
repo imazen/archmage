@@ -3,9 +3,11 @@
 use archmage::{ScalarToken, SimdToken};
 use magemath::recip::*;
 const LOW: u32 = RecipOptions::PORTABLE_LOWP
+    .with_execution(RecipExecution::Caller)
     .with_validation(RecipValidation::AssumeValid)
     .bits();
 const MID: u32 = RecipOptions::PORTABLE_MIDP
+    .with_execution(RecipExecution::Caller)
     .with_validation(RecipValidation::AssumeValid)
     .bits();
 const NLOW: u32 = RecipOptions::BACKEND_LOWP
@@ -34,6 +36,22 @@ fn scan(t: Token, stride: usize) -> [(f64, u32); 8] {
         ];
         for (j, vector) in values.into_iter().enumerate() {
             for (i, y) in vector.to_array().into_iter().enumerate() {
+                if j < 4 {
+                    let x = input[i];
+                    let mut r = f32::from_bits(0x7ef127ea_u32.wrapping_sub(x.to_bits()));
+                    let mut y = f32::from_bits(0x5f3759df_u32.wrapping_sub(x.to_bits() >> 1));
+                    for _ in 0..if j < 2 { 1 } else { 2 } {
+                        r = r * (-x).mul_add(r, 2.0);
+                        y = y * (-((0.5 * x) * y)).mul_add(y, 1.5);
+                    }
+                    let expected = if j % 2 == 0 { r } else { y };
+                    assert_eq!(
+                        vector.to_array()[i].to_bits(),
+                        expected.to_bits(),
+                        "portable graph {j} input {:08x}",
+                        x.to_bits()
+                    );
+                }
                 let reference = if j % 2 == 0 {
                     1.0 / input[i] as f64
                 } else {
