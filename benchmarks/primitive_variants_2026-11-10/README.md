@@ -136,3 +136,13 @@ AVX-512 timing, f64 reciprocal family, or long-buffer timing in this study.
 Raw output, binaries, source archives and logs live under
 `/mnt/v/output/archmage/primitive-variants-2026-11-10/`, mirrored under
 `/mnt/tower/output/archmage/primitive-variants-2026-11-10/`.
+
+The final full-suite review (std/no_std tests, ARM/WASM Clippy, API snapshots and
+consumer codegen) passed in 73 s: run-heavy peak-RSS 5.98 GiB, minimum available
+35440 MiB, peak load 2.24. The codegen gate covered 1623 x86, 794 ARM and 794
+WASM probes against stack base f47f05de, with zero reviewed differences. Raw
+assembly text has symbol/section naming differences on x86/WASM; the comparison
+uses the existing normalization, not byte-for-byte object equality. A later
+unit-test expectation makes the explicit WASM testable-dispatch recipe require
+suppression support; that test and final MSRV check pass in 4 s, peak-RSS 0.52
+GiB. No numerical graph changed after the full-suite review.

@@ -1216,6 +1216,13 @@ fn process(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 
 ## Known Bugs
 
+Adjacent crate finding, 2026-11-10: clean linear-srgb 8900ffc uses f32 rational
+intermediates in sRGB SIMD chunks and f64 in scalar tails. An isolated build
+reproduces `[0.125;17]` producing chunk `3c6b22d7` versus tail `3c6b22d8`.
+The owning [issue 32](https://github.com/imazen/linear-srgb/issues/32) records it;
+no sibling source was changed. See `docs/LINEAR-SRGB-INVENTORY.md`.
+
+
 Resolved 2026-11-10: the Miri target enumerator explicitly selected the new
 `sqrt_token_testing` binary without its required token-testing feature, so
 Cargo refused before running the baseline suite. The runner now executes that

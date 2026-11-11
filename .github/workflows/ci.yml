@@ -446,7 +446,7 @@ jobs:
         run: |
           cargo test -p magemath --features "${{ env.FEATURES }}" --target wasm32-wasip1 --test primitive_contracts
           cargo test -p magemath --no-default-features --features w512 --target wasm32-wasip1 --test primitive_contracts
-          cargo test -p magemath --features "std w512 archmage/testable_dispatch" --target wasm32-wasip1 --lib primitive_wasm::tests::
+          CARGO_TARGET_WASM32_WASIP1_RUNNER="wasmtime --env ARCHMAGE_EXPECT_TESTABLE_DISPATCH=yes" cargo test -p magemath --features "std w512 archmage/testable_dispatch" --target wasm32-wasip1 --lib primitive_wasm::tests::
 
       - name: Magemath contracts on strict WASM
         env:

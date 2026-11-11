@@ -85,6 +85,12 @@ mod tests {
         let _guard = archmage::testing::lock_token_testing();
         let t = Wasm128Token::summon().expect("SIMD module");
         assert!(super::f32::<_, false, 4>(t, [1.; 4], [2.; 4]).is_some());
+        if std::env::var("ARCHMAGE_EXPECT_TESTABLE_DISPATCH").as_deref() == Ok("yes") {
+            assert!(
+                Wasm128RelaxedToken::compiled_with().is_none(),
+                "testable dispatch must expose suppression"
+            );
+        }
         if Wasm128RelaxedToken::compiled_with().is_none() {
             Wasm128RelaxedToken::dangerously_disable_token_process_wide(true).unwrap();
             assert!(super::f32::<_, false, 4>(t, [1.; 4], [2.; 4]).is_none());

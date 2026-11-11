@@ -46,6 +46,8 @@ See the [study protocol/results](../benchmarks/primitive_variants_2026-11-10/REA
 
 ## Confirmed existing tail mismatch
 
+Tracked in [linear-srgb issue 32](https://github.com/imazen/linear-srgb/issues/32).
+
 The actual unmodified linear-srgb crate, built from the isolated source revision
 above with its own dependencies, fails this reproducer:
 

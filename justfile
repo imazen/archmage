@@ -1089,7 +1089,7 @@ primitive-codegen target="x86_64-unknown-linux-gnu" flags="":
     RUSTFLAGS="{{flags}}" cargo rustc --release --lib --manifest-path benchmarks/primitive_variants_2026-11-10/Cargo.toml --target {{target}} -- --emit=asm
 
 primitive-wasm-token-testing:
-    RUSTFLAGS="-Ctarget-feature=+simd128,+relaxed-simd" CARGO_TARGET_WASM32_WASIP1_RUNNER=wasmtime cargo test -p magemath --features "std w512 archmage/testable_dispatch" --target wasm32-wasip1 --lib primitive_wasm::tests::
+    RUSTFLAGS="-Ctarget-feature=+simd128,+relaxed-simd" CARGO_TARGET_WASM32_WASIP1_RUNNER="wasmtime --env ARCHMAGE_EXPECT_TESTABLE_DISPATCH=yes" cargo test -p magemath --features "std w512 archmage/testable_dispatch" --target wasm32-wasip1 --lib primitive_wasm::tests::
 
 # Opt-in full mantissa coverage in two exponent parity classes; constant memory.
 primitive-accuracy:
