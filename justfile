@@ -1174,3 +1174,6 @@ primitive-recip-certified-analyze results study:
 
 primitive-recip-certified-matrix results study:
     python3 -B benchmarks/primitive_variants_2026-11-10/run_certified_matrix.py "{{results}}" {{study}}
+
+primitive-recip-certified-table results:
+    python3 -B benchmarks/primitive_variants_2026-11-10/certified_table.py "{{results}}"
