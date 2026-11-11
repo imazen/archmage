@@ -1,5 +1,6 @@
 //! Fixed 64-value/step kernels. No corpus materialization; timing is opt-in.
 #![forbid(unsafe_code)]
+mod seed_graphs;
 use archmage::{ScalarToken, SimdToken};
 use magemath::{minmax::*, recip::*};
 use magetypes::simd::backends::F32x8Convert;
@@ -73,6 +74,13 @@ fn operation<T: F32x8Convert, const OP: u8, const MODE: u8>(t: T, x: V<T>) -> V<
             } else {
                 $rs::<$flags, _>(t, x).unwrap()
             }
+        };
+    }
+    if MODE == 9 {
+        return if OP == 1 {
+            seed_graphs::recip8(t, x)
+        } else {
+            seed_graphs::rsqrt8(t, x)
         };
     }
     if MODE == 7 || MODE == 8 {
@@ -179,6 +187,28 @@ fn register_fusion(suite: &mut Suite) {
     }
     fusion_groups!(suite, ScalarToken, stream_scalar, chain_scalar);
 }
+macro_rules! correction_groups {
+    ($suite:ident,$t:expr,$stream:ident,$chain:ident)=>{{
+        let t=$t;
+        group!($suite,t,$stream,$chain,"recip-correction/f32x8/stream64",1,false,"current portable MIDP fused"=>2,"parallel residual correction"=>9,"magetypes recip"=>0,"HIGHP division"=>1);
+        group!($suite,t,$stream,$chain,"recip-correction/f32x8/chain64",1,true,"current portable MIDP fused"=>2,"parallel residual correction"=>9,"magetypes recip"=>0,"HIGHP division"=>1);
+        group!($suite,t,$stream,$chain,"rsqrt-correction/f32x8/stream64",2,false,"current portable MIDP fused"=>2,"quadratic residual correction"=>9,"magetypes rsqrt"=>0,"HIGHP sqrt then divide"=>1);
+        group!($suite,t,$stream,$chain,"rsqrt-correction/f32x8/chain64",2,true,"current portable MIDP fused"=>2,"quadratic residual correction"=>9,"magetypes rsqrt"=>0,"HIGHP sqrt then divide"=>1);
+    }};
+}
+fn register_corrections(suite: &mut Suite) {
+    #[cfg(target_arch = "x86_64")]
+    if let Some(t) = archmage::X64V3Token::summon() {
+        correction_groups!(suite, t, stream_v3, chain_v3);
+        return;
+    }
+    #[cfg(target_arch = "aarch64")]
+    if let Some(t) = archmage::NeonToken::summon() {
+        correction_groups!(suite, t, stream_neon, chain_neon);
+        return;
+    }
+    correction_groups!(suite, ScalarToken, stream_scalar, chain_scalar);
+}
 fn main() {
     if std::env::args().any(|a| a == "--cpu-set") {
         let topology = zenbench::platform::detect_cpu_topology();
@@ -203,7 +233,9 @@ fn main() {
         println!("primitive benchmark kernels compile; timing requires --measure");
         return;
     }
-    let registrar: fn(&mut Suite) = if std::env::args().any(|a| a == "--fusion-study") {
+    let registrar: fn(&mut Suite) = if std::env::args().any(|a| a == "--correction-study") {
+        register_corrections
+    } else if std::env::args().any(|a| a == "--fusion-study") {
         register_fusion
     } else {
         register

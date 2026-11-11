@@ -1103,3 +1103,10 @@ primitive-recip-fusion-wasm:
 
 primitive-fusion-analyze results:
     python3 -B benchmarks/primitive_variants_2026-11-10/fusion_analysis.py "{{results}}"
+
+# Benchmark-only correction graphs; no public profile is changed.
+primitive-seed-study *ARGS:
+    cargo run --release --manifest-path benchmarks/primitive_variants_2026-11-10/Cargo.toml --bin seed_study -- {{ARGS}}
+
+primitive-correction-analyze results:
+    python3 -B benchmarks/primitive_variants_2026-11-10/correction_analysis.py "{{results}}"

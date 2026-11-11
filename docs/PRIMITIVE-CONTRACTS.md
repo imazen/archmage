@@ -127,3 +127,8 @@ On the native M6 x4 scan, raw NEON LOWP maxima are 2.853393554688e-3 /
 1.618327600566e-5. These pass the same bounds and confirm that a second NEON
 refinement is unnecessary for this MIDP contract on this CPU. No final-graph
 NEON timing or Neoverse result is claimed.
+
+The [portable seed/correction study](../benchmarks/primitive_variants_2026-11-10/PORTABLE-SEEDS.md)
+records real masking/rounding counterexamples and two benchmark-only deterministic
+MIDP alternatives. Their numerical scans pass, but every new timing group failed
+admission; neither changes the public graph or qualifies a legacy replacement.

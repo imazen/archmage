@@ -2,6 +2,7 @@
 #![no_std]
 #![forbid(unsafe_code)]
 use magemath::{minmax::*, recip::*};
+mod seed_graphs;
 #[inline(never)]
 pub fn scalar_highp_recip(x: f32) -> f32 {
     try_recip_with::<{ RecipOptions::HIGHP.bits() }>(x).unwrap()
@@ -16,6 +17,22 @@ pub fn scalar_normal_min(a: f32, b: f32) -> f32 {
 }
 macro_rules! probes {
     ($token:ident) => {
+        #[archmage::arcane]
+        pub fn native_recip_parallel(t: archmage::$token, x: [f32; 8]) -> [f32; 8] {
+            seed_graphs::recip8(t, magetypes::simd::generic::f32x8::from_array_t(t, x)).to_array()
+        }
+        #[archmage::arcane]
+        pub fn native_rsqrt_quadratic(t: archmage::$token, x: [f32; 8]) -> [f32; 8] {
+            seed_graphs::rsqrt8(t, magetypes::simd::generic::f32x8::from_array_t(t, x)).to_array()
+        }
+        #[inline(never)]
+        pub fn probe_recip_parallel(t: archmage::$token, x: [f32; 8]) -> [f32; 8] {
+            native_recip_parallel(t, x)
+        }
+        #[inline(never)]
+        pub fn probe_rsqrt_quadratic(t: archmage::$token, x: [f32; 8]) -> [f32; 8] {
+            native_rsqrt_quadratic(t, x)
+        }
         #[archmage::arcane]
         pub fn native_recip_portable(t: archmage::$token, a: [f32; 8]) -> [f32; 8] {
             use magetypes::simd::generic::f32x8 as V;

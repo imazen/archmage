@@ -908,12 +908,14 @@ fn generate_float_backend_trait(ty: &FloatVecType) -> String {
 
             // ====== Approximations ======
 
-            /// Raw per-backend reciprocal seed (1/x). On x86/ARM this is the
-            /// hardware estimate; the generic `rcp_approx` refines it to a ≥12-bit
-            /// floor. WASM/scalar override `rcp_approx` on the generic type.
+            /// Backend-dependent reciprocal approximation (1/x).
             ///
-            /// **Default body returns the input unchanged** — every shipped
-            /// backend overrides this with a native intrinsic. The original
+            /// This may already include refinement (for example on NEON), or
+            /// use full division. It is not a portable raw hardware seed.
+            /// Generic wrappers may apply further accuracy or special-value repairs.
+            ///
+            /// **Default body returns the input unchanged** — shipped backends
+            /// override this placeholder. The original
             /// default `Self::div(Self::splat(1.0), a)` would require `splat`
             /// to be tokenless; with the soundness fix on `splat`, the default
             /// can no longer construct a `1.0` constant. New backends MUST
@@ -921,8 +923,9 @@ fn generate_float_backend_trait(ty: &FloatVecType) -> String {
             #[inline(always)]
             fn rcp_approx(self, a: Self::Repr) -> Self::Repr {{ a }}
 
-            /// Fast reciprocal square root approximation: backend-dependent
-            /// (x86 ~12-bit, ARM ~8-bit, WASM full). [`rsqrt`] is full f32 everywhere.
+            /// Backend-dependent reciprocal square root approximation.
+            /// Some backends already refine their native estimate. No shared
+            /// seed bits across backends are promised.
             ///
             /// See [`rcp_approx`] for default-body rationale.
             #[inline(always)]
