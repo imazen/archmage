@@ -254,7 +254,7 @@ oracle, compiler identities and analysis live under
 `/mnt/v/output/archmage/recip-qualification-2026-11-11/`, mirrored with a checked
 SHA256 manifest to `/mnt/tower/output/archmage/recip-qualification-2026-11-11/`.
 Large generated results are external; these tools and this readable report are
-tracked. 
+tracked.
 
 Resource wrappers: Zen 5 V3 **84 s, peak-RSS 0.26 GiB**; V4 **80 s, 0.25 GiB**;
 Scalar **87 s, 0.25 GiB**. Intel E-core timing **61 s, 0.03 GiB**, build
