@@ -168,8 +168,8 @@ macro_rules! recip_width {
                                         0x5f3759df_u32.wrapping_sub(x.to_bits() >> 1),
                                     );
                                     for _ in 0..if $o == LOW { 1 } else { 2 } {
-                                        r = r * (2.0 - x * r);
-                                        y = y * (1.5 - 0.5 * x * y * y);
+                                        r = r * (-x).mul_add(r, 2.0);
+                                        y = y * (-(0.5 * x * y)).mul_add(y, 1.5);
                                     }
                                     same(rc[i], r.to_bits());
                                     same(rs[i], y.to_bits());
@@ -474,5 +474,23 @@ fn checked_domains_and_canonical_options() {
                 assert_eq!(actual.is_sign_negative(), a.is_sign_negative());
             }
         }
+    }
+}
+
+#[test]
+fn portable_fusion_caller_matches_automatic_scalar() {
+    const FLAGS: u32 = RecipOptions::PORTABLE_MIDP
+        .with_execution(RecipExecution::Caller)
+        .bits();
+    for bits in [0x01000000, 0x3f800001, 0x3ff12999, 0x406eb88c, 0x7e000000] {
+        let x = f32::from_bits(bits);
+        same(
+            try_recip_with::<FLAGS>(x).unwrap(),
+            try_recip_with::<MID>(x).unwrap().to_bits(),
+        );
+        same(
+            try_rsqrt_with::<FLAGS>(x).unwrap(),
+            try_rsqrt_with::<MID>(x).unwrap().to_bits(),
+        );
     }
 }

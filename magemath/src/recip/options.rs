@@ -24,7 +24,8 @@ pub enum RecipPrecision {
 /// Cross-ISA agreement for approximate algorithms.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub enum RecipPortability {
-    /// Fixed integer seed and separate IEEE mul/sub steps; scalar/vector bits match.
+    /// Fixed integer seed and canonically fused Newton steps; scalar/vector bits match.
+    /// Uses exact software FMA when hardware fusion is unavailable.
     #[default]
     BitExact,
     /// Native estimates/refinement; result bits may differ between ISAs and widths.

@@ -1094,3 +1094,12 @@ primitive-wasm-token-testing:
 # Opt-in full mantissa coverage in two exponent parity classes; constant memory.
 primitive-accuracy:
     cargo run --release --manifest-path benchmarks/primitive_variants_2026-11-10/Cargo.toml --bin accuracy -- --exhaustive
+
+# Fusion provider selection: test both engine choices and disable the relaxed token.
+primitive-recip-fusion-wasm:
+    RUSTFLAGS="-Ctarget-feature=+simd128,+relaxed-simd" CARGO_TARGET_WASM32_WASIP1_RUNNER="wasmtime --env ARCHMAGE_EXPECT_RELAXED_FUSION=yes --env ARCHMAGE_EXPECT_TESTABLE_DISPATCH=yes" cargo test -p magemath --features "std w512 archmage/testable_dispatch" --target wasm32-wasip1 --lib recip::tests::
+    RUSTFLAGS="-Ctarget-feature=+simd128,+relaxed-simd" CARGO_TARGET_WASM32_WASIP1_RUNNER="wasmtime -W relaxed-simd-deterministic=n -C cranelift-has-fma=false --env ARCHMAGE_EXPECT_RELAXED_FUSION=no --env ARCHMAGE_EXPECT_TESTABLE_DISPATCH=yes" cargo test -p magemath --features "std w512 archmage/testable_dispatch" --target wasm32-wasip1 --lib recip::tests::
+    RUSTFLAGS="-Ctarget-feature=+simd128,+relaxed-simd" CARGO_TARGET_WASM32_WASIP1_RUNNER="wasmtime -W relaxed-simd-deterministic=n -C cranelift-has-fma=false" cargo test -p magemath --features "std w512" --target wasm32-wasip1 --test primitive_contracts
+
+primitive-fusion-analyze results:
+    python3 -B benchmarks/primitive_variants_2026-11-10/fusion_analysis.py "{{results}}"

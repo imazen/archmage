@@ -16,6 +16,24 @@ pub fn scalar_normal_min(a: f32, b: f32) -> f32 {
 }
 macro_rules! probes {
     ($token:ident) => {
+        #[archmage::arcane]
+        pub fn native_recip_portable(t: archmage::$token, a: [f32; 8]) -> [f32; 8] {
+            use magetypes::simd::generic::f32x8 as V;
+            try_recip_f32x8_with::<
+                {
+                    RecipOptions::PORTABLE_MIDP
+                        .with_validation(RecipValidation::AssumeValid)
+                        .bits()
+                },
+                _,
+            >(t, V::from_array_t(t, a))
+            .unwrap()
+            .to_array()
+        }
+        #[inline(never)]
+        pub fn probe_recip_portable(t: archmage::$token, a: [f32; 8]) -> [f32; 8] {
+            native_recip_portable(t, a)
+        }
         #[inline(never)]
         pub fn probe_min_normal(t: archmage::$token, a: [f32; 8], b: [f32; 8]) -> [f32; 8] {
             native_min_normal(t, a, b)
@@ -132,3 +150,44 @@ probes!(X64V3Token);
 probes!(NeonToken);
 #[cfg(target_arch = "wasm32")]
 probes!(Wasm128Token);
+
+#[inline(never)]
+pub fn scalar_portable_midp_caller(x: f32) -> f32 {
+    try_recip_with::<
+        {
+            RecipOptions::PORTABLE_MIDP
+                .with_validation(RecipValidation::AssumeValid)
+                .with_execution(RecipExecution::Caller)
+                .bits()
+        },
+    >(x)
+    .unwrap()
+}
+#[inline(never)]
+pub fn scalar_portable_midp_automatic(x: f32) -> f32 {
+    try_recip_with::<
+        {
+            RecipOptions::PORTABLE_MIDP
+                .with_validation(RecipValidation::AssumeValid)
+                .bits()
+        },
+    >(x)
+    .unwrap()
+}
+#[inline(never)]
+pub fn scalar_representation_midp_automatic(x: [f32; 4]) -> [f32; 4] {
+    use magetypes::simd::generic::f32x4 as V;
+    try_recip_f32x4_with::<
+        {
+            RecipOptions::PORTABLE_MIDP
+                .with_validation(RecipValidation::AssumeValid)
+                .bits()
+        },
+        _,
+    >(
+        archmage::ScalarToken,
+        V::from_array_t(archmage::ScalarToken, x),
+    )
+    .unwrap()
+    .to_array()
+}

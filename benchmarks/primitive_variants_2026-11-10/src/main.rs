@@ -75,6 +75,20 @@ fn operation<T: F32x8Convert, const OP: u8, const MODE: u8>(t: T, x: V<T>) -> V<
             }
         };
     }
+    if MODE == 7 || MODE == 8 {
+        let y = if OP == 1 {
+            x.rcp_approx_portable()
+        } else {
+            x.rsqrt_approx_portable()
+        };
+        return if MODE == 7 {
+            y
+        } else if OP == 1 {
+            y.recip_newton_portable(x)
+        } else {
+            y.rsqrt_newton_portable(x)
+        };
+    }
     match MODE {
         0 => {
             if OP == 1 {
@@ -143,6 +157,28 @@ fn register(suite: &mut Suite) {
     }
     register!(suite, ScalarToken, stream_scalar, chain_scalar);
 }
+macro_rules! fusion_groups {
+    ($suite:ident,$t:expr,$stream:ident,$chain:ident)=>{{
+        let t=$t;
+        group!($suite,t,$stream,$chain,"recip-fusion/f32x8/stream64",1,false,"portable LOWP unfused"=>7,"portable LOWP fused"=>3,"portable MIDP unfused"=>8,"portable MIDP fused"=>2,"magetypes recip"=>0,"backend MIDP unchecked"=>4,"HIGHP division"=>1);
+        group!($suite,t,$stream,$chain,"recip-fusion/f32x8/chain64",1,true,"portable LOWP unfused"=>7,"portable LOWP fused"=>3,"portable MIDP unfused"=>8,"portable MIDP fused"=>2,"magetypes recip"=>0,"backend MIDP unchecked"=>4,"HIGHP division"=>1);
+        group!($suite,t,$stream,$chain,"rsqrt-fusion/f32x8/stream64",2,false,"portable LOWP unfused"=>7,"portable LOWP fused"=>3,"portable MIDP unfused"=>8,"portable MIDP fused"=>2,"magetypes rsqrt"=>0,"backend MIDP unchecked"=>4,"HIGHP sqrt then divide"=>1);
+        group!($suite,t,$stream,$chain,"rsqrt-fusion/f32x8/chain64",2,true,"portable LOWP unfused"=>7,"portable LOWP fused"=>3,"portable MIDP unfused"=>8,"portable MIDP fused"=>2,"magetypes rsqrt"=>0,"backend MIDP unchecked"=>4,"HIGHP sqrt then divide"=>1);
+    }};
+}
+fn register_fusion(suite: &mut Suite) {
+    #[cfg(target_arch = "x86_64")]
+    if let Some(t) = archmage::X64V3Token::summon() {
+        fusion_groups!(suite, t, stream_v3, chain_v3);
+        return;
+    }
+    #[cfg(target_arch = "aarch64")]
+    if let Some(t) = archmage::NeonToken::summon() {
+        fusion_groups!(suite, t, stream_neon, chain_neon);
+        return;
+    }
+    fusion_groups!(suite, ScalarToken, stream_scalar, chain_scalar);
+}
 fn main() {
     if std::env::args().any(|a| a == "--cpu-set") {
         let topology = zenbench::platform::detect_cpu_topology();
@@ -167,7 +203,12 @@ fn main() {
         println!("primitive benchmark kernels compile; timing requires --measure");
         return;
     }
-    let r = zenbench::run_gated(GateConfig::strict(), register);
+    let registrar: fn(&mut Suite) = if std::env::args().any(|a| a == "--fusion-study") {
+        register_fusion
+    } else {
+        register
+    };
+    let r = zenbench::run_gated(GateConfig::strict(), registrar);
     let path = std::env::var("ARCHMAGE_PRIMITIVE_RESULTS").expect("durable result path");
     r.save(path).unwrap();
     r.print_report();

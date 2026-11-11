@@ -71,8 +71,8 @@ pub fn {name}<const O:u32,const N:usize>({args})->Result<[{f};N],PrimitiveError>
             if binary:
                 body=f'{lane}::<O,_>(ScalarToken,a,b)'
             else:
-                body=f'if O & RecipOptions::BACKEND == 0 {{ {lane}::<O,_>(ScalarToken,x) }} else {{ {name}::<O,1>({sc}).map(|v|v[0]) }}'
-            note='Scalar min/max needs no CPU detection.' if binary else 'Portable graphs need no CPU detection; native estimates may select once.'
+                body=f'if O & 6 == 0 {{ {lane}::<O,_>(ScalarToken,x) }} else {{ {name}::<O,1>({sc}).map(|v|v[0]) }}'
+            note='Scalar min/max needs no CPU detection.' if binary else 'Approximate graphs select one provider for the whole operation; HIGHP needs no CPU detection.'
             out+=f'''/// Configured scalar {op}. {note}
 #[inline(always)]
 pub fn {scalar}<const O:u32>({sa})->Result<{f},PrimitiveError>{{{body}}}

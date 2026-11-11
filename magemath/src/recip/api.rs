@@ -264,10 +264,10 @@ pub fn try_recip_array_with<const O: u32, const N: usize>(
         lane_mask: 0,
     })
 }
-/// Configured scalar recip. Portable graphs need no CPU detection; native estimates may select once.
+/// Configured scalar recip. Approximate graphs select one provider for the whole operation; HIGHP needs no CPU detection.
 #[inline(always)]
 pub fn try_recip_with<const O: u32>(x: f32) -> Result<f32, PrimitiveError> {
-    if O & RecipOptions::BACKEND == 0 {
+    if O & 6 == 0 {
         try_recip_f32x4_lane_with::<O, _>(ScalarToken, x)
     } else {
         try_recip_array_with::<O, 1>([x]).map(|v| v[0])
@@ -325,10 +325,10 @@ pub fn try_rsqrt_array_with<const O: u32, const N: usize>(
         lane_mask: 0,
     })
 }
-/// Configured scalar rsqrt. Portable graphs need no CPU detection; native estimates may select once.
+/// Configured scalar rsqrt. Approximate graphs select one provider for the whole operation; HIGHP needs no CPU detection.
 #[inline(always)]
 pub fn try_rsqrt_with<const O: u32>(x: f32) -> Result<f32, PrimitiveError> {
-    if O & RecipOptions::BACKEND == 0 {
+    if O & 6 == 0 {
         try_rsqrt_f32x4_lane_with::<O, _>(ScalarToken, x)
     } else {
         try_rsqrt_array_with::<O, 1>([x]).map(|v| v[0])

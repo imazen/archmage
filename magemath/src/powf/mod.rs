@@ -37,7 +37,7 @@ mod std_probe;
 #[cfg(test)]
 mod tests;
 #[cfg(target_arch = "wasm32")]
-mod wasm;
+pub(crate) mod wasm;
 
 mod options;
 pub use options::{

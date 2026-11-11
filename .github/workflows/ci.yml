@@ -448,6 +448,14 @@ jobs:
           cargo test -p magemath --no-default-features --features w512 --target wasm32-wasip1 --test primitive_contracts
           CARGO_TARGET_WASM32_WASIP1_RUNNER="wasmtime --env ARCHMAGE_EXPECT_TESTABLE_DISPATCH=yes" cargo test -p magemath --features "std w512 archmage/testable_dispatch" --target wasm32-wasip1 --lib primitive_wasm::tests::
 
+      - name: Reciprocal fusion selection and non-fusing engine
+        env:
+          RUSTFLAGS: "-C target-feature=+simd128,+relaxed-simd"
+        run: |
+          CARGO_TARGET_WASM32_WASIP1_RUNNER="wasmtime --env ARCHMAGE_EXPECT_RELAXED_FUSION=yes --env ARCHMAGE_EXPECT_TESTABLE_DISPATCH=yes" cargo test -p magemath --features "std w512 archmage/testable_dispatch" --target wasm32-wasip1 --lib recip::tests::
+          CARGO_TARGET_WASM32_WASIP1_RUNNER="wasmtime -W relaxed-simd-deterministic=n -C cranelift-has-fma=false --env ARCHMAGE_EXPECT_RELAXED_FUSION=no --env ARCHMAGE_EXPECT_TESTABLE_DISPATCH=yes" cargo test -p magemath --features "std w512 archmage/testable_dispatch" --target wasm32-wasip1 --lib recip::tests::
+          CARGO_TARGET_WASM32_WASIP1_RUNNER="wasmtime -W relaxed-simd-deterministic=n -C cranelift-has-fma=false" cargo test -p magemath --features "std w512" --target wasm32-wasip1 --test primitive_contracts
+
       - name: Magemath contracts on strict WASM
         env:
           RUSTFLAGS: "-C target-feature=+simd128"

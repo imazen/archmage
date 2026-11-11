@@ -7,7 +7,7 @@
 //!
 //! LOWP/MIDP use an explicit normal operating range: 2^-125 through 2^125 in
 //! magnitude, positive for rsqrt. Portable profiles share fixed integer seeds
-//! and one/two non-fused Newton steps. Backend profiles may use native estimates.
+//! and one/two canonically fused Newton steps. Backend profiles may use native estimates.
 //! Native estimate bits can differ across widths even with the same token;
 //! use the matching width-specific lane entry for scalar tails.
 mod api;
@@ -16,12 +16,79 @@ use crate::{PrimitiveError, PrimitiveErrorKind};
 pub use api::*;
 pub use options::*;
 
+// Arithmetic is selected once before entering either Newton graph.
+const NATIVE: u8 = 0;
+const SOFTWARE: u8 = 1;
+#[cfg(all(feature = "std", target_arch = "x86_64", not(miri)))]
+const STD_FMA: u8 = 3;
+#[cfg(target_arch = "wasm32")]
+const WASM_SOFTWARE: u8 = 2;
+
+#[inline(always)]
+fn native_fusion<T: archmage::SimdToken>(_: T) -> bool {
+    let id = core::any::TypeId::of::<T>();
+    #[cfg(target_arch = "x86_64")]
+    {
+        if id == core::any::TypeId::of::<archmage::X64V3Token>() {
+            return true;
+        }
+        #[cfg(feature = "avx512")]
+        if id == core::any::TypeId::of::<archmage::X64V4Token>()
+            || id == core::any::TypeId::of::<archmage::X64V4xToken>()
+        {
+            return true;
+        }
+    }
+    #[cfg(target_arch = "aarch64")]
+    if id == core::any::TypeId::of::<archmage::NeonToken>() {
+        return true;
+    }
+    #[cfg(all(target_arch = "wasm32", target_feature = "relaxed-simd"))]
+    if id == core::any::TypeId::of::<archmage::Wasm128Token>() {
+        use archmage::SimdToken;
+        return archmage::Wasm128RelaxedToken::summon().is_some()
+            && crate::wasm_fma::powf_f32_fuses();
+    }
+    let _ = id;
+    false
+}
+
 macro_rules! graph {
-    ($name:ident, $v:ident, $bound:ident,$n:literal) => {
+    ($name:ident,$core:ident,$v:ident,$int:ident,$bound:ident,$n:literal) => {
         #[inline(always)]
         pub(super) fn $name<
             const O: u32,
             const RSQRT: bool,
+            T: magetypes::simd::backends::$bound,
+        >(
+            t: T,
+            x: magetypes::simd::generic::$v<T>,
+        ) -> Result<magetypes::simd::generic::$v<T>, PrimitiveError> {
+            // HIGHP and backend-estimate graphs do not need the portable FMA selector.
+            if O & 6 == 0 || O & RecipOptions::BACKEND != 0 || native_fusion(t) {
+                return $core::<O, RSQRT, NATIVE, T>(t, x);
+            }
+            // FMA3 can exist without all V3 prerequisites. No additional proof
+            // token is fabricated: std's correctly rounded primitive owns its
+            // platform dispatch, selected here once for the complete graph.
+            #[cfg(all(feature = "std", target_arch = "x86_64", not(miri)))]
+            if O & RecipOptions::CALLER == 0
+                && core::any::TypeId::of::<T>() == core::any::TypeId::of::<archmage::ScalarToken>()
+                && std::is_x86_feature_detected!("fma")
+            {
+                return $core::<O, RSQRT, STD_FMA, T>(t, x);
+            }
+            #[cfg(target_arch = "wasm32")]
+            if core::any::TypeId::of::<T>() == core::any::TypeId::of::<archmage::Wasm128Token>() {
+                return $core::<O, RSQRT, WASM_SOFTWARE, T>(t, x);
+            }
+            $core::<O, RSQRT, SOFTWARE, T>(t, x)
+        }
+        #[inline(always)]
+        fn $core<
+            const O: u32,
+            const RSQRT: bool,
+            const ARITHMETIC: u8,
             T: magetypes::simd::backends::$bound,
         >(
             t: T,
@@ -93,22 +160,142 @@ macro_rules! graph {
                     r.mul_add_relaxed(e, r)
                 });
             }
-            let y = if RSQRT {
-                x.rsqrt_approx_portable()
-            } else {
-                x.rcp_approx_portable()
+            let madd = |a: V<T>, b: V<T>, c: V<T>| {
+                if ARITHMETIC == NATIVE {
+                    #[cfg(target_arch = "wasm32")]
+                    if let Some(proof) =
+                        (&t as &dyn core::any::Any).downcast_ref::<archmage::Wasm128Token>()
+                    {
+                        // The operation boundary has already proved fusion and
+                        // observed token testing. Do not select again per FMA.
+                        return V::from_array_t(
+                            t,
+                            crate::powf::wasm::hardware_lanes(
+                                *proof,
+                                a.to_array(),
+                                b.to_array(),
+                                c.to_array(),
+                            ),
+                        );
+                    }
+                    return a.mul_add_relaxed(b, c);
+                }
+                #[cfg(target_arch = "wasm32")]
+                if ARITHMETIC == WASM_SOFTWARE {
+                    let any = &t as &dyn core::any::Any;
+                    let proof = *any
+                        .downcast_ref::<archmage::Wasm128Token>()
+                        .expect("private WASM FMA mode requires its proof");
+                    return V::from_array_t(
+                        t,
+                        crate::powf::wasm::software_lanes(
+                            proof,
+                            a.to_array(),
+                            b.to_array(),
+                            c.to_array(),
+                        ),
+                    );
+                }
+                #[cfg(all(feature = "std", target_arch = "x86_64", not(miri)))]
+                if ARITHMETIC == STD_FMA {
+                    let (a, b, c) = (a.to_array(), b.to_array(), c.to_array());
+                    return V::from_array_t(t, core::array::from_fn(|i| a[i].mul_add(b[i], c[i])));
+                }
+                // Scalar f32 fused arithmetic has no runtime feature probe.
+                // Compile-proven hardware is still allowed by this primitive.
+                a.mul_add_fused(b, c)
             };
-            Ok(if precision == 2 {
-                y
-            } else if RSQRT {
-                y.rsqrt_newton_portable(x)
+            use magetypes::simd::generic::$int as I;
+            let bits = x.bitcast_to_i32();
+            let seed = if RSQRT {
+                I::splat_t(t, 0x5f3759df) - bits.shr_logical_const::<1>()
             } else {
-                y.recip_newton_portable(x)
-            })
+                I::splat_t(t, 0x7ef127ea) - bits
+            };
+            let mut y = seed.bitcast_to_f32();
+            for _ in 0..if precision == 2 { 1 } else { 2 } {
+                y = if RSQRT {
+                    // Explicit graph: three multiplications and one fused add.
+                    // Retain left association in the product to avoid y*y
+                    // overflowing at the low end of the accepted range.
+                    let product = (sp(0.5) * x) * y;
+                    y * madd(-product, y, sp(1.5))
+                } else {
+                    y * madd(-x, y, sp(2.0))
+                };
+            }
+            Ok(y)
         }
     };
 }
-graph!(graph4, f32x4, F32x4Convert, 4);
-graph!(graph8, f32x8, F32x8Convert, 8);
+graph!(graph4, core4, f32x4, i32x4, F32x4Convert, 4);
+graph!(graph8, core8, f32x8, i32x8, F32x8Convert, 8);
 #[cfg(feature = "w512")]
-graph!(graph16, f32x16, F32x16Convert, 16);
+graph!(graph16, core16, f32x16, i32x16, F32x16Convert, 16);
+
+#[cfg(all(
+    test,
+    feature = "std",
+    target_arch = "wasm32",
+    target_feature = "relaxed-simd"
+))]
+mod tests {
+    use super::*;
+    use archmage::{SimdToken, Wasm128RelaxedToken, Wasm128Token};
+    #[test]
+    fn fused_provider_respects_probe_and_token_suppression() {
+        let _guard = archmage::testing::lock_token_testing();
+        let t = Wasm128Token::summon().expect("SIMD module");
+        let fuses = crate::wasm_fma::powf_f32_fuses();
+        match std::env::var("ARCHMAGE_EXPECT_RELAXED_FUSION").as_deref() {
+            Ok("yes") => assert!(fuses),
+            Ok("no") => assert!(!fuses),
+            _ => {}
+        }
+        assert_eq!(native_fusion(t), fuses);
+        use magetypes::simd::generic::f32x8 as V;
+        const O: u32 = RecipOptions::PORTABLE_MIDP.bits();
+        let input = V::from_array_t(
+            t,
+            [
+                1.1,
+                3.0,
+                f32::from_bits(0x3ff12999),
+                0.125,
+                2.25,
+                7.0,
+                16.0,
+                1.0,
+            ],
+        );
+        let rc = try_recip_f32x8_with::<O, _>(t, input)
+            .unwrap()
+            .to_array()
+            .map(f32::to_bits);
+        let rs = try_rsqrt_f32x8_with::<O, _>(t, input)
+            .unwrap()
+            .to_array()
+            .map(f32::to_bits);
+        if std::env::var("ARCHMAGE_EXPECT_TESTABLE_DISPATCH").as_deref() == Ok("yes") {
+            assert!(Wasm128RelaxedToken::compiled_with().is_none());
+            Wasm128RelaxedToken::dangerously_disable_token_process_wide(true).unwrap();
+            assert!(!native_fusion(t));
+            assert_eq!(
+                rc,
+                try_recip_f32x8_with::<O, _>(t, input)
+                    .unwrap()
+                    .to_array()
+                    .map(f32::to_bits)
+            );
+            assert_eq!(
+                rs,
+                try_rsqrt_f32x8_with::<O, _>(t, input)
+                    .unwrap()
+                    .to_array()
+                    .map(f32::to_bits)
+            );
+            Wasm128RelaxedToken::dangerously_disable_token_process_wide(false).unwrap();
+            assert_eq!(native_fusion(t), fuses);
+        }
+    }
+}

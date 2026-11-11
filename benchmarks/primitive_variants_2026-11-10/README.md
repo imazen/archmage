@@ -1,4 +1,7 @@
-# Configurable primitive study — 2026-11-10
+# Initial unfused configurable primitive study — 2026-11-10
+
+This is the historical **unfused portable** graph. The current implementation
+and separately measured comparison are in [FUSION.md](FUSION.md).
 
 **The overall Zen 5 timing run failed admission. No blanket legacy replacement
 is performance-qualified.** Six comparison groups retain 50/50 clean rounds;

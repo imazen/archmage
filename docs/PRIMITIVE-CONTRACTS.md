@@ -20,8 +20,8 @@ its precondition gives unspecified numerical output, never memory UB.
 | MinMax RELAXED | Full | Backend NaN choice and zero sign. With one NaN either number or NaN is permitted; two NaNs yield NaN. |
 | MinMax NORMAL / UNCHECKED_NORMAL | Finite normal operands | Checked / AssumeValid; one native comparison/min/max graph, no NaN/zero repairs. |
 | Recip HIGHP | Full | Rounded `1/x`; rsqrt is rounded `1 / rounded_sqrt(x)`, **not** correctly rounded mathematical rsqrt. |
-| Recip PORTABLE_LOWP | 2^-125 ≤ abs(x) ≤ 2^125; positive for rsqrt | Fixed integer seed, one separate mul/sub Newton step; relative error ≤ 6e-3. |
-| Recip PORTABLE_MIDP | Same | Two separate Newton steps; relative error ≤ 1e-4. |
+| Recip PORTABLE_LOWP | 2^-125 ≤ abs(x) ≤ 2^125; positive for rsqrt | Fixed integer seed, one canonically fused Newton step; relative error ≤ 6e-3. |
+| Recip PORTABLE_MIDP | Same | Two canonically fused Newton steps; relative error ≤ 1e-4. |
 | Recip BACKEND_LOWP / BACKEND_MIDP | Same | Same error bounds, ISA-dependent estimates/refinement and bits. |
 
 `MinMaxDomain::Finite` also permits subnormals and signed zeros and rejects
@@ -38,10 +38,12 @@ These are semantic axes; min/max does not have a meaningless precision selector.
 
 ## Callers and tails
 
-Typed vector entries retain the supplied token and never independently upgrade.
+Typed vector entries retain the supplied vector backend and width. Native proof
+types select their arithmetic at compile time; Scalar Automatic may use std FMA
+without changing its vector representation.
 Arrays select once for the whole operation unless Execution::Caller is selected.
-Scalar portable reciprocal and min/max need no feature detection; backend
-reciprocal estimates may select a native backend. `no_std` cannot dynamically
+Scalar approximate reciprocal entries select a provider once, including portable
+fusion. Scalar min/max and HIGHP reciprocal need no CPU detection. `no_std` cannot dynamically
 detect optional x86 features; supply a proof or compile-time feature support.
 
 A native estimate may differ between logical widths even with the same token
@@ -88,13 +90,19 @@ MIDP avoids the unnecessary second refinement found during codegen review.
 
 ## Evidence and costs
 
-See the [frozen study](../benchmarks/primitive_variants_2026-11-10/README.md) for
-all arms, ns, paired intervals and admission failures. No legacy replacement is
-promoted from this study. Portable MIDP has a measurable cost on the clean Zen 5
-chain cells: reciprocal 225.792 ns versus legacy `recip()` 158.832 ns; rsqrt
-320.346 ns versus legacy `rsqrt()` 217.749 ns, per 64 eight-lane dependent steps.
-Native unchecked MIDP takes 125.766 ns and 187.771 ns respectively. Checked
-validation has a separate cost and is not hidden in the unchecked comparisons.
+Portable LOWP/MIDP now use canonical fused steps: hardware where proved,
+exact software otherwise. The relaxed-WASM provider reuses powf's cached probe
+once per operation, only in compile-time relaxed builds, and honors token
+suppression. See the [fusion implementation and study](../benchmarks/primitive_variants_2026-11-10/FUSION.md).
+The [initial unfused study](../benchmarks/primitive_variants_2026-11-10/README.md)
+is retained as historical evidence; it does not describe the current graph.
+
+The clean Zen 5 x8 dependency chains improve with fusion: MIDP reciprocal
+226.856 → 177.889 ns and MIDP rsqrt 321.171 → 274.920 ns per 64 eight-lane
+steps. Existing native Magetypes methods take 159.488 ns and 218.321 ns in
+those same comparisons. Portable MIDP therefore still has an 11.54% / 25.92%
+cost against those native graphs. The whole run remains unqualified because
+rsqrt throughput has only 22/50 clean rounds; no legacy replacement is promoted.
 
 `just primitive-verify` runs exact fixture regeneration checks, API generation
 checks, strict Clippy and fast std/no_std directed tests. `primitive-cross`
@@ -106,9 +114,10 @@ exponent parity classes, against f64 references. Directed tests cover edge
 exponents and signed reciprocal inputs. This is not an exhaustive enumeration
 of the entire normal domain or a proof for every future native CPU estimate.
 
-The full x4 scan on Zen 5 found portable LOWP maxima 3.362332798595e-3
-(reciprocal) / 1.752338672098e-3 (rsqrt), and MIDP 1.144745716896e-5 /
-4.732987923610e-6. V3 backend LOWP maxima were 3.152981953462e-4 /
+The full x4 scan on Zen 5 and M6 agrees on portable fused LOWP maxima
+3.362326737260e-3 (reciprocal) / 1.752338672098e-3 (rsqrt), and MIDP
+1.141549399374e-5 / 4.723778778297e-6. The earlier unfused maxima remain in
+the historical study. V3 backend LOWP maxima were 3.152981953462e-4 /
 2.586608049593e-4; MIDP 1.538581244089e-7 / 2.108307648628e-7.
 The independent exact-rational fixtures distinguish mathematical rsqrt from
 sqrt-then-divide; the public HIGHP contract intentionally names the latter.
