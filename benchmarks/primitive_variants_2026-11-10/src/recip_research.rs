@@ -29,8 +29,69 @@ fn hardware_fma<T: archmage::SimdToken>() -> bool {
 /// binary32 products use at most 48 bits; subtracting from two fits in binary64.
 /// This is deliberately NOT a general-purpose FMA replacement.
 #[inline(always)]
-fn correction<const N: usize>(x: [f32; N], y: [f32; N]) -> [f32; N] {
-    core::array::from_fn(|i| (2.0_f64 - f64::from(x[i]) * f64::from(y[i])) as f32)
+fn correction<const TWO: bool, T: archmage::SimdToken, const N: usize>(
+    t: T,
+    x: [f32; N],
+    y: [f32; N],
+) -> [f32; N] {
+    #[cfg(target_arch = "wasm32")]
+    if let Some(proof) = (&t as &dyn core::any::Any).downcast_ref::<archmage::Wasm128Token>() {
+        return wasm::lanes::<TWO, N>(*proof, x, y);
+    }
+    let _ = t;
+    let c = if TWO { 2.0_f64 } else { 1.0_f64 };
+    core::array::from_fn(|i| (c - f64::from(x[i]) * f64::from(y[i])) as f32)
+}
+
+#[cfg(target_arch = "wasm32")]
+mod wasm {
+    use core::arch::wasm32 as w;
+    /// Explicit demotion avoids scalar extract/demote/insert sequences observed
+    /// in the automatic vectorizer. Arithmetic is unchanged and exact in f64.
+    #[archmage::rite]
+    pub(super) fn lanes<const TWO: bool, const N: usize>(
+        t: archmage::Wasm128Token,
+        x: [f32; N],
+        y: [f32; N],
+    ) -> [f32; N] {
+        assert_eq!(N % 4, 0);
+        let mut out = [0.; N];
+        for ((x, y), out) in x
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .zip(y.as_chunks::<4>().0)
+            .zip(out.as_chunks_mut::<4>().0)
+        {
+            let a = w::f32x4(x[0], x[1], x[2], x[3]);
+            let b = w::f32x4(y[0], y[1], y[2], y[3]);
+            let c = w::f64x2_splat(if TWO { 2.0 } else { 1.0 });
+            let lo = w::f64x2_sub(
+                c,
+                w::f64x2_mul(w::f64x2_promote_low_f32x4(a), w::f64x2_promote_low_f32x4(b)),
+            );
+            let ah = w::i32x4_shuffle::<2, 3, 2, 3>(a, a);
+            let bh = w::i32x4_shuffle::<2, 3, 2, 3>(b, b);
+            let hi = w::f64x2_sub(
+                c,
+                w::f64x2_mul(
+                    w::f64x2_promote_low_f32x4(ah),
+                    w::f64x2_promote_low_f32x4(bh),
+                ),
+            );
+            let r = w::i32x4_shuffle::<0, 1, 4, 5>(
+                w::f32x4_demote_f64x2_zero(lo),
+                w::f32x4_demote_f64x2_zero(hi),
+            );
+            *out = [
+                w::f32x4_extract_lane::<0>(r),
+                w::f32x4_extract_lane::<1>(r),
+                w::f32x4_extract_lane::<2>(r),
+                w::f32x4_extract_lane::<3>(r),
+            ];
+        }
+        out
+    }
 }
 
 macro_rules! kernels {
@@ -46,7 +107,7 @@ macro_rules! kernels {
             use magetypes::simd::generic::{$i as I, $v as V};
             let mut y = (I::splat_t(t, 0x7ef127ea) - x.bitcast_to_i32()).bitcast_to_f32();
             for _ in 0..STEPS {
-                y = y * V::from_array_t(t, correction(x.to_array(), y.to_array()));
+                y = y * V::from_array_t(t, correction::<true, _, _>(t, x.to_array(), y.to_array()));
             }
             y
         }
@@ -110,18 +171,8 @@ macro_rules! kernels {
                 // in f64. Subtraction from one is exact too; no software FMA.
                 let (x, lo, hi) = (xn.to_array(), lo.to_array(), hi.to_array());
                 (
-                    V::from_array_t(
-                        t,
-                        core::array::from_fn(|i| {
-                            (1.0_f64 - f64::from(x[i]) * f64::from(lo[i])) as f32
-                        }),
-                    ),
-                    V::from_array_t(
-                        t,
-                        core::array::from_fn(|i| {
-                            (1.0_f64 - f64::from(x[i]) * f64::from(hi[i])) as f32
-                        }),
-                    ),
+                    V::from_array_t(t, correction::<false, _, _>(t, x, lo)),
+                    V::from_array_t(t, correction::<false, _, _>(t, x, hi)),
                 )
             };
             let odd = k & ip(1);

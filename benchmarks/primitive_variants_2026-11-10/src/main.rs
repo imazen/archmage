@@ -3,6 +3,7 @@
 mod rcp14;
 mod recip_perf;
 mod recip_research;
+mod recip_workload;
 mod seed_graphs;
 use archmage::{ScalarToken, SimdToken};
 use magemath::{minmax::*, recip::*};

@@ -10,6 +10,7 @@ default = ["std", "w512", "avx512"]
 std = ["archmage/std", "magetypes/std", "magemath/std"]
 w512 = ["magetypes/w512", "magemath/w512"]
 avx512 = ["w512", "archmage/avx512", "magetypes/avx512", "magemath/avx512"]
+wasm-host = ["zenbench/wasm"]
 [dependencies]
 archmage = { path = "../..", default-features = false }
 magetypes = { path = "../../magetypes", default-features = false }
@@ -20,3 +21,8 @@ zenbench = "0.1.11"
 # Pin post-release admission/counter fixes used by this qualification.
 [patch.crates-io]
 zenbench = { git = "https://github.com/imazen/zenbench", rev = "73302a1c115836b2646f6a9adc32058c20d1a66f" }
+
+[[bin]]
+name = "recip_wasm_host"
+path = "src/bin/recip_wasm_host.rs"
+required-features = ["wasm-host"]
