@@ -1140,3 +1140,8 @@ primitive-recip-qualification-analyze results:
 
 primitive-recip-qualification-process-analyze results:
     python3 -B benchmarks/primitive_variants_2026-11-10/qualification_process_analysis.py "{{results}}"
+
+# Preserve the upstream oracle byte-for-byte; lint authored whitespace separately.
+primitive-study-source-check base:
+    python3 -c 'import hashlib,pathlib; assert hashlib.sha256(pathlib.Path("benchmarks/primitive_variants_2026-11-10/reference/RECIP14.c").read_bytes()).hexdigest() == "4cb551b434f65928e97b062b1a4718809c955da6ab8d650f19593c72679b21e9"'
+    git diff "{{base}}" --check -- . ':!benchmarks/primitive_variants_2026-11-10/reference/RECIP14.c'

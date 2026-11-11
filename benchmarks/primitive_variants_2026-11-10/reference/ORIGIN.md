@@ -15,3 +15,7 @@ The benchmark-only Rust interpolation in `../src/rcp14.rs` is derived from this
 reference and retains the complete BSD notice. Its scope is f32 normal inputs
 with magnitude 2^-125 through 2^125; it does not port the reference's complete
 exceptional/subnormal or f64 algorithms.
+
+The original CRLF line endings and whitespace are retained to preserve this
+byte identity. `primitive-study-source-check` verifies its SHA256 and checks
+authored files separately.
