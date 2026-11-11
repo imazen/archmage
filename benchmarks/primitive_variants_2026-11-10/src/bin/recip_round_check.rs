@@ -2,7 +2,9 @@
 #![forbid(unsafe_code)]
 #[path = "../recip_research.rs"]
 mod research;
-use archmage::{ScalarToken, SimdToken};
+use archmage::ScalarToken;
+#[cfg(any(target_arch = "x86_64", target_arch = "aarch64", target_arch = "wasm32"))]
+use archmage::SimdToken;
 use std::io::{BufReader, Read, Seek, SeekFrom};
 #[derive(Debug, Default)]
 struct Summary {

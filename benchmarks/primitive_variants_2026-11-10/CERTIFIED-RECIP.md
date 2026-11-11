@@ -84,6 +84,12 @@ All three implementations select the same canonical result:
 3. Correctly rounded division proposal, certify only coarse midpoint results,
    which are the ambiguous double-rounding cases.
 
+Here “native” in the retained benchmark labels names the existing Magetypes
+working `recip()` proposal, not a raw hardware estimate instruction. Scalar and
+WASM implement that proposal with division. The division-proposal variant can
+use its tighter ambiguity guard there; both variants still target the same RN14
+or RN8 result.
+
 Certification normalizes x and the proposed rounded answer. Midpoints then
 have at most 16 significant bits. A hardware FMA computes the sign of
 `1 - x*midpoint`; the smallest nonzero normalized residual is well above f32
@@ -121,6 +127,11 @@ Contexts: Zen5 Scalar/V3/V4, Intel Skymont E V3, M6 NEON exploratory, and hosted
 WASM strict/fusing/forced-nonfusing. M6 remains excluded from strict promotion
 because macOS does not enforce one core class.
 
+Linux runs enforce a uniform CPU-class cpuset. Their measurement thread is
+unpinned; traces report observer `no_pin` and inherited affinity. Dedicated
+spare-observer-CPU isolation and verified frequency are not claimed. The cold
+ablation enables gate tracing, retaining its observer work for every arm.
+
 The WASM host uses patched zenbench and Wasmtime49.0.5. Compilation and instance
 setup are outside samples. Calls batch 4096 complete short-stream workloads or
 256 long-stream/chain workloads, with guest black_box barriers inside every
@@ -128,6 +139,9 @@ repetition. Tables report ns/workload after dividing by that fixed batch;
 raw packets/bars retain ns/host call, including host-call and guest-lock costs.
 The actual relaxed-FMA probes are 0/1/0 for strict/fusing/nonfusing respectively.
 Before timing, the guest checks every result lane for every arm and workload.
+The forced-nonfusing host requests a baseline x86_64 engine target; this is not
+an isolated FMA-only codegen switch. Compare implementations within each mode,
+and do not attribute every timing difference between engine modes solely to FMA.
 
 The first matrix is complete. Every strict suite fails admission. Ten of its
 91 strict groups have all 250 observations clean individually, all on Intel;

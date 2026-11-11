@@ -19,7 +19,8 @@ assert (root / "SOURCE.json").is_file()
 assert not (root / "local-progress.json").exists()
 claim = Path(".workongoing")
 assert "codex-portability-fma" in claim.read_text()
-wrapper = Path.home() / "work/claudehints/scripts/run-heavy"
+wrapper = Path(os.environ["ARCHMAGE_HEAVY_WRAPPER"]).resolve()
+assert wrapper.is_file(), wrapper
 launcher = Path(__file__).resolve().parent / "run_local.py"
 cells = [("zen5/" + tier, root / "zen5/archmage-primitive-study",
           ["--recip-qualification", "--qual-tier", tier], {})

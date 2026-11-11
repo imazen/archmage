@@ -29,7 +29,7 @@ for context in dict.fromkeys(r["context"] for r in rows):
         label = r["group"].split("/", 1)[1]
         lines.append("| " + label + " | " + " | ".join(f"{x:.3f}" for x in r["ns_per_workload"].values()) +
                      f" | {r['clean']}/{r['retained']} |")
-    lines += ["", "Suite valid: **" + str(subset[0]["suite_valid"]) + "**; " +
+    lines += ["", "Aggregate incomplete/unreliable flags clear: **" + str(subset[0]["suite_valid"]) + "**; " +
               str(sum(r["all_rounds_clean"] for r in subset)) + "/13 groups have all observations clean.", ""]
 destination = root / "timings.md"
 assert not destination.exists(), destination
