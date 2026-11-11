@@ -16,3 +16,7 @@ magetypes = { path = "../../magetypes", default-features = false }
 magemath = { path = "../../magemath", default-features = false }
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 zenbench = "0.1.11"
+
+# Pin post-release admission/counter fixes used by this qualification.
+[patch.crates-io]
+zenbench = { git = "https://github.com/imazen/zenbench", rev = "73302a1c115836b2646f6a9adc32058c20d1a66f" }

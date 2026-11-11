@@ -978,8 +978,7 @@ dependencies = [
 [[package]]
 name = "zenbench"
 version = "0.1.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "09d75419b947440f4a39f5a678ac5a76b4aa6d126ffec94ee83776c28c55fb1d"
+source = "git+https://github.com/imazen/zenbench?rev=73302a1c115836b2646f6a9adc32058c20d1a66f#73302a1c115836b2646f6a9adc32058c20d1a66f"
 dependencies = [
  "affinity",
  "clap",

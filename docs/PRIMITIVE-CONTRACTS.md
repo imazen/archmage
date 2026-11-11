@@ -156,3 +156,8 @@ tradeoff, not a newly selected public default. Existing HIGHP division remains
 the simple bit-portable alternative and can be cheaper for dependency chains.
 The linked report retains every width/workload time in ns and all admission
 limits, including unconfined, resource-flagged M6 exploratory timings.
+
+Harness correction: the reciprocal qualification above used registry zenbench
+0.1.11 without the later observer-affinity/macOS-counter fixes. Its admission
+conclusions are provisional while the frozen matrix is repeated with pinned
+patched source. This does not change the numerical tests or error bounds.

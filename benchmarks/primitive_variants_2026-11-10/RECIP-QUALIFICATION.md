@@ -1,5 +1,10 @@
 # Reciprocal qualification — 2026-11-11
 
+**Harness correction:** these timings used published zenbench 0.1.11 (`983eafaa`),
+without 13 later main commits, including observer-affinity and macOS CPU-counter
+fixes. Their admission conclusions are provisional. Patched-source requalification
+is in progress; all original results remain retained. Numerical tests are unaffected.
+
 **Neither research graph is promoted.** Both are bit-portable on the tested
 normal domain. Parallel fused correction wins some clean Intel/Zen 5 cells,
 but loses other workloads. Canonical RCP14 gives the requested asymmetric
