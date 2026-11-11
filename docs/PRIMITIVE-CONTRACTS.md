@@ -77,6 +77,11 @@ Other widths return UnsupportedWidth. Slice scheduling belongs to the caller.
 | WASM relaxed SIMD | Normal or explicitly permissive policies may use relaxed min/max | No standardized reciprocal/rsqrt estimate instruction | Compiled opcode probes; relaxed token disabling tested | Not measured |
 | Scalar | Comparison/select plus requested repairs | Division / two-step rsqrt estimate, both grades alias | Exact-rational HIGHP fixtures; directed and x4 mantissa scan | Zen 5 Caller x4/x8/x16; overall unqualified |
 
+The latest timing matrix measures current portable MIDP reciprocal and HIGHP
+division, existing Magetypes `recip()`, and two research graphs. Backend LOWP/MIDP
+profile timings remain limited to the earlier V3 x8 study; the table's timing
+column points to available family evidence, not complete per-profile coverage.
+
 Relaxed WASM selection requires a module compiled with relaxed SIMD and an
 internal `Wasm128RelaxedToken::summon()`; module validation establishes feature
 availability. `testable_dispatch` can suppress that selection. This is an
