@@ -6,7 +6,8 @@ import shutil
 import subprocess
 import sys
 out=Path(sys.argv[1]).resolve();out.mkdir(parents=True,exist_ok=True)
-name='recip_guest'
+name=sys.argv[3] if len(sys.argv)>3 else 'recip_guest'
+assert name in ['recip_guest','policy_guest']
 mode=sys.argv[2];assert mode in ['strict','relaxed']
 features='+simd128'+(',+relaxed-simd' if mode=='relaxed' else '')
 flags=f'-Ctarget-feature={features} -Cmetadata=recip_certified_guest -Clink-dead-code=yes'

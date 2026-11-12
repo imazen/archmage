@@ -26,3 +26,8 @@ zenbench = { git = "https://github.com/imazen/zenbench", rev = "73302a1c115836b2
 name = "recip_wasm_host"
 path = "src/bin/recip_wasm_host.rs"
 required-features = ["wasm-host"]
+
+[[bin]]
+name = "policy_wasm_host"
+path = "src/bin/policy_wasm_host.rs"
+required-features = ["wasm-host"]

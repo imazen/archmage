@@ -1186,3 +1186,10 @@ primitive-policy-inventory output:
 
 primitive-policy-tables inventory *ARGS:
     python3 -B benchmarks/primitive_variants_2026-11-10/policy_tables.py "{{inventory}}" {{ARGS}}
+
+primitive-policy-benchgen inventory *ARGS:
+    python3 -B benchmarks/primitive_variants_2026-11-10/policy_benchgen.py "{{inventory}}" {{ARGS}}
+    python3 -B benchmarks/primitive_variants_2026-11-10/policy_guestgen.py "{{inventory}}" {{ARGS}}
+
+primitive-policy-guest output mode:
+    python3 -B benchmarks/primitive_variants_2026-11-10/build_guest.py "{{output}}" {{mode}} policy_guest
