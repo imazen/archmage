@@ -65,9 +65,9 @@ macro_rules! functions {
                 |x|$chain::<O,OP,L>(t,x))
         }
         fn $select<const O:u32,const L:bool>(s:&mut State,op:bool,kind:i32,reps:i32,verify:bool)->f64 {
-            macro_rules! call {($op:literal,$n:literal,$chain:literal)=>{{
-                if verify {$verify::<O,$op,L,$n,$chain>(s)}
-                else {$exec::<O,$op,L,$n,$chain>(s,reps);0.0}
+            macro_rules! call {($op:literal,$n:literal,$dep:literal)=>{{
+                if verify {$verify::<O,$op,L,$n,$dep>(s)}
+                else {$exec::<O,$op,L,$n,$dep>(s,reps);0.0}
             }};}
             match(op,kind) {
                 (false,0|3)=>call!(false,64,false),(true,0|3)=>call!(true,64,false),

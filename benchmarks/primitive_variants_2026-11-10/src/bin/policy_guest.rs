@@ -125,11 +125,11 @@ mod guest {
                 verify: bool,
             ) -> f64 {
                 macro_rules! call {
-                    ($op:literal,$n:literal,$chain:literal) => {{
+                    ($op:literal,$n:literal,$dep:literal) => {{
                         if verify {
-                            $verify::<O, $op, L, $n, $chain>(s)
+                            $verify::<O, $op, L, $n, $dep>(s)
                         } else {
-                            $exec::<O, $op, L, $n, $chain>(s, reps);
+                            $exec::<O, $op, L, $n, $dep>(s, reps);
                             0.0
                         }
                     }};
