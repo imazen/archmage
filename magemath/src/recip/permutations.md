@@ -72,3 +72,18 @@ A redirected configuration may reuse its canonical cell's exact evidence. Other 
 
 The [primitive permutation reference](https://github.com/imazen/archmage/blob/feat/primitive-contracts/docs/PRIMITIVE-PERMUTATIONS.md) joins these IDs to numerical contracts, measured error and per-ISA/width/workload timings.
 Missing measurements are explicitly unmeasured; dirty retained runs are descriptive; M6 scheduler-selected runs are exploratory. Those states do not mean a demonstrated slowdown.
+
+### ISA-specific graph redirects
+
+On ScalarToken and WASM SIMD (strict or relaxed), backend reciprocal LOWP/MIDP both use division; backend rsqrt LOWP/MIDP both use the existing two-step estimate.
+The following **source-level graph redirects** preserve Normal-domain validation and execution. They are not equal encoded flags, do not expand the domain and do not infer identical timings.
+All three logical widths route through those graphs. Every configuration is still timed independently in the matrix.
+
+| Validation | Execution | Backend MIDP / LOWP reciprocal → HIGHP | Backend LOWP rsqrt → Backend MIDP |
+|---|---|---|---|
+| Checked | Automatic | [R0b](#r0b) / [R0d](#r0d) → [R01](#r01) | [R0d](#r0d) → [R0b](#r0b) |
+| Checked | Caller | [R2b](#r2b) / [R2d](#r2d) → [R21](#r21) | [R2d](#r2d) → [R2b](#r2b) |
+| AssumeValid | Automatic | [R1b](#r1b) / [R1d](#r1d) → [R11](#r11) | [R1d](#r1d) → [R1b](#r1b) |
+| AssumeValid | Caller | [R3b](#r3b) / [R3d](#r3d) → [R31](#r31) | [R3d](#r3d) → [R3b](#r3b) |
+
+This routing is specific to Scalar/WASM. Native x86 and NEON have distinct hardware seed/refinement graphs; their precision grades are not redirected by this table.

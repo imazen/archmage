@@ -85,6 +85,23 @@ def render(family, rows, nostd):
         lines += ["## Precision and timing evidence", "",
                   "The [primitive permutation reference](https://github.com/imazen/archmage/blob/feat/primitive-contracts/docs/PRIMITIVE-PERMUTATIONS.md) joins these IDs to numerical contracts, measured error and per-ISA/width/workload timings.",
                   "Missing measurements are explicitly unmeasured; dirty retained runs are descriptive; M6 scheduler-selected runs are exploratory. Those states do not mean a demonstrated slowdown.", ""]
+        if family == "recip":
+            lines += ["### ISA-specific graph redirects", "",
+                      "On ScalarToken and WASM SIMD (strict or relaxed), backend reciprocal LOWP/MIDP both use division; backend rsqrt LOWP/MIDP both use the existing two-step estimate.",
+                      "The following **source-level graph redirects** preserve Normal-domain validation and execution. They are not equal encoded flags, do not expand the domain and do not infer identical timings.",
+                      "All three logical widths route through those graphs. Every configuration is still timed independently in the matrix.", "",
+                      "| Validation | Execution | Backend MIDP / LOWP reciprocal → HIGHP | Backend LOWP rsqrt → Backend MIDP |",
+                      "|---|---|---|---|"]
+            for validation, execution in COLS:
+                def find(precision, portability):
+                    r = next(r for r in rs if (r['domain'], r['precision_or_nan'], r['portability_or_zero'], r['validation'], r['execution']) == ('Normal', precision, portability, validation, execution))
+                    label = cell(r)
+                    return f'[{label}](#{label.lower()})'
+                mid = find('Midp', 'BackendDependent')
+                low = find('Lowp', 'BackendDependent')
+                high = find('Highp', 'BitExact')
+                lines.append(f'| {validation} | {execution} | {mid} / {low} → {high} | {low} → {mid} |')
+            lines += ["", "This routing is specific to Scalar/WASM. Native x86 and NEON have distinct hardware seed/refinement graphs; their precision grades are not redirected by this table.", ""]
     else:
         lines += ["## Measurement coverage", "",
                   "This expansion inventories every option for this family. New timing coverage is currently scoped to min/max, reciprocal and rsqrt; the transcendental measurement gaps are not presented as completed work.", ""]
