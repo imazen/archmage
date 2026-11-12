@@ -78,6 +78,8 @@
 #![doc = include_str!("timings/dev-v4x-max.md")]
 #![doc = include_str!("timings/wasm-strict-min.md")]
 #![doc = include_str!("timings/wasm-strict-max.md")]
+#![doc = include_str!("timings/wasm-fusing-min.md")]
+#![doc = include_str!("timings/wasm-fusing-max.md")]
 // END GENERATED TIMING DOCUMENTS
 mod api;
 mod options;

@@ -1,6 +1,6 @@
 # Complete primitive option matrix — 2026-11-11
 
-Relaxed WASM timings are in progress. Strict WASM, AMD Scalar/V3/V4/V4x, Intel V3 and
+Relaxed nonfusing WASM timing is in progress. Fusing/strict WASM, AMD Scalar/V3/V4/V4x, Intel V3 and
 the M6 exploratory matrix are complete: all 46 canonical flag sets, 66 workload groups and 1,566 arms,
 including existing Magetypes baselines. No default or numerical implementation
 changes in this expansion. Pow/exp/log timing expansion is deferred by the owner;
@@ -239,6 +239,35 @@ R3b/R3d reciprocal around 17.42 ns, using division. Portable MIDP R33 takes
 that estimate is a different graph/accuracy contract from HIGHP sqrt/division.
 Every configuration and observed error remains in the nested tables.
 
+## Relaxed fusing WASM: math aliases do not imply equal costs
+
+The fusing suite has 13,978/16,500 clean observations and 3/66 fully clean
+groups. The whole suite fails admission. These f32x8 examples are flagged:
+
+| Configuration | Reciprocal stream64 ns | Reciprocal chain64 ns |
+|---|---:|---:|
+| Existing division | 17.4186 | 211.1722 |
+| R00 HIGHP | 17.4199 | 211.5168 |
+| R33 portable MIDP, AssumeValid Caller | 57.1175 | 810.3162 |
+| R35 portable LOWP, AssumeValid Caller | 32.9226 | 510.8550 |
+| R3b backend MIDP, AssumeValid Caller | 17.4189 | 210.9469 |
+| R3d backend LOWP, AssumeValid Caller | 17.4649 | 556.8797 |
+
+R3b/R3d both route mathematically to division on WASM. Their different chain
+costs are a code-generation/call-context observation, not a precision advantage.
+The source-level redirect table deliberately does not copy timing evidence.
+
+On zero-clamp64, existing min takes 8.0728 ns, M21 Finite unchecked Ordered
+8.0503 ns, M31 Finite unchecked Backend-zero 21.8920 ns and M18 Full relaxed
+21.9585 ns. A relaxed opcode alone does not make the complete wrapper cheaper.
+The frozen module's timed selectors retain calls to `primitive_wasm::kernel`
+and to fused/software `powf::wasm::lanes`; source helpers include an internal
+arcane boundary. This identifies an inlining/array-ABI concern. It is not a
+measurement isolating its causal share of the cost or a machine-instruction
+count. Raw WAT and call-site extracts are preserved under `wasm/codegen/`.
+Reducing those boundaries deserves a separately qualified implementation change;
+this matrix records the actual current code without calling it ISA-intrinsic cost.
+
 ## Orchestration and resources
 
 The initial Intel run hit the default 300-second child supervisor timeout
@@ -269,6 +298,8 @@ Zen 5 V4x timing uses 1,715 s / peak-RSS 0.29 GiB, minimum available RAM
 42,067 MiB and peak load 2.15; its return code 1 retains failed confirmation.
 Strict WASM timing uses 4,728 s / peak-RSS 0.09 GiB, minimum available RAM
 21,472 MiB and peak load 1.68; its return code 1 preserves failed confirmation.
+Relaxed fusing timing uses 3,177 s / peak-RSS 0.09 GiB, minimum available RAM
+19,175 MiB and peak load 3.50; its return code 1 preserves failed confirmation.
 The first analysis launch lacked NumPy; a task-local venv supplies NumPy 2.4.2.
 No timing rerun was needed for that analysis dependency.
 

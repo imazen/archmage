@@ -1216,6 +1216,14 @@ fn process(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 
 ## Known Bugs
 
+Relaxed-WASM codegen cost, 2026-11-11: flagged fusing x8 zero-clamp64 min
+costs 21.9585 ns for M18 Full relaxed versus 8.0728 ns existing strict min;
+M21 Finite unchecked Ordered costs 8.0503 ns. The frozen WAT retains private
+kernel calls. Fusing x8 reciprocal chain R3d costs 556.8797 ns versus R3b
+210.9469 ns although both route to division. These are implementation/call-
+context findings, not proof that relaxed instructions are intrinsically slow.
+See `benchmarks/primitive_variants_2026-11-10/POLICY-MATRIX.md`.
+
 Strict-WASM portable graph cost, 2026-11-11: the clean f32x4 reciprocal
 stream4096 cell (250/250 observations) takes 26,635.7708 ns for portable MIDP
 AssumeValid Caller R33 versus 1,115.7777 ns existing division. Process-family95

@@ -80,7 +80,7 @@ def render(family, rows, nostd):
         lines.append("| " + " | ".join([f'<a id="{label.lower()}"></a>{label}', r["domain"], r["precision_or_nan"], r["portability_or_zero"], r["validation"], r["execution"], feature]) + " |")
     lines += ["", "IDs expose the current encoded flags for traceability; construct options with the public builder, not handwritten integers.",
               "Numerical contracts and measured error are distinct from timing. Timing identities also include operation, scalar type, logical width, ISA, entry form, workload, compiler and source.",
-              "A redirected configuration may reuse its canonical cell's exact evidence. Other reuse needs a separately verified graph or compiled-code identity.", ""]
+              "An equal-flag redirect uses the same instantiation. A source-level graph redirect does not license copying timings: the compiled execution path and call context must match too.", ""]
     if family in ("minmax", "recip"):
         lines += ["## Precision and timing evidence", "",
                   "The [primitive permutation reference](https://github.com/imazen/archmage/blob/feat/primitive-contracts/docs/PRIMITIVE-PERMUTATIONS.md) joins these IDs to numerical contracts, measured error and per-ISA/width/workload timings.",

@@ -72,7 +72,7 @@ and **32 distinct supported flag sets**. A flag ID identifies a configuration, n
 
 IDs expose the current encoded flags for traceability; construct options with the public builder, not handwritten integers.
 Numerical contracts and measured error are distinct from timing. Timing identities also include operation, scalar type, logical width, ISA, entry form, workload, compiler and source.
-A redirected configuration may reuse its canonical cell's exact evidence. Other reuse needs a separately verified graph or compiled-code identity.
+An equal-flag redirect uses the same instantiation. A source-level graph redirect does not license copying timings: the compiled execution path and call context must match too.
 
 ## Measurement coverage
 

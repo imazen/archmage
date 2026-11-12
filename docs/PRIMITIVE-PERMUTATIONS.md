@@ -125,13 +125,13 @@ quality-threshold change. Per-case numerical
 preflight runs before timing. Its observed error on fixed inputs/chain states
 is reported independently from the prior full scans and normative bounds.
 
-The complete Zen 5 Scalar/V3/V4/V4x, Intel V3, strict WASM and M6 exploratory tables are included directly in the
+The complete Zen 5 Scalar/V3/V4/V4x, Intel V3, strict/fusing WASM and M6 exploratory tables are included directly in the
 [min/max rustdoc](../magemath/src/minmax/mod.rs) and
 [reciprocal/rsqrt rustdoc](../magemath/src/recip/mod.rs), nested by operation,
 type and width. They contain all supported canonical cells and workloads,
 including the explicit Normal/zero-clamp exclusions. Intel has 32/66 fully
 clean groups, but its whole suite fails admission. Strict WASM has 18/66 fully
-clean groups and fails whole-suite admission. Zen 5 Scalar/V3/V4/V4x have no fully
+clean groups; fusing WASM has 3/66. Both fail whole-suite admission. Zen 5 Scalar/V3/V4/V4x have no fully
 clean group; Automatic scalar fusion selection is explicitly not a speed win
 in its flagged data. All 3,300 M6 group-round
 observations are resource-flagged; none establishes strict promotion.
