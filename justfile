@@ -1049,8 +1049,7 @@ sqrt-token-miri:
     cargo +$(tr -d '[:space:]' < xtask/miri-nightly.txt) miri test -p magetypes --no-default-features --features "w512 archmage/testable_dispatch" --test sqrt_token_testing
 
 primitive-generate:
-    python3 -B xtask/primitive_api.py
-    cargo fmt -p magemath
+    cargo run -p xtask -- generate-magemath
 
 primitive-check:
     cargo test -p magemath --features "std avx512" --test primitive_contracts
@@ -1061,7 +1060,7 @@ primitive-type-check:
     RUSTFLAGS="-Ctarget-feature=+simd128,+relaxed-simd" cargo check -p magemath --target wasm32-wasip1 --features "std w512"
 
 primitive-verify:
-    python3 -B xtask/primitive_api.py --check
+    cargo run -p xtask -- generate-magemath --check
     python3 -B xtask/reciprocal_vectors.py --check
     cargo clippy -p magemath --lib --test primitive_contracts --features "std avx512" -- -D warnings
     just primitive-check
@@ -1218,4 +1217,4 @@ primitive-policy-wasm-calls wat output:
 
 # Static codegen equivalence classes, hot-call gate, and llvm-mca throughput/latency analysis.
 mca *ARGS:
-    python3 -B xtask/mca.py {{ARGS}}
+    cargo run -p xtask -- mca {{ARGS}}

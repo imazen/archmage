@@ -41,7 +41,10 @@ fn relaxed_f64_op<const MAX: bool>(a: v128, b: v128) -> v128 {
 }
 
 #[cfg_attr(target_feature = "simd128", inline(always))]
-#[cfg_attr(not(target_feature = "simd128"), archmage::arcane(suppress_const_test))]
+#[cfg_attr(
+    not(target_feature = "simd128"),
+    archmage::attune(wrap, suppress_const_test)
+)]
 fn pminmax_f32_op<const MAX: bool>(_t: Wasm128Token, a: v128, b: v128) -> v128 {
     if MAX {
         w::f32x4_pmax(a, b)
@@ -51,7 +54,10 @@ fn pminmax_f32_op<const MAX: bool>(_t: Wasm128Token, a: v128, b: v128) -> v128 {
 }
 
 #[cfg_attr(target_feature = "simd128", inline(always))]
-#[cfg_attr(not(target_feature = "simd128"), archmage::arcane(suppress_const_test))]
+#[cfg_attr(
+    not(target_feature = "simd128"),
+    archmage::attune(wrap, suppress_const_test)
+)]
 fn pminmax_f64_op<const MAX: bool>(_t: Wasm128Token, a: v128, b: v128) -> v128 {
     if MAX {
         w::f64x2_pmax(a, b)

@@ -15,7 +15,10 @@ fn cast_same<A: 'static + Copy, B: 'static + Copy>(val: A) -> Option<B> {
 }
 
 #[cfg_attr(target_feature = "simd128", inline(always))]
-#[cfg_attr(not(target_feature = "simd128"), archmage::arcane(suppress_const_test))]
+#[cfg_attr(
+    not(target_feature = "simd128"),
+    archmage::attune(wrap, suppress_const_test)
+)]
 fn step_v128<const SOFTWARE: bool>(token: Wasm128Token, a: v128, b: v128, c: v128) -> v128 {
     if SOFTWARE {
         crate::wasm_fma::powf_soft_f32x4(token, a, b, c)
@@ -85,7 +88,10 @@ pub(crate) fn fma_f32x16<const SOFTWARE: bool, T: F32x16Backend>(
 }
 
 #[cfg_attr(target_feature = "simd128", inline(always))]
-#[cfg_attr(not(target_feature = "simd128"), archmage::arcane(suppress_const_test))]
+#[cfg_attr(
+    not(target_feature = "simd128"),
+    archmage::attune(wrap, suppress_const_test)
+)]
 fn lanes<const SOFTWARE: bool, const N: usize>(
     token: Wasm128Token,
     a: [f32; N],

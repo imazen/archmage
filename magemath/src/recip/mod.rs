@@ -134,7 +134,7 @@ macro_rules! graph {
         #[cfg_attr(all(target_feature = "avx2", target_feature = "fma"), inline(always))]
         #[cfg_attr(
             not(all(target_feature = "avx2", target_feature = "fma")),
-            archmage::arcane(suppress_const_test)
+            archmage::attune(wrap, suppress_const_test)
         )]
         fn $v3_whole<const O: u32, const RSQRT: bool>(
             v3: archmage::X64V3Token,
@@ -147,7 +147,10 @@ macro_rules! graph {
 
         #[cfg(all(target_arch = "aarch64", not(miri)))]
         #[cfg_attr(target_feature = "neon", inline(always))]
-        #[cfg_attr(not(target_feature = "neon"), archmage::arcane(suppress_const_test))]
+        #[cfg_attr(
+            not(target_feature = "neon"),
+            archmage::attune(wrap, suppress_const_test)
+        )]
         fn $neon_whole<const O: u32, const RSQRT: bool>(
             neon: archmage::NeonToken,
             x: [f32; $lanes],

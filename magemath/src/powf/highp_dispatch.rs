@@ -96,7 +96,7 @@ fn scalar<
 ))]
 macro_rules! entry {
     ($name:ident,$token:ident,$packed:ident) => {
-        #[archmage::arcane]
+        #[archmage::attune(wrap, suppress_const_test)]
         fn $name<const OPTIONS: u32, const N: usize>(
             t: archmage::$token,
             x: [f32; N],

@@ -45,6 +45,7 @@ enum Key {
     Inline,
     Make,
     Wrap,
+    SuppressConstTest,
     Impl,
     Trait,
     SelfType,
@@ -101,6 +102,7 @@ impl Parse for Definition {
                     "inline" => Some(Key::Inline),
                     "make" => Some(Key::Make),
                     "wrap" => Some(Key::Wrap),
+                    "suppress_const_test" => Some(Key::SuppressConstTest),
                     "in_impl" => Some(Key::Impl),
                     "in_trait" | "nested" => Some(Key::Trait),
                     "_self" => Some(Key::SelfType),
@@ -132,6 +134,7 @@ impl Parse for Definition {
                             }
                         }
                         Key::Wrap => opts.wrap = true,
+                        Key::SuppressConstTest => opts.suppress_const_test = true,
                         Key::Impl => opts.in_impl = true,
                         Key::Trait => opts.in_trait = true,
                         Key::SelfType => {

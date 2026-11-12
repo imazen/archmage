@@ -14,7 +14,7 @@ use magetypes::simd::generic::{f32x16, f64x8};
 mod kernel {
     use super::*;
 
-    #[archmage::arcane(suppress_const_test)]
+    #[archmage::attune(wrap, suppress_const_test)]
     pub(super) fn minmax_f32<const MAX: bool>(
         _t: NeonToken,
         a: float32x4_t,
@@ -27,7 +27,7 @@ mod kernel {
         }
     }
 
-    #[archmage::arcane(suppress_const_test)]
+    #[archmage::attune(wrap, suppress_const_test)]
     pub(super) fn minmax_f64<const MAX: bool>(
         _t: NeonToken,
         a: float64x2_t,
@@ -40,7 +40,7 @@ mod kernel {
         }
     }
 
-    #[archmage::arcane(suppress_const_test)]
+    #[archmage::attune(wrap, suppress_const_test)]
     pub(super) fn est_f32<const RSQRT: bool>(_t: NeonToken, a: float32x4_t) -> float32x4_t {
         if RSQRT {
             n::vrsqrteq_f32(a)

@@ -21,7 +21,14 @@ fn same64(actual: f64, bits: u64) {
     }
 }
 
-#[archmage::magetypes(v4x(cfg(avx512)), v4(cfg(avx512)), v3, neon, wasm128, scalar)]
+#[archmage::attune(
+    _v4x_t(cfg(avx512)),
+    _v4_t(cfg(avx512)),
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _scalar_t
+)]
 fn widths(token: Token) {
     macro_rules! check {
         ($vec:ident, $float:ident, $data:ident, $same:ident, $n:literal) => {{
@@ -64,7 +71,7 @@ fn rational_fixtures_match_scalar_and_vector_widths() {
         same64(magetypes::simd::scalar::f64x1(input).sqrt().0, expected);
         same64(input.sqrt(), expected);
     }
-    widths_scalar(archmage::ScalarToken);
+    widths_scalar_t(archmage::ScalarToken);
     #[cfg(any(
         target_arch = "x86_64",
         target_arch = "aarch64",
@@ -74,23 +81,23 @@ fn rational_fixtures_match_scalar_and_vector_widths() {
     #[cfg(target_arch = "x86_64")]
     {
         if let Some(t) = archmage::X64V3Token::summon() {
-            widths_v3(t);
+            widths_v3_t(t);
         }
         #[cfg(feature = "avx512")]
         {
             if let Some(t) = archmage::X64V4Token::summon() {
-                widths_v4(t);
+                widths_v4_t(t);
             }
             if let Some(t) = archmage::X64V4xToken::summon() {
-                widths_v4x(t);
+                widths_v4x_t(t);
             }
         }
     }
     #[cfg(target_arch = "aarch64")]
-    widths_neon(archmage::NeonToken::summon().unwrap());
+    widths_neon_t(archmage::NeonToken::summon().unwrap());
     #[cfg(target_arch = "wasm32")]
     if let Some(t) = archmage::Wasm128Token::summon() {
-        widths_wasm128(t);
+        widths_wasm128_t(t);
     }
 }
 

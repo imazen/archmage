@@ -530,7 +530,6 @@ jobs:
         run: |
           cargo fetch
           cargo run -p xtask -- generate
-          python3 -B xtask/primitive_api.py --check
           python3 -B xtask/reciprocal_vectors.py --check
 
       - name: Check for differences

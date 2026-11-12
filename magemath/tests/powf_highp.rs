@@ -74,7 +74,7 @@ fn canonical_checked_masks_and_const_assumptions() {
 
 // Different table indices must occupy the same pack. Broadcast-only fixtures
 // cannot catch lane ordering, gather or packing mistakes.
-#[archmage::magetypes(v3, neon, wasm128, scalar)]
+#[archmage::attune(_v3_t, _neon_t, _wasm128_t, _scalar_t)]
 fn vector4(token: Token, x: [f32; 4], n: f32) -> [f32; 4] {
     magemath::powf::try_powf_f32x4_with::<CALLER, _>(
         token,
@@ -109,14 +109,14 @@ fn canonical_mixed_lanes() {
         let x = core::array::from_fn(|i| f32::from_bits(chunk[i % chunk.len()][0]));
         for (i, &[_, n, expected]) in chunk.iter().enumerate() {
             let n = f32::from_bits(n);
-            equal(vector4_scalar(archmage::ScalarToken, x, n)[i], expected);
+            equal(vector4_scalar_t(archmage::ScalarToken, x, n)[i], expected);
             #[cfg(target_arch = "x86_64")]
             if let Some(t) = <archmage::X64V3Token as archmage::SimdToken>::summon() {
-                equal(vector4_v3(t, x, n)[i], expected);
+                equal(vector4_v3_t(t, x, n)[i], expected);
             }
             #[cfg(target_arch = "aarch64")]
             equal(
-                vector4_neon(
+                vector4_neon_t(
                     <archmage::NeonToken as archmage::SimdToken>::summon().unwrap(),
                     x,
                     n,
@@ -125,7 +125,7 @@ fn canonical_mixed_lanes() {
             );
             #[cfg(target_arch = "wasm32")]
             if let Some(t) = <archmage::Wasm128Token as archmage::SimdToken>::summon() {
-                equal(vector4_wasm128(t, x, n)[i], expected);
+                equal(vector4_wasm128_t(t, x, n)[i], expected);
             }
         }
     }

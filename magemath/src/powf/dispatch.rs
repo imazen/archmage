@@ -145,33 +145,33 @@ macro_rules! run_const {
 }
 run_const!(
     run4_const,
-    kernel4_with_v3,
-    kernel4_with_v4,
-    kernel4_with_v4x,
-    kernel4_with_neon,
-    kernel4_with_wasm128,
-    kernel4_with_scalar,
+    kernel4_with_v3_t,
+    kernel4_with_v4_t,
+    kernel4_with_v4x_t,
+    kernel4_with_neon_t,
+    kernel4_with_wasm128_t,
+    kernel4_with_scalar_t,
     4
 );
 run_const!(
     run8_const,
-    kernel8_with_v3,
-    kernel8_with_v4,
-    kernel8_with_v4x,
-    kernel8_with_neon,
-    kernel8_with_wasm128,
-    kernel8_with_scalar,
+    kernel8_with_v3_t,
+    kernel8_with_v4_t,
+    kernel8_with_v4x_t,
+    kernel8_with_neon_t,
+    kernel8_with_wasm128_t,
+    kernel8_with_scalar_t,
     8
 );
 #[cfg(feature = "w512")]
 run_const!(
     run16_const,
-    kernel16_with_v3,
-    kernel16_with_v4,
-    kernel16_with_v4x,
-    kernel16_with_neon,
-    kernel16_with_wasm128,
-    kernel16_with_scalar,
+    kernel16_with_v3_t,
+    kernel16_with_v4_t,
+    kernel16_with_v4x_t,
+    kernel16_with_neon_t,
+    kernel16_with_wasm128_t,
+    kernel16_with_scalar_t,
     16
 );
 

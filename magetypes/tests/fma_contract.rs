@@ -8,7 +8,7 @@
     target_arch = "wasm32"
 ))]
 use archmage::SimdToken;
-use archmage::{ScalarToken, magetypes};
+use archmage::{ScalarToken, attune};
 #[path = "common/fma_vectors.rs"]
 mod fixtures;
 #[path = "common/fma_expected.rs"]
@@ -61,7 +61,15 @@ macro_rules! check {
     };
 }
 
-#[magetypes(v3, v4, v4x, neon, wasm128, scalar)]
+#[attune(
+    _v3_t,
+    _v4_t(cfg(avx512)),
+    _v4x_t(cfg(avx512)),
+    _neon_t,
+    _wasm128_t,
+    _scalar_t,
+    dispatch
+)]
 fn vectors(token: Token) {
     check!(token, f32x4, f32, 4, fixtures::F32);
     check!(token, f32x8, f32, 8, fixtures::F32);
@@ -76,7 +84,7 @@ fn vectors(token: Token) {
 
 #[test]
 fn scalar_and_software_contract() {
-    vectors_scalar(ScalarToken);
+    vectors_scalar_t(ScalarToken);
     for [a, b, c, expected] in fixtures::F32.map(|row| row.map(f32::from_bits)) {
         same!(magetypes::nostd_math::fmaf(a, b, c), expected);
         same!(magetypes::nostd_math::fmaf_soft(a, b, c), expected);
@@ -101,19 +109,21 @@ fn selected_backend_contract() {
         .as_deref()
         .unwrap_or("auto")
     {
-        "scalar" => vectors_scalar(ScalarToken),
+        "scalar" => vectors_scalar_t(ScalarToken),
         #[cfg(target_arch = "x86_64")]
-        "v3" => vectors_v3(archmage::X64V3Token::summon().expect("requested v3")),
+        "v3" => vectors_v3_t(archmage::X64V3Token::summon().expect("requested v3")),
         #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-        "v4" => vectors_v4(archmage::X64V4Token::summon().expect("requested v4")),
+        "v4" => vectors_v4_t(archmage::X64V4Token::summon().expect("requested v4")),
         #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-        "v4x" => vectors_v4x(archmage::X64V4xToken::summon().expect("requested v4x")),
+        "v4x" => vectors_v4x_t(archmage::X64V4xToken::summon().expect("requested v4x")),
         #[cfg(target_arch = "aarch64")]
-        "neon" => vectors_neon(archmage::NeonToken::summon().expect("requested neon")),
+        "neon" => vectors_neon_t(archmage::NeonToken::summon().expect("requested neon")),
         #[cfg(target_arch = "wasm32")]
-        "wasm128" => vectors_wasm128(archmage::Wasm128Token::summon().expect("requested wasm128")),
+        "wasm128" => {
+            vectors_wasm128_t(archmage::Wasm128Token::summon().expect("requested wasm128"))
+        }
         "auto" => {
-            archmage::incant!(vectors(), [v4x, v4, v3, neon, wasm128, scalar]);
+            vectors(ScalarToken);
         }
         tier => panic!("unsupported requested tier {tier}"),
     }

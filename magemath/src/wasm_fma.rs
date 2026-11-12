@@ -36,28 +36,28 @@ pub(crate) fn powf_f64_fuses() -> bool {
 
 #[cfg(not(target_feature = "relaxed-simd"))]
 #[cfg_attr(target_feature = "simd128", inline(always))]
-#[cfg_attr(not(target_feature = "simd128"), archmage::rite)]
+#[cfg_attr(not(target_feature = "simd128"), archmage::attune(wasm128))]
 pub(crate) fn madd_f32x4(_token: Wasm128Token, a: v128, b: v128, c: v128) -> v128 {
     w::f32x4_add(w::f32x4_mul(a, b), c)
 }
 
 #[cfg(not(target_feature = "relaxed-simd"))]
 #[cfg_attr(target_feature = "simd128", inline(always))]
-#[cfg_attr(not(target_feature = "simd128"), archmage::rite)]
+#[cfg_attr(not(target_feature = "simd128"), archmage::attune(wasm128))]
 pub(crate) fn msub_f32x4(_token: Wasm128Token, a: v128, b: v128, c: v128) -> v128 {
     w::f32x4_sub(w::f32x4_mul(a, b), c)
 }
 
 #[cfg(not(target_feature = "relaxed-simd"))]
 #[cfg_attr(target_feature = "simd128", inline(always))]
-#[cfg_attr(not(target_feature = "simd128"), archmage::rite)]
+#[cfg_attr(not(target_feature = "simd128"), archmage::attune(wasm128))]
 pub(crate) fn madd_f64x2(_token: Wasm128Token, a: v128, b: v128, c: v128) -> v128 {
     w::f64x2_add(w::f64x2_mul(a, b), c)
 }
 
 #[cfg(not(target_feature = "relaxed-simd"))]
 #[cfg_attr(target_feature = "simd128", inline(always))]
-#[cfg_attr(not(target_feature = "simd128"), archmage::rite)]
+#[cfg_attr(not(target_feature = "simd128"), archmage::attune(wasm128))]
 pub(crate) fn msub_f64x2(_token: Wasm128Token, a: v128, b: v128, c: v128) -> v128 {
     w::f64x2_sub(w::f64x2_mul(a, b), c)
 }
@@ -147,7 +147,7 @@ mod relaxed_probe {
 }
 
 #[cfg_attr(target_feature = "simd128", inline(always))]
-#[cfg_attr(not(target_feature = "simd128"), archmage::rite)]
+#[cfg_attr(not(target_feature = "simd128"), archmage::attune(wasm128))]
 pub(crate) fn fused_f32x4(token: Wasm128Token, a: v128, b: v128, c: v128) -> v128 {
     #[cfg(target_feature = "relaxed-simd")]
     if relaxed_probe::fuses_f32() {
@@ -165,7 +165,7 @@ pub(crate) fn fused_f32x4(token: Wasm128Token, a: v128, b: v128, c: v128) -> v12
 
 /// Vector form of nostd_math::fmaf: exact f64 product, TwoSum, round to odd.
 #[cfg_attr(target_feature = "simd128", inline(always))]
-#[cfg_attr(not(target_feature = "simd128"), archmage::rite)]
+#[cfg_attr(not(target_feature = "simd128"), archmage::attune(wasm128))]
 fn wide_sum(_token: Wasm128Token, a: v128, b: v128, c: v128) -> v128 {
     let product = w::f64x2_mul(w::f64x2_promote_low_f32x4(a), w::f64x2_promote_low_f32x4(b));
     let addend = w::f64x2_promote_low_f32x4(c);
@@ -189,7 +189,7 @@ fn wide_sum(_token: Wasm128Token, a: v128, b: v128, c: v128) -> v128 {
 // Same packed software algorithm as fused_f32x4, with no cached probe. Pow
 // has already selected software once for its complete expression graph.
 #[cfg_attr(target_feature = "simd128", inline(always))]
-#[cfg_attr(not(target_feature = "simd128"), archmage::rite)]
+#[cfg_attr(not(target_feature = "simd128"), archmage::attune(wasm128))]
 pub(crate) fn powf_soft_f32x4(token: Wasm128Token, a: v128, b: v128, c: v128) -> v128 {
     let lo = wide_sum(token, a, b, c);
     let hi = wide_sum(
@@ -202,7 +202,7 @@ pub(crate) fn powf_soft_f32x4(token: Wasm128Token, a: v128, b: v128, c: v128) ->
 }
 
 #[cfg_attr(target_feature = "simd128", inline(always))]
-#[cfg_attr(not(target_feature = "simd128"), archmage::rite)]
+#[cfg_attr(not(target_feature = "simd128"), archmage::attune(wasm128))]
 pub(crate) fn fused_f64x2(_token: Wasm128Token, a: v128, b: v128, c: v128) -> v128 {
     #[cfg(target_feature = "relaxed-simd")]
     if relaxed_probe::fuses_f64() {
