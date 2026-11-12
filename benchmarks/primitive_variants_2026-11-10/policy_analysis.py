@@ -66,6 +66,11 @@ def main():
     for gi, group in enumerate(reps[0]['comparisons']):
         groups = [r['comparisons'][gi] for r in reps]
         names = [b['name'] for b in group['benchmarks']]
+        operation = group['group_name'].split('/')[1]
+        assert names[0] == 'existing Magetypes ' + operation
+        assert len(set(names)) == len(names)
+        assert len(names) == (23 if operation in ('recip', 'rsqrt') else
+                              21 if group['group_name'].endswith('/zero-clamp64') else 25)
         assert all(g['group_name'] == group['group_name'] and
                    [b['name'] for b in g['benchmarks']] == names for g in groups)
         assert re.fullmatch(r'(?:wasm-)?[a-z0-9]+/(?:min|max|recip|rsqrt)/f(?:32|64)x(?:2|4|8|16)/(?:stream64|stream4096|chain64|zero-clamp64)', group['group_name'])
