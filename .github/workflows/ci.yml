@@ -160,8 +160,8 @@ jobs:
 
       - name: Portable and native FMA contracts (std and no_std)
         run: |
-          cargo test -p magetypes --features "${{ env.FEATURES }}" --test fma_contract --test float_inequality --test float_negation
-          cargo test -p magetypes --no-default-features --features w512 --test fma_contract --test float_inequality --test float_negation
+          cargo test -p magetypes --features "${{ env.FEATURES }}" --test fma_contract --test float_inequality --test float_negation --test subtier_ops
+          cargo test -p magetypes --no-default-features --features w512 --test fma_contract --test float_inequality --test float_negation --test subtier_ops
 
       - name: Macro input, output, and diagnostic contracts
         run: |
@@ -261,8 +261,8 @@ jobs:
 
       - name: Portable and native FMA contracts (std and no_std)
         run: |
-          cargo test -p magetypes --features "${{ env.FEATURES }}" --test fma_contract --test float_inequality --test float_negation
-          cargo test -p magetypes --no-default-features --features w512 --test fma_contract --test float_inequality --test float_negation
+          cargo test -p magetypes --features "${{ env.FEATURES }}" --test fma_contract --test float_inequality --test float_negation --test subtier_ops
+          cargo test -p magetypes --no-default-features --features w512 --test fma_contract --test float_inequality --test float_negation --test subtier_ops
 
       - name: Macro input, output, and diagnostic contracts
         run: |
@@ -456,25 +456,25 @@ jobs:
         env:
           RUSTFLAGS: "-C target-feature=+simd128,+relaxed-simd"
           CARGO_TARGET_WASM32_WASIP1_RUNNER: "wasmtime --env ARCHMAGE_EXPECT_RELAXED_FUSION=yes"
-        run: cargo test -p magetypes --features "${{ env.FEATURES }}" --target wasm32-wasip1 --lib --test fma_contract --test fused_arithmetic --test doc_examples --test scalar_parity
+        run: cargo test -p magetypes --features "${{ env.FEATURES }}" --target wasm32-wasip1 --lib --test fma_contract --test fused_arithmetic --test doc_examples --test scalar_parity --test subtier_ops
 
       - name: Test no_std WASM arithmetic
         env:
           RUSTFLAGS: "-C target-feature=+simd128"
           CARGO_TARGET_WASM32_WASIP1_RUNNER: "wasmtime"
-        run: cargo test -p magetypes --no-default-features --features w512 --target wasm32-wasip1 --test fma_contract --test fused_arithmetic --test doc_examples --test scalar_parity
+        run: cargo test -p magetypes --no-default-features --features w512 --target wasm32-wasip1 --test fma_contract --test fused_arithmetic --test doc_examples --test scalar_parity --test subtier_ops
 
       - name: Test no_std relaxed WASM arithmetic
         env:
           RUSTFLAGS: "-C target-feature=+simd128,+relaxed-simd"
           CARGO_TARGET_WASM32_WASIP1_RUNNER: "wasmtime"
-        run: cargo test -p magetypes --no-default-features --features w512 --target wasm32-wasip1 --test fma_contract
+        run: cargo test -p magetypes --no-default-features --features w512 --target wasm32-wasip1 --test fma_contract --test subtier_ops
 
       - name: Test relaxed WASM arithmetic without host FMA
         env:
           RUSTFLAGS: "-C target-feature=+simd128,+relaxed-simd"
           CARGO_TARGET_WASM32_WASIP1_RUNNER: "wasmtime -W relaxed-simd-deterministic=n -C cranelift-has-fma=false --env ARCHMAGE_EXPECT_RELAXED_FUSION=no"
-        run: cargo test -p magetypes --features "${{ env.FEATURES }}" --target wasm32-wasip1 --lib --test fma_contract --test fused_arithmetic --test doc_examples --test scalar_parity
+        run: cargo test -p magetypes --features "${{ env.FEATURES }}" --target wasm32-wasip1 --lib --test fma_contract --test fused_arithmetic --test doc_examples --test scalar_parity --test subtier_ops
 
       - name: Run arch exercise (WASM)
         if: always()

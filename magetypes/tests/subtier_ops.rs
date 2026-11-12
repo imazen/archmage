@@ -4,12 +4,20 @@
 #![forbid(unsafe_code)]
 #![deny(deprecated)]
 
-use archmage::{SimdToken, attune};
+#[test]
+fn foreign_subtier_tokens_never_summon() {
+    use archmage::SimdToken;
+    #[cfg(not(target_arch = "x86_64"))]
+    assert!(archmage::X64V3VnniToken::summon().is_none());
+    #[cfg(not(target_arch = "aarch64"))]
+    assert!(archmage::Arm64V2Token::summon().is_none());
+    #[cfg(not(target_arch = "wasm32"))]
+    assert!(archmage::Wasm128RelaxedToken::summon().is_none());
+}
 
 #[cfg(target_arch = "x86_64")]
 mod x86_vnni_tests {
-    use super::*;
-    use archmage::{X64V3Token, X64V3VnniToken};
+    use archmage::{SimdToken, X64V3Token, X64V3VnniToken, attune};
 
     #[attune(v3_vnni, define(f32x8))]
     fn axpy_v3_vnni_body(x: &[f32; 8], a: f32, b: f32) -> [f32; 8] {
@@ -159,13 +167,19 @@ mod x86_vnni_tests {
 
     #[test]
     fn vnni_dot_products_match_scalar_reference() {
+        #[cfg(target_feature = "avxvnni")]
+        assert!(
+            X64V3VnniToken::summon().is_some(),
+            "avxvnni enabled at compile time must summon X64V3VnniToken"
+        );
         let Some(token) = X64V3VnniToken::summon() else {
             return;
         };
         let x = [1.0, -2.0, 3.5, 4.0, -0.5, 6.0, 7.25, -8.0];
         let got = call_axpy_v3_vnni(token, &x, 2.0, 1.0);
         for (g, e) in got.into_iter().zip(x.map(|v| v * 2.0 + 1.0)) {
-            assert!((g - e).abs() <= 1e-6);
+            let diff = if g >= e { g - e } else { e - g };
+            assert!(diff <= 1e-6);
         }
         check_vnni_128_v3_vnni_t(token);
         check_vnni_256_v3_vnni_t(token);
@@ -174,8 +188,7 @@ mod x86_vnni_tests {
 
 #[cfg(target_arch = "aarch64")]
 mod arm_v2_tests {
-    use super::*;
-    use archmage::{Arm64V2Token, Arm64V3Token, NeonToken};
+    use archmage::{Arm64V2Token, Arm64V3Token, NeonToken, SimdToken, attune};
 
     #[attune(arm_v3, define(f32x4))]
     fn axpy_arm_v3_body(x: &[f32; 4], a: f32, b: f32) -> [f32; 4] {
@@ -266,20 +279,43 @@ mod arm_v2_tests {
 
     #[test]
     fn arm_v2_dotprod_and_rdm_match_scalar_reference() {
+        #[cfg(all(target_feature = "dotprod", target_feature = "rdm"))]
+        assert!(
+            Arm64V2Token::summon().is_some(),
+            "dotprod+rdm enabled at compile time must summon Arm64V2Token"
+        );
         if let Some(token) = Arm64V2Token::summon() {
             check_arm_v2_arm_v2_t(token);
         }
         if let Some(v3) = Arm64V3Token::summon() {
             let got = call_axpy_arm_v3(v3, &[1.0, 2.0, -3.0, 4.0], 2.0, 0.5);
             assert_eq!(got, [2.5, 4.5, -5.5, 8.5]);
+            check_arm_v2_arm_v2_t(v3.arm_v2());
         }
     }
 }
 
 #[cfg(target_arch = "wasm32")]
 mod wasm_relaxed_tests {
-    use super::*;
-    use archmage::Wasm128RelaxedToken;
+    use archmage::{SimdToken, Wasm128RelaxedToken, Wasm128Token, attune};
+
+    #[attune(wasm128_relaxed, define(f32x4))]
+    fn axpy_wasm_relaxed_body(x: &[f32; 4], a: f32, b: f32) -> [f32; 4] {
+        let base = Wasm128Token::from_context();
+        f32x4::load_t(base, x)
+            .mul_add_relaxed(f32x4::splat_t(base, a), f32x4::splat_t(base, b))
+            .to_array()
+    }
+
+    #[attune(wrap)]
+    fn call_axpy_wasm_relaxed(
+        _token: Wasm128RelaxedToken,
+        x: &[f32; 4],
+        a: f32,
+        b: f32,
+    ) -> [f32; 4] {
+        axpy_wasm_relaxed_body(x, a, b)
+    }
 
     #[attune(_wasm128_relaxed_t, define(f32x4, f64x2, i32x4, i8x16))]
     fn check_wasm_relaxed(token: Token) {
@@ -314,7 +350,19 @@ mod wasm_relaxed_tests {
 
     #[test]
     fn wasm_relaxed_ops_match_scalar_reference() {
+        #[cfg(target_feature = "relaxed-simd")]
+        assert!(
+            Wasm128RelaxedToken::summon().is_some(),
+            "relaxed-simd enabled at compile time must summon Wasm128RelaxedToken"
+        );
+        #[cfg(not(target_feature = "relaxed-simd"))]
+        assert!(
+            Wasm128RelaxedToken::summon().is_none(),
+            "strict WASM without +relaxed-simd must not summon Wasm128RelaxedToken"
+        );
         if let Some(token) = Wasm128RelaxedToken::summon() {
+            let got = call_axpy_wasm_relaxed(token, &[1.0, -2.0, 3.0, 4.0], 2.0, 0.5);
+            assert_eq!(got, [2.5, -3.5, 6.5, 8.5]);
             check_wasm_relaxed_wasm128_relaxed_t(token);
         }
     }
