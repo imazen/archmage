@@ -69,6 +69,10 @@
 //! assert_eq!(y.to_array()[2].to_bits(), tail.to_bits());
 //! ```
 #![doc = include_str!("permutations.md")]
+// BEGIN GENERATED TIMING DOCUMENTS
+#![doc = include_str!("timings/mac-neon-recip.md")]
+#![doc = include_str!("timings/mac-neon-rsqrt.md")]
+// END GENERATED TIMING DOCUMENTS
 mod api;
 mod options;
 use crate::{PrimitiveError, PrimitiveErrorKind};

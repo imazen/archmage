@@ -63,6 +63,10 @@
 //! Min/max has no precision or FMA selector because neither describes this
 //! operation's numerical choices.
 #![doc = include_str!("permutations.md")]
+// BEGIN GENERATED TIMING DOCUMENTS
+#![doc = include_str!("timings/mac-neon-min.md")]
+#![doc = include_str!("timings/mac-neon-max.md")]
+// END GENERATED TIMING DOCUMENTS
 mod api;
 mod options;
 use crate::{PrimitiveError, PrimitiveErrorKind};

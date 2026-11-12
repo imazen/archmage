@@ -1216,6 +1216,13 @@ fn process(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 
 ## Known Bugs
 
+Policy matrix orchestration, 2026-11-11: the full 66-group benchmark exceeds
+zenbench's default 300-second child supervisor timeout. The incomplete attempt
+and its child logs are retained. After verifying its owner process had exited,
+its orphan admission reservation was preserved and released. Subsequent full
+matrix runs use `ZENBENCH_TIMEOUT=7200`; rounds, confidence, admission and the
+2% comparison bound are unchanged. This timeout is not a measured regression.
+
 Reciprocal research costs, 2026-11-11: bounded f64 Newton correction preserves
 current fused bits and reduces software-only timing, but regresses native-FMA
 comparisons. Canonical RN14 rounding adds work beyond HIGHP division; its cold
