@@ -35,4 +35,7 @@ if state['stage'] not in ('complete', 'failed-no-packet'):
                 for line in stream)
         state['required_groups_per_process'] = 66
 (a.root / 'LIVE-PROGRESS.json').write_text(json.dumps(state, indent=2) + '\n')
-print(json.dumps(state))
+line = json.dumps(state)
+with (a.root / 'progress-history.jsonl').open('a') as stream:
+    stream.write(line + '\n')
+print(line)
