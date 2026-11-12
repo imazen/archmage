@@ -3,6 +3,8 @@
 #[macro_use]
 #[path = "../policy_registry.rs"]
 mod registry;
+#[path = "../policy_check.rs"]
+mod check;
 #[path = "../policy_workload.rs"]
 mod workload;
 use archmage::ScalarToken;
@@ -15,6 +17,26 @@ use archmage::SimdToken;
 use std::sync::Arc;
 use workload::*;
 use zenbench::{Suite, black_box};
+
+fn add_bench<F: CheckScalar, const N: usize, const W: usize, const DEP: bool>(
+    g: &mut zenbench::BenchGroup,
+    name: &str,
+    data: Arc<([F; N], [F; N])>,
+    stream: impl Fn(&[F; N], &[F; N], &mut [F; N]) + Send + 'static,
+    chain: impl Fn(F) -> [F; W] + Send + 'static,
+) {
+    g.bench(name.to_owned(), move |b| {
+        let mut out = [F::from_f32(0.0); N];
+        b.iter(|| {
+            if DEP {
+                black_box(chain(black_box(F::from_f32(0.75))));
+            } else {
+                stream(black_box(&data.0), black_box(&data.1), black_box(&mut out));
+                black_box(&out);
+            }
+        });
+    });
+}
 
 macro_rules! group {
     ($suite:ident,$tier:ident,$t:ident,$stream:ident,$chain:ident,$float:ty,$w:literal,$operation:literal,$recip:literal,$op:literal,$n:literal,$dependent:literal,$zero:literal,$cases:ident,$kind:literal) => {{
@@ -32,60 +54,17 @@ macro_rules! group {
         let data = Arc::new((a, b));
         macro_rules! preflight {
             ($flag:literal,$legacy:literal,$id:expr) => {{
-                let mut out: [$float; $n] = [0.0; $n];
-                $stream::<$flag, $op, $legacy, $n>($t, &data.0, &data.1, &mut out);
-                let mut error = 0.0_f64;
-                for i in 0..$n {
-                    if $recip {
-                        error = error.max(check_rc(
-                            $flag,
-                            $legacy,
-                            $op,
-                            data.0[i].narrow(),
-                            out[i].narrow(),
-                        ));
-                    } else {
-                        check_mm::<$op>(
-                            $flag,
-                            $legacy,
-                            data.0[i].widen(),
-                            data.1[i].widen(),
-                            out[i].widen(),
-                        );
-                    }
-                }
-                if $dependent {
-                    let mut a: [$float; $w] = [0.75; $w];
-                    let b: [$float; $w] = [2.0; $w];
-                    let mut out: [$float; $w] = [0.0; $w];
-                    for _ in 0..64 {
-                        $stream::<$flag, $op, $legacy, $w>($t, &a, &b, &mut out);
-                        for i in 0..$w {
-                            if $recip {
-                                error = error.max(check_rc(
-                                    $flag,
-                                    $legacy,
-                                    $op,
-                                    a[i].narrow(),
-                                    out[i].narrow(),
-                                ));
-                            } else {
-                                check_mm::<$op>(
-                                    $flag,
-                                    $legacy,
-                                    a[i].widen(),
-                                    b[i].widen(),
-                                    out[i].widen(),
-                                );
-                            }
-                            a[i] = out[i] + if $recip { 0.5 } else { 0.03125 };
-                        }
-                    }
-                    assert_eq!(
-                        $chain::<$flag, $op, $legacy>($t, black_box(0.75)).map(|x| x.to_bits()),
-                        a.map(|x| x.to_bits())
-                    );
-                }
+                let error = check::verify::<$float, $n, $w>(
+                    $flag,
+                    $legacy,
+                    $recip,
+                    $op,
+                    $dependent,
+                    &data,
+                    |a, b, out| $stream::<$flag, $op, $legacy, $n>($t, a, b, out),
+                    |a, b, out| $stream::<$flag, $op, $legacy, $w>($t, a, b, out),
+                    |x| $chain::<$flag, $op, $legacy>($t, x),
+                );
                 eprintln!("POLICY_ACCURACY\t{}\t{}\t{:.17e}", name, $id, error);
             }};
         }
@@ -103,23 +82,13 @@ macro_rules! group {
                 macro_rules! add {
                     ($o:literal,$legacy:literal,$id:expr) => {{
                         preflight!($o, $legacy, $id);
-                        let data = Arc::clone(&data);
-                        g.bench($id, move |b| {
-                            let mut out: [$float; $n] = [0.0; $n];
-                            b.iter(|| {
-                                if $dependent {
-                                    black_box($chain::<$o, $op, $legacy>($t, black_box(0.75)));
-                                } else {
-                                    $stream::<$o, $op, $legacy, $n>(
-                                        $t,
-                                        black_box(&data.0),
-                                        black_box(&data.1),
-                                        black_box(&mut out),
-                                    );
-                                    black_box(&out);
-                                }
-                            });
-                        });
+                        add_bench::<$float, $n, $w, $dependent>(
+                            g,
+                            $id,
+                            Arc::clone(&data),
+                            move |a, b, out| $stream::<$o, $op, $legacy, $n>($t, a, b, out),
+                            move |x| $chain::<$o, $op, $legacy>($t, x),
+                        );
                     }};
                 }
                 add!(0, true, concat!("existing Magetypes ", $operation));
