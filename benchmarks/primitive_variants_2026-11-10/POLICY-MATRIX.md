@@ -1,7 +1,7 @@
 # Complete primitive option matrix — 2026-11-11
 
-AMD and hosted WASM timings are in progress. Intel V3 and the M6 exploratory
-matrix are complete: all 46 canonical flag sets, 66 workload groups and 1,566 arms,
+AMD V3/V4/V4x and hosted WASM timings are in progress. AMD Scalar, Intel V3 and
+the M6 exploratory matrix are complete: all 46 canonical flag sets, 66 workload groups and 1,566 arms,
 including existing Magetypes baselines. No default or numerical implementation
 changes in this expansion. Pow/exp/log timing expansion is deferred by the owner;
 their supported options and redirects are fully inventoried.
@@ -132,6 +132,29 @@ AssumeValid Caller; R3b/R3d are Normal backend MIDP/LOWP, AssumeValid Caller.
 All retain the supplied V3 token. The same configured kernels process the
 streams; no runtime-options argument is passed through the hot loop.
 
+## Zen 5 Scalar: provider selection is a cost dimension
+
+This suite has no entirely clean group: 9,963/16,500 observations are clean.
+Every timing below is descriptive, flagged and excluded from promotion.
+
+For f32x8 reciprocal stream64, existing Magetypes division takes 7.1325 ns and
+HIGHP R00 takes 7.1326 ns. Portable MIDP AssumeValid Caller R33 takes 109.8284 ns;
+the same precision/domain/validation with Automatic execution R13 takes
+199.3708 ns. Portable LOWP AssumeValid Caller R35 takes 49.0341 ns. Backend
+MIDP/LOWP R3b/R3d take 7.1316/7.1315 ns and route to division on this backend.
+
+For chain64, existing division takes 153.3879 ns, R33 968.4987 ns and R13
+1,536.1956 ns. Automatic Scalar selects std's scalar FMA provider; Caller uses
+the current exact software graph in this baseline distribution build. These
+are retained **typed ScalarToken** observations, not a measurement of the public
+scalar/array entry's whole-operation dispatch. Hardware-provider selection is
+not a demonstrated speed win here. No source or arithmetic change is made to
+hide the cost; further provider optimization is a separate implementation step.
+
+The interval family still contains only the 1,500 baseline comparisons.
+These Automatic/Caller ns are not presented with an unregistered pairwise
+confidence interval or a new promotion claim.
+
 ## Orchestration and resources
 
 The initial Intel run hit the default 300-second child supervisor timeout
@@ -152,6 +175,8 @@ retained resource flags. Zero exit does not qualify this unconfined run.
 Intel native timing uses 1,601 s / peak-RSS 0.05 GiB, minimum available RAM
 21,570 MiB and peak load 1.59. Its return code 1 preserves the confirmation
 failure. Intel retained-pair analysis uses 3 s / 0.27 GiB on the M6.
+Zen 5 Scalar timing uses 1,799 s / peak-RSS 0.29 GiB, minimum available RAM
+42,245 MiB and peak load 2.62; its return code 1 retains failed confirmation.
 The first analysis launch lacked NumPy; a task-local venv supplies NumPy 2.4.2.
 No timing rerun was needed for that analysis dependency.
 

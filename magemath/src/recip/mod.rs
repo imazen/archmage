@@ -74,6 +74,8 @@
 #![doc = include_str!("timings/mac-neon-rsqrt.md")]
 #![doc = include_str!("timings/i265-v3-recip.md")]
 #![doc = include_str!("timings/i265-v3-rsqrt.md")]
+#![doc = include_str!("timings/dev-scalar-recip.md")]
+#![doc = include_str!("timings/dev-scalar-rsqrt.md")]
 // END GENERATED TIMING DOCUMENTS
 mod api;
 mod options;

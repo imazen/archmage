@@ -1216,6 +1216,13 @@ fn process(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 
 ## Known Bugs
 
+Scalar provider cost, 2026-11-11: flagged Zen 5 typed ScalarToken f32x8
+reciprocal stream64 takes 199.3708 ns with portable MIDP AssumeValid Automatic
+R13 versus 109.8284 ns with Caller R33 and 7.1326 ns HIGHP R00. None of the
+66 groups is entirely clean; this is descriptive evidence, not a clean
+performance failure or provider-speed qualification. See `POLICY-MATRIX.md`
+under `benchmarks/primitive_variants_2026-11-10/`.
+
 Complete option-matrix cost, 2026-11-11: Intel V3 f32x8 reciprocal chain64
 retains 250/250 clean observations. Portable MIDP AssumeValid Caller R33
 costs 290.8175 ns versus existing Magetypes 270.7577 ns, ratio 1.074088
