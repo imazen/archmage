@@ -257,7 +257,7 @@ fn register_mm8_scalar(suite: &mut Suite, tier: &str, t: ScalarToken) {
     );
 }
 
-#[cfg(all(feature = "w512"))]
+#[cfg(feature = "w512")]
 fn register_mm16_scalar(suite: &mut Suite, tier: &str, t: ScalarToken) {
     width!(
         suite,
@@ -447,7 +447,7 @@ fn register_mm64x4_scalar(suite: &mut Suite, tier: &str, t: ScalarToken) {
     );
 }
 
-#[cfg(all(feature = "w512"))]
+#[cfg(feature = "w512")]
 fn register_mm64x8_scalar(suite: &mut Suite, tier: &str, t: ScalarToken) {
     width!(
         suite,
@@ -569,7 +569,7 @@ fn register_rc8_scalar(suite: &mut Suite, tier: &str, t: ScalarToken) {
     );
 }
 
-#[cfg(all(feature = "w512"))]
+#[cfg(feature = "w512")]
 fn register_rc16_scalar(suite: &mut Suite, tier: &str, t: ScalarToken) {
     width!(
         suite,
@@ -599,7 +599,7 @@ fn register_rc16_scalar(suite: &mut Suite, tier: &str, t: ScalarToken) {
     );
 }
 
-#[cfg(all(target_arch = "x86_64"))]
+#[cfg(target_arch = "x86_64")]
 fn register_mm4_v3(suite: &mut Suite, tier: &str, t: archmage::X64V3Token) {
     width!(
         suite,
@@ -663,7 +663,7 @@ fn register_mm4_v3(suite: &mut Suite, tier: &str, t: archmage::X64V3Token) {
     );
 }
 
-#[cfg(all(target_arch = "x86_64"))]
+#[cfg(target_arch = "x86_64")]
 fn register_mm8_v3(suite: &mut Suite, tier: &str, t: archmage::X64V3Token) {
     width!(
         suite,
@@ -791,7 +791,7 @@ fn register_mm16_v3(suite: &mut Suite, tier: &str, t: archmage::X64V3Token) {
     );
 }
 
-#[cfg(all(target_arch = "x86_64"))]
+#[cfg(target_arch = "x86_64")]
 fn register_mm64x2_v3(suite: &mut Suite, tier: &str, t: archmage::X64V3Token) {
     width!(
         suite,
@@ -855,7 +855,7 @@ fn register_mm64x2_v3(suite: &mut Suite, tier: &str, t: archmage::X64V3Token) {
     );
 }
 
-#[cfg(all(target_arch = "x86_64"))]
+#[cfg(target_arch = "x86_64")]
 fn register_mm64x4_v3(suite: &mut Suite, tier: &str, t: archmage::X64V3Token) {
     width!(
         suite,
@@ -983,7 +983,7 @@ fn register_mm64x8_v3(suite: &mut Suite, tier: &str, t: archmage::X64V3Token) {
     );
 }
 
-#[cfg(all(target_arch = "x86_64"))]
+#[cfg(target_arch = "x86_64")]
 fn register_rc4_v3(suite: &mut Suite, tier: &str, t: archmage::X64V3Token) {
     width!(
         suite,
@@ -1013,7 +1013,7 @@ fn register_rc4_v3(suite: &mut Suite, tier: &str, t: archmage::X64V3Token) {
     );
 }
 
-#[cfg(all(target_arch = "x86_64"))]
+#[cfg(target_arch = "x86_64")]
 fn register_rc8_v3(suite: &mut Suite, tier: &str, t: archmage::X64V3Token) {
     width!(
         suite,
@@ -2021,7 +2021,7 @@ fn register_rc16_v4x(suite: &mut Suite, tier: &str, t: archmage::X64V4xToken) {
     );
 }
 
-#[cfg(all(target_arch = "aarch64"))]
+#[cfg(target_arch = "aarch64")]
 fn register_mm4_neon(suite: &mut Suite, tier: &str, t: archmage::NeonToken) {
     width!(
         suite,
@@ -2085,7 +2085,7 @@ fn register_mm4_neon(suite: &mut Suite, tier: &str, t: archmage::NeonToken) {
     );
 }
 
-#[cfg(all(target_arch = "aarch64"))]
+#[cfg(target_arch = "aarch64")]
 fn register_mm8_neon(suite: &mut Suite, tier: &str, t: archmage::NeonToken) {
     width!(
         suite,
@@ -2213,7 +2213,7 @@ fn register_mm16_neon(suite: &mut Suite, tier: &str, t: archmage::NeonToken) {
     );
 }
 
-#[cfg(all(target_arch = "aarch64"))]
+#[cfg(target_arch = "aarch64")]
 fn register_mm64x2_neon(suite: &mut Suite, tier: &str, t: archmage::NeonToken) {
     width!(
         suite,
@@ -2277,7 +2277,7 @@ fn register_mm64x2_neon(suite: &mut Suite, tier: &str, t: archmage::NeonToken) {
     );
 }
 
-#[cfg(all(target_arch = "aarch64"))]
+#[cfg(target_arch = "aarch64")]
 fn register_mm64x4_neon(suite: &mut Suite, tier: &str, t: archmage::NeonToken) {
     width!(
         suite,
@@ -2405,7 +2405,7 @@ fn register_mm64x8_neon(suite: &mut Suite, tier: &str, t: archmage::NeonToken) {
     );
 }
 
-#[cfg(all(target_arch = "aarch64"))]
+#[cfg(target_arch = "aarch64")]
 fn register_rc4_neon(suite: &mut Suite, tier: &str, t: archmage::NeonToken) {
     width!(
         suite,
@@ -2435,7 +2435,7 @@ fn register_rc4_neon(suite: &mut Suite, tier: &str, t: archmage::NeonToken) {
     );
 }
 
-#[cfg(all(target_arch = "aarch64"))]
+#[cfg(target_arch = "aarch64")]
 fn register_rc8_neon(suite: &mut Suite, tier: &str, t: archmage::NeonToken) {
     width!(
         suite,
@@ -2533,7 +2533,7 @@ fn main() {
             #[cfg(feature = "w512")]
             register_rc16_scalar(suite, &tier, t);
         }
-        #[cfg(all(target_arch = "x86_64"))]
+        #[cfg(target_arch = "x86_64")]
         "v3" => {
             let t = archmage::X64V3Token::summon().expect("V3");
             register_mm4_v3(suite, &tier, t);
@@ -2581,7 +2581,7 @@ fn main() {
             #[cfg(feature = "w512")]
             register_rc16_v4x(suite, &tier, t);
         }
-        #[cfg(all(target_arch = "aarch64"))]
+        #[cfg(target_arch = "aarch64")]
         "neon" => {
             let t = archmage::NeonToken::summon().expect("NEON");
             register_mm4_neon(suite, &tier, t);

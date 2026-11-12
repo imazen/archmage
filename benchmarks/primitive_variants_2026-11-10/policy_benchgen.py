@@ -137,11 +137,11 @@ def native():
         ('v4','archmage::X64V4Token','archmage::X64V4Token::summon().expect("V4")',['target_arch="x86_64"','feature="avx512"']),
         ('v4x','archmage::X64V4xToken','archmage::X64V4xToken::summon().expect("V4x")',['target_arch="x86_64"','feature="avx512"']),
         ('neon','archmage::NeonToken','archmage::NeonToken::summon().expect("NEON")',['target_arch="aarch64"'])]:
-        topattr='#[cfg(all('+','.join(cfg)+'))]\n' if cfg else ''
+        topattr='#[cfg('+(cfg[0] if len(cfg)==1 else 'all('+','.join(cfg)+')')+')]\n' if cfg else ''
         tiercalls=[]
         for family,ty,w,tag,wide in shapes:
             conditions=cfg+(['feature="w512"'] if wide else [])
-            attr='#[cfg(all('+','.join(conditions)+'))]\n' if conditions else ''
+            attr='#[cfg('+(conditions[0] if len(conditions)==1 else 'all('+','.join(conditions)+')')+')]\n' if conditions else ''
             name=f'register_{family}{tag}_{tier}'
             body=[]
             for op,operation in [(False,'min' if family=='mm' else 'recip'),(True,'max' if family=='mm' else 'rsqrt')]:
