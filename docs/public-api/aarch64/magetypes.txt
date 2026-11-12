@@ -6,14 +6,14 @@
 # impls omitted; re-export duplicates annotated `[also: path]`.
 # DO NOT EDIT BY HAND — commit regenerated changes with the code.
 #
-# files: magetypes.txt 2671 lines (supported surface) | magetypes.features.txt 12 added (features: avx512,std,w512) | magetypes.internal.txt 36 lines (48 hidden + 0 excluded-feature)
+# files: magetypes.txt 2675 lines (supported surface) | magetypes.features.txt 12 added (features: avx512,std,w512) | magetypes.internal.txt 36 lines (48 hidden + 0 excluded-feature)
 
 ## summary
 #
 #   pub modules                                12
 #   pub types (struct/enum/trait/alias)       287
 #   pub consts/statics                        228
-#   free functions                           3786
+#   free functions                           3794
 #   inherent methods                         1251
 #   enum variants                               1
 #   re-exports                                  2
@@ -25,10 +25,10 @@
 # per-module pub lines:
 #   (root)                          321
 #   cast                              3
-#   prelude                        3622
+#   prelude                        3630
 #   simd                           1621
 
-## items (2448 lines)
+## items (2452 lines)
 
 pub mod magetypes
 pub use archmage
@@ -382,6 +382,8 @@ pub fn prelude::i16x8<archmage::tokens::generated::arm::NeonToken>::from_raw(cor
 pub fn prelude::i16x8<archmage::tokens::generated::arm::NeonToken>::from_raw_t(archmage::tokens::generated::arm::NeonToken, core::core_arch::arm_shared::neon::int16x8_t) -> Self [also: prelude::i16x8<archmage::tokens::generated::arm::NeonToken>]
 pub fn prelude::i16x8<archmage::tokens::generated::arm::NeonToken>::raw(self) -> core::core_arch::arm_shared::neon::int16x8_t [also: prelude::i16x8<archmage::tokens::generated::arm::NeonToken>]
 pub const fn prelude::i16x8<archmage::tokens::generated::arm::NeonToken>::implementation_name() -> &'static str [also: (root)]
+pub fn prelude::i16x8<archmage::tokens::generated::arm::NeonToken>::qrdmlah(self, archmage::tokens::generated::arm::Arm64V2Token, Self, Self) -> Self [also: prelude::i16x8<archmage::tokens::generated::arm::NeonToken>]
+pub fn prelude::i16x8<archmage::tokens::generated::arm::NeonToken>::qrdmlsh(self, archmage::tokens::generated::arm::Arm64V2Token, Self, Self) -> Self [also: prelude::i16x8<archmage::tokens::generated::arm::NeonToken>]
 pub fn prelude::i16x8<T>::madd_adjacent(self, Self) -> prelude::i32x4<T> [also: prelude::i16x8<T>]
 pub fn prelude::i16x8<T>::widen_high(self) -> prelude::i32x4<T> [also: prelude::i16x8<T>]
 pub fn prelude::i16x8<T>::widen_low(self) -> prelude::i32x4<T> [also: prelude::i16x8<T>]
@@ -449,6 +451,7 @@ pub fn prelude::i32x16<T>::narrow_saturating_u16(self, Self) -> prelude::u16x32<
 pub fn [i32; 16]::from(prelude::i32x16<T>) -> [i32; 16] [also: (root)]
 #[repr(C)] pub struct prelude::i32x4<T: simd::backends::I32x4Backend>(_, _) [also: simd::generic]
 pub const fn prelude::i32x4<archmage::tokens::ScalarToken>::implementation_name() -> &'static str [also: (root)]
+pub fn prelude::i32x4<archmage::tokens::generated::arm::NeonToken>::dot_i8(self, archmage::tokens::generated::arm::Arm64V2Token, prelude::i8x16<archmage::tokens::generated::arm::NeonToken>, prelude::i8x16<archmage::tokens::generated::arm::NeonToken>) -> Self [also: prelude::i32x4<archmage::tokens::generated::arm::NeonToken>]
 pub fn prelude::i32x4<archmage::tokens::generated::arm::NeonToken>::from_raw(core::core_arch::arm_shared::neon::int32x4_t) -> Self [also: prelude::i32x4<archmage::tokens::generated::arm::NeonToken>]
 pub fn prelude::i32x4<archmage::tokens::generated::arm::NeonToken>::from_raw_t(archmage::tokens::generated::arm::NeonToken, core::core_arch::arm_shared::neon::int32x4_t) -> Self [also: prelude::i32x4<archmage::tokens::generated::arm::NeonToken>]
 pub fn prelude::i32x4<archmage::tokens::generated::arm::NeonToken>::raw(self) -> core::core_arch::arm_shared::neon::int32x4_t [also: prelude::i32x4<archmage::tokens::generated::arm::NeonToken>]
@@ -748,6 +751,7 @@ pub fn prelude::u32x16<T>::partition_slice_mut(T, &mut [u32]) -> (&mut [[u32; 16
 pub fn [u32; 16]::from(prelude::u32x16<T>) -> [u32; 16] [also: (root)]
 #[repr(C)] pub struct prelude::u32x4<T: simd::backends::U32x4Backend>(_, _) [also: simd::generic]
 pub const fn prelude::u32x4<archmage::tokens::ScalarToken>::implementation_name() -> &'static str [also: (root)]
+pub fn prelude::u32x4<archmage::tokens::generated::arm::NeonToken>::dot_u8(self, archmage::tokens::generated::arm::Arm64V2Token, prelude::u8x16<archmage::tokens::generated::arm::NeonToken>, prelude::u8x16<archmage::tokens::generated::arm::NeonToken>) -> Self [also: prelude::u32x4<archmage::tokens::generated::arm::NeonToken>]
 pub fn prelude::u32x4<archmage::tokens::generated::arm::NeonToken>::from_raw(core::core_arch::arm_shared::neon::uint32x4_t) -> Self [also: prelude::u32x4<archmage::tokens::generated::arm::NeonToken>]
 pub fn prelude::u32x4<archmage::tokens::generated::arm::NeonToken>::from_raw_t(archmage::tokens::generated::arm::NeonToken, core::core_arch::arm_shared::neon::uint32x4_t) -> Self [also: prelude::u32x4<archmage::tokens::generated::arm::NeonToken>]
 pub fn prelude::u32x4<archmage::tokens::generated::arm::NeonToken>::raw(self) -> core::core_arch::arm_shared::neon::uint32x4_t [also: prelude::u32x4<archmage::tokens::generated::arm::NeonToken>]

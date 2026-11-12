@@ -9,49 +9,49 @@ use archmage::Wasm128Token;
 use core::arch::wasm32::{self as w, v128};
 
 #[cfg(not(target_feature = "relaxed-simd"))]
-#[archmage::rite]
+#[archmage::attune(wasm128)]
 pub(crate) fn madd_f32x4(_token: Wasm128Token, a: v128, b: v128, c: v128) -> v128 {
     w::f32x4_add(w::f32x4_mul(a, b), c)
 }
 
 #[cfg(not(target_feature = "relaxed-simd"))]
-#[archmage::rite]
+#[archmage::attune(wasm128)]
 pub(crate) fn msub_f32x4(_token: Wasm128Token, a: v128, b: v128, c: v128) -> v128 {
     w::f32x4_sub(w::f32x4_mul(a, b), c)
 }
 
 #[cfg(not(target_feature = "relaxed-simd"))]
-#[archmage::rite]
+#[archmage::attune(wasm128)]
 pub(crate) fn madd_f64x2(_token: Wasm128Token, a: v128, b: v128, c: v128) -> v128 {
     w::f64x2_add(w::f64x2_mul(a, b), c)
 }
 
 #[cfg(not(target_feature = "relaxed-simd"))]
-#[archmage::rite]
+#[archmage::attune(wasm128)]
 pub(crate) fn msub_f64x2(_token: Wasm128Token, a: v128, b: v128, c: v128) -> v128 {
     w::f64x2_sub(w::f64x2_mul(a, b), c)
 }
 
 #[cfg(target_feature = "relaxed-simd")]
-#[archmage::rite]
+#[archmage::attune(wasm128_relaxed)]
 pub(crate) fn madd_f32x4(_token: Wasm128Token, a: v128, b: v128, c: v128) -> v128 {
     w::f32x4_relaxed_madd(a, b, c)
 }
 
 #[cfg(target_feature = "relaxed-simd")]
-#[archmage::rite]
+#[archmage::attune(wasm128_relaxed)]
 pub(crate) fn msub_f32x4(_token: Wasm128Token, a: v128, b: v128, c: v128) -> v128 {
     w::f32x4_relaxed_madd(a, b, w::f32x4_neg(c))
 }
 
 #[cfg(target_feature = "relaxed-simd")]
-#[archmage::rite]
+#[archmage::attune(wasm128_relaxed)]
 pub(crate) fn madd_f64x2(_token: Wasm128Token, a: v128, b: v128, c: v128) -> v128 {
     w::f64x2_relaxed_madd(a, b, c)
 }
 
 #[cfg(target_feature = "relaxed-simd")]
-#[archmage::rite]
+#[archmage::attune(wasm128_relaxed)]
 pub(crate) fn msub_f64x2(_token: Wasm128Token, a: v128, b: v128, c: v128) -> v128 {
     w::f64x2_relaxed_madd(a, b, w::f64x2_neg(c))
 }
@@ -116,7 +116,7 @@ mod relaxed_probe {
     }
 }
 
-#[archmage::rite]
+#[archmage::attune(wasm128)]
 pub(crate) fn fused_f32x4(token: Wasm128Token, a: v128, b: v128, c: v128) -> v128 {
     #[cfg(target_feature = "relaxed-simd")]
     if relaxed_probe::fuses_f32() {
@@ -133,7 +133,7 @@ pub(crate) fn fused_f32x4(token: Wasm128Token, a: v128, b: v128, c: v128) -> v12
 }
 
 /// Vector form of nostd_math::fmaf: exact f64 product, TwoSum, round to odd.
-#[archmage::rite]
+#[archmage::attune(wasm128)]
 fn wide_sum(_token: Wasm128Token, a: v128, b: v128, c: v128) -> v128 {
     let product = w::f64x2_mul(w::f64x2_promote_low_f32x4(a), w::f64x2_promote_low_f32x4(b));
     let addend = w::f64x2_promote_low_f32x4(c);
@@ -154,7 +154,7 @@ fn wide_sum(_token: Wasm128Token, a: v128, b: v128, c: v128) -> v128 {
     w::f32x4_demote_f64x2_zero(w::v128_bitselect(odd, sum, adjust))
 }
 
-#[archmage::rite]
+#[archmage::attune(wasm128)]
 pub(crate) fn fused_f64x2(_token: Wasm128Token, a: v128, b: v128, c: v128) -> v128 {
     #[cfg(target_feature = "relaxed-simd")]
     if relaxed_probe::fuses_f64() {

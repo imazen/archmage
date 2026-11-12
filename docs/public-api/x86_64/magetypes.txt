@@ -6,14 +6,14 @@
 # impls omitted; re-export duplicates annotated `[also: path]`.
 # DO NOT EDIT BY HAND — commit regenerated changes with the code.
 #
-# files: magetypes.txt 2676 lines (supported surface) | magetypes.features.txt 96 added (features: avx512,std,w512) | magetypes.internal.txt 36 lines (48 hidden + 0 excluded-feature)
+# files: magetypes.txt 2684 lines (supported surface) | magetypes.features.txt 96 added (features: avx512,std,w512) | magetypes.internal.txt 36 lines (48 hidden + 0 excluded-feature)
 
 ## summary
 #
 #   pub modules                                12
 #   pub types (struct/enum/trait/alias)       377
 #   pub consts/statics                        228
-#   free functions                           3886
+#   free functions                           3902
 #   inherent methods                         1251
 #   enum variants                               1
 #   re-exports                                  2
@@ -25,10 +25,10 @@
 # per-module pub lines:
 #   (root)                          321
 #   cast                              3
-#   prelude                        3722
+#   prelude                        3738
 #   simd                           1711
 
-## items (2452 lines)
+## items (2460 lines)
 
 pub mod magetypes
 pub use archmage
@@ -461,6 +461,10 @@ pub fn [i32; 16]::from(prelude::i32x16<T>) -> [i32; 16] [also: (root)]
 #[repr(C)] pub struct prelude::i32x4<T: simd::backends::I32x4Backend>(_, _) [also: simd::generic]
 pub const fn prelude::i32x4<archmage::tokens::ScalarToken>::implementation_name() -> &'static str [also: (root)]
 pub const fn prelude::i32x4<archmage::tokens::generated::x86::X64V3Token>::implementation_name() -> &'static str [also: (root)]
+pub fn prelude::i32x4<archmage::tokens::generated::x86::X64V3Token>::mul_add_i16_sat_vnni(self, archmage::tokens::generated::x86::X64V3VnniToken, prelude::i16x8<archmage::tokens::generated::x86::X64V3Token>, prelude::i16x8<archmage::tokens::generated::x86::X64V3Token>) -> Self [also: prelude::i32x4<archmage::tokens::generated::x86::X64V3Token>]
+pub fn prelude::i32x4<archmage::tokens::generated::x86::X64V3Token>::mul_add_i16_vnni(self, archmage::tokens::generated::x86::X64V3VnniToken, prelude::i16x8<archmage::tokens::generated::x86::X64V3Token>, prelude::i16x8<archmage::tokens::generated::x86::X64V3Token>) -> Self [also: prelude::i32x4<archmage::tokens::generated::x86::X64V3Token>]
+pub fn prelude::i32x4<archmage::tokens::generated::x86::X64V3Token>::mul_add_u8_i8_sat_vnni(self, archmage::tokens::generated::x86::X64V3VnniToken, prelude::u8x16<archmage::tokens::generated::x86::X64V3Token>, prelude::i8x16<archmage::tokens::generated::x86::X64V3Token>) -> Self [also: prelude::i32x4<archmage::tokens::generated::x86::X64V3Token>]
+pub fn prelude::i32x4<archmage::tokens::generated::x86::X64V3Token>::mul_add_u8_i8_vnni(self, archmage::tokens::generated::x86::X64V3VnniToken, prelude::u8x16<archmage::tokens::generated::x86::X64V3Token>, prelude::i8x16<archmage::tokens::generated::x86::X64V3Token>) -> Self [also: prelude::i32x4<archmage::tokens::generated::x86::X64V3Token>]
 pub fn prelude::i32x4<T>::bitcast_f32x4(self) -> prelude::f32x4<T> [also: prelude::i32x4<T>, prelude::u32x4<T>]
 pub fn prelude::i32x4<T>::bitcast_to_f32(self) -> prelude::f32x4<T> [also: prelude::i32x4<T>]
 pub fn prelude::i32x4<T>::to_f32(self) -> prelude::f32x4<T> [also: prelude::i32x4<T>]
@@ -499,6 +503,10 @@ pub const fn prelude::i32x8<archmage::tokens::generated::x86::X64V3Token>::imple
 pub fn prelude::i32x8<archmage::tokens::generated::x86::X64V3Token>::raw(self) -> core::core_arch::x86::__m256i [also: prelude::i16x16<archmage::tokens::generated::x86::X64V3Token>, prelude::i32x8<archmage::tokens::generated::x86::X64V3Token>, prelude::i64x4<archmage::tokens::generated::x86::X64V3Token>, prelude::i8x32<archmage::tokens::generated::x86::X64V3Token>, prelude::u16x16<archmage::tokens::generated::x86::X64V3Token>, prelude::u32x8<archmage::tokens::generated::x86::X64V3Token>, prelude::u64x4<archmage::tokens::generated::x86::X64V3Token>, prelude::u8x32<archmage::tokens::generated::x86::X64V3Token>]
 pub fn prelude::i32x8<archmage::tokens::generated::x86::X64V3Token>::from_raw(core::core_arch::x86::__m256i) -> Self [also: prelude::i16x16<archmage::tokens::generated::x86::X64V3Token>, prelude::i32x8<archmage::tokens::generated::x86::X64V3Token>, prelude::i64x4<archmage::tokens::generated::x86::X64V3Token>, prelude::i8x32<archmage::tokens::generated::x86::X64V3Token>, prelude::u16x16<archmage::tokens::generated::x86::X64V3Token>, prelude::u32x8<archmage::tokens::generated::x86::X64V3Token>, prelude::u64x4<archmage::tokens::generated::x86::X64V3Token>, prelude::u8x32<archmage::tokens::generated::x86::X64V3Token>]
 pub fn prelude::i32x8<archmage::tokens::generated::x86::X64V3Token>::from_raw_t(archmage::tokens::generated::x86::X64V3Token, core::core_arch::x86::__m256i) -> Self [also: prelude::i16x16<archmage::tokens::generated::x86::X64V3Token>, prelude::i32x8<archmage::tokens::generated::x86::X64V3Token>, prelude::i64x4<archmage::tokens::generated::x86::X64V3Token>, prelude::i8x32<archmage::tokens::generated::x86::X64V3Token>, prelude::u16x16<archmage::tokens::generated::x86::X64V3Token>, prelude::u32x8<archmage::tokens::generated::x86::X64V3Token>, prelude::u64x4<archmage::tokens::generated::x86::X64V3Token>, prelude::u8x32<archmage::tokens::generated::x86::X64V3Token>]
+pub fn prelude::i32x8<archmage::tokens::generated::x86::X64V3Token>::mul_add_i16_sat_vnni(self, archmage::tokens::generated::x86::X64V3VnniToken, prelude::i16x16<archmage::tokens::generated::x86::X64V3Token>, prelude::i16x16<archmage::tokens::generated::x86::X64V3Token>) -> Self [also: prelude::i32x8<archmage::tokens::generated::x86::X64V3Token>]
+pub fn prelude::i32x8<archmage::tokens::generated::x86::X64V3Token>::mul_add_i16_vnni(self, archmage::tokens::generated::x86::X64V3VnniToken, prelude::i16x16<archmage::tokens::generated::x86::X64V3Token>, prelude::i16x16<archmage::tokens::generated::x86::X64V3Token>) -> Self [also: prelude::i32x8<archmage::tokens::generated::x86::X64V3Token>]
+pub fn prelude::i32x8<archmage::tokens::generated::x86::X64V3Token>::mul_add_u8_i8_sat_vnni(self, archmage::tokens::generated::x86::X64V3VnniToken, prelude::u8x32<archmage::tokens::generated::x86::X64V3Token>, prelude::i8x32<archmage::tokens::generated::x86::X64V3Token>) -> Self [also: prelude::i32x8<archmage::tokens::generated::x86::X64V3Token>]
+pub fn prelude::i32x8<archmage::tokens::generated::x86::X64V3Token>::mul_add_u8_i8_vnni(self, archmage::tokens::generated::x86::X64V3VnniToken, prelude::u8x32<archmage::tokens::generated::x86::X64V3Token>, prelude::i8x32<archmage::tokens::generated::x86::X64V3Token>) -> Self [also: prelude::i32x8<archmage::tokens::generated::x86::X64V3Token>]
 pub fn prelude::i32x8<T>::bitcast_f32x8(self) -> prelude::f32x8<T> [also: prelude::i32x8<T>]
 pub fn prelude::i32x8<T>::bitcast_to_f32(self) -> prelude::f32x8<T> [also: prelude::i32x8<T>]
 pub fn prelude::i32x8<T>::to_f32(self) -> prelude::f32x8<T> [also: prelude::i32x8<T>]
