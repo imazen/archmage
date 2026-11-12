@@ -1211,3 +1211,7 @@ primitive-policy-render *ARGS:
 
 primitive-policy-progress root source:
     python3 -B benchmarks/primitive_variants_2026-11-10/policy_progress.py "{{root}}" "{{source}}"
+
+# Print a frozen guest with wasm-tools first; this inventories WAT, not JIT code.
+primitive-policy-wasm-calls wat output:
+    python3 -B benchmarks/primitive_variants_2026-11-10/policy_wasm_calls.py "{{wat}}" "{{output}}"
