@@ -1,6 +1,6 @@
 # Complete primitive option matrix — 2026-11-11
 
-AMD V3/V4/V4x and hosted WASM timings are in progress. AMD Scalar, Intel V3 and
+AMD V4/V4x and hosted WASM timings are in progress. AMD Scalar/V3, Intel V3 and
 the M6 exploratory matrix are complete: all 46 canonical flag sets, 66 workload groups and 1,566 arms,
 including existing Magetypes baselines. No default or numerical implementation
 changes in this expansion. Pow/exp/log timing expansion is deferred by the owner;
@@ -166,6 +166,30 @@ The interval family still contains only the 1,500 baseline comparisons.
 These Automatic/Caller ns are not presented with an unregistered pairwise
 confidence interval or a new promotion claim.
 
+## Zen 5 V3: retained costs, no fully clean group
+
+The five-process V3 suite retains 10,408/16,500 clean observations; none of its
+66 groups is entirely clean. These are descriptive measurements, not a new
+clean performance failure or promotion.
+
+For f32x8 chain64, reciprocal takes 159.4310 ns with existing Magetypes,
+80.6279 ns with HIGHP R00, 177.6733 ns with portable MIDP R33 and 126.2870 ns
+with backend MIDP R3b. Rsqrt takes 218.4796 ns existing, 238.4796 ns R00,
+274.7846 ns R33 and 188.6272 ns R3b. These flags have the same definitions
+as the Intel section. All retained intervals and validation variants remain
+in the nested tables; no favorable rounds are selected.
+
+Selected original zenbench bars for `v3/recip/f32x8/chain64` (flagged):
+
+```text
+R3d                       █████████ 43.2ns
+R00                       █████████████████ 80.6ns
+R35                       ██████████████████████ 100.4ns
+R3b                       ███████████████████████████ 126.3ns
+existing Magetypes recip  ██████████████████████████████████ 159.4ns
+R33                       ██████████████████████████████████████ 177.7ns
+```
+
 ## Orchestration and resources
 
 The initial Intel run hit the default 300-second child supervisor timeout
@@ -188,6 +212,8 @@ Intel native timing uses 1,601 s / peak-RSS 0.05 GiB, minimum available RAM
 failure. Intel retained-pair analysis uses 3 s / 0.27 GiB on the M6.
 Zen 5 Scalar timing uses 1,799 s / peak-RSS 0.29 GiB, minimum available RAM
 42,245 MiB and peak load 2.62; its return code 1 retains failed confirmation.
+Zen 5 V3 timing uses 1,692 s / peak-RSS 0.29 GiB, minimum available RAM
+42,287 MiB and peak load 2.29; its return code 1 also retains failed confirmation.
 The first analysis launch lacked NumPy; a task-local venv supplies NumPy 2.4.2.
 No timing rerun was needed for that analysis dependency.
 
