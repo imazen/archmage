@@ -18,13 +18,14 @@ def render(context, op, rows):
     assert len(selected) == (24 if op in ('min', 'max') else 9)
     exploratory = selected[0]['exploratory']
     lines = [f'<details><summary>{LABELS[context]}: {op} timings and observed error</summary>', '',
-             'Each timing is **ns per complete workload; ratio [interval] versus existing Magetypes**.',
+             'Each timing is **ns per complete workload; ratio (interval) versus existing Magetypes**.',
              'Streams process 64/4096 scalar elements; chain64 performs 64 dependent vector steps.',
              'Error is the largest observed relative error across this width’s fixed stream inputs and chain states; it is not a whole-domain maximum.',
              'Min/max error 0 denotes exact selected values; preflight separately verifies the requested zero signs.',
              ('**Exploratory**: one process, 50 pairs, unrestricted macOS scheduler. Intervals are paired-round 95%; no strict promotion.' if exploratory else
               '**Retained**: five processes × 50 pairs. Intervals are diagnostic process-family 95% (all 1,500 baseline comparisons), including the timer floor.'),
              'C marks a group whose 250/250 observations are fresh and clean; D marks a flagged group. E marks exploratory. No observations are filtered.',
+             'Display values are rounded; decisions use the full-precision analysis and original samples.',
              'Whole-suite confirmation: ' + ('passed.' if all(r['confirmation_passed'] for r in selected) else 'not established; read cell status separately.'), '']
     if context == 'wasm/nonfusing':
         lines += ['The nonfusing engine uses the baseline x86_64 target, which disables more features than FMA. This is not an isolated FMA-cost comparison.', '']
@@ -50,7 +51,7 @@ def render(context, op, rows):
                 ci = r['intervals'].get(cell)
                 if ci:
                     low, high = ci['paired_round95'] if exploratory else ci['process_family95']
-                    entries.append(f'{ns:.3g}; {ci["ratio"]:.3g} [{low:.3g},{high:.3g}]')
+                    entries.append(f'{ns:.3g}; {ci["ratio"]:.3g} ({low:.3g}–{high:.3g})')
                 else:
                     entries.append(f'{ns:.3g}; baseline')
             label = 'Existing Magetypes ' + op if cell.startswith('existing ') else f'[{cell}](#{cell.lower()})'
