@@ -5,6 +5,7 @@ Streams process 64/4096 scalar elements; chain64 performs 64 dependent vector st
 Error is the largest observed relative error across this width’s fixed stream inputs and chain states; it is not a whole-domain maximum.
 Min/max error 0 denotes exact selected values; preflight separately verifies the requested zero signs.
 **Exploratory**: one process, 50 pairs, unrestricted macOS scheduler. Intervals are paired-round 95%; no strict promotion.
+The point ratio divides all-retained mean ns. Strict process intervals describe the geometric mean of the five process ratios; raw analysis also retains the paired-round interval.
 C marks a group whose 250/250 observations are fresh and clean; D marks a flagged group. E marks exploratory. No observations are filtered.
 Display values are rounded; decisions use the full-precision analysis and original samples.
 Whole-suite confirmation: not established; read cell status separately.

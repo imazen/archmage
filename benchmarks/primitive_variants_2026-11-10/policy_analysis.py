@@ -96,7 +96,8 @@ def main():
                 logs = np.log(process_means[:, i] / process_means[:, 0])
                 floor = max(2 * r['timer_resolution_ns'] / batch /
                             min(s['iterations'] for s in g['samples']) /
-                            process_means[j, i] for j, (r, g) in enumerate(zip(reps, groups)))
+                            min(process_means[j, i], process_means[j, 0])
+                            for j, (r, g) in enumerate(zip(reps, groups)))
                 half = max(t4_critical(1 - 0.05 / (2 * family)) * logs.std(ddof=1) / math.sqrt(5), floor)
                 process_ci = [math.exp(logs.mean() - half), math.exp(logs.mean() + half)]
             intervals[names[i]] = dict(ratio=float(means[i] / means[0]),

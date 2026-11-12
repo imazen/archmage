@@ -35,7 +35,9 @@ to the builders in the adjoining permutation tables.
   0x531324. Strict table intervals are diagnostic log-process-mean Student-t
   (df=4), Bonferroni family 95% across all 1,500 baseline comparisons, plus timer
   floor. They do not replace zenbench admission/confirmation. Raw analysis keeps
-  both intervals. A clean cell is distinct from a qualified whole suite.
+  both intervals. The displayed point divides the all-retained mean ns;
+  process intervals describe the geometric mean of process ratios. A clean
+  cell is distinct from a qualified whole suite.
 - The conservative promotion bound remains upper interval ≤1.02 in every
   required ordinary cell; optimization also needs an upper interval <1.00.
   Missing or flagged contexts prevent a blanket promotion.
@@ -99,6 +101,9 @@ Native build/verification: 178 s / peak-RSS 6.19 GiB locally; Intel 172 s /
 6.23 GiB. WASM build 130 s / 2.14 GiB; verification 1 s / 0.05 GiB.
 M6 build takes 96 s; its wrapper's 0.01 GiB excludes possible sccache daemon
 work and is not a whole-build memory claim. M6 analysis uses 2 s / 0.17 GiB.
+M6 native timing uses 285 s / peak-RSS 0.03 GiB (minimum proxy-available RAM
+9,279 MiB, peak load 2.69); its exploratory return code is zero despite the
+retained resource flags. Zero exit does not qualify this unconfined run.
 The first analysis launch lacked NumPy; a task-local venv supplies NumPy 2.4.2.
 No timing rerun was needed for that analysis dependency.
 

@@ -24,6 +24,7 @@ def render(context, op, rows):
              'Min/max error 0 denotes exact selected values; preflight separately verifies the requested zero signs.',
              ('**Exploratory**: one process, 50 pairs, unrestricted macOS scheduler. Intervals are paired-round 95%; no strict promotion.' if exploratory else
               '**Retained**: five processes × 50 pairs. Intervals are diagnostic process-family 95% (all 1,500 baseline comparisons), including the timer floor.'),
+             'The point ratio divides all-retained mean ns. Strict process intervals describe the geometric mean of the five process ratios; raw analysis also retains the paired-round interval.',
              'C marks a group whose 250/250 observations are fresh and clean; D marks a flagged group. E marks exploratory. No observations are filtered.',
              'Display values are rounded; decisions use the full-precision analysis and original samples.',
              'Whole-suite confirmation: ' + ('passed.' if all(r['confirmation_passed'] for r in selected) else 'not established; read cell status separately.'), '']
