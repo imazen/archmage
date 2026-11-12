@@ -135,7 +135,7 @@ fn neon() {
     }
 }
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
 #[test]
 fn wasm128() {
     match archmage::Wasm128Token::summon() {

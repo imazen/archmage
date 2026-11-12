@@ -6,30 +6,30 @@
 # impls omitted; re-export duplicates annotated `[also: path]`.
 # DO NOT EDIT BY HAND — commit regenerated changes with the code.
 #
-# files: archmage.txt 406 lines (supported surface) | archmage.features.txt 0 added (features: avx512,forge-token-api,macros,safe_unaligned_simd,std,testable_dispatch) | archmage.internal.txt 85 lines (85 hidden + 0 excluded-feature)
+# files: archmage.txt 441 lines (supported surface) | archmage.features.txt 0 added (features: avx512,forge-token-api,macros,safe_unaligned_simd,std,testable_dispatch) | archmage.internal.txt 89 lines (89 hidden + 0 excluded-feature)
 
 ## summary
 #
 #   pub modules                                 6
-#   pub types (struct/enum/trait/alias)       117
+#   pub types (struct/enum/trait/alias)       120
 #   pub consts/statics                         18
 #   free functions                              4
-#   inherent methods                          189
+#   inherent methods                          222
 #   struct fields                              12
 #   enum variants                              51
 #   re-exports                                 60
-#   trait roster entries (type × trait)       173
-#   auto-trait-complete types                  24
+#   trait roster entries (type × trait)       179
+#   auto-trait-complete types                  25
 #   auto-trait exceptions                       1
 #
 # per-module pub lines:
-#   (root)                          143
+#   (root)                          145
 #   intrinsics                       19
-#   prelude                          92
+#   prelude                          94
 #   testing                          13
-#   tokens                          190
+#   tokens                          222
 
-## items (379 lines)
+## items (413 lines)
 
 pub mod archmage
 pub use arcane
@@ -120,9 +120,19 @@ pub fn tokens::ScalarToken::dangerously_disable_token_process_wide(bool) -> core
 pub fn tokens::ScalarToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
 pub const fn tokens::ScalarToken::forge_token_dangerously() -> Self [also: (root)]
 pub const fn tokens::ScalarToken::from_context() -> Self [also: (root)]
+pub fn tokens::Wasm128RelaxedFmaToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
+pub fn tokens::Wasm128RelaxedFmaToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub fn tokens::Wasm128RelaxedFmaToken::forge_token_dangerously() -> Self
+pub fn tokens::Wasm128RelaxedFmaToken::from_context() -> Self
+pub fn tokens::Wasm128RelaxedFmaToken::wasm128(self) -> tokens::Wasm128Token
+pub fn tokens::Wasm128RelaxedFmaToken::wasm128_relaxed(self) -> tokens::Wasm128RelaxedToken
+pub fn tokens::Wasm128RelaxedToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
+pub fn tokens::Wasm128RelaxedToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
 pub fn tokens::Wasm128RelaxedToken::forge_token_dangerously() -> Self
 pub fn tokens::Wasm128RelaxedToken::from_context() -> Self
 pub fn tokens::Wasm128RelaxedToken::wasm128(self) -> tokens::Wasm128Token
+pub fn tokens::Wasm128Token::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
+pub fn tokens::Wasm128Token::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
 pub fn tokens::Wasm128Token::forge_token_dangerously() -> Self
 pub fn tokens::Wasm128Token::from_context() -> Self
 pub fn tokens::X64CryptoToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
@@ -162,6 +172,7 @@ pub fn prelude::IntoConcreteToken::as_neon_sha3(self) -> core::option::Option<to
 pub fn prelude::IntoConcreteToken::as_scalar(self) -> core::option::Option<tokens::ScalarToken>
 pub fn prelude::IntoConcreteToken::as_wasm128(self) -> core::option::Option<tokens::Wasm128Token>
 pub fn prelude::IntoConcreteToken::as_wasm128_relaxed(self) -> core::option::Option<tokens::Wasm128RelaxedToken>
+pub fn prelude::IntoConcreteToken::as_wasm128_relaxed_fma(self) -> core::option::Option<tokens::Wasm128RelaxedFmaToken>
 pub fn prelude::IntoConcreteToken::as_x64_crypto(self) -> core::option::Option<tokens::X64CryptoToken>
 pub fn prelude::IntoConcreteToken::as_x64v1(self) -> core::option::Option<tokens::X64V1Token>
 pub fn prelude::IntoConcreteToken::as_x64v2(self) -> core::option::Option<tokens::X64V2Token>
@@ -222,9 +233,19 @@ pub fn tokens::NeonToken::manually_disabled() -> core::result::Result<bool, toke
 pub unsafe fn tokens::NeonToken::forge_token_dangerously() -> Self
 pub fn tokens::ScalarToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
 pub fn tokens::ScalarToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub fn tokens::Wasm128RelaxedFmaToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
+pub fn tokens::Wasm128RelaxedFmaToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub fn tokens::Wasm128RelaxedFmaToken::forge_token_dangerously() -> Self
+pub fn tokens::Wasm128RelaxedFmaToken::from_context() -> Self
+pub fn tokens::Wasm128RelaxedFmaToken::wasm128(self) -> tokens::Wasm128Token
+pub fn tokens::Wasm128RelaxedFmaToken::wasm128_relaxed(self) -> tokens::Wasm128RelaxedToken
+pub fn tokens::Wasm128RelaxedToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
+pub fn tokens::Wasm128RelaxedToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
 pub fn tokens::Wasm128RelaxedToken::forge_token_dangerously() -> Self
 pub fn tokens::Wasm128RelaxedToken::from_context() -> Self
 pub fn tokens::Wasm128RelaxedToken::wasm128(self) -> tokens::Wasm128Token
+pub fn tokens::Wasm128Token::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
+pub fn tokens::Wasm128Token::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
 pub fn tokens::Wasm128Token::forge_token_dangerously() -> Self
 pub fn tokens::Wasm128Token::from_context() -> Self
 pub fn tokens::X64CryptoToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
@@ -264,6 +285,7 @@ pub fn tokens::IntoConcreteToken::as_neon_sha3(self) -> core::option::Option<tok
 pub fn tokens::IntoConcreteToken::as_scalar(self) -> core::option::Option<tokens::ScalarToken>
 pub fn tokens::IntoConcreteToken::as_wasm128(self) -> core::option::Option<tokens::Wasm128Token>
 pub fn tokens::IntoConcreteToken::as_wasm128_relaxed(self) -> core::option::Option<tokens::Wasm128RelaxedToken>
+pub fn tokens::IntoConcreteToken::as_wasm128_relaxed_fma(self) -> core::option::Option<tokens::Wasm128RelaxedFmaToken>
 pub fn tokens::IntoConcreteToken::as_x64_crypto(self) -> core::option::Option<tokens::X64CryptoToken>
 pub fn tokens::IntoConcreteToken::as_x64v1(self) -> core::option::Option<tokens::X64V1Token>
 pub fn tokens::IntoConcreteToken::as_x64v2(self) -> core::option::Option<tokens::X64V2Token>
@@ -320,11 +342,22 @@ pub unsafe fn tokens::NeonToken::forge_token_dangerously() -> Self
 pub struct ScalarToken [also: prelude, tokens]
 pub fn tokens::ScalarToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
 pub fn tokens::ScalarToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub struct Wasm128RelaxedFmaToken [also: prelude, tokens]
+pub fn tokens::Wasm128RelaxedFmaToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
+pub fn tokens::Wasm128RelaxedFmaToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub fn tokens::Wasm128RelaxedFmaToken::forge_token_dangerously() -> Self
+pub fn tokens::Wasm128RelaxedFmaToken::from_context() -> Self
+pub fn tokens::Wasm128RelaxedFmaToken::wasm128(self) -> tokens::Wasm128Token
+pub fn tokens::Wasm128RelaxedFmaToken::wasm128_relaxed(self) -> tokens::Wasm128RelaxedToken
 pub struct Wasm128RelaxedToken [also: prelude, tokens]
+pub fn tokens::Wasm128RelaxedToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
+pub fn tokens::Wasm128RelaxedToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
 pub fn tokens::Wasm128RelaxedToken::forge_token_dangerously() -> Self
 pub fn tokens::Wasm128RelaxedToken::from_context() -> Self
 pub fn tokens::Wasm128RelaxedToken::wasm128(self) -> tokens::Wasm128Token
 pub struct Wasm128Token [also: prelude, tokens]
+pub fn tokens::Wasm128Token::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
+pub fn tokens::Wasm128Token::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
 pub fn tokens::Wasm128Token::forge_token_dangerously() -> Self
 pub fn tokens::Wasm128Token::from_context() -> Self
 pub struct X64CryptoToken [also: prelude, tokens]
@@ -384,6 +417,7 @@ pub fn IntoConcreteToken::as_neon_sha3(self) -> core::option::Option<tokens::Neo
 pub fn IntoConcreteToken::as_scalar(self) -> core::option::Option<tokens::ScalarToken>
 pub fn IntoConcreteToken::as_wasm128(self) -> core::option::Option<tokens::Wasm128Token>
 pub fn IntoConcreteToken::as_wasm128_relaxed(self) -> core::option::Option<tokens::Wasm128RelaxedToken>
+pub fn IntoConcreteToken::as_wasm128_relaxed_fma(self) -> core::option::Option<tokens::Wasm128RelaxedFmaToken>
 pub fn IntoConcreteToken::as_x64_crypto(self) -> core::option::Option<tokens::X64CryptoToken>
 pub fn IntoConcreteToken::as_x64v1(self) -> core::option::Option<tokens::X64V1Token>
 pub fn IntoConcreteToken::as_x64v2(self) -> core::option::Option<tokens::X64V2Token>
@@ -411,7 +445,7 @@ pub type Desktop64 = tokens::X64V3Token [also: prelude, tokens]
 pub type Server64 = tokens::X64V4Token [also: prelude, tokens]
 pub type Sse2Token = tokens::X64V1Token [also: prelude, tokens]
 
-## trait impls (25 types)
+## trait impls (26 types)
 
 testing::CompileTimePolicy: Clone, Copy, Debug, Eq, PartialEq
 testing::PermutationReport: Clone, Debug, Display
@@ -427,6 +461,7 @@ tokens::NeonCrcToken: Clone, Copy, Debug, tokens::Has128BitSimd, tokens::HasNeon
 tokens::NeonSha3Token: Clone, Copy, Debug, tokens::Has128BitSimd, tokens::HasNeon, tokens::HasNeonSha3, tokens::IntoConcreteToken, tokens::SimdToken
 tokens::NeonToken: Clone, Copy, Debug, tokens::Has128BitSimd, tokens::HasNeon, tokens::IntoConcreteToken, tokens::SimdToken
 tokens::ScalarToken: Clone, Copy, Debug, Eq, Hash, PartialEq, tokens::IntoConcreteToken, tokens::SimdToken
+tokens::Wasm128RelaxedFmaToken: Clone, Copy, Debug, tokens::Has128BitSimd, tokens::IntoConcreteToken, tokens::SimdToken
 tokens::Wasm128RelaxedToken: Clone, Copy, Debug, tokens::Has128BitSimd, tokens::IntoConcreteToken, tokens::SimdToken
 tokens::Wasm128Token: Clone, Copy, Debug, tokens::Has128BitSimd, tokens::IntoConcreteToken, tokens::SimdToken
 tokens::X64CryptoToken: Clone, Copy, Debug, tokens::Has128BitSimd, tokens::HasX64V2, tokens::IntoConcreteToken, tokens::SimdToken
@@ -441,5 +476,5 @@ tokens::X64V4xToken: Clone, Copy, Debug, tokens::Has128BitSimd, tokens::Has256Bi
 
 ## auto traits
 
-24 types implement all of: Freeze, RefUnwindSafe, Send, Sync, Unpin, UnwindSafe
+25 types implement all of: Freeze, RefUnwindSafe, Send, Sync, Unpin, UnwindSafe
 testing::TokenTestGuard: !Send

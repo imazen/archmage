@@ -238,7 +238,7 @@ fn neon_backend_shift_exhaustive() {
     }
 }
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
 #[test]
 fn wasm128_backend_shift_exhaustive() {
     if let Some(t) = archmage::Wasm128Token::summon() {

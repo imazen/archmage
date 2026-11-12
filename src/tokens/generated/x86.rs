@@ -229,6 +229,7 @@ impl X64V1Token {
     /// Check if this token has been manually disabled process-wide.
     ///
     /// Returns `Err` when all required features are compile-time enabled.
+    #[inline(always)]
     #[allow(clippy::needless_return)]
     pub fn manually_disabled() -> Result<bool, crate::tokens::CompileTimeGuaranteedError> {
         #[cfg(all(
@@ -404,9 +405,8 @@ impl X64V2Token {
     /// Zero-cost: compiles away entirely.
     #[inline(always)]
     pub fn v1(self) -> X64V1Token {
-        // SAFETY: holding `self` proves this CPU has x86-64-v2's
-        // full feature set, a superset of x86-64-v1's (registry-
-        // verified hierarchy), so the ancestor token's claim holds.
+        // SAFETY: holding `self` proves this environment satisfies
+        // x86-64-v2's full contract, a superset of x86-64-v1's.
         unsafe { X64V1Token::from_context() }
     }
 }
@@ -491,6 +491,7 @@ impl X64V2Token {
     /// Check if this token has been manually disabled process-wide.
     ///
     /// Returns `Err` when all required features are compile-time enabled.
+    #[inline(always)]
     #[allow(clippy::needless_return)]
     pub fn manually_disabled() -> Result<bool, crate::tokens::CompileTimeGuaranteedError> {
         #[cfg(all(
@@ -729,9 +730,8 @@ impl X64CryptoToken {
     /// Zero-cost: compiles away entirely.
     #[inline(always)]
     pub fn v1(self) -> X64V1Token {
-        // SAFETY: holding `self` proves this CPU has x86-64 Crypto's
-        // full feature set, a superset of x86-64-v1's (registry-
-        // verified hierarchy), so the ancestor token's claim holds.
+        // SAFETY: holding `self` proves this environment satisfies
+        // x86-64 Crypto's full contract, a superset of x86-64-v1's.
         unsafe { X64V1Token::from_context() }
     }
     /// Extract a X64V2Token — guaranteed because x86-64 Crypto implies x86-64-v2.
@@ -739,9 +739,8 @@ impl X64CryptoToken {
     /// Zero-cost: compiles away entirely.
     #[inline(always)]
     pub fn v2(self) -> X64V2Token {
-        // SAFETY: holding `self` proves this CPU has x86-64 Crypto's
-        // full feature set, a superset of x86-64-v2's (registry-
-        // verified hierarchy), so the ancestor token's claim holds.
+        // SAFETY: holding `self` proves this environment satisfies
+        // x86-64 Crypto's full contract, a superset of x86-64-v2's.
         unsafe { X64V2Token::from_context() }
     }
 }
@@ -824,6 +823,7 @@ impl X64CryptoToken {
     /// Check if this token has been manually disabled process-wide.
     ///
     /// Returns `Err` when all required features are compile-time enabled.
+    #[inline(always)]
     #[allow(clippy::needless_return)]
     pub fn manually_disabled() -> Result<bool, crate::tokens::CompileTimeGuaranteedError> {
         #[cfg(all(
@@ -1095,9 +1095,8 @@ impl X64V3Token {
     /// Zero-cost: compiles away entirely.
     #[inline(always)]
     pub fn v1(self) -> X64V1Token {
-        // SAFETY: holding `self` proves this CPU has x86-64-v3's
-        // full feature set, a superset of x86-64-v1's (registry-
-        // verified hierarchy), so the ancestor token's claim holds.
+        // SAFETY: holding `self` proves this environment satisfies
+        // x86-64-v3's full contract, a superset of x86-64-v1's.
         unsafe { X64V1Token::from_context() }
     }
     /// Extract a X64V2Token — guaranteed because x86-64-v3 implies x86-64-v2.
@@ -1105,9 +1104,8 @@ impl X64V3Token {
     /// Zero-cost: compiles away entirely.
     #[inline(always)]
     pub fn v2(self) -> X64V2Token {
-        // SAFETY: holding `self` proves this CPU has x86-64-v3's
-        // full feature set, a superset of x86-64-v2's (registry-
-        // verified hierarchy), so the ancestor token's claim holds.
+        // SAFETY: holding `self` proves this environment satisfies
+        // x86-64-v3's full contract, a superset of x86-64-v2's.
         unsafe { X64V2Token::from_context() }
     }
 }
@@ -1202,6 +1200,7 @@ impl X64V3Token {
     /// Check if this token has been manually disabled process-wide.
     ///
     /// Returns `Err` when all required features are compile-time enabled.
+    #[inline(always)]
     #[allow(clippy::needless_return)]
     pub fn manually_disabled() -> Result<bool, crate::tokens::CompileTimeGuaranteedError> {
         #[cfg(all(
@@ -1515,9 +1514,8 @@ impl X64V3CryptoToken {
     /// Zero-cost: compiles away entirely.
     #[inline(always)]
     pub fn x64_crypto(self) -> X64CryptoToken {
-        // SAFETY: holding `self` proves this CPU has x86-64-v3 Crypto's
-        // full feature set, a superset of x86-64 Crypto's (registry-
-        // verified hierarchy), so the ancestor token's claim holds.
+        // SAFETY: holding `self` proves this environment satisfies
+        // x86-64-v3 Crypto's full contract, a superset of x86-64 Crypto's.
         unsafe { X64CryptoToken::from_context() }
     }
     /// Extract a X64V1Token — guaranteed because x86-64-v3 Crypto implies x86-64-v1.
@@ -1525,9 +1523,8 @@ impl X64V3CryptoToken {
     /// Zero-cost: compiles away entirely.
     #[inline(always)]
     pub fn v1(self) -> X64V1Token {
-        // SAFETY: holding `self` proves this CPU has x86-64-v3 Crypto's
-        // full feature set, a superset of x86-64-v1's (registry-
-        // verified hierarchy), so the ancestor token's claim holds.
+        // SAFETY: holding `self` proves this environment satisfies
+        // x86-64-v3 Crypto's full contract, a superset of x86-64-v1's.
         unsafe { X64V1Token::from_context() }
     }
     /// Extract a X64V2Token — guaranteed because x86-64-v3 Crypto implies x86-64-v2.
@@ -1535,9 +1532,8 @@ impl X64V3CryptoToken {
     /// Zero-cost: compiles away entirely.
     #[inline(always)]
     pub fn v2(self) -> X64V2Token {
-        // SAFETY: holding `self` proves this CPU has x86-64-v3 Crypto's
-        // full feature set, a superset of x86-64-v2's (registry-
-        // verified hierarchy), so the ancestor token's claim holds.
+        // SAFETY: holding `self` proves this environment satisfies
+        // x86-64-v3 Crypto's full contract, a superset of x86-64-v2's.
         unsafe { X64V2Token::from_context() }
     }
     /// Extract a X64V3Token — guaranteed because x86-64-v3 Crypto implies x86-64-v3.
@@ -1545,9 +1541,8 @@ impl X64V3CryptoToken {
     /// Zero-cost: compiles away entirely.
     #[inline(always)]
     pub fn v3(self) -> X64V3Token {
-        // SAFETY: holding `self` proves this CPU has x86-64-v3 Crypto's
-        // full feature set, a superset of x86-64-v3's (registry-
-        // verified hierarchy), so the ancestor token's claim holds.
+        // SAFETY: holding `self` proves this environment satisfies
+        // x86-64-v3 Crypto's full contract, a superset of x86-64-v3's.
         unsafe { X64V3Token::from_context() }
     }
 }
@@ -1641,6 +1636,7 @@ impl X64V3CryptoToken {
     /// Check if this token has been manually disabled process-wide.
     ///
     /// Returns `Err` when all required features are compile-time enabled.
+    #[inline(always)]
     #[allow(clippy::needless_return)]
     pub fn manually_disabled() -> Result<bool, crate::tokens::CompileTimeGuaranteedError> {
         #[cfg(all(
@@ -1980,9 +1976,8 @@ impl X64V3GfniCryptoToken {
     /// Zero-cost: compiles away entirely.
     #[inline(always)]
     pub fn x64_crypto(self) -> X64CryptoToken {
-        // SAFETY: holding `self` proves this CPU has x86-64-v3 GFNI Crypto's
-        // full feature set, a superset of x86-64 Crypto's (registry-
-        // verified hierarchy), so the ancestor token's claim holds.
+        // SAFETY: holding `self` proves this environment satisfies
+        // x86-64-v3 GFNI Crypto's full contract, a superset of x86-64 Crypto's.
         unsafe { X64CryptoToken::from_context() }
     }
     /// Extract a X64V1Token — guaranteed because x86-64-v3 GFNI Crypto implies x86-64-v1.
@@ -1990,9 +1985,8 @@ impl X64V3GfniCryptoToken {
     /// Zero-cost: compiles away entirely.
     #[inline(always)]
     pub fn v1(self) -> X64V1Token {
-        // SAFETY: holding `self` proves this CPU has x86-64-v3 GFNI Crypto's
-        // full feature set, a superset of x86-64-v1's (registry-
-        // verified hierarchy), so the ancestor token's claim holds.
+        // SAFETY: holding `self` proves this environment satisfies
+        // x86-64-v3 GFNI Crypto's full contract, a superset of x86-64-v1's.
         unsafe { X64V1Token::from_context() }
     }
     /// Extract a X64V2Token — guaranteed because x86-64-v3 GFNI Crypto implies x86-64-v2.
@@ -2000,9 +1994,8 @@ impl X64V3GfniCryptoToken {
     /// Zero-cost: compiles away entirely.
     #[inline(always)]
     pub fn v2(self) -> X64V2Token {
-        // SAFETY: holding `self` proves this CPU has x86-64-v3 GFNI Crypto's
-        // full feature set, a superset of x86-64-v2's (registry-
-        // verified hierarchy), so the ancestor token's claim holds.
+        // SAFETY: holding `self` proves this environment satisfies
+        // x86-64-v3 GFNI Crypto's full contract, a superset of x86-64-v2's.
         unsafe { X64V2Token::from_context() }
     }
     /// Extract a X64V3CryptoToken — guaranteed because x86-64-v3 GFNI Crypto implies x86-64-v3 Crypto.
@@ -2010,9 +2003,8 @@ impl X64V3GfniCryptoToken {
     /// Zero-cost: compiles away entirely.
     #[inline(always)]
     pub fn v3_crypto(self) -> X64V3CryptoToken {
-        // SAFETY: holding `self` proves this CPU has x86-64-v3 GFNI Crypto's
-        // full feature set, a superset of x86-64-v3 Crypto's (registry-
-        // verified hierarchy), so the ancestor token's claim holds.
+        // SAFETY: holding `self` proves this environment satisfies
+        // x86-64-v3 GFNI Crypto's full contract, a superset of x86-64-v3 Crypto's.
         unsafe { X64V3CryptoToken::from_context() }
     }
     /// Extract a X64V3Token — guaranteed because x86-64-v3 GFNI Crypto implies x86-64-v3.
@@ -2020,9 +2012,8 @@ impl X64V3GfniCryptoToken {
     /// Zero-cost: compiles away entirely.
     #[inline(always)]
     pub fn v3(self) -> X64V3Token {
-        // SAFETY: holding `self` proves this CPU has x86-64-v3 GFNI Crypto's
-        // full feature set, a superset of x86-64-v3's (registry-
-        // verified hierarchy), so the ancestor token's claim holds.
+        // SAFETY: holding `self` proves this environment satisfies
+        // x86-64-v3 GFNI Crypto's full contract, a superset of x86-64-v3's.
         unsafe { X64V3Token::from_context() }
     }
 }
@@ -2115,6 +2106,7 @@ impl X64V3GfniCryptoToken {
     /// Check if this token has been manually disabled process-wide.
     ///
     /// Returns `Err` when all required features are compile-time enabled.
+    #[inline(always)]
     #[allow(clippy::needless_return)]
     pub fn manually_disabled() -> Result<bool, crate::tokens::CompileTimeGuaranteedError> {
         #[cfg(all(
@@ -2460,9 +2452,8 @@ impl X64V3VnniToken {
     /// Zero-cost: compiles away entirely.
     #[inline(always)]
     pub fn x64_crypto(self) -> X64CryptoToken {
-        // SAFETY: holding `self` proves this CPU has x86-64-v3 VNNI's
-        // full feature set, a superset of x86-64 Crypto's (registry-
-        // verified hierarchy), so the ancestor token's claim holds.
+        // SAFETY: holding `self` proves this environment satisfies
+        // x86-64-v3 VNNI's full contract, a superset of x86-64 Crypto's.
         unsafe { X64CryptoToken::from_context() }
     }
     /// Extract a X64V1Token — guaranteed because x86-64-v3 VNNI implies x86-64-v1.
@@ -2470,9 +2461,8 @@ impl X64V3VnniToken {
     /// Zero-cost: compiles away entirely.
     #[inline(always)]
     pub fn v1(self) -> X64V1Token {
-        // SAFETY: holding `self` proves this CPU has x86-64-v3 VNNI's
-        // full feature set, a superset of x86-64-v1's (registry-
-        // verified hierarchy), so the ancestor token's claim holds.
+        // SAFETY: holding `self` proves this environment satisfies
+        // x86-64-v3 VNNI's full contract, a superset of x86-64-v1's.
         unsafe { X64V1Token::from_context() }
     }
     /// Extract a X64V2Token — guaranteed because x86-64-v3 VNNI implies x86-64-v2.
@@ -2480,9 +2470,8 @@ impl X64V3VnniToken {
     /// Zero-cost: compiles away entirely.
     #[inline(always)]
     pub fn v2(self) -> X64V2Token {
-        // SAFETY: holding `self` proves this CPU has x86-64-v3 VNNI's
-        // full feature set, a superset of x86-64-v2's (registry-
-        // verified hierarchy), so the ancestor token's claim holds.
+        // SAFETY: holding `self` proves this environment satisfies
+        // x86-64-v3 VNNI's full contract, a superset of x86-64-v2's.
         unsafe { X64V2Token::from_context() }
     }
     /// Extract a X64V3CryptoToken — guaranteed because x86-64-v3 VNNI implies x86-64-v3 Crypto.
@@ -2490,9 +2479,8 @@ impl X64V3VnniToken {
     /// Zero-cost: compiles away entirely.
     #[inline(always)]
     pub fn v3_crypto(self) -> X64V3CryptoToken {
-        // SAFETY: holding `self` proves this CPU has x86-64-v3 VNNI's
-        // full feature set, a superset of x86-64-v3 Crypto's (registry-
-        // verified hierarchy), so the ancestor token's claim holds.
+        // SAFETY: holding `self` proves this environment satisfies
+        // x86-64-v3 VNNI's full contract, a superset of x86-64-v3 Crypto's.
         unsafe { X64V3CryptoToken::from_context() }
     }
     /// Extract a X64V3GfniCryptoToken — guaranteed because x86-64-v3 VNNI implies x86-64-v3 GFNI Crypto.
@@ -2500,9 +2488,8 @@ impl X64V3VnniToken {
     /// Zero-cost: compiles away entirely.
     #[inline(always)]
     pub fn v3_gfni_crypto(self) -> X64V3GfniCryptoToken {
-        // SAFETY: holding `self` proves this CPU has x86-64-v3 VNNI's
-        // full feature set, a superset of x86-64-v3 GFNI Crypto's (registry-
-        // verified hierarchy), so the ancestor token's claim holds.
+        // SAFETY: holding `self` proves this environment satisfies
+        // x86-64-v3 VNNI's full contract, a superset of x86-64-v3 GFNI Crypto's.
         unsafe { X64V3GfniCryptoToken::from_context() }
     }
     /// Extract a X64V3Token — guaranteed because x86-64-v3 VNNI implies x86-64-v3.
@@ -2510,9 +2497,8 @@ impl X64V3VnniToken {
     /// Zero-cost: compiles away entirely.
     #[inline(always)]
     pub fn v3(self) -> X64V3Token {
-        // SAFETY: holding `self` proves this CPU has x86-64-v3 VNNI's
-        // full feature set, a superset of x86-64-v3's (registry-
-        // verified hierarchy), so the ancestor token's claim holds.
+        // SAFETY: holding `self` proves this environment satisfies
+        // x86-64-v3 VNNI's full contract, a superset of x86-64-v3's.
         unsafe { X64V3Token::from_context() }
     }
 }
@@ -2599,6 +2585,7 @@ impl X64V3VnniToken {
     /// Check if this token has been manually disabled process-wide.
     ///
     /// Returns `Err` when all required features are compile-time enabled.
+    #[inline(always)]
     #[allow(clippy::needless_return)]
     pub fn manually_disabled() -> Result<bool, crate::tokens::CompileTimeGuaranteedError> {
         #[cfg(all(
@@ -2947,9 +2934,8 @@ impl X64V4Token {
     /// Zero-cost: compiles away entirely.
     #[inline(always)]
     pub fn x64_crypto(self) -> X64CryptoToken {
-        // SAFETY: holding `self` proves this CPU has AVX-512's
-        // full feature set, a superset of x86-64 Crypto's (registry-
-        // verified hierarchy), so the ancestor token's claim holds.
+        // SAFETY: holding `self` proves this environment satisfies
+        // AVX-512's full contract, a superset of x86-64 Crypto's.
         unsafe { X64CryptoToken::from_context() }
     }
     /// Extract a X64V1Token — guaranteed because AVX-512 implies x86-64-v1.
@@ -2957,9 +2943,8 @@ impl X64V4Token {
     /// Zero-cost: compiles away entirely.
     #[inline(always)]
     pub fn v1(self) -> X64V1Token {
-        // SAFETY: holding `self` proves this CPU has AVX-512's
-        // full feature set, a superset of x86-64-v1's (registry-
-        // verified hierarchy), so the ancestor token's claim holds.
+        // SAFETY: holding `self` proves this environment satisfies
+        // AVX-512's full contract, a superset of x86-64-v1's.
         unsafe { X64V1Token::from_context() }
     }
     /// Extract a X64V2Token — guaranteed because AVX-512 implies x86-64-v2.
@@ -2967,9 +2952,8 @@ impl X64V4Token {
     /// Zero-cost: compiles away entirely.
     #[inline(always)]
     pub fn v2(self) -> X64V2Token {
-        // SAFETY: holding `self` proves this CPU has AVX-512's
-        // full feature set, a superset of x86-64-v2's (registry-
-        // verified hierarchy), so the ancestor token's claim holds.
+        // SAFETY: holding `self` proves this environment satisfies
+        // AVX-512's full contract, a superset of x86-64-v2's.
         unsafe { X64V2Token::from_context() }
     }
     /// Extract a X64V3Token — guaranteed because AVX-512 implies x86-64-v3.
@@ -2977,9 +2961,8 @@ impl X64V4Token {
     /// Zero-cost: compiles away entirely.
     #[inline(always)]
     pub fn v3(self) -> X64V3Token {
-        // SAFETY: holding `self` proves this CPU has AVX-512's
-        // full feature set, a superset of x86-64-v3's (registry-
-        // verified hierarchy), so the ancestor token's claim holds.
+        // SAFETY: holding `self` proves this environment satisfies
+        // AVX-512's full contract, a superset of x86-64-v3's.
         unsafe { X64V3Token::from_context() }
     }
 }
@@ -3076,6 +3059,7 @@ impl X64V4Token {
     /// Check if this token has been manually disabled process-wide.
     ///
     /// Returns `Err` when all required features are compile-time enabled.
+    #[inline(always)]
     #[allow(clippy::needless_return)]
     pub fn manually_disabled() -> Result<bool, crate::tokens::CompileTimeGuaranteedError> {
         #[cfg(all(
@@ -3465,9 +3449,8 @@ impl X64V4xToken {
     /// Zero-cost: compiles away entirely.
     #[inline(always)]
     pub fn x64_crypto(self) -> X64CryptoToken {
-        // SAFETY: holding `self` proves this CPU has x86-64-v4x's
-        // full feature set, a superset of x86-64 Crypto's (registry-
-        // verified hierarchy), so the ancestor token's claim holds.
+        // SAFETY: holding `self` proves this environment satisfies
+        // x86-64-v4x's full contract, a superset of x86-64 Crypto's.
         unsafe { X64CryptoToken::from_context() }
     }
     /// Extract a X64V1Token — guaranteed because x86-64-v4x implies x86-64-v1.
@@ -3475,9 +3458,8 @@ impl X64V4xToken {
     /// Zero-cost: compiles away entirely.
     #[inline(always)]
     pub fn v1(self) -> X64V1Token {
-        // SAFETY: holding `self` proves this CPU has x86-64-v4x's
-        // full feature set, a superset of x86-64-v1's (registry-
-        // verified hierarchy), so the ancestor token's claim holds.
+        // SAFETY: holding `self` proves this environment satisfies
+        // x86-64-v4x's full contract, a superset of x86-64-v1's.
         unsafe { X64V1Token::from_context() }
     }
     /// Extract a X64V2Token — guaranteed because x86-64-v4x implies x86-64-v2.
@@ -3485,9 +3467,8 @@ impl X64V4xToken {
     /// Zero-cost: compiles away entirely.
     #[inline(always)]
     pub fn v2(self) -> X64V2Token {
-        // SAFETY: holding `self` proves this CPU has x86-64-v4x's
-        // full feature set, a superset of x86-64-v2's (registry-
-        // verified hierarchy), so the ancestor token's claim holds.
+        // SAFETY: holding `self` proves this environment satisfies
+        // x86-64-v4x's full contract, a superset of x86-64-v2's.
         unsafe { X64V2Token::from_context() }
     }
     /// Extract a X64V3CryptoToken — guaranteed because x86-64-v4x implies x86-64-v3 Crypto.
@@ -3495,9 +3476,8 @@ impl X64V4xToken {
     /// Zero-cost: compiles away entirely.
     #[inline(always)]
     pub fn v3_crypto(self) -> X64V3CryptoToken {
-        // SAFETY: holding `self` proves this CPU has x86-64-v4x's
-        // full feature set, a superset of x86-64-v3 Crypto's (registry-
-        // verified hierarchy), so the ancestor token's claim holds.
+        // SAFETY: holding `self` proves this environment satisfies
+        // x86-64-v4x's full contract, a superset of x86-64-v3 Crypto's.
         unsafe { X64V3CryptoToken::from_context() }
     }
     /// Extract a X64V3GfniCryptoToken — guaranteed because x86-64-v4x implies x86-64-v3 GFNI Crypto.
@@ -3505,9 +3485,8 @@ impl X64V4xToken {
     /// Zero-cost: compiles away entirely.
     #[inline(always)]
     pub fn v3_gfni_crypto(self) -> X64V3GfniCryptoToken {
-        // SAFETY: holding `self` proves this CPU has x86-64-v4x's
-        // full feature set, a superset of x86-64-v3 GFNI Crypto's (registry-
-        // verified hierarchy), so the ancestor token's claim holds.
+        // SAFETY: holding `self` proves this environment satisfies
+        // x86-64-v4x's full contract, a superset of x86-64-v3 GFNI Crypto's.
         unsafe { X64V3GfniCryptoToken::from_context() }
     }
     /// Extract a X64V3Token — guaranteed because x86-64-v4x implies x86-64-v3.
@@ -3515,9 +3494,8 @@ impl X64V4xToken {
     /// Zero-cost: compiles away entirely.
     #[inline(always)]
     pub fn v3(self) -> X64V3Token {
-        // SAFETY: holding `self` proves this CPU has x86-64-v4x's
-        // full feature set, a superset of x86-64-v3's (registry-
-        // verified hierarchy), so the ancestor token's claim holds.
+        // SAFETY: holding `self` proves this environment satisfies
+        // x86-64-v4x's full contract, a superset of x86-64-v3's.
         unsafe { X64V3Token::from_context() }
     }
     /// Extract a X64V4Token — guaranteed because x86-64-v4x implies AVX-512.
@@ -3525,16 +3503,15 @@ impl X64V4xToken {
     /// Zero-cost: compiles away entirely.
     #[inline(always)]
     pub fn v4(self) -> X64V4Token {
-        // SAFETY: holding `self` proves this CPU has x86-64-v4x's
-        // full feature set, a superset of AVX-512's (registry-
-        // verified hierarchy), so the ancestor token's claim holds.
+        // SAFETY: holding `self` proves this environment satisfies
+        // x86-64-v4x's full contract, a superset of AVX-512's.
         unsafe { X64V4Token::from_context() }
     }
 
     /// Get a X64V4Token (alias for `.v4()`)
     #[inline(always)]
     pub fn avx512(self) -> X64V4Token {
-        // SAFETY: identical to `.v4()` — self's feature set is a
+        // SAFETY: identical to `.v4()` — self's contract is a
         // registry-verified superset of AVX-512's.
         unsafe { X64V4Token::from_context() }
     }
@@ -3642,6 +3619,7 @@ impl X64V4xToken {
     /// Check if this token has been manually disabled process-wide.
     ///
     /// Returns `Err` when all required features are compile-time enabled.
+    #[inline(always)]
     #[allow(clippy::needless_return)]
     pub fn manually_disabled() -> Result<bool, crate::tokens::CompileTimeGuaranteedError> {
         #[cfg(all(
@@ -4034,9 +4012,8 @@ impl Avx512Fp16Token {
     /// Zero-cost: compiles away entirely.
     #[inline(always)]
     pub fn x64_crypto(self) -> X64CryptoToken {
-        // SAFETY: holding `self` proves this CPU has AVX-512FP16's
-        // full feature set, a superset of x86-64 Crypto's (registry-
-        // verified hierarchy), so the ancestor token's claim holds.
+        // SAFETY: holding `self` proves this environment satisfies
+        // AVX-512FP16's full contract, a superset of x86-64 Crypto's.
         unsafe { X64CryptoToken::from_context() }
     }
     /// Extract a X64V1Token — guaranteed because AVX-512FP16 implies x86-64-v1.
@@ -4044,9 +4021,8 @@ impl Avx512Fp16Token {
     /// Zero-cost: compiles away entirely.
     #[inline(always)]
     pub fn v1(self) -> X64V1Token {
-        // SAFETY: holding `self` proves this CPU has AVX-512FP16's
-        // full feature set, a superset of x86-64-v1's (registry-
-        // verified hierarchy), so the ancestor token's claim holds.
+        // SAFETY: holding `self` proves this environment satisfies
+        // AVX-512FP16's full contract, a superset of x86-64-v1's.
         unsafe { X64V1Token::from_context() }
     }
     /// Extract a X64V2Token — guaranteed because AVX-512FP16 implies x86-64-v2.
@@ -4054,9 +4030,8 @@ impl Avx512Fp16Token {
     /// Zero-cost: compiles away entirely.
     #[inline(always)]
     pub fn v2(self) -> X64V2Token {
-        // SAFETY: holding `self` proves this CPU has AVX-512FP16's
-        // full feature set, a superset of x86-64-v2's (registry-
-        // verified hierarchy), so the ancestor token's claim holds.
+        // SAFETY: holding `self` proves this environment satisfies
+        // AVX-512FP16's full contract, a superset of x86-64-v2's.
         unsafe { X64V2Token::from_context() }
     }
     /// Extract a X64V3Token — guaranteed because AVX-512FP16 implies x86-64-v3.
@@ -4064,9 +4039,8 @@ impl Avx512Fp16Token {
     /// Zero-cost: compiles away entirely.
     #[inline(always)]
     pub fn v3(self) -> X64V3Token {
-        // SAFETY: holding `self` proves this CPU has AVX-512FP16's
-        // full feature set, a superset of x86-64-v3's (registry-
-        // verified hierarchy), so the ancestor token's claim holds.
+        // SAFETY: holding `self` proves this environment satisfies
+        // AVX-512FP16's full contract, a superset of x86-64-v3's.
         unsafe { X64V3Token::from_context() }
     }
     /// Extract a X64V4Token — guaranteed because AVX-512FP16 implies AVX-512.
@@ -4074,16 +4048,15 @@ impl Avx512Fp16Token {
     /// Zero-cost: compiles away entirely.
     #[inline(always)]
     pub fn v4(self) -> X64V4Token {
-        // SAFETY: holding `self` proves this CPU has AVX-512FP16's
-        // full feature set, a superset of AVX-512's (registry-
-        // verified hierarchy), so the ancestor token's claim holds.
+        // SAFETY: holding `self` proves this environment satisfies
+        // AVX-512FP16's full contract, a superset of AVX-512's.
         unsafe { X64V4Token::from_context() }
     }
 
     /// Get a X64V4Token (alias for `.v4()`)
     #[inline(always)]
     pub fn avx512(self) -> X64V4Token {
-        // SAFETY: identical to `.v4()` — self's feature set is a
+        // SAFETY: identical to `.v4()` — self's contract is a
         // registry-verified superset of AVX-512's.
         unsafe { X64V4Token::from_context() }
     }
@@ -4175,6 +4148,7 @@ impl Avx512Fp16Token {
     /// Check if this token has been manually disabled process-wide.
     ///
     /// Returns `Err` when all required features are compile-time enabled.
+    #[inline(always)]
     #[allow(clippy::needless_return)]
     pub fn manually_disabled() -> Result<bool, crate::tokens::CompileTimeGuaranteedError> {
         #[cfg(all(

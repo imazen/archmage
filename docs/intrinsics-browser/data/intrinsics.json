@@ -179638,6 +179638,21 @@
         "Wasm128Token"
       ],
       "tier": "wasm128_relaxed"
+    },
+    {
+      "aliases": [],
+      "arch": "wasm32",
+      "display": "WASM Relaxed FMA",
+      "doc": "Proof that WASM Relaxed SIMD is available AND both `f32x4.relaxed_madd` and `f64x2.relaxed_madd` fuse to single-rounding FMA on the executing engine.",
+      "features": [
+        "simd128",
+        "relaxed-simd"
+      ],
+      "name": "Wasm128RelaxedFmaToken",
+      "parents": [
+        "Wasm128RelaxedToken"
+      ],
+      "tier": "wasm128_relaxed_fma"
     }
   ]
 }

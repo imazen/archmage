@@ -549,6 +549,12 @@ pub trait IntoConcreteToken: SimdToken + Sized {
         None
     }
 
+    /// Try to cast to Wasm128RelaxedFmaToken.
+    #[inline(always)]
+    fn as_wasm128_relaxed_fma(self) -> Option<Wasm128RelaxedFmaToken> {
+        None
+    }
+
     /// Try to cast to ScalarToken.
     #[inline(always)]
     fn as_scalar(self) -> Option<ScalarToken> {
@@ -704,6 +710,14 @@ impl IntoConcreteToken for Wasm128Token {
 impl IntoConcreteToken for Wasm128RelaxedToken {
     #[inline(always)]
     fn as_wasm128_relaxed(self) -> Option<Wasm128RelaxedToken> {
+        Some(self)
+    }
+}
+
+// Implement IntoConcreteToken for Wasm128RelaxedFmaToken
+impl IntoConcreteToken for Wasm128RelaxedFmaToken {
+    #[inline(always)]
+    fn as_wasm128_relaxed_fma(self) -> Option<Wasm128RelaxedFmaToken> {
         Some(self)
     }
 }

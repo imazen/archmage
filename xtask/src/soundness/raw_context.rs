@@ -135,6 +135,7 @@ impl<'ast> Visit<'ast> for ContextVisitor<'_> {
             };
             let valid = token.is_some_and(|t| {
                 !self.frame.name.is_empty()
+                    && !t.runtime_probe
                     && t.features.iter().all(|f| self.frame.features.contains(f))
             });
             if !valid {
@@ -241,6 +242,7 @@ mod tests {
             "fn wrap(t: archmage::X64V3Token) { archmage::X64V3Token::from_context(); }",
             "#[archmage::rite(v3)] fn wrap() { Alias::from_context(); }",
             "#[archmage::rite(neon)] fn wrap() { archmage::X64V3Token::from_context(); }",
+            "#[archmage::rite(wasm128_relaxed)] fn wrap() { archmage::Wasm128RelaxedFmaToken::from_context(); }",
             "macro_rules! wrap { () => { archmage::X64V3Token::from_context() } }",
         ] {
             assert!(!check(source).is_empty(), "accepted {source}");

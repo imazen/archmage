@@ -112,6 +112,7 @@ impl Parse for Call {
 pub(crate) struct Context<'a> {
     pub features: &'a [&'static str],
     pub target_arch: Option<&'static str>,
+    pub tier_suffix: Option<&'static str>,
 }
 
 impl Context<'_> {
@@ -122,13 +123,20 @@ impl Context<'_> {
         if self.target_arch != callee.target_arch {
             return false;
         }
-        crate::generated::tier_to_canonical_token(callee.name)
-            .and_then(crate::generated::token_to_features)
-            .is_some_and(|features| {
-                features
-                    .iter()
-                    .all(|feature| self.features.contains(feature))
-            })
+        let Some(canonical) = crate::generated::tier_to_canonical_token(callee.name) else {
+            return false;
+        };
+        if crate::generated::token_requires_runtime_probe(canonical) {
+            return self.tier_suffix.is_some_and(|caller| {
+                caller == callee.suffix
+                    || crate::generated::can_downgrade_tier(caller, callee.suffix)
+            });
+        }
+        crate::generated::token_to_features(canonical).is_some_and(|features| {
+            features
+                .iter()
+                .all(|feature| self.features.contains(feature))
+        })
     }
 }
 
@@ -300,16 +308,30 @@ impl Call {
 }
 
 fn selection_condition(caller: Option<Context<'_>>, selection: &Selection) -> Option<TokenStream> {
-    let arch = if caller.is_some_and(|c| c.target_arch == selection.tier.target_arch) {
-        None
-    } else {
-        selection.tier.target_arch
-    };
-    match (arch, selection.gate.as_deref()) {
-        (Some(a), Some(f)) => Some(quote!(all(target_arch = #a, feature = #f))),
-        (Some(a), None) => Some(quote!(target_arch = #a)),
-        (None, Some(f)) => Some(quote!(feature = #f)),
-        (None, None) => None,
+    let mut preds = Vec::new();
+    if let Some(arch) = selection.tier.target_arch {
+        let same_arch = caller.is_some_and(|c| c.target_arch == Some(arch));
+        if !same_arch {
+            preds.push(quote!(target_arch = #arch));
+        }
+        if arch == "wasm32" {
+            let caller_feats = caller
+                .filter(|c| c.target_arch == Some("wasm32"))
+                .map_or(&[][..], |c| c.features);
+            for tf in crate::common::tier_wasm_features(selection.tier.name) {
+                if !caller_feats.contains(tf) {
+                    preds.push(quote!(target_feature = #tf));
+                }
+            }
+        }
+    }
+    if let Some(f) = selection.gate.as_deref() {
+        preds.push(quote!(feature = #f));
+    }
+    match preds.as_slice() {
+        [] => None,
+        [only] => Some(only.clone()),
+        many => Some(quote!(all(#(#many),*))),
     }
 }
 
@@ -337,6 +359,7 @@ pub(crate) fn rewrite(
         Context {
             features,
             target_arch: caller.target_arch,
+            tier_suffix: Some(caller.suffix),
         },
         signature,
     )

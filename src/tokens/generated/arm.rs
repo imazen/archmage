@@ -194,6 +194,7 @@ impl NeonToken {
     /// Check if this token has been manually disabled process-wide.
     ///
     /// Returns `Err` when all required features are compile-time enabled.
+    #[inline(always)]
     #[allow(clippy::needless_return)]
     pub fn manually_disabled() -> Result<bool, crate::tokens::CompileTimeGuaranteedError> {
         #[cfg(all(target_feature = "neon", not(feature = "testable_dispatch")))]
@@ -369,9 +370,8 @@ impl NeonAesToken {
     /// Zero-cost: compiles away entirely.
     #[inline(always)]
     pub fn neon(self) -> NeonToken {
-        // SAFETY: holding `self` proves this CPU has NEON+AES's
-        // full feature set, a superset of NEON's (registry-
-        // verified hierarchy), so the ancestor token's claim holds.
+        // SAFETY: holding `self` proves this environment satisfies
+        // NEON+AES's full contract, a superset of NEON's.
         unsafe { NeonToken::from_context() }
     }
 }
@@ -418,6 +418,7 @@ impl NeonAesToken {
     /// Check if this token has been manually disabled process-wide.
     ///
     /// Returns `Err` when all required features are compile-time enabled.
+    #[inline(always)]
     #[allow(clippy::needless_return)]
     pub fn manually_disabled() -> Result<bool, crate::tokens::CompileTimeGuaranteedError> {
         #[cfg(all(
@@ -606,9 +607,8 @@ impl NeonSha3Token {
     /// Zero-cost: compiles away entirely.
     #[inline(always)]
     pub fn neon(self) -> NeonToken {
-        // SAFETY: holding `self` proves this CPU has NEON+SHA3's
-        // full feature set, a superset of NEON's (registry-
-        // verified hierarchy), so the ancestor token's claim holds.
+        // SAFETY: holding `self` proves this environment satisfies
+        // NEON+SHA3's full contract, a superset of NEON's.
         unsafe { NeonToken::from_context() }
     }
 }
@@ -655,6 +655,7 @@ impl NeonSha3Token {
     /// Check if this token has been manually disabled process-wide.
     ///
     /// Returns `Err` when all required features are compile-time enabled.
+    #[inline(always)]
     #[allow(clippy::needless_return)]
     pub fn manually_disabled() -> Result<bool, crate::tokens::CompileTimeGuaranteedError> {
         #[cfg(all(
@@ -844,9 +845,8 @@ impl NeonCrcToken {
     /// Zero-cost: compiles away entirely.
     #[inline(always)]
     pub fn neon(self) -> NeonToken {
-        // SAFETY: holding `self` proves this CPU has NEON+CRC's
-        // full feature set, a superset of NEON's (registry-
-        // verified hierarchy), so the ancestor token's claim holds.
+        // SAFETY: holding `self` proves this environment satisfies
+        // NEON+CRC's full contract, a superset of NEON's.
         unsafe { NeonToken::from_context() }
     }
 }
@@ -893,6 +893,7 @@ impl NeonCrcToken {
     /// Check if this token has been manually disabled process-wide.
     ///
     /// Returns `Err` when all required features are compile-time enabled.
+    #[inline(always)]
     #[allow(clippy::needless_return)]
     pub fn manually_disabled() -> Result<bool, crate::tokens::CompileTimeGuaranteedError> {
         #[cfg(all(
@@ -1106,9 +1107,8 @@ impl Arm64V2Token {
     /// Zero-cost: compiles away entirely.
     #[inline(always)]
     pub fn neon_aes(self) -> NeonAesToken {
-        // SAFETY: holding `self` proves this CPU has Arm64-v2's
-        // full feature set, a superset of NEON+AES's (registry-
-        // verified hierarchy), so the ancestor token's claim holds.
+        // SAFETY: holding `self` proves this environment satisfies
+        // Arm64-v2's full contract, a superset of NEON+AES's.
         unsafe { NeonAesToken::from_context() }
     }
     /// Extract a NeonCrcToken — guaranteed because Arm64-v2 implies NEON+CRC.
@@ -1116,9 +1116,8 @@ impl Arm64V2Token {
     /// Zero-cost: compiles away entirely.
     #[inline(always)]
     pub fn neon_crc(self) -> NeonCrcToken {
-        // SAFETY: holding `self` proves this CPU has Arm64-v2's
-        // full feature set, a superset of NEON+CRC's (registry-
-        // verified hierarchy), so the ancestor token's claim holds.
+        // SAFETY: holding `self` proves this environment satisfies
+        // Arm64-v2's full contract, a superset of NEON+CRC's.
         unsafe { NeonCrcToken::from_context() }
     }
     /// Extract a NeonToken — guaranteed because Arm64-v2 implies NEON.
@@ -1126,9 +1125,8 @@ impl Arm64V2Token {
     /// Zero-cost: compiles away entirely.
     #[inline(always)]
     pub fn neon(self) -> NeonToken {
-        // SAFETY: holding `self` proves this CPU has Arm64-v2's
-        // full feature set, a superset of NEON's (registry-
-        // verified hierarchy), so the ancestor token's claim holds.
+        // SAFETY: holding `self` proves this environment satisfies
+        // Arm64-v2's full contract, a superset of NEON's.
         unsafe { NeonToken::from_context() }
     }
 }
@@ -1190,6 +1188,7 @@ impl Arm64V2Token {
     /// Check if this token has been manually disabled process-wide.
     ///
     /// Returns `Err` when all required features are compile-time enabled.
+    #[inline(always)]
     #[allow(clippy::needless_return)]
     pub fn manually_disabled() -> Result<bool, crate::tokens::CompileTimeGuaranteedError> {
         #[cfg(all(
@@ -1442,9 +1441,8 @@ impl Arm64V3Token {
     /// Zero-cost: compiles away entirely.
     #[inline(always)]
     pub fn arm_v2(self) -> Arm64V2Token {
-        // SAFETY: holding `self` proves this CPU has Arm64-v3's
-        // full feature set, a superset of Arm64-v2's (registry-
-        // verified hierarchy), so the ancestor token's claim holds.
+        // SAFETY: holding `self` proves this environment satisfies
+        // Arm64-v3's full contract, a superset of Arm64-v2's.
         unsafe { Arm64V2Token::from_context() }
     }
     /// Extract a NeonAesToken — guaranteed because Arm64-v3 implies NEON+AES.
@@ -1452,9 +1450,8 @@ impl Arm64V3Token {
     /// Zero-cost: compiles away entirely.
     #[inline(always)]
     pub fn neon_aes(self) -> NeonAesToken {
-        // SAFETY: holding `self` proves this CPU has Arm64-v3's
-        // full feature set, a superset of NEON+AES's (registry-
-        // verified hierarchy), so the ancestor token's claim holds.
+        // SAFETY: holding `self` proves this environment satisfies
+        // Arm64-v3's full contract, a superset of NEON+AES's.
         unsafe { NeonAesToken::from_context() }
     }
     /// Extract a NeonCrcToken — guaranteed because Arm64-v3 implies NEON+CRC.
@@ -1462,9 +1459,8 @@ impl Arm64V3Token {
     /// Zero-cost: compiles away entirely.
     #[inline(always)]
     pub fn neon_crc(self) -> NeonCrcToken {
-        // SAFETY: holding `self` proves this CPU has Arm64-v3's
-        // full feature set, a superset of NEON+CRC's (registry-
-        // verified hierarchy), so the ancestor token's claim holds.
+        // SAFETY: holding `self` proves this environment satisfies
+        // Arm64-v3's full contract, a superset of NEON+CRC's.
         unsafe { NeonCrcToken::from_context() }
     }
     /// Extract a NeonSha3Token — guaranteed because Arm64-v3 implies NEON+SHA3.
@@ -1472,9 +1468,8 @@ impl Arm64V3Token {
     /// Zero-cost: compiles away entirely.
     #[inline(always)]
     pub fn neon_sha3(self) -> NeonSha3Token {
-        // SAFETY: holding `self` proves this CPU has Arm64-v3's
-        // full feature set, a superset of NEON+SHA3's (registry-
-        // verified hierarchy), so the ancestor token's claim holds.
+        // SAFETY: holding `self` proves this environment satisfies
+        // Arm64-v3's full contract, a superset of NEON+SHA3's.
         unsafe { NeonSha3Token::from_context() }
     }
     /// Extract a NeonToken — guaranteed because Arm64-v3 implies NEON.
@@ -1482,9 +1477,8 @@ impl Arm64V3Token {
     /// Zero-cost: compiles away entirely.
     #[inline(always)]
     pub fn neon(self) -> NeonToken {
-        // SAFETY: holding `self` proves this CPU has Arm64-v3's
-        // full feature set, a superset of NEON's (registry-
-        // verified hierarchy), so the ancestor token's claim holds.
+        // SAFETY: holding `self` proves this environment satisfies
+        // Arm64-v3's full contract, a superset of NEON's.
         unsafe { NeonToken::from_context() }
     }
 }
@@ -1551,6 +1545,7 @@ impl Arm64V3Token {
     /// Check if this token has been manually disabled process-wide.
     ///
     /// Returns `Err` when all required features are compile-time enabled.
+    #[inline(always)]
     #[allow(clippy::needless_return)]
     pub fn manually_disabled() -> Result<bool, crate::tokens::CompileTimeGuaranteedError> {
         #[cfg(all(

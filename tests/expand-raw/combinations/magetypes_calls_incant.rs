@@ -30,7 +30,7 @@ fn inner_neon(token: archmage::NeonToken, x: f32) -> f32 {
     let _: () = <archmage::NeonToken>::__ARCHMAGE_ASSERT_TIER_72CB52B2;
     unsafe { __arcane_inner_neon(token, x) }
 }
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
 #[target_feature(enable = "simd128")]
 #[inline]
 fn inner_wasm128(token: archmage::Wasm128Token, x: f32) -> f32 {
@@ -69,7 +69,7 @@ fn outer_neon(token: archmage::NeonToken, x: f32) -> f32 {
     let _: () = <archmage::NeonToken>::__ARCHMAGE_ASSERT_TIER_72CB52B2;
     unsafe { __arcane_outer_neon(token, x) }
 }
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
 #[target_feature(enable = "simd128")]
 #[inline]
 fn outer_wasm128(token: archmage::Wasm128Token, x: f32) -> f32 {
@@ -93,8 +93,11 @@ fn outer_scalar(token: archmage::ScalarToken, x: f32) -> f32 {
         }
         #[cfg(target_arch = "wasm32")]
         {
-            if let Some(__t) = archmage::Wasm128Token::summon() {
-                break '__incant inner_wasm128(__t, x);
+            #[cfg(target_feature = "simd128")]
+            {
+                if let Some(__t) = archmage::Wasm128Token::summon() {
+                    break '__incant inner_wasm128(__t, x);
+                }
             }
         }
         inner_scalar(archmage::ScalarToken, x)
@@ -118,8 +121,11 @@ pub fn api(x: f32) -> f32 {
         }
         #[cfg(target_arch = "wasm32")]
         {
-            if let Some(__t) = archmage::Wasm128Token::summon() {
-                break '__incant outer_wasm128(__t, x);
+            #[cfg(target_feature = "simd128")]
+            {
+                if let Some(__t) = archmage::Wasm128Token::summon() {
+                    break '__incant outer_wasm128(__t, x);
+                }
             }
         }
         outer_scalar(archmage::ScalarToken, x)

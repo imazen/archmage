@@ -43,10 +43,19 @@ pub(crate) fn expand(attr: TokenStream, item: TokenStream) -> syn::Result<TokenS
             // otherwise ensure the existing proof declares the named context.
             let placeholder = input.sig.inputs.iter().any(placeholder_parameter);
             if let Some(proof) = crate::token_discovery::find_token_param(&input.sig) {
-                let expected = crate::generated::tier_to_canonical_token(tier.name)
-                    .and_then(crate::generated::token_to_features)
-                    .expect("registered tier");
+                let canonical =
+                    crate::generated::tier_to_canonical_token(tier.name).expect("registered tier");
+                let expected =
+                    crate::generated::token_to_features(canonical).expect("registered tier");
+                let runtime_probe_mismatch =
+                    crate::generated::token_requires_runtime_probe(canonical)
+                        && proof
+                            .token_type_name
+                            .as_deref()
+                            .and_then(crate::generated::canonical_token_to_tier_suffix)
+                            != Some(tier.suffix);
                 if proof.target_arch != tier.target_arch
+                    || runtime_probe_mismatch
                     || proof.features.len() != expected.len()
                     || !expected.iter().all(|f| proof.features.contains(f))
                 {
@@ -191,6 +200,13 @@ fn define_backend_token<'a>(
     tier: &'a TierDescriptor,
     context: &crate::engine::feature::FeatureContext,
 ) -> &'a str {
+    if context
+        .token
+        .as_deref()
+        .is_some_and(crate::generated::token_has_magetypes_backend)
+    {
+        return tier.token_path;
+    }
     match context.magetypes_namespace {
         Some(ns) if tier.suffix == ns || crate::generated::can_downgrade_tier(tier.suffix, ns) => {
             find_tier(ns).map_or(tier.token_path, |base| base.token_path)
@@ -366,7 +382,7 @@ fn family(mut input: LightFn, args: Args) -> syn::Result<TokenStream> {
                 args.options.in_impl,
                 Some(quote!(__attune_proof)),
             );
-            let guard = gen_cfg_guard(tier.target_arch, gate);
+            let guard = gen_target_cfg_guard(tier.target_arch, gate, tier_wasm_features(tier.name));
             dispatch_arms.push(if tier.name == "scalar" {
                 let invocation = forward(&forward_sig, &proof_name, args.options.in_impl, Some(quote!(::archmage::ScalarToken)));
                 quote!(#guard { break '__attune_dispatch #invocation; })
@@ -477,9 +493,10 @@ fn proof_entry(
         // proof, and the sibling exists in the same definition scope.
         crate::engine::boundary::proof_call(invocation)
     };
-    let guard = gen_cfg_guard(
+    let guard = gen_target_cfg_guard(
         tier.target_arch,
         gate.or(args.options.imports.cfg_feature.as_deref()),
+        tier_wasm_features(tier.name),
     );
     Ok(quote!(#guard #wrapper))
 }

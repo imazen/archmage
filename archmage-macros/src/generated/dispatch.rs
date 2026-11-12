@@ -148,6 +148,15 @@ pub(crate) const DISPATCH_TIERS: &[TierDescriptor] = &[
         priority: 20,
     },
     TierDescriptor {
+        name: "wasm128_relaxed_fma",
+        suffix: "wasm128_relaxed_fma",
+        token_path: "archmage::Wasm128RelaxedFmaToken",
+        as_method: "as_wasm128_relaxed_fma",
+        target_arch: Some("wasm32"),
+        cfg_feature: None,
+        priority: 22,
+    },
+    TierDescriptor {
         name: "wasm128_relaxed",
         suffix: "wasm128_relaxed",
         token_path: "archmage::Wasm128RelaxedToken",

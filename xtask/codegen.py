@@ -940,6 +940,7 @@ def storage_access_probes():
         "RUSTC_WORKSPACE_WRAPPER",
     ):
         env.pop(key, None)
+    env["CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUSTFLAGS"] = "-Ctarget-feature=+simd128"
     result = {}
     failures = []
     for target, tiers in targets.items():
@@ -1359,6 +1360,7 @@ def integer_probes():
         "RUSTC_WORKSPACE_WRAPPER",
     ):
         env.pop(key, None)
+    env["CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUSTFLAGS"] = "-Ctarget-feature=+simd128"
     result = {}
     failures = []
     for target, (arch, tiers) in targets.items():
@@ -1640,6 +1642,7 @@ def tokenless_context_probes():
     for key in ("RUSTFLAGS", "CARGO_ENCODED_RUSTFLAGS", "CARGO_TARGET_DIR",
                 "CARGO_BUILD_TARGET", "RUSTC_WRAPPER", "RUSTC_WORKSPACE_WRAPPER"):
         env.pop(key, None)
+    env["CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUSTFLAGS"] = "-Ctarget-feature=+simd128"
     targets = {
         "x86_64-unknown-linux-gnu": [("v3", "v3", "X64V3Token"), ("v3", "v2", "X64V2Token")],
         "aarch64-unknown-linux-gnu": [("neon", "neon", "NeonToken")],
@@ -1758,6 +1761,7 @@ def main():
         "CARGO_BUILD_TARGET",
     ]:
         env.pop(key, None)
+    env["CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUSTFLAGS"] = "-Ctarget-feature=+simd128"
     targets = {
         "x86_64-unknown-linux-gnu": [
             ("scalar", "ScalarToken", [128, 256, 512]),

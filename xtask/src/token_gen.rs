@@ -147,8 +147,8 @@ fn gen_real_tokens(
         use crate::tokens::SimdToken;
     "});
 
-    // Atomic imports (for tokens with runtime detection)
-    if arch != "wasm" && !tokens.is_empty() {
+    // Atomic imports (for runtime detection and process-wide token disabling)
+    if !tokens.is_empty() {
         out.push_str("use core::sync::atomic::{AtomicBool, AtomicU8, Ordering};\n");
     }
 
@@ -172,7 +172,7 @@ fn gen_real_tokens(
     let mut external_imports: std::collections::BTreeSet<(&str, &str)> =
         std::collections::BTreeSet::new();
     for token in tokens {
-        let ancestors = collect_ancestors(reg, token);
+        let ancestors = reg.collect_ancestors(token);
         for ancestor in &ancestors {
             let in_file = tokens.iter().any(|other| other.name == ancestor.name);
             if !in_file {
@@ -187,8 +187,8 @@ fn gen_real_tokens(
 
     out.push('\n');
 
-    // Generate cache and disabled statics (skip WASM - it's compile-time only)
-    if arch != "wasm" {
+    // Generate cache and disabled statics for all native tokens
+    if !tokens.is_empty() {
         out.push_str("// Cache statics: 0 = unknown, 1 = unavailable, 2 = available\n");
         for token in tokens {
             let cache_name = cache_var_name(&token.name);
@@ -226,7 +226,8 @@ fn gen_real_tokens(
         match arch {
             "x86" => out.push_str(&gen_summon_cold_x86(token)),
             "aarch64" => out.push_str(&gen_summon_cold_aarch64(token)),
-            _ => {} // WASM is compile-time only, no cold path
+            "wasm" if token.runtime_probe => out.push_str(&gen_summon_cold_wasm(token)),
+            _ => {} // Compile-time only WASM tokens have no cold path
         }
         out.push('\n');
     }
@@ -298,10 +299,8 @@ fn gen_real_token_struct(
     // Extraction methods
     gen_extraction_methods(out, reg, token);
 
-    // Disable/getter methods (not for WASM — compile-time only)
-    if arch != "wasm" {
-        gen_disable_methods(out, reg, token, all_tokens_in_file);
-    }
+    // Disable/getter methods (all native tokens support disabling under testable_dispatch or runtime detection)
+    gen_disable_methods(out, reg, token, all_tokens_in_file);
 }
 
 /// Generate the public `from_context()` constructor.
@@ -314,21 +313,13 @@ fn gen_real_token_struct(
 ///   safe and needs no `unsafe` block — the caller's attribute *is* the proof.
 /// * From anywhere else the call is `unsafe`, and the caller carries the
 ///   obligation by hand. That is how the generated internals use it.
-///
-/// Globally enabled features (`-C target-feature=+avx2`, `-C target-cpu=native`)
-/// do **not** make the call safe; rustc requires them on the caller's own
-/// `#[target_feature]`.
-///
-/// `#[inline(always)]` is not permitted on a `#[target_feature]` function, so
-/// this is plain `#[inline]`. Codegen is unaffected: the body is a ZST
-/// construction with no instructions, so LLVM drops the call even where the
-/// feature mismatch blocks inlining (verified with `cargo asm`, see
-/// `docs/SOUNDNESS.md`).
 fn gen_from_context(token: &TokenDef) -> String {
     let name = &token.name;
     let features = token.features.join(",");
     let display = token.display_name.as_deref().unwrap_or(name);
-    let context_docs = if token.arch == "wasm" {
+    let context_docs = if token.runtime_probe {
+        "/// Rust permits safe calls to `#[target_feature]` functions from any\n    /// WASM context. Inside an `#[attune(wasm128_relaxed_fma)]` region the\n    /// single-rounding FMA contract was already checked by the entry probe;\n    /// use [`SimdToken::summon`](crate::SimdToken::summon) at dispatch boundaries\n    /// to run and cache the runtime fusion probe."
+    } else if token.arch == "wasm" {
         "/// Rust permits safe calls to `#[target_feature]` functions from any\n    /// WASM context: the engine validates the required instructions when the\n    /// module is loaded, so a module that runs at all has the features."
     } else {
         "/// A safe call requires a caller whose `#[target_feature]` attribute\n    /// enables every feature of this tier; a superset is sufficient. Outside\n    /// such a context rustc requires an `unsafe` block at the call site.\n    ///\n    /// Features enabled globally (`-C target-feature`, `-C target-cpu`) do\n    /// not satisfy this — rustc requires them on the caller's own attribute."
@@ -448,19 +439,38 @@ fn gen_compiled_with(token: &TokenDef, arch: &str) -> String {
             "}
         }
         "wasm" => {
-            // No testable_dispatch guard for WASM — compile-time only,
-            // no runtime detection to toggle.
             let check_features: Vec<&str> = token.features.iter().map(|s| s.as_str()).collect();
             let all_conditions = cfg_all_features(&check_features);
-            formatdoc! {"
-                {INDENT}#[inline]
-                {INDENT}fn compiled_with() -> Option<bool> {{
-                {INDENT}    #[cfg(all(target_arch = \"wasm32\", {all_conditions}))]
-                {INDENT}    {{ Some(true) }}
-                {INDENT}    #[cfg(not(all(target_arch = \"wasm32\", {all_conditions})))]
-                {INDENT}    {{ None }}
-                {INDENT}}}
-            "}
+            if token.runtime_probe {
+                // Even when +simd128,+relaxed-simd are enabled at compile time,
+                // single-rounding FMA depends on the host WASM engine at runtime.
+                // When those target features are NOT enabled at compile time, this
+                // binary emits no relaxed-simd probe and can never summon the token.
+                formatdoc! {"
+                    {INDENT}#[inline]
+                    {INDENT}fn compiled_with() -> Option<bool> {{
+                    {INDENT}    #[cfg(all(target_arch = \"wasm32\", {all_conditions}))]
+                    {INDENT}    {{ None }}
+                    {INDENT}    #[cfg(not(all(target_arch = \"wasm32\", {all_conditions})))]
+                    {INDENT}    {{ Some(false) }}
+                    {INDENT}}}
+                "}
+            } else {
+                // WASM has no runtime feature detection: unless `testable_dispatch`
+                // suppresses compile-time guarantees on an enabled feature set,
+                // availability is 100% determined at compile time via `cfg`.
+                formatdoc! {"
+                    {INDENT}#[inline]
+                    {INDENT}fn compiled_with() -> Option<bool> {{
+                    {INDENT}    #[cfg(all(target_arch = \"wasm32\", {all_conditions}{dct_guard}))]
+                    {INDENT}    {{ Some(true) }}
+                    {INDENT}    #[cfg(all(target_arch = \"wasm32\", {all_conditions}, feature = \"testable_dispatch\"))]
+                    {INDENT}    {{ None }}
+                    {INDENT}    #[cfg(not(all(target_arch = \"wasm32\", {all_conditions})))]
+                    {INDENT}    {{ Some(false) }}
+                    {INDENT}}}
+                "}
+            }
         }
         _ => unreachable!("unknown arch: {arch}"),
     }
@@ -684,15 +694,41 @@ fn gen_summon_cold_aarch64(token: &TokenDef) -> String {
 }
 
 fn gen_summon_wasm(token: &TokenDef) -> String {
-    // No testable_dispatch guard for WASM — compile-time only,
-    // no runtime detection to toggle.
     let check_features: Vec<&str> = token.features.iter().map(|s| s.as_str()).collect();
     let all_conditions = cfg_all_features(&check_features);
+    if token.runtime_probe {
+        let cache_name = cache_var_name(&token.name);
+        let detect_fn_name = lower_snake(&token.name, "detect");
+        return formatdoc! {"
+            {INDENT}#[inline(always)]
+            {INDENT}fn summon() -> Option<Self> {{
+            {INDENT}    #[cfg(all(target_arch = \"wasm32\", {all_conditions}))]
+            {INDENT}    {{
+            {INDENT}        match {cache_name}.load(Ordering::Relaxed) {{
+            {INDENT}            // 2 is only ever stored by {detect_fn_name}() after confirming
+            {INDENT}            // single-rounding f32x4 and f64x2 FMA fusion across all lanes.
+            {INDENT}            2 => Some(Self::from_context()),
+            {INDENT}            1 => None,
+            {INDENT}            _ => {detect_fn_name}(),
+            {INDENT}        }}
+            {INDENT}    }}
+            {INDENT}    #[cfg(not(all(target_arch = \"wasm32\", {all_conditions})))]
+            {INDENT}    {{
+            {INDENT}        None
+            {INDENT}    }}
+            {INDENT}}}
+        "};
+    }
+    let disabled_name = disabled_var_name(&token.name);
     formatdoc! {"
-        {INDENT}#[inline]
+        {INDENT}#[inline(always)]
         {INDENT}fn summon() -> Option<Self> {{
         {INDENT}    #[cfg(all(target_arch = \"wasm32\", {all_conditions}))]
         {INDENT}    {{
+        {INDENT}        #[cfg(feature = \"testable_dispatch\")]
+        {INDENT}        if {disabled_name}.load(Ordering::Relaxed) {{
+        {INDENT}            return None;
+        {INDENT}        }}
         {INDENT}        // The required wasm features are compile-time enabled; a
         {INDENT}        // runtime that validated this module supports them (wasm has
         {INDENT}        // no runtime feature detection). wasm32 `#[target_feature]`
@@ -707,21 +743,83 @@ fn gen_summon_wasm(token: &TokenDef) -> String {
     "}
 }
 
+/// Generate the cold-path runtime fusion probe for `Wasm128RelaxedFmaToken`.
+///
+/// Guarded by `#[cfg(all(target_arch = "wasm32", target_feature = "simd128", target_feature = "relaxed-simd"))]`
+/// so strict `+simd128` WASM modules emit zero relaxed-SIMD opcodes and remain
+/// valid under `WebAssembly.validate` on engines without Relaxed SIMD.
+fn gen_summon_cold_wasm(token: &TokenDef) -> String {
+    let check_features: Vec<&str> = token.features.iter().map(|s| s.as_str()).collect();
+    let all_conditions = cfg_all_features(&check_features);
+    let enable_features = token.features.join(",");
+    let name = &token.name;
+    let cache_name = cache_var_name(name);
+    let disabled_name = disabled_var_name(name);
+    let detect_fn_name = lower_snake(name, "detect");
+
+    formatdoc! {"
+        #[cfg(all(target_arch = \"wasm32\", {all_conditions}))]
+        #[cold]
+        #[inline(never)]
+        #[target_feature(enable = \"{enable_features}\")]
+        fn {detect_fn_name}() -> Option<{name}> {{
+            use core::arch::wasm32;
+            use core::hint::black_box;
+            // (1 + 2^-12)^2 - (1 + 2^-11) == 2^-24 with single rounding; two roundings give 0.
+            let x32 = wasm32::f32x4_splat(black_box(1.0_f32 + 1.0 / 4096.0));
+            let c32 = wasm32::f32x4_splat(black_box(-(1.0_f32 + 1.0 / 2048.0)));
+            let r32 = wasm32::f32x4_relaxed_madd(x32, x32, c32);
+            let exp32 = 1.0_f32 / 16_777_216.0;
+            let f32_fuses = wasm32::f32x4_extract_lane::<0>(r32) == exp32
+                && wasm32::f32x4_extract_lane::<1>(r32) == exp32
+                && wasm32::f32x4_extract_lane::<2>(r32) == exp32
+                && wasm32::f32x4_extract_lane::<3>(r32) == exp32;
+            // (1 + 2^-27)^2 - (1 + 2^-26) == 2^-54 with single rounding; two roundings give 0.
+            let e64 = 1.0_f64 / 134_217_728.0;
+            let x64 = wasm32::f64x2_splat(black_box(1.0_f64 + e64));
+            let c64 = wasm32::f64x2_splat(black_box(-(1.0_f64 + 2.0 * e64)));
+            let r64 = wasm32::f64x2_relaxed_madd(x64, x64, c64);
+            let exp64 = e64 * e64;
+            let f64_fuses = wasm32::f64x2_extract_lane::<0>(r64) == exp64
+                && wasm32::f64x2_extract_lane::<1>(r64) == exp64;
+            let available = f32_fuses && f64_fuses;
+            let _ = {cache_name}.compare_exchange(
+                0,
+                if available {{ 2 }} else {{ 1 }},
+                Ordering::Relaxed,
+                Ordering::Relaxed,
+            );
+            if available && !{disabled_name}.load(Ordering::Relaxed) {{
+                // Runtime probe just confirmed single-rounding f32x4 and f64x2
+                // relaxed_madd fusion across all lanes on this engine.
+                Some({name}::from_context())
+            }} else {{
+                None
+            }}
+        }}
+
+    "}
+}
+
 fn gen_extraction_methods(out: &mut String, reg: &Registry, token: &TokenDef) {
-    // Use feature subset math: generate a method for every same-arch token
-    // whose features are a strict subset of this token's features.
-    // This is more complete than the parent DAG (catches cross-branch subsets).
+    // Combine explicit registry ancestors with strict feature-subset targets
+    // (excluding runtime_probe tokens unless explicitly in the ancestor chain).
     let token_features: std::collections::BTreeSet<&str> =
         token.features.iter().map(|s| s.as_str()).collect();
+    let ancestors = reg.collect_ancestors(token);
 
     let mut targets: Vec<&TokenDef> = reg
         .token
         .iter()
         .filter(|other| {
             other.name != token.name && other.arch == token.arch && {
+                let is_ancestor = ancestors.iter().any(|a| a.name == other.name);
                 let other_features: std::collections::BTreeSet<&str> =
                     other.features.iter().map(|s| s.as_str()).collect();
-                other_features.is_subset(&token_features) && other_features != token_features
+                let is_strict_subset = !other.runtime_probe
+                    && other_features.is_subset(&token_features)
+                    && other_features != token_features;
+                is_ancestor || is_strict_subset
             }
         })
         .collect();
@@ -738,9 +836,6 @@ fn gen_extraction_methods(out: &mut String, reg: &Registry, token: &TokenDef) {
 
     out.push_str(&format!("\nimpl {name} {{\n"));
 
-    // wasm32 `#[target_feature]` functions are safe to call; an `unsafe`
-    // block there is reported as unused.
-    let wasm = token.arch == "wasm";
     for ancestor in &targets {
         let anc_name = &ancestor.name;
         let short = ancestor
@@ -748,6 +843,9 @@ fn gen_extraction_methods(out: &mut String, reg: &Registry, token: &TokenDef) {
             .as_deref()
             .unwrap_or("MISSING_SHORT_NAME");
         let anc_display = ancestor.display_name.as_deref().unwrap_or(anc_name);
+        // wasm32 `#[target_feature]` functions are safe to call; an `unsafe`
+        // block there is reported as unused.
+        let safe_wasm = token.arch == "wasm";
 
         let doc = formatdoc! {"
             {INDENT}/// Extract a {anc_name} — guaranteed because {token_display} implies {anc_display}.
@@ -756,7 +854,7 @@ fn gen_extraction_methods(out: &mut String, reg: &Registry, token: &TokenDef) {
             {INDENT}#[inline(always)]
         "};
         out.push_str(&doc);
-        out.push_str(&if wasm {
+        out.push_str(&if safe_wasm {
             formatdoc! {"
                 {INDENT}pub fn {short}(self) -> {anc_name} {{
                 {INDENT}    // Holding `self` proves {token_display}'s feature set, a superset
@@ -767,9 +865,8 @@ fn gen_extraction_methods(out: &mut String, reg: &Registry, token: &TokenDef) {
         } else {
             formatdoc! {"
                 {INDENT}pub fn {short}(self) -> {anc_name} {{
-                {INDENT}    // SAFETY: holding `self` proves this CPU has {token_display}'s
-                {INDENT}    // full feature set, a superset of {anc_display}'s (registry-
-                {INDENT}    // verified hierarchy), so the ancestor token's claim holds.
+                {INDENT}    // SAFETY: holding `self` proves this environment satisfies
+                {INDENT}    // {token_display}'s full contract, a superset of {anc_display}'s.
                 {INDENT}    unsafe {{ {anc_name}::from_context() }}
                 {INDENT}}}
             "}
@@ -777,13 +874,13 @@ fn gen_extraction_methods(out: &mut String, reg: &Registry, token: &TokenDef) {
 
         // Extraction aliases for this ancestor (e.g., .avx512() for X64V4Token)
         for alias_name in &ancestor.extraction_aliases {
-            let body = if wasm {
+            let body = if safe_wasm {
                 formatdoc! {"
                     {INDENT}    self.{short}()
                 "}
             } else {
                 formatdoc! {"
-                    {INDENT}    // SAFETY: identical to `.{short}()` — self's feature set is a
+                    {INDENT}    // SAFETY: identical to `.{short}()` — self's contract is a
                     {INDENT}    // registry-verified superset of {anc_display}'s.
                     {INDENT}    unsafe {{ {anc_name}::from_context() }}
                 "}
@@ -812,13 +909,8 @@ fn gen_disable_methods(
     let cache_name = cache_var_name(&token.name);
     let disabled_name = disabled_var_name(&token.name);
 
-    // For the compile-time guard, use the FULL unfiltered feature list.
-    // The testable_dispatch feature suppresses the guard.
-    let base_conditions = cfg_all_features_full(&token.features);
-    let all_conditions = format!("{base_conditions}, not(feature = \"testable_dispatch\")");
-
-    // Collect descendants (tokens that have this token in their ancestor chain)
-    let descendants = collect_descendants(reg, token);
+    // Collect descendants (tokens that have this token in their ancestor chain).
+    let descendants: Vec<&TokenDef> = collect_descendants(reg, token);
 
     // Build cascade code
     let cascade_code = gen_cascade_code(&descendants, all_tokens_in_file);
@@ -833,6 +925,39 @@ fn gen_disable_methods(
     } else {
         String::new()
     };
+
+    if token.runtime_probe {
+        // Runtime-probed tokens (such as Wasm128RelaxedFmaToken) never elide
+        // their runtime check into a compile-time constant, so process-wide
+        // disabling always succeeds on the native architecture.
+        out.push_str(&formatdoc! {"
+
+            impl {name} {{
+                /// Disable this token process-wide for testing and benchmarking.
+                ///
+                /// When disabled, `summon()` returns `None` even on engines where
+                /// the runtime probe succeeds. Pass `false` to re-enable probing.
+            {descendant_docs}    pub fn dangerously_disable_token_process_wide(disabled: bool) -> Result<(), crate::tokens::CompileTimeGuaranteedError> {{
+                    {disabled_name}.store(disabled, Ordering::Relaxed);
+                    let v = if disabled {{ 1 }} else {{ 0 }};
+                    {cache_name}.store(v, Ordering::Relaxed);
+            {cascade_code}        Ok(())
+                }}
+
+                /// Check if this token has been manually disabled process-wide.
+                #[inline(always)]
+                pub fn manually_disabled() -> Result<bool, crate::tokens::CompileTimeGuaranteedError> {{
+                    Ok({disabled_name}.load(Ordering::Relaxed))
+                }}
+            }}
+        "});
+        return;
+    }
+
+    // For the compile-time guard, use the FULL unfiltered feature list.
+    // The testable_dispatch feature suppresses the guard.
+    let base_conditions = cfg_all_features_full(&token.features);
+    let all_conditions = format!("{base_conditions}, not(feature = \"testable_dispatch\")");
 
     out.push_str(&formatdoc! {"
 
@@ -864,6 +989,7 @@ fn gen_disable_methods(
             /// Check if this token has been manually disabled process-wide.
             ///
             /// Returns `Err` when all required features are compile-time enabled.
+            #[inline(always)]
             #[allow(clippy::needless_return)]
             pub fn manually_disabled() -> Result<bool, crate::tokens::CompileTimeGuaranteedError> {{
                 #[cfg(all({all_conditions}))]
@@ -911,26 +1037,6 @@ fn gen_cascade_code(descendants: &[&TokenDef], all_tokens_in_file: &[&TokenDef])
     cascade
 }
 
-/// BFS through parent DAG and collect all ancestors (deduplicated, stable order).
-fn collect_ancestors<'a>(reg: &'a Registry, token: &'a TokenDef) -> Vec<&'a TokenDef> {
-    let mut ancestors = Vec::new();
-    let mut visited = std::collections::HashSet::new();
-    let mut queue: std::collections::VecDeque<&str> =
-        token.parents.iter().map(|s| s.as_str()).collect();
-    while let Some(name) = queue.pop_front() {
-        if !visited.insert(name) {
-            continue;
-        }
-        if let Some(parent) = reg.token.iter().find(|t| t.name == name) {
-            ancestors.push(parent);
-            for gp in &parent.parents {
-                queue.push_back(gp.as_str());
-            }
-        }
-    }
-    ancestors
-}
-
 /// Collect all descendants (tokens that have this token in their ancestor chain).
 fn collect_descendants<'a>(reg: &'a Registry, token: &'a TokenDef) -> Vec<&'a TokenDef> {
     let mut descendants = Vec::new();
@@ -939,7 +1045,7 @@ fn collect_descendants<'a>(reg: &'a Registry, token: &'a TokenDef) -> Vec<&'a To
             continue;
         }
         // Check if token is an ancestor of other
-        let ancestors = collect_ancestors(reg, other);
+        let ancestors = reg.collect_ancestors(other);
         if ancestors.iter().any(|a| a.name == token.name) {
             descendants.push(other);
         }

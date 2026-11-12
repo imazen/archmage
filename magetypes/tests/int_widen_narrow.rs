@@ -803,24 +803,28 @@ fn neon_backend() {
     );
 }
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
 #[test]
 fn wasm128_backend() {
-    let built_with_simd128 = cfg!(target_feature = "simd128");
     match archmage::Wasm128Token::summon() {
         Some(t) => {
             let n = run_all!(archmage::Wasm128Token, t) + run_all_512!(archmage::Wasm128Token, t);
             assert!(n >= MIN_CASES_W128, "wasm128 arm ran only {n} comparisons");
         }
         None => {
-            #[cfg(feature = "std")]
             assert!(
-                !built_with_simd128,
+                matches!(archmage::Wasm128Token::manually_disabled(), Ok(true)),
                 "built with target-feature=+simd128 but Wasm128Token did not summon \
-             — the wasm arm would have been silently skipped"
+                 — the wasm arm would have been silently skipped"
             );
         }
     }
+}
+
+#[cfg(all(target_arch = "wasm32", not(target_feature = "simd128")))]
+#[test]
+fn wasm128_absent_without_simd128() {
+    assert!(archmage::Wasm128Token::summon().is_none());
 }
 
 // The motivating use case: one token-specialized body combines checked loads,

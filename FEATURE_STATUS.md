@@ -83,7 +83,7 @@ still useful — it just can't be used for direct intrinsic calls yet.
 | Feature | Stable since | Token(s) | Notes |
 |---------|-------------|----------|-------|
 | `simd128` | 1.54 | Wasm128Token | ~100+ intrinsics |
-| `relaxed-simd` | 1.82 | Wasm128RelaxedToken | 28 relaxed instructions |
+| `relaxed-simd` | 1.82 | Wasm128RelaxedToken, Wasm128RelaxedFmaToken | 28 relaxed instructions (`Wasm128RelaxedFmaToken` additionally probes runtime single-rounding `relaxed_madd` fusion) |
 
 ---
 

@@ -118,12 +118,17 @@ impl ResolvedTier {
     }
 
     /// The `#[cfg]` attributes for a generated variant of this tier: its
-    /// architecture, then its feature gate (preceded by
-    /// `#[allow(unexpected_cfgs)]` when the gate is an implied default).
+    /// architecture (plus WASM compile-time `target_feature`s), then its
+    /// feature gate (preceded by `#[allow(unexpected_cfgs)]` when the gate is
+    /// an implied default).
     pub(crate) fn variant_cfg_guard(&self) -> proc_macro2::TokenStream {
-        let arch = self
-            .target_arch
-            .map(|arch| quote::quote! { #[cfg(target_arch = #arch)] });
+        let arch = self.target_arch.map(|arch| {
+            crate::common::gen_target_cfg_guard(
+                Some(arch),
+                None,
+                crate::common::tier_wasm_features(self.name),
+            )
+        });
         let gate = self.feature_gate.as_ref().map(|feat| {
             let allow_attr = if self.allow_unexpected_cfg {
                 quote::quote! { #[allow(unexpected_cfgs)] }
@@ -140,10 +145,10 @@ impl ResolvedTier {
 }
 
 /// Build the dispatch arms for the non-fallback tiers. `check(tier)` produces
-/// one tier's test-and-call; each is wrapped in its `#[cfg(feature)]` gate,
-/// and the tiers of one architecture share a `#[cfg(target_arch)]` block, in
-/// list order. `incant!`'s two forms and `#[autoversion]` differ only in the
-/// check, so they share this.
+/// one tier's test-and-call; each is wrapped in its `#[cfg(feature)]` gate
+/// (and WASM `target_feature` gate), and the tiers of one architecture share a
+/// `#[cfg(target_arch)]` block, in list order. `incant!`'s two forms and
+/// `#[autoversion]` differ only in the check, so they share this.
 pub(crate) fn gen_dispatch_arms(
     tiers: &[ResolvedTier],
     mut check: impl FnMut(&ResolvedTier) -> proc_macro2::TokenStream,
@@ -162,15 +167,28 @@ pub(crate) fn gen_dispatch_arms(
         let mut tier_checks = Vec::new();
         for rt in group_tiers {
             let check = check(rt);
+            let mut preds = Vec::new();
+            if *target_arch == Some("wasm32") {
+                for tf in crate::common::tier_wasm_features(rt.name) {
+                    preds.push(quote::quote! { target_feature = #tf });
+                }
+            }
             if let Some(feat) = &rt.feature_gate {
-                let allow_attr = if rt.allow_unexpected_cfg {
+                preds.push(quote::quote! { feature = #feat });
+            }
+            if !preds.is_empty() {
+                let allow_attr = if rt.allow_unexpected_cfg && rt.feature_gate.is_some() {
                     quote::quote! { #[allow(unexpected_cfgs)] }
                 } else {
                     quote::quote! {}
                 };
+                let cfg_attr = match preds.as_slice() {
+                    [only] => quote::quote! { #[cfg(#only)] },
+                    many => quote::quote! { #[cfg(all(#(#many),*))] },
+                };
                 tier_checks.push(quote::quote! {
                     #allow_attr
-                    #[cfg(feature = #feat)]
+                    #cfg_attr
                     { #check }
                 });
             } else {

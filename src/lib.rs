@@ -188,6 +188,7 @@ pub use tokens::{
     ScalarToken,
     Sse2Token,
     // WASM tokens
+    Wasm128RelaxedFmaToken,
     Wasm128RelaxedToken,
     Wasm128Token,
     X64CryptoToken,

@@ -375,7 +375,7 @@ fn rounding_contract_across_widths_and_tokens() {
             &a,
             &b,
         ),
-        #[cfg(target_arch = "wasm32")]
+        #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
         "wasm128" => vectors_wasm128(
             archmage::Wasm128Token::summon().expect("requested wasm128"),
             &a,

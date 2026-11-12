@@ -465,3 +465,148 @@ fn exercise_saturating_arithmetic(token: Wasm128Token) {
     black_box(i16x8_sub_sat(i16x8_splat(-30000), d));
     black_box(u16x8_sub_sat(i16x8_splat(0), d));
 }
+
+// =============================================================================
+// Relaxed SIMD (Wasm128RelaxedToken + Wasm128RelaxedFmaToken — all 28 intrinsics)
+// =============================================================================
+
+#[cfg(target_feature = "relaxed-simd")]
+mod relaxed_simd_intrinsics {
+    use archmage::{SimdToken, Wasm128RelaxedFmaToken, Wasm128RelaxedToken, arcane};
+    use core::arch::wasm32::*;
+    use core::hint::black_box;
+
+    #[test]
+    fn test_wasm128_relaxed_and_fma_intrinsics() {
+        let token = Wasm128RelaxedToken::summon()
+            .expect("Wasm128RelaxedToken must summon when +simd128,+relaxed-simd are enabled");
+        exercise_all_relaxed_simd_intrinsics(token);
+        if let Some(fma_token) = Wasm128RelaxedFmaToken::summon() {
+            exercise_relaxed_fma_single_rounding(fma_token);
+        }
+    }
+
+    #[arcane]
+    fn exercise_all_relaxed_simd_intrinsics(_token: Wasm128RelaxedToken) {
+        // Swizzle (2)
+        let bytes = i8x16(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
+        let idx = i8x16(15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, -1);
+        let swz_i = i8x16_relaxed_swizzle(bytes, idx);
+        let swz_u = u8x16_relaxed_swizzle(bytes, idx);
+        assert_eq!(i8x16_extract_lane::<0>(swz_i), 15);
+        assert_eq!(i8x16_extract_lane::<15>(swz_i), 0);
+        assert_eq!(u8x16_extract_lane::<0>(swz_u), 15);
+        assert_eq!(u8x16_extract_lane::<15>(swz_u), 0);
+
+        // Relaxed float->int truncations (4)
+        let vf = f32x4(1.75, -2.5, 42.25, 0.0);
+        let vfu = f32x4(1.75, 2.5, 42.25, 0.0);
+        let vd = f64x2(12.75, -9.5);
+        let vdu = f64x2(12.75, 9.5);
+        assert_eq!(i32x4_extract_lane::<0>(i32x4_relaxed_trunc_f32x4(vf)), 1);
+        assert_eq!(u32x4_extract_lane::<2>(u32x4_relaxed_trunc_f32x4(vfu)), 42);
+        assert_eq!(
+            i32x4_extract_lane::<0>(i32x4_relaxed_trunc_f64x2_zero(vd)),
+            12
+        );
+        assert_eq!(
+            u32x4_extract_lane::<1>(u32x4_relaxed_trunc_f64x2_zero(vdu)),
+            9
+        );
+
+        // Relaxed multiply-add / negative multiply-add (4)
+        let fa = f32x4_splat(2.0);
+        let fb = f32x4_splat(3.0);
+        let fc = f32x4_splat(0.5);
+        assert_eq!(f32x4_extract_lane::<0>(f32x4_relaxed_madd(fa, fb, fc)), 6.5);
+        assert_eq!(
+            f32x4_extract_lane::<0>(f32x4_relaxed_nmadd(fa, fb, fc)),
+            -5.5
+        );
+        let da = f64x2_splat(2.0);
+        let db = f64x2_splat(3.0);
+        let dc = f64x2_splat(0.5);
+        assert_eq!(f64x2_extract_lane::<0>(f64x2_relaxed_madd(da, db, dc)), 6.5);
+        assert_eq!(
+            f64x2_extract_lane::<0>(f64x2_relaxed_nmadd(da, db, dc)),
+            -5.5
+        );
+
+        // Relaxed laneselect (8)
+        let ones = i32x4_splat(-1);
+        let zeros = i32x4_splat(0);
+        let x = i32x4_splat(11);
+        let y = i32x4_splat(22);
+        assert_eq!(
+            i32x4_extract_lane::<0>(i8x16_relaxed_laneselect(x, y, ones)),
+            11
+        );
+        assert_eq!(
+            i32x4_extract_lane::<0>(i16x8_relaxed_laneselect(x, y, zeros)),
+            22
+        );
+        assert_eq!(
+            i32x4_extract_lane::<0>(i32x4_relaxed_laneselect(x, y, ones)),
+            11
+        );
+        assert_eq!(
+            i32x4_extract_lane::<0>(i64x2_relaxed_laneselect(x, y, zeros)),
+            22
+        );
+        black_box(u8x16_relaxed_laneselect(x, y, ones));
+        black_box(u16x8_relaxed_laneselect(x, y, zeros));
+        black_box(u32x4_relaxed_laneselect(x, y, ones));
+        black_box(u64x2_relaxed_laneselect(x, y, zeros));
+
+        // Relaxed float min/max (4)
+        assert_eq!(f32x4_extract_lane::<0>(f32x4_relaxed_min(fa, fb)), 2.0);
+        assert_eq!(f32x4_extract_lane::<0>(f32x4_relaxed_max(fa, fb)), 3.0);
+        assert_eq!(f64x2_extract_lane::<0>(f64x2_relaxed_min(da, db)), 2.0);
+        assert_eq!(f64x2_extract_lane::<0>(f64x2_relaxed_max(da, db)), 3.0);
+
+        // Relaxed Q15 rounding multiply + integer dot products (6)
+        let q1 = i16x8_splat(16384); // 0.5 in Q15
+        assert_eq!(i16x8_extract_lane::<0>(i16x8_relaxed_q15mulr(q1, q1)), 8192);
+        assert_eq!(i16x8_extract_lane::<0>(u16x8_relaxed_q15mulr(q1, q1)), 8192);
+        let d8a = i8x16_splat(3);
+        let d7b = i8x16_splat(4);
+        let acc = i32x4_splat(10);
+        assert_eq!(
+            i16x8_extract_lane::<0>(i16x8_relaxed_dot_i8x16_i7x16(d8a, d7b)),
+            24
+        );
+        assert_eq!(
+            i16x8_extract_lane::<0>(u16x8_relaxed_dot_i8x16_i7x16(d8a, d7b)),
+            24
+        );
+        assert_eq!(
+            i32x4_extract_lane::<0>(i32x4_relaxed_dot_i8x16_i7x16_add(d8a, d7b, acc)),
+            58
+        );
+        assert_eq!(
+            i32x4_extract_lane::<0>(u32x4_relaxed_dot_i8x16_i7x16_add(d8a, d7b, acc)),
+            58
+        );
+    }
+
+    #[arcane]
+    fn exercise_relaxed_fma_single_rounding(_token: Wasm128RelaxedFmaToken) {
+        let e32 = black_box(1.0_f32 / 4096.0);
+        let x32 = f32x4_splat(1.0 + e32);
+        let c32 = f32x4_splat(-(1.0 + 2.0 * e32));
+        let r32 = f32x4_relaxed_madd(x32, x32, c32);
+        let exp32 = e32 * e32;
+        assert_eq!(f32x4_extract_lane::<0>(r32), exp32);
+        assert_eq!(f32x4_extract_lane::<1>(r32), exp32);
+        assert_eq!(f32x4_extract_lane::<2>(r32), exp32);
+        assert_eq!(f32x4_extract_lane::<3>(r32), exp32);
+
+        let e64 = black_box(1.0_f64 / 134_217_728.0);
+        let x64 = f64x2_splat(1.0 + e64);
+        let c64 = f64x2_splat(-(1.0 + 2.0 * e64));
+        let r64 = f64x2_relaxed_madd(x64, x64, c64);
+        let exp64 = e64 * e64;
+        assert_eq!(f64x2_extract_lane::<0>(r64), exp64);
+        assert_eq!(f64x2_extract_lane::<1>(r64), exp64);
+    }
+}
