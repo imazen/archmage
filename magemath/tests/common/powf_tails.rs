@@ -21,7 +21,7 @@ const POSITIVE: u32 = PowfOptions::new()
 // A feature-context tail must use the same graph as the packed body. In
 // particular BackendDependent Caller must retain its token rather than switch
 // to ScalarToken (which intentionally uses separate arithmetic).
-#[archmage::magetypes(v4x(cfg(avx512)), v3, neon, wasm128, scalar)]
+#[archmage::attune(_v4x_t(cfg(avx512)), _v3_t, _neon_t, _wasm128_t, _scalar_t)]
 fn bounded_widths_and_tails(token: Token) {
     #[cfg(target_arch = "wasm32")]
     {
@@ -146,19 +146,19 @@ fn bounded_widths_and_tails(token: Token) {
 
 #[test]
 fn single_vector_and_all_tail_remainders_match() {
-    bounded_widths_and_tails_scalar(archmage::ScalarToken);
+    bounded_widths_and_tails_scalar_t(archmage::ScalarToken);
     #[cfg(target_arch = "x86_64")]
     {
         if let Some(t) = archmage::X64V3Token::summon() {
-            bounded_widths_and_tails_v3(t);
+            bounded_widths_and_tails_v3_t(t);
         }
         #[cfg(feature = "avx512")]
         if let Some(t) = archmage::X64V4xToken::summon() {
-            bounded_widths_and_tails_v4x(t);
+            bounded_widths_and_tails_v4x_t(t);
         }
     }
     #[cfg(target_arch = "aarch64")]
-    bounded_widths_and_tails_neon(archmage::NeonToken::summon().unwrap());
+    bounded_widths_and_tails_neon_t(archmage::NeonToken::summon().unwrap());
     #[cfg(target_arch = "wasm32")]
-    bounded_widths_and_tails_wasm128(archmage::Wasm128Token::summon().unwrap());
+    bounded_widths_and_tails_wasm128_t(archmage::Wasm128Token::summon().unwrap());
 }

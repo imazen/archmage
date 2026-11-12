@@ -1047,3 +1047,174 @@ workflow-contract-check:
 
 sqrt-token-miri:
     cargo +$(tr -d '[:space:]' < xtask/miri-nightly.txt) miri test -p magetypes --no-default-features --features "w512 archmage/testable_dispatch" --test sqrt_token_testing
+
+primitive-generate:
+    cargo run -p xtask -- generate-magemath
+
+primitive-check:
+    cargo test -p magemath --features "std avx512" --test primitive_contracts
+    cargo test -p magemath --no-default-features --features w512 --test primitive_contracts
+
+primitive-type-check:
+    cargo check -p magemath --features "std avx512"
+    RUSTFLAGS="-Ctarget-feature=+simd128,+relaxed-simd" cargo check -p magemath --target wasm32-wasip1 --features "std w512"
+
+primitive-verify:
+    cargo run -p xtask -- generate-magemath --check
+    python3 -B xtask/reciprocal_vectors.py --check
+    cargo clippy -p magemath --lib --test primitive_contracts --features "std avx512" -- -D warnings
+    just primitive-check
+
+primitive-cross:
+    RUSTFLAGS="-Ctarget-feature=+simd128" CARGO_TARGET_WASM32_WASIP1_RUNNER=wasmtime cargo test -p magemath --target wasm32-wasip1 --features "std w512" --test primitive_contracts
+    RUSTFLAGS="-Ctarget-feature=+simd128,+relaxed-simd" CARGO_TARGET_WASM32_WASIP1_RUNNER=wasmtime cargo test -p magemath --target wasm32-wasip1 --features "std w512" --test primitive_contracts
+    RUSTFLAGS="-Ctarget-feature=+simd128,+relaxed-simd" CARGO_TARGET_WASM32_WASIP1_RUNNER=wasmtime cargo test -p magemath --target wasm32-wasip1 --no-default-features --features w512 --test primitive_contracts
+    cargo check -p magemath --target aarch64-unknown-linux-gnu --features "std w512"
+
+primitive-study-build:
+    cargo build --release --manifest-path benchmarks/primitive_variants_2026-11-10/Cargo.toml --bin archmage-primitive-study
+
+primitive-study-check:
+    cargo run --manifest-path benchmarks/primitive_variants_2026-11-10/Cargo.toml --bin archmage-primitive-study
+    cargo clippy --manifest-path benchmarks/primitive_variants_2026-11-10/Cargo.toml --all-targets -- -D warnings
+
+primitive-linear-inventory:
+    cargo run --release --manifest-path benchmarks/primitive_variants_2026-11-10/Cargo.toml --bin linear_inventory
+
+primitive-linear-original checkout output:
+    python3 -B benchmarks/primitive_variants_2026-11-10/linear_original.py "{{checkout}}" "{{output}}"
+
+primitive-codegen target="x86_64-unknown-linux-gnu" flags="":
+    RUSTFLAGS="{{flags}}" cargo rustc --release --lib --manifest-path benchmarks/primitive_variants_2026-11-10/Cargo.toml --target {{target}} -- --emit=asm
+
+primitive-wasm-token-testing:
+    RUSTFLAGS="-Ctarget-feature=+simd128,+relaxed-simd" CARGO_TARGET_WASM32_WASIP1_RUNNER="wasmtime --env ARCHMAGE_EXPECT_TESTABLE_DISPATCH=yes" cargo test -p magemath --features "std w512 archmage/testable_dispatch" --target wasm32-wasip1 --lib primitive_wasm::tests::
+
+# Opt-in full mantissa coverage in two exponent parity classes; constant memory.
+primitive-accuracy:
+    cargo run --release --manifest-path benchmarks/primitive_variants_2026-11-10/Cargo.toml --bin accuracy -- --exhaustive
+
+# Fusion provider selection: test both engine choices and disable the relaxed token.
+primitive-recip-fusion-wasm:
+    RUSTFLAGS="-Ctarget-feature=+simd128,+relaxed-simd" CARGO_TARGET_WASM32_WASIP1_RUNNER="wasmtime --env ARCHMAGE_EXPECT_RELAXED_FUSION=yes --env ARCHMAGE_EXPECT_TESTABLE_DISPATCH=yes" cargo test -p magemath --features "std w512 archmage/testable_dispatch" --target wasm32-wasip1 --lib recip::tests::
+    RUSTFLAGS="-Ctarget-feature=+simd128,+relaxed-simd" CARGO_TARGET_WASM32_WASIP1_RUNNER="wasmtime -W relaxed-simd-deterministic=n -C cranelift-has-fma=false --env ARCHMAGE_EXPECT_RELAXED_FUSION=no --env ARCHMAGE_EXPECT_TESTABLE_DISPATCH=yes" cargo test -p magemath --features "std w512 archmage/testable_dispatch" --target wasm32-wasip1 --lib recip::tests::
+    RUSTFLAGS="-Ctarget-feature=+simd128,+relaxed-simd" CARGO_TARGET_WASM32_WASIP1_RUNNER="wasmtime -W relaxed-simd-deterministic=n -C cranelift-has-fma=false" cargo test -p magemath --features "std w512" --target wasm32-wasip1 --test primitive_contracts
+
+primitive-fusion-analyze results:
+    python3 -B benchmarks/primitive_variants_2026-11-10/fusion_analysis.py "{{results}}"
+
+# Benchmark-only correction graphs; no public profile is changed.
+primitive-seed-study *ARGS:
+    cargo run --release --manifest-path benchmarks/primitive_variants_2026-11-10/Cargo.toml --bin seed_study -- {{ARGS}}
+
+primitive-correction-analyze results:
+    python3 -B benchmarks/primitive_variants_2026-11-10/correction_analysis.py "{{results}}"
+
+# Resource admission diagnostic only: no timings and no baseline/promotion.
+primitive-gate-check:
+    ZENBENCH_GATE_TRACE=1 cargo run --release --manifest-path benchmarks/primitive_variants_2026-11-10/Cargo.toml --bin archmage-primitive-study -- --gate-check
+
+primitive-rcp14-reference output:
+    mkdir -p "{{output}}"
+    cc -O3 -std=c11 -fno-strict-aliasing -ffp-contract=off -fno-fast-math benchmarks/primitive_variants_2026-11-10/rcp14_reference.c -lm -o "{{output}}/rcp14-reference"
+    "{{output}}/rcp14-reference"
+
+primitive-recip-reference-data output:
+    mkdir -p "{{output}}"
+    cc -O3 -std=c11 -fno-strict-aliasing -ffp-contract=off -fno-fast-math benchmarks/primitive_variants_2026-11-10/rcp14_reference.c -lm -o "{{output}}/rcp14-reference"
+    "{{output}}/rcp14-reference" --emit "{{output}}/recip-reference.u32le"
+    sha256sum "{{output}}/recip-reference.u32le"
+
+primitive-recip-qualify reference tier *ARGS:
+    cargo run --release --manifest-path benchmarks/primitive_variants_2026-11-10/Cargo.toml --bin recip_qualification -- --reference "{{reference}}" --tier {{tier}} {{ARGS}}
+
+primitive-recip-qualify-wasm reference density="--dense":
+    bash benchmarks/primitive_variants_2026-11-10/qualify_wasm.sh "{{reference}}" "{{density}}"
+
+primitive-recip-qualify-perf binary tier:
+    python3 -B benchmarks/primitive_variants_2026-11-10/run_local.py "{{binary}}" --recip-qualification --qual-tier "{{tier}}"
+
+primitive-recip-qualification-analyze results:
+    python3 -B benchmarks/primitive_variants_2026-11-10/qualification_analysis.py "{{results}}"
+
+primitive-recip-qualification-process-analyze results:
+    python3 -B benchmarks/primitive_variants_2026-11-10/qualification_process_analysis.py "{{results}}"
+
+# Preserve the upstream oracle byte-for-byte; lint authored whitespace separately.
+primitive-study-source-check base:
+    python3 -c 'import hashlib,pathlib; assert hashlib.sha256(pathlib.Path("benchmarks/primitive_variants_2026-11-10/reference/RECIP14.c").read_bytes()).hexdigest() == "4cb551b434f65928e97b062b1a4718809c955da6ab8d650f19593c72679b21e9"'
+    git diff "{{base}}" --check -- . ':!benchmarks/primitive_variants_2026-11-10/reference/RECIP14.c'
+
+primitive-recip-round-reference output:
+    mkdir -p "{{output}}"
+    cc -O3 -std=c11 -ffp-contract=off -fno-fast-math benchmarks/primitive_variants_2026-11-10/recip_round_reference.c -lm -o "{{output}}/recip-round-reference"
+    "{{output}}/recip-round-reference" "{{output}}/recip-round-reference.u32le"
+    sha256sum "{{output}}/recip-round-reference.u32le"
+
+primitive-recip-round-check reference tier *ARGS:
+    cargo run --release --manifest-path benchmarks/primitive_variants_2026-11-10/Cargo.toml --bin recip_round_check -- --reference "{{reference}}" --tier {{tier}} {{ARGS}}
+
+primitive-recip-round-wasm reference density="--dense":
+    bash benchmarks/primitive_variants_2026-11-10/qualify_wasm.sh "{{reference}}" "{{density}}" recip_round_check
+
+primitive-recip-guest output mode:
+    python3 -B benchmarks/primitive_variants_2026-11-10/build_guest.py "{{output}}" {{mode}}
+
+primitive-recip-wasm-host-build:
+    cargo build --release --manifest-path benchmarks/primitive_variants_2026-11-10/Cargo.toml --features wasm-host --bin recip_wasm_host
+
+primitive-recip-round-audit reference output:
+    cc -O3 -std=c11 -ffp-contract=off -fno-fast-math benchmarks/primitive_variants_2026-11-10/recip_round_reference.c -lm -o "{{output}}/recip-round-audit"
+    "{{output}}/recip-round-audit" --audit
+    python3 -B benchmarks/primitive_variants_2026-11-10/oracle_spotcheck.py "{{reference}}"
+
+primitive-recip-certified-analyze results study:
+    python3 -B benchmarks/primitive_variants_2026-11-10/certified_analysis.py "{{results}}" {{study}}
+
+primitive-recip-certified-matrix results study:
+    python3 -B benchmarks/primitive_variants_2026-11-10/run_certified_matrix.py "{{results}}" {{study}}
+
+primitive-recip-certified-table results:
+    python3 -B benchmarks/primitive_variants_2026-11-10/certified_table.py "{{results}}"
+
+# Compiles the actual builder source and private validity predicates unchanged.
+primitive-policy-inventory output:
+    mkdir -p "{{output}}"
+    cargo run --release --manifest-path benchmarks/primitive_variants_2026-11-10/Cargo.toml --bin policy_inventory > "{{output}}/std.tsv"
+    cargo run --release --manifest-path benchmarks/primitive_variants_2026-11-10/Cargo.toml --bin policy_inventory --no-default-features --features w512 > "{{output}}/no-std.tsv"
+
+primitive-policy-tables inventory *ARGS:
+    python3 -B benchmarks/primitive_variants_2026-11-10/policy_tables.py "{{inventory}}" {{ARGS}}
+
+primitive-policy-benchgen inventory *ARGS:
+    python3 -B benchmarks/primitive_variants_2026-11-10/policy_benchgen.py "{{inventory}}" {{ARGS}}
+    python3 -B benchmarks/primitive_variants_2026-11-10/policy_guestgen.py "{{inventory}}" {{ARGS}}
+
+primitive-policy-guest output mode:
+    python3 -B benchmarks/primitive_variants_2026-11-10/build_guest.py "{{output}}" {{mode}} policy_guest
+
+primitive-policy-validate-wasm modules:
+    python3 -B benchmarks/primitive_variants_2026-11-10/validate_wasm_boundary.py "{{modules}}"
+
+primitive-policy-native-run root binary *ARGS:
+    python3 -B benchmarks/primitive_variants_2026-11-10/run_policy_native.py "{{root}}" "{{binary}}" {{ARGS}}
+
+primitive-policy-wasm-run root *ARGS:
+    python3 -B benchmarks/primitive_variants_2026-11-10/run_policy_wasm.py "{{root}}" {{ARGS}}
+
+primitive-policy-analyze packet log output *ARGS:
+    python3 -B benchmarks/primitive_variants_2026-11-10/policy_analysis.py "{{packet}}" "{{log}}" "{{output}}" {{ARGS}}
+
+primitive-policy-render *ARGS:
+    python3 -B benchmarks/primitive_variants_2026-11-10/policy_render.py {{ARGS}}
+
+primitive-policy-progress root source:
+    python3 -B benchmarks/primitive_variants_2026-11-10/policy_progress.py "{{root}}" "{{source}}"
+
+# Print a frozen guest with wasm-tools first; this inventories WAT, not JIT code.
+primitive-policy-wasm-calls wat output:
+    python3 -B benchmarks/primitive_variants_2026-11-10/policy_wasm_calls.py "{{wat}}" "{{output}}"
+
+# Static codegen equivalence classes, hot-call gate, and llvm-mca throughput/latency analysis.
+mca *ARGS:
+    cargo run -p xtask -- mca {{ARGS}}

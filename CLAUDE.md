@@ -1216,6 +1216,68 @@ fn process(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 
 ## Known Bugs
 
+Relaxed-WASM codegen cost, 2026-11-11: flagged fusing x8 zero-clamp64 min
+costs 21.9585 ns for M18 Full relaxed versus 8.0728 ns existing strict min;
+M21 Finite unchecked Ordered costs 8.0503 ns. The frozen WAT retains private
+kernel calls. Fusing x8 reciprocal chain R3d costs 556.8797 ns versus R3b
+210.9469 ns although both route to division. These are implementation/call-
+context findings, not proof that relaxed instructions are intrinsically slow.
+See `benchmarks/primitive_variants_2026-11-10/POLICY-MATRIX.md`.
+
+Strict-WASM portable graph cost, 2026-11-11: the clean f32x4 reciprocal
+stream4096 cell (250/250 observations) takes 26,635.7708 ns for portable MIDP
+AssumeValid Caller R33 versus 1,115.7777 ns existing division. Process-family95
+ratio is 23.514024–24.235254. The whole suite still fails admission (18/66
+groups fully clean). HIGHP is already portable division; changing only the
+software MIDP result to division would violate its fixed-graph bit contract.
+See `benchmarks/primitive_variants_2026-11-10/POLICY-MATRIX.md`.
+
+Scalar provider cost, 2026-11-11: flagged Zen 5 typed ScalarToken f32x8
+reciprocal stream64 takes 199.3708 ns with portable MIDP AssumeValid Automatic
+R13 versus 109.8284 ns with Caller R33 and 7.1326 ns HIGHP R00. None of the
+66 groups is entirely clean; this is descriptive evidence, not a clean
+performance failure or provider-speed qualification. See `POLICY-MATRIX.md`
+under `benchmarks/primitive_variants_2026-11-10/`.
+
+Complete option-matrix cost, 2026-11-11: Intel V3 f32x8 reciprocal chain64
+retains 250/250 clean observations. Portable MIDP AssumeValid Caller R33
+costs 290.8175 ns versus existing Magetypes 270.7577 ns, ratio 1.074088
+(process-family95 1.067217–1.081004), above the 2% bound. Backend MIDP R3b
+costs 188.5439 ns in that cell. The whole suite fails admission; no blanket
+replacement is promoted. See `benchmarks/primitive_variants_2026-11-10/POLICY-MATRIX.md`.
+
+Policy matrix orchestration, 2026-11-11: the full 66-group benchmark exceeds
+zenbench's default 300-second child supervisor timeout. The incomplete attempt
+and its child logs are retained. After verifying its owner process had exited,
+its orphan admission reservation was preserved and released. Subsequent full
+matrix runs use `ZENBENCH_TIMEOUT=7200`; rounds, confidence, admission and the
+2% comparison bound are unchanged. This timeout is not a measured regression.
+
+Reciprocal research costs, 2026-11-11: bounded f64 Newton correction preserves
+current fused bits and reduces software-only timing, but regresses native-FMA
+comparisons. Canonical RN14 rounding adds work beyond HIGHP division; its cold
+integer repair improves Scalar fast paths but worsens frequent-repair boundary
+streams on Intel/NEON. These are benchmark-only graphs, not public defaults.
+All admission failures remain visible in
+`benchmarks/primitive_variants_2026-11-10/CERTIFIED-RECIP.md`.
+
+Configurable reciprocal performance, 2026-11-11: fused portable MIDP improves
+its own unfused chains, but still costs 11.54% reciprocal / 25.92% rsqrt versus
+the existing native Magetypes graphs on clean Zen 5 x8 chain comparisons. The
+whole new timing run fails admission (rsqrt stream 22/50 clean); no blanket
+legacy replacement is promoted. See `benchmarks/primitive_variants_2026-11-10/FUSION.md`.
+
+Resolved 2026-11-11: the new primitive dispatch and integration tests imported
+SimdToken on i686, where those code paths do not exist. Imports are now scoped
+to their dispatch targets; strict i686 Clippy passes (935193fc).
+
+Adjacent crate finding, 2026-11-10: clean linear-srgb 8900ffc uses f32 rational
+intermediates in sRGB SIMD chunks and f64 in scalar tails. An isolated build
+reproduces `[0.125;17]` producing chunk `3c6b22d7` versus tail `3c6b22d8`.
+The owning [issue 32](https://github.com/imazen/linear-srgb/issues/32) records it;
+no sibling source was changed. See `docs/LINEAR-SRGB-INVENTORY.md`.
+
+
 Resolved 2026-11-10: the Miri target enumerator explicitly selected the new
 `sqrt_token_testing` binary without its required token-testing feature, so
 Cargo refused before running the baseline suite. The runner now executes that
@@ -1225,9 +1287,9 @@ assertions and the existing baseline tests. `just sqrt-token-miri` passes.
 Magemath migration (2026-11-10): LOWP log1p retains the rational log2 fit's bias
 near zero; a tiny positive input can produce a negative approximation. MIDP
 remains available. This refactor does not introduce a new small-x LOWP graph or
-promote the experimental normal-output exp2 range. Reciprocal/root primitives
-remain in Magetypes until separately implemented and measured replacements
-exist. See `docs/MAGEMATH-MIGRATION.md`.
+promote the experimental normal-output exp2 range. Existing reciprocal/root primitives remain in Magetypes. The additive Magemath
+policy families and their measured tradeoffs are in `docs/PRIMITIVE-CONTRACTS.md`;
+they do not promote a blanket legacy replacement. See `docs/MAGEMATH-MIGRATION.md`.
 
 Canonical HIGHP packed performance (2026-11-09, draft held): the first M6
 32-cell exploratory matrix has 24 Full packed cells within the 2% std cost

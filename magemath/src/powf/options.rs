@@ -8,10 +8,10 @@ pub enum PowfDomain {
     PositiveNormal,
     /// Also admit +0 with nonnegative exponent: 0^0=1 and 0^positive=+0.
     NonNegativeNormal,
-    /// +0 or positive normal [2^-16,2^16], exponent normal or zero in [0,4].
+    /// +0 or positive normal `[2^-16,2^16]`, exponent normal or zero in `[0,4]`.
     /// The approximation's output is positive normal or +0 without a range check.
     Gamma,
-    /// Positive normal [2^-16,2^16], exponent normal or zero in [0,4].
+    /// Positive normal `[2^-16,2^16]`, exponent normal or zero in `[0,4]`.
     /// Same nonzero graph as Gamma; excludes zero and removes its masks.
     PositiveGamma,
     /// Full f32 input/output domain for HIGHP.

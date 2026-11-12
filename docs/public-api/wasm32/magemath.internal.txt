@@ -9,16 +9,21 @@
 
 ## summary
 #
-#   inherent methods                           24
-#   trait roster entries (type × trait)        24
+#   inherent methods                           38
+#   trait roster entries (type × trait)        38
 #
 # per-module pub lines:
+#   (root)                            2
 #   expf                              8
 #   logf                              8
+#   minmax                            6
 #   powf                              8
+#   recip                             6
 
-## items (24 lines)
+## items (38 lines)
 
+pub fn PrimitiveError::assert_fields_are_eq(&self)
+pub fn PrimitiveErrorKind::assert_fields_are_eq(&self)
 pub fn expf::ExpfDomain::assert_fields_are_eq(&self)
 pub fn expf::ExpfError::assert_fields_are_eq(&self)
 pub fn expf::ExpfErrorKind::assert_fields_are_eq(&self)
@@ -35,6 +40,12 @@ pub fn logf::LogfOptions::assert_fields_are_eq(&self)
 pub fn logf::LogfPortability::assert_fields_are_eq(&self)
 pub fn logf::LogfPrecision::assert_fields_are_eq(&self)
 pub fn logf::LogfValidation::assert_fields_are_eq(&self)
+pub fn minmax::MinMaxDomain::assert_fields_are_eq(&self)
+pub fn minmax::MinMaxExecution::assert_fields_are_eq(&self)
+pub fn minmax::MinMaxNaN::assert_fields_are_eq(&self)
+pub fn minmax::MinMaxOptions::assert_fields_are_eq(&self)
+pub fn minmax::MinMaxValidation::assert_fields_are_eq(&self)
+pub fn minmax::MinMaxZero::assert_fields_are_eq(&self)
 pub fn powf::PowfDomain::assert_fields_are_eq(&self)
 pub fn powf::PowfError::assert_fields_are_eq(&self)
 pub fn powf::PowfErrorKind::assert_fields_are_eq(&self)
@@ -43,9 +54,17 @@ pub fn powf::PowfOptions::assert_fields_are_eq(&self)
 pub fn powf::PowfPortability::assert_fields_are_eq(&self)
 pub fn powf::PowfPrecision::assert_fields_are_eq(&self)
 pub fn powf::PowfValidation::assert_fields_are_eq(&self)
+pub fn recip::RecipDomain::assert_fields_are_eq(&self)
+pub fn recip::RecipExecution::assert_fields_are_eq(&self)
+pub fn recip::RecipOptions::assert_fields_are_eq(&self)
+pub fn recip::RecipPortability::assert_fields_are_eq(&self)
+pub fn recip::RecipPrecision::assert_fields_are_eq(&self)
+pub fn recip::RecipValidation::assert_fields_are_eq(&self)
 
-## trait impls (24 types)
+## trait impls (38 types)
 
+PrimitiveError: TrivialClone
+PrimitiveErrorKind: TrivialClone
 expf::ExpfDomain: TrivialClone
 expf::ExpfError: TrivialClone
 expf::ExpfErrorKind: TrivialClone
@@ -62,6 +81,12 @@ logf::LogfOptions: TrivialClone
 logf::LogfPortability: TrivialClone
 logf::LogfPrecision: TrivialClone
 logf::LogfValidation: TrivialClone
+minmax::MinMaxDomain: TrivialClone
+minmax::MinMaxExecution: TrivialClone
+minmax::MinMaxNaN: TrivialClone
+minmax::MinMaxOptions: TrivialClone
+minmax::MinMaxValidation: TrivialClone
+minmax::MinMaxZero: TrivialClone
 powf::PowfDomain: TrivialClone
 powf::PowfError: TrivialClone
 powf::PowfErrorKind: TrivialClone
@@ -70,3 +95,9 @@ powf::PowfOptions: TrivialClone
 powf::PowfPortability: TrivialClone
 powf::PowfPrecision: TrivialClone
 powf::PowfValidation: TrivialClone
+recip::RecipDomain: TrivialClone
+recip::RecipExecution: TrivialClone
+recip::RecipOptions: TrivialClone
+recip::RecipPortability: TrivialClone
+recip::RecipPrecision: TrivialClone
+recip::RecipValidation: TrivialClone

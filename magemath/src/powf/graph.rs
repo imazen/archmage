@@ -314,7 +314,14 @@ macro_rules! graph {
             }
         }
 
-        #[archmage::magetypes(v4x(cfg(avx512)), v4(cfg(avx512)), v3, neon, wasm128, scalar)]
+        #[archmage::attune(
+            _v4x_t(cfg(avx512)),
+            _v4_t(cfg(avx512)),
+            _v3_t,
+            _neon_t,
+            _wasm128_t,
+            _scalar_t
+        )]
         pub(super) fn $const_entry<const ARITHMETIC: usize, const OPTIONS: u32>(
             token: Token,
             bases: [f32; $lanes],

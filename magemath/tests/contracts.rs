@@ -139,7 +139,14 @@ fn signed_zero_and_whole_vector_rejection() {
     );
 }
 
-#[archmage::magetypes(v4x(cfg(avx512)), v4(cfg(avx512)), v3, neon, wasm128, scalar)]
+#[archmage::attune(
+    _v4x_t(cfg(avx512)),
+    _v4_t(cfg(avx512)),
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _scalar_t
+)]
 fn check_tails(token: Token) {
     macro_rules! check {
         ($f:literal,$n:literal,$vec:ident,$exp:ident,$pow:ident,$log:ident,$ln:ident,$log10:ident,$log1p:ident) => {{
@@ -244,26 +251,26 @@ fn vectors_and_tails_reuse_the_same_caller_graph() {
         target_arch = "wasm32"
     ))]
     use archmage::SimdToken;
-    check_tails_scalar(archmage::ScalarToken);
+    check_tails_scalar_t(archmage::ScalarToken);
     #[cfg(target_arch = "x86_64")]
     if let Some(t) = archmage::X64V3Token::summon() {
-        check_tails_v3(t);
+        check_tails_v3_t(t);
     }
     #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
     {
         if let Some(t) = archmage::X64V4Token::summon() {
-            check_tails_v4(t);
+            check_tails_v4_t(t);
         }
         if let Some(t) = archmage::X64V4xToken::summon() {
-            check_tails_v4x(t);
+            check_tails_v4x_t(t);
         }
     }
     #[cfg(target_arch = "aarch64")]
     if let Some(t) = archmage::NeonToken::summon() {
-        check_tails_neon(t);
+        check_tails_neon_t(t);
     }
     #[cfg(target_arch = "wasm32")]
     if let Some(t) = archmage::Wasm128Token::summon() {
-        check_tails_wasm128(t);
+        check_tails_wasm128_t(t);
     }
 }

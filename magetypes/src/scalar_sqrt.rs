@@ -55,11 +55,11 @@ mod selected {
         }
     }
 
-    #[archmage::arcane]
+    #[archmage::attune(wrap, suppress_const_test)]
     fn hardware32(_token: archmage::X64V1Token, x: f32) -> f32 {
         _mm_cvtss_f32(_mm_sqrt_ss(_mm_set_ss(x)))
     }
-    #[archmage::arcane]
+    #[archmage::attune(wrap, suppress_const_test)]
     fn hardware64(_token: archmage::X64V1Token, x: f64) -> f64 {
         let a = _mm_set_sd(x);
         _mm_cvtsd_f64(_mm_sqrt_sd(a, a))
@@ -87,11 +87,11 @@ mod selected {
         }
     }
 
-    #[archmage::arcane]
+    #[archmage::attune(wrap, suppress_const_test)]
     fn hardware32(_token: archmage::NeonToken, x: f32) -> f32 {
         vget_lane_f32::<0>(vsqrt_f32(vdup_n_f32(x)))
     }
-    #[archmage::arcane]
+    #[archmage::attune(wrap, suppress_const_test)]
     fn hardware64(_token: archmage::NeonToken, x: f64) -> f64 {
         vget_lane_f64::<0>(vsqrt_f64(vdup_n_f64(x)))
     }
@@ -122,11 +122,11 @@ mod selected {
         }
     }
 
-    #[archmage::arcane]
+    #[archmage::attune(wrap, suppress_const_test)]
     fn hardware32(_token: archmage::Wasm128Token, x: f32) -> f32 {
         f32x4_extract_lane::<0>(f32x4_sqrt(f32x4_splat(x)))
     }
-    #[archmage::arcane]
+    #[archmage::attune(wrap, suppress_const_test)]
     fn hardware64(_token: archmage::Wasm128Token, x: f64) -> f64 {
         f64x2_extract_lane::<0>(f64x2_sqrt(f64x2_splat(x)))
     }

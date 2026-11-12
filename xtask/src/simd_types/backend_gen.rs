@@ -908,12 +908,14 @@ fn generate_float_backend_trait(ty: &FloatVecType) -> String {
 
             // ====== Approximations ======
 
-            /// Raw per-backend reciprocal seed (1/x). On x86/ARM this is the
-            /// hardware estimate; the generic `rcp_approx` refines it to a ≥12-bit
-            /// floor. WASM/scalar override `rcp_approx` on the generic type.
+            /// Backend-dependent reciprocal approximation (1/x).
             ///
-            /// **Default body returns the input unchanged** — every shipped
-            /// backend overrides this with a native intrinsic. The original
+            /// This may already include refinement (for example on NEON), or
+            /// use full division. It is not a portable raw hardware seed.
+            /// Generic wrappers may apply further accuracy or special-value repairs.
+            ///
+            /// **Default body returns the input unchanged** — shipped backends
+            /// override this placeholder. The original
             /// default `Self::div(Self::splat(1.0), a)` would require `splat`
             /// to be tokenless; with the soundness fix on `splat`, the default
             /// can no longer construct a `1.0` constant. New backends MUST
@@ -921,8 +923,9 @@ fn generate_float_backend_trait(ty: &FloatVecType) -> String {
             #[inline(always)]
             fn rcp_approx(self, a: Self::Repr) -> Self::Repr {{ a }}
 
-            /// Fast reciprocal square root approximation: backend-dependent
-            /// (x86 ~12-bit, ARM ~8-bit, WASM full). [`rsqrt`] is full f32 everywhere.
+            /// Backend-dependent reciprocal square root approximation.
+            /// Some backends already refine their native estimate. No shared
+            /// seed bits across backends are promised.
             ///
             /// See [`rcp_approx`] for default-body rationale.
             #[inline(always)]
@@ -2701,6 +2704,11 @@ fn generate_neon_float_impl(ty: &FloatVecType) -> String {
     } else {
         String::new()
     };
+    let sub_trait = format!(
+        "F{}x{}Backend",
+        &elem[1..],
+        if elem == "f32" { 4 } else { 2 }
+    );
 
     formatdoc! {r#"
         impl {trait_name} for archmage::NeonToken {{
@@ -2887,22 +2895,22 @@ fn generate_neon_float_impl(ty: &FloatVecType) -> String {
             // methods — one source of truth for the estimate.
             {arcane}
             fn rcp_approx(self, a: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <Self as {sub_trait}>::rcp_approx(_self, a[i]))
+                [{rcp_approx_body}]
             }}
 
             {arcane}
             fn rsqrt_approx(self, a: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <Self as {sub_trait}>::rsqrt_approx(_self, a[i]))
+                [{rsqrt_approx_body}]
             }}
 
             {arcane}
             fn recip(self, a: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <Self as {sub_trait}>::recip(_self, a[i]))
+                [{recip_body}]
             }}
 
             {arcane}
             fn rsqrt(self, a: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <Self as {sub_trait}>::rsqrt(_self, a[i]))
+                [{rsqrt_body}]
             }}
 
             // ====== Bitwise ======
@@ -2932,6 +2940,18 @@ fn generate_neon_float_impl(ty: &FloatVecType) -> String {
     "#,
         v4_copies = (0..sub_count).map(|_| "v4").collect::<Vec<_>>().join(", "),
         z_copies = (0..sub_count).map(|_| "z").collect::<Vec<_>>().join(", "),
+        rcp_approx_body = (0..sub_count)
+            .map(|i| format!("<Self as {sub_trait}>::rcp_approx(_self, a[{i}])"))
+            .collect::<Vec<_>>().join(", "),
+        rsqrt_approx_body = (0..sub_count)
+            .map(|i| format!("<Self as {sub_trait}>::rsqrt_approx(_self, a[{i}])"))
+            .collect::<Vec<_>>().join(", "),
+        recip_body = (0..sub_count)
+            .map(|i| format!("<Self as {sub_trait}>::recip(_self, a[{i}])"))
+            .collect::<Vec<_>>().join(", "),
+        rsqrt_body = (0..sub_count)
+            .map(|i| format!("<Self as {sub_trait}>::rsqrt(_self, a[{i}])"))
+            .collect::<Vec<_>>().join(", "),
         add_body = binary_op(&format!("vaddq_{ns}")),
         sub_body = binary_op(&format!("vsubq_{ns}")),
         mul_body = binary_op(&format!("vmulq_{ns}")),
@@ -2966,7 +2986,6 @@ fn generate_neon_float_impl(ty: &FloatVecType) -> String {
         reduce_add_body = reduce_combine(&format!("vaddq_{ns}"), &format!("vpaddq_{ns}")),
         reduce_min_body = reduce_combine(&format!("vminnmq_{ns}"), &format!("vpminnmq_{ns}")),
         reduce_max_body = reduce_combine(&format!("vmaxnmq_{ns}"), &format!("vpmaxnmq_{ns}")),
-        sub_trait = format!("F{}x{}Backend", &elem[1..], if elem == "f32" { 4 } else { 2 }),
         not_body = bitwise_not_op(),
         and_body = bitwise_binary_op(&format!("vandq_u{}", if elem == "f32" { 32 } else { 64 })),
         or_body = bitwise_binary_op(&format!("vorrq_u{}", if elem == "f32" { 32 } else { 64 })),
@@ -3558,22 +3577,22 @@ fn generate_wasm_float_impl(ty: &FloatVecType) -> String {
 
             #[inline(always)]
             fn rcp_approx(self, a: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <Self as {sub_trait}>::rcp_approx(self, a[i]))
+                [{rcp_approx_lanes}]
             }}
 
             #[inline(always)]
             fn rsqrt_approx(self, a: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <Self as {sub_trait}>::rsqrt_approx(self, a[i]))
+                [{rsqrt_approx_lanes}]
             }}
 
             #[inline(always)]
             fn recip(self, a: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <Self as {sub_trait}>::recip(self, a[i]))
+                [{recip_lanes}]
             }}
 
             #[inline(always)]
             fn rsqrt(self, a: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <Self as {sub_trait}>::rsqrt(self, a[i]))
+                [{rsqrt_lanes}]
             }}
 
             #[inline(always)]
@@ -3589,6 +3608,18 @@ fn generate_wasm_float_impl(ty: &FloatVecType) -> String {
     "#,
         v4_copies = (0..sub_count).map(|_| "v4").collect::<Vec<_>>().join(", "),
         z_copies = (0..sub_count).map(|_| "z").collect::<Vec<_>>().join(", "),
+        rcp_approx_lanes = (0..sub_count)
+            .map(|i| format!("<Self as {sub_trait}>::rcp_approx(self, a[{i}])"))
+            .collect::<Vec<_>>().join(", "),
+        rsqrt_approx_lanes = (0..sub_count)
+            .map(|i| format!("<Self as {sub_trait}>::rsqrt_approx(self, a[{i}])"))
+            .collect::<Vec<_>>().join(", "),
+        recip_lanes = (0..sub_count)
+            .map(|i| format!("<Self as {sub_trait}>::recip(self, a[{i}])"))
+            .collect::<Vec<_>>().join(", "),
+        rsqrt_lanes = (0..sub_count)
+            .map(|i| format!("<Self as {sub_trait}>::rsqrt(self, a[{i}])"))
+            .collect::<Vec<_>>().join(", "),
         load_lanes = format!("[{}]", (0..sub_count)
             .map(|i| format!("crate::simd_storage::copy(&data.as_chunks::<{}>().0[{i}])", native_lanes))
             .collect::<Vec<_>>().join(", ")),

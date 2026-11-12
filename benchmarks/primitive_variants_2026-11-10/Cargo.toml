@@ -1,0 +1,33 @@
+[package]
+name = "archmage-primitive-study"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.89"
+publish = false
+[workspace]
+[features]
+default = ["std", "w512", "avx512"]
+std = ["archmage/std", "magetypes/std", "magemath/std"]
+w512 = ["magetypes/w512", "magemath/w512"]
+avx512 = ["w512", "archmage/avx512", "magetypes/avx512", "magemath/avx512"]
+wasm-host = ["zenbench/wasm"]
+[dependencies]
+archmage = { path = "../..", default-features = false }
+magetypes = { path = "../../magetypes", default-features = false }
+magemath = { path = "../../magemath", default-features = false }
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+zenbench = "0.1.11"
+
+# Pin post-release admission/counter/macOS-QoS fixes used by this qualification.
+[patch.crates-io]
+zenbench = { git = "https://github.com/imazen/zenbench", rev = "952dd1f09fc79d1203a2a75a091c43e7e1ce54fc" }
+
+[[bin]]
+name = "recip_wasm_host"
+path = "src/bin/recip_wasm_host.rs"
+required-features = ["wasm-host"]
+
+[[bin]]
+name = "policy_wasm_host"
+path = "src/bin/policy_wasm_host.rs"
+required-features = ["wasm-host"]

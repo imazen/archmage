@@ -1,0 +1,246 @@
+{
+  "source": "results.json",
+  "unreliable": true,
+  "rows": [
+    {
+      "group": "recip-fusion/f32x8/stream64",
+      "implementation": "portable LOWP fused",
+      "reference": "portable LOWP unfused",
+      "ns": 1.6444111287426897,
+      "reference_ns": 1.8632729274994586,
+      "ratio": 0.8825390550537946,
+      "ci95": [
+        0.7627030796737457,
+        1.0216127480814097
+      ],
+      "clean": 50,
+      "retained": 50,
+      "outlier_removal": false
+    },
+    {
+      "group": "recip-fusion/f32x8/stream64",
+      "implementation": "portable LOWP fused",
+      "reference": "magetypes recip",
+      "ns": 1.6444111287426897,
+      "reference_ns": 2.4181965685617794,
+      "ratio": 0.68001549175992,
+      "ci95": [
+        0.615333782000659,
+        0.7615137671291837
+      ],
+      "clean": 50,
+      "retained": 50,
+      "outlier_removal": false
+    },
+    {
+      "group": "recip-fusion/f32x8/stream64",
+      "implementation": "portable MIDP fused",
+      "reference": "portable MIDP unfused",
+      "ns": 3.060657273160357,
+      "reference_ns": 3.2114081526100717,
+      "ratio": 0.9530577017040976,
+      "ci95": [
+        0.8691450883270496,
+        1.0449755124081344
+      ],
+      "clean": 50,
+      "retained": 50,
+      "outlier_removal": false
+    },
+    {
+      "group": "recip-fusion/f32x8/stream64",
+      "implementation": "portable MIDP fused",
+      "reference": "magetypes recip",
+      "ns": 3.060657273160357,
+      "reference_ns": 2.4181965685617794,
+      "ratio": 1.2656776181684355,
+      "ci95": [
+        1.1452443839417907,
+        1.3907914243836423
+      ],
+      "clean": 50,
+      "retained": 50,
+      "outlier_removal": false
+    },
+    {
+      "group": "recip-fusion/f32x8/chain64",
+      "implementation": "portable LOWP fused",
+      "reference": "portable LOWP unfused",
+      "ns": 100.37783111240857,
+      "reference_ns": 125.52984905448007,
+      "ratio": 0.7996331698673875,
+      "ci95": [
+        0.7987191284754992,
+        0.8005479671385058
+      ],
+      "clean": 50,
+      "retained": 50,
+      "outlier_removal": false
+    },
+    {
+      "group": "recip-fusion/f32x8/chain64",
+      "implementation": "portable LOWP fused",
+      "reference": "magetypes recip",
+      "ns": 100.37783111240857,
+      "reference_ns": 159.488214540741,
+      "ratio": 0.6293745992545876,
+      "ci95": [
+        0.6288184974053953,
+        0.6299285722345911
+      ],
+      "clean": 50,
+      "retained": 50,
+      "outlier_removal": false
+    },
+    {
+      "group": "recip-fusion/f32x8/chain64",
+      "implementation": "portable MIDP fused",
+      "reference": "portable MIDP unfused",
+      "ns": 177.88887550983523,
+      "reference_ns": 226.85550238975156,
+      "ratio": 0.7841505876468066,
+      "ci95": [
+        0.7836214137403056,
+        0.7847649661059257
+      ],
+      "clean": 50,
+      "retained": 50,
+      "outlier_removal": false
+    },
+    {
+      "group": "recip-fusion/f32x8/chain64",
+      "implementation": "portable MIDP fused",
+      "reference": "magetypes recip",
+      "ns": 177.88887550983523,
+      "reference_ns": 159.488214540741,
+      "ratio": 1.1153731705009073,
+      "ci95": [
+        1.1146354359092912,
+        1.1161906124914376
+      ],
+      "clean": 50,
+      "retained": 50,
+      "outlier_removal": false
+    },
+    {
+      "group": "rsqrt-fusion/f32x8/stream64",
+      "implementation": "portable LOWP fused",
+      "reference": "portable LOWP unfused",
+      "ns": 3.1724161116448704,
+      "reference_ns": 3.062516994485018,
+      "ratio": 1.035885226876376,
+      "ci95": [
+        0.9336728748451765,
+        1.154437363696737
+      ],
+      "clean": 22,
+      "retained": 50,
+      "outlier_removal": false
+    },
+    {
+      "group": "rsqrt-fusion/f32x8/stream64",
+      "implementation": "portable LOWP fused",
+      "reference": "magetypes rsqrt",
+      "ns": 3.1724161116448704,
+      "reference_ns": 3.5518630190997778,
+      "ratio": 0.8931696111549149,
+      "ci95": [
+        0.8234086574634398,
+        0.9768245444197493
+      ],
+      "clean": 22,
+      "retained": 50,
+      "outlier_removal": false
+    },
+    {
+      "group": "rsqrt-fusion/f32x8/stream64",
+      "implementation": "portable MIDP fused",
+      "reference": "portable MIDP unfused",
+      "ns": 5.078555301081436,
+      "reference_ns": 5.360183619745185,
+      "ratio": 0.9474592031462651,
+      "ci95": [
+        0.9341094446490764,
+        0.9581346703405985
+      ],
+      "clean": 22,
+      "retained": 50,
+      "outlier_removal": false
+    },
+    {
+      "group": "rsqrt-fusion/f32x8/stream64",
+      "implementation": "portable MIDP fused",
+      "reference": "magetypes rsqrt",
+      "ns": 5.078555301081436,
+      "reference_ns": 3.5518630190997778,
+      "ratio": 1.4298285924237584,
+      "ci95": [
+        1.417448327375263,
+        1.4402267824242685
+      ],
+      "clean": 22,
+      "retained": 50,
+      "outlier_removal": false
+    },
+    {
+      "group": "rsqrt-fusion/f32x8/chain64",
+      "implementation": "portable LOWP fused",
+      "reference": "portable LOWP unfused",
+      "ns": 164.91738924467572,
+      "reference_ns": 188.17634513594507,
+      "ratio": 0.8763980888540147,
+      "ci95": [
+        0.875270386209456,
+        0.8774266536005937
+      ],
+      "clean": 50,
+      "retained": 50,
+      "outlier_removal": false
+    },
+    {
+      "group": "rsqrt-fusion/f32x8/chain64",
+      "implementation": "portable LOWP fused",
+      "reference": "magetypes rsqrt",
+      "ns": 164.91738924467572,
+      "reference_ns": 218.32146568412898,
+      "ratio": 0.7553878805636128,
+      "ci95": [
+        0.7547857407075913,
+        0.7559645627433994
+      ],
+      "clean": 50,
+      "retained": 50,
+      "outlier_removal": false
+    },
+    {
+      "group": "rsqrt-fusion/f32x8/chain64",
+      "implementation": "portable MIDP fused",
+      "reference": "portable MIDP unfused",
+      "ns": 274.92009782182635,
+      "reference_ns": 321.17092257724096,
+      "ratio": 0.8559931129995388,
+      "ci95": [
+        0.855491980029861,
+        0.8564688654488792
+      ],
+      "clean": 50,
+      "retained": 50,
+      "outlier_removal": false
+    },
+    {
+      "group": "rsqrt-fusion/f32x8/chain64",
+      "implementation": "portable MIDP fused",
+      "reference": "magetypes rsqrt",
+      "ns": 274.92009782182635,
+      "reference_ns": 218.32146568412898,
+      "ratio": 1.259244467603498,
+      "ci95": [
+        1.258487534196183,
+        1.260037976806426
+      ],
+      "clean": 50,
+      "retained": 50,
+      "outlier_removal": false
+    }
+  ]
+}

@@ -879,6 +879,25 @@ fn w512_new_ops_scalar(ty: &W512Type) -> String {
 
 /// Delegating bodies for the width polyfills (2x256 on V3, 4x128 on NEON/WASM).
 fn w512_new_ops_delegate(ty: &W512Type, token: &str, sub_trait: &str, repr: &str) -> String {
+    let is_v3 = token == "X64V3Token";
+    let sub_scalar_rhs = |method: &str, rhs: &str| -> String {
+        if is_v3 {
+            format!(
+                "let f = <archmage::{token} as {sub_trait}>::{method};\n                [f(self, a[0], {rhs}), f(self, a[1], {rhs})]"
+            )
+        } else {
+            format!("q4!({sub_trait}::{method}(self, a, @scalar {rhs}))")
+        }
+    };
+    let sub_bin = |method: &str| -> String {
+        if is_v3 {
+            format!(
+                "let f = <archmage::{token} as {sub_trait}>::{method};\n                [f(self, a[0], b[0]), f(self, a[1], b[1])]"
+            )
+        } else {
+            format!("q4!({sub_trait}::{method}(self, a, b))")
+        }
+    };
     let mut code = String::new();
     if ty.has_uniform_shift_ops() {
         // The narrower traits only declare `shr_arithmetic_uniform` for signed
@@ -888,34 +907,39 @@ fn w512_new_ops_delegate(ty: &W512Type, token: &str, sub_trait: &str, repr: &str
         } else {
             "shr_logical_uniform"
         };
+        let shl_u = sub_scalar_rhs("shl_uniform", "count");
+        let shr_lu = sub_scalar_rhs("shr_logical_uniform", "count");
+        let shr_au = sub_scalar_rhs(arith_delegate, "count");
         code.push_str(&formatdoc! {r#"
             #[inline(always)]
             fn shl_uniform(self, a: {repr}, count: u32) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {sub_trait}>::shl_uniform(self, a[i], count))
+                {shl_u}
             }}
 
             #[inline(always)]
             fn shr_logical_uniform(self, a: {repr}, count: u32) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {sub_trait}>::shr_logical_uniform(self, a[i], count))
+                {shr_lu}
             }}
 
             #[inline(always)]
             fn shr_arithmetic_uniform(self, a: {repr}, count: u32) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {sub_trait}>::{arith_delegate}(self, a[i], count))
+                {shr_au}
             }}
         "#});
     }
     if ty.has_new_int_ops() {
+        let sat_add = sub_bin("saturating_add");
+        let sat_sub = sub_bin("saturating_sub");
         code.push_str(&formatdoc! {r#"
 
             #[inline(always)]
             fn saturating_add(self, a: {repr}, b: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {sub_trait}>::saturating_add(self, a[i], b[i]))
+                {sat_add}
             }}
 
             #[inline(always)]
             fn saturating_sub(self, a: {repr}, b: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {sub_trait}>::saturating_sub(self, a[i], b[i]))
+                {sat_sub}
             }}
     "#});
     }
@@ -1959,6 +1983,13 @@ fn generate_4way_polyfill_impl(
         "v128".to_string()
     };
 
+    let q_unary = |method: &str| -> String { format!("q4!({quarter_trait}::{method}(self, a))") };
+    let q_binary =
+        |method: &str| -> String { format!("q4!({quarter_trait}::{method}(self, a, b))") };
+    let q_ternary = |method: &str, a_arg: &str, b_arg: &str, c_arg: &str| -> String {
+        format!("q4!({quarter_trait}::{method}(self, {a_arg}, {b_arg}, {c_arg}))")
+    };
+
     let mut code = formatdoc! {r#"
         #[cfg(target_arch = "{arch}")]
         impl {trait_name} for archmage::{token} {{
@@ -2031,83 +2062,105 @@ fn generate_4way_polyfill_impl(
 
             #[inline(always)]
             fn add(self, a: {repr}, b: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::add(self, a[i], b[i]))
+                {add_q}
             }}
 
             #[inline(always)]
             fn sub(self, a: {repr}, b: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::sub(self, a[i], b[i]))
+                {sub_q}
             }}
     "#,
         q2 = q_lanes * 2,
         q3 = q_lanes * 3,
         q2_val = q_lanes * 2,
         q3_val = q_lanes * 3,
+        add_q = q_binary("add"),
+        sub_q = q_binary("sub"),
     };
 
     // Float: mul, div
     if ty.is_float() {
+        let mul_q = q_binary("mul");
+        let div_q = q_binary("div");
         code.push_str(&formatdoc! {r#"
 
             #[inline(always)]
             fn mul(self, a: {repr}, b: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::mul(self, a[i], b[i]))
+                {mul_q}
             }}
 
             #[inline(always)]
             fn div(self, a: {repr}, b: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::div(self, a[i], b[i]))
+                {div_q}
             }}
         "#});
     } else if ty.elem_bits == 16 || ty.elem_bits == 32 {
+        let mul_q = q_binary("mul");
         code.push_str(&formatdoc! {r#"
 
             #[inline(always)]
             fn mul(self, a: {repr}, b: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::mul(self, a[i], b[i]))
+                {mul_q}
             }}
         "#});
     }
 
     // neg: signed delegates to quarter backend, unsigned uses sub(zero, a)
     if ty.kind != W512Kind::UnsignedInt {
+        let neg_q = q_unary("neg");
         code.push_str(&formatdoc! {r#"
 
             #[inline(always)]
             fn neg(self, a: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::neg(self, a[i]))
+                {neg_q}
             }}
         "#});
     } else {
+        let neg_u = format!("q4!({quarter_trait}::sub(self, @scalar z, a))");
         code.push_str(&formatdoc! {r#"
 
             #[inline(always)]
             fn neg(self, a: {repr}) -> {repr} {{
                 let z = <archmage::{token} as {quarter_trait}>::zero(self);
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::sub(self, z, a[i]))
+                {neg_u}
             }}
         "#});
     }
 
+    let min_q = q_binary("min");
+    let max_q = q_binary("max");
     code.push_str(&formatdoc! {r#"
 
             #[inline(always)]
             fn min(self, a: {repr}, b: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::min(self, a[i], b[i]))
+                {min_q}
             }}
 
             #[inline(always)]
             fn max(self, a: {repr}, b: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::max(self, a[i], b[i]))
+                {max_q}
             }}
     "#});
 
     if ty.is_float() {
+        let sqrt_q = q_unary("sqrt");
+        let rcp_approx_q = q_unary("rcp_approx");
+        let rsqrt_approx_q = q_unary("rsqrt_approx");
+        let recip_q = q_unary("recip");
+        let rsqrt_q = q_unary("rsqrt");
+        let abs_q = q_unary("abs");
+        let floor_q = q_unary("floor");
+        let ceil_q = q_unary("ceil");
+        let round_q = q_unary("round");
+        let mul_add_q = q_ternary("mul_add", "a", "b", "c");
+        let mul_sub_q = q_ternary("mul_sub", "a", "b", "c");
+        let mul_add_p_q = q_ternary("mul_add_portable", "a", "b", "c");
+        let mul_sub_p_q = q_ternary("mul_sub_portable", "a", "b", "c");
         code.push_str(&formatdoc! {r#"
 
             #[inline(always)]
             fn sqrt(self, a: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::sqrt(self, a[i]))
+                {sqrt_q}
             }}
 
             // Reciprocals delegate to the quarter backend so the full-precision
@@ -2115,62 +2168,62 @@ fn generate_4way_polyfill_impl(
             // (Without these the trait defaults make recip/rcp_approx the identity.)
             #[inline(always)]
             fn rcp_approx(self, a: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::rcp_approx(self, a[i]))
+                {rcp_approx_q}
             }}
 
             #[inline(always)]
             fn rsqrt_approx(self, a: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::rsqrt_approx(self, a[i]))
+                {rsqrt_approx_q}
             }}
 
             #[inline(always)]
             fn recip(self, a: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::recip(self, a[i]))
+                {recip_q}
             }}
 
             #[inline(always)]
             fn rsqrt(self, a: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::rsqrt(self, a[i]))
+                {rsqrt_q}
             }}
 
             #[inline(always)]
             fn abs(self, a: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::abs(self, a[i]))
+                {abs_q}
             }}
 
             #[inline(always)]
             fn floor(self, a: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::floor(self, a[i]))
+                {floor_q}
             }}
 
             #[inline(always)]
             fn ceil(self, a: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::ceil(self, a[i]))
+                {ceil_q}
             }}
 
             #[inline(always)]
             fn round(self, a: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::round(self, a[i]))
+                {round_q}
             }}
 
             #[inline(always)]
             fn mul_add(self, a: {repr}, b: {repr}, c: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::mul_add(self, a[i], b[i], c[i]))
+                {mul_add_q}
             }}
 
             #[inline(always)]
             fn mul_sub(self, a: {repr}, b: {repr}, c: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::mul_sub(self, a[i], b[i], c[i]))
+                {mul_sub_q}
             }}
 
             #[inline(always)]
             fn mul_add_portable(self, a: {repr}, b: {repr}, c: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::mul_add_portable(self, a[i], b[i], c[i]))
+                {mul_add_p_q}
             }}
 
             #[inline(always)]
             fn mul_sub_portable(self, a: {repr}, b: {repr}, c: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::mul_sub_portable(self, a[i], b[i], c[i]))
+                {mul_sub_p_q}
             }}
 
             #[inline(always)]
@@ -2214,11 +2267,12 @@ fn generate_4way_polyfill_impl(
     } else {
         // Integer: abs, reduce, shifts, boolean
         if ty.is_signed() {
+            let abs_q = q_unary("abs");
             code.push_str(&formatdoc! {r#"
 
             #[inline(always)]
             fn abs(self, a: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::abs(self, a[i]))
+                {abs_q}
             }}
             "#});
         }
@@ -2230,6 +2284,9 @@ fn generate_4way_polyfill_impl(
         } else {
             "shr_arithmetic_const"
         };
+        let shl_c = q_unary("shl_const::<N>");
+        let shr_ac = q_unary(&format!("{shr_arith_delegate}::<N>"));
+        let shr_lc = q_unary("shr_logical_const::<N>");
 
         code.push_str(&formatdoc! {r#"
 
@@ -2243,17 +2300,17 @@ fn generate_4way_polyfill_impl(
 
             #[inline(always)]
             fn shl_const<const N: i32>(self, a: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::shl_const::<N>(self, a[i]))
+                {shl_c}
             }}
 
             #[inline(always)]
             fn shr_arithmetic_const<const N: i32>(self, a: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::{shr_arith_delegate}::<N>(self, a[i]))
+                {shr_ac}
             }}
 
             #[inline(always)]
             fn shr_logical_const<const N: i32>(self, a: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::shr_logical_const::<N>(self, a[i]))
+                {shr_lc}
             }}
 
         {new_ops}
@@ -2291,61 +2348,72 @@ fn generate_4way_polyfill_impl(
     }
 
     // Common: comparisons and bitwise
+    let eq_q = q_binary("simd_eq");
+    let ne_q = q_binary("simd_ne");
+    let lt_q = q_binary("simd_lt");
+    let le_q = q_binary("simd_le");
+    let gt_q = q_binary("simd_gt");
+    let ge_q = q_binary("simd_ge");
+    let blend_q = q_ternary("blend", "mask", "if_true", "if_false");
+    let not_q = q_unary("not");
+    let bitand_q = q_binary("bitand");
+    let bitor_q = q_binary("bitor");
+    let bitxor_q = q_binary("bitxor");
     code.push_str(&formatdoc! {r#"
 
             #[inline(always)]
             fn simd_eq(self, a: {repr}, b: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::simd_eq(self, a[i], b[i]))
+                {eq_q}
             }}
 
             #[inline(always)]
             fn simd_ne(self, a: {repr}, b: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::simd_ne(self, a[i], b[i]))
+                {ne_q}
             }}
 
             #[inline(always)]
             fn simd_lt(self, a: {repr}, b: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::simd_lt(self, a[i], b[i]))
+                {lt_q}
             }}
 
             #[inline(always)]
             fn simd_le(self, a: {repr}, b: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::simd_le(self, a[i], b[i]))
+                {le_q}
             }}
 
             #[inline(always)]
             fn simd_gt(self, a: {repr}, b: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::simd_gt(self, a[i], b[i]))
+                {gt_q}
             }}
 
             #[inline(always)]
             fn simd_ge(self, a: {repr}, b: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::simd_ge(self, a[i], b[i]))
+                {ge_q}
             }}
 
             #[inline(always)]
             fn blend(self, mask: {repr}, if_true: {repr}, if_false: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::blend(self, mask[i], if_true[i], if_false[i]))
+                {blend_q}
             }}
 
             #[inline(always)]
             fn not(self, a: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::not(self, a[i]))
+                {not_q}
             }}
 
             #[inline(always)]
             fn bitand(self, a: {repr}, b: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::bitand(self, a[i], b[i]))
+                {bitand_q}
             }}
 
             #[inline(always)]
             fn bitor(self, a: {repr}, b: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::bitor(self, a[i], b[i]))
+                {bitor_q}
             }}
 
             #[inline(always)]
             fn bitxor(self, a: {repr}, b: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::bitxor(self, a[i], b[i]))
+                {bitxor_q}
             }}
         {integer_methods}
         }}
@@ -2354,9 +2422,32 @@ fn generate_4way_polyfill_impl(
     code
 }
 
+fn q4_macro_def() -> &'static str {
+    r#"#[cfg(feature = "w512")]
+macro_rules! q4 {
+    ($qt:ident :: $m:ident $(::<$n:ident>)? ($s:expr, $a:expr)) => {
+        [<Self as $qt>::$m $(::<$n>)? ($s, $a[0]), <Self as $qt>::$m $(::<$n>)? ($s, $a[1]), <Self as $qt>::$m $(::<$n>)? ($s, $a[2]), <Self as $qt>::$m $(::<$n>)? ($s, $a[3])]
+    };
+    ($qt:ident :: $m:ident ($s:expr, $a:expr, @scalar $c:expr)) => {
+        [<Self as $qt>::$m($s, $a[0], $c), <Self as $qt>::$m($s, $a[1], $c), <Self as $qt>::$m($s, $a[2], $c), <Self as $qt>::$m($s, $a[3], $c)]
+    };
+    ($qt:ident :: $m:ident ($s:expr, @scalar $z:expr, $a:expr)) => {
+        [<Self as $qt>::$m($s, $z, $a[0]), <Self as $qt>::$m($s, $z, $a[1]), <Self as $qt>::$m($s, $z, $a[2]), <Self as $qt>::$m($s, $z, $a[3])]
+    };
+    ($qt:ident :: $m:ident ($s:expr, $a:expr, $b:expr)) => {
+        [<Self as $qt>::$m($s, $a[0], $b[0]), <Self as $qt>::$m($s, $a[1], $b[1]), <Self as $qt>::$m($s, $a[2], $b[2]), <Self as $qt>::$m($s, $a[3], $b[3])]
+    };
+    ($qt:ident :: $m:ident ($s:expr, $a:expr, $b:expr, $c:expr)) => {
+        [<Self as $qt>::$m($s, $a[0], $b[0], $c[0]), <Self as $qt>::$m($s, $a[1], $b[1], $c[1]), <Self as $qt>::$m($s, $a[2], $b[2], $c[2]), <Self as $qt>::$m($s, $a[3], $b[3], $c[3])]
+    };
+}
+
+"#
+}
+
 /// Generate all NEON W512 polyfill implementations.
 pub(super) fn generate_neon_w512_impls(types: &[W512Type]) -> String {
-    let mut code = String::new();
+    let mut code = String::from(q4_macro_def());
     for ty in types {
         code.push_str(&generate_neon_polyfill_impl(ty));
         code.push('\n');
@@ -2366,7 +2457,7 @@ pub(super) fn generate_neon_w512_impls(types: &[W512Type]) -> String {
 
 /// Generate all WASM W512 polyfill implementations.
 pub(super) fn generate_wasm_w512_impls(types: &[W512Type]) -> String {
-    let mut code = String::new();
+    let mut code = String::from(q4_macro_def());
     for ty in types {
         code.push_str(&generate_wasm_polyfill_impl(ty));
         code.push('\n');

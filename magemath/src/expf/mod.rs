@@ -9,6 +9,7 @@
 //! `-inf` -> `+0`). `AssumeValid` omits checks while retaining memory safety.
 //! Legacy Magetypes exponential methods remain available during deprecation.
 
+#![doc = include_str!("permutations.md")]
 pub(crate) mod const_api;
 mod dispatch;
 mod graph;

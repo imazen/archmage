@@ -13,6 +13,8 @@ use std::path::{Path, PathBuf};
 mod compare_arch;
 mod expand_gen;
 mod intrinsics_browser;
+mod magemath_gen;
+mod mca;
 mod registry;
 mod simd_types;
 mod soundness;
@@ -1145,6 +1147,11 @@ fn main() -> Result<()> {
 
     match args[1].as_str() {
         "generate" => generate_all()?,
+        "generate-magemath" => {
+            let check = args[2..].iter().any(|a| a == "--check");
+            magemath_gen::generate_magemath_primitives(Path::new("."), check)?;
+        }
+        "mca" => mca::run_mca(&args[2..])?,
         "validate" => {
             let reg = registry::Registry::load(&PathBuf::from("token-registry.toml"))?;
             soundness::verify(&reg)?;
@@ -1338,6 +1345,7 @@ fn validate_after_soundness(reg: &registry::Registry) -> Result<()> {
     validate_summon(reg)?;
     check_compile_budgets()?;
     check_package_licenses()?;
+    magemath_gen::generate_magemath_primitives(Path::new("."), true)?;
     Ok(())
 }
 
@@ -2096,6 +2104,10 @@ pub(crate) use dispatch::*;
     // Generate intrinsics browser data (JSON + per-token markdown)
     println!("\n=== Generating Intrinsics Browser ===");
     intrinsics_browser::generate_intrinsics_browser(&reg)?;
+
+    // Generate magemath typed primitive entrypoints (minmax, recip)
+    println!("\n=== Generating Magemath Primitive Entrypoints ===");
+    magemath_gen::generate_magemath_primitives(Path::new("."), false)?;
 
     // Run safety validation on generated code (hard failure)
     println!("\n=== Validating Magetypes Safety ===");

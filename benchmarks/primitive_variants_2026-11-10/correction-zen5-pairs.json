@@ -1,0 +1,126 @@
+{
+  "source": "results.json",
+  "unreliable": true,
+  "rows": [
+    {
+      "group": "recip-correction/f32x8/stream64",
+      "implementation": "parallel residual correction",
+      "reference": "current portable MIDP fused",
+      "ns": 2.8063637719212142,
+      "reference_ns": 2.9266466972076755,
+      "ratio": 0.9589007701540389,
+      "ci95": [
+        0.8865826305390924,
+        1.035871144994007
+      ],
+      "clean": 15,
+      "retained": 50,
+      "outlier_removal": false
+    },
+    {
+      "group": "recip-correction/f32x8/stream64",
+      "implementation": "parallel residual correction",
+      "reference": "magetypes recip",
+      "ns": 2.8063637719212142,
+      "reference_ns": 2.5016428959323753,
+      "ratio": 1.1218083030492918,
+      "ci95": [
+        1.0405214549268225,
+        1.1976105960386603
+      ],
+      "clean": 15,
+      "retained": 50,
+      "outlier_removal": false
+    },
+    {
+      "group": "recip-correction/f32x8/chain64",
+      "implementation": "parallel residual correction",
+      "reference": "current portable MIDP fused",
+      "ns": 154.22648535815435,
+      "reference_ns": 176.6916596962929,
+      "ratio": 0.8728566227927629,
+      "ci95": [
+        0.8694284474335117,
+        0.876329738693499
+      ],
+      "clean": 0,
+      "retained": 50,
+      "outlier_removal": false
+    },
+    {
+      "group": "recip-correction/f32x8/chain64",
+      "implementation": "parallel residual correction",
+      "reference": "magetypes recip",
+      "ns": 154.22648535815435,
+      "reference_ns": 158.58972278800638,
+      "ratio": 0.9724872623954041,
+      "ci95": [
+        0.9687181438476571,
+        0.9763303064023636
+      ],
+      "clean": 0,
+      "retained": 50,
+      "outlier_removal": false
+    },
+    {
+      "group": "rsqrt-correction/f32x8/stream64",
+      "implementation": "quadratic residual correction",
+      "reference": "current portable MIDP fused",
+      "ns": 3.693819478874596,
+      "reference_ns": 5.045837524138896,
+      "ratio": 0.7320527982131112,
+      "ci95": [
+        0.6925927553492098,
+        0.7766671911104983
+      ],
+      "clean": 27,
+      "retained": 50,
+      "outlier_removal": false
+    },
+    {
+      "group": "rsqrt-correction/f32x8/stream64",
+      "implementation": "quadratic residual correction",
+      "reference": "magetypes rsqrt",
+      "ns": 3.693819478874596,
+      "reference_ns": 3.597311991253207,
+      "ratio": 1.026827666840142,
+      "ci95": [
+        0.9590887537414821,
+        1.0993540610530952
+      ],
+      "clean": 27,
+      "retained": 50,
+      "outlier_removal": false
+    },
+    {
+      "group": "rsqrt-correction/f32x8/chain64",
+      "implementation": "quadratic residual correction",
+      "reference": "current portable MIDP fused",
+      "ns": 246.34579507686968,
+      "reference_ns": 274.32408035080425,
+      "ratio": 0.8980101009063584,
+      "ci95": [
+        0.897635633011107,
+        0.8983848390706074
+      ],
+      "clean": 25,
+      "retained": 50,
+      "outlier_removal": false
+    },
+    {
+      "group": "rsqrt-correction/f32x8/chain64",
+      "implementation": "quadratic residual correction",
+      "reference": "magetypes rsqrt",
+      "ns": 246.34579507686968,
+      "reference_ns": 217.97016551519087,
+      "ratio": 1.1301812543685077,
+      "ci95": [
+        1.1296231830554953,
+        1.1307566748855185
+      ],
+      "clean": 25,
+      "retained": 50,
+      "outlier_removal": false
+    }
+  ]
+}
