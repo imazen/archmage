@@ -319,11 +319,19 @@ exists. That algorithm experiment is outside this evidence expansion.
 Root justfile recipes: `primitive-policy-inventory`, `primitive-policy-tables`,
 `primitive-policy-benchgen`, `primitive-policy-guest`,
 `primitive-policy-native-run`, `primitive-policy-wasm-run`,
-`primitive-policy-analyze`, `primitive-policy-render`.
+`primitive-policy-analyze`, `primitive-policy-render`,
+`primitive-policy-progress`, `primitive-policy-wasm-calls`.
 Generate/check the catalog from the actual Rust builders. Build binaries once,
 freeze hashes, verify, then measure without overlapping builds on that host.
 
 External artifacts are under
 `/mnt/v/output/archmage/primitive-options-2026-11-11/`.
-The mirror and complete verification manifest will be recorded after all
-prescribed contexts finish; an incomplete run is not marked archived/verified.
+The owner-stopped snapshot contains 229 payload files / 571,992,669 bytes,
+including the eight complete contexts and explicitly partial nonfusing evidence.
+Every payload hash was recomputed from the NAS mirror at
+`/mnt/tower/output/archmage/primitive-options-2026-11-11/`.
+`SHA256SUMS` has SHA256
+`b33de3e12b784b82e2327ed7d97caa6b98c2895ee49a9dda0be3b85ef2be54c1`.
+`ARCHIVE-VERIFIED.json` records the readback; these two control files are
+excluded from the payload list. The archive operation passed in 9 s / peak-RSS
+0.02 GiB. Archive integrity does not complete or qualify the interrupted context.
