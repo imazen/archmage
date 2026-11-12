@@ -1216,6 +1216,14 @@ fn process(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 
 ## Known Bugs
 
+Strict-WASM portable graph cost, 2026-11-11: the clean f32x4 reciprocal
+stream4096 cell (250/250 observations) takes 26,635.7708 ns for portable MIDP
+AssumeValid Caller R33 versus 1,115.7777 ns existing division. Process-family95
+ratio is 23.514024–24.235254. The whole suite still fails admission (18/66
+groups fully clean). HIGHP is already portable division; changing only the
+software MIDP result to division would violate its fixed-graph bit contract.
+See `benchmarks/primitive_variants_2026-11-10/POLICY-MATRIX.md`.
+
 Scalar provider cost, 2026-11-11: flagged Zen 5 typed ScalarToken f32x8
 reciprocal stream64 takes 199.3708 ns with portable MIDP AssumeValid Automatic
 R13 versus 109.8284 ns with Caller R33 and 7.1326 ns HIGHP R00. None of the

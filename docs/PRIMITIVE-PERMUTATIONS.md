@@ -60,6 +60,12 @@ x > 0. Every Checked/AssumeValid and Automatic/Caller variant retains its
 declared numerical contract. Portable means result agreement, not software-only
 execution: native FMA is used when proved, with exact software otherwise.
 
+Portable MIDP/LOWP target their fixed fused graphs. Substituting division only
+on a software backend would change their result bits, even though division is
+more accurate. HIGHP already supplies the portable division target. Backend
+MIDP/LOWP may redirect to division on Scalar/WASM because those profiles
+promise an error bound rather than cross-ISA bits.
+
 The [fusion report](../benchmarks/primitive_variants_2026-11-10/FUSION.md) and
 [primitive contract reference](PRIMITIVE-CONTRACTS.md) preserve scan scope,
 source identities and witnesses. Measured maxima are not silently promoted to

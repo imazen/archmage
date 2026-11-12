@@ -1,6 +1,6 @@
 # Complete primitive option matrix — 2026-11-11
 
-AMD V4x and hosted WASM timings are in progress. AMD Scalar/V3/V4, Intel V3 and
+AMD V4x and relaxed WASM timings are in progress. Strict WASM, AMD Scalar/V3/V4, Intel V3 and
 the M6 exploratory matrix are complete: all 46 canonical flag sets, 66 workload groups and 1,566 arms,
 including existing Magetypes baselines. No default or numerical implementation
 changes in this expansion. Pow/exp/log timing expansion is deferred by the owner;
@@ -205,6 +205,30 @@ For rsqrt chain64 the same order is 228.5043, 244.0332, 281.3762 and
 202.5815 ns. These are descriptive costs under the V4 proof on Zen 5, not
 confirmed optimizations. The tables preserve all other widths and flag sets.
 
+## Strict WASM: clean software costs and min/max choices
+
+The strict host retains 16,116/16,500 clean observations; 18/66 groups are
+entirely clean. The aggregate fails admission, so no whole-suite promotion.
+
+The clean f32x4 reciprocal stream4096 group takes 1,115.7777 ns with existing
+division and 26,635.7708 ns with portable MIDP R33. Its process-family95 ratio
+is [23.514024, 24.235254], entirely beyond the 1.02 bound. The clean f32x16
+group also loses: 1,115.2528 versus 18,916.6050 ns, interval
+[16.560597, 17.372486]. These are genuine per-cell software-fallback costs.
+
+For f32x8 zero-clamp64 (250/250 clean), existing min takes 8.0479 ns,
+Full Number/Ordered M00 12.9125 ns, Finite unchecked Ordered M21 8.0722 ns,
+and Finite unchecked Backend-zero M31 8.0556 ns. M00's ratio is 1.604449
+[1.583722, 1.625450]. M21/M31 intervals extend above 1.02, so their near-equal
+point estimates do not establish the conservative no-regression gate.
+Normal remains unsupported on this zero/subnormal workload.
+
+The flagged f32x8 stream64 comparisons show HIGHP R00 and Backend MIDP/LOWP
+R3b/R3d reciprocal around 17.42 ns, using division. Portable MIDP R33 takes
+308.8020 ns. Backend rsqrt R3b takes 14.9776 ns versus existing 39.4182 ns;
+that estimate is a different graph/accuracy contract from HIGHP sqrt/division.
+Every configuration and observed error remains in the nested tables.
+
 ## Orchestration and resources
 
 The initial Intel run hit the default 300-second child supervisor timeout
@@ -231,6 +255,8 @@ Zen 5 V3 timing uses 1,692 s / peak-RSS 0.29 GiB, minimum available RAM
 42,287 MiB and peak load 2.29; its return code 1 also retains failed confirmation.
 Zen 5 V4 timing uses 1,735 s / peak-RSS 0.29 GiB, minimum available RAM
 42,065 MiB and peak load 2.81; its return code 1 retains failed confirmation.
+Strict WASM timing uses 4,728 s / peak-RSS 0.09 GiB, minimum available RAM
+21,472 MiB and peak load 1.68; its return code 1 preserves failed confirmation.
 The first analysis launch lacked NumPy; a task-local venv supplies NumPy 2.4.2.
 No timing rerun was needed for that analysis dependency.
 
