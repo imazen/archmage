@@ -259,16 +259,22 @@ pub(crate) fn input64(i: usize, zero: bool) -> (f64, f64) {
         (f64::from(a), f64::from(b))
     }
 }
-pub(crate) trait CheckScalar: Copy+Send+Sync+core::fmt::Debug+core::ops::Add<Output=Self>+'static {
-    fn from_f32(x:f32)->Self;
-    fn bits(self)->u64;
+pub(crate) trait CheckScalar:
+    Copy + Send + Sync + core::fmt::Debug + core::ops::Add<Output = Self> + 'static
+{
+    fn from_f32(x: f32) -> Self;
+    fn bits(self) -> u64;
     fn widen(self) -> f64;
     fn narrow(self) -> f32;
     fn pair(i: usize, zero: bool, recip: bool, rsqrt: bool) -> (Self, Self);
 }
 impl CheckScalar for f32 {
-    fn from_f32(x:f32)->Self {x}
-    fn bits(self)->u64 {u64::from(self.to_bits())}
+    fn from_f32(x: f32) -> Self {
+        x
+    }
+    fn bits(self) -> u64 {
+        u64::from(self.to_bits())
+    }
     fn widen(self) -> f64 {
         f64::from(self)
     }
@@ -280,8 +286,12 @@ impl CheckScalar for f32 {
     }
 }
 impl CheckScalar for f64 {
-    fn from_f32(x:f32)->Self {f64::from(x)}
-    fn bits(self)->u64 {self.to_bits()}
+    fn from_f32(x: f32) -> Self {
+        f64::from(x)
+    }
+    fn bits(self) -> u64 {
+        self.to_bits()
+    }
     fn widen(self) -> f64 {
         self
     }

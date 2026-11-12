@@ -125,31 +125,34 @@ fn main() {
 
 
 def native():
-    params=[];calls=[]
+    shapes=[]
     for family,types in [("mm",[("f32",[4,8,16]),("f64",[2,4,8])]),("rc",[("f32",[4,8,16])])]:
         for ty,widths in types:
-            for width in widths:
-                tag=str(width) if ty=="f32" else f"64x{width}"
-                params += [f"$s{family}{tag}:ident",f"$c{family}{tag}:ident"]
-                for op,name in [(False,"min" if family=="mm" else "recip"),(True,"max" if family=="mm" else "rsqrt")]:
-                    line=f'width!($suite,$tier,t,$s{family}{tag},$c{family}{tag},{ty},{width},"{name}",{str(family=="rc").lower()},{str(op).lower()},{"minmax_cases" if family=="mm" else "recip_cases"});'
-                    if width==widths[-1]:line='#[cfg(feature="w512")]\n'+line
-                    calls.append(line)
-                    if family=="mm":
-                        z=f'group!($suite,$tier,t,$s{family}{tag},$c{family}{tag},{ty},{width},"{name}",false,{str(op).lower()},64,false,true,zero_cases,"zero-clamp64");'
-                        if width==widths[-1]:z='#[cfg(feature="w512")]\n'+z
-                        calls.append(z)
-    matrix='macro_rules! matrix {($suite:ident,$tier:ident,$token:expr,'+','.join(params)+')=>{{let t=$token;'+''.join(calls)+'}};}\n'
-    tiers=[]
-    for tier,token,cfg in [('scalar','ScalarToken',''),('v3','archmage::X64V3Token::summon().expect("V3")','#[cfg(target_arch="x86_64")]'),('v4','archmage::X64V4Token::summon().expect("V4")','#[cfg(all(target_arch="x86_64",feature="avx512"))]'),('v4x','archmage::X64V4xToken::summon().expect("V4x")','#[cfg(all(target_arch="x86_64",feature="avx512"))]'),('neon','archmage::NeonToken::summon().expect("NEON")','#[cfg(target_arch="aarch64")]')]:
-        funcs=[]
-        for family,types in [("mm",[("f32",[4,8,16]),("f64",[2,4,8])]),("rc",[("f32",[4,8,16])])]:
-            for ty,widths in types:
-                for w in widths:
-                    tag=str(w) if ty=="f32" else f"64x{w}"
-                    funcs += [f'stream_{family}{tag}_{tier}',f'chain_{family}{tag}_{tier}']
-        tiers.append(cfg+f'"{tier}"=>matrix!(suite,tier,{token},'+','.join(funcs)+'),')
-    return NATIVE.replace('// MATRIX',matrix).replace('// TIERS','\n'.join(tiers))
+            for w in widths:
+                shapes.append((family,ty,w,str(w) if ty=="f32" else f"64x{w}",w==widths[-1]))
+    definitions=[];tiers=[]
+    for tier,token_type,token,cfg in [
+        ('scalar','ScalarToken','ScalarToken',[]),
+        ('v3','archmage::X64V3Token','archmage::X64V3Token::summon().expect("V3")',['target_arch="x86_64"']),
+        ('v4','archmage::X64V4Token','archmage::X64V4Token::summon().expect("V4")',['target_arch="x86_64"','feature="avx512"']),
+        ('v4x','archmage::X64V4xToken','archmage::X64V4xToken::summon().expect("V4x")',['target_arch="x86_64"','feature="avx512"']),
+        ('neon','archmage::NeonToken','archmage::NeonToken::summon().expect("NEON")',['target_arch="aarch64"'])]:
+        topattr='#[cfg(all('+','.join(cfg)+'))]\n' if cfg else ''
+        tiercalls=[]
+        for family,ty,w,tag,wide in shapes:
+            conditions=cfg+(['feature="w512"'] if wide else [])
+            attr='#[cfg(all('+','.join(conditions)+'))]\n' if conditions else ''
+            name=f'register_{family}{tag}_{tier}'
+            body=[]
+            for op,operation in [(False,'min' if family=='mm' else 'recip'),(True,'max' if family=='mm' else 'rsqrt')]:
+                rc=str(family=='rc').lower();op=str(op).lower()
+                args=f'suite,tier,t,stream_{family}{tag}_{tier},chain_{family}{tag}_{tier},{ty},{w},"{operation}",{rc},{op}'
+                body.append('width!('+args+','+('minmax_cases' if family=='mm' else 'recip_cases')+');')
+                if family=='mm':body.append('group!('+args+',64,false,true,zero_cases,"zero-clamp64");')
+            definitions.append(attr+f'fn {name}(suite:&mut Suite,tier:&str,t:{token_type}) {{'+''.join(body)+'}\n')
+            tiercalls.append(('#[cfg(feature="w512")]\n' if wide else '')+f'{name}(suite,&tier,t);')
+        tiers.append(topattr+f'"{tier}"=>{{let t={token};'+''.join(tiercalls)+'},')
+    return NATIVE.replace('// MATRIX','\n'.join(definitions)).replace('// TIERS','\n'.join(tiers))
 
 
 def main():
