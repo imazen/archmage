@@ -2,6 +2,7 @@
 
 Each timing is **ns per complete workload; ratio (interval) versus existing Magetypes**.
 Streams process 64/4096 scalar elements; chain64 performs 64 dependent vector steps.
+Timing build: std + w512 + avx512 Cargo features, with CPU features controlled by the supplied proof/module. no_std legality is inventoried separately; no_std timing is unmeasured here.
 Error is the largest observed relative error across this width’s fixed stream inputs and chain states; it is not a whole-domain maximum.
 Min/max error 0 denotes exact selected values; preflight separately verifies the requested zero signs.
 **Retained**: five processes × 50 pairs. Intervals are diagnostic process-family 95% (all 1,500 baseline comparisons), including the timer floor.

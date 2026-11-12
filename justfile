@@ -1194,6 +1194,9 @@ primitive-policy-benchgen inventory *ARGS:
 primitive-policy-guest output mode:
     python3 -B benchmarks/primitive_variants_2026-11-10/build_guest.py "{{output}}" {{mode}} policy_guest
 
+primitive-policy-validate-wasm modules:
+    python3 -B benchmarks/primitive_variants_2026-11-10/validate_wasm_boundary.py "{{modules}}"
+
 primitive-policy-native-run root binary *ARGS:
     python3 -B benchmarks/primitive_variants_2026-11-10/run_policy_native.py "{{root}}" "{{binary}}" {{ARGS}}
 

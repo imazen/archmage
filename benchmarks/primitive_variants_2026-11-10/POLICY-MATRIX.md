@@ -58,6 +58,17 @@ WASM strict/fusing/nonfusing pass. Actual WASM fusion probes read 0/1/0.
 The fixed timing preflight is spot checking, separate from the earlier dense
 mantissa scans and independent exact-rational fixtures.
 
+The frozen strict module also runs with relaxed SIMD disabled. The relaxed
+module is rejected specifically at its relaxed-SIMD instruction as the negative
+control (Wasmtime CLI 50.0.1; this is validation, not the timed 49.0.5 host).
+Feature-boundary validation takes 2 s / peak-RSS 0.06 GiB on M6. Both modules
+are unchanged; this adds no timing retry.
+
+All current timing binaries/guests use std + w512 + avx512 Cargo features.
+The actual CPU capabilities still come from proofs and module flags. no_std
+legality/correctness is inventoried and tested; no_std timing remains unmeasured
+in this new matrix, alongside the other explicitly separate frontend leaves.
+
 ## M6 exploratory findings
 
 All 3,300 group-round observations were resource-flagged; there are no strict

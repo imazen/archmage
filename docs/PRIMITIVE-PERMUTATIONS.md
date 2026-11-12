@@ -98,6 +98,12 @@ latency are separate leaves and remain explicitly unmeasured by this kernel
 matrix. Existing matching-tail correctness tests do not substitute for a tail
 microbenchmark.
 
+These timing builds use the study's Cargo defaults (`std`, `w512`, `avx512`),
+including the WASM guests. CPU features remain controlled by the proof or module;
+the Cargo AVX-512 feature does not authorize executing x86 code on WASM.
+The no_std option inventory and correctness checks are complete, but no_std
+timings are a separate, explicitly unmeasured build dimension of this matrix.
+
 Strict runs retain five independent processes × 50 paired rounds, pinned
 zenbench73302a1c, 95% family confidence and the unchanged 2% bound. M6 is one
 exploratory process. Every round, admission failure and source/binary identity
