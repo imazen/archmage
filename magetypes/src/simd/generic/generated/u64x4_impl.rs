@@ -509,6 +509,12 @@ impl u64x4<archmage::X64V3Token> {
         "x86::v3::u64x4"
     }
 
+    /// Get the raw `__m256i` value.
+    #[inline(always)]
+    pub fn raw(self) -> core::arch::x86_64::__m256i {
+        self.0
+    }
+
     /// Deprecated spelling of [`Self::from_raw_t`].
     #[deprecated(
         note = "Use from_raw_t(token, v), or from_raw(v) in a matching feature context; from_m256i is removed in magetypes 0.10."
@@ -516,30 +522,6 @@ impl u64x4<archmage::X64V3Token> {
     #[inline(always)]
     pub fn from_m256i(token: archmage::X64V3Token, v: core::arch::x86_64::__m256i) -> Self {
         Self(v, token)
-    }
-}
-
-#[cfg(target_arch = "x86_64")]
-impl u64x4<archmage::X64V3CryptoToken> {
-    /// Implementation identifier for this backend.
-    pub const fn implementation_name() -> &'static str {
-        "x86::v3_crypto::u64x4"
-    }
-}
-
-#[cfg(target_arch = "x86_64")]
-impl u64x4<archmage::X64V3GfniCryptoToken> {
-    /// Implementation identifier for this backend.
-    pub const fn implementation_name() -> &'static str {
-        "x86::v3_gfni_crypto::u64x4"
-    }
-}
-
-#[cfg(target_arch = "x86_64")]
-impl u64x4<archmage::X64V3VnniToken> {
-    /// Implementation identifier for this backend.
-    pub const fn implementation_name() -> &'static str {
-        "x86::v3_vnni::u64x4"
     }
 }
 
@@ -551,22 +533,6 @@ impl u64x4<archmage::NeonToken> {
     }
 }
 
-#[cfg(target_arch = "aarch64")]
-impl u64x4<archmage::Arm64V2Token> {
-    /// Implementation identifier for this backend.
-    pub const fn implementation_name() -> &'static str {
-        "polyfill::arm_v2::u64x4"
-    }
-}
-
-#[cfg(target_arch = "aarch64")]
-impl u64x4<archmage::Arm64V3Token> {
-    /// Implementation identifier for this backend.
-    pub const fn implementation_name() -> &'static str {
-        "polyfill::arm_v3::u64x4"
-    }
-}
-
 #[cfg(target_arch = "wasm32")]
 impl u64x4<archmage::Wasm128Token> {
     /// Implementation identifier for this backend.
@@ -574,34 +540,17 @@ impl u64x4<archmage::Wasm128Token> {
         "polyfill::wasm128::u64x4"
     }
 }
-
-#[cfg(target_arch = "wasm32")]
-impl u64x4<archmage::Wasm128RelaxedToken> {
-    /// Implementation identifier for this backend.
-    pub const fn implementation_name() -> &'static str {
-        "polyfill::wasm128_relaxed::u64x4"
-    }
-}
-impl<T: U64x4Backend + crate::simd::backends::NativeW256Backend> u64x4<T> {
-    /// Get the raw platform SIMD register value (`T::Repr`).
-    #[forbid(unsafe_code)]
-    #[inline(always)]
-    pub fn raw(self) -> T::Repr {
-        self.0
-    }
-
-    /// Wrap a raw platform SIMD register value using an explicit CPU capability token.
+#[cfg(target_arch = "x86_64")]
+impl u64x4<archmage::X64V3Token> {
+    /// Wrap a raw `__m256i` using an explicit CPU capability token.
     ///
     /// The caller does not need a target-feature annotation.
     #[forbid(unsafe_code)]
     #[inline(always)]
-    pub fn from_raw_t(token: T, value: T::Repr) -> Self {
+    pub fn from_raw_t(token: archmage::X64V3Token, value: core::arch::x86_64::__m256i) -> Self {
         Self(value, token)
     }
-}
 
-#[cfg(target_arch = "x86_64")]
-impl u64x4<archmage::X64V3Token> {
     /// Wrap a raw `__m256i` in a matching target-feature context.
     ///
     /// Rust requires the caller to enable the `v3` tier's features.
@@ -616,60 +565,6 @@ impl u64x4<archmage::X64V3Token> {
     #[inline]
     pub fn from_raw(value: core::arch::x86_64::__m256i) -> Self {
         Self(value, archmage::X64V3Token::from_context())
-    }
-}
-#[cfg(target_arch = "x86_64")]
-impl u64x4<archmage::X64V3CryptoToken> {
-    /// Wrap a raw `__m256i` in a matching target-feature context.
-    ///
-    /// Rust requires the caller to enable the `v3_crypto` tier's features.
-    /// Use an archmage `#[rite(v3_crypto)]` helper or `#[arcane]` entry point.
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger feature context, which Rust checks.
-    #[target_feature(
-        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,vpclmulqdq,vaes"
-    )]
-    #[inline]
-    pub fn from_raw(value: core::arch::x86_64::__m256i) -> Self {
-        Self(value, archmage::X64V3CryptoToken::from_context())
-    }
-}
-#[cfg(target_arch = "x86_64")]
-impl u64x4<archmage::X64V3GfniCryptoToken> {
-    /// Wrap a raw `__m256i` in a matching target-feature context.
-    ///
-    /// Rust requires the caller to enable the `v3_gfni_crypto` tier's features.
-    /// Use an archmage `#[rite(v3_gfni_crypto)]` helper or `#[arcane]` entry point.
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger feature context, which Rust checks.
-    #[target_feature(
-        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,vpclmulqdq,vaes,gfni"
-    )]
-    #[inline]
-    pub fn from_raw(value: core::arch::x86_64::__m256i) -> Self {
-        Self(value, archmage::X64V3GfniCryptoToken::from_context())
-    }
-}
-#[cfg(target_arch = "x86_64")]
-impl u64x4<archmage::X64V3VnniToken> {
-    /// Wrap a raw `__m256i` in a matching target-feature context.
-    ///
-    /// Rust requires the caller to enable the `v3_vnni` tier's features.
-    /// Use an archmage `#[rite(v3_vnni)]` helper or `#[arcane]` entry point.
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger feature context, which Rust checks.
-    #[target_feature(
-        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,vpclmulqdq,vaes,gfni,avxvnni"
-    )]
-    #[inline]
-    pub fn from_raw(value: core::arch::x86_64::__m256i) -> Self {
-        Self(value, archmage::X64V3VnniToken::from_context())
     }
 }
 // Generated deprecated token-constructor forwarders. Do not edit.

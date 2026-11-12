@@ -588,7 +588,7 @@ pub fn dispatch_variant(input: TokenStream) -> TokenStream {
 ///
 /// Default tiers: `v4`, `v3`, `neon`, `wasm128`, `scalar`.
 ///
-/// Known tiers: `v1`, `v2`, `v3`, `v3_crypto`, `v3_gfni_crypto`, `v3_vnni`, `v4`, `v4x`,
+/// Known tiers: `v1`, `v2`, `v3`, `v3_crypto`, `v3_gfni_crypto`, `v4`, `v4x`,
 /// `neon`, `neon_aes`, `neon_sha3`, `neon_crc`, `arm_v2`, `arm_v3`, `wasm128`,
 /// `wasm128_relaxed`, `x64_crypto`, `scalar`.
 ///
@@ -703,6 +703,8 @@ mod tests;
 /// `inline(none)`, `inline(hint)`, and `inline(never)` select explicit body policies.
 /// Per-output `make(inline(...) _v3)` overrides the definition-level policy.
 /// Definition-level policy does not alter proof-wrapper or dispatcher defaults.
+/// Trusted code generators may pass `suppress_const_test` on proof wrappers
+/// (`wrap` or `_t`) to omit the token-name mismatch const check.
 #[proc_macro_attribute]
 pub fn attune(attr: TokenStream, item: TokenStream) -> TokenStream {
     attune::expand(attr.into(), item.into())

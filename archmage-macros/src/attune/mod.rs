@@ -19,7 +19,7 @@ use crate::{
 use syntax::{Args, Form, Inline, Selection};
 
 pub(crate) fn expand(attr: TokenStream, item: TokenStream) -> syn::Result<TokenStream> {
-    let args: Args = syn::parse2(attr)?;
+    let mut args: Args = syn::parse2(attr)?;
     let mut input: LightFn = syn::parse2(item)?;
     if args.family {
         family(input, args)
@@ -56,6 +56,9 @@ pub(crate) fn expand(attr: TokenStream, item: TokenStream) -> syn::Result<TokenS
                     ));
                 }
             } else {
+                // Root-anchored `::archmage::...` paths synthesized here cannot
+                // be shadowed by a local alias, so skip the redundant name check.
+                args.options.suppress_const_test = true;
                 let token: syn::Path = syn::parse_str(&format!("::{}", tier.token_path))?;
                 if placeholder {
                     specialize_syntax(&mut input.sig, &quote!(#token))?;
@@ -80,6 +83,12 @@ pub(crate) fn expand(attr: TokenStream, item: TokenStream) -> syn::Result<TokenS
             syn::Error::new_spanned(&input.sig.ident,
                 "attune needs a tier, a registered tier suffix (optionally _t), wrap, or make(...)")
         })?;
+        if args.options.suppress_const_test {
+            return Err(syn::Error::new_spanned(
+                &input.sig.ident,
+                "suppress_const_test requires a proof wrapper (wrap, a _t suffix, _*_t, or dispatch); direct target-feature bodies emit no token assertion",
+            ));
+        }
         if args.options.in_trait || args.options.self_type.is_some() {
             return Err(syn::Error::new_spanned(
                 &input.sig,
@@ -124,15 +133,24 @@ fn direct(
         ));
     }
     // Raw functions without aliases need no token path or substitution pass.
-    let token_path = if args.family || !args.options.defines.is_empty() {
-        Some(tier.token_path.parse::<TokenStream>()?)
-    } else {
-        None
-    };
+    // `define(...)` resolves sub-tier proof contexts (`v3_vnni`, `arm_v2`,
+    // `wasm128_relaxed`, `fp16`, etc.) to their width-namespace representation
+    // token (`X64V3Token`, `NeonToken`, `Wasm128Token`, `X64V4Token`) so sub-tiers
+    // share the base vector representation at zero KLOC / `.rmeta` cost.
+    let token_path = args
+        .family
+        .then(|| tier.token_path.parse::<TokenStream>())
+        .transpose()?;
+    let define_token_path = (!args.options.defines.is_empty())
+        .then(|| define_backend_token(tier, &context).parse::<TokenStream>())
+        .transpose()?;
     let defines = args.options.defines.iter().map(|name| {
+        let backend = define_token_path
+            .as_ref()
+            .expect("defines checked non-empty");
         quote! {
             #[allow(non_camel_case_types, dead_code)]
-            type #name = ::magetypes::simd::generic::#name<::#token_path>;
+            type #name = ::magetypes::simd::generic::#name<::#backend>;
         }
     });
     prepend_to_body(&mut input.body, quote!(#(#defines)*));
@@ -145,7 +163,7 @@ fn direct(
     };
     // Signature proof discovery must see each family's concrete parameter;
     // body Token markers remain intact until contextual calls are rewritten.
-    if args.family
+    if let Some(token_path) = &token_path
         && input
             .sig
             .inputs
@@ -159,12 +177,26 @@ fn direct(
     // A single raw context preserves the written signature and identifiers.
     // Token is a substitution placeholder only for generated families.
     Ok(
-        if args.family && tokens_contain_ident(&function, &["Token"]) {
+        if let Some(token_path) = &token_path
+            && tokens_contain_ident(&function, &["Token"])
+        {
             replace_ident_in_tokens(function, "Token", &quote!(::#token_path))
         } else {
             function
         },
     )
+}
+
+fn define_backend_token<'a>(
+    tier: &'a TierDescriptor,
+    context: &crate::engine::feature::FeatureContext,
+) -> &'a str {
+    match context.magetypes_namespace {
+        Some(ns) if tier.suffix == ns || crate::generated::can_downgrade_tier(tier.suffix, ns) => {
+            find_tier(ns).map_or(tier.token_path, |base| base.token_path)
+        }
+        _ => tier.token_path,
+    }
 }
 
 fn output_name(
@@ -455,6 +487,7 @@ fn proof_entry(
 fn wrap(input: LightFn, args: Args) -> syn::Result<TokenStream> {
     let options = crate::engine::boundary::BoundaryOptions {
         body_inline: args.options.body_inline,
+        suppress_const_test: args.options.suppress_const_test,
         nested: args.options.in_trait || args.options.self_type.is_some(),
         in_impl: args.options.in_impl,
         self_type: args.options.self_type,

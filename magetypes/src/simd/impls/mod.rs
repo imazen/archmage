@@ -7,8 +7,6 @@
 
 #[cfg(target_arch = "x86_64")]
 mod x86_v3;
-#[cfg(target_arch = "x86_64")]
-mod x86_v3_higher_delegated;
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 mod x86_v4;
@@ -26,13 +24,9 @@ mod x86_v4_f32_overrides;
 mod x86_v4_narrow_delegated;
 
 #[cfg(target_arch = "aarch64")]
-mod arm_higher_delegated;
-#[cfg(target_arch = "aarch64")]
 mod arm_neon;
 
 #[cfg(target_arch = "wasm32")]
 mod wasm128;
-#[cfg(target_arch = "wasm32")]
-mod wasm128_relaxed_delegated;
 
 mod scalar;

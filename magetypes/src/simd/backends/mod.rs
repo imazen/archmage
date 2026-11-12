@@ -5,7 +5,6 @@
 #![allow(non_camel_case_types)]
 
 pub(crate) mod sealed;
-pub use sealed::{NativeW128Backend, NativeW256Backend, NativeW512Backend};
 
 mod f32x4;
 pub use f32x4::F32x4Backend;

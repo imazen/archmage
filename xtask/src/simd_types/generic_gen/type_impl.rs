@@ -1600,31 +1600,13 @@ fn gen_platform(ty: &SimdType) -> String {
                         \"x86::v3::{name}\"
                     }}
 
+                    /// Get the raw `{raw_type}` value.
+                    #[inline(always)]
+                    pub fn raw(self) -> core::arch::x86_64::{raw_type} {{
+                        self.0
+                    }}
+
                     {legacy_raw}
-                }}
-
-                #[cfg(target_arch = \"x86_64\")]
-                impl {name}<archmage::X64V3CryptoToken> {{
-                    /// Implementation identifier for this backend.
-                    pub const fn implementation_name() -> &'static str {{
-                        \"x86::v3_crypto::{name}\"
-                    }}
-                }}
-
-                #[cfg(target_arch = \"x86_64\")]
-                impl {name}<archmage::X64V3GfniCryptoToken> {{
-                    /// Implementation identifier for this backend.
-                    pub const fn implementation_name() -> &'static str {{
-                        \"x86::v3_gfni_crypto::{name}\"
-                    }}
-                }}
-
-                #[cfg(target_arch = \"x86_64\")]
-                impl {name}<archmage::X64V3VnniToken> {{
-                    /// Implementation identifier for this backend.
-                    pub const fn implementation_name() -> &'static str {{
-                        \"x86::v3_vnni::{name}\"
-                    }}
                 }}
 
                 #[cfg(target_arch = \"aarch64\")]
@@ -1635,35 +1617,11 @@ fn gen_platform(ty: &SimdType) -> String {
                     }}
                 }}
 
-                #[cfg(target_arch = \"aarch64\")]
-                impl {name}<archmage::Arm64V2Token> {{
-                    /// Implementation identifier for this backend.
-                    pub const fn implementation_name() -> &'static str {{
-                        \"arm::arm_v2::{name}\"
-                    }}
-                }}
-
-                #[cfg(target_arch = \"aarch64\")]
-                impl {name}<archmage::Arm64V3Token> {{
-                    /// Implementation identifier for this backend.
-                    pub const fn implementation_name() -> &'static str {{
-                        \"arm::arm_v3::{name}\"
-                    }}
-                }}
-
                 #[cfg(target_arch = \"wasm32\")]
                 impl {name}<archmage::Wasm128Token> {{
                     /// Implementation identifier for this backend.
                     pub const fn implementation_name() -> &'static str {{
                         \"wasm::wasm128::{name}\"
-                    }}
-                }}
-
-                #[cfg(target_arch = \"wasm32\")]
-                impl {name}<archmage::Wasm128RelaxedToken> {{
-                    /// Implementation identifier for this backend.
-                    pub const fn implementation_name() -> &'static str {{
-                        \"wasm::wasm128_relaxed::{name}\"
                     }}
                 }}
             "}
@@ -1686,31 +1644,13 @@ fn gen_platform(ty: &SimdType) -> String {
                         \"x86::v3::{name}\"
                     }}
 
+                    /// Get the raw `{raw_type}` value.
+                    #[inline(always)]
+                    pub fn raw(self) -> core::arch::x86_64::{raw_type} {{
+                        self.0
+                    }}
+
                     {legacy_raw}
-                }}
-
-                #[cfg(target_arch = \"x86_64\")]
-                impl {name}<archmage::X64V3CryptoToken> {{
-                    /// Implementation identifier for this backend.
-                    pub const fn implementation_name() -> &'static str {{
-                        \"x86::v3_crypto::{name}\"
-                    }}
-                }}
-
-                #[cfg(target_arch = \"x86_64\")]
-                impl {name}<archmage::X64V3GfniCryptoToken> {{
-                    /// Implementation identifier for this backend.
-                    pub const fn implementation_name() -> &'static str {{
-                        \"x86::v3_gfni_crypto::{name}\"
-                    }}
-                }}
-
-                #[cfg(target_arch = \"x86_64\")]
-                impl {name}<archmage::X64V3VnniToken> {{
-                    /// Implementation identifier for this backend.
-                    pub const fn implementation_name() -> &'static str {{
-                        \"x86::v3_vnni::{name}\"
-                    }}
                 }}
 
                 #[cfg(target_arch = \"aarch64\")]
@@ -1721,35 +1661,11 @@ fn gen_platform(ty: &SimdType) -> String {
                     }}
                 }}
 
-                #[cfg(target_arch = \"aarch64\")]
-                impl {name}<archmage::Arm64V2Token> {{
-                    /// Implementation identifier for this backend.
-                    pub const fn implementation_name() -> &'static str {{
-                        \"polyfill::arm_v2::{name}\"
-                    }}
-                }}
-
-                #[cfg(target_arch = \"aarch64\")]
-                impl {name}<archmage::Arm64V3Token> {{
-                    /// Implementation identifier for this backend.
-                    pub const fn implementation_name() -> &'static str {{
-                        \"polyfill::arm_v3::{name}\"
-                    }}
-                }}
-
                 #[cfg(target_arch = \"wasm32\")]
                 impl {name}<archmage::Wasm128Token> {{
                     /// Implementation identifier for this backend.
                     pub const fn implementation_name() -> &'static str {{
                         \"polyfill::wasm128::{name}\"
-                    }}
-                }}
-
-                #[cfg(target_arch = \"wasm32\")]
-                impl {name}<archmage::Wasm128RelaxedToken> {{
-                    /// Implementation identifier for this backend.
-                    pub const fn implementation_name() -> &'static str {{
-                        \"polyfill::wasm128_relaxed::{name}\"
                     }}
                 }}
             "}
@@ -1778,30 +1694,6 @@ fn gen_platform(ty: &SimdType) -> String {
                     }}
                 }}
 
-                #[cfg(target_arch = \"x86_64\")]
-                impl {name}<archmage::X64V3CryptoToken> {{
-                    /// Implementation identifier for this backend.
-                    pub const fn implementation_name() -> &'static str {{
-                        \"polyfill::v3_crypto_512::{name}\"
-                    }}
-                }}
-
-                #[cfg(target_arch = \"x86_64\")]
-                impl {name}<archmage::X64V3GfniCryptoToken> {{
-                    /// Implementation identifier for this backend.
-                    pub const fn implementation_name() -> &'static str {{
-                        \"polyfill::v3_gfni_crypto_512::{name}\"
-                    }}
-                }}
-
-                #[cfg(target_arch = \"x86_64\")]
-                impl {name}<archmage::X64V3VnniToken> {{
-                    /// Implementation identifier for this backend.
-                    pub const fn implementation_name() -> &'static str {{
-                        \"polyfill::v3_vnni_512::{name}\"
-                    }}
-                }}
-
                 #[cfg(all(target_arch = \"x86_64\", feature = \"avx512\"))]
                 impl {name}<archmage::X64V4Token> {{
                     /// Implementation identifier for this backend.
@@ -1826,35 +1718,11 @@ fn gen_platform(ty: &SimdType) -> String {
                     }}
                 }}
 
-                #[cfg(target_arch = \"aarch64\")]
-                impl {name}<archmage::Arm64V2Token> {{
-                    /// Implementation identifier for this backend.
-                    pub const fn implementation_name() -> &'static str {{
-                        \"polyfill::arm_v2_512::{name}\"
-                    }}
-                }}
-
-                #[cfg(target_arch = \"aarch64\")]
-                impl {name}<archmage::Arm64V3Token> {{
-                    /// Implementation identifier for this backend.
-                    pub const fn implementation_name() -> &'static str {{
-                        \"polyfill::arm_v3_512::{name}\"
-                    }}
-                }}
-
                 #[cfg(target_arch = \"wasm32\")]
                 impl {name}<archmage::Wasm128Token> {{
                     /// Implementation identifier for this backend.
                     pub const fn implementation_name() -> &'static str {{
                         \"polyfill::wasm128_512::{name}\"
-                    }}
-                }}
-
-                #[cfg(target_arch = \"wasm32\")]
-                impl {name}<archmage::Wasm128RelaxedToken> {{
-                    /// Implementation identifier for this backend.
-                    pub const fn implementation_name() -> &'static str {{
-                        \"polyfill::wasm128_relaxed_512::{name}\"
                     }}
                 }}
             "}
@@ -1882,85 +1750,16 @@ fn deprecated_platform_ctor(name: &str, token: &str, raw_path: &str) -> String {
 /// code included) that hold a token but no feature context.
 pub(super) fn gen_raw_interop(ty: &SimdType, registry: &crate::registry::Registry) -> String {
     let name = ty.name();
-    let backend = backend_trait(ty);
-    let native_trait = match ty.width {
-        SimdWidth::W128 => "NativeW128Backend",
-        SimdWidth::W256 => "NativeW256Backend",
-        SimdWidth::W512 => "NativeW512Backend",
-    };
-    let width_gate = if ty.width == SimdWidth::W512 {
-        "#[cfg(feature = \"w512\")]\n"
-    } else {
-        ""
-    };
-    let mut code = formatdoc! {r#"
-        {width_gate}impl<T: {backend} + crate::simd::backends::{native_trait}> {name}<T> {{
-            /// Get the raw platform SIMD register value (`T::Repr`).
-            #[forbid(unsafe_code)]
-            #[inline(always)]
-            pub fn raw(self) -> T::Repr {{
-                self.0
-            }}
-
-            /// Wrap a raw platform SIMD register value using an explicit CPU capability token.
-            ///
-            /// The caller does not need a target-feature annotation.
-            #[forbid(unsafe_code)]
-            #[inline(always)]
-            pub fn from_raw_t(token: T, value: T::Repr) -> Self {{
-                Self(value, token)
-            }}
-        }}
-
-    "#};
+    let mut code = String::new();
     let mut platforms = Vec::new();
     match ty.width {
         SimdWidth::W128 => {
             platforms.push(("x86_64", "X64V3Token", "v3", x86_raw_type(ty), ""));
-            platforms.push((
-                "x86_64",
-                "X64V3CryptoToken",
-                "v3_crypto",
-                x86_raw_type(ty),
-                "",
-            ));
-            platforms.push((
-                "x86_64",
-                "X64V3GfniCryptoToken",
-                "v3_gfni_crypto",
-                x86_raw_type(ty),
-                "",
-            ));
-            platforms.push(("x86_64", "X64V3VnniToken", "v3_vnni", x86_raw_type(ty), ""));
             platforms.push(("aarch64", "NeonToken", "neon", arm_repr_hint(ty), ""));
-            platforms.push(("aarch64", "Arm64V2Token", "arm_v2", arm_repr_hint(ty), ""));
-            platforms.push(("aarch64", "Arm64V3Token", "arm_v3", arm_repr_hint(ty), ""));
             platforms.push(("wasm32", "Wasm128Token", "wasm128", "v128", ""));
-            platforms.push((
-                "wasm32",
-                "Wasm128RelaxedToken",
-                "wasm128_relaxed",
-                "v128",
-                "",
-            ));
         }
         SimdWidth::W256 => {
             platforms.push(("x86_64", "X64V3Token", "v3", x86_raw_type(ty), ""));
-            platforms.push((
-                "x86_64",
-                "X64V3CryptoToken",
-                "v3_crypto",
-                x86_raw_type(ty),
-                "",
-            ));
-            platforms.push((
-                "x86_64",
-                "X64V3GfniCryptoToken",
-                "v3_gfni_crypto",
-                x86_raw_type(ty),
-                "",
-            ));
-            platforms.push(("x86_64", "X64V3VnniToken", "v3_vnni", x86_raw_type(ty), ""));
         }
         SimdWidth::W512 => {
             platforms.push((
@@ -1990,9 +1789,36 @@ pub(super) fn gen_raw_interop(ty: &SimdType, registry: &crate::registry::Registr
         } else {
             format!("all(target_arch = \"{arch}\"{feature})")
         };
+        // x86 128/256-bit types get `raw()` in `gen_type_impl`; the rest here.
+        let raw_getter = if arch != "x86_64" || ty.width == SimdWidth::W512 {
+            formatdoc! {r#"
+                /// Get the raw `{raw}` value.
+                #[inline(always)]
+                pub fn raw(self) -> core::arch::{arch}::{raw} {{
+                    self.0
+                }}
+            "#}
+        } else {
+            String::new()
+        };
+        // Platform-named constructors exist only where 0.9.29 shipped them:
+        // the x86 128/256-bit names, emitted in `gen_type_impl` as deprecated
+        // forwarders to `from_raw_t`. NEON, WASM and AVX-512 types never had
+        // one on the generic types and do not get one.
+        let legacy = raw_getter;
         code.push_str(&formatdoc! {r#"
             #[cfg({cfg})]
             impl {name}<archmage::{token}> {{
+                {legacy}
+                /// Wrap a raw `{raw}` using an explicit CPU capability token.
+                ///
+                /// The caller does not need a target-feature annotation.
+                #[forbid(unsafe_code)]
+                #[inline(always)]
+                pub fn from_raw_t(token: archmage::{token}, value: core::arch::{arch}::{raw}) -> Self {{
+                    Self(value, token)
+                }}
+
                 /// Wrap a raw `{raw}` in a matching target-feature context.
                 ///
                 /// Rust requires the caller to enable the `{tier}` tier's features.

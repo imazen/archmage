@@ -433,39 +433,6 @@ mod x86_dispatch {
         }
     }
 
-    impl F16Convert for archmage::X64V3CryptoToken {
-        #[inline]
-        fn f16_to_f32_into(self, input: &[u16], output: &mut [f32]) {
-            f16c_decode_select(self.v3(), input, output);
-        }
-        #[inline]
-        fn f32_to_f16_into(self, input: &[f32], output: &mut [u16]) {
-            f16c_encode_select(self.v3(), input, output);
-        }
-    }
-
-    impl F16Convert for archmage::X64V3GfniCryptoToken {
-        #[inline]
-        fn f16_to_f32_into(self, input: &[u16], output: &mut [f32]) {
-            f16c_decode_select(self.v3(), input, output);
-        }
-        #[inline]
-        fn f32_to_f16_into(self, input: &[f32], output: &mut [u16]) {
-            f16c_encode_select(self.v3(), input, output);
-        }
-    }
-
-    impl F16Convert for archmage::X64V3VnniToken {
-        #[inline]
-        fn f16_to_f32_into(self, input: &[u16], output: &mut [f32]) {
-            f16c_decode_select(self.v3(), input, output);
-        }
-        #[inline]
-        fn f32_to_f16_into(self, input: &[f32], output: &mut [u16]) {
-            f16c_encode_select(self.v3(), input, output);
-        }
-    }
-
     // The AVX-512-tier tokens (`X64V4Token` / `X64V4xToken` / `Avx512Fp16Token`)
     // deliberately do NOT implement `F16Convert` themselves. A V4 holder reaches
     // the 16-wide path the usual way — `f16_to_f32_slice(token.v3(), ..)` — and
@@ -515,28 +482,6 @@ mod aarch64_dispatch {
         #[inline]
         fn f32_to_f16_into(self, input: &[f32], output: &mut [u16]) {
             neon_f16_encode(self, input, output);
-        }
-    }
-
-    impl F16Convert for archmage::Arm64V2Token {
-        #[inline]
-        fn f16_to_f32_into(self, input: &[u16], output: &mut [f32]) {
-            arm_v2_f16_decode_select(self, input, output);
-        }
-        #[inline]
-        fn f32_to_f16_into(self, input: &[f32], output: &mut [u16]) {
-            arm_v2_f16_encode_select(self, input, output);
-        }
-    }
-
-    impl F16Convert for archmage::Arm64V3Token {
-        #[inline]
-        fn f16_to_f32_into(self, input: &[u16], output: &mut [f32]) {
-            arm_v2_f16_decode_select(self.arm_v2(), input, output);
-        }
-        #[inline]
-        fn f32_to_f16_into(self, input: &[f32], output: &mut [u16]) {
-            arm_v2_f16_encode_select(self.arm_v2(), input, output);
         }
     }
 }
@@ -656,40 +601,6 @@ fn neon_f16_encode_select(token: archmage::NeonToken, input: &[f32], output: &mu
 #[inline]
 fn neon_f16_encode_select(token: archmage::NeonToken, input: &[f32], output: &mut [u16]) {
     f32_to_f16_slice_soft(token, input, output);
-}
-
-/// HW-capable toolchain (rustc ≥ 1.94): `Arm64V2Token` statically proves `fp16`,
-/// so dispatch straight to `neon_f16_decode_hw` with zero runtime `summon()` check.
-#[cfg(target_arch = "aarch64")]
-#[rustversion::since(1.94)]
-#[inline]
-fn arm_v2_f16_decode_select(token: archmage::Arm64V2Token, input: &[u16], output: &mut [f32]) {
-    neon_f16_decode_hw(token, input, output);
-}
-
-/// Pre-stabilization toolchain (rustc < 1.94): software-only decode via `.neon()`.
-#[cfg(target_arch = "aarch64")]
-#[rustversion::before(1.94)]
-#[inline]
-fn arm_v2_f16_decode_select(token: archmage::Arm64V2Token, input: &[u16], output: &mut [f32]) {
-    f16_to_f32_slice_soft(token.neon(), input, output);
-}
-
-/// HW-capable toolchain (rustc ≥ 1.94): `Arm64V2Token` statically proves `fp16`,
-/// so dispatch straight to `neon_f16_encode_hw` with zero runtime `summon()` check.
-#[cfg(target_arch = "aarch64")]
-#[rustversion::since(1.94)]
-#[inline]
-fn arm_v2_f16_encode_select(token: archmage::Arm64V2Token, input: &[f32], output: &mut [u16]) {
-    neon_f16_encode_hw(token, input, output);
-}
-
-/// Pre-stabilization toolchain (rustc < 1.94): software-only encode via `.neon()`.
-#[cfg(target_arch = "aarch64")]
-#[rustversion::before(1.94)]
-#[inline]
-fn arm_v2_f16_encode_select(token: archmage::Arm64V2Token, input: &[f32], output: &mut [u16]) {
-    f32_to_f16_slice_soft(token.neon(), input, output);
 }
 
 /// Hardware NEON-f16 decode kernel: `&[u16]` → `&mut [f32]` via `vcvt_f32_f16`.

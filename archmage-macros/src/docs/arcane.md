@@ -149,10 +149,10 @@ Works with concrete tokens, `impl Trait` bounds, and generic parameters.
 
 - **x86_64**: `X64V2Token`, `X64V3Token`/`Desktop64`, `X64V4Token`/`Avx512Token`/`Server64`,
   `X64V4xToken`, `Avx512Fp16Token`, `X64CryptoToken`, `X64V3CryptoToken`,
-  `X64V3GfniCryptoToken`, `X64V3VnniToken`
+  `X64V3GfniCryptoToken`
 - **ARM**: `NeonToken`/`Arm64`, `Arm64V2Token`, `Arm64V3Token`,
   `NeonAesToken`, `NeonSha3Token`, `NeonCrcToken`
-- **WASM**: `Wasm128Token`, `Wasm128RelaxedToken`
+- **WASM**: `Wasm128Token`
 
 # Supported Trait Bounds
 

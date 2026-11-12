@@ -26,7 +26,7 @@ mod x86_tests {
     use super::*;
     use archmage::{
         X64CryptoToken, X64V1Token, X64V2Token, X64V3CryptoToken, X64V3GfniCryptoToken, X64V3Token,
-        arcane, autoversion, incant,
+        attune, autoversion, incant,
     };
     use core::arch::x86_64::*;
 
@@ -96,23 +96,28 @@ mod x86_tests {
         }
     }
 
-    #[arcane]
+    #[attune(wrap)]
     fn which_tier_v3_vnni(_token: X64V3VnniToken) -> &'static str {
         "v3_vnni"
     }
 
-    #[arcane]
+    #[attune(wrap)]
     fn which_tier_v3_gfni_crypto(_token: X64V3GfniCryptoToken) -> &'static str {
         "v3_gfni_crypto"
     }
 
-    #[arcane]
+    #[attune(wrap)]
     fn which_tier_v3(_token: X64V3Token) -> &'static str {
         "v3"
     }
 
     fn which_tier_scalar(_token: ScalarToken) -> &'static str {
         "scalar"
+    }
+
+    #[attune(_v3_vnni, _v3_gfni_crypto, _v3, _scalar, dispatch)]
+    fn attune_sum(values: &[i32]) -> i32 {
+        values.iter().copied().sum()
     }
 
     #[test]
@@ -131,6 +136,7 @@ mod x86_tests {
             "scalar"
         };
         assert_eq!(dispatched, expected);
+        assert_eq!(attune_sum(&[1, 2, 3, 4, 5, 6, 7, 8]), 36);
 
         #[autoversion(v3_vnni, v3_gfni_crypto, v3, scalar)]
         fn auto_sum(values: &[i32]) -> i32 {
@@ -179,8 +185,7 @@ mod x86_tests {
     }
 
     fn extract_i32x8(v: __m256i) -> [i32; 8] {
-        // `_mm256_extract_epi32` requires AVX2; wrap in a tiny rite helper.
-        #[archmage::rite(v3)]
+        #[attune(v3)]
         fn inner(v: __m256i) -> [i32; 8] {
             [
                 _mm256_extract_epi32::<0>(v),
@@ -193,15 +198,14 @@ mod x86_tests {
                 _mm256_extract_epi32::<7>(v),
             ]
         }
-        // Safe to call when caller holds X64V3Token; expose via #[arcane].
-        #[arcane]
+        #[attune(wrap)]
         fn outer(_token: X64V3Token, v: __m256i) -> [i32; 8] {
             inner(v)
         }
         outer(X64V3Token::summon().unwrap(), v)
     }
 
-    #[arcane]
+    #[attune(wrap)]
     fn run_avx_vnni_intrinsics(
         _token: X64V3VnniToken,
     ) -> ([i32; 8], [i32; 8], [i32; 8], [i32; 8], i32) {

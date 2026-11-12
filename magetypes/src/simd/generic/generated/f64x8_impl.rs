@@ -706,30 +706,6 @@ impl f64x8<archmage::X64V3Token> {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
-impl f64x8<archmage::X64V3CryptoToken> {
-    /// Implementation identifier for this backend.
-    pub const fn implementation_name() -> &'static str {
-        "polyfill::v3_crypto_512::f64x8"
-    }
-}
-
-#[cfg(target_arch = "x86_64")]
-impl f64x8<archmage::X64V3GfniCryptoToken> {
-    /// Implementation identifier for this backend.
-    pub const fn implementation_name() -> &'static str {
-        "polyfill::v3_gfni_crypto_512::f64x8"
-    }
-}
-
-#[cfg(target_arch = "x86_64")]
-impl f64x8<archmage::X64V3VnniToken> {
-    /// Implementation identifier for this backend.
-    pub const fn implementation_name() -> &'static str {
-        "polyfill::v3_vnni_512::f64x8"
-    }
-}
-
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 impl f64x8<archmage::X64V4Token> {
     /// Implementation identifier for this backend.
@@ -754,22 +730,6 @@ impl f64x8<archmage::NeonToken> {
     }
 }
 
-#[cfg(target_arch = "aarch64")]
-impl f64x8<archmage::Arm64V2Token> {
-    /// Implementation identifier for this backend.
-    pub const fn implementation_name() -> &'static str {
-        "polyfill::arm_v2_512::f64x8"
-    }
-}
-
-#[cfg(target_arch = "aarch64")]
-impl f64x8<archmage::Arm64V3Token> {
-    /// Implementation identifier for this backend.
-    pub const fn implementation_name() -> &'static str {
-        "polyfill::arm_v3_512::f64x8"
-    }
-}
-
 #[cfg(target_arch = "wasm32")]
 impl f64x8<archmage::Wasm128Token> {
     /// Implementation identifier for this backend.
@@ -777,35 +737,23 @@ impl f64x8<archmage::Wasm128Token> {
         "polyfill::wasm128_512::f64x8"
     }
 }
-
-#[cfg(target_arch = "wasm32")]
-impl f64x8<archmage::Wasm128RelaxedToken> {
-    /// Implementation identifier for this backend.
-    pub const fn implementation_name() -> &'static str {
-        "polyfill::wasm128_relaxed_512::f64x8"
-    }
-}
-#[cfg(feature = "w512")]
-impl<T: F64x8Backend + crate::simd::backends::NativeW512Backend> f64x8<T> {
-    /// Get the raw platform SIMD register value (`T::Repr`).
-    #[forbid(unsafe_code)]
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+impl f64x8<archmage::X64V4Token> {
+    /// Get the raw `__m512d` value.
     #[inline(always)]
-    pub fn raw(self) -> T::Repr {
+    pub fn raw(self) -> core::arch::x86_64::__m512d {
         self.0
     }
 
-    /// Wrap a raw platform SIMD register value using an explicit CPU capability token.
+    /// Wrap a raw `__m512d` using an explicit CPU capability token.
     ///
     /// The caller does not need a target-feature annotation.
     #[forbid(unsafe_code)]
     #[inline(always)]
-    pub fn from_raw_t(token: T, value: T::Repr) -> Self {
+    pub fn from_raw_t(token: archmage::X64V4Token, value: core::arch::x86_64::__m512d) -> Self {
         Self(value, token)
     }
-}
 
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-impl f64x8<archmage::X64V4Token> {
     /// Wrap a raw `__m512d` in a matching target-feature context.
     ///
     /// Rust requires the caller to enable the `v4` tier's features.
@@ -824,6 +772,21 @@ impl f64x8<archmage::X64V4Token> {
 }
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 impl f64x8<archmage::X64V4xToken> {
+    /// Get the raw `__m512d` value.
+    #[inline(always)]
+    pub fn raw(self) -> core::arch::x86_64::__m512d {
+        self.0
+    }
+
+    /// Wrap a raw `__m512d` using an explicit CPU capability token.
+    ///
+    /// The caller does not need a target-feature annotation.
+    #[forbid(unsafe_code)]
+    #[inline(always)]
+    pub fn from_raw_t(token: archmage::X64V4xToken, value: core::arch::x86_64::__m512d) -> Self {
+        Self(value, token)
+    }
+
     /// Wrap a raw `__m512d` in a matching target-feature context.
     ///
     /// Rust requires the caller to enable the `v4x` tier's features.
