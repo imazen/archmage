@@ -78,15 +78,15 @@ Other widths return UnsupportedWidth. Slice scheduling belongs to the caller.
 | x86 V4/V4x | Same semantic graph; native widths | Existing width's estimate → refinement | Native directed x4/x8/x16 and f64 x2/x4/x8 | Zen 5 x4/x8/x16 measured; overall unqualified |
 | ARM NEON | Ordered Propagate uses fmin/fmax; Normal aliases existing fminnm/fmaxnm | Raw frecpe/frsqrte → one existing NEON refinement | Native M6 std/no_std directed and x4 mantissa scan | M6 exploratory x4/x8/x16; every round resource-flagged |
 | WASM SIMD128 | Propagate uses strict min/max; Number uses repairs | Reciprocal division; rsqrt fixed two-step estimate for both grades | Wasmtime strict/relaxed std/no_std directed | Complete canonical std min/max/reciprocal/rsqrt x4/x8/x16 (f64 min/max x2/x4/x8); 18/66 groups fully clean, whole suite fails admission |
-| WASM relaxed SIMD | Normal or explicitly permissive policies may use relaxed min/max | No standardized reciprocal/rsqrt estimate instruction | Compiled opcode probes; relaxed token disabling tested | Hosted fusing/nonfusing reciprocal measured; strict suites fail admission |
+| WASM relaxed SIMD | Normal or explicitly permissive policies may use relaxed min/max | No standardized reciprocal/rsqrt estimate instruction | Compiled opcode probes; relaxed token disabling tested | Canonical fusing matrix measured, 3/66 fully clean groups; nonfusing running. Earlier reciprocal research covers both modes; all whole strict suites fail admission |
 | Scalar | Comparison/select plus requested repairs | Division / two-step rsqrt estimate, both grades alias | Exact-rational HIGHP fixtures; directed and x4 mantissa scan | Zen 5 Caller x4/x8/x16; overall unqualified |
 
-The earlier reciprocal research matrix measures current portable MIDP reciprocal and HIGHP
-division, existing Magetypes `recip()`, and two research graphs. Backend LOWP/MIDP
-profile timings remain limited to the earlier V3 x8 study; the table's timing
-column points to that earlier family evidence. The new complete canonical-cell
-matrix is tracked in [the permutation reference](PRIMITIVE-PERMUTATIONS.md);
-its M6 min/max, reciprocal and rsqrt tables are complete and exploratory.
+The [canonical-cell matrix](PRIMITIVE-PERMUTATIONS.md) measures every supported
+min/max, reciprocal and rsqrt flag set across three logical widths and the
+declared workloads. Native Scalar/V3/V4/V4x, Intel V3, strict/fusing WASM and
+exploratory M6 tables are complete; relaxed nonfusing WASM remains running.
+All complete strict suites fail admission. Earlier reciprocal research graphs
+remain separate, benchmark-only comparisons and do not fill missing cells.
 
 Relaxed WASM selection requires a module compiled with relaxed SIMD and an
 internal `Wasm128RelaxedToken::summon()`; module validation establishes feature
@@ -94,7 +94,8 @@ availability. `testable_dispatch` can suppress that selection. This is an
 explicitly disclosed internal token lookup, not runtime discovery of a feature
 missing from a loaded module. It optimizes away in ordinary relaxed builds.
 
-Scalar/WASM native LOWP and MIDP alias where no cheaper useful estimate exists.
+Scalar/WASM backend LOWP and MIDP currently share the same numerical graphs;
+this does not establish equal compiled cost or optimality.
 HIGHP can beat approximations on a particular CPU; the grades specify numerical
 bounds, not a universal timing order. NEON LOWP now uses the actual raw seed;
 MIDP avoids the unnecessary second refinement found during codegen review.
@@ -136,8 +137,8 @@ sqrt-then-divide; the public HIGHP contract intentionally names the latter.
 On the native M6 x4 scan, raw NEON LOWP maxima are 2.853393554688e-3 /
 3.276822880217e-3; one-refinement MIDP maxima are 8.228816000135e-6 /
 1.618327600566e-5. These pass the same bounds and confirm that a second NEON
-refinement is unnecessary for this MIDP contract on this CPU. No final-graph
-NEON timing or Neoverse result is claimed.
+refinement is unnecessary for this MIDP contract on this CPU. Current-graph
+NEON timings are exploratory and resource-flagged; Neoverse remains unmeasured.
 
 The [portable seed/correction study](../benchmarks/primitive_variants_2026-11-10/PORTABLE-SEEDS.md)
 records real masking/rounding counterexamples and two benchmark-only deterministic

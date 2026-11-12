@@ -89,8 +89,7 @@ silently copied to another because its preset name sounds similar.
 | Exploratory | Explicitly unconfined M6 scheduler timings; excluded from the strict promotion gate. |
 | Unmeasured | No attributable measurement of this exact leaf. It is not a measured failure or a zero-cost operation. |
 
-The first complete canonical-cell kernel run is being qualified. Its frozen
-matrix covers all 46 supported flag sets, min/max in f32/f64, reciprocal/rsqrt
+The canonical-cell kernel matrix covers all 46 supported flag sets, min/max in f32/f64, reciprocal/rsqrt
 in f32, and all three logical widths (f32x4/x8/x16; f64x2/x4/x8). Each has
 stream64, stream4096 and chain64 workloads. Min/max also has zero-clamp64,
 including signed zeros and subnormals; the four Normal cells are explicitly
