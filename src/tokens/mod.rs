@@ -477,6 +477,12 @@ pub trait IntoConcreteToken: SimdToken + Sized {
         None
     }
 
+    /// Try to cast to X64V3VnniToken.
+    #[inline(always)]
+    fn as_x64v3_vnni(self) -> Option<X64V3VnniToken> {
+        None
+    }
+
     /// Try to cast to X64V4Token.
     #[inline(always)]
     fn as_x64v4(self) -> Option<X64V4Token> {
@@ -602,6 +608,14 @@ impl IntoConcreteToken for X64V3CryptoToken {
 impl IntoConcreteToken for X64V3GfniCryptoToken {
     #[inline(always)]
     fn as_x64v3_gfni_crypto(self) -> Option<X64V3GfniCryptoToken> {
+        Some(self)
+    }
+}
+
+// Implement IntoConcreteToken for X64V3VnniToken
+impl IntoConcreteToken for X64V3VnniToken {
+    #[inline(always)]
+    fn as_x64v3_vnni(self) -> Option<X64V3VnniToken> {
         Some(self)
     }
 }

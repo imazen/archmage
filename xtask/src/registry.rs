@@ -468,7 +468,7 @@ mod tests {
         let registry = Registry::load(&path).expect("Failed to load token-registry.toml");
 
         // Basic counts
-        assert_eq!(registry.token.len(), 17, "Expected 17 tokens");
+        assert_eq!(registry.token.len(), 18, "Expected 18 tokens");
         assert_eq!(registry.traits.len(), 10, "Expected 10 traits");
         assert_eq!(
             registry.width_namespace.len(),
@@ -493,6 +493,16 @@ mod tests {
             v3_gfni_crypto.parents,
             vec!["X64V3CryptoToken"],
             "V3 GFNI Crypto should extend V3 Crypto"
+        );
+
+        let v3_vnni = registry
+            .find_token("X64V3VnniToken")
+            .expect("X64V3VnniToken not found");
+        assert!(v3_vnni.features.contains(&"avxvnni".to_string()));
+        assert_eq!(
+            v3_vnni.parents,
+            vec!["X64V3GfniCryptoToken"],
+            "V3 VNNI should extend V3 GFNI Crypto"
         );
 
         // Spot-check aliases

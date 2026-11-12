@@ -28,6 +28,7 @@ pub mod import_paths;
 pub mod parity_tests;
 pub mod scalar_parity_gen;
 mod structure;
+pub mod tier_delegation_gen;
 pub mod types;
 pub mod v4_delegation_gen;
 pub mod width_dispatch;

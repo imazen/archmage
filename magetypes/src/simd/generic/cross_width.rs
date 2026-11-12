@@ -208,6 +208,67 @@ impl F32x8FromHalves for archmage::Avx512Fp16Token {
     }
 }
 
+// Higher-tier x86-64-v3 tokens (`X64V3CryptoToken`, `X64V3GfniCryptoToken`,
+// `X64V3VnniToken`) share V3's `__m128` / `__m256` representations and forward
+// via `self.v3()`.
+#[cfg(target_arch = "x86_64")]
+impl F32x8FromHalves for archmage::X64V3CryptoToken {
+    #[inline(always)]
+    fn from_halves(
+        self,
+        lo: core::arch::x86_64::__m128,
+        hi: core::arch::x86_64::__m128,
+    ) -> core::arch::x86_64::__m256 {
+        <archmage::X64V3Token as F32x8FromHalves>::from_halves(self.v3(), lo, hi)
+    }
+    #[inline(always)]
+    fn low(self, wide: core::arch::x86_64::__m256) -> core::arch::x86_64::__m128 {
+        <archmage::X64V3Token as F32x8FromHalves>::low(self.v3(), wide)
+    }
+    #[inline(always)]
+    fn high(self, wide: core::arch::x86_64::__m256) -> core::arch::x86_64::__m128 {
+        <archmage::X64V3Token as F32x8FromHalves>::high(self.v3(), wide)
+    }
+}
+#[cfg(target_arch = "x86_64")]
+impl F32x8FromHalves for archmage::X64V3GfniCryptoToken {
+    #[inline(always)]
+    fn from_halves(
+        self,
+        lo: core::arch::x86_64::__m128,
+        hi: core::arch::x86_64::__m128,
+    ) -> core::arch::x86_64::__m256 {
+        <archmage::X64V3Token as F32x8FromHalves>::from_halves(self.v3(), lo, hi)
+    }
+    #[inline(always)]
+    fn low(self, wide: core::arch::x86_64::__m256) -> core::arch::x86_64::__m128 {
+        <archmage::X64V3Token as F32x8FromHalves>::low(self.v3(), wide)
+    }
+    #[inline(always)]
+    fn high(self, wide: core::arch::x86_64::__m256) -> core::arch::x86_64::__m128 {
+        <archmage::X64V3Token as F32x8FromHalves>::high(self.v3(), wide)
+    }
+}
+#[cfg(target_arch = "x86_64")]
+impl F32x8FromHalves for archmage::X64V3VnniToken {
+    #[inline(always)]
+    fn from_halves(
+        self,
+        lo: core::arch::x86_64::__m128,
+        hi: core::arch::x86_64::__m128,
+    ) -> core::arch::x86_64::__m256 {
+        <archmage::X64V3Token as F32x8FromHalves>::from_halves(self.v3(), lo, hi)
+    }
+    #[inline(always)]
+    fn low(self, wide: core::arch::x86_64::__m256) -> core::arch::x86_64::__m128 {
+        <archmage::X64V3Token as F32x8FromHalves>::low(self.v3(), wide)
+    }
+    #[inline(always)]
+    fn high(self, wide: core::arch::x86_64::__m256) -> core::arch::x86_64::__m128 {
+        <archmage::X64V3Token as F32x8FromHalves>::high(self.v3(), wide)
+    }
+}
+
 // NeonToken — polyfilled wider Repr. Soundness: array construction; no
 // platform feature beyond what NeonToken already proves (AdvSIMD).
 #[cfg(target_arch = "aarch64")]
@@ -233,6 +294,46 @@ impl F32x8FromHalves for archmage::NeonToken {
     }
 }
 
+#[cfg(target_arch = "aarch64")]
+impl F32x8FromHalves for archmage::Arm64V2Token {
+    #[inline(always)]
+    fn from_halves(
+        self,
+        lo: core::arch::aarch64::float32x4_t,
+        hi: core::arch::aarch64::float32x4_t,
+    ) -> [core::arch::aarch64::float32x4_t; 2] {
+        <archmage::NeonToken as F32x8FromHalves>::from_halves(self.neon(), lo, hi)
+    }
+    #[inline(always)]
+    fn low(self, wide: [core::arch::aarch64::float32x4_t; 2]) -> core::arch::aarch64::float32x4_t {
+        <archmage::NeonToken as F32x8FromHalves>::low(self.neon(), wide)
+    }
+    #[inline(always)]
+    fn high(self, wide: [core::arch::aarch64::float32x4_t; 2]) -> core::arch::aarch64::float32x4_t {
+        <archmage::NeonToken as F32x8FromHalves>::high(self.neon(), wide)
+    }
+}
+
+#[cfg(target_arch = "aarch64")]
+impl F32x8FromHalves for archmage::Arm64V3Token {
+    #[inline(always)]
+    fn from_halves(
+        self,
+        lo: core::arch::aarch64::float32x4_t,
+        hi: core::arch::aarch64::float32x4_t,
+    ) -> [core::arch::aarch64::float32x4_t; 2] {
+        <archmage::NeonToken as F32x8FromHalves>::from_halves(self.neon(), lo, hi)
+    }
+    #[inline(always)]
+    fn low(self, wide: [core::arch::aarch64::float32x4_t; 2]) -> core::arch::aarch64::float32x4_t {
+        <archmage::NeonToken as F32x8FromHalves>::low(self.neon(), wide)
+    }
+    #[inline(always)]
+    fn high(self, wide: [core::arch::aarch64::float32x4_t; 2]) -> core::arch::aarch64::float32x4_t {
+        <archmage::NeonToken as F32x8FromHalves>::high(self.neon(), wide)
+    }
+}
+
 // Wasm128Token — same shape as NEON: polyfill via `[v128; 2]`.
 #[cfg(target_arch = "wasm32")]
 impl F32x8FromHalves for archmage::Wasm128Token {
@@ -254,6 +355,26 @@ impl F32x8FromHalves for archmage::Wasm128Token {
     fn high(self, wide: [core::arch::wasm32::v128; 2]) -> core::arch::wasm32::v128 {
         let _ = self;
         wide[1]
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+impl F32x8FromHalves for archmage::Wasm128RelaxedToken {
+    #[inline(always)]
+    fn from_halves(
+        self,
+        lo: core::arch::wasm32::v128,
+        hi: core::arch::wasm32::v128,
+    ) -> [core::arch::wasm32::v128; 2] {
+        <archmage::Wasm128Token as F32x8FromHalves>::from_halves(self.wasm128(), lo, hi)
+    }
+    #[inline(always)]
+    fn low(self, wide: [core::arch::wasm32::v128; 2]) -> core::arch::wasm32::v128 {
+        <archmage::Wasm128Token as F32x8FromHalves>::low(self.wasm128(), wide)
+    }
+    #[inline(always)]
+    fn high(self, wide: [core::arch::wasm32::v128; 2]) -> core::arch::wasm32::v128 {
+        <archmage::Wasm128Token as F32x8FromHalves>::high(self.wasm128(), wide)
     }
 }
 
@@ -365,6 +486,66 @@ impl F32x16FromHalves for archmage::X64V3Token {
     }
 }
 
+#[cfg(all(target_arch = "x86_64", feature = "w512"))]
+impl F32x16FromHalves for archmage::X64V3CryptoToken {
+    #[inline(always)]
+    fn from_halves(
+        self,
+        lo: core::arch::x86_64::__m256,
+        hi: core::arch::x86_64::__m256,
+    ) -> [core::arch::x86_64::__m256; 2] {
+        <archmage::X64V3Token as F32x16FromHalves>::from_halves(self.v3(), lo, hi)
+    }
+    #[inline(always)]
+    fn low(self, wide: [core::arch::x86_64::__m256; 2]) -> core::arch::x86_64::__m256 {
+        <archmage::X64V3Token as F32x16FromHalves>::low(self.v3(), wide)
+    }
+    #[inline(always)]
+    fn high(self, wide: [core::arch::x86_64::__m256; 2]) -> core::arch::x86_64::__m256 {
+        <archmage::X64V3Token as F32x16FromHalves>::high(self.v3(), wide)
+    }
+}
+
+#[cfg(all(target_arch = "x86_64", feature = "w512"))]
+impl F32x16FromHalves for archmage::X64V3GfniCryptoToken {
+    #[inline(always)]
+    fn from_halves(
+        self,
+        lo: core::arch::x86_64::__m256,
+        hi: core::arch::x86_64::__m256,
+    ) -> [core::arch::x86_64::__m256; 2] {
+        <archmage::X64V3Token as F32x16FromHalves>::from_halves(self.v3(), lo, hi)
+    }
+    #[inline(always)]
+    fn low(self, wide: [core::arch::x86_64::__m256; 2]) -> core::arch::x86_64::__m256 {
+        <archmage::X64V3Token as F32x16FromHalves>::low(self.v3(), wide)
+    }
+    #[inline(always)]
+    fn high(self, wide: [core::arch::x86_64::__m256; 2]) -> core::arch::x86_64::__m256 {
+        <archmage::X64V3Token as F32x16FromHalves>::high(self.v3(), wide)
+    }
+}
+
+#[cfg(all(target_arch = "x86_64", feature = "w512"))]
+impl F32x16FromHalves for archmage::X64V3VnniToken {
+    #[inline(always)]
+    fn from_halves(
+        self,
+        lo: core::arch::x86_64::__m256,
+        hi: core::arch::x86_64::__m256,
+    ) -> [core::arch::x86_64::__m256; 2] {
+        <archmage::X64V3Token as F32x16FromHalves>::from_halves(self.v3(), lo, hi)
+    }
+    #[inline(always)]
+    fn low(self, wide: [core::arch::x86_64::__m256; 2]) -> core::arch::x86_64::__m256 {
+        <archmage::X64V3Token as F32x16FromHalves>::low(self.v3(), wide)
+    }
+    #[inline(always)]
+    fn high(self, wide: [core::arch::x86_64::__m256; 2]) -> core::arch::x86_64::__m256 {
+        <archmage::X64V3Token as F32x16FromHalves>::high(self.v3(), wide)
+    }
+}
+
 // X64V4Token — native AVX-512. f32x16<V4>::Repr is `__m512`; f32x8<V4>::Repr
 // is V3-delegated `__m256`.
 //
@@ -460,6 +641,58 @@ impl F32x16FromHalves for archmage::NeonToken {
     }
 }
 
+#[cfg(all(target_arch = "aarch64", feature = "w512"))]
+impl F32x16FromHalves for archmage::Arm64V2Token {
+    #[inline(always)]
+    fn from_halves(
+        self,
+        lo: [core::arch::aarch64::float32x4_t; 2],
+        hi: [core::arch::aarch64::float32x4_t; 2],
+    ) -> [core::arch::aarch64::float32x4_t; 4] {
+        <archmage::NeonToken as F32x16FromHalves>::from_halves(self.neon(), lo, hi)
+    }
+    #[inline(always)]
+    fn low(
+        self,
+        wide: [core::arch::aarch64::float32x4_t; 4],
+    ) -> [core::arch::aarch64::float32x4_t; 2] {
+        <archmage::NeonToken as F32x16FromHalves>::low(self.neon(), wide)
+    }
+    #[inline(always)]
+    fn high(
+        self,
+        wide: [core::arch::aarch64::float32x4_t; 4],
+    ) -> [core::arch::aarch64::float32x4_t; 2] {
+        <archmage::NeonToken as F32x16FromHalves>::high(self.neon(), wide)
+    }
+}
+
+#[cfg(all(target_arch = "aarch64", feature = "w512"))]
+impl F32x16FromHalves for archmage::Arm64V3Token {
+    #[inline(always)]
+    fn from_halves(
+        self,
+        lo: [core::arch::aarch64::float32x4_t; 2],
+        hi: [core::arch::aarch64::float32x4_t; 2],
+    ) -> [core::arch::aarch64::float32x4_t; 4] {
+        <archmage::NeonToken as F32x16FromHalves>::from_halves(self.neon(), lo, hi)
+    }
+    #[inline(always)]
+    fn low(
+        self,
+        wide: [core::arch::aarch64::float32x4_t; 4],
+    ) -> [core::arch::aarch64::float32x4_t; 2] {
+        <archmage::NeonToken as F32x16FromHalves>::low(self.neon(), wide)
+    }
+    #[inline(always)]
+    fn high(
+        self,
+        wide: [core::arch::aarch64::float32x4_t; 4],
+    ) -> [core::arch::aarch64::float32x4_t; 2] {
+        <archmage::NeonToken as F32x16FromHalves>::high(self.neon(), wide)
+    }
+}
+
 // Wasm128Token — cascade polyfill, same shape as NEON.
 #[cfg(all(target_arch = "wasm32", feature = "w512"))]
 impl F32x16FromHalves for archmage::Wasm128Token {
@@ -481,6 +714,26 @@ impl F32x16FromHalves for archmage::Wasm128Token {
     fn high(self, wide: [core::arch::wasm32::v128; 4]) -> [core::arch::wasm32::v128; 2] {
         let _ = self;
         [wide[2], wide[3]]
+    }
+}
+
+#[cfg(all(target_arch = "wasm32", feature = "w512"))]
+impl F32x16FromHalves for archmage::Wasm128RelaxedToken {
+    #[inline(always)]
+    fn from_halves(
+        self,
+        lo: [core::arch::wasm32::v128; 2],
+        hi: [core::arch::wasm32::v128; 2],
+    ) -> [core::arch::wasm32::v128; 4] {
+        <archmage::Wasm128Token as F32x16FromHalves>::from_halves(self.wasm128(), lo, hi)
+    }
+    #[inline(always)]
+    fn low(self, wide: [core::arch::wasm32::v128; 4]) -> [core::arch::wasm32::v128; 2] {
+        <archmage::Wasm128Token as F32x16FromHalves>::low(self.wasm128(), wide)
+    }
+    #[inline(always)]
+    fn high(self, wide: [core::arch::wasm32::v128; 4]) -> [core::arch::wasm32::v128; 2] {
+        <archmage::Wasm128Token as F32x16FromHalves>::high(self.wasm128(), wide)
     }
 }
 

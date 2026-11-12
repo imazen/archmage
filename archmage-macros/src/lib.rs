@@ -588,7 +588,7 @@ pub fn dispatch_variant(input: TokenStream) -> TokenStream {
 ///
 /// Default tiers: `v4`, `v3`, `neon`, `wasm128`, `scalar`.
 ///
-/// Known tiers: `v1`, `v2`, `v3`, `v3_crypto`, `v3_gfni_crypto`, `v4`, `v4x`,
+/// Known tiers: `v1`, `v2`, `v3`, `v3_crypto`, `v3_gfni_crypto`, `v3_vnni`, `v4`, `v4x`,
 /// `neon`, `neon_aes`, `neon_sha3`, `neon_crc`, `arm_v2`, `arm_v3`, `wasm128`,
 /// `wasm128_relaxed`, `x64_crypto`, `scalar`.
 ///

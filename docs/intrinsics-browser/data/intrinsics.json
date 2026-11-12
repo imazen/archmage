@@ -62943,6 +62943,7 @@
       "n": "_mm256_dpwssd_avx_epi32",
       "s": true,
       "sig": "fn _mm256_dpwssd_avx_epi32(src: __m256i, a: __m256i, b: __m256i) -> __m256i",
+      "t": "X64V3VnniToken",
       "u": false
     },
     {
@@ -62986,6 +62987,7 @@
       "n": "_mm_dpwssd_avx_epi32",
       "s": true,
       "sig": "fn _mm_dpwssd_avx_epi32(src: __m128i, a: __m128i, b: __m128i) -> __m128i",
+      "t": "X64V3VnniToken",
       "u": false
     },
     {
@@ -63062,6 +63064,7 @@
       "n": "_mm256_dpwssds_avx_epi32",
       "s": true,
       "sig": "fn _mm256_dpwssds_avx_epi32(src: __m256i, a: __m256i, b: __m256i) -> __m256i",
+      "t": "X64V3VnniToken",
       "u": false
     },
     {
@@ -63105,6 +63108,7 @@
       "n": "_mm_dpwssds_avx_epi32",
       "s": true,
       "sig": "fn _mm_dpwssds_avx_epi32(src: __m128i, a: __m128i, b: __m128i) -> __m128i",
+      "t": "X64V3VnniToken",
       "u": false
     },
     {
@@ -63181,6 +63185,7 @@
       "n": "_mm256_dpbusd_avx_epi32",
       "s": true,
       "sig": "fn _mm256_dpbusd_avx_epi32(src: __m256i, a: __m256i, b: __m256i) -> __m256i",
+      "t": "X64V3VnniToken",
       "u": false
     },
     {
@@ -63224,6 +63229,7 @@
       "n": "_mm_dpbusd_avx_epi32",
       "s": true,
       "sig": "fn _mm_dpbusd_avx_epi32(src: __m128i, a: __m128i, b: __m128i) -> __m128i",
+      "t": "X64V3VnniToken",
       "u": false
     },
     {
@@ -63300,6 +63306,7 @@
       "n": "_mm256_dpbusds_avx_epi32",
       "s": true,
       "sig": "fn _mm256_dpbusds_avx_epi32(src: __m256i, a: __m256i, b: __m256i) -> __m256i",
+      "t": "X64V3VnniToken",
       "u": false
     },
     {
@@ -63343,6 +63350,7 @@
       "n": "_mm_dpbusds_avx_epi32",
       "s": true,
       "sig": "fn _mm_dpbusds_avx_epi32(src: __m128i, a: __m128i, b: __m128i) -> __m128i",
+      "t": "X64V3VnniToken",
       "u": false
     },
     {
@@ -179339,6 +179347,41 @@
         "X64V3CryptoToken"
       ],
       "tier": "v3_gfni_crypto"
+    },
+    {
+      "aliases": [],
+      "arch": "x86_64",
+      "display": "x86-64-v3 VNNI",
+      "doc": "Proof that VEX-encoded AVX-VNNI (`avxvnni`) is available on top of `X64V3GfniCryptoToken`.",
+      "features": [
+        "sse",
+        "sse2",
+        "sse3",
+        "ssse3",
+        "sse4.1",
+        "sse4.2",
+        "popcnt",
+        "cmpxchg16b",
+        "avx",
+        "avx2",
+        "fma",
+        "bmi1",
+        "bmi2",
+        "f16c",
+        "lzcnt",
+        "movbe",
+        "pclmulqdq",
+        "aes",
+        "vpclmulqdq",
+        "vaes",
+        "gfni",
+        "avxvnni"
+      ],
+      "name": "X64V3VnniToken",
+      "parents": [
+        "X64V3GfniCryptoToken"
+      ],
+      "tier": "v3_vnni"
     },
     {
       "aliases": [

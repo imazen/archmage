@@ -130,6 +130,27 @@ magetypes_namespace = "v3"
 doc = "Proof that AVX2 + GFNI + VPCLMULQDQ + VAES are available.\n\nGFNI provides GF(2^8) affine transforms and field multiplication over the\nAES/Rijndael polynomial. Its 256-bit VEX forms operate on YMM registers without\nrequiring AVX-512. At the x86-64-v3 level, GFNI-capable CPUs also provide the\nAES, PCLMULQDQ, VAES, and VPCLMULQDQ features inherited from\n`X64V3CryptoToken`.\n\nAvailable without AVX-512 on Intel Alder Lake, Raptor Lake, Meteor Lake, Arrow\nLake, Lunar Lake, Sierra Forest, and later related CPUs. Also available on AMD\nZen 4+.\n\nUse for Reed-Solomon erasure coding, GF(2^8) and binary-tower field arithmetic,\nbit permutation, and byte-wise affine transforms."
 
 [[token]]
+name = "X64V3VnniToken"
+dispatch_priority = 38
+dispatch_as = "as_x64v3_vnni"
+arch = "x86"
+features = [
+    "sse", "sse2",
+    "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt", "cmpxchg16b",
+    "avx", "avx2", "fma", "bmi1", "bmi2", "f16c", "lzcnt", "movbe",
+    "pclmulqdq", "aes",
+    "vpclmulqdq", "vaes",
+    "gfni",
+    "avxvnni",
+]
+traits = ["HasX64V2", "Has128BitSimd", "Has256BitSimd"]
+parents = ["X64V3GfniCryptoToken"]
+display_name = "x86-64-v3 VNNI"
+short_name = "v3_vnni"
+magetypes_namespace = "v3"
+doc = "Proof that VEX-encoded AVX-VNNI (`avxvnni`) is available on top of `X64V3GfniCryptoToken`.\n\n`avxvnni` provides VEX-encoded 128/256-bit `VPDPBUSD`, `VPDPBUSDS`, `VPDPWSSD`,\nand `VPDPWSSDS` (`_mm256_dpbusd_avx_epi32`, `_mm256_dpwssd_avx_epi32`, etc.) for\nINT8 (`u8 × i8 -> i32`) and INT16 (`i16 × i16 -> i32`) dot-product accumulation\nwithout requiring AVX-512.\n\nAvailable without AVX-512 on Intel Alder Lake, Raptor Lake, Meteor Lake, Arrow\nLake, Lunar Lake, Sierra Forest, and later client/hybrid/E-core x86-64 CPUs.\nNote that AVX-512 server/desktop parts (`X64V4Token` / `X64V4xToken` on Ice Lake\nand Zen 4) provide EVEX `avx512vnni` rather than VEX `avxvnni`, so this token is\na leaf under `X64V3GfniCryptoToken` and is not implied by `X64V4xToken`."
+
+[[token]]
 name = "X64V4Token"
 dispatch_priority = 40
 dispatch_as = "as_x64v4"

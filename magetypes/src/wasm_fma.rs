@@ -1,11 +1,12 @@
 //! WASM multiply-add. `madd_*`/`msub_*` back `mul_add`/`mul_sub`: the engine's
-//! relaxed madd in relaxed-SIMD builds, a multiply then an add otherwise.
+//! relaxed madd in relaxed-SIMD builds (or per-function via
+//! `Wasm128RelaxedToken`), a multiply then an add otherwise.
 //! `fused_*` back the `_portable` forms, which round once: through relaxed madd
 //! where a cached probe shows the engine fuses it, in software otherwise
 //! (strict builds, and engines that round twice).
 #![forbid(unsafe_code)]
 
-use archmage::Wasm128Token;
+use archmage::{Wasm128RelaxedToken, Wasm128Token};
 use core::arch::wasm32::{self as w, v128};
 
 #[cfg(not(target_feature = "relaxed-simd"))]
@@ -180,6 +181,368 @@ fn soft_f64x2_inline(a: v128, b: v128, c: v128) -> v128 {
     let lanes = |v: v128| [w::f64x2_extract_lane::<0>(v), w::f64x2_extract_lane::<1>(v)];
     let [lo, hi] = crate::soft_fma::fma_lanes(lanes(a), lanes(b), lanes(c));
     w::f64x2(lo, hi)
+}
+
+// ============================================================================
+// Per-function Wasm128RelaxedToken overrides (issue #155)
+//
+// Unlike `Wasm128Token`, which only emits `relaxed_madd` when the whole crate
+// is compiled with `-C target-feature=+relaxed-simd`, `Wasm128RelaxedToken`
+// proves `simd128,relaxed-simd` at the function level. Each helper below
+// carries `#[archmage::rite]` (emitting `#[inline]` +
+// `#[target_feature(enable = "simd128,relaxed-simd")]`), so callers inside
+// `#[arcane]` / `#[rite(wasm128_relaxed)]` get inlined `f32x4.relaxed_madd` /
+// `f64x2.relaxed_madd` even without crate-global `+relaxed-simd`.
+// ============================================================================
+
+mod relaxed_token_probe {
+    use archmage::Wasm128RelaxedToken;
+    use core::arch::wasm32 as w;
+    use core::hint::black_box;
+    use core::sync::atomic::{AtomicU8, Ordering};
+
+    /// 0 = not probed, 1 = rounds twice, 2 = fuses.
+    static F32: AtomicU8 = AtomicU8::new(0);
+    static F64: AtomicU8 = AtomicU8::new(0);
+
+    #[archmage::rite]
+    pub(super) fn fuses_f32(_token: Wasm128RelaxedToken) -> bool {
+        let state = F32.load(Ordering::Relaxed);
+        if state == 2 {
+            return true;
+        }
+        if state == 1 {
+            return false;
+        }
+        let x = w::f32x4_splat(black_box(1.0 + 1.0 / 4096.0));
+        let c = w::f32x4_splat(black_box(-(1.0 + 1.0 / 2048.0)));
+        let r = w::f32x4_relaxed_madd(x, x, c);
+        let fused = w::f32x4_extract_lane::<0>(r) == 1.0 / 16_777_216.0
+            && w::f32x4_extract_lane::<3>(r) == 1.0 / 16_777_216.0;
+        F32.store(if fused { 2 } else { 1 }, Ordering::Relaxed);
+        fused
+    }
+
+    #[archmage::rite]
+    pub(super) fn fuses_f64(_token: Wasm128RelaxedToken) -> bool {
+        let state = F64.load(Ordering::Relaxed);
+        if state == 2 {
+            return true;
+        }
+        if state == 1 {
+            return false;
+        }
+        let e = 1.0 / 134_217_728.0;
+        let x = w::f64x2_splat(black_box(1.0 + e));
+        let c = w::f64x2_splat(black_box(-(1.0 + 2.0 * e)));
+        let r = w::f64x2_relaxed_madd(x, x, c);
+        let fused =
+            w::f64x2_extract_lane::<0>(r) == e * e && w::f64x2_extract_lane::<1>(r) == e * e;
+        F64.store(if fused { 2 } else { 1 }, Ordering::Relaxed);
+        fused
+    }
+}
+
+#[archmage::rite]
+pub(crate) fn madd_f32x4_relaxed(_token: Wasm128RelaxedToken, a: v128, b: v128, c: v128) -> v128 {
+    w::f32x4_relaxed_madd(a, b, c)
+}
+
+#[archmage::rite]
+pub(crate) fn msub_f32x4_relaxed(_token: Wasm128RelaxedToken, a: v128, b: v128, c: v128) -> v128 {
+    w::f32x4_relaxed_madd(a, b, w::f32x4_neg(c))
+}
+
+#[archmage::rite]
+pub(crate) fn madd_f32x8_relaxed(
+    _token: Wasm128RelaxedToken,
+    a: [v128; 2],
+    b: [v128; 2],
+    c: [v128; 2],
+) -> [v128; 2] {
+    [
+        w::f32x4_relaxed_madd(a[0], b[0], c[0]),
+        w::f32x4_relaxed_madd(a[1], b[1], c[1]),
+    ]
+}
+
+#[archmage::rite]
+pub(crate) fn msub_f32x8_relaxed(
+    _token: Wasm128RelaxedToken,
+    a: [v128; 2],
+    b: [v128; 2],
+    c: [v128; 2],
+) -> [v128; 2] {
+    [
+        w::f32x4_relaxed_madd(a[0], b[0], w::f32x4_neg(c[0])),
+        w::f32x4_relaxed_madd(a[1], b[1], w::f32x4_neg(c[1])),
+    ]
+}
+
+#[cfg(feature = "w512")]
+#[archmage::rite]
+pub(crate) fn madd_f32x16_relaxed(
+    _token: Wasm128RelaxedToken,
+    a: [v128; 4],
+    b: [v128; 4],
+    c: [v128; 4],
+) -> [v128; 4] {
+    [
+        w::f32x4_relaxed_madd(a[0], b[0], c[0]),
+        w::f32x4_relaxed_madd(a[1], b[1], c[1]),
+        w::f32x4_relaxed_madd(a[2], b[2], c[2]),
+        w::f32x4_relaxed_madd(a[3], b[3], c[3]),
+    ]
+}
+
+#[cfg(feature = "w512")]
+#[archmage::rite]
+pub(crate) fn msub_f32x16_relaxed(
+    _token: Wasm128RelaxedToken,
+    a: [v128; 4],
+    b: [v128; 4],
+    c: [v128; 4],
+) -> [v128; 4] {
+    [
+        w::f32x4_relaxed_madd(a[0], b[0], w::f32x4_neg(c[0])),
+        w::f32x4_relaxed_madd(a[1], b[1], w::f32x4_neg(c[1])),
+        w::f32x4_relaxed_madd(a[2], b[2], w::f32x4_neg(c[2])),
+        w::f32x4_relaxed_madd(a[3], b[3], w::f32x4_neg(c[3])),
+    ]
+}
+
+#[archmage::rite]
+pub(crate) fn madd_f64x2_relaxed(_token: Wasm128RelaxedToken, a: v128, b: v128, c: v128) -> v128 {
+    w::f64x2_relaxed_madd(a, b, c)
+}
+
+#[archmage::rite]
+pub(crate) fn msub_f64x2_relaxed(_token: Wasm128RelaxedToken, a: v128, b: v128, c: v128) -> v128 {
+    w::f64x2_relaxed_madd(a, b, w::f64x2_neg(c))
+}
+
+#[archmage::rite]
+pub(crate) fn madd_f64x4_relaxed(
+    _token: Wasm128RelaxedToken,
+    a: [v128; 2],
+    b: [v128; 2],
+    c: [v128; 2],
+) -> [v128; 2] {
+    [
+        w::f64x2_relaxed_madd(a[0], b[0], c[0]),
+        w::f64x2_relaxed_madd(a[1], b[1], c[1]),
+    ]
+}
+
+#[archmage::rite]
+pub(crate) fn msub_f64x4_relaxed(
+    _token: Wasm128RelaxedToken,
+    a: [v128; 2],
+    b: [v128; 2],
+    c: [v128; 2],
+) -> [v128; 2] {
+    [
+        w::f64x2_relaxed_madd(a[0], b[0], w::f64x2_neg(c[0])),
+        w::f64x2_relaxed_madd(a[1], b[1], w::f64x2_neg(c[1])),
+    ]
+}
+
+#[cfg(feature = "w512")]
+#[archmage::rite]
+pub(crate) fn madd_f64x8_relaxed(
+    _token: Wasm128RelaxedToken,
+    a: [v128; 4],
+    b: [v128; 4],
+    c: [v128; 4],
+) -> [v128; 4] {
+    [
+        w::f64x2_relaxed_madd(a[0], b[0], c[0]),
+        w::f64x2_relaxed_madd(a[1], b[1], c[1]),
+        w::f64x2_relaxed_madd(a[2], b[2], c[2]),
+        w::f64x2_relaxed_madd(a[3], b[3], c[3]),
+    ]
+}
+
+#[cfg(feature = "w512")]
+#[archmage::rite]
+pub(crate) fn msub_f64x8_relaxed(
+    _token: Wasm128RelaxedToken,
+    a: [v128; 4],
+    b: [v128; 4],
+    c: [v128; 4],
+) -> [v128; 4] {
+    [
+        w::f64x2_relaxed_madd(a[0], b[0], w::f64x2_neg(c[0])),
+        w::f64x2_relaxed_madd(a[1], b[1], w::f64x2_neg(c[1])),
+        w::f64x2_relaxed_madd(a[2], b[2], w::f64x2_neg(c[2])),
+        w::f64x2_relaxed_madd(a[3], b[3], w::f64x2_neg(c[3])),
+    ]
+}
+
+#[archmage::rite]
+pub(crate) fn fused_f32x4_relaxed(token: Wasm128RelaxedToken, a: v128, b: v128, c: v128) -> v128 {
+    if relaxed_token_probe::fuses_f32(token) {
+        return w::f32x4_relaxed_madd(a, b, c);
+    }
+    let w128 = token.wasm128();
+    let lo = wide_sum(w128, a, b, c);
+    let hi = wide_sum(
+        w128,
+        w::i32x4_shuffle::<2, 3, 2, 3>(a, a),
+        w::i32x4_shuffle::<2, 3, 2, 3>(b, b),
+        w::i32x4_shuffle::<2, 3, 2, 3>(c, c),
+    );
+    w::i32x4_shuffle::<0, 1, 4, 5>(lo, hi)
+}
+
+#[archmage::rite]
+pub(crate) fn fused_sub_f32x4_relaxed(
+    token: Wasm128RelaxedToken,
+    a: v128,
+    b: v128,
+    c: v128,
+) -> v128 {
+    fused_f32x4_relaxed(token, a, b, w::f32x4_neg(c))
+}
+
+#[archmage::rite]
+pub(crate) fn fused_f32x8_relaxed(
+    token: Wasm128RelaxedToken,
+    a: [v128; 2],
+    b: [v128; 2],
+    c: [v128; 2],
+) -> [v128; 2] {
+    [
+        fused_f32x4_relaxed(token, a[0], b[0], c[0]),
+        fused_f32x4_relaxed(token, a[1], b[1], c[1]),
+    ]
+}
+
+#[archmage::rite]
+pub(crate) fn fused_sub_f32x8_relaxed(
+    token: Wasm128RelaxedToken,
+    a: [v128; 2],
+    b: [v128; 2],
+    c: [v128; 2],
+) -> [v128; 2] {
+    [
+        fused_sub_f32x4_relaxed(token, a[0], b[0], c[0]),
+        fused_sub_f32x4_relaxed(token, a[1], b[1], c[1]),
+    ]
+}
+
+#[cfg(feature = "w512")]
+#[archmage::rite]
+pub(crate) fn fused_f32x16_relaxed(
+    token: Wasm128RelaxedToken,
+    a: [v128; 4],
+    b: [v128; 4],
+    c: [v128; 4],
+) -> [v128; 4] {
+    [
+        fused_f32x4_relaxed(token, a[0], b[0], c[0]),
+        fused_f32x4_relaxed(token, a[1], b[1], c[1]),
+        fused_f32x4_relaxed(token, a[2], b[2], c[2]),
+        fused_f32x4_relaxed(token, a[3], b[3], c[3]),
+    ]
+}
+
+#[cfg(feature = "w512")]
+#[archmage::rite]
+pub(crate) fn fused_sub_f32x16_relaxed(
+    token: Wasm128RelaxedToken,
+    a: [v128; 4],
+    b: [v128; 4],
+    c: [v128; 4],
+) -> [v128; 4] {
+    [
+        fused_sub_f32x4_relaxed(token, a[0], b[0], c[0]),
+        fused_sub_f32x4_relaxed(token, a[1], b[1], c[1]),
+        fused_sub_f32x4_relaxed(token, a[2], b[2], c[2]),
+        fused_sub_f32x4_relaxed(token, a[3], b[3], c[3]),
+    ]
+}
+
+#[inline(never)]
+#[archmage::rite]
+fn soft_f64x2_relaxed(_token: Wasm128RelaxedToken, a: v128, b: v128, c: v128) -> v128 {
+    soft_f64x2_inline(a, b, c)
+}
+
+#[archmage::rite]
+pub(crate) fn fused_f64x2_relaxed(token: Wasm128RelaxedToken, a: v128, b: v128, c: v128) -> v128 {
+    if relaxed_token_probe::fuses_f64(token) {
+        return w::f64x2_relaxed_madd(a, b, c);
+    }
+    soft_f64x2_relaxed(token, a, b, c)
+}
+
+#[archmage::rite]
+pub(crate) fn fused_sub_f64x2_relaxed(
+    token: Wasm128RelaxedToken,
+    a: v128,
+    b: v128,
+    c: v128,
+) -> v128 {
+    fused_f64x2_relaxed(token, a, b, w::f64x2_neg(c))
+}
+
+#[archmage::rite]
+pub(crate) fn fused_f64x4_relaxed(
+    token: Wasm128RelaxedToken,
+    a: [v128; 2],
+    b: [v128; 2],
+    c: [v128; 2],
+) -> [v128; 2] {
+    [
+        fused_f64x2_relaxed(token, a[0], b[0], c[0]),
+        fused_f64x2_relaxed(token, a[1], b[1], c[1]),
+    ]
+}
+
+#[archmage::rite]
+pub(crate) fn fused_sub_f64x4_relaxed(
+    token: Wasm128RelaxedToken,
+    a: [v128; 2],
+    b: [v128; 2],
+    c: [v128; 2],
+) -> [v128; 2] {
+    [
+        fused_sub_f64x2_relaxed(token, a[0], b[0], c[0]),
+        fused_sub_f64x2_relaxed(token, a[1], b[1], c[1]),
+    ]
+}
+
+#[cfg(feature = "w512")]
+#[archmage::rite]
+pub(crate) fn fused_f64x8_relaxed(
+    token: Wasm128RelaxedToken,
+    a: [v128; 4],
+    b: [v128; 4],
+    c: [v128; 4],
+) -> [v128; 4] {
+    [
+        fused_f64x2_relaxed(token, a[0], b[0], c[0]),
+        fused_f64x2_relaxed(token, a[1], b[1], c[1]),
+        fused_f64x2_relaxed(token, a[2], b[2], c[2]),
+        fused_f64x2_relaxed(token, a[3], b[3], c[3]),
+    ]
+}
+
+#[cfg(feature = "w512")]
+#[archmage::rite]
+pub(crate) fn fused_sub_f64x8_relaxed(
+    token: Wasm128RelaxedToken,
+    a: [v128; 4],
+    b: [v128; 4],
+    c: [v128; 4],
+) -> [v128; 4] {
+    [
+        fused_sub_f64x2_relaxed(token, a[0], b[0], c[0]),
+        fused_sub_f64x2_relaxed(token, a[1], b[1], c[1]),
+        fused_sub_f64x2_relaxed(token, a[2], b[2], c[2]),
+        fused_sub_f64x2_relaxed(token, a[3], b[3], c[3]),
+    ]
 }
 
 /// The cached answer must match the engine. CI sets

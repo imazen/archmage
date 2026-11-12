@@ -533,6 +533,12 @@ fn generate_x86_reference(db: &HashMap<String, IntrinsicEntry>) -> String {
             intrinsics: BTreeMap::new(),
         },
         TierInfo {
+            name: "X64V3VnniToken (AVX-VNNI)",
+            token: "X64V3VnniToken",
+            features: &["avxvnni"],
+            intrinsics: BTreeMap::new(),
+        },
+        TierInfo {
             name: "X64V4Token (AVX-512)",
             token: "X64V4Token / Server64",
             features: &["avx512f", "avx512bw", "avx512cd", "avx512dq", "avx512vl"],

@@ -645,6 +645,47 @@ pub fn generate_backend_files() -> BTreeMap<String, String> {
             "impls/x86_v4_narrow_delegated.rs".to_string(),
             super::v4_delegation_gen::generate_narrow(&specs),
         );
+
+        // 10e. Higher-tier x86-v3, ARM64-v2/v3, and WASM Relaxed-SIMD backends
+        // (issues #155, #161): delegate all W128, W256, convert/bitcast, and
+        // `w512`-gated W512 backends to the architecture's baseline SIMD token,
+        // with per-function `relaxed-simd` FMA overrides on `Wasm128RelaxedToken`.
+        let mut all_narrow_specs = vec![
+            (
+                "F32x4Backend".to_string(),
+                files["backends/f32x4.rs"].clone(),
+            ),
+            (
+                "F32x8Backend".to_string(),
+                files["backends/f32x8.rs"].clone(),
+            ),
+        ];
+        all_narrow_specs.extend(specs);
+
+        let mut w512_specs: Vec<(String, String)> = Vec::new();
+        for ty in &w512_types {
+            w512_specs.push((
+                ty.trait_name(),
+                files[&format!("backends/{}.rs", ty.name())].clone(),
+            ));
+        }
+        w512_specs.push((
+            "F32x16Convert".to_string(),
+            files["backends/convert.rs"].clone(),
+        ));
+
+        files.insert(
+            "impls/x86_v3_higher_delegated.rs".to_string(),
+            super::tier_delegation_gen::generate_x86_v3_higher(&all_narrow_specs, &w512_specs),
+        );
+        files.insert(
+            "impls/arm_higher_delegated.rs".to_string(),
+            super::tier_delegation_gen::generate_arm_higher(&all_narrow_specs, &w512_specs),
+        );
+        files.insert(
+            "impls/wasm128_relaxed_delegated.rs".to_string(),
+            super::tier_delegation_gen::generate_wasm_relaxed(&all_narrow_specs, &w512_specs),
+        );
     }
 
     // 11. impls/mod.rs
@@ -668,7 +709,11 @@ fn generate_sealed() -> String {
 
         impl Sealed for archmage::X64V1Token {{}}
         impl Sealed for archmage::X64V2Token {{}}
+        impl Sealed for archmage::X64CryptoToken {{}}
         impl Sealed for archmage::X64V3Token {{}}
+        impl Sealed for archmage::X64V3CryptoToken {{}}
+        impl Sealed for archmage::X64V3GfniCryptoToken {{}}
+        impl Sealed for archmage::X64V3VnniToken {{}}
         impl Sealed for archmage::X64V4Token {{}}
         impl Sealed for archmage::X64V4xToken {{}}
         impl Sealed for archmage::Avx512Fp16Token {{}}
@@ -676,8 +721,66 @@ fn generate_sealed() -> String {
         impl Sealed for archmage::NeonAesToken {{}}
         impl Sealed for archmage::NeonSha3Token {{}}
         impl Sealed for archmage::NeonCrcToken {{}}
+        impl Sealed for archmage::Arm64V2Token {{}}
+        impl Sealed for archmage::Arm64V3Token {{}}
         impl Sealed for archmage::Wasm128Token {{}}
+        impl Sealed for archmage::Wasm128RelaxedToken {{}}
         impl Sealed for archmage::ScalarToken {{}}
+
+        /// Sealed marker trait for tokens whose 128-bit SIMD `Repr` is a native
+        /// single-register platform SIMD type (`__m128*`, NEON `*x*_t`, `v128`).
+        pub trait NativeW128Backend: Sealed {{}}
+
+        /// Sealed marker trait for tokens whose 256-bit SIMD `Repr` is a native
+        /// single-register platform SIMD type (`__m256*`).
+        pub trait NativeW256Backend: Sealed {{}}
+
+        /// Sealed marker trait for tokens whose 512-bit SIMD `Repr` is a native
+        /// single-register platform SIMD type (`__m512*`).
+        pub trait NativeW512Backend: Sealed {{}}
+
+        #[cfg(target_arch = "x86_64")]
+        impl NativeW128Backend for archmage::X64V3Token {{}}
+        #[cfg(target_arch = "x86_64")]
+        impl NativeW128Backend for archmage::X64V3CryptoToken {{}}
+        #[cfg(target_arch = "x86_64")]
+        impl NativeW128Backend for archmage::X64V3GfniCryptoToken {{}}
+        #[cfg(target_arch = "x86_64")]
+        impl NativeW128Backend for archmage::X64V3VnniToken {{}}
+        #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+        impl NativeW128Backend for archmage::X64V4Token {{}}
+        #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+        impl NativeW128Backend for archmage::X64V4xToken {{}}
+
+        #[cfg(target_arch = "aarch64")]
+        impl NativeW128Backend for archmage::NeonToken {{}}
+        #[cfg(target_arch = "aarch64")]
+        impl NativeW128Backend for archmage::Arm64V2Token {{}}
+        #[cfg(target_arch = "aarch64")]
+        impl NativeW128Backend for archmage::Arm64V3Token {{}}
+
+        #[cfg(target_arch = "wasm32")]
+        impl NativeW128Backend for archmage::Wasm128Token {{}}
+        #[cfg(target_arch = "wasm32")]
+        impl NativeW128Backend for archmage::Wasm128RelaxedToken {{}}
+
+        #[cfg(target_arch = "x86_64")]
+        impl NativeW256Backend for archmage::X64V3Token {{}}
+        #[cfg(target_arch = "x86_64")]
+        impl NativeW256Backend for archmage::X64V3CryptoToken {{}}
+        #[cfg(target_arch = "x86_64")]
+        impl NativeW256Backend for archmage::X64V3GfniCryptoToken {{}}
+        #[cfg(target_arch = "x86_64")]
+        impl NativeW256Backend for archmage::X64V3VnniToken {{}}
+        #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+        impl NativeW256Backend for archmage::X64V4Token {{}}
+        #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+        impl NativeW256Backend for archmage::X64V4xToken {{}}
+
+        #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+        impl NativeW512Backend for archmage::X64V4Token {{}}
+        #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+        impl NativeW512Backend for archmage::X64V4xToken {{}}
     "#}
 }
 
@@ -992,6 +1095,7 @@ fn generate_backends_mod(
         #![allow(non_camel_case_types)]
 
         pub(crate) mod sealed;
+        pub use sealed::{{NativeW128Backend, NativeW256Backend, NativeW512Backend}};
 
     "#};
 
@@ -1094,6 +1198,8 @@ fn generate_impls_mod() -> String {
 
         #[cfg(target_arch = "x86_64")]
         mod x86_v3;
+        #[cfg(target_arch = "x86_64")]
+        mod x86_v3_higher_delegated;
 
         #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
         mod x86_v4;
@@ -1112,9 +1218,13 @@ fn generate_impls_mod() -> String {
 
         #[cfg(target_arch = "aarch64")]
         mod arm_neon;
+        #[cfg(target_arch = "aarch64")]
+        mod arm_higher_delegated;
 
         #[cfg(target_arch = "wasm32")]
         mod wasm128;
+        #[cfg(target_arch = "wasm32")]
+        mod wasm128_relaxed_delegated;
 
         mod scalar;
     "#}
