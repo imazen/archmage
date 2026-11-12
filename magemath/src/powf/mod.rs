@@ -19,6 +19,7 @@
 //! assert_eq!(try_powf_with::<{ PowfOptions::new().with_domain(PowfDomain::NonNegativeNormal).bits() }>(0.0, 2.4).unwrap(), 0.0);
 //! ```
 
+#![doc = include_str!("permutations.md")]
 pub(crate) mod const_api;
 mod dispatch;
 pub use const_api::{try_powf_array_with, try_powf_with, try_powf_with_token};

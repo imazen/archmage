@@ -53,26 +53,81 @@ macro_rules! transcendental {
     }};
 }
 fn main() {
-    println!("family\tstd\tdomain\tprecision_or_nan\tportability_or_zero\treserved\tvalidation\texecution\tbits\tsupported");
-    transcendental!(powf, PowfOptions, PowfDomain,
-        [PositiveNormal,NonNegativeNormal,Gamma,PositiveGamma,Full],
-        PowfPrecision,[Lowp,Midp,Highp],PowfPortability,PowfValidation,PowfExecution);
-    transcendental!(expf, ExpfOptions, ExpfDomain,[Bounded,Full],
-        ExpfPrecision,[Lowp,Midp],ExpfPortability,ExpfValidation,ExpfExecution);
-    transcendental!(logf, LogfOptions, LogfDomain,[Positive,Specials],
-        LogfPrecision,[Lowp,Midp],LogfPortability,LogfValidation,LogfExecution);
-    transcendental!(recip, RecipOptions, RecipDomain,[Full,Normal],
-        RecipPrecision,[Lowp,Midp,Highp],RecipPortability,RecipValidation,RecipExecution);
+    println!(
+        "family\tstd\tdomain\tprecision_or_nan\tportability_or_zero\treserved\tvalidation\texecution\tbits\tsupported"
+    );
+    transcendental!(
+        powf,
+        PowfOptions,
+        PowfDomain,
+        [
+            PositiveNormal,
+            NonNegativeNormal,
+            Gamma,
+            PositiveGamma,
+            Full
+        ],
+        PowfPrecision,
+        [Lowp, Midp, Highp],
+        PowfPortability,
+        PowfValidation,
+        PowfExecution
+    );
+    transcendental!(
+        expf,
+        ExpfOptions,
+        ExpfDomain,
+        [Bounded, Full],
+        ExpfPrecision,
+        [Lowp, Midp],
+        ExpfPortability,
+        ExpfValidation,
+        ExpfExecution
+    );
+    transcendental!(
+        logf,
+        LogfOptions,
+        LogfDomain,
+        [Positive, Specials],
+        LogfPrecision,
+        [Lowp, Midp],
+        LogfPortability,
+        LogfValidation,
+        LogfExecution
+    );
+    transcendental!(
+        recip,
+        RecipOptions,
+        RecipDomain,
+        [Full, Normal],
+        RecipPrecision,
+        [Lowp, Midp, Highp],
+        RecipPortability,
+        RecipValidation,
+        RecipExecution
+    );
     use minmax::*;
-    for d in [MinMaxDomain::Full, MinMaxDomain::Finite, MinMaxDomain::Normal] {
+    for d in [
+        MinMaxDomain::Full,
+        MinMaxDomain::Finite,
+        MinMaxDomain::Normal,
+    ] {
         for nan in [MinMaxNaN::Number, MinMaxNaN::Propagate, MinMaxNaN::Backend] {
             for zero in [MinMaxZero::Ordered, MinMaxZero::Backend] {
                 for validation in [MinMaxValidation::Checked, MinMaxValidation::AssumeValid] {
                     for execution in [MinMaxExecution::Automatic, MinMaxExecution::Caller] {
-                        let o = MinMaxOptions::new().with_domain(d).with_nan(nan).with_zero(zero)
-                            .with_validation(validation).with_execution(execution);
-                        row("minmax", [&d, &nan, &zero, &"-", &validation, &execution],
-                            o.bits(), MinMaxOptions::valid(o.bits()));
+                        let o = MinMaxOptions::new()
+                            .with_domain(d)
+                            .with_nan(nan)
+                            .with_zero(zero)
+                            .with_validation(validation)
+                            .with_execution(execution);
+                        row(
+                            "minmax",
+                            [&d, &nan, &zero, &"-", &validation, &execution],
+                            o.bits(),
+                            MinMaxOptions::valid(o.bits()),
+                        );
                     }
                 }
             }

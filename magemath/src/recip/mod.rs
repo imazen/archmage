@@ -68,6 +68,7 @@
 //! let tail = try_recip_f32x4_lane_with::<FLAGS, _>(t, 3.0).unwrap();
 //! assert_eq!(y.to_array()[2].to_bits(), tail.to_bits());
 //! ```
+#![doc = include_str!("permutations.md")]
 mod api;
 mod options;
 use crate::{PrimitiveError, PrimitiveErrorKind};

@@ -1183,3 +1183,6 @@ primitive-policy-inventory output:
     mkdir -p "{{output}}"
     cargo run --release --manifest-path benchmarks/primitive_variants_2026-11-10/Cargo.toml --bin policy_inventory > "{{output}}/std.tsv"
     cargo run --release --manifest-path benchmarks/primitive_variants_2026-11-10/Cargo.toml --bin policy_inventory --no-default-features --features w512 > "{{output}}/no-std.tsv"
+
+primitive-policy-tables inventory *ARGS:
+    python3 -B benchmarks/primitive_variants_2026-11-10/policy_tables.py "{{inventory}}" {{ARGS}}

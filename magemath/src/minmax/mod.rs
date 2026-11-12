@@ -6,6 +6,31 @@
 //! Normal-domain graphs need no special-value repairs. AssumeValid removes the
 //! input checks too; violations never cause memory unsoundness.
 //!
+//! # Zero clamps: use Full or Finite
+//!
+//! `NORMAL` and `UNCHECKED_NORMAL` are the specialized **finite normal operands
+//! only, zero excluded** presets. Both operands must satisfy that restriction:
+//! `min(x, 0)` and `max(0, 5)` are outside it. Checked Normal rejects them;
+//! unchecked Normal has unspecified output. `NONZERO` alone would still omit
+//! the exclusion of subnormals and infinities.
+//!
+//! Finite admits zeros and subnormals. Keep Ordered zeros for portable zero
+//! signs, or explicitly select Backend zero ties when their signs do not matter.
+//! Full-domain presets also admit zeros, with their stated NaN/zero semantics.
+//!
+//! ```
+//! use magemath::minmax::{
+//!     MinMaxDomain, MinMaxOptions, MinMaxValidation, try_min_with, try_max_with,
+//! };
+//! const FINITE: u32 = MinMaxOptions::new()
+//!     .with_domain(MinMaxDomain::Finite)
+//!     .with_validation(MinMaxValidation::AssumeValid)
+//!     .bits();
+//! assert_eq!(try_min_with::<FINITE>(0.25, 0.0).unwrap(), 0.0);
+//! assert_eq!(try_max_with::<FINITE>(0.0, 5.0).unwrap(), 5.0);
+//! assert!(try_max_with::<{ MinMaxOptions::NORMAL.bits() }>(0.0, 5.0).is_err());
+//! ```
+//!
 //! Typed vector and width-specific lane entries retain their caller's token.
 //! Scalar/array entries select once unless configured for Caller execution.
 //!
@@ -37,6 +62,7 @@
 //! ISA. Relaxed behavior permits ISA-dependent results; it is not a speed claim.
 //! Min/max has no precision or FMA selector because neither describes this
 //! operation's numerical choices.
+#![doc = include_str!("permutations.md")]
 mod api;
 mod options;
 use crate::{PrimitiveError, PrimitiveErrorKind};
