@@ -13,7 +13,7 @@ p.add_argument('source', type=Path)
 a = p.parse_args()
 state = json.loads((a.root / 'progress.json').read_text())
 state['observed_utc'] = datetime.now(timezone.utc).isoformat()
-if state['stage'] not in ('complete', 'failed-no-packet'):
+if state['stage'] not in ('complete', 'failed-no-packet', 'owner-stopped'):
     pid = state['wrapper_pid']
     try:
         os.kill(pid, 0)

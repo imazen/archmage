@@ -1,6 +1,9 @@
 # Complete primitive option matrix — 2026-11-11
 
-Relaxed nonfusing WASM timing is in progress. Fusing/strict WASM, AMD Scalar/V3/V4/V4x, Intel V3 and
+Eight of nine contexts are complete. Relaxed nonfusing WASM was stopped at the
+owner's wrap-up request: one complete process packet and interrupted-process
+logs are retained, without a complete five-process result or timing table.
+Fusing/strict WASM, AMD Scalar/V3/V4/V4x, Intel V3 and
 the M6 exploratory matrix are complete: all 46 canonical flag sets, 66 workload groups and 1,566 arms,
 including existing Magetypes baselines. No default or numerical implementation
 changes in this expansion. Pow/exp/log timing expansion is deferred by the owner;
@@ -300,6 +303,9 @@ Strict WASM timing uses 4,728 s / peak-RSS 0.09 GiB, minimum available RAM
 21,472 MiB and peak load 1.68; its return code 1 preserves failed confirmation.
 Relaxed fusing timing uses 3,177 s / peak-RSS 0.09 GiB, minimum available RAM
 19,175 MiB and peak load 3.50; its return code 1 preserves failed confirmation.
+The owner-stopped nonfusing run used 2,911 s / peak-RSS 0.07 GiB, minimum
+available RAM 20,053 MiB and peak load 3.51. Its interrupted pairs are invalid;
+no full-context numerical or performance conclusion is drawn from that attempt.
 The first analysis launch lacked NumPy; a task-local venv supplies NumPy 2.4.2.
 No timing rerun was needed for that analysis dependency.
 

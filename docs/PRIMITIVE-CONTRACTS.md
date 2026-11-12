@@ -78,13 +78,14 @@ Other widths return UnsupportedWidth. Slice scheduling belongs to the caller.
 | x86 V4/V4x | Same semantic graph; native widths | Existing width's estimate → refinement | Native directed x4/x8/x16 and f64 x2/x4/x8 | Zen 5 x4/x8/x16 measured; overall unqualified |
 | ARM NEON | Ordered Propagate uses fmin/fmax; Normal aliases existing fminnm/fmaxnm | Raw frecpe/frsqrte → one existing NEON refinement | Native M6 std/no_std directed and x4 mantissa scan | M6 exploratory x4/x8/x16; every round resource-flagged |
 | WASM SIMD128 | Propagate uses strict min/max; Number uses repairs | Reciprocal division; rsqrt fixed two-step estimate for both grades | Wasmtime strict/relaxed std/no_std directed | Complete canonical std min/max/reciprocal/rsqrt x4/x8/x16 (f64 min/max x2/x4/x8); 18/66 groups fully clean, whole suite fails admission |
-| WASM relaxed SIMD | Normal or explicitly permissive policies may use relaxed min/max | No standardized reciprocal/rsqrt estimate instruction | Compiled opcode probes; relaxed token disabling tested | Canonical fusing matrix measured, 3/66 fully clean groups; nonfusing running. Earlier reciprocal research covers both modes; all whole strict suites fail admission |
+| WASM relaxed SIMD | Normal or explicitly permissive policies may use relaxed min/max | No standardized reciprocal/rsqrt estimate instruction | Compiled opcode probes; relaxed token disabling tested | Canonical fusing matrix measured, 3/66 fully clean groups; nonfusing incomplete (owner-stopped). Earlier reciprocal research covers both modes; all whole strict suites fail admission |
 | Scalar | Comparison/select plus requested repairs | Division / two-step rsqrt estimate, both grades alias | Exact-rational HIGHP fixtures; directed and x4 mantissa scan | Zen 5 Caller x4/x8/x16; overall unqualified |
 
 The [canonical-cell matrix](PRIMITIVE-PERMUTATIONS.md) measures every supported
 min/max, reciprocal and rsqrt flag set across three logical widths and the
 declared workloads. Native Scalar/V3/V4/V4x, Intel V3, strict/fusing WASM and
-exploratory M6 tables are complete; relaxed nonfusing WASM remains running.
+exploratory M6 tables are complete; relaxed nonfusing WASM was stopped at the
+owner's wrap-up request and has no complete five-process result.
 All complete strict suites fail admission. Earlier reciprocal research graphs
 remain separate, benchmark-only comparisons and do not fill missing cells.
 

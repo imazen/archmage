@@ -137,7 +137,10 @@ observations are resource-flagged; none establishes strict promotion.
 The [matrix report](../benchmarks/primitive_variants_2026-11-10/POLICY-MATRIX.md)
 records source identity, method, resource usage and remaining contexts.
 
-Pending contexts are not filled with historical timings. Earlier measurements
+Relaxed nonfusing WASM was stopped at the owner's wrap-up request after one
+complete process and part of the second; there is no complete five-process
+result or generated timing table. Partial evidence is preserved separately.
+Missing contexts are not filled with historical timings. Earlier measurements
 remain available, with their exact flags, source and harness limitations, in
 the [initial study](../benchmarks/primitive_variants_2026-11-10/README.md),
 [fusion study](../benchmarks/primitive_variants_2026-11-10/FUSION.md), and
