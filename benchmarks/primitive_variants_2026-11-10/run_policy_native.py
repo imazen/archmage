@@ -27,6 +27,7 @@ manifest=dict(source=args.source,compiler=subprocess.check_output(['rustc','-vV'
               zenbench='73302a1c115836b2646f6a9adc32058c20d1a66f',
               groups=66,arms=1566,processes=1 if args.exploratory_macos else 5,rounds_per_process=50,
               entry='typed vector proof retained',flags='default release; no target-cpu=native',
+              supervisor_timeout_seconds=os.environ.get('ZENBENCH_TIMEOUT','300'),
               exploratory=args.exploratory_macos)
 (root/'SOURCE.json').write_text(json.dumps(manifest,indent=2)+'\n')
 done=[]
