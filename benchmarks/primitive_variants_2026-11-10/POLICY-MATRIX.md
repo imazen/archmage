@@ -1,6 +1,6 @@
 # Complete primitive option matrix — 2026-11-11
 
-AMD V4x and relaxed WASM timings are in progress. Strict WASM, AMD Scalar/V3/V4, Intel V3 and
+Relaxed WASM timings are in progress. Strict WASM, AMD Scalar/V3/V4/V4x, Intel V3 and
 the M6 exploratory matrix are complete: all 46 canonical flag sets, 66 workload groups and 1,566 arms,
 including existing Magetypes baselines. No default or numerical implementation
 changes in this expansion. Pow/exp/log timing expansion is deferred by the owner;
@@ -40,7 +40,9 @@ to the builders in the adjoining permutation tables.
   first-use detection, invalid-input latency or tail speed claim.
 - Strict contexts prescribe five independent processes × 50 paired rounds;
   M6 one exploratory process × 50 pairs under the unrestricted scheduler.
-  Every round and every resource failure is retained. No favorable retries.
+  Every complete packet's rounds and resource failures are retained. No
+  performance-selected retries. The initial timed-out child has no surviving
+  per-round packet; its logs and experiment metadata are preserved separately.
 - Reported means use all retained pairs with equal process weight. Paired-round
   95% intervals use 10,000 within-process bootstrap resamples, NumPy PCG64 seed
   0x531324. Strict table intervals are diagnostic log-process-mean Student-t
@@ -205,6 +207,14 @@ For rsqrt chain64 the same order is 228.5043, 244.0332, 281.3762 and
 202.5815 ns. These are descriptive costs under the V4 proof on Zen 5, not
 confirmed optimizations. The tables preserve all other widths and flag sets.
 
+## Zen 5 V4x: final native context
+
+V4x retains 10,069/16,500 clean observations with no fully clean group.
+Its descriptive f32x16 reciprocal chain64 times are 163.1765 ns existing,
+79.2984 ns HIGHP R00, 176.9857 ns portable MIDP R33 and 134.3761 ns backend
+MIDP R3b. Rsqrt takes 222.6467, 237.9767, 274.2627 and 197.3359 ns respectively.
+V4 and V4x are separate proof-context measurements; timing noise is retained.
+
 ## Strict WASM: clean software costs and min/max choices
 
 The strict host retains 16,116/16,500 clean observations; 18/66 groups are
@@ -255,10 +265,17 @@ Zen 5 V3 timing uses 1,692 s / peak-RSS 0.29 GiB, minimum available RAM
 42,287 MiB and peak load 2.29; its return code 1 also retains failed confirmation.
 Zen 5 V4 timing uses 1,735 s / peak-RSS 0.29 GiB, minimum available RAM
 42,065 MiB and peak load 2.81; its return code 1 retains failed confirmation.
+Zen 5 V4x timing uses 1,715 s / peak-RSS 0.29 GiB, minimum available RAM
+42,067 MiB and peak load 2.15; its return code 1 retains failed confirmation.
 Strict WASM timing uses 4,728 s / peak-RSS 0.09 GiB, minimum available RAM
 21,472 MiB and peak load 1.68; its return code 1 preserves failed confirmation.
 The first analysis launch lacked NumPy; a task-local venv supplies NumPy 2.4.2.
 No timing rerun was needed for that analysis dependency.
+
+An unmeasured follow-up is a non-fused fixed-seed one/two-step fallback for
+backend-dependent Scalar/WASM profiles. The current division/two-step redirects
+describe this implementation; they do not establish that no cheaper fallback
+exists. That algorithm experiment is outside this evidence expansion.
 
 ## Reproduction and artifacts
 

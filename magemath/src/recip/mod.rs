@@ -80,6 +80,8 @@
 #![doc = include_str!("timings/dev-v3-rsqrt.md")]
 #![doc = include_str!("timings/dev-v4-recip.md")]
 #![doc = include_str!("timings/dev-v4-rsqrt.md")]
+#![doc = include_str!("timings/dev-v4x-recip.md")]
+#![doc = include_str!("timings/dev-v4x-rsqrt.md")]
 #![doc = include_str!("timings/wasm-strict-recip.md")]
 #![doc = include_str!("timings/wasm-strict-rsqrt.md")]
 // END GENERATED TIMING DOCUMENTS
