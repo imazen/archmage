@@ -11,7 +11,7 @@
 //!
 //! # Presets and policy permutations
 //!
-//! | [`MinMaxOptions`] preset | Domain | NaN policy | Opposite-zero tie | Validation |
+//! | [`crate::minmax::MinMaxOptions`] preset | Domain | NaN policy | Opposite-zero tie | Validation |
 //! |---|---|---|---|---|
 //! | `PORTABLE_NUMBER` (also `new()`) | Full | Prefer the number; two NaNs yield NaN | Min -0, max +0 | Checked; no domain rejection needed |
 //! | `PORTABLE_PROPAGATE` | Full | Either NaN yields NaN | Min -0, max +0 | Checked; no domain rejection needed |
@@ -20,8 +20,9 @@
 //! | `UNCHECKED_NORMAL` | Normal | No NaNs admitted | No zeros admitted | AssumeValid |
 //!
 //! All presets default to Automatic execution. Builders can independently select
-//! any [`MinMaxNaN`], [`MinMaxZero`], [`MinMaxDomain`], [`MinMaxValidation`] and
-//! [`MinMaxExecution`] combination, then encode it with `.bits()`.
+//! any [`crate::minmax::MinMaxNaN`], [`crate::minmax::MinMaxZero`],
+//! [`crate::minmax::MinMaxDomain`], [`crate::minmax::MinMaxValidation`] and
+//! [`crate::minmax::MinMaxExecution`] combination, then encode it with `.bits()`.
 //!
 //! | Domain | Accepted inputs | Distinct result policies |
 //! |---|---|---|

@@ -13,11 +13,11 @@
 //!
 //! # Presets and supported combinations
 //!
-//! Every preset defaults to [`RecipValidation::Checked`] and
-//! [`RecipExecution::Automatic`]. Use `.with_validation(...)` or
+//! Every preset defaults to [`crate::recip::RecipValidation::Checked`] and
+//! [`crate::recip::RecipExecution::Automatic`]. Use `.with_validation(...)` or
 //! `.with_execution(...)` to change those choices before `.bits()`.
 //!
-//! | [`RecipOptions`] preset | Domain | Result agreement | Accuracy / graph |
+//! | [`crate::recip::RecipOptions`] preset | Domain | Result agreement | Accuracy / graph |
 //! |---|---|---|---|
 //! | `HIGHP` (also `new()`) | Full | BitExact, excluding NaN encoding | Rounded division; rsqrt is rounded sqrt then division |
 //! | `PORTABLE_MIDP` | Normal | Same non-NaN bits across ISAs and widths | Fixed seed, two fused Newton steps; relative error ≤1e-4 |
