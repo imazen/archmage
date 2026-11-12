@@ -50,6 +50,7 @@ pub(super) struct Options {
     pub body_inline: Option<Inline>,
     pub tier: Option<&'static TierDescriptor>,
     pub wrap: bool,
+    pub suppress_const_test: bool,
     pub names: Vec<Rename>,
     pub in_impl: bool,
     pub in_trait: bool,

@@ -281,3 +281,122 @@ fn reattune_still_probes_and_nested_functions_do_not_inherit_parent_proof() {
     assert!(text.contains("attuned !"), "{text}");
     assert!(!text.contains("__attune_parent_proof"), "{text}");
 }
+
+#[test]
+fn suppress_const_test_controls_token_assertion_on_proof_boundaries() {
+    let checked_wrap = super::expand(
+        quote!(wrap),
+        quote!(
+            fn work(token: X64V3Token, x: u32) -> u32 {
+                let _ = token;
+                x
+            }
+        ),
+    )
+    .unwrap()
+    .to_string();
+    assert!(
+        checked_wrap.contains("__ARCHMAGE_ASSERT_TIER_F38B284B"),
+        "{checked_wrap}"
+    );
+
+    let suppressed_wrap = super::expand(
+        quote!(wrap, suppress_const_test),
+        quote!(
+            fn work(token: X64V3Token, x: u32) -> u32 {
+                let _ = token;
+                x
+            }
+        ),
+    )
+    .unwrap()
+    .to_string();
+    assert!(
+        !suppressed_wrap.contains("__ARCHMAGE_ASSERT_TIER_"),
+        "{suppressed_wrap}"
+    );
+
+    let suppressed_self = super::expand(
+        quote!(wrap, suppress_const_test, _self = X64V3Token),
+        quote!(
+            fn work(self, x: u32) -> u32 {
+                let _ = self;
+                x
+            }
+        ),
+    )
+    .unwrap()
+    .to_string();
+    assert!(
+        !suppressed_self.contains("__ARCHMAGE_ASSERT_TIER_"),
+        "{suppressed_self}"
+    );
+
+    // Explicit user-written proof type on a `_t` function checks by default,
+    // and omits the check when `suppress_const_test` is passed.
+    let checked_suffix = super::expand(
+        quote!(),
+        quote!(
+            fn work_v3_t(token: X64V3Token, x: u32) -> u32 {
+                let _ = token;
+                x
+            }
+        ),
+    )
+    .unwrap()
+    .to_string();
+    assert!(
+        checked_suffix.contains("__ARCHMAGE_ASSERT_TIER_F38B284B"),
+        "{checked_suffix}"
+    );
+
+    let suppressed_suffix = super::expand(
+        quote!(suppress_const_test),
+        quote!(
+            fn work_v3_t(token: X64V3Token, x: u32) -> u32 {
+                let _ = token;
+                x
+            }
+        ),
+    )
+    .unwrap()
+    .to_string();
+    assert!(
+        !suppressed_suffix.contains("__ARCHMAGE_ASSERT_TIER_"),
+        "{suppressed_suffix}"
+    );
+
+    // Macro-synthesized `::archmage::...` parameters cannot be shadowed, so
+    // they automatically omit the redundant const assertion.
+    for sig in [
+        quote!(
+            fn work_v3_t(x: u32) -> u32 {
+                x
+            }
+        ),
+        quote!(
+            fn work_v3_t(token: Token, x: u32) -> u32 {
+                let _ = token;
+                x
+            }
+        ),
+    ] {
+        let synthesized = super::expand(quote!(), sig).unwrap().to_string();
+        assert!(
+            !synthesized.contains("__ARCHMAGE_ASSERT_TIER_"),
+            "{synthesized}"
+        );
+    }
+
+    // Direct bodies emit no wrapper and reject `suppress_const_test`.
+    let direct_err = super::expand(
+        quote!(suppress_const_test),
+        quote!(
+            fn work_v3(x: u32) -> u32 {
+                x
+            }
+        ),
+    )
+    .unwrap_err();
+    assert!(direct_err.to_string().contains("requires a proof wrapper"));
+}

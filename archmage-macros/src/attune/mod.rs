@@ -19,7 +19,7 @@ use crate::{
 use syntax::{Args, Form, Inline, Selection};
 
 pub(crate) fn expand(attr: TokenStream, item: TokenStream) -> syn::Result<TokenStream> {
-    let args: Args = syn::parse2(attr)?;
+    let mut args: Args = syn::parse2(attr)?;
     let mut input: LightFn = syn::parse2(item)?;
     if args.family {
         family(input, args)
@@ -56,6 +56,9 @@ pub(crate) fn expand(attr: TokenStream, item: TokenStream) -> syn::Result<TokenS
                     ));
                 }
             } else {
+                // Root-anchored `::archmage::...` paths synthesized here cannot
+                // be shadowed by a local alias, so skip the redundant name check.
+                args.options.suppress_const_test = true;
                 let token: syn::Path = syn::parse_str(&format!("::{}", tier.token_path))?;
                 if placeholder {
                     specialize_syntax(&mut input.sig, &quote!(#token))?;
@@ -80,6 +83,12 @@ pub(crate) fn expand(attr: TokenStream, item: TokenStream) -> syn::Result<TokenS
             syn::Error::new_spanned(&input.sig.ident,
                 "attune needs a tier, a registered tier suffix (optionally _t), wrap, or make(...)")
         })?;
+        if args.options.suppress_const_test {
+            return Err(syn::Error::new_spanned(
+                &input.sig.ident,
+                "suppress_const_test requires a proof wrapper (wrap, a _t suffix, _*_t, or dispatch); direct target-feature bodies emit no token assertion",
+            ));
+        }
         if args.options.in_trait || args.options.self_type.is_some() {
             return Err(syn::Error::new_spanned(
                 &input.sig,
@@ -455,6 +464,7 @@ fn proof_entry(
 fn wrap(input: LightFn, args: Args) -> syn::Result<TokenStream> {
     let options = crate::engine::boundary::BoundaryOptions {
         body_inline: args.options.body_inline,
+        suppress_const_test: args.options.suppress_const_test,
         nested: args.options.in_trait || args.options.self_type.is_some(),
         in_impl: args.options.in_impl,
         self_type: args.options.self_type,
