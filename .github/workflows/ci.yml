@@ -161,8 +161,8 @@ jobs:
 
       - name: Portable and native FMA contracts (std and no_std)
         run: |
-          cargo test -p magetypes --features "${{ env.FEATURES }}" --test fma_contract --test float_inequality --test float_negation
-          cargo test -p magetypes --no-default-features --features w512 --test fma_contract --test float_inequality --test float_negation
+          cargo test -p magetypes --features "${{ env.FEATURES }}" --test fma_contract --test sqrt_portability --test float_inequality --test float_negation
+          cargo test -p magetypes --no-default-features --features w512 --test fma_contract --test sqrt_portability --test float_inequality --test float_negation
 
       - name: Macro input, output, and diagnostic contracts
         run: |
@@ -262,8 +262,8 @@ jobs:
 
       - name: Portable and native FMA contracts (std and no_std)
         run: |
-          cargo test -p magetypes --features "${{ env.FEATURES }}" --test fma_contract --test float_inequality --test float_negation
-          cargo test -p magetypes --no-default-features --features w512 --test fma_contract --test float_inequality --test float_negation
+          cargo test -p magetypes --features "${{ env.FEATURES }}" --test fma_contract --test sqrt_portability --test float_inequality --test float_negation
+          cargo test -p magetypes --no-default-features --features w512 --test fma_contract --test sqrt_portability --test float_inequality --test float_negation
 
       - name: Macro input, output, and diagnostic contracts
         run: |
@@ -359,7 +359,7 @@ jobs:
           cross test -p magemath --no-default-features --features w512 --target ${{ matrix.target }}
 
       - name: Portable FMA contract (no_std, cross/QEMU)
-        run: cross test -p magetypes --no-default-features --features w512 --target ${{ matrix.target }} --test fma_contract
+        run: cross test -p magetypes --no-default-features --features w512 --target ${{ matrix.target }} --test fma_contract --test sqrt_portability
 
       # archmage-no-features-test compiles with #![deny(warnings)]. It
       # exercises #[autoversion] with explicit non-x86 tier lists — the
@@ -468,31 +468,31 @@ jobs:
         env:
           ARCHMAGE_TEST_TIER: scalar
           CARGO_TARGET_WASM32_WASIP1_RUNNER: "wasmtime"
-        run: cargo test -p magetypes --no-default-features --features w512 --target wasm32-wasip1 --test fma_contract
+        run: cargo test -p magetypes --no-default-features --features w512 --target wasm32-wasip1 --test fma_contract --test sqrt_portability
 
       - name: Test relaxed WASM arithmetic
         env:
           RUSTFLAGS: "-C target-feature=+simd128,+relaxed-simd"
           CARGO_TARGET_WASM32_WASIP1_RUNNER: "wasmtime --env ARCHMAGE_EXPECT_RELAXED_FUSION=yes"
-        run: cargo test -p magetypes --features "${{ env.FEATURES }}" --target wasm32-wasip1 --lib --test fma_contract --test fused_arithmetic --test doc_examples --test scalar_parity
+        run: cargo test -p magetypes --features "${{ env.FEATURES }}" --target wasm32-wasip1 --lib --test fma_contract --test sqrt_portability --test fused_arithmetic --test doc_examples --test scalar_parity
 
       - name: Test no_std WASM arithmetic
         env:
           RUSTFLAGS: "-C target-feature=+simd128"
           CARGO_TARGET_WASM32_WASIP1_RUNNER: "wasmtime"
-        run: cargo test -p magetypes --no-default-features --features w512 --target wasm32-wasip1 --test fma_contract --test fused_arithmetic --test doc_examples --test scalar_parity
+        run: cargo test -p magetypes --no-default-features --features w512 --target wasm32-wasip1 --test fma_contract --test sqrt_portability --test fused_arithmetic --test doc_examples --test scalar_parity
 
       - name: Test no_std relaxed WASM arithmetic
         env:
           RUSTFLAGS: "-C target-feature=+simd128,+relaxed-simd"
           CARGO_TARGET_WASM32_WASIP1_RUNNER: "wasmtime"
-        run: cargo test -p magetypes --no-default-features --features w512 --target wasm32-wasip1 --test fma_contract
+        run: cargo test -p magetypes --no-default-features --features w512 --target wasm32-wasip1 --test fma_contract --test sqrt_portability
 
       - name: Test relaxed WASM arithmetic without host FMA
         env:
           RUSTFLAGS: "-C target-feature=+simd128,+relaxed-simd"
           CARGO_TARGET_WASM32_WASIP1_RUNNER: "wasmtime -W relaxed-simd-deterministic=n -C cranelift-has-fma=false --env ARCHMAGE_EXPECT_RELAXED_FUSION=no"
-        run: cargo test -p magetypes --features "${{ env.FEATURES }}" --target wasm32-wasip1 --lib --test fma_contract --test fused_arithmetic --test doc_examples --test scalar_parity
+        run: cargo test -p magetypes --features "${{ env.FEATURES }}" --target wasm32-wasip1 --lib --test fma_contract --test sqrt_portability --test fused_arithmetic --test doc_examples --test scalar_parity
 
       - name: Test WASM selection and disabled fallbacks
         run: bash xtask/test_wasm_selection.sh
@@ -1046,11 +1046,13 @@ jobs:
 
       - name: Build tests
         # The bare form builds only the root crate's tests — magetypes (where
-        # the SIMD types and their backend-arm tests live) must be built
-        # explicitly or the emulated tiers never exercise it at all.
+        # the SIMD types and their backend-arm tests live) and magemath's
+        # primitive contracts must be built explicitly or the emulated tiers
+        # never exercise them at all.
         run: |
           cargo test --features "${{ env.FEATURES }}" --no-run
           cargo test -p magetypes --features "std avx512" --no-run
+          cargo test -p magemath --features "std avx512" --lib --test primitive_contracts --no-run
 
       - name: Run tests under SDE (${{ matrix.cpu.name }})
         run: |

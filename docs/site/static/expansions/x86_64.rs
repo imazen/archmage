@@ -54,7 +54,6 @@ pub mod inferred_wrap {
     }
     #[inline(always)]
     pub fn add_one_v3_t(__attune_token: ::archmage::X64V3Token, x: u32) -> u32 {
-        let _: () = <::archmage::X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
         unsafe { __arcane_add_one_v3_t(__attune_token, x) }
     }
 }

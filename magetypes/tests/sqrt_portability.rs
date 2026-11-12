@@ -80,11 +80,21 @@ fn rational_fixtures_match_scalar_and_vector_widths() {
     use archmage::SimdToken;
     #[cfg(target_arch = "x86_64")]
     {
+        #[cfg(all(target_feature = "avx2", target_feature = "fma"))]
+        assert!(archmage::X64V3Token::summon().is_some());
         if let Some(t) = archmage::X64V3Token::summon() {
             widths_v3_t(t);
         }
         #[cfg(feature = "avx512")]
         {
+            #[cfg(all(
+                target_feature = "avx512f",
+                target_feature = "avx512bw",
+                target_feature = "avx512cd",
+                target_feature = "avx512dq",
+                target_feature = "avx512vl"
+            ))]
+            assert!(archmage::X64V4Token::summon().is_some());
             if let Some(t) = archmage::X64V4Token::summon() {
                 widths_v4_t(t);
             }
@@ -96,11 +106,16 @@ fn rational_fixtures_match_scalar_and_vector_widths() {
     #[cfg(target_arch = "aarch64")]
     widths_neon_t(archmage::NeonToken::summon().unwrap());
     #[cfg(target_arch = "wasm32")]
-    if let Some(t) = archmage::Wasm128Token::summon() {
-        widths_wasm128_t(t);
+    {
+        #[cfg(target_feature = "simd128")]
+        assert!(archmage::Wasm128Token::summon().is_some());
+        if let Some(t) = archmage::Wasm128Token::summon() {
+            widths_wasm128_t(t);
+        }
     }
 }
 
+#[cfg(feature = "std")]
 #[test]
 fn f32_stream_matches_hardware_and_retained_software() {
     // The caller explicitly chooses the opt-in full sweep (stride 1).
