@@ -20,6 +20,11 @@ to the builders in the adjoining permutation tables.
   between these inputs; WASM adds the guest/host harness.
 - Rust 1.99.1, distribution baseline release compilation, no target-cpu=native.
   Patched zenbench `73302a1c115836b2646f6a9adc32058c20d1a66f`.
+- Zen 5 measurements enforce the 32 MiB L3 class; Intel enforces the E-core
+  class, not P-cores. Placement comes from retained packet metadata. These
+  classes are not interchanged when interpreting timings. M6 remains unconfined.
+  Frozen `SOURCE.json` identifies the compiled input; runtime `git_hash` can
+  reflect later documentation commits while the same frozen binary runs.
 - Min/max f32x4/x8/x16 and f64x2/x4/x8; reciprocal/rsqrt f32x4/x8/x16.
   Streams of 64 and 4096 elements, 64-step vector dependency chains, and
   min/max zero-clamp64 with signed zeros and subnormals. Normal configurations

@@ -5,12 +5,12 @@ import json
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
-LABELS = {'dev/scalar': 'Zen 5 / ScalarToken', 'dev/v3': 'Zen 5 / V3',
-          'dev/v4': 'Zen 5 / V4', 'dev/v4x': 'Zen 5 / V4x',
-          'i265/v3': 'Core Ultra 7 265K / V3', 'mac/neon': 'Apple M6 / NEON',
-          'wasm/strict': 'Core Ultra 7 265K / strict WASM',
-          'wasm/fusing': 'Core Ultra 7 265K / relaxed fusing WASM',
-          'wasm/nonfusing': 'Core Ultra 7 265K / relaxed nonfusing WASM'}
+LABELS = {'dev/scalar': 'Zen 5, 32 MiB L3 class / ScalarToken', 'dev/v3': 'Zen 5, 32 MiB L3 class / V3',
+          'dev/v4': 'Zen 5, 32 MiB L3 class / V4', 'dev/v4x': 'Zen 5, 32 MiB L3 class / V4x',
+          'i265/v3': 'Core Ultra 7 265K E-cores / V3', 'mac/neon': 'Apple M6 / NEON',
+          'wasm/strict': 'Core Ultra 7 265K E-cores / strict WASM',
+          'wasm/fusing': 'Core Ultra 7 265K E-cores / relaxed fusing WASM',
+          'wasm/nonfusing': 'Core Ultra 7 265K E-cores / relaxed nonfusing WASM'}
 
 
 def render(context, op, rows):

@@ -1,4 +1,4 @@
-<details><summary>Core Ultra 7 265K / V3: max timings and observed error</summary>
+<details><summary>Core Ultra 7 265K E-cores / V3: max timings and observed error</summary>
 
 Each timing is **ns per complete workload; ratio (interval) versus existing Magetypes**.
 Streams process 64/4096 scalar elements; chain64 performs 64 dependent vector steps.
