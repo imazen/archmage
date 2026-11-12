@@ -32,7 +32,44 @@ use archmage::ScalarToken;
 #[cfg(any(target_arch="x86_64",target_arch="aarch64",target_arch="wasm32"))]
 use archmage::SimdToken;
 use zenbench::{black_box,Suite};
+use std::collections::{BTreeMap,BTreeSet};
 use std::sync::Arc;
+
+struct BenchFilter {
+    substr: Option<String>,
+    dedup: Option<BTreeMap<String,BTreeSet<String>>>,
+    rounds: usize,
+}
+
+impl BenchFilter {
+    fn from_args(args:&[String],iterate:bool) -> Self {
+        let substr=args.iter().position(|x|x=="--filter").and_then(|i|args.get(i+1)).cloned();
+        let dedup_path=args.iter().position(|x|x=="--dedup").and_then(|i|args.get(i+1)).cloned();
+        let dedup=dedup_path.map(|p| {
+            let mut map:BTreeMap<String,BTreeSet<String>>=BTreeMap::new();
+            for line in std::fs::read_to_string(p).expect("read --dedup TSV").lines() {
+                let mut cols=line.split('\t');
+                if let (Some(cell),Some(rep))=(cols.next(),cols.next()) {
+                    map.entry(cell.to_owned()).or_default().insert(rep.to_owned());
+                }
+            }
+            map
+        });
+        Self {substr,dedup,rounds:if iterate {30} else {50}}
+    }
+    fn matches_group(&self,name:&str) -> bool {
+        self.substr.as_ref().is_none_or(|f|name.contains(f))
+    }
+    fn keep_arm(&self,group:&str,arm:&str) -> bool {
+        let Some(map)=&self.dedup else {return true;};
+        if let Some(reps)=map.get(group) {return reps.contains(arm);}
+        if let Some(prefix)=group.strip_suffix("/stream4096").or_else(||group.strip_suffix("/zero-clamp64")) {
+            let fallback=format!("{prefix}/stream64");
+            if let Some(reps)=map.get(&fallback) {return reps.contains(arm);}
+        }
+        true
+    }
+}
 
 fn add_bench<F:CheckScalar,const N:usize,const W:usize,const DEP:bool>(
     g:&mut zenbench::BenchGroup,name:&str,data:Arc<([F;N],[F;N])>,
@@ -49,69 +86,79 @@ fn add_bench<F:CheckScalar,const N:usize,const W:usize,const DEP:bool>(
 }
 
 macro_rules! group {
-    ($suite:ident,$tier:ident,$t:ident,$stream:ident,$chain:ident,$float:ty,$w:literal,$operation:literal,$recip:literal,$op:literal,$n:literal,$dependent:literal,$zero:literal,$cases:ident,$kind:literal) => {{
+    ($suite:ident,$flt:ident,$tier:ident,$t:ident,$stream:ident,$chain:ident,$float:ty,$w:literal,$operation:literal,$recip:literal,$op:literal,$n:literal,$dependent:literal,$zero:literal,$cases:ident,$kind:literal) => {{
         let name=format!("{}/{}/{}x{}/{}",$tier,$operation,stringify!($float),$w,$kind);
-        let pair=|i| <$float as CheckScalar>::pair(i,$zero,$recip,$recip && $op);
-        let a:[$float;$n]=core::array::from_fn(|i|pair(i).0);
-        let b:[$float;$n]=core::array::from_fn(|i|pair(i).1);
-        let data=Arc::new((a,b));
-        macro_rules! preflight {
-            ($flag:literal,$legacy:literal,$id:expr) => {{
-                let error=check::verify::<$float,$n,$w>($flag,$legacy,$recip,$op,$dependent,&data,
-                    |a,b,out|$stream::<$flag,$op,$legacy,$n>($t,a,b,out),
-                    |a,b,out|$stream::<$flag,$op,$legacy,$w>($t,a,b,out),
-                    |x|$chain::<$flag,$op,$legacy>($t,x));
-                eprintln!("POLICY_ACCURACY\t{}\t{}\t{:.17e}",name,$id,error);
-            }};
-        }
-        if std::env::args().any(|a|a=="--verify-only") {
-            preflight!(0,true,"existing Magetypes");
-            macro_rules! verify {($o:literal,$id:literal)=>{preflight!($o,false,$id);};}
-            $cases!(verify);
-        } else {
-            $suite.group(name.clone(),|g| {
-                g.config().min_rounds(50).max_rounds(50).auto_rounds(false);
-                macro_rules! add {($o:literal,$legacy:literal,$id:expr)=>{{
-                    preflight!($o,$legacy,$id);
-                    add_bench::<$float,$n,$w,$dependent>(g,$id,Arc::clone(&data),
-                        move|a,b,out|$stream::<$o,$op,$legacy,$n>($t,a,b,out),
-                        move|x|$chain::<$o,$op,$legacy>($t,x));
-                }};}
-                add!(0,true,concat!("existing Magetypes ",$operation));
-                macro_rules! add_case {($o:literal,$id:literal)=>{add!($o,false,$id);};}
-                $cases!(add_case);
-            });
+        if $flt.matches_group(&name) {
+            let pair=|i| <$float as CheckScalar>::pair(i,$zero,$recip,$recip && $op);
+            let a:[$float;$n]=core::array::from_fn(|i|pair(i).0);
+            let b:[$float;$n]=core::array::from_fn(|i|pair(i).1);
+            let data=Arc::new((a,b));
+            macro_rules! preflight {
+                ($flag:literal,$legacy:literal,$id:expr) => {{
+                    let error=check::verify::<$float,$n,$w>($flag,$legacy,$recip,$op,$dependent,&data,
+                        |a,b,out|$stream::<$flag,$op,$legacy,$n>($t,a,b,out),
+                        |a,b,out|$stream::<$flag,$op,$legacy,$w>($t,a,b,out),
+                        |x|$chain::<$flag,$op,$legacy>($t,x));
+                    eprintln!("POLICY_ACCURACY\t{}\t{}\t{:.17e}",name,$id,error);
+                }};
+            }
+            if std::env::args().any(|a|a=="--verify-only") {
+                preflight!(0,true,"existing Magetypes");
+                macro_rules! verify {($o:literal,$id:literal)=>{preflight!($o,false,$id);};}
+                $cases!(verify);
+            } else {
+                $suite.group(name.clone(),|g| {
+                    g.config().min_rounds($flt.rounds).max_rounds($flt.rounds).auto_rounds(false);
+                    macro_rules! add {($o:literal,$legacy:literal,$id:expr)=>{{
+                        preflight!($o,$legacy,$id);
+                        if $flt.keep_arm(&name,$id) {
+                            add_bench::<$float,$n,$w,$dependent>(g,$id,Arc::clone(&data),
+                                move|a,b,out|$stream::<$o,$op,$legacy,$n>($t,a,b,out),
+                                move|x|$chain::<$o,$op,$legacy>($t,x));
+                        }
+                    }};}
+                    add!(0,true,concat!("existing Magetypes ",$operation));
+                    macro_rules! add_case {($o:literal,$id:literal)=>{add!($o,false,$id);};}
+                    $cases!(add_case);
+                });
+            }
         }
     }};
 }
 macro_rules! width {
-    ($suite:ident,$tier:ident,$t:ident,$stream:ident,$chain:ident,$float:ty,$w:literal,$operation:literal,$recip:literal,$op:literal,$cases:ident) => {{
-        group!($suite,$tier,$t,$stream,$chain,$float,$w,$operation,$recip,$op,64,false,false,$cases,"stream64");
-        group!($suite,$tier,$t,$stream,$chain,$float,$w,$operation,$recip,$op,4096,false,false,$cases,"stream4096");
-        group!($suite,$tier,$t,$stream,$chain,$float,$w,$operation,$recip,$op,64,true,false,$cases,"chain64");
+    ($suite:ident,$flt:ident,$tier:ident,$t:ident,$stream:ident,$chain:ident,$float:ty,$w:literal,$operation:literal,$recip:literal,$op:literal,$cases:ident) => {{
+        group!($suite,$flt,$tier,$t,$stream,$chain,$float,$w,$operation,$recip,$op,64,false,false,$cases,"stream64");
+        group!($suite,$flt,$tier,$t,$stream,$chain,$float,$w,$operation,$recip,$op,4096,false,false,$cases,"stream4096");
+        group!($suite,$flt,$tier,$t,$stream,$chain,$float,$w,$operation,$recip,$op,64,true,false,$cases,"chain64");
     }};
 }
 // MATRIX
 fn main() {
     if std::env::args().any(|x|x=="--cpu-set") {
         let mut classes=zenbench::platform::detect_cpu_topology().classes;
-        classes.sort_by(|a,b|a.name.cmp(&b.name));
+        classes.sort_by(|a,b|{
+            let rank=|s:&str|if s.starts_with("super"){0}else if s.starts_with("performance"){1}else{2};
+            rank(&a.name).cmp(&rank(&b.name)).then_with(||a.name.cmp(&b.name))
+        });
         println!("{}",classes[0].cpus.iter().map(usize::to_string).collect::<Vec<_>>().join(","));return;
     }
     let args:Vec<_>=std::env::args().collect();
     let tier=args.iter().position(|x|x=="--policy-tier").and_then(|i|args.get(i+1)).expect("--policy-tier").clone();
+    let exploratory=args.iter().any(|x|x=="--exploratory-macos");
+    let iterate_flag=args.iter().any(|x|x=="--iterate");
+    let flt=BenchFilter::from_args(&args,iterate_flag);
     let register=|suite:&mut Suite| {match tier.as_str() {
         // TIERS
         _=>panic!("unavailable policy tier"),
     }};
     if args.iter().any(|x|x=="--verify-only") {register(&mut Suite::new());return;}
     assert!(args.iter().any(|x|x=="--measure"),"timing requires --measure");
-    let exploratory=args.iter().any(|x|x=="--exploratory-macos");
     assert!(!exploratory || cfg!(target_os="macos"));
-    let mut gate=zenbench::GateConfig::strict();if exploratory {gate.strict=false;}
+    let fast_iter=exploratory || iterate_flag;
+    let mut gate=zenbench::GateConfig::strict();if fast_iter {gate.strict=false;}
     let result=zenbench::run_gated(gate,|suite| {
-        let p=suite.plan();p.mode=if exploratory {zenbench::BenchmarkMode::Iterate}else{zenbench::BenchmarkMode::Confirm};
-        p.processes=if exploratory {1}else{5};p.rounds=Some(50);p.margin_pct=2.0;p.confidence=0.95;
+        let p=suite.plan();p.mode=if fast_iter {zenbench::BenchmarkMode::Iterate}else{zenbench::BenchmarkMode::Confirm};
+        p.processes=if fast_iter {1}else{5};p.rounds=Some(flt.rounds);p.margin_pct=2.0;p.confidence=0.95;
         p.workload_id=Some("public-primitive-canonical-flags-stream64-4096-chain64-zero-clamp-v1".into());
         p.scope=Some(format!("primitive-policies-{tier}"));register(suite);
     });
@@ -119,6 +166,7 @@ fn main() {
     result.save(std::env::var("ARCHMAGE_PRIMITIVE_RESULTS").expect("durable results path")).unwrap();
     result.print_report();
     if exploratory {eprintln!("EXPLORATORY M6; no uniform core-class enforcement or promotion");}
+    else if iterate_flag || flt.substr.is_some() || flt.dedup.is_some() {eprintln!("ITERATE/SLICE RUN; non-archival codegen check");}
     else {assert!(result.confirmation_issues().is_empty(),"retained matrix failed confirmation: {:?}",result.confirmation_issues());}
 }
 '''
@@ -146,11 +194,11 @@ def native():
             body=[]
             for op,operation in [(False,'min' if family=='mm' else 'recip'),(True,'max' if family=='mm' else 'rsqrt')]:
                 rc=str(family=='rc').lower();op=str(op).lower()
-                args=f'suite,tier,t,stream_{family}{tag}_{tier},chain_{family}{tag}_{tier},{ty},{w},"{operation}",{rc},{op}'
+                args=f'suite,flt,tier,t,stream_{family}{tag}_{tier},chain_{family}{tag}_{tier},{ty},{w},"{operation}",{rc},{op}'
                 body.append('width!('+args+','+('minmax_cases' if family=='mm' else 'recip_cases')+');')
                 if family=='mm':body.append('group!('+args+',64,false,true,zero_cases,"zero-clamp64");')
-            definitions.append(attr+f'fn {name}(suite:&mut Suite,tier:&str,t:{token_type}) {{'+''.join(body)+'}\n')
-            tiercalls.append(('#[cfg(feature="w512")]\n' if wide else '')+f'{name}(suite,&tier,t);')
+            definitions.append(attr+f'fn {name}(suite:&mut Suite,flt:&BenchFilter,tier:&str,t:{token_type}) {{'+''.join(body)+'}\n')
+            tiercalls.append(('#[cfg(feature="w512")]\n' if wide else '')+f'{name}(suite,&flt,&tier,t);')
         tiers.append(topattr+f'"{tier}"=>{{let t={token};'+''.join(tiercalls)+'},')
     return NATIVE.replace('// MATRIX','\n'.join(definitions)).replace('// TIERS','\n'.join(tiers))
 

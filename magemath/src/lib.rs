@@ -74,7 +74,7 @@ mod primitive;
 pub use primitive::{PrimitiveError, PrimitiveErrorKind};
 /// Configurable min/max policies for f32 and f64.
 pub mod minmax;
-#[cfg(all(target_arch = "wasm32", target_feature = "relaxed-simd"))]
+#[cfg(target_arch = "wasm32")]
 mod primitive_wasm;
 /// Configurable reciprocal and reciprocal square root for f32.
 pub mod recip;

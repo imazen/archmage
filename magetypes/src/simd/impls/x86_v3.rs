@@ -5543,12 +5543,14 @@ impl I8x64Backend for X64V3Token {
 
     #[inline(always)]
     fn saturating_add(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
-        core::array::from_fn(|i| <X64V3Token as I8x32Backend>::saturating_add(self, a[i], b[i]))
+        let f = <X64V3Token as I8x32Backend>::saturating_add;
+        [f(self, a[0], b[0]), f(self, a[1], b[1])]
     }
 
     #[inline(always)]
     fn saturating_sub(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
-        core::array::from_fn(|i| <X64V3Token as I8x32Backend>::saturating_sub(self, a[i], b[i]))
+        let f = <X64V3Token as I8x32Backend>::saturating_sub;
+        [f(self, a[0], b[0]), f(self, a[1], b[1])]
     }
 
     // AND/OR the halves first, then one reduction — one vector op +
@@ -5810,12 +5812,14 @@ impl U8x64Backend for X64V3Token {
 
     #[inline(always)]
     fn saturating_add(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
-        core::array::from_fn(|i| <X64V3Token as U8x32Backend>::saturating_add(self, a[i], b[i]))
+        let f = <X64V3Token as U8x32Backend>::saturating_add;
+        [f(self, a[0], b[0]), f(self, a[1], b[1])]
     }
 
     #[inline(always)]
     fn saturating_sub(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
-        core::array::from_fn(|i| <X64V3Token as U8x32Backend>::saturating_sub(self, a[i], b[i]))
+        let f = <X64V3Token as U8x32Backend>::saturating_sub;
+        [f(self, a[0], b[0]), f(self, a[1], b[1])]
     }
 
     // AND/OR the halves first, then one reduction — one vector op +
@@ -6148,31 +6152,32 @@ impl I16x32Backend for X64V3Token {
 
     #[inline(always)]
     fn shl_uniform(self, a: [__m256i; 2], count: u32) -> [__m256i; 2] {
-        core::array::from_fn(|i| <X64V3Token as I16x16Backend>::shl_uniform(self, a[i], count))
+        let f = <X64V3Token as I16x16Backend>::shl_uniform;
+        [f(self, a[0], count), f(self, a[1], count)]
     }
 
     #[inline(always)]
     fn shr_logical_uniform(self, a: [__m256i; 2], count: u32) -> [__m256i; 2] {
-        core::array::from_fn(|i| {
-            <X64V3Token as I16x16Backend>::shr_logical_uniform(self, a[i], count)
-        })
+        let f = <X64V3Token as I16x16Backend>::shr_logical_uniform;
+        [f(self, a[0], count), f(self, a[1], count)]
     }
 
     #[inline(always)]
     fn shr_arithmetic_uniform(self, a: [__m256i; 2], count: u32) -> [__m256i; 2] {
-        core::array::from_fn(|i| {
-            <X64V3Token as I16x16Backend>::shr_arithmetic_uniform(self, a[i], count)
-        })
+        let f = <X64V3Token as I16x16Backend>::shr_arithmetic_uniform;
+        [f(self, a[0], count), f(self, a[1], count)]
     }
 
     #[inline(always)]
     fn saturating_add(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
-        core::array::from_fn(|i| <X64V3Token as I16x16Backend>::saturating_add(self, a[i], b[i]))
+        let f = <X64V3Token as I16x16Backend>::saturating_add;
+        [f(self, a[0], b[0]), f(self, a[1], b[1])]
     }
 
     #[inline(always)]
     fn saturating_sub(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
-        core::array::from_fn(|i| <X64V3Token as I16x16Backend>::saturating_sub(self, a[i], b[i]))
+        let f = <X64V3Token as I16x16Backend>::saturating_sub;
+        [f(self, a[0], b[0]), f(self, a[1], b[1])]
     }
 
     // AND/OR the halves first, then one reduction — one vector op +
@@ -6471,31 +6476,32 @@ impl U16x32Backend for X64V3Token {
 
     #[inline(always)]
     fn shl_uniform(self, a: [__m256i; 2], count: u32) -> [__m256i; 2] {
-        core::array::from_fn(|i| <X64V3Token as U16x16Backend>::shl_uniform(self, a[i], count))
+        let f = <X64V3Token as U16x16Backend>::shl_uniform;
+        [f(self, a[0], count), f(self, a[1], count)]
     }
 
     #[inline(always)]
     fn shr_logical_uniform(self, a: [__m256i; 2], count: u32) -> [__m256i; 2] {
-        core::array::from_fn(|i| {
-            <X64V3Token as U16x16Backend>::shr_logical_uniform(self, a[i], count)
-        })
+        let f = <X64V3Token as U16x16Backend>::shr_logical_uniform;
+        [f(self, a[0], count), f(self, a[1], count)]
     }
 
     #[inline(always)]
     fn shr_arithmetic_uniform(self, a: [__m256i; 2], count: u32) -> [__m256i; 2] {
-        core::array::from_fn(|i| {
-            <X64V3Token as U16x16Backend>::shr_logical_uniform(self, a[i], count)
-        })
+        let f = <X64V3Token as U16x16Backend>::shr_logical_uniform;
+        [f(self, a[0], count), f(self, a[1], count)]
     }
 
     #[inline(always)]
     fn saturating_add(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
-        core::array::from_fn(|i| <X64V3Token as U16x16Backend>::saturating_add(self, a[i], b[i]))
+        let f = <X64V3Token as U16x16Backend>::saturating_add;
+        [f(self, a[0], b[0]), f(self, a[1], b[1])]
     }
 
     #[inline(always)]
     fn saturating_sub(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
-        core::array::from_fn(|i| <X64V3Token as U16x16Backend>::saturating_sub(self, a[i], b[i]))
+        let f = <X64V3Token as U16x16Backend>::saturating_sub;
+        [f(self, a[0], b[0]), f(self, a[1], b[1])]
     }
 
     // AND/OR the halves first, then one reduction — one vector op +
@@ -6786,21 +6792,20 @@ impl I32x16Backend for X64V3Token {
 
     #[inline(always)]
     fn shl_uniform(self, a: [__m256i; 2], count: u32) -> [__m256i; 2] {
-        core::array::from_fn(|i| <X64V3Token as I32x8Backend>::shl_uniform(self, a[i], count))
+        let f = <X64V3Token as I32x8Backend>::shl_uniform;
+        [f(self, a[0], count), f(self, a[1], count)]
     }
 
     #[inline(always)]
     fn shr_logical_uniform(self, a: [__m256i; 2], count: u32) -> [__m256i; 2] {
-        core::array::from_fn(|i| {
-            <X64V3Token as I32x8Backend>::shr_logical_uniform(self, a[i], count)
-        })
+        let f = <X64V3Token as I32x8Backend>::shr_logical_uniform;
+        [f(self, a[0], count), f(self, a[1], count)]
     }
 
     #[inline(always)]
     fn shr_arithmetic_uniform(self, a: [__m256i; 2], count: u32) -> [__m256i; 2] {
-        core::array::from_fn(|i| {
-            <X64V3Token as I32x8Backend>::shr_arithmetic_uniform(self, a[i], count)
-        })
+        let f = <X64V3Token as I32x8Backend>::shr_arithmetic_uniform;
+        [f(self, a[0], count), f(self, a[1], count)]
     }
 
     // AND/OR the halves first, then one reduction — one vector op +
@@ -7070,21 +7075,20 @@ impl U32x16Backend for X64V3Token {
 
     #[inline(always)]
     fn shl_uniform(self, a: [__m256i; 2], count: u32) -> [__m256i; 2] {
-        core::array::from_fn(|i| <X64V3Token as U32x8Backend>::shl_uniform(self, a[i], count))
+        let f = <X64V3Token as U32x8Backend>::shl_uniform;
+        [f(self, a[0], count), f(self, a[1], count)]
     }
 
     #[inline(always)]
     fn shr_logical_uniform(self, a: [__m256i; 2], count: u32) -> [__m256i; 2] {
-        core::array::from_fn(|i| {
-            <X64V3Token as U32x8Backend>::shr_logical_uniform(self, a[i], count)
-        })
+        let f = <X64V3Token as U32x8Backend>::shr_logical_uniform;
+        [f(self, a[0], count), f(self, a[1], count)]
     }
 
     #[inline(always)]
     fn shr_arithmetic_uniform(self, a: [__m256i; 2], count: u32) -> [__m256i; 2] {
-        core::array::from_fn(|i| {
-            <X64V3Token as U32x8Backend>::shr_logical_uniform(self, a[i], count)
-        })
+        let f = <X64V3Token as U32x8Backend>::shr_logical_uniform;
+        [f(self, a[0], count), f(self, a[1], count)]
     }
 
     // AND/OR the halves first, then one reduction — one vector op +

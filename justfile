@@ -1215,3 +1215,7 @@ primitive-policy-progress root source:
 # Print a frozen guest with wasm-tools first; this inventories WAT, not JIT code.
 primitive-policy-wasm-calls wat output:
     python3 -B benchmarks/primitive_variants_2026-11-10/policy_wasm_calls.py "{{wat}}" "{{output}}"
+
+# Static codegen equivalence classes, hot-call gate, and llvm-mca throughput/latency analysis.
+mca *ARGS:
+    python3 -B xtask/mca.py {{ARGS}}

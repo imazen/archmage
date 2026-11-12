@@ -3,13 +3,27 @@
 #[macro_use]
 #[path = "../policy_registry.rs"]
 mod registry;
+use std::collections::{BTreeMap, BTreeSet};
 use std::sync::{Arc, Mutex};
 use zenbench::wasm::{WasmBench, wasmtime};
 
 fn main() {
     if std::env::args().any(|a| a == "--cpu-set") {
         let mut classes = zenbench::platform::detect_cpu_topology().classes;
-        classes.sort_by(|a, b| a.name.cmp(&b.name));
+        classes.sort_by(|a, b| {
+            let rank = |s: &str| {
+                if s.starts_with("super") {
+                    0
+                } else if s.starts_with("performance") {
+                    1
+                } else {
+                    2
+                }
+            };
+            rank(&a.name)
+                .cmp(&rank(&b.name))
+                .then_with(|| a.name.cmp(&b.name))
+        });
         println!(
             "{}",
             classes[0]
@@ -72,9 +86,45 @@ fn main() {
         }
     }
     assert_eq!(cells.len(), 66);
+    let args: Vec<_> = std::env::args().collect();
+    let filter_substr = args
+        .iter()
+        .position(|a| a == "--filter")
+        .and_then(|i| args.get(i + 1))
+        .cloned();
+    let dedup_map: Option<BTreeMap<String, BTreeSet<String>>> = args
+        .iter()
+        .position(|a| a == "--dedup")
+        .and_then(|i| args.get(i + 1))
+        .map(|p| {
+            let mut map: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
+            for line in std::fs::read_to_string(p)
+                .expect("read --dedup TSV")
+                .lines()
+            {
+                let mut cols = line.split('\t');
+                if let (Some(cell), Some(rep)) = (cols.next(), cols.next()) {
+                    map.entry(cell.to_owned())
+                        .or_default()
+                        .insert(rep.to_owned());
+                }
+            }
+            map
+        });
+    let iterate_flag = args.iter().any(|a| a == "--iterate");
+    let rounds = if iterate_flag { 30 } else { 50 };
+
     let mut inventory = Vec::new();
+    let mca_tier = if mode == "strict" {
+        "wasm128"
+    } else {
+        "wasm128-relaxed"
+    };
     for &(op, name, ty, width, kind, label) in &cells {
         let group = format!("wasm-{mode}/{name}/{ty}x{width}/{label}");
+        if filter_substr.as_ref().is_some_and(|f| !group.contains(f)) {
+            continue;
+        }
         let mut arms = vec![(-1, format!("existing Magetypes {name}"))];
         macro_rules! add {
             ($flag:literal,$id:literal) => {
@@ -95,21 +145,38 @@ fn main() {
                 .unwrap();
             eprintln!("POLICY_ACCURACY\t{group}\t{id}\t{error:.17e}");
         }
+        if let Some(map) = &dedup_map {
+            let mca_cell = format!("{mca_tier}/{name}/{ty}x{width}/{label}");
+            let fallback = format!("{mca_tier}/{name}/{ty}x{width}/stream64");
+            if let Some(reps) = map.get(&mca_cell).or_else(|| map.get(&fallback)) {
+                arms.retain(|(_, id)| reps.contains(id));
+            }
+        }
         inventory.push((op, width, kind, group, arms));
     }
-    assert_eq!(inventory.iter().map(|v| v.4.len()).sum::<usize>(), 1566);
-    if std::env::args().any(|a| a == "--verify-only") {
+    if filter_substr.is_none() && dedup_map.is_none() {
+        assert_eq!(inventory.iter().map(|v| v.4.len()).sum::<usize>(), 1566);
+    }
+    if args.iter().any(|a| a == "--verify-only") {
         return;
     }
     // One instance is shared by the sequential paired arms. Preparation/locking
     // happens outside b.iter; guest input/output addresses are identical for all
     // arms. Reusing it avoids per-round instantiation and an instance per cell.
     let shared = Arc::new(Mutex::new(inst));
-    let result = zenbench::run_gated(zenbench::GateConfig::strict(), |suite| {
+    let mut gate = zenbench::GateConfig::strict();
+    if iterate_flag {
+        gate.strict = false;
+    }
+    let result = zenbench::run_gated(gate, |suite| {
         let p = suite.plan();
-        p.mode = zenbench::BenchmarkMode::Confirm;
-        p.processes = 5;
-        p.rounds = Some(50);
+        p.mode = if iterate_flag {
+            zenbench::BenchmarkMode::Iterate
+        } else {
+            zenbench::BenchmarkMode::Confirm
+        };
+        p.processes = if iterate_flag { 1 } else { 5 };
+        p.rounds = Some(rounds);
         p.margin_pct = 2.0;
         p.confidence = 0.95;
         p.workload_id =
@@ -117,7 +184,10 @@ fn main() {
         p.scope = Some(format!("primitive-policies-wasm-{mode}"));
         for (op, width, kind, group, arms) in inventory {
             suite.group(group, |g| {
-                g.config().min_rounds(50).max_rounds(50).auto_rounds(false);
+                g.config()
+                    .min_rounds(rounds)
+                    .max_rounds(rounds)
+                    .auto_rounds(false);
                 for (flag, id) in arms {
                     let shared = Arc::clone(&shared);
                     let prepare = prepare.clone();
@@ -145,9 +215,13 @@ fn main() {
         .save(std::env::var("ARCHMAGE_PRIMITIVE_RESULTS").expect("durable result path"))
         .unwrap();
     result.print_report();
-    assert!(
-        result.confirmation_issues().is_empty(),
-        "retained WASM policy matrix fails confirmation: {:?}",
-        result.confirmation_issues()
-    );
+    if iterate_flag || filter_substr.is_some() || dedup_map.is_some() {
+        eprintln!("ITERATE/SLICE WASM RUN; non-archival codegen check");
+    } else {
+        assert!(
+            result.confirmation_issues().is_empty(),
+            "retained WASM policy matrix fails confirmation: {:?}",
+            result.confirmation_issues()
+        );
+    }
 }

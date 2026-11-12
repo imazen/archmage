@@ -2991,7 +2991,7 @@ dependencies = [
 [[package]]
 name = "zenbench"
 version = "0.1.11"
-source = "git+https://github.com/imazen/zenbench?rev=73302a1c115836b2646f6a9adc32058c20d1a66f#73302a1c115836b2646f6a9adc32058c20d1a66f"
+source = "git+https://github.com/imazen/zenbench?rev=952dd1f09fc79d1203a2a75a091c43e7e1ce54fc#952dd1f09fc79d1203a2a75a091c43e7e1ce54fc"
 dependencies = [
  "affinity",
  "clap",

@@ -96,8 +96,6 @@ pub use options::*;
 // Arithmetic is selected once before entering either Newton graph.
 const NATIVE: u8 = 0;
 const SOFTWARE: u8 = 1;
-#[cfg(all(feature = "std", target_arch = "x86_64", not(miri)))]
-const STD_FMA: u8 = 3;
 #[cfg(target_arch = "wasm32")]
 const WASM_SOFTWARE: u8 = 2;
 
@@ -131,7 +129,34 @@ fn native_fusion<T: archmage::SimdToken>(_: T) -> bool {
 }
 
 macro_rules! graph {
-    ($name:ident,$core:ident,$v:ident,$int:ident,$bound:ident,$n:literal) => {
+    ($name:ident,$core:ident,$v:ident,$int:ident,$bound:ident,$lanes:literal,$neon_est:ident,$wasm_fma:ident,$v3_whole:ident,$neon_whole:ident) => {
+        #[cfg(all(target_arch = "x86_64", not(miri)))]
+        #[cfg_attr(all(target_feature = "avx2", target_feature = "fma"), inline(always))]
+        #[cfg_attr(
+            not(all(target_feature = "avx2", target_feature = "fma")),
+            archmage::arcane(suppress_const_test)
+        )]
+        fn $v3_whole<const O: u32, const RSQRT: bool>(
+            v3: archmage::X64V3Token,
+            x: [f32; $lanes],
+        ) -> Result<[f32; $lanes], PrimitiveError> {
+            use magetypes::simd::generic::$v as V;
+            $core::<O, RSQRT, NATIVE, archmage::X64V3Token>(v3, V::from_array_t(v3, x))
+                .map(|r| r.to_array())
+        }
+
+        #[cfg(all(target_arch = "aarch64", not(miri)))]
+        #[cfg_attr(target_feature = "neon", inline(always))]
+        #[cfg_attr(not(target_feature = "neon"), archmage::arcane(suppress_const_test))]
+        fn $neon_whole<const O: u32, const RSQRT: bool>(
+            neon: archmage::NeonToken,
+            x: [f32; $lanes],
+        ) -> Result<[f32; $lanes], PrimitiveError> {
+            use magetypes::simd::generic::$v as V;
+            $core::<O, RSQRT, NATIVE, archmage::NeonToken>(neon, V::from_array_t(neon, x))
+                .map(|r| r.to_array())
+        }
+
         #[inline(always)]
         pub(super) fn $name<
             const O: u32,
@@ -145,15 +170,27 @@ macro_rules! graph {
             if O & 6 == 0 || O & RecipOptions::BACKEND != 0 || native_fusion(t) {
                 return $core::<O, RSQRT, NATIVE, T>(t, x);
             }
-            // FMA3 can exist without all V3 prerequisites. No additional proof
-            // token is fabricated: std's correctly rounded primitive owns its
-            // platform dispatch, selected here once for the complete graph.
-            #[cfg(all(feature = "std", target_arch = "x86_64", not(miri)))]
+            // Under Automatic on ScalarToken: run the bit-identical portable
+            // graph once on native V3 / NEON registers instead of N scalar lanes.
+            #[cfg(all(target_arch = "x86_64", not(miri)))]
             if O & RecipOptions::CALLER == 0
                 && core::any::TypeId::of::<T>() == core::any::TypeId::of::<archmage::ScalarToken>()
-                && std::is_x86_feature_detected!("fma")
             {
-                return $core::<O, RSQRT, STD_FMA, T>(t, x);
+                use archmage::SimdToken;
+                if let Some(v3) = archmage::X64V3Token::summon() {
+                    return $v3_whole::<O, RSQRT>(v3, x.to_array())
+                        .map(|r| magetypes::simd::generic::$v::from_array_t(t, r));
+                }
+            }
+            #[cfg(all(target_arch = "aarch64", not(miri)))]
+            if O & RecipOptions::CALLER == 0
+                && core::any::TypeId::of::<T>() == core::any::TypeId::of::<archmage::ScalarToken>()
+            {
+                use archmage::SimdToken;
+                if let Some(neon) = archmage::NeonToken::summon() {
+                    return $neon_whole::<O, RSQRT>(neon, x.to_array())
+                        .map(|r| magetypes::simd::generic::$v::from_array_t(t, r));
+                }
             }
             #[cfg(target_arch = "wasm32")]
             if core::any::TypeId::of::<T>() == core::any::TypeId::of::<archmage::Wasm128Token>() {
@@ -198,12 +235,19 @@ macro_rules! graph {
                 return Ok(sp(1.0) / if RSQRT { x.sqrt() } else { x });
             }
             if O & RecipOptions::BACKEND != 0 {
+                // No reciprocal-estimate opcode exists on scalar/WASM: unify LOWP
+                // and MIDP directly onto hoisted `sp(1.0) / x` (and `rsqrt_approx`
+                // for rsqrt) so R3d never pays extra per-half splat overhead vs R3b.
+                if cfg!(target_arch = "wasm32")
+                    || core::any::TypeId::of::<T>()
+                        == core::any::TypeId::of::<archmage::ScalarToken>()
+                {
+                    return Ok(if RSQRT { x.rsqrt_approx() } else { sp(1.0) / x });
+                }
                 if precision == 2 {
                     #[cfg(target_arch = "aarch64")]
-                    if let Some(r) =
-                        crate::primitive_neon::estimate::<T, RSQRT, $n>(t, x.to_array())
-                    {
-                        return Ok(V::from_array_t(t, r));
+                    if let Some(r) = crate::primitive_neon::$neon_est::<RSQRT, T>(t, x) {
+                        return Ok(r);
                     }
                     return Ok(if RSQRT {
                         x.rsqrt_approx()
@@ -211,8 +255,6 @@ macro_rules! graph {
                         x.rcp_approx()
                     });
                 }
-                // No useful reciprocal-estimate instruction on scalar/WASM.
-                // Their existing rsqrt estimate already has two fixed steps.
                 #[cfg(target_arch = "aarch64")]
                 if core::any::TypeId::of::<T>() == core::any::TypeId::of::<archmage::NeonToken>() {
                     return Ok(if RSQRT {
@@ -220,12 +262,6 @@ macro_rules! graph {
                     } else {
                         x.rcp_approx()
                     });
-                }
-                if cfg!(target_arch = "wasm32")
-                    || core::any::TypeId::of::<T>()
-                        == core::any::TypeId::of::<archmage::ScalarToken>()
-                {
-                    return Ok(if RSQRT { x.rsqrt_approx() } else { sp(1.0) / x });
                 }
                 return Ok(if RSQRT {
                     let y = x.rsqrt_approx();
@@ -240,43 +276,17 @@ macro_rules! graph {
             let madd = |a: V<T>, b: V<T>, c: V<T>| {
                 if ARITHMETIC == NATIVE {
                     #[cfg(target_arch = "wasm32")]
-                    if let Some(proof) =
-                        (&t as &dyn core::any::Any).downcast_ref::<archmage::Wasm128Token>()
-                    {
+                    if let Some(r) = crate::powf::wasm::$wasm_fma::<false, T>(t, a, b, c) {
                         // The operation boundary has already proved fusion and
                         // observed token testing. Do not select again per FMA.
-                        return V::from_array_t(
-                            t,
-                            crate::powf::wasm::hardware_lanes(
-                                *proof,
-                                a.to_array(),
-                                b.to_array(),
-                                c.to_array(),
-                            ),
-                        );
+                        return r;
                     }
                     return a.mul_add_relaxed(b, c);
                 }
                 #[cfg(target_arch = "wasm32")]
                 if ARITHMETIC == WASM_SOFTWARE {
-                    let any = &t as &dyn core::any::Any;
-                    let proof = *any
-                        .downcast_ref::<archmage::Wasm128Token>()
+                    return crate::powf::wasm::$wasm_fma::<true, T>(t, a, b, c)
                         .expect("private WASM FMA mode requires its proof");
-                    return V::from_array_t(
-                        t,
-                        crate::powf::wasm::software_lanes(
-                            proof,
-                            a.to_array(),
-                            b.to_array(),
-                            c.to_array(),
-                        ),
-                    );
-                }
-                #[cfg(all(feature = "std", target_arch = "x86_64", not(miri)))]
-                if ARITHMETIC == STD_FMA {
-                    let (a, b, c) = (a.to_array(), b.to_array(), c.to_array());
-                    return V::from_array_t(t, core::array::from_fn(|i| a[i].mul_add(b[i], c[i])));
                 }
                 // Scalar f32 fused arithmetic has no runtime feature probe.
                 // Compile-proven hardware is still allowed by this primitive.
@@ -305,10 +315,43 @@ macro_rules! graph {
         }
     };
 }
-graph!(graph4, core4, f32x4, i32x4, F32x4Convert, 4);
-graph!(graph8, core8, f32x8, i32x8, F32x8Convert, 8);
+graph!(
+    graph4,
+    core4,
+    f32x4,
+    i32x4,
+    F32x4Convert,
+    4,
+    estimate_f32x4,
+    fma_f32x4,
+    v3_whole4,
+    neon_whole4
+);
+graph!(
+    graph8,
+    core8,
+    f32x8,
+    i32x8,
+    F32x8Convert,
+    8,
+    estimate_f32x8,
+    fma_f32x8,
+    v3_whole8,
+    neon_whole8
+);
 #[cfg(feature = "w512")]
-graph!(graph16, core16, f32x16, i32x16, F32x16Convert, 16);
+graph!(
+    graph16,
+    core16,
+    f32x16,
+    i32x16,
+    F32x16Convert,
+    16,
+    estimate_f32x16,
+    fma_f32x16,
+    v3_whole16,
+    neon_whole16
+);
 
 #[cfg(all(
     test,

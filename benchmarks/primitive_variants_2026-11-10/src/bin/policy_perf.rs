@@ -14,9 +14,72 @@ use archmage::ScalarToken;
     target_arch = "wasm32"
 ))]
 use archmage::SimdToken;
+use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 use workload::*;
 use zenbench::{Suite, black_box};
+
+struct BenchFilter {
+    substr: Option<String>,
+    dedup: Option<BTreeMap<String, BTreeSet<String>>>,
+    rounds: usize,
+}
+
+impl BenchFilter {
+    fn from_args(args: &[String], iterate: bool) -> Self {
+        let substr = args
+            .iter()
+            .position(|x| x == "--filter")
+            .and_then(|i| args.get(i + 1))
+            .cloned();
+        let dedup_path = args
+            .iter()
+            .position(|x| x == "--dedup")
+            .and_then(|i| args.get(i + 1))
+            .cloned();
+        let dedup = dedup_path.map(|p| {
+            let mut map: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
+            for line in std::fs::read_to_string(p)
+                .expect("read --dedup TSV")
+                .lines()
+            {
+                let mut cols = line.split('\t');
+                if let (Some(cell), Some(rep)) = (cols.next(), cols.next()) {
+                    map.entry(cell.to_owned())
+                        .or_default()
+                        .insert(rep.to_owned());
+                }
+            }
+            map
+        });
+        Self {
+            substr,
+            dedup,
+            rounds: if iterate { 30 } else { 50 },
+        }
+    }
+    fn matches_group(&self, name: &str) -> bool {
+        self.substr.as_ref().is_none_or(|f| name.contains(f))
+    }
+    fn keep_arm(&self, group: &str, arm: &str) -> bool {
+        let Some(map) = &self.dedup else {
+            return true;
+        };
+        if let Some(reps) = map.get(group) {
+            return reps.contains(arm);
+        }
+        if let Some(prefix) = group
+            .strip_suffix("/stream4096")
+            .or_else(|| group.strip_suffix("/zero-clamp64"))
+        {
+            let fallback = format!("{prefix}/stream64");
+            if let Some(reps) = map.get(&fallback) {
+                return reps.contains(arm);
+            }
+        }
+        true
+    }
+}
 
 fn add_bench<F: CheckScalar, const N: usize, const W: usize, const DEP: bool>(
     g: &mut zenbench::BenchGroup,
@@ -39,7 +102,7 @@ fn add_bench<F: CheckScalar, const N: usize, const W: usize, const DEP: bool>(
 }
 
 macro_rules! group {
-    ($suite:ident,$tier:ident,$t:ident,$stream:ident,$chain:ident,$float:ty,$w:literal,$operation:literal,$recip:literal,$op:literal,$n:literal,$dependent:literal,$zero:literal,$cases:ident,$kind:literal) => {{
+    ($suite:ident,$flt:ident,$tier:ident,$t:ident,$stream:ident,$chain:ident,$float:ty,$w:literal,$operation:literal,$recip:literal,$op:literal,$n:literal,$dependent:literal,$zero:literal,$cases:ident,$kind:literal) => {{
         let name = format!(
             "{}/{}/{}x{}/{}",
             $tier,
@@ -48,68 +111,76 @@ macro_rules! group {
             $w,
             $kind
         );
-        let pair = |i| <$float as CheckScalar>::pair(i, $zero, $recip, $recip && $op);
-        let a: [$float; $n] = core::array::from_fn(|i| pair(i).0);
-        let b: [$float; $n] = core::array::from_fn(|i| pair(i).1);
-        let data = Arc::new((a, b));
-        macro_rules! preflight {
-            ($flag:literal,$legacy:literal,$id:expr) => {{
-                let error = check::verify::<$float, $n, $w>(
-                    $flag,
-                    $legacy,
-                    $recip,
-                    $op,
-                    $dependent,
-                    &data,
-                    |a, b, out| $stream::<$flag, $op, $legacy, $n>($t, a, b, out),
-                    |a, b, out| $stream::<$flag, $op, $legacy, $w>($t, a, b, out),
-                    |x| $chain::<$flag, $op, $legacy>($t, x),
-                );
-                eprintln!("POLICY_ACCURACY\t{}\t{}\t{:.17e}", name, $id, error);
-            }};
-        }
-        if std::env::args().any(|a| a == "--verify-only") {
-            preflight!(0, true, "existing Magetypes");
-            macro_rules! verify {
-                ($o:literal,$id:literal) => {
-                    preflight!($o, false, $id);
-                };
+        if $flt.matches_group(&name) {
+            let pair = |i| <$float as CheckScalar>::pair(i, $zero, $recip, $recip && $op);
+            let a: [$float; $n] = core::array::from_fn(|i| pair(i).0);
+            let b: [$float; $n] = core::array::from_fn(|i| pair(i).1);
+            let data = Arc::new((a, b));
+            macro_rules! preflight {
+                ($flag:literal,$legacy:literal,$id:expr) => {{
+                    let error = check::verify::<$float, $n, $w>(
+                        $flag,
+                        $legacy,
+                        $recip,
+                        $op,
+                        $dependent,
+                        &data,
+                        |a, b, out| $stream::<$flag, $op, $legacy, $n>($t, a, b, out),
+                        |a, b, out| $stream::<$flag, $op, $legacy, $w>($t, a, b, out),
+                        |x| $chain::<$flag, $op, $legacy>($t, x),
+                    );
+                    eprintln!("POLICY_ACCURACY\t{}\t{}\t{:.17e}", name, $id, error);
+                }};
             }
-            $cases!(verify);
-        } else {
-            $suite.group(name.clone(), |g| {
-                g.config().min_rounds(50).max_rounds(50).auto_rounds(false);
-                macro_rules! add {
-                    ($o:literal,$legacy:literal,$id:expr) => {{
-                        preflight!($o, $legacy, $id);
-                        add_bench::<$float, $n, $w, $dependent>(
-                            g,
-                            $id,
-                            Arc::clone(&data),
-                            move |a, b, out| $stream::<$o, $op, $legacy, $n>($t, a, b, out),
-                            move |x| $chain::<$o, $op, $legacy>($t, x),
-                        );
-                    }};
-                }
-                add!(0, true, concat!("existing Magetypes ", $operation));
-                macro_rules! add_case {
+            if std::env::args().any(|a| a == "--verify-only") {
+                preflight!(0, true, "existing Magetypes");
+                macro_rules! verify {
                     ($o:literal,$id:literal) => {
-                        add!($o, false, $id);
+                        preflight!($o, false, $id);
                     };
                 }
-                $cases!(add_case);
-            });
+                $cases!(verify);
+            } else {
+                $suite.group(name.clone(), |g| {
+                    g.config()
+                        .min_rounds($flt.rounds)
+                        .max_rounds($flt.rounds)
+                        .auto_rounds(false);
+                    macro_rules! add {
+                        ($o:literal,$legacy:literal,$id:expr) => {{
+                            preflight!($o, $legacy, $id);
+                            if $flt.keep_arm(&name, $id) {
+                                add_bench::<$float, $n, $w, $dependent>(
+                                    g,
+                                    $id,
+                                    Arc::clone(&data),
+                                    move |a, b, out| $stream::<$o, $op, $legacy, $n>($t, a, b, out),
+                                    move |x| $chain::<$o, $op, $legacy>($t, x),
+                                );
+                            }
+                        }};
+                    }
+                    add!(0, true, concat!("existing Magetypes ", $operation));
+                    macro_rules! add_case {
+                        ($o:literal,$id:literal) => {
+                            add!($o, false, $id);
+                        };
+                    }
+                    $cases!(add_case);
+                });
+            }
         }
     }};
 }
 macro_rules! width {
-    ($suite:ident,$tier:ident,$t:ident,$stream:ident,$chain:ident,$float:ty,$w:literal,$operation:literal,$recip:literal,$op:literal,$cases:ident) => {{
+    ($suite:ident,$flt:ident,$tier:ident,$t:ident,$stream:ident,$chain:ident,$float:ty,$w:literal,$operation:literal,$recip:literal,$op:literal,$cases:ident) => {{
         group!(
-            $suite, $tier, $t, $stream, $chain, $float, $w, $operation, $recip, $op, 64, false,
-            false, $cases, "stream64"
+            $suite, $flt, $tier, $t, $stream, $chain, $float, $w, $operation, $recip, $op, 64,
+            false, false, $cases, "stream64"
         );
         group!(
             $suite,
+            $flt,
             $tier,
             $t,
             $stream,
@@ -126,14 +197,15 @@ macro_rules! width {
             "stream4096"
         );
         group!(
-            $suite, $tier, $t, $stream, $chain, $float, $w, $operation, $recip, $op, 64, true,
-            false, $cases, "chain64"
+            $suite, $flt, $tier, $t, $stream, $chain, $float, $w, $operation, $recip, $op, 64,
+            true, false, $cases, "chain64"
         );
     }};
 }
-fn register_mm4_scalar(suite: &mut Suite, tier: &str, t: ScalarToken) {
+fn register_mm4_scalar(suite: &mut Suite, flt: &BenchFilter, tier: &str, t: ScalarToken) {
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_mm4_scalar,
@@ -147,6 +219,7 @@ fn register_mm4_scalar(suite: &mut Suite, tier: &str, t: ScalarToken) {
     );
     group!(
         suite,
+        flt,
         tier,
         t,
         stream_mm4_scalar,
@@ -164,6 +237,7 @@ fn register_mm4_scalar(suite: &mut Suite, tier: &str, t: ScalarToken) {
     );
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_mm4_scalar,
@@ -177,6 +251,7 @@ fn register_mm4_scalar(suite: &mut Suite, tier: &str, t: ScalarToken) {
     );
     group!(
         suite,
+        flt,
         tier,
         t,
         stream_mm4_scalar,
@@ -194,9 +269,10 @@ fn register_mm4_scalar(suite: &mut Suite, tier: &str, t: ScalarToken) {
     );
 }
 
-fn register_mm8_scalar(suite: &mut Suite, tier: &str, t: ScalarToken) {
+fn register_mm8_scalar(suite: &mut Suite, flt: &BenchFilter, tier: &str, t: ScalarToken) {
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_mm8_scalar,
@@ -210,6 +286,7 @@ fn register_mm8_scalar(suite: &mut Suite, tier: &str, t: ScalarToken) {
     );
     group!(
         suite,
+        flt,
         tier,
         t,
         stream_mm8_scalar,
@@ -227,6 +304,7 @@ fn register_mm8_scalar(suite: &mut Suite, tier: &str, t: ScalarToken) {
     );
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_mm8_scalar,
@@ -240,6 +318,7 @@ fn register_mm8_scalar(suite: &mut Suite, tier: &str, t: ScalarToken) {
     );
     group!(
         suite,
+        flt,
         tier,
         t,
         stream_mm8_scalar,
@@ -258,9 +337,10 @@ fn register_mm8_scalar(suite: &mut Suite, tier: &str, t: ScalarToken) {
 }
 
 #[cfg(feature = "w512")]
-fn register_mm16_scalar(suite: &mut Suite, tier: &str, t: ScalarToken) {
+fn register_mm16_scalar(suite: &mut Suite, flt: &BenchFilter, tier: &str, t: ScalarToken) {
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_mm16_scalar,
@@ -274,6 +354,7 @@ fn register_mm16_scalar(suite: &mut Suite, tier: &str, t: ScalarToken) {
     );
     group!(
         suite,
+        flt,
         tier,
         t,
         stream_mm16_scalar,
@@ -291,6 +372,7 @@ fn register_mm16_scalar(suite: &mut Suite, tier: &str, t: ScalarToken) {
     );
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_mm16_scalar,
@@ -304,6 +386,7 @@ fn register_mm16_scalar(suite: &mut Suite, tier: &str, t: ScalarToken) {
     );
     group!(
         suite,
+        flt,
         tier,
         t,
         stream_mm16_scalar,
@@ -321,9 +404,10 @@ fn register_mm16_scalar(suite: &mut Suite, tier: &str, t: ScalarToken) {
     );
 }
 
-fn register_mm64x2_scalar(suite: &mut Suite, tier: &str, t: ScalarToken) {
+fn register_mm64x2_scalar(suite: &mut Suite, flt: &BenchFilter, tier: &str, t: ScalarToken) {
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_mm64x2_scalar,
@@ -337,6 +421,7 @@ fn register_mm64x2_scalar(suite: &mut Suite, tier: &str, t: ScalarToken) {
     );
     group!(
         suite,
+        flt,
         tier,
         t,
         stream_mm64x2_scalar,
@@ -354,6 +439,7 @@ fn register_mm64x2_scalar(suite: &mut Suite, tier: &str, t: ScalarToken) {
     );
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_mm64x2_scalar,
@@ -367,6 +453,7 @@ fn register_mm64x2_scalar(suite: &mut Suite, tier: &str, t: ScalarToken) {
     );
     group!(
         suite,
+        flt,
         tier,
         t,
         stream_mm64x2_scalar,
@@ -384,9 +471,10 @@ fn register_mm64x2_scalar(suite: &mut Suite, tier: &str, t: ScalarToken) {
     );
 }
 
-fn register_mm64x4_scalar(suite: &mut Suite, tier: &str, t: ScalarToken) {
+fn register_mm64x4_scalar(suite: &mut Suite, flt: &BenchFilter, tier: &str, t: ScalarToken) {
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_mm64x4_scalar,
@@ -400,6 +488,7 @@ fn register_mm64x4_scalar(suite: &mut Suite, tier: &str, t: ScalarToken) {
     );
     group!(
         suite,
+        flt,
         tier,
         t,
         stream_mm64x4_scalar,
@@ -417,6 +506,7 @@ fn register_mm64x4_scalar(suite: &mut Suite, tier: &str, t: ScalarToken) {
     );
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_mm64x4_scalar,
@@ -430,6 +520,7 @@ fn register_mm64x4_scalar(suite: &mut Suite, tier: &str, t: ScalarToken) {
     );
     group!(
         suite,
+        flt,
         tier,
         t,
         stream_mm64x4_scalar,
@@ -448,9 +539,10 @@ fn register_mm64x4_scalar(suite: &mut Suite, tier: &str, t: ScalarToken) {
 }
 
 #[cfg(feature = "w512")]
-fn register_mm64x8_scalar(suite: &mut Suite, tier: &str, t: ScalarToken) {
+fn register_mm64x8_scalar(suite: &mut Suite, flt: &BenchFilter, tier: &str, t: ScalarToken) {
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_mm64x8_scalar,
@@ -464,6 +556,7 @@ fn register_mm64x8_scalar(suite: &mut Suite, tier: &str, t: ScalarToken) {
     );
     group!(
         suite,
+        flt,
         tier,
         t,
         stream_mm64x8_scalar,
@@ -481,6 +574,7 @@ fn register_mm64x8_scalar(suite: &mut Suite, tier: &str, t: ScalarToken) {
     );
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_mm64x8_scalar,
@@ -494,6 +588,7 @@ fn register_mm64x8_scalar(suite: &mut Suite, tier: &str, t: ScalarToken) {
     );
     group!(
         suite,
+        flt,
         tier,
         t,
         stream_mm64x8_scalar,
@@ -511,9 +606,10 @@ fn register_mm64x8_scalar(suite: &mut Suite, tier: &str, t: ScalarToken) {
     );
 }
 
-fn register_rc4_scalar(suite: &mut Suite, tier: &str, t: ScalarToken) {
+fn register_rc4_scalar(suite: &mut Suite, flt: &BenchFilter, tier: &str, t: ScalarToken) {
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_rc4_scalar,
@@ -527,6 +623,7 @@ fn register_rc4_scalar(suite: &mut Suite, tier: &str, t: ScalarToken) {
     );
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_rc4_scalar,
@@ -540,9 +637,10 @@ fn register_rc4_scalar(suite: &mut Suite, tier: &str, t: ScalarToken) {
     );
 }
 
-fn register_rc8_scalar(suite: &mut Suite, tier: &str, t: ScalarToken) {
+fn register_rc8_scalar(suite: &mut Suite, flt: &BenchFilter, tier: &str, t: ScalarToken) {
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_rc8_scalar,
@@ -556,6 +654,7 @@ fn register_rc8_scalar(suite: &mut Suite, tier: &str, t: ScalarToken) {
     );
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_rc8_scalar,
@@ -570,9 +669,10 @@ fn register_rc8_scalar(suite: &mut Suite, tier: &str, t: ScalarToken) {
 }
 
 #[cfg(feature = "w512")]
-fn register_rc16_scalar(suite: &mut Suite, tier: &str, t: ScalarToken) {
+fn register_rc16_scalar(suite: &mut Suite, flt: &BenchFilter, tier: &str, t: ScalarToken) {
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_rc16_scalar,
@@ -586,6 +686,7 @@ fn register_rc16_scalar(suite: &mut Suite, tier: &str, t: ScalarToken) {
     );
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_rc16_scalar,
@@ -600,9 +701,10 @@ fn register_rc16_scalar(suite: &mut Suite, tier: &str, t: ScalarToken) {
 }
 
 #[cfg(target_arch = "x86_64")]
-fn register_mm4_v3(suite: &mut Suite, tier: &str, t: archmage::X64V3Token) {
+fn register_mm4_v3(suite: &mut Suite, flt: &BenchFilter, tier: &str, t: archmage::X64V3Token) {
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_mm4_v3,
@@ -616,6 +718,7 @@ fn register_mm4_v3(suite: &mut Suite, tier: &str, t: archmage::X64V3Token) {
     );
     group!(
         suite,
+        flt,
         tier,
         t,
         stream_mm4_v3,
@@ -633,6 +736,7 @@ fn register_mm4_v3(suite: &mut Suite, tier: &str, t: archmage::X64V3Token) {
     );
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_mm4_v3,
@@ -646,6 +750,7 @@ fn register_mm4_v3(suite: &mut Suite, tier: &str, t: archmage::X64V3Token) {
     );
     group!(
         suite,
+        flt,
         tier,
         t,
         stream_mm4_v3,
@@ -664,9 +769,10 @@ fn register_mm4_v3(suite: &mut Suite, tier: &str, t: archmage::X64V3Token) {
 }
 
 #[cfg(target_arch = "x86_64")]
-fn register_mm8_v3(suite: &mut Suite, tier: &str, t: archmage::X64V3Token) {
+fn register_mm8_v3(suite: &mut Suite, flt: &BenchFilter, tier: &str, t: archmage::X64V3Token) {
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_mm8_v3,
@@ -680,6 +786,7 @@ fn register_mm8_v3(suite: &mut Suite, tier: &str, t: archmage::X64V3Token) {
     );
     group!(
         suite,
+        flt,
         tier,
         t,
         stream_mm8_v3,
@@ -697,6 +804,7 @@ fn register_mm8_v3(suite: &mut Suite, tier: &str, t: archmage::X64V3Token) {
     );
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_mm8_v3,
@@ -710,6 +818,7 @@ fn register_mm8_v3(suite: &mut Suite, tier: &str, t: archmage::X64V3Token) {
     );
     group!(
         suite,
+        flt,
         tier,
         t,
         stream_mm8_v3,
@@ -728,9 +837,10 @@ fn register_mm8_v3(suite: &mut Suite, tier: &str, t: archmage::X64V3Token) {
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "w512"))]
-fn register_mm16_v3(suite: &mut Suite, tier: &str, t: archmage::X64V3Token) {
+fn register_mm16_v3(suite: &mut Suite, flt: &BenchFilter, tier: &str, t: archmage::X64V3Token) {
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_mm16_v3,
@@ -744,6 +854,7 @@ fn register_mm16_v3(suite: &mut Suite, tier: &str, t: archmage::X64V3Token) {
     );
     group!(
         suite,
+        flt,
         tier,
         t,
         stream_mm16_v3,
@@ -761,6 +872,7 @@ fn register_mm16_v3(suite: &mut Suite, tier: &str, t: archmage::X64V3Token) {
     );
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_mm16_v3,
@@ -774,6 +886,7 @@ fn register_mm16_v3(suite: &mut Suite, tier: &str, t: archmage::X64V3Token) {
     );
     group!(
         suite,
+        flt,
         tier,
         t,
         stream_mm16_v3,
@@ -792,9 +905,10 @@ fn register_mm16_v3(suite: &mut Suite, tier: &str, t: archmage::X64V3Token) {
 }
 
 #[cfg(target_arch = "x86_64")]
-fn register_mm64x2_v3(suite: &mut Suite, tier: &str, t: archmage::X64V3Token) {
+fn register_mm64x2_v3(suite: &mut Suite, flt: &BenchFilter, tier: &str, t: archmage::X64V3Token) {
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_mm64x2_v3,
@@ -808,6 +922,7 @@ fn register_mm64x2_v3(suite: &mut Suite, tier: &str, t: archmage::X64V3Token) {
     );
     group!(
         suite,
+        flt,
         tier,
         t,
         stream_mm64x2_v3,
@@ -825,6 +940,7 @@ fn register_mm64x2_v3(suite: &mut Suite, tier: &str, t: archmage::X64V3Token) {
     );
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_mm64x2_v3,
@@ -838,6 +954,7 @@ fn register_mm64x2_v3(suite: &mut Suite, tier: &str, t: archmage::X64V3Token) {
     );
     group!(
         suite,
+        flt,
         tier,
         t,
         stream_mm64x2_v3,
@@ -856,9 +973,10 @@ fn register_mm64x2_v3(suite: &mut Suite, tier: &str, t: archmage::X64V3Token) {
 }
 
 #[cfg(target_arch = "x86_64")]
-fn register_mm64x4_v3(suite: &mut Suite, tier: &str, t: archmage::X64V3Token) {
+fn register_mm64x4_v3(suite: &mut Suite, flt: &BenchFilter, tier: &str, t: archmage::X64V3Token) {
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_mm64x4_v3,
@@ -872,6 +990,7 @@ fn register_mm64x4_v3(suite: &mut Suite, tier: &str, t: archmage::X64V3Token) {
     );
     group!(
         suite,
+        flt,
         tier,
         t,
         stream_mm64x4_v3,
@@ -889,6 +1008,7 @@ fn register_mm64x4_v3(suite: &mut Suite, tier: &str, t: archmage::X64V3Token) {
     );
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_mm64x4_v3,
@@ -902,6 +1022,7 @@ fn register_mm64x4_v3(suite: &mut Suite, tier: &str, t: archmage::X64V3Token) {
     );
     group!(
         suite,
+        flt,
         tier,
         t,
         stream_mm64x4_v3,
@@ -920,9 +1041,10 @@ fn register_mm64x4_v3(suite: &mut Suite, tier: &str, t: archmage::X64V3Token) {
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "w512"))]
-fn register_mm64x8_v3(suite: &mut Suite, tier: &str, t: archmage::X64V3Token) {
+fn register_mm64x8_v3(suite: &mut Suite, flt: &BenchFilter, tier: &str, t: archmage::X64V3Token) {
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_mm64x8_v3,
@@ -936,6 +1058,7 @@ fn register_mm64x8_v3(suite: &mut Suite, tier: &str, t: archmage::X64V3Token) {
     );
     group!(
         suite,
+        flt,
         tier,
         t,
         stream_mm64x8_v3,
@@ -953,6 +1076,7 @@ fn register_mm64x8_v3(suite: &mut Suite, tier: &str, t: archmage::X64V3Token) {
     );
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_mm64x8_v3,
@@ -966,6 +1090,7 @@ fn register_mm64x8_v3(suite: &mut Suite, tier: &str, t: archmage::X64V3Token) {
     );
     group!(
         suite,
+        flt,
         tier,
         t,
         stream_mm64x8_v3,
@@ -984,9 +1109,10 @@ fn register_mm64x8_v3(suite: &mut Suite, tier: &str, t: archmage::X64V3Token) {
 }
 
 #[cfg(target_arch = "x86_64")]
-fn register_rc4_v3(suite: &mut Suite, tier: &str, t: archmage::X64V3Token) {
+fn register_rc4_v3(suite: &mut Suite, flt: &BenchFilter, tier: &str, t: archmage::X64V3Token) {
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_rc4_v3,
@@ -1000,6 +1126,7 @@ fn register_rc4_v3(suite: &mut Suite, tier: &str, t: archmage::X64V3Token) {
     );
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_rc4_v3,
@@ -1014,9 +1141,10 @@ fn register_rc4_v3(suite: &mut Suite, tier: &str, t: archmage::X64V3Token) {
 }
 
 #[cfg(target_arch = "x86_64")]
-fn register_rc8_v3(suite: &mut Suite, tier: &str, t: archmage::X64V3Token) {
+fn register_rc8_v3(suite: &mut Suite, flt: &BenchFilter, tier: &str, t: archmage::X64V3Token) {
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_rc8_v3,
@@ -1030,6 +1158,7 @@ fn register_rc8_v3(suite: &mut Suite, tier: &str, t: archmage::X64V3Token) {
     );
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_rc8_v3,
@@ -1044,9 +1173,10 @@ fn register_rc8_v3(suite: &mut Suite, tier: &str, t: archmage::X64V3Token) {
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "w512"))]
-fn register_rc16_v3(suite: &mut Suite, tier: &str, t: archmage::X64V3Token) {
+fn register_rc16_v3(suite: &mut Suite, flt: &BenchFilter, tier: &str, t: archmage::X64V3Token) {
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_rc16_v3,
@@ -1060,6 +1190,7 @@ fn register_rc16_v3(suite: &mut Suite, tier: &str, t: archmage::X64V3Token) {
     );
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_rc16_v3,
@@ -1074,9 +1205,10 @@ fn register_rc16_v3(suite: &mut Suite, tier: &str, t: archmage::X64V3Token) {
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-fn register_mm4_v4(suite: &mut Suite, tier: &str, t: archmage::X64V4Token) {
+fn register_mm4_v4(suite: &mut Suite, flt: &BenchFilter, tier: &str, t: archmage::X64V4Token) {
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_mm4_v4,
@@ -1090,6 +1222,7 @@ fn register_mm4_v4(suite: &mut Suite, tier: &str, t: archmage::X64V4Token) {
     );
     group!(
         suite,
+        flt,
         tier,
         t,
         stream_mm4_v4,
@@ -1107,6 +1240,7 @@ fn register_mm4_v4(suite: &mut Suite, tier: &str, t: archmage::X64V4Token) {
     );
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_mm4_v4,
@@ -1120,6 +1254,7 @@ fn register_mm4_v4(suite: &mut Suite, tier: &str, t: archmage::X64V4Token) {
     );
     group!(
         suite,
+        flt,
         tier,
         t,
         stream_mm4_v4,
@@ -1138,9 +1273,10 @@ fn register_mm4_v4(suite: &mut Suite, tier: &str, t: archmage::X64V4Token) {
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-fn register_mm8_v4(suite: &mut Suite, tier: &str, t: archmage::X64V4Token) {
+fn register_mm8_v4(suite: &mut Suite, flt: &BenchFilter, tier: &str, t: archmage::X64V4Token) {
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_mm8_v4,
@@ -1154,6 +1290,7 @@ fn register_mm8_v4(suite: &mut Suite, tier: &str, t: archmage::X64V4Token) {
     );
     group!(
         suite,
+        flt,
         tier,
         t,
         stream_mm8_v4,
@@ -1171,6 +1308,7 @@ fn register_mm8_v4(suite: &mut Suite, tier: &str, t: archmage::X64V4Token) {
     );
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_mm8_v4,
@@ -1184,6 +1322,7 @@ fn register_mm8_v4(suite: &mut Suite, tier: &str, t: archmage::X64V4Token) {
     );
     group!(
         suite,
+        flt,
         tier,
         t,
         stream_mm8_v4,
@@ -1202,9 +1341,10 @@ fn register_mm8_v4(suite: &mut Suite, tier: &str, t: archmage::X64V4Token) {
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512", feature = "w512"))]
-fn register_mm16_v4(suite: &mut Suite, tier: &str, t: archmage::X64V4Token) {
+fn register_mm16_v4(suite: &mut Suite, flt: &BenchFilter, tier: &str, t: archmage::X64V4Token) {
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_mm16_v4,
@@ -1218,6 +1358,7 @@ fn register_mm16_v4(suite: &mut Suite, tier: &str, t: archmage::X64V4Token) {
     );
     group!(
         suite,
+        flt,
         tier,
         t,
         stream_mm16_v4,
@@ -1235,6 +1376,7 @@ fn register_mm16_v4(suite: &mut Suite, tier: &str, t: archmage::X64V4Token) {
     );
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_mm16_v4,
@@ -1248,6 +1390,7 @@ fn register_mm16_v4(suite: &mut Suite, tier: &str, t: archmage::X64V4Token) {
     );
     group!(
         suite,
+        flt,
         tier,
         t,
         stream_mm16_v4,
@@ -1266,9 +1409,10 @@ fn register_mm16_v4(suite: &mut Suite, tier: &str, t: archmage::X64V4Token) {
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-fn register_mm64x2_v4(suite: &mut Suite, tier: &str, t: archmage::X64V4Token) {
+fn register_mm64x2_v4(suite: &mut Suite, flt: &BenchFilter, tier: &str, t: archmage::X64V4Token) {
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_mm64x2_v4,
@@ -1282,6 +1426,7 @@ fn register_mm64x2_v4(suite: &mut Suite, tier: &str, t: archmage::X64V4Token) {
     );
     group!(
         suite,
+        flt,
         tier,
         t,
         stream_mm64x2_v4,
@@ -1299,6 +1444,7 @@ fn register_mm64x2_v4(suite: &mut Suite, tier: &str, t: archmage::X64V4Token) {
     );
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_mm64x2_v4,
@@ -1312,6 +1458,7 @@ fn register_mm64x2_v4(suite: &mut Suite, tier: &str, t: archmage::X64V4Token) {
     );
     group!(
         suite,
+        flt,
         tier,
         t,
         stream_mm64x2_v4,
@@ -1330,9 +1477,10 @@ fn register_mm64x2_v4(suite: &mut Suite, tier: &str, t: archmage::X64V4Token) {
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-fn register_mm64x4_v4(suite: &mut Suite, tier: &str, t: archmage::X64V4Token) {
+fn register_mm64x4_v4(suite: &mut Suite, flt: &BenchFilter, tier: &str, t: archmage::X64V4Token) {
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_mm64x4_v4,
@@ -1346,6 +1494,7 @@ fn register_mm64x4_v4(suite: &mut Suite, tier: &str, t: archmage::X64V4Token) {
     );
     group!(
         suite,
+        flt,
         tier,
         t,
         stream_mm64x4_v4,
@@ -1363,6 +1512,7 @@ fn register_mm64x4_v4(suite: &mut Suite, tier: &str, t: archmage::X64V4Token) {
     );
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_mm64x4_v4,
@@ -1376,6 +1526,7 @@ fn register_mm64x4_v4(suite: &mut Suite, tier: &str, t: archmage::X64V4Token) {
     );
     group!(
         suite,
+        flt,
         tier,
         t,
         stream_mm64x4_v4,
@@ -1394,9 +1545,10 @@ fn register_mm64x4_v4(suite: &mut Suite, tier: &str, t: archmage::X64V4Token) {
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512", feature = "w512"))]
-fn register_mm64x8_v4(suite: &mut Suite, tier: &str, t: archmage::X64V4Token) {
+fn register_mm64x8_v4(suite: &mut Suite, flt: &BenchFilter, tier: &str, t: archmage::X64V4Token) {
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_mm64x8_v4,
@@ -1410,6 +1562,7 @@ fn register_mm64x8_v4(suite: &mut Suite, tier: &str, t: archmage::X64V4Token) {
     );
     group!(
         suite,
+        flt,
         tier,
         t,
         stream_mm64x8_v4,
@@ -1427,6 +1580,7 @@ fn register_mm64x8_v4(suite: &mut Suite, tier: &str, t: archmage::X64V4Token) {
     );
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_mm64x8_v4,
@@ -1440,6 +1594,7 @@ fn register_mm64x8_v4(suite: &mut Suite, tier: &str, t: archmage::X64V4Token) {
     );
     group!(
         suite,
+        flt,
         tier,
         t,
         stream_mm64x8_v4,
@@ -1458,9 +1613,10 @@ fn register_mm64x8_v4(suite: &mut Suite, tier: &str, t: archmage::X64V4Token) {
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-fn register_rc4_v4(suite: &mut Suite, tier: &str, t: archmage::X64V4Token) {
+fn register_rc4_v4(suite: &mut Suite, flt: &BenchFilter, tier: &str, t: archmage::X64V4Token) {
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_rc4_v4,
@@ -1474,6 +1630,7 @@ fn register_rc4_v4(suite: &mut Suite, tier: &str, t: archmage::X64V4Token) {
     );
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_rc4_v4,
@@ -1488,9 +1645,10 @@ fn register_rc4_v4(suite: &mut Suite, tier: &str, t: archmage::X64V4Token) {
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-fn register_rc8_v4(suite: &mut Suite, tier: &str, t: archmage::X64V4Token) {
+fn register_rc8_v4(suite: &mut Suite, flt: &BenchFilter, tier: &str, t: archmage::X64V4Token) {
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_rc8_v4,
@@ -1504,6 +1662,7 @@ fn register_rc8_v4(suite: &mut Suite, tier: &str, t: archmage::X64V4Token) {
     );
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_rc8_v4,
@@ -1518,9 +1677,10 @@ fn register_rc8_v4(suite: &mut Suite, tier: &str, t: archmage::X64V4Token) {
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512", feature = "w512"))]
-fn register_rc16_v4(suite: &mut Suite, tier: &str, t: archmage::X64V4Token) {
+fn register_rc16_v4(suite: &mut Suite, flt: &BenchFilter, tier: &str, t: archmage::X64V4Token) {
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_rc16_v4,
@@ -1534,6 +1694,7 @@ fn register_rc16_v4(suite: &mut Suite, tier: &str, t: archmage::X64V4Token) {
     );
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_rc16_v4,
@@ -1548,9 +1709,10 @@ fn register_rc16_v4(suite: &mut Suite, tier: &str, t: archmage::X64V4Token) {
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-fn register_mm4_v4x(suite: &mut Suite, tier: &str, t: archmage::X64V4xToken) {
+fn register_mm4_v4x(suite: &mut Suite, flt: &BenchFilter, tier: &str, t: archmage::X64V4xToken) {
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_mm4_v4x,
@@ -1564,6 +1726,7 @@ fn register_mm4_v4x(suite: &mut Suite, tier: &str, t: archmage::X64V4xToken) {
     );
     group!(
         suite,
+        flt,
         tier,
         t,
         stream_mm4_v4x,
@@ -1581,6 +1744,7 @@ fn register_mm4_v4x(suite: &mut Suite, tier: &str, t: archmage::X64V4xToken) {
     );
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_mm4_v4x,
@@ -1594,6 +1758,7 @@ fn register_mm4_v4x(suite: &mut Suite, tier: &str, t: archmage::X64V4xToken) {
     );
     group!(
         suite,
+        flt,
         tier,
         t,
         stream_mm4_v4x,
@@ -1612,9 +1777,10 @@ fn register_mm4_v4x(suite: &mut Suite, tier: &str, t: archmage::X64V4xToken) {
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-fn register_mm8_v4x(suite: &mut Suite, tier: &str, t: archmage::X64V4xToken) {
+fn register_mm8_v4x(suite: &mut Suite, flt: &BenchFilter, tier: &str, t: archmage::X64V4xToken) {
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_mm8_v4x,
@@ -1628,6 +1794,7 @@ fn register_mm8_v4x(suite: &mut Suite, tier: &str, t: archmage::X64V4xToken) {
     );
     group!(
         suite,
+        flt,
         tier,
         t,
         stream_mm8_v4x,
@@ -1645,6 +1812,7 @@ fn register_mm8_v4x(suite: &mut Suite, tier: &str, t: archmage::X64V4xToken) {
     );
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_mm8_v4x,
@@ -1658,6 +1826,7 @@ fn register_mm8_v4x(suite: &mut Suite, tier: &str, t: archmage::X64V4xToken) {
     );
     group!(
         suite,
+        flt,
         tier,
         t,
         stream_mm8_v4x,
@@ -1676,9 +1845,10 @@ fn register_mm8_v4x(suite: &mut Suite, tier: &str, t: archmage::X64V4xToken) {
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512", feature = "w512"))]
-fn register_mm16_v4x(suite: &mut Suite, tier: &str, t: archmage::X64V4xToken) {
+fn register_mm16_v4x(suite: &mut Suite, flt: &BenchFilter, tier: &str, t: archmage::X64V4xToken) {
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_mm16_v4x,
@@ -1692,6 +1862,7 @@ fn register_mm16_v4x(suite: &mut Suite, tier: &str, t: archmage::X64V4xToken) {
     );
     group!(
         suite,
+        flt,
         tier,
         t,
         stream_mm16_v4x,
@@ -1709,6 +1880,7 @@ fn register_mm16_v4x(suite: &mut Suite, tier: &str, t: archmage::X64V4xToken) {
     );
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_mm16_v4x,
@@ -1722,6 +1894,7 @@ fn register_mm16_v4x(suite: &mut Suite, tier: &str, t: archmage::X64V4xToken) {
     );
     group!(
         suite,
+        flt,
         tier,
         t,
         stream_mm16_v4x,
@@ -1740,9 +1913,10 @@ fn register_mm16_v4x(suite: &mut Suite, tier: &str, t: archmage::X64V4xToken) {
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-fn register_mm64x2_v4x(suite: &mut Suite, tier: &str, t: archmage::X64V4xToken) {
+fn register_mm64x2_v4x(suite: &mut Suite, flt: &BenchFilter, tier: &str, t: archmage::X64V4xToken) {
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_mm64x2_v4x,
@@ -1756,6 +1930,7 @@ fn register_mm64x2_v4x(suite: &mut Suite, tier: &str, t: archmage::X64V4xToken) 
     );
     group!(
         suite,
+        flt,
         tier,
         t,
         stream_mm64x2_v4x,
@@ -1773,6 +1948,7 @@ fn register_mm64x2_v4x(suite: &mut Suite, tier: &str, t: archmage::X64V4xToken) 
     );
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_mm64x2_v4x,
@@ -1786,6 +1962,7 @@ fn register_mm64x2_v4x(suite: &mut Suite, tier: &str, t: archmage::X64V4xToken) 
     );
     group!(
         suite,
+        flt,
         tier,
         t,
         stream_mm64x2_v4x,
@@ -1804,9 +1981,10 @@ fn register_mm64x2_v4x(suite: &mut Suite, tier: &str, t: archmage::X64V4xToken) 
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-fn register_mm64x4_v4x(suite: &mut Suite, tier: &str, t: archmage::X64V4xToken) {
+fn register_mm64x4_v4x(suite: &mut Suite, flt: &BenchFilter, tier: &str, t: archmage::X64V4xToken) {
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_mm64x4_v4x,
@@ -1820,6 +1998,7 @@ fn register_mm64x4_v4x(suite: &mut Suite, tier: &str, t: archmage::X64V4xToken) 
     );
     group!(
         suite,
+        flt,
         tier,
         t,
         stream_mm64x4_v4x,
@@ -1837,6 +2016,7 @@ fn register_mm64x4_v4x(suite: &mut Suite, tier: &str, t: archmage::X64V4xToken) 
     );
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_mm64x4_v4x,
@@ -1850,6 +2030,7 @@ fn register_mm64x4_v4x(suite: &mut Suite, tier: &str, t: archmage::X64V4xToken) 
     );
     group!(
         suite,
+        flt,
         tier,
         t,
         stream_mm64x4_v4x,
@@ -1868,9 +2049,10 @@ fn register_mm64x4_v4x(suite: &mut Suite, tier: &str, t: archmage::X64V4xToken) 
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512", feature = "w512"))]
-fn register_mm64x8_v4x(suite: &mut Suite, tier: &str, t: archmage::X64V4xToken) {
+fn register_mm64x8_v4x(suite: &mut Suite, flt: &BenchFilter, tier: &str, t: archmage::X64V4xToken) {
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_mm64x8_v4x,
@@ -1884,6 +2066,7 @@ fn register_mm64x8_v4x(suite: &mut Suite, tier: &str, t: archmage::X64V4xToken) 
     );
     group!(
         suite,
+        flt,
         tier,
         t,
         stream_mm64x8_v4x,
@@ -1901,6 +2084,7 @@ fn register_mm64x8_v4x(suite: &mut Suite, tier: &str, t: archmage::X64V4xToken) 
     );
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_mm64x8_v4x,
@@ -1914,6 +2098,7 @@ fn register_mm64x8_v4x(suite: &mut Suite, tier: &str, t: archmage::X64V4xToken) 
     );
     group!(
         suite,
+        flt,
         tier,
         t,
         stream_mm64x8_v4x,
@@ -1932,9 +2117,10 @@ fn register_mm64x8_v4x(suite: &mut Suite, tier: &str, t: archmage::X64V4xToken) 
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-fn register_rc4_v4x(suite: &mut Suite, tier: &str, t: archmage::X64V4xToken) {
+fn register_rc4_v4x(suite: &mut Suite, flt: &BenchFilter, tier: &str, t: archmage::X64V4xToken) {
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_rc4_v4x,
@@ -1948,6 +2134,7 @@ fn register_rc4_v4x(suite: &mut Suite, tier: &str, t: archmage::X64V4xToken) {
     );
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_rc4_v4x,
@@ -1962,9 +2149,10 @@ fn register_rc4_v4x(suite: &mut Suite, tier: &str, t: archmage::X64V4xToken) {
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-fn register_rc8_v4x(suite: &mut Suite, tier: &str, t: archmage::X64V4xToken) {
+fn register_rc8_v4x(suite: &mut Suite, flt: &BenchFilter, tier: &str, t: archmage::X64V4xToken) {
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_rc8_v4x,
@@ -1978,6 +2166,7 @@ fn register_rc8_v4x(suite: &mut Suite, tier: &str, t: archmage::X64V4xToken) {
     );
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_rc8_v4x,
@@ -1992,9 +2181,10 @@ fn register_rc8_v4x(suite: &mut Suite, tier: &str, t: archmage::X64V4xToken) {
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512", feature = "w512"))]
-fn register_rc16_v4x(suite: &mut Suite, tier: &str, t: archmage::X64V4xToken) {
+fn register_rc16_v4x(suite: &mut Suite, flt: &BenchFilter, tier: &str, t: archmage::X64V4xToken) {
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_rc16_v4x,
@@ -2008,6 +2198,7 @@ fn register_rc16_v4x(suite: &mut Suite, tier: &str, t: archmage::X64V4xToken) {
     );
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_rc16_v4x,
@@ -2022,9 +2213,10 @@ fn register_rc16_v4x(suite: &mut Suite, tier: &str, t: archmage::X64V4xToken) {
 }
 
 #[cfg(target_arch = "aarch64")]
-fn register_mm4_neon(suite: &mut Suite, tier: &str, t: archmage::NeonToken) {
+fn register_mm4_neon(suite: &mut Suite, flt: &BenchFilter, tier: &str, t: archmage::NeonToken) {
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_mm4_neon,
@@ -2038,6 +2230,7 @@ fn register_mm4_neon(suite: &mut Suite, tier: &str, t: archmage::NeonToken) {
     );
     group!(
         suite,
+        flt,
         tier,
         t,
         stream_mm4_neon,
@@ -2055,6 +2248,7 @@ fn register_mm4_neon(suite: &mut Suite, tier: &str, t: archmage::NeonToken) {
     );
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_mm4_neon,
@@ -2068,6 +2262,7 @@ fn register_mm4_neon(suite: &mut Suite, tier: &str, t: archmage::NeonToken) {
     );
     group!(
         suite,
+        flt,
         tier,
         t,
         stream_mm4_neon,
@@ -2086,9 +2281,10 @@ fn register_mm4_neon(suite: &mut Suite, tier: &str, t: archmage::NeonToken) {
 }
 
 #[cfg(target_arch = "aarch64")]
-fn register_mm8_neon(suite: &mut Suite, tier: &str, t: archmage::NeonToken) {
+fn register_mm8_neon(suite: &mut Suite, flt: &BenchFilter, tier: &str, t: archmage::NeonToken) {
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_mm8_neon,
@@ -2102,6 +2298,7 @@ fn register_mm8_neon(suite: &mut Suite, tier: &str, t: archmage::NeonToken) {
     );
     group!(
         suite,
+        flt,
         tier,
         t,
         stream_mm8_neon,
@@ -2119,6 +2316,7 @@ fn register_mm8_neon(suite: &mut Suite, tier: &str, t: archmage::NeonToken) {
     );
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_mm8_neon,
@@ -2132,6 +2330,7 @@ fn register_mm8_neon(suite: &mut Suite, tier: &str, t: archmage::NeonToken) {
     );
     group!(
         suite,
+        flt,
         tier,
         t,
         stream_mm8_neon,
@@ -2150,9 +2349,10 @@ fn register_mm8_neon(suite: &mut Suite, tier: &str, t: archmage::NeonToken) {
 }
 
 #[cfg(all(target_arch = "aarch64", feature = "w512"))]
-fn register_mm16_neon(suite: &mut Suite, tier: &str, t: archmage::NeonToken) {
+fn register_mm16_neon(suite: &mut Suite, flt: &BenchFilter, tier: &str, t: archmage::NeonToken) {
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_mm16_neon,
@@ -2166,6 +2366,7 @@ fn register_mm16_neon(suite: &mut Suite, tier: &str, t: archmage::NeonToken) {
     );
     group!(
         suite,
+        flt,
         tier,
         t,
         stream_mm16_neon,
@@ -2183,6 +2384,7 @@ fn register_mm16_neon(suite: &mut Suite, tier: &str, t: archmage::NeonToken) {
     );
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_mm16_neon,
@@ -2196,6 +2398,7 @@ fn register_mm16_neon(suite: &mut Suite, tier: &str, t: archmage::NeonToken) {
     );
     group!(
         suite,
+        flt,
         tier,
         t,
         stream_mm16_neon,
@@ -2214,9 +2417,10 @@ fn register_mm16_neon(suite: &mut Suite, tier: &str, t: archmage::NeonToken) {
 }
 
 #[cfg(target_arch = "aarch64")]
-fn register_mm64x2_neon(suite: &mut Suite, tier: &str, t: archmage::NeonToken) {
+fn register_mm64x2_neon(suite: &mut Suite, flt: &BenchFilter, tier: &str, t: archmage::NeonToken) {
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_mm64x2_neon,
@@ -2230,6 +2434,7 @@ fn register_mm64x2_neon(suite: &mut Suite, tier: &str, t: archmage::NeonToken) {
     );
     group!(
         suite,
+        flt,
         tier,
         t,
         stream_mm64x2_neon,
@@ -2247,6 +2452,7 @@ fn register_mm64x2_neon(suite: &mut Suite, tier: &str, t: archmage::NeonToken) {
     );
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_mm64x2_neon,
@@ -2260,6 +2466,7 @@ fn register_mm64x2_neon(suite: &mut Suite, tier: &str, t: archmage::NeonToken) {
     );
     group!(
         suite,
+        flt,
         tier,
         t,
         stream_mm64x2_neon,
@@ -2278,9 +2485,10 @@ fn register_mm64x2_neon(suite: &mut Suite, tier: &str, t: archmage::NeonToken) {
 }
 
 #[cfg(target_arch = "aarch64")]
-fn register_mm64x4_neon(suite: &mut Suite, tier: &str, t: archmage::NeonToken) {
+fn register_mm64x4_neon(suite: &mut Suite, flt: &BenchFilter, tier: &str, t: archmage::NeonToken) {
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_mm64x4_neon,
@@ -2294,6 +2502,7 @@ fn register_mm64x4_neon(suite: &mut Suite, tier: &str, t: archmage::NeonToken) {
     );
     group!(
         suite,
+        flt,
         tier,
         t,
         stream_mm64x4_neon,
@@ -2311,6 +2520,7 @@ fn register_mm64x4_neon(suite: &mut Suite, tier: &str, t: archmage::NeonToken) {
     );
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_mm64x4_neon,
@@ -2324,6 +2534,7 @@ fn register_mm64x4_neon(suite: &mut Suite, tier: &str, t: archmage::NeonToken) {
     );
     group!(
         suite,
+        flt,
         tier,
         t,
         stream_mm64x4_neon,
@@ -2342,9 +2553,10 @@ fn register_mm64x4_neon(suite: &mut Suite, tier: &str, t: archmage::NeonToken) {
 }
 
 #[cfg(all(target_arch = "aarch64", feature = "w512"))]
-fn register_mm64x8_neon(suite: &mut Suite, tier: &str, t: archmage::NeonToken) {
+fn register_mm64x8_neon(suite: &mut Suite, flt: &BenchFilter, tier: &str, t: archmage::NeonToken) {
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_mm64x8_neon,
@@ -2358,6 +2570,7 @@ fn register_mm64x8_neon(suite: &mut Suite, tier: &str, t: archmage::NeonToken) {
     );
     group!(
         suite,
+        flt,
         tier,
         t,
         stream_mm64x8_neon,
@@ -2375,6 +2588,7 @@ fn register_mm64x8_neon(suite: &mut Suite, tier: &str, t: archmage::NeonToken) {
     );
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_mm64x8_neon,
@@ -2388,6 +2602,7 @@ fn register_mm64x8_neon(suite: &mut Suite, tier: &str, t: archmage::NeonToken) {
     );
     group!(
         suite,
+        flt,
         tier,
         t,
         stream_mm64x8_neon,
@@ -2406,9 +2621,10 @@ fn register_mm64x8_neon(suite: &mut Suite, tier: &str, t: archmage::NeonToken) {
 }
 
 #[cfg(target_arch = "aarch64")]
-fn register_rc4_neon(suite: &mut Suite, tier: &str, t: archmage::NeonToken) {
+fn register_rc4_neon(suite: &mut Suite, flt: &BenchFilter, tier: &str, t: archmage::NeonToken) {
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_rc4_neon,
@@ -2422,6 +2638,7 @@ fn register_rc4_neon(suite: &mut Suite, tier: &str, t: archmage::NeonToken) {
     );
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_rc4_neon,
@@ -2436,9 +2653,10 @@ fn register_rc4_neon(suite: &mut Suite, tier: &str, t: archmage::NeonToken) {
 }
 
 #[cfg(target_arch = "aarch64")]
-fn register_rc8_neon(suite: &mut Suite, tier: &str, t: archmage::NeonToken) {
+fn register_rc8_neon(suite: &mut Suite, flt: &BenchFilter, tier: &str, t: archmage::NeonToken) {
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_rc8_neon,
@@ -2452,6 +2670,7 @@ fn register_rc8_neon(suite: &mut Suite, tier: &str, t: archmage::NeonToken) {
     );
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_rc8_neon,
@@ -2466,9 +2685,10 @@ fn register_rc8_neon(suite: &mut Suite, tier: &str, t: archmage::NeonToken) {
 }
 
 #[cfg(all(target_arch = "aarch64", feature = "w512"))]
-fn register_rc16_neon(suite: &mut Suite, tier: &str, t: archmage::NeonToken) {
+fn register_rc16_neon(suite: &mut Suite, flt: &BenchFilter, tier: &str, t: archmage::NeonToken) {
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_rc16_neon,
@@ -2482,6 +2702,7 @@ fn register_rc16_neon(suite: &mut Suite, tier: &str, t: archmage::NeonToken) {
     );
     width!(
         suite,
+        flt,
         tier,
         t,
         stream_rc16_neon,
@@ -2498,7 +2719,20 @@ fn register_rc16_neon(suite: &mut Suite, tier: &str, t: archmage::NeonToken) {
 fn main() {
     if std::env::args().any(|x| x == "--cpu-set") {
         let mut classes = zenbench::platform::detect_cpu_topology().classes;
-        classes.sort_by(|a, b| a.name.cmp(&b.name));
+        classes.sort_by(|a, b| {
+            let rank = |s: &str| {
+                if s.starts_with("super") {
+                    0
+                } else if s.starts_with("performance") {
+                    1
+                } else {
+                    2
+                }
+            };
+            rank(&a.name)
+                .cmp(&rank(&b.name))
+                .then_with(|| a.name.cmp(&b.name))
+        });
         println!(
             "{}",
             classes[0]
@@ -2517,85 +2751,88 @@ fn main() {
         .and_then(|i| args.get(i + 1))
         .expect("--policy-tier")
         .clone();
+    let exploratory = args.iter().any(|x| x == "--exploratory-macos");
+    let iterate_flag = args.iter().any(|x| x == "--iterate");
+    let flt = BenchFilter::from_args(&args, iterate_flag);
     let register = |suite: &mut Suite| match tier.as_str() {
         "scalar" => {
             let t = ScalarToken;
-            register_mm4_scalar(suite, &tier, t);
-            register_mm8_scalar(suite, &tier, t);
+            register_mm4_scalar(suite, &flt, &tier, t);
+            register_mm8_scalar(suite, &flt, &tier, t);
             #[cfg(feature = "w512")]
-            register_mm16_scalar(suite, &tier, t);
-            register_mm64x2_scalar(suite, &tier, t);
-            register_mm64x4_scalar(suite, &tier, t);
+            register_mm16_scalar(suite, &flt, &tier, t);
+            register_mm64x2_scalar(suite, &flt, &tier, t);
+            register_mm64x4_scalar(suite, &flt, &tier, t);
             #[cfg(feature = "w512")]
-            register_mm64x8_scalar(suite, &tier, t);
-            register_rc4_scalar(suite, &tier, t);
-            register_rc8_scalar(suite, &tier, t);
+            register_mm64x8_scalar(suite, &flt, &tier, t);
+            register_rc4_scalar(suite, &flt, &tier, t);
+            register_rc8_scalar(suite, &flt, &tier, t);
             #[cfg(feature = "w512")]
-            register_rc16_scalar(suite, &tier, t);
+            register_rc16_scalar(suite, &flt, &tier, t);
         }
         #[cfg(target_arch = "x86_64")]
         "v3" => {
             let t = archmage::X64V3Token::summon().expect("V3");
-            register_mm4_v3(suite, &tier, t);
-            register_mm8_v3(suite, &tier, t);
+            register_mm4_v3(suite, &flt, &tier, t);
+            register_mm8_v3(suite, &flt, &tier, t);
             #[cfg(feature = "w512")]
-            register_mm16_v3(suite, &tier, t);
-            register_mm64x2_v3(suite, &tier, t);
-            register_mm64x4_v3(suite, &tier, t);
+            register_mm16_v3(suite, &flt, &tier, t);
+            register_mm64x2_v3(suite, &flt, &tier, t);
+            register_mm64x4_v3(suite, &flt, &tier, t);
             #[cfg(feature = "w512")]
-            register_mm64x8_v3(suite, &tier, t);
-            register_rc4_v3(suite, &tier, t);
-            register_rc8_v3(suite, &tier, t);
+            register_mm64x8_v3(suite, &flt, &tier, t);
+            register_rc4_v3(suite, &flt, &tier, t);
+            register_rc8_v3(suite, &flt, &tier, t);
             #[cfg(feature = "w512")]
-            register_rc16_v3(suite, &tier, t);
+            register_rc16_v3(suite, &flt, &tier, t);
         }
         #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
         "v4" => {
             let t = archmage::X64V4Token::summon().expect("V4");
-            register_mm4_v4(suite, &tier, t);
-            register_mm8_v4(suite, &tier, t);
+            register_mm4_v4(suite, &flt, &tier, t);
+            register_mm8_v4(suite, &flt, &tier, t);
             #[cfg(feature = "w512")]
-            register_mm16_v4(suite, &tier, t);
-            register_mm64x2_v4(suite, &tier, t);
-            register_mm64x4_v4(suite, &tier, t);
+            register_mm16_v4(suite, &flt, &tier, t);
+            register_mm64x2_v4(suite, &flt, &tier, t);
+            register_mm64x4_v4(suite, &flt, &tier, t);
             #[cfg(feature = "w512")]
-            register_mm64x8_v4(suite, &tier, t);
-            register_rc4_v4(suite, &tier, t);
-            register_rc8_v4(suite, &tier, t);
+            register_mm64x8_v4(suite, &flt, &tier, t);
+            register_rc4_v4(suite, &flt, &tier, t);
+            register_rc8_v4(suite, &flt, &tier, t);
             #[cfg(feature = "w512")]
-            register_rc16_v4(suite, &tier, t);
+            register_rc16_v4(suite, &flt, &tier, t);
         }
         #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
         "v4x" => {
             let t = archmage::X64V4xToken::summon().expect("V4x");
-            register_mm4_v4x(suite, &tier, t);
-            register_mm8_v4x(suite, &tier, t);
+            register_mm4_v4x(suite, &flt, &tier, t);
+            register_mm8_v4x(suite, &flt, &tier, t);
             #[cfg(feature = "w512")]
-            register_mm16_v4x(suite, &tier, t);
-            register_mm64x2_v4x(suite, &tier, t);
-            register_mm64x4_v4x(suite, &tier, t);
+            register_mm16_v4x(suite, &flt, &tier, t);
+            register_mm64x2_v4x(suite, &flt, &tier, t);
+            register_mm64x4_v4x(suite, &flt, &tier, t);
             #[cfg(feature = "w512")]
-            register_mm64x8_v4x(suite, &tier, t);
-            register_rc4_v4x(suite, &tier, t);
-            register_rc8_v4x(suite, &tier, t);
+            register_mm64x8_v4x(suite, &flt, &tier, t);
+            register_rc4_v4x(suite, &flt, &tier, t);
+            register_rc8_v4x(suite, &flt, &tier, t);
             #[cfg(feature = "w512")]
-            register_rc16_v4x(suite, &tier, t);
+            register_rc16_v4x(suite, &flt, &tier, t);
         }
         #[cfg(target_arch = "aarch64")]
         "neon" => {
             let t = archmage::NeonToken::summon().expect("NEON");
-            register_mm4_neon(suite, &tier, t);
-            register_mm8_neon(suite, &tier, t);
+            register_mm4_neon(suite, &flt, &tier, t);
+            register_mm8_neon(suite, &flt, &tier, t);
             #[cfg(feature = "w512")]
-            register_mm16_neon(suite, &tier, t);
-            register_mm64x2_neon(suite, &tier, t);
-            register_mm64x4_neon(suite, &tier, t);
+            register_mm16_neon(suite, &flt, &tier, t);
+            register_mm64x2_neon(suite, &flt, &tier, t);
+            register_mm64x4_neon(suite, &flt, &tier, t);
             #[cfg(feature = "w512")]
-            register_mm64x8_neon(suite, &tier, t);
-            register_rc4_neon(suite, &tier, t);
-            register_rc8_neon(suite, &tier, t);
+            register_mm64x8_neon(suite, &flt, &tier, t);
+            register_rc4_neon(suite, &flt, &tier, t);
+            register_rc8_neon(suite, &flt, &tier, t);
             #[cfg(feature = "w512")]
-            register_rc16_neon(suite, &tier, t);
+            register_rc16_neon(suite, &flt, &tier, t);
         }
         _ => panic!("unavailable policy tier"),
     };
@@ -2607,21 +2844,21 @@ fn main() {
         args.iter().any(|x| x == "--measure"),
         "timing requires --measure"
     );
-    let exploratory = args.iter().any(|x| x == "--exploratory-macos");
     assert!(!exploratory || cfg!(target_os = "macos"));
+    let fast_iter = exploratory || iterate_flag;
     let mut gate = zenbench::GateConfig::strict();
-    if exploratory {
+    if fast_iter {
         gate.strict = false;
     }
     let result = zenbench::run_gated(gate, |suite| {
         let p = suite.plan();
-        p.mode = if exploratory {
+        p.mode = if fast_iter {
             zenbench::BenchmarkMode::Iterate
         } else {
             zenbench::BenchmarkMode::Confirm
         };
-        p.processes = if exploratory { 1 } else { 5 };
-        p.rounds = Some(50);
+        p.processes = if fast_iter { 1 } else { 5 };
+        p.rounds = Some(flt.rounds);
         p.margin_pct = 2.0;
         p.confidence = 0.95;
         p.workload_id =
@@ -2638,6 +2875,8 @@ fn main() {
     result.print_report();
     if exploratory {
         eprintln!("EXPLORATORY M6; no uniform core-class enforcement or promotion");
+    } else if iterate_flag || flt.substr.is_some() || flt.dedup.is_some() {
+        eprintln!("ITERATE/SLICE RUN; non-archival codegen check");
     } else {
         assert!(
             result.confirmation_issues().is_empty(),

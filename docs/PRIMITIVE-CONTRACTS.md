@@ -43,8 +43,11 @@ These are semantic axes; min/max does not have a meaningless precision selector.
 ## Callers and tails
 
 Typed vector entries retain the supplied vector backend and width. Native proof
-types select their arithmetic at compile time; Scalar Automatic may use std FMA
-without changing its vector representation.
+types select their arithmetic at compile time; Scalar Automatic may select a
+whole-operation native FMA kernel (`X64V3Token` / `NeonToken`) on bit-identical
+portable profiles without changing its vector return type, falling back to
+SSE2/scalar software FMA otherwise (`Execution::Caller` retains pure ScalarToken
+evaluation).
 Arrays select once for the whole operation unless Execution::Caller is selected.
 Scalar approximate reciprocal entries select a provider once, including portable
 fusion. Scalar min/max and HIGHP reciprocal need no CPU detection. `no_std` cannot dynamically

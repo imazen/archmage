@@ -248,17 +248,167 @@ def neon_fma_dataflow(body):
                     stores.append((address, registers[register]))
             continue
         fma = re.fullmatch(r"fmla\s+v(\d+)\.(\w+), v(\d+)\.\2, v(\d+)\.\2", line)
-        if not fma:
-            return None
-        dest, shape, left, right = fma.groups()
-        registers[dest] = (
-            "fma",
-            shape,
-            registers[dest],
-            registers[left],
-            registers[right],
+        if fma:
+            dest, shape, left, right = fma.groups()
+            registers[dest] = (
+                "fma",
+                shape,
+                registers[dest],
+                registers[left],
+                registers[right],
+            )
+            continue
+        binop = re.fullmatch(
+            r"(fadd|add|and)\s+v(\d+)\.(\w+), v(\d+)\.\3, v(\d+)\.\3", line
         )
+        if binop:
+            op, dest, shape, left, right = binop.groups()
+            registers[dest] = (op, shape, registers[left], registers[right])
+            continue
+        return None
     return stores, sorted(accesses)
+
+
+WASM_W512_TYPES = {
+    "f32x16",
+    "f64x8",
+    "i8x64",
+    "u8x64",
+    "i16x32",
+    "u16x32",
+    "i32x16",
+    "u32x16",
+    "i64x8",
+    "u64x8",
+}
+
+
+def wasm_w512_arity(name):
+    m = re.fullmatch(
+        r"wasm_(\w+)_(sqrt|add|bitand|fma|fma_portable)(?:_plain)?", name
+    )
+    if not m or m[1] not in WASM_W512_TYPES:
+        return None
+    op = m[2]
+    if op == "sqrt":
+        return 1
+    if op in ("add", "bitand"):
+        return 2
+    return 3
+
+
+def wasm_w512_sret_dataflow(name, functions):
+    """Symbolically execute the outer 4-way WASM W512 wrapper around 128-bit callees.
+
+    Direct `[q0, q1, q2, q3]` construction passes `out + 16*i` directly as each
+    quarter callee's sret pointer instead of spilling 4 `v128`s to stack locals
+    and copying them out afterward (-30 instructions, -4 loads, -4 stores).
+    Fail closed on any unknown instruction, unaligned/out-of-frame store, or
+    un-restored `__stack_pointer`.
+    """
+    arity = wasm_w512_arity(name)
+    if arity is None or name not in functions:
+        return None
+    sp = ("stack", 0)
+    locals_map = {0: ("out", 0), **{i: (f"arg{i}", 0) for i in range(1, arity + 1)}}
+    stack = []
+    memory = {}
+    frame_size = None
+
+    def shifted(ptr, delta):
+        if not isinstance(ptr, tuple) or len(ptr) != 2 or not isinstance(delta, int):
+            return None
+        return (ptr[0], ptr[1] + delta)
+
+    def read_v128(ptr):
+        if ptr in memory:
+            return memory[ptr]
+        if (
+            isinstance(ptr, tuple)
+            and ptr[0].startswith("arg")
+            and ptr[1] in (0, 16, 32, 48)
+        ):
+            return ("in", ptr[0], ptr[1])
+        return None
+
+    for line in functions[name]:
+        if line == "global.get\t__stack_pointer":
+            stack.append(sp)
+        elif line == "global.set\t__stack_pointer":
+            if not stack:
+                return None
+            sp = stack.pop()
+            if not isinstance(sp, tuple) or sp[0] != "stack":
+                return None
+            if sp[1] < 0 and frame_size is None:
+                frame_size = -sp[1]
+        elif m := re.fullmatch(r"i32\.const\t(-?\d+)", line):
+            stack.append(int(m[1]))
+        elif line in ("i32.add", "i32.sub"):
+            if len(stack) < 2:
+                return None
+            rhs = stack.pop()
+            lhs = stack.pop()
+            if not isinstance(rhs, int):
+                return None
+            res = shifted(lhs, rhs if line == "i32.add" else -rhs)
+            if res is None:
+                return None
+            stack.append(res)
+        elif m := re.fullmatch(r"local\.(get|set|tee)\t(\d+)", line):
+            kind, idx = m[1], int(m[2])
+            if kind == "get":
+                if idx not in locals_map:
+                    return None
+                stack.append(locals_map[idx])
+            else:
+                if not stack:
+                    return None
+                val = stack[-1] if kind == "tee" else stack.pop()
+                locals_map[idx] = val
+        elif m := re.fullmatch(r"v128\.(load|store)\t(\d+)(?::p2align=\d+)?", line):
+            kind, off = m[1], int(m[2])
+            if kind == "load":
+                if not stack:
+                    return None
+                addr = shifted(stack.pop(), off)
+                val = read_v128(addr)
+                if val is None:
+                    return None
+                stack.append(val)
+            else:
+                if len(stack) < 2:
+                    return None
+                val = stack.pop()
+                addr = shifted(stack.pop(), off)
+                if addr is None or not isinstance(val, tuple):
+                    return None
+                memory[addr] = val
+        elif m := re.fullmatch(r"call\t(\S+)", line):
+            callee = m[1]
+            if callee not in functions or len(stack) < arity + 1:
+                return None
+            arg_ptrs = [stack.pop() for _ in range(arity)][::-1]
+            sret = stack.pop()
+            arg_vals = [read_v128(p) for p in arg_ptrs]
+            if sret is None or any(v is None for v in arg_vals):
+                return None
+            memory[sret] = ("call", tuple(expand(callee, functions)), *arg_vals)
+        else:
+            return None
+
+    if stack or sp != ("stack", 0) or not frame_size or frame_size <= 0:
+        return None
+    for base, off in memory:
+        if base == "stack":
+            if not (-frame_size <= off < 0) or off % 16 != 0:
+                return None
+        elif base != "out" or off not in (0, 16, 32, 48):
+            return None
+    out_lanes = [memory.get(("out", off)) for off in (0, 16, 32, 48)]
+    if any(lane is None for lane in out_lanes):
+        return None
+    return tuple(out_lanes)
 
 
 def partition_dataflow(body, target):
@@ -724,6 +874,78 @@ def self_test():
     assert not x86_halves_dataflow(
         [line.replace("(%rdx)", "(%rsi)") for line in halves], 32
     )
+    neon_w512_a = [
+        "ldp\tq0, q3, [x1]",
+        "ldp\tq1, q2, [x0]",
+        "ldp\tq4, q6, [x1, #32]",
+        "fadd\tv0.4s, v1.4s, v0.4s",
+        "ldp\tq1, q5, [x0, #32]",
+        "fadd\tv2.4s, v2.4s, v3.4s",
+        "fadd\tv1.4s, v1.4s, v4.4s",
+        "fadd\tv3.4s, v5.4s, v6.4s",
+        "stp\tq0, q2, [x8]",
+        "stp\tq1, q3, [x8, #32]",
+        "ret",
+    ]
+    neon_w512_b = [
+        "ldp\tq0, q3, [x1]",
+        "ldp\tq1, q2, [x0]",
+        "fadd\tv0.4s, v1.4s, v0.4s",
+        "ldp\tq1, q5, [x0, #32]",
+        "fadd\tv2.4s, v2.4s, v3.4s",
+        "ldp\tq4, q3, [x1, #32]",
+        "fadd\tv1.4s, v1.4s, v4.4s",
+        "fadd\tv3.4s, v5.4s, v3.4s",
+        "stp\tq0, q2, [x8]",
+        "stp\tq1, q3, [x8, #32]",
+        "ret",
+    ]
+    assert neon_fma_dataflow(neon_w512_a) is not None
+    assert neon_fma_dataflow(neon_w512_a) == neon_fma_dataflow(neon_w512_b)
+    assert neon_fma_dataflow(neon_w512_a) != neon_fma_dataflow(
+        [line.replace("v1.4s, v0.4s", "v0.4s, v1.4s") for line in neon_w512_b]
+    )
+    wasm_sret_funcs = {
+        "_q": ["local.get\t0", "local.get\t1", "v128.load\t0", "f32x4.sqrt", "v128.store\t0"],
+        "wasm_f32x16_sqrt_plain": [
+            "global.get\t__stack_pointer",
+            "i32.const\t16",
+            "i32.sub",
+            "local.tee\t2",
+            "global.set\t__stack_pointer",
+            *[
+                ins
+                for off in (0, 16, 32, 48)
+                for ins in (
+                    [
+                        "local.get\t2",
+                        "local.get\t1",
+                        f"v128.load\t{off}",
+                        "v128.store\t0",
+                        "local.get\t0",
+                    ]
+                    + ([f"i32.const\t{off}", "i32.add"] if off else [])
+                    + ["local.get\t2", "call\t_q"]
+                )
+            ],
+            "local.get\t2",
+            "i32.const\t16",
+            "i32.add",
+            "global.set\t__stack_pointer",
+        ],
+    }
+    assert wasm_w512_sret_dataflow("wasm_f32x16_sqrt_plain", wasm_sret_funcs) is not None
+    assert wasm_w512_sret_dataflow("wasm_f32x16_sqrt_plain", wasm_sret_funcs) != wasm_w512_sret_dataflow(
+        "wasm_f32x16_sqrt_plain",
+        {**wasm_sret_funcs, "_q": ["local.get\t0", "local.get\t1", "v128.load\t0", "v128.store\t0"]},
+    )
+    assert wasm_w512_sret_dataflow(
+        "wasm_f32x16_sqrt_plain",
+        {
+            **wasm_sret_funcs,
+            "wasm_f32x16_sqrt_plain": wasm_sret_funcs["wasm_f32x16_sqrt_plain"][:-3],
+        },
+    ) is None
     for target, first, alternate, address, end in (
         (
             "x86",
@@ -2171,15 +2393,43 @@ def compare(root, expected):
             kind = "stronger destination alignment"
             if reference is not None:
                 kind = "exactly matches independent direct std sqrt reference"
-            elif target.startswith("aarch64") and n.removesuffix("_plain") in [
-                "neon_f32x8_fma",
-                "neon_f64x4_fma",
-            ]:
-                assert list(map(opcode, old)) == list(map(opcode, new))
+            elif target.startswith("aarch64") and (
+                n.removesuffix("_plain") in ["neon_f32x8_fma", "neon_f64x4_fma"]
+                or re.fullmatch(
+                    r"neon_(?:f32x16|f64x8|[iu]8x64|[iu]16x32|[iu]32x16|[iu]64x8)_(?:add|bitand|fma|fma_portable)(?:_plain)?",
+                    n,
+                )
+            ):
+                assert collections.Counter(map(opcode, old)) == collections.Counter(
+                    map(opcode, new)
+                )
+                assert transfers(old) == transfers(new) == []
                 assert neon_fma_dataflow(old) is not None and neon_fma_dataflow(
                     old
                 ) == neon_fma_dataflow(new)
-                kind = "identical FMA dataflow and instruction sequence; register allocation only"
+                kind = "identical symbolic SIMD dataflow and opcode multiset; register/load scheduling only"
+            elif target.startswith("wasm") and wasm_w512_arity(n) is not None:
+                assert len(new) == len(old) - 30, (target, n, len(old), len(new))
+                assert transfers(new) == transfers(old), (target, n)
+                before_ops = collections.Counter(map(opcode, old))
+                after_ops = collections.Counter(map(opcode, new))
+                assert after_ops - before_ops == {} and before_ops - after_ops == {
+                    "i32.const": 1,
+                    "local.get": 14,
+                    "v128.load": 4,
+                    "local.set": 6,
+                    "v128.store": 4,
+                    "i32.add": 1,
+                }, (target, n, after_ops - before_ops, before_ops - after_ops)
+                old_flow = wasm_w512_sret_dataflow(n, a)
+                new_flow = wasm_w512_sret_dataflow(n, b)
+                assert old_flow is not None and old_flow == new_flow, (
+                    target,
+                    n,
+                    old_flow,
+                    new_flow,
+                )
+                kind = "direct sret quarter construction; eliminates 64-byte stack temporary (-30 instructions, -4 loads, -4 stores)"
             elif "_partition" in n:
                 # Soundness comes from core::slice::as_chunks[_mut]; this gate checks
                 # instruction/control-flow/memory cost despite register rescheduling.

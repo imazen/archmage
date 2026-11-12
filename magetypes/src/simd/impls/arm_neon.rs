@@ -543,22 +543,34 @@ impl F32x8Backend for NeonToken {
     // methods — one source of truth for the estimate.
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn rcp_approx(self, a: [float32x4_t; 2]) -> [float32x4_t; 2] {
-        core::array::from_fn(|i| <Self as F32x4Backend>::rcp_approx(_self, a[i]))
+        [
+            <Self as F32x4Backend>::rcp_approx(_self, a[0]),
+            <Self as F32x4Backend>::rcp_approx(_self, a[1]),
+        ]
     }
 
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn rsqrt_approx(self, a: [float32x4_t; 2]) -> [float32x4_t; 2] {
-        core::array::from_fn(|i| <Self as F32x4Backend>::rsqrt_approx(_self, a[i]))
+        [
+            <Self as F32x4Backend>::rsqrt_approx(_self, a[0]),
+            <Self as F32x4Backend>::rsqrt_approx(_self, a[1]),
+        ]
     }
 
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn recip(self, a: [float32x4_t; 2]) -> [float32x4_t; 2] {
-        core::array::from_fn(|i| <Self as F32x4Backend>::recip(_self, a[i]))
+        [
+            <Self as F32x4Backend>::recip(_self, a[0]),
+            <Self as F32x4Backend>::recip(_self, a[1]),
+        ]
     }
 
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn rsqrt(self, a: [float32x4_t; 2]) -> [float32x4_t; 2] {
-        core::array::from_fn(|i| <Self as F32x4Backend>::rsqrt(_self, a[i]))
+        [
+            <Self as F32x4Backend>::rsqrt(_self, a[0]),
+            <Self as F32x4Backend>::rsqrt(_self, a[1]),
+        ]
     }
 
     // ====== Bitwise ======
@@ -1139,22 +1151,34 @@ impl F64x4Backend for NeonToken {
     // methods — one source of truth for the estimate.
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn rcp_approx(self, a: [float64x2_t; 2]) -> [float64x2_t; 2] {
-        core::array::from_fn(|i| <Self as F64x2Backend>::rcp_approx(_self, a[i]))
+        [
+            <Self as F64x2Backend>::rcp_approx(_self, a[0]),
+            <Self as F64x2Backend>::rcp_approx(_self, a[1]),
+        ]
     }
 
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn rsqrt_approx(self, a: [float64x2_t; 2]) -> [float64x2_t; 2] {
-        core::array::from_fn(|i| <Self as F64x2Backend>::rsqrt_approx(_self, a[i]))
+        [
+            <Self as F64x2Backend>::rsqrt_approx(_self, a[0]),
+            <Self as F64x2Backend>::rsqrt_approx(_self, a[1]),
+        ]
     }
 
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn recip(self, a: [float64x2_t; 2]) -> [float64x2_t; 2] {
-        core::array::from_fn(|i| <Self as F64x2Backend>::recip(_self, a[i]))
+        [
+            <Self as F64x2Backend>::recip(_self, a[0]),
+            <Self as F64x2Backend>::recip(_self, a[1]),
+        ]
     }
 
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn rsqrt(self, a: [float64x2_t; 2]) -> [float64x2_t; 2] {
-        core::array::from_fn(|i| <Self as F64x2Backend>::rsqrt(_self, a[i]))
+        [
+            <Self as F64x2Backend>::rsqrt(_self, a[0]),
+            <Self as F64x2Backend>::rsqrt(_self, a[1]),
+        ]
     }
 
     // ====== Bitwise ======
@@ -4518,6 +4542,25 @@ impl U64x4Bitcast for NeonToken {
     }
 }
 #[cfg(feature = "w512")]
+macro_rules! q4 {
+    ($qt:ident :: $m:ident $(::<$n:ident>)? ($s:expr, $a:expr)) => {
+        [<Self as $qt>::$m $(::<$n>)? ($s, $a[0]), <Self as $qt>::$m $(::<$n>)? ($s, $a[1]), <Self as $qt>::$m $(::<$n>)? ($s, $a[2]), <Self as $qt>::$m $(::<$n>)? ($s, $a[3])]
+    };
+    ($qt:ident :: $m:ident ($s:expr, $a:expr, @scalar $c:expr)) => {
+        [<Self as $qt>::$m($s, $a[0], $c), <Self as $qt>::$m($s, $a[1], $c), <Self as $qt>::$m($s, $a[2], $c), <Self as $qt>::$m($s, $a[3], $c)]
+    };
+    ($qt:ident :: $m:ident ($s:expr, @scalar $z:expr, $a:expr)) => {
+        [<Self as $qt>::$m($s, $z, $a[0]), <Self as $qt>::$m($s, $z, $a[1]), <Self as $qt>::$m($s, $z, $a[2]), <Self as $qt>::$m($s, $z, $a[3])]
+    };
+    ($qt:ident :: $m:ident ($s:expr, $a:expr, $b:expr)) => {
+        [<Self as $qt>::$m($s, $a[0], $b[0]), <Self as $qt>::$m($s, $a[1], $b[1]), <Self as $qt>::$m($s, $a[2], $b[2]), <Self as $qt>::$m($s, $a[3], $b[3])]
+    };
+    ($qt:ident :: $m:ident ($s:expr, $a:expr, $b:expr, $c:expr)) => {
+        [<Self as $qt>::$m($s, $a[0], $b[0], $c[0]), <Self as $qt>::$m($s, $a[1], $b[1], $c[1]), <Self as $qt>::$m($s, $a[2], $b[2], $c[2]), <Self as $qt>::$m($s, $a[3], $b[3], $c[3])]
+    };
+}
+
+#[cfg(feature = "w512")]
 #[cfg(target_arch = "aarch64")]
 impl F32x16Backend for NeonToken {
     type Repr = [float32x4_t; 4];
@@ -4589,42 +4632,42 @@ impl F32x16Backend for NeonToken {
 
     #[inline(always)]
     fn add(self, a: [float32x4_t; 4], b: [float32x4_t; 4]) -> [float32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as F32x4Backend>::add(self, a[i], b[i]))
+        q4!(F32x4Backend::add(self, a, b))
     }
 
     #[inline(always)]
     fn sub(self, a: [float32x4_t; 4], b: [float32x4_t; 4]) -> [float32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as F32x4Backend>::sub(self, a[i], b[i]))
+        q4!(F32x4Backend::sub(self, a, b))
     }
 
     #[inline(always)]
     fn mul(self, a: [float32x4_t; 4], b: [float32x4_t; 4]) -> [float32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as F32x4Backend>::mul(self, a[i], b[i]))
+        q4!(F32x4Backend::mul(self, a, b))
     }
 
     #[inline(always)]
     fn div(self, a: [float32x4_t; 4], b: [float32x4_t; 4]) -> [float32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as F32x4Backend>::div(self, a[i], b[i]))
+        q4!(F32x4Backend::div(self, a, b))
     }
 
     #[inline(always)]
     fn neg(self, a: [float32x4_t; 4]) -> [float32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as F32x4Backend>::neg(self, a[i]))
+        q4!(F32x4Backend::neg(self, a))
     }
 
     #[inline(always)]
     fn min(self, a: [float32x4_t; 4], b: [float32x4_t; 4]) -> [float32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as F32x4Backend>::min(self, a[i], b[i]))
+        q4!(F32x4Backend::min(self, a, b))
     }
 
     #[inline(always)]
     fn max(self, a: [float32x4_t; 4], b: [float32x4_t; 4]) -> [float32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as F32x4Backend>::max(self, a[i], b[i]))
+        q4!(F32x4Backend::max(self, a, b))
     }
 
     #[inline(always)]
     fn sqrt(self, a: [float32x4_t; 4]) -> [float32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as F32x4Backend>::sqrt(self, a[i]))
+        q4!(F32x4Backend::sqrt(self, a))
     }
 
     // Reciprocals delegate to the quarter backend so the full-precision
@@ -4632,42 +4675,42 @@ impl F32x16Backend for NeonToken {
     // (Without these the trait defaults make recip/rcp_approx the identity.)
     #[inline(always)]
     fn rcp_approx(self, a: [float32x4_t; 4]) -> [float32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as F32x4Backend>::rcp_approx(self, a[i]))
+        q4!(F32x4Backend::rcp_approx(self, a))
     }
 
     #[inline(always)]
     fn rsqrt_approx(self, a: [float32x4_t; 4]) -> [float32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as F32x4Backend>::rsqrt_approx(self, a[i]))
+        q4!(F32x4Backend::rsqrt_approx(self, a))
     }
 
     #[inline(always)]
     fn recip(self, a: [float32x4_t; 4]) -> [float32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as F32x4Backend>::recip(self, a[i]))
+        q4!(F32x4Backend::recip(self, a))
     }
 
     #[inline(always)]
     fn rsqrt(self, a: [float32x4_t; 4]) -> [float32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as F32x4Backend>::rsqrt(self, a[i]))
+        q4!(F32x4Backend::rsqrt(self, a))
     }
 
     #[inline(always)]
     fn abs(self, a: [float32x4_t; 4]) -> [float32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as F32x4Backend>::abs(self, a[i]))
+        q4!(F32x4Backend::abs(self, a))
     }
 
     #[inline(always)]
     fn floor(self, a: [float32x4_t; 4]) -> [float32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as F32x4Backend>::floor(self, a[i]))
+        q4!(F32x4Backend::floor(self, a))
     }
 
     #[inline(always)]
     fn ceil(self, a: [float32x4_t; 4]) -> [float32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as F32x4Backend>::ceil(self, a[i]))
+        q4!(F32x4Backend::ceil(self, a))
     }
 
     #[inline(always)]
     fn round(self, a: [float32x4_t; 4]) -> [float32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as F32x4Backend>::round(self, a[i]))
+        q4!(F32x4Backend::round(self, a))
     }
 
     #[inline(always)]
@@ -4677,7 +4720,7 @@ impl F32x16Backend for NeonToken {
         b: [float32x4_t; 4],
         c: [float32x4_t; 4],
     ) -> [float32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as F32x4Backend>::mul_add(self, a[i], b[i], c[i]))
+        q4!(F32x4Backend::mul_add(self, a, b, c))
     }
 
     #[inline(always)]
@@ -4687,7 +4730,7 @@ impl F32x16Backend for NeonToken {
         b: [float32x4_t; 4],
         c: [float32x4_t; 4],
     ) -> [float32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as F32x4Backend>::mul_sub(self, a[i], b[i], c[i]))
+        q4!(F32x4Backend::mul_sub(self, a, b, c))
     }
 
     #[inline(always)]
@@ -4697,9 +4740,7 @@ impl F32x16Backend for NeonToken {
         b: [float32x4_t; 4],
         c: [float32x4_t; 4],
     ) -> [float32x4_t; 4] {
-        core::array::from_fn(|i| {
-            <NeonToken as F32x4Backend>::mul_add_portable(self, a[i], b[i], c[i])
-        })
+        q4!(F32x4Backend::mul_add_portable(self, a, b, c))
     }
 
     #[inline(always)]
@@ -4709,9 +4750,7 @@ impl F32x16Backend for NeonToken {
         b: [float32x4_t; 4],
         c: [float32x4_t; 4],
     ) -> [float32x4_t; 4] {
-        core::array::from_fn(|i| {
-            <NeonToken as F32x4Backend>::mul_sub_portable(self, a[i], b[i], c[i])
-        })
+        q4!(F32x4Backend::mul_sub_portable(self, a, b, c))
     }
 
     #[inline(always)]
@@ -4754,32 +4793,32 @@ impl F32x16Backend for NeonToken {
 
     #[inline(always)]
     fn simd_eq(self, a: [float32x4_t; 4], b: [float32x4_t; 4]) -> [float32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as F32x4Backend>::simd_eq(self, a[i], b[i]))
+        q4!(F32x4Backend::simd_eq(self, a, b))
     }
 
     #[inline(always)]
     fn simd_ne(self, a: [float32x4_t; 4], b: [float32x4_t; 4]) -> [float32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as F32x4Backend>::simd_ne(self, a[i], b[i]))
+        q4!(F32x4Backend::simd_ne(self, a, b))
     }
 
     #[inline(always)]
     fn simd_lt(self, a: [float32x4_t; 4], b: [float32x4_t; 4]) -> [float32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as F32x4Backend>::simd_lt(self, a[i], b[i]))
+        q4!(F32x4Backend::simd_lt(self, a, b))
     }
 
     #[inline(always)]
     fn simd_le(self, a: [float32x4_t; 4], b: [float32x4_t; 4]) -> [float32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as F32x4Backend>::simd_le(self, a[i], b[i]))
+        q4!(F32x4Backend::simd_le(self, a, b))
     }
 
     #[inline(always)]
     fn simd_gt(self, a: [float32x4_t; 4], b: [float32x4_t; 4]) -> [float32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as F32x4Backend>::simd_gt(self, a[i], b[i]))
+        q4!(F32x4Backend::simd_gt(self, a, b))
     }
 
     #[inline(always)]
     fn simd_ge(self, a: [float32x4_t; 4], b: [float32x4_t; 4]) -> [float32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as F32x4Backend>::simd_ge(self, a[i], b[i]))
+        q4!(F32x4Backend::simd_ge(self, a, b))
     }
 
     #[inline(always)]
@@ -4789,29 +4828,27 @@ impl F32x16Backend for NeonToken {
         if_true: [float32x4_t; 4],
         if_false: [float32x4_t; 4],
     ) -> [float32x4_t; 4] {
-        core::array::from_fn(|i| {
-            <NeonToken as F32x4Backend>::blend(self, mask[i], if_true[i], if_false[i])
-        })
+        q4!(F32x4Backend::blend(self, mask, if_true, if_false))
     }
 
     #[inline(always)]
     fn not(self, a: [float32x4_t; 4]) -> [float32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as F32x4Backend>::not(self, a[i]))
+        q4!(F32x4Backend::not(self, a))
     }
 
     #[inline(always)]
     fn bitand(self, a: [float32x4_t; 4], b: [float32x4_t; 4]) -> [float32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as F32x4Backend>::bitand(self, a[i], b[i]))
+        q4!(F32x4Backend::bitand(self, a, b))
     }
 
     #[inline(always)]
     fn bitor(self, a: [float32x4_t; 4], b: [float32x4_t; 4]) -> [float32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as F32x4Backend>::bitor(self, a[i], b[i]))
+        q4!(F32x4Backend::bitor(self, a, b))
     }
 
     #[inline(always)]
     fn bitxor(self, a: [float32x4_t; 4], b: [float32x4_t; 4]) -> [float32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as F32x4Backend>::bitxor(self, a[i], b[i]))
+        q4!(F32x4Backend::bitxor(self, a, b))
     }
 }
 
@@ -4887,42 +4924,42 @@ impl F64x8Backend for NeonToken {
 
     #[inline(always)]
     fn add(self, a: [float64x2_t; 4], b: [float64x2_t; 4]) -> [float64x2_t; 4] {
-        core::array::from_fn(|i| <NeonToken as F64x2Backend>::add(self, a[i], b[i]))
+        q4!(F64x2Backend::add(self, a, b))
     }
 
     #[inline(always)]
     fn sub(self, a: [float64x2_t; 4], b: [float64x2_t; 4]) -> [float64x2_t; 4] {
-        core::array::from_fn(|i| <NeonToken as F64x2Backend>::sub(self, a[i], b[i]))
+        q4!(F64x2Backend::sub(self, a, b))
     }
 
     #[inline(always)]
     fn mul(self, a: [float64x2_t; 4], b: [float64x2_t; 4]) -> [float64x2_t; 4] {
-        core::array::from_fn(|i| <NeonToken as F64x2Backend>::mul(self, a[i], b[i]))
+        q4!(F64x2Backend::mul(self, a, b))
     }
 
     #[inline(always)]
     fn div(self, a: [float64x2_t; 4], b: [float64x2_t; 4]) -> [float64x2_t; 4] {
-        core::array::from_fn(|i| <NeonToken as F64x2Backend>::div(self, a[i], b[i]))
+        q4!(F64x2Backend::div(self, a, b))
     }
 
     #[inline(always)]
     fn neg(self, a: [float64x2_t; 4]) -> [float64x2_t; 4] {
-        core::array::from_fn(|i| <NeonToken as F64x2Backend>::neg(self, a[i]))
+        q4!(F64x2Backend::neg(self, a))
     }
 
     #[inline(always)]
     fn min(self, a: [float64x2_t; 4], b: [float64x2_t; 4]) -> [float64x2_t; 4] {
-        core::array::from_fn(|i| <NeonToken as F64x2Backend>::min(self, a[i], b[i]))
+        q4!(F64x2Backend::min(self, a, b))
     }
 
     #[inline(always)]
     fn max(self, a: [float64x2_t; 4], b: [float64x2_t; 4]) -> [float64x2_t; 4] {
-        core::array::from_fn(|i| <NeonToken as F64x2Backend>::max(self, a[i], b[i]))
+        q4!(F64x2Backend::max(self, a, b))
     }
 
     #[inline(always)]
     fn sqrt(self, a: [float64x2_t; 4]) -> [float64x2_t; 4] {
-        core::array::from_fn(|i| <NeonToken as F64x2Backend>::sqrt(self, a[i]))
+        q4!(F64x2Backend::sqrt(self, a))
     }
 
     // Reciprocals delegate to the quarter backend so the full-precision
@@ -4930,42 +4967,42 @@ impl F64x8Backend for NeonToken {
     // (Without these the trait defaults make recip/rcp_approx the identity.)
     #[inline(always)]
     fn rcp_approx(self, a: [float64x2_t; 4]) -> [float64x2_t; 4] {
-        core::array::from_fn(|i| <NeonToken as F64x2Backend>::rcp_approx(self, a[i]))
+        q4!(F64x2Backend::rcp_approx(self, a))
     }
 
     #[inline(always)]
     fn rsqrt_approx(self, a: [float64x2_t; 4]) -> [float64x2_t; 4] {
-        core::array::from_fn(|i| <NeonToken as F64x2Backend>::rsqrt_approx(self, a[i]))
+        q4!(F64x2Backend::rsqrt_approx(self, a))
     }
 
     #[inline(always)]
     fn recip(self, a: [float64x2_t; 4]) -> [float64x2_t; 4] {
-        core::array::from_fn(|i| <NeonToken as F64x2Backend>::recip(self, a[i]))
+        q4!(F64x2Backend::recip(self, a))
     }
 
     #[inline(always)]
     fn rsqrt(self, a: [float64x2_t; 4]) -> [float64x2_t; 4] {
-        core::array::from_fn(|i| <NeonToken as F64x2Backend>::rsqrt(self, a[i]))
+        q4!(F64x2Backend::rsqrt(self, a))
     }
 
     #[inline(always)]
     fn abs(self, a: [float64x2_t; 4]) -> [float64x2_t; 4] {
-        core::array::from_fn(|i| <NeonToken as F64x2Backend>::abs(self, a[i]))
+        q4!(F64x2Backend::abs(self, a))
     }
 
     #[inline(always)]
     fn floor(self, a: [float64x2_t; 4]) -> [float64x2_t; 4] {
-        core::array::from_fn(|i| <NeonToken as F64x2Backend>::floor(self, a[i]))
+        q4!(F64x2Backend::floor(self, a))
     }
 
     #[inline(always)]
     fn ceil(self, a: [float64x2_t; 4]) -> [float64x2_t; 4] {
-        core::array::from_fn(|i| <NeonToken as F64x2Backend>::ceil(self, a[i]))
+        q4!(F64x2Backend::ceil(self, a))
     }
 
     #[inline(always)]
     fn round(self, a: [float64x2_t; 4]) -> [float64x2_t; 4] {
-        core::array::from_fn(|i| <NeonToken as F64x2Backend>::round(self, a[i]))
+        q4!(F64x2Backend::round(self, a))
     }
 
     #[inline(always)]
@@ -4975,7 +5012,7 @@ impl F64x8Backend for NeonToken {
         b: [float64x2_t; 4],
         c: [float64x2_t; 4],
     ) -> [float64x2_t; 4] {
-        core::array::from_fn(|i| <NeonToken as F64x2Backend>::mul_add(self, a[i], b[i], c[i]))
+        q4!(F64x2Backend::mul_add(self, a, b, c))
     }
 
     #[inline(always)]
@@ -4985,7 +5022,7 @@ impl F64x8Backend for NeonToken {
         b: [float64x2_t; 4],
         c: [float64x2_t; 4],
     ) -> [float64x2_t; 4] {
-        core::array::from_fn(|i| <NeonToken as F64x2Backend>::mul_sub(self, a[i], b[i], c[i]))
+        q4!(F64x2Backend::mul_sub(self, a, b, c))
     }
 
     #[inline(always)]
@@ -4995,9 +5032,7 @@ impl F64x8Backend for NeonToken {
         b: [float64x2_t; 4],
         c: [float64x2_t; 4],
     ) -> [float64x2_t; 4] {
-        core::array::from_fn(|i| {
-            <NeonToken as F64x2Backend>::mul_add_portable(self, a[i], b[i], c[i])
-        })
+        q4!(F64x2Backend::mul_add_portable(self, a, b, c))
     }
 
     #[inline(always)]
@@ -5007,9 +5042,7 @@ impl F64x8Backend for NeonToken {
         b: [float64x2_t; 4],
         c: [float64x2_t; 4],
     ) -> [float64x2_t; 4] {
-        core::array::from_fn(|i| {
-            <NeonToken as F64x2Backend>::mul_sub_portable(self, a[i], b[i], c[i])
-        })
+        q4!(F64x2Backend::mul_sub_portable(self, a, b, c))
     }
 
     #[inline(always)]
@@ -5052,32 +5085,32 @@ impl F64x8Backend for NeonToken {
 
     #[inline(always)]
     fn simd_eq(self, a: [float64x2_t; 4], b: [float64x2_t; 4]) -> [float64x2_t; 4] {
-        core::array::from_fn(|i| <NeonToken as F64x2Backend>::simd_eq(self, a[i], b[i]))
+        q4!(F64x2Backend::simd_eq(self, a, b))
     }
 
     #[inline(always)]
     fn simd_ne(self, a: [float64x2_t; 4], b: [float64x2_t; 4]) -> [float64x2_t; 4] {
-        core::array::from_fn(|i| <NeonToken as F64x2Backend>::simd_ne(self, a[i], b[i]))
+        q4!(F64x2Backend::simd_ne(self, a, b))
     }
 
     #[inline(always)]
     fn simd_lt(self, a: [float64x2_t; 4], b: [float64x2_t; 4]) -> [float64x2_t; 4] {
-        core::array::from_fn(|i| <NeonToken as F64x2Backend>::simd_lt(self, a[i], b[i]))
+        q4!(F64x2Backend::simd_lt(self, a, b))
     }
 
     #[inline(always)]
     fn simd_le(self, a: [float64x2_t; 4], b: [float64x2_t; 4]) -> [float64x2_t; 4] {
-        core::array::from_fn(|i| <NeonToken as F64x2Backend>::simd_le(self, a[i], b[i]))
+        q4!(F64x2Backend::simd_le(self, a, b))
     }
 
     #[inline(always)]
     fn simd_gt(self, a: [float64x2_t; 4], b: [float64x2_t; 4]) -> [float64x2_t; 4] {
-        core::array::from_fn(|i| <NeonToken as F64x2Backend>::simd_gt(self, a[i], b[i]))
+        q4!(F64x2Backend::simd_gt(self, a, b))
     }
 
     #[inline(always)]
     fn simd_ge(self, a: [float64x2_t; 4], b: [float64x2_t; 4]) -> [float64x2_t; 4] {
-        core::array::from_fn(|i| <NeonToken as F64x2Backend>::simd_ge(self, a[i], b[i]))
+        q4!(F64x2Backend::simd_ge(self, a, b))
     }
 
     #[inline(always)]
@@ -5087,29 +5120,27 @@ impl F64x8Backend for NeonToken {
         if_true: [float64x2_t; 4],
         if_false: [float64x2_t; 4],
     ) -> [float64x2_t; 4] {
-        core::array::from_fn(|i| {
-            <NeonToken as F64x2Backend>::blend(self, mask[i], if_true[i], if_false[i])
-        })
+        q4!(F64x2Backend::blend(self, mask, if_true, if_false))
     }
 
     #[inline(always)]
     fn not(self, a: [float64x2_t; 4]) -> [float64x2_t; 4] {
-        core::array::from_fn(|i| <NeonToken as F64x2Backend>::not(self, a[i]))
+        q4!(F64x2Backend::not(self, a))
     }
 
     #[inline(always)]
     fn bitand(self, a: [float64x2_t; 4], b: [float64x2_t; 4]) -> [float64x2_t; 4] {
-        core::array::from_fn(|i| <NeonToken as F64x2Backend>::bitand(self, a[i], b[i]))
+        q4!(F64x2Backend::bitand(self, a, b))
     }
 
     #[inline(always)]
     fn bitor(self, a: [float64x2_t; 4], b: [float64x2_t; 4]) -> [float64x2_t; 4] {
-        core::array::from_fn(|i| <NeonToken as F64x2Backend>::bitor(self, a[i], b[i]))
+        q4!(F64x2Backend::bitor(self, a, b))
     }
 
     #[inline(always)]
     fn bitxor(self, a: [float64x2_t; 4], b: [float64x2_t; 4]) -> [float64x2_t; 4] {
-        core::array::from_fn(|i| <NeonToken as F64x2Backend>::bitxor(self, a[i], b[i]))
+        q4!(F64x2Backend::bitxor(self, a, b))
     }
 }
 
@@ -5185,32 +5216,32 @@ impl I8x64Backend for NeonToken {
 
     #[inline(always)]
     fn add(self, a: [int8x16_t; 4], b: [int8x16_t; 4]) -> [int8x16_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I8x16Backend>::add(self, a[i], b[i]))
+        q4!(I8x16Backend::add(self, a, b))
     }
 
     #[inline(always)]
     fn sub(self, a: [int8x16_t; 4], b: [int8x16_t; 4]) -> [int8x16_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I8x16Backend>::sub(self, a[i], b[i]))
+        q4!(I8x16Backend::sub(self, a, b))
     }
 
     #[inline(always)]
     fn neg(self, a: [int8x16_t; 4]) -> [int8x16_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I8x16Backend>::neg(self, a[i]))
+        q4!(I8x16Backend::neg(self, a))
     }
 
     #[inline(always)]
     fn min(self, a: [int8x16_t; 4], b: [int8x16_t; 4]) -> [int8x16_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I8x16Backend>::min(self, a[i], b[i]))
+        q4!(I8x16Backend::min(self, a, b))
     }
 
     #[inline(always)]
     fn max(self, a: [int8x16_t; 4], b: [int8x16_t; 4]) -> [int8x16_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I8x16Backend>::max(self, a[i], b[i]))
+        q4!(I8x16Backend::max(self, a, b))
     }
 
     #[inline(always)]
     fn abs(self, a: [int8x16_t; 4]) -> [int8x16_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I8x16Backend>::abs(self, a[i]))
+        q4!(I8x16Backend::abs(self, a))
     }
 
     #[inline(always)]
@@ -5223,27 +5254,27 @@ impl I8x64Backend for NeonToken {
 
     #[inline(always)]
     fn shl_const<const N: i32>(self, a: [int8x16_t; 4]) -> [int8x16_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I8x16Backend>::shl_const::<N>(self, a[i]))
+        q4!(I8x16Backend::shl_const::<N>(self, a))
     }
 
     #[inline(always)]
     fn shr_arithmetic_const<const N: i32>(self, a: [int8x16_t; 4]) -> [int8x16_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I8x16Backend>::shr_arithmetic_const::<N>(self, a[i]))
+        q4!(I8x16Backend::shr_arithmetic_const::<N>(self, a))
     }
 
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: [int8x16_t; 4]) -> [int8x16_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I8x16Backend>::shr_logical_const::<N>(self, a[i]))
+        q4!(I8x16Backend::shr_logical_const::<N>(self, a))
     }
 
     #[inline(always)]
     fn saturating_add(self, a: [int8x16_t; 4], b: [int8x16_t; 4]) -> [int8x16_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I8x16Backend>::saturating_add(self, a[i], b[i]))
+        q4!(I8x16Backend::saturating_add(self, a, b))
     }
 
     #[inline(always)]
     fn saturating_sub(self, a: [int8x16_t; 4], b: [int8x16_t; 4]) -> [int8x16_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I8x16Backend>::saturating_sub(self, a[i], b[i]))
+        q4!(I8x16Backend::saturating_sub(self, a, b))
     }
 
     // Reduce the quarters with vector AND/OR first, then ONE lane
@@ -5275,32 +5306,32 @@ impl I8x64Backend for NeonToken {
 
     #[inline(always)]
     fn simd_eq(self, a: [int8x16_t; 4], b: [int8x16_t; 4]) -> [int8x16_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I8x16Backend>::simd_eq(self, a[i], b[i]))
+        q4!(I8x16Backend::simd_eq(self, a, b))
     }
 
     #[inline(always)]
     fn simd_ne(self, a: [int8x16_t; 4], b: [int8x16_t; 4]) -> [int8x16_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I8x16Backend>::simd_ne(self, a[i], b[i]))
+        q4!(I8x16Backend::simd_ne(self, a, b))
     }
 
     #[inline(always)]
     fn simd_lt(self, a: [int8x16_t; 4], b: [int8x16_t; 4]) -> [int8x16_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I8x16Backend>::simd_lt(self, a[i], b[i]))
+        q4!(I8x16Backend::simd_lt(self, a, b))
     }
 
     #[inline(always)]
     fn simd_le(self, a: [int8x16_t; 4], b: [int8x16_t; 4]) -> [int8x16_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I8x16Backend>::simd_le(self, a[i], b[i]))
+        q4!(I8x16Backend::simd_le(self, a, b))
     }
 
     #[inline(always)]
     fn simd_gt(self, a: [int8x16_t; 4], b: [int8x16_t; 4]) -> [int8x16_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I8x16Backend>::simd_gt(self, a[i], b[i]))
+        q4!(I8x16Backend::simd_gt(self, a, b))
     }
 
     #[inline(always)]
     fn simd_ge(self, a: [int8x16_t; 4], b: [int8x16_t; 4]) -> [int8x16_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I8x16Backend>::simd_ge(self, a[i], b[i]))
+        q4!(I8x16Backend::simd_ge(self, a, b))
     }
 
     #[inline(always)]
@@ -5310,29 +5341,27 @@ impl I8x64Backend for NeonToken {
         if_true: [int8x16_t; 4],
         if_false: [int8x16_t; 4],
     ) -> [int8x16_t; 4] {
-        core::array::from_fn(|i| {
-            <NeonToken as I8x16Backend>::blend(self, mask[i], if_true[i], if_false[i])
-        })
+        q4!(I8x16Backend::blend(self, mask, if_true, if_false))
     }
 
     #[inline(always)]
     fn not(self, a: [int8x16_t; 4]) -> [int8x16_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I8x16Backend>::not(self, a[i]))
+        q4!(I8x16Backend::not(self, a))
     }
 
     #[inline(always)]
     fn bitand(self, a: [int8x16_t; 4], b: [int8x16_t; 4]) -> [int8x16_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I8x16Backend>::bitand(self, a[i], b[i]))
+        q4!(I8x16Backend::bitand(self, a, b))
     }
 
     #[inline(always)]
     fn bitor(self, a: [int8x16_t; 4], b: [int8x16_t; 4]) -> [int8x16_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I8x16Backend>::bitor(self, a[i], b[i]))
+        q4!(I8x16Backend::bitor(self, a, b))
     }
 
     #[inline(always)]
     fn bitxor(self, a: [int8x16_t; 4], b: [int8x16_t; 4]) -> [int8x16_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I8x16Backend>::bitxor(self, a[i], b[i]))
+        q4!(I8x16Backend::bitxor(self, a, b))
     }
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn widen_low_i8_to_i16(self, a: [int8x16_t; 4]) -> [int16x8_t; 4] {
@@ -5427,28 +5456,28 @@ impl U8x64Backend for NeonToken {
 
     #[inline(always)]
     fn add(self, a: [uint8x16_t; 4], b: [uint8x16_t; 4]) -> [uint8x16_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U8x16Backend>::add(self, a[i], b[i]))
+        q4!(U8x16Backend::add(self, a, b))
     }
 
     #[inline(always)]
     fn sub(self, a: [uint8x16_t; 4], b: [uint8x16_t; 4]) -> [uint8x16_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U8x16Backend>::sub(self, a[i], b[i]))
+        q4!(U8x16Backend::sub(self, a, b))
     }
 
     #[inline(always)]
     fn neg(self, a: [uint8x16_t; 4]) -> [uint8x16_t; 4] {
         let z = <NeonToken as U8x16Backend>::zero(self);
-        core::array::from_fn(|i| <NeonToken as U8x16Backend>::sub(self, z, a[i]))
+        q4!(U8x16Backend::sub(self, @scalar z, a))
     }
 
     #[inline(always)]
     fn min(self, a: [uint8x16_t; 4], b: [uint8x16_t; 4]) -> [uint8x16_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U8x16Backend>::min(self, a[i], b[i]))
+        q4!(U8x16Backend::min(self, a, b))
     }
 
     #[inline(always)]
     fn max(self, a: [uint8x16_t; 4], b: [uint8x16_t; 4]) -> [uint8x16_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U8x16Backend>::max(self, a[i], b[i]))
+        q4!(U8x16Backend::max(self, a, b))
     }
 
     #[inline(always)]
@@ -5461,27 +5490,27 @@ impl U8x64Backend for NeonToken {
 
     #[inline(always)]
     fn shl_const<const N: i32>(self, a: [uint8x16_t; 4]) -> [uint8x16_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U8x16Backend>::shl_const::<N>(self, a[i]))
+        q4!(U8x16Backend::shl_const::<N>(self, a))
     }
 
     #[inline(always)]
     fn shr_arithmetic_const<const N: i32>(self, a: [uint8x16_t; 4]) -> [uint8x16_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U8x16Backend>::shr_logical_const::<N>(self, a[i]))
+        q4!(U8x16Backend::shr_logical_const::<N>(self, a))
     }
 
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: [uint8x16_t; 4]) -> [uint8x16_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U8x16Backend>::shr_logical_const::<N>(self, a[i]))
+        q4!(U8x16Backend::shr_logical_const::<N>(self, a))
     }
 
     #[inline(always)]
     fn saturating_add(self, a: [uint8x16_t; 4], b: [uint8x16_t; 4]) -> [uint8x16_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U8x16Backend>::saturating_add(self, a[i], b[i]))
+        q4!(U8x16Backend::saturating_add(self, a, b))
     }
 
     #[inline(always)]
     fn saturating_sub(self, a: [uint8x16_t; 4], b: [uint8x16_t; 4]) -> [uint8x16_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U8x16Backend>::saturating_sub(self, a[i], b[i]))
+        q4!(U8x16Backend::saturating_sub(self, a, b))
     }
 
     // Reduce the quarters with vector AND/OR first, then ONE lane
@@ -5513,32 +5542,32 @@ impl U8x64Backend for NeonToken {
 
     #[inline(always)]
     fn simd_eq(self, a: [uint8x16_t; 4], b: [uint8x16_t; 4]) -> [uint8x16_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U8x16Backend>::simd_eq(self, a[i], b[i]))
+        q4!(U8x16Backend::simd_eq(self, a, b))
     }
 
     #[inline(always)]
     fn simd_ne(self, a: [uint8x16_t; 4], b: [uint8x16_t; 4]) -> [uint8x16_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U8x16Backend>::simd_ne(self, a[i], b[i]))
+        q4!(U8x16Backend::simd_ne(self, a, b))
     }
 
     #[inline(always)]
     fn simd_lt(self, a: [uint8x16_t; 4], b: [uint8x16_t; 4]) -> [uint8x16_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U8x16Backend>::simd_lt(self, a[i], b[i]))
+        q4!(U8x16Backend::simd_lt(self, a, b))
     }
 
     #[inline(always)]
     fn simd_le(self, a: [uint8x16_t; 4], b: [uint8x16_t; 4]) -> [uint8x16_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U8x16Backend>::simd_le(self, a[i], b[i]))
+        q4!(U8x16Backend::simd_le(self, a, b))
     }
 
     #[inline(always)]
     fn simd_gt(self, a: [uint8x16_t; 4], b: [uint8x16_t; 4]) -> [uint8x16_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U8x16Backend>::simd_gt(self, a[i], b[i]))
+        q4!(U8x16Backend::simd_gt(self, a, b))
     }
 
     #[inline(always)]
     fn simd_ge(self, a: [uint8x16_t; 4], b: [uint8x16_t; 4]) -> [uint8x16_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U8x16Backend>::simd_ge(self, a[i], b[i]))
+        q4!(U8x16Backend::simd_ge(self, a, b))
     }
 
     #[inline(always)]
@@ -5548,29 +5577,27 @@ impl U8x64Backend for NeonToken {
         if_true: [uint8x16_t; 4],
         if_false: [uint8x16_t; 4],
     ) -> [uint8x16_t; 4] {
-        core::array::from_fn(|i| {
-            <NeonToken as U8x16Backend>::blend(self, mask[i], if_true[i], if_false[i])
-        })
+        q4!(U8x16Backend::blend(self, mask, if_true, if_false))
     }
 
     #[inline(always)]
     fn not(self, a: [uint8x16_t; 4]) -> [uint8x16_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U8x16Backend>::not(self, a[i]))
+        q4!(U8x16Backend::not(self, a))
     }
 
     #[inline(always)]
     fn bitand(self, a: [uint8x16_t; 4], b: [uint8x16_t; 4]) -> [uint8x16_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U8x16Backend>::bitand(self, a[i], b[i]))
+        q4!(U8x16Backend::bitand(self, a, b))
     }
 
     #[inline(always)]
     fn bitor(self, a: [uint8x16_t; 4], b: [uint8x16_t; 4]) -> [uint8x16_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U8x16Backend>::bitor(self, a[i], b[i]))
+        q4!(U8x16Backend::bitor(self, a, b))
     }
 
     #[inline(always)]
     fn bitxor(self, a: [uint8x16_t; 4], b: [uint8x16_t; 4]) -> [uint8x16_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U8x16Backend>::bitxor(self, a[i], b[i]))
+        q4!(U8x16Backend::bitxor(self, a, b))
     }
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn widen_low_u8_to_u16(self, a: [uint8x16_t; 4]) -> [uint16x8_t; 4] {
@@ -5701,37 +5728,37 @@ impl I16x32Backend for NeonToken {
 
     #[inline(always)]
     fn add(self, a: [int16x8_t; 4], b: [int16x8_t; 4]) -> [int16x8_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I16x8Backend>::add(self, a[i], b[i]))
+        q4!(I16x8Backend::add(self, a, b))
     }
 
     #[inline(always)]
     fn sub(self, a: [int16x8_t; 4], b: [int16x8_t; 4]) -> [int16x8_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I16x8Backend>::sub(self, a[i], b[i]))
+        q4!(I16x8Backend::sub(self, a, b))
     }
 
     #[inline(always)]
     fn mul(self, a: [int16x8_t; 4], b: [int16x8_t; 4]) -> [int16x8_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I16x8Backend>::mul(self, a[i], b[i]))
+        q4!(I16x8Backend::mul(self, a, b))
     }
 
     #[inline(always)]
     fn neg(self, a: [int16x8_t; 4]) -> [int16x8_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I16x8Backend>::neg(self, a[i]))
+        q4!(I16x8Backend::neg(self, a))
     }
 
     #[inline(always)]
     fn min(self, a: [int16x8_t; 4], b: [int16x8_t; 4]) -> [int16x8_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I16x8Backend>::min(self, a[i], b[i]))
+        q4!(I16x8Backend::min(self, a, b))
     }
 
     #[inline(always)]
     fn max(self, a: [int16x8_t; 4], b: [int16x8_t; 4]) -> [int16x8_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I16x8Backend>::max(self, a[i], b[i]))
+        q4!(I16x8Backend::max(self, a, b))
     }
 
     #[inline(always)]
     fn abs(self, a: [int16x8_t; 4]) -> [int16x8_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I16x8Backend>::abs(self, a[i]))
+        q4!(I16x8Backend::abs(self, a))
     }
 
     #[inline(always)]
@@ -5744,46 +5771,42 @@ impl I16x32Backend for NeonToken {
 
     #[inline(always)]
     fn shl_const<const N: i32>(self, a: [int16x8_t; 4]) -> [int16x8_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I16x8Backend>::shl_const::<N>(self, a[i]))
+        q4!(I16x8Backend::shl_const::<N>(self, a))
     }
 
     #[inline(always)]
     fn shr_arithmetic_const<const N: i32>(self, a: [int16x8_t; 4]) -> [int16x8_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I16x8Backend>::shr_arithmetic_const::<N>(self, a[i]))
+        q4!(I16x8Backend::shr_arithmetic_const::<N>(self, a))
     }
 
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: [int16x8_t; 4]) -> [int16x8_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I16x8Backend>::shr_logical_const::<N>(self, a[i]))
+        q4!(I16x8Backend::shr_logical_const::<N>(self, a))
     }
 
     #[inline(always)]
     fn shl_uniform(self, a: [int16x8_t; 4], count: u32) -> [int16x8_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I16x8Backend>::shl_uniform(self, a[i], count))
+        q4!(I16x8Backend::shl_uniform(self, a, @scalar count))
     }
 
     #[inline(always)]
     fn shr_logical_uniform(self, a: [int16x8_t; 4], count: u32) -> [int16x8_t; 4] {
-        core::array::from_fn(|i| {
-            <NeonToken as I16x8Backend>::shr_logical_uniform(self, a[i], count)
-        })
+        q4!(I16x8Backend::shr_logical_uniform(self, a, @scalar count))
     }
 
     #[inline(always)]
     fn shr_arithmetic_uniform(self, a: [int16x8_t; 4], count: u32) -> [int16x8_t; 4] {
-        core::array::from_fn(|i| {
-            <NeonToken as I16x8Backend>::shr_arithmetic_uniform(self, a[i], count)
-        })
+        q4!(I16x8Backend::shr_arithmetic_uniform(self, a, @scalar count))
     }
 
     #[inline(always)]
     fn saturating_add(self, a: [int16x8_t; 4], b: [int16x8_t; 4]) -> [int16x8_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I16x8Backend>::saturating_add(self, a[i], b[i]))
+        q4!(I16x8Backend::saturating_add(self, a, b))
     }
 
     #[inline(always)]
     fn saturating_sub(self, a: [int16x8_t; 4], b: [int16x8_t; 4]) -> [int16x8_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I16x8Backend>::saturating_sub(self, a[i], b[i]))
+        q4!(I16x8Backend::saturating_sub(self, a, b))
     }
 
     // Reduce the quarters with vector AND/OR first, then ONE lane
@@ -5815,32 +5838,32 @@ impl I16x32Backend for NeonToken {
 
     #[inline(always)]
     fn simd_eq(self, a: [int16x8_t; 4], b: [int16x8_t; 4]) -> [int16x8_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I16x8Backend>::simd_eq(self, a[i], b[i]))
+        q4!(I16x8Backend::simd_eq(self, a, b))
     }
 
     #[inline(always)]
     fn simd_ne(self, a: [int16x8_t; 4], b: [int16x8_t; 4]) -> [int16x8_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I16x8Backend>::simd_ne(self, a[i], b[i]))
+        q4!(I16x8Backend::simd_ne(self, a, b))
     }
 
     #[inline(always)]
     fn simd_lt(self, a: [int16x8_t; 4], b: [int16x8_t; 4]) -> [int16x8_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I16x8Backend>::simd_lt(self, a[i], b[i]))
+        q4!(I16x8Backend::simd_lt(self, a, b))
     }
 
     #[inline(always)]
     fn simd_le(self, a: [int16x8_t; 4], b: [int16x8_t; 4]) -> [int16x8_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I16x8Backend>::simd_le(self, a[i], b[i]))
+        q4!(I16x8Backend::simd_le(self, a, b))
     }
 
     #[inline(always)]
     fn simd_gt(self, a: [int16x8_t; 4], b: [int16x8_t; 4]) -> [int16x8_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I16x8Backend>::simd_gt(self, a[i], b[i]))
+        q4!(I16x8Backend::simd_gt(self, a, b))
     }
 
     #[inline(always)]
     fn simd_ge(self, a: [int16x8_t; 4], b: [int16x8_t; 4]) -> [int16x8_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I16x8Backend>::simd_ge(self, a[i], b[i]))
+        q4!(I16x8Backend::simd_ge(self, a, b))
     }
 
     #[inline(always)]
@@ -5850,29 +5873,27 @@ impl I16x32Backend for NeonToken {
         if_true: [int16x8_t; 4],
         if_false: [int16x8_t; 4],
     ) -> [int16x8_t; 4] {
-        core::array::from_fn(|i| {
-            <NeonToken as I16x8Backend>::blend(self, mask[i], if_true[i], if_false[i])
-        })
+        q4!(I16x8Backend::blend(self, mask, if_true, if_false))
     }
 
     #[inline(always)]
     fn not(self, a: [int16x8_t; 4]) -> [int16x8_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I16x8Backend>::not(self, a[i]))
+        q4!(I16x8Backend::not(self, a))
     }
 
     #[inline(always)]
     fn bitand(self, a: [int16x8_t; 4], b: [int16x8_t; 4]) -> [int16x8_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I16x8Backend>::bitand(self, a[i], b[i]))
+        q4!(I16x8Backend::bitand(self, a, b))
     }
 
     #[inline(always)]
     fn bitor(self, a: [int16x8_t; 4], b: [int16x8_t; 4]) -> [int16x8_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I16x8Backend>::bitor(self, a[i], b[i]))
+        q4!(I16x8Backend::bitor(self, a, b))
     }
 
     #[inline(always)]
     fn bitxor(self, a: [int16x8_t; 4], b: [int16x8_t; 4]) -> [int16x8_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I16x8Backend>::bitxor(self, a[i], b[i]))
+        q4!(I16x8Backend::bitxor(self, a, b))
     }
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn widen_low_i16_to_i32(self, a: [int16x8_t; 4]) -> [int32x4_t; 4] {
@@ -6019,33 +6040,33 @@ impl U16x32Backend for NeonToken {
 
     #[inline(always)]
     fn add(self, a: [uint16x8_t; 4], b: [uint16x8_t; 4]) -> [uint16x8_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U16x8Backend>::add(self, a[i], b[i]))
+        q4!(U16x8Backend::add(self, a, b))
     }
 
     #[inline(always)]
     fn sub(self, a: [uint16x8_t; 4], b: [uint16x8_t; 4]) -> [uint16x8_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U16x8Backend>::sub(self, a[i], b[i]))
+        q4!(U16x8Backend::sub(self, a, b))
     }
 
     #[inline(always)]
     fn mul(self, a: [uint16x8_t; 4], b: [uint16x8_t; 4]) -> [uint16x8_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U16x8Backend>::mul(self, a[i], b[i]))
+        q4!(U16x8Backend::mul(self, a, b))
     }
 
     #[inline(always)]
     fn neg(self, a: [uint16x8_t; 4]) -> [uint16x8_t; 4] {
         let z = <NeonToken as U16x8Backend>::zero(self);
-        core::array::from_fn(|i| <NeonToken as U16x8Backend>::sub(self, z, a[i]))
+        q4!(U16x8Backend::sub(self, @scalar z, a))
     }
 
     #[inline(always)]
     fn min(self, a: [uint16x8_t; 4], b: [uint16x8_t; 4]) -> [uint16x8_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U16x8Backend>::min(self, a[i], b[i]))
+        q4!(U16x8Backend::min(self, a, b))
     }
 
     #[inline(always)]
     fn max(self, a: [uint16x8_t; 4], b: [uint16x8_t; 4]) -> [uint16x8_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U16x8Backend>::max(self, a[i], b[i]))
+        q4!(U16x8Backend::max(self, a, b))
     }
 
     #[inline(always)]
@@ -6058,46 +6079,42 @@ impl U16x32Backend for NeonToken {
 
     #[inline(always)]
     fn shl_const<const N: i32>(self, a: [uint16x8_t; 4]) -> [uint16x8_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U16x8Backend>::shl_const::<N>(self, a[i]))
+        q4!(U16x8Backend::shl_const::<N>(self, a))
     }
 
     #[inline(always)]
     fn shr_arithmetic_const<const N: i32>(self, a: [uint16x8_t; 4]) -> [uint16x8_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U16x8Backend>::shr_logical_const::<N>(self, a[i]))
+        q4!(U16x8Backend::shr_logical_const::<N>(self, a))
     }
 
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: [uint16x8_t; 4]) -> [uint16x8_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U16x8Backend>::shr_logical_const::<N>(self, a[i]))
+        q4!(U16x8Backend::shr_logical_const::<N>(self, a))
     }
 
     #[inline(always)]
     fn shl_uniform(self, a: [uint16x8_t; 4], count: u32) -> [uint16x8_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U16x8Backend>::shl_uniform(self, a[i], count))
+        q4!(U16x8Backend::shl_uniform(self, a, @scalar count))
     }
 
     #[inline(always)]
     fn shr_logical_uniform(self, a: [uint16x8_t; 4], count: u32) -> [uint16x8_t; 4] {
-        core::array::from_fn(|i| {
-            <NeonToken as U16x8Backend>::shr_logical_uniform(self, a[i], count)
-        })
+        q4!(U16x8Backend::shr_logical_uniform(self, a, @scalar count))
     }
 
     #[inline(always)]
     fn shr_arithmetic_uniform(self, a: [uint16x8_t; 4], count: u32) -> [uint16x8_t; 4] {
-        core::array::from_fn(|i| {
-            <NeonToken as U16x8Backend>::shr_logical_uniform(self, a[i], count)
-        })
+        q4!(U16x8Backend::shr_logical_uniform(self, a, @scalar count))
     }
 
     #[inline(always)]
     fn saturating_add(self, a: [uint16x8_t; 4], b: [uint16x8_t; 4]) -> [uint16x8_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U16x8Backend>::saturating_add(self, a[i], b[i]))
+        q4!(U16x8Backend::saturating_add(self, a, b))
     }
 
     #[inline(always)]
     fn saturating_sub(self, a: [uint16x8_t; 4], b: [uint16x8_t; 4]) -> [uint16x8_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U16x8Backend>::saturating_sub(self, a[i], b[i]))
+        q4!(U16x8Backend::saturating_sub(self, a, b))
     }
 
     // Reduce the quarters with vector AND/OR first, then ONE lane
@@ -6129,32 +6146,32 @@ impl U16x32Backend for NeonToken {
 
     #[inline(always)]
     fn simd_eq(self, a: [uint16x8_t; 4], b: [uint16x8_t; 4]) -> [uint16x8_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U16x8Backend>::simd_eq(self, a[i], b[i]))
+        q4!(U16x8Backend::simd_eq(self, a, b))
     }
 
     #[inline(always)]
     fn simd_ne(self, a: [uint16x8_t; 4], b: [uint16x8_t; 4]) -> [uint16x8_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U16x8Backend>::simd_ne(self, a[i], b[i]))
+        q4!(U16x8Backend::simd_ne(self, a, b))
     }
 
     #[inline(always)]
     fn simd_lt(self, a: [uint16x8_t; 4], b: [uint16x8_t; 4]) -> [uint16x8_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U16x8Backend>::simd_lt(self, a[i], b[i]))
+        q4!(U16x8Backend::simd_lt(self, a, b))
     }
 
     #[inline(always)]
     fn simd_le(self, a: [uint16x8_t; 4], b: [uint16x8_t; 4]) -> [uint16x8_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U16x8Backend>::simd_le(self, a[i], b[i]))
+        q4!(U16x8Backend::simd_le(self, a, b))
     }
 
     #[inline(always)]
     fn simd_gt(self, a: [uint16x8_t; 4], b: [uint16x8_t; 4]) -> [uint16x8_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U16x8Backend>::simd_gt(self, a[i], b[i]))
+        q4!(U16x8Backend::simd_gt(self, a, b))
     }
 
     #[inline(always)]
     fn simd_ge(self, a: [uint16x8_t; 4], b: [uint16x8_t; 4]) -> [uint16x8_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U16x8Backend>::simd_ge(self, a[i], b[i]))
+        q4!(U16x8Backend::simd_ge(self, a, b))
     }
 
     #[inline(always)]
@@ -6164,29 +6181,27 @@ impl U16x32Backend for NeonToken {
         if_true: [uint16x8_t; 4],
         if_false: [uint16x8_t; 4],
     ) -> [uint16x8_t; 4] {
-        core::array::from_fn(|i| {
-            <NeonToken as U16x8Backend>::blend(self, mask[i], if_true[i], if_false[i])
-        })
+        q4!(U16x8Backend::blend(self, mask, if_true, if_false))
     }
 
     #[inline(always)]
     fn not(self, a: [uint16x8_t; 4]) -> [uint16x8_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U16x8Backend>::not(self, a[i]))
+        q4!(U16x8Backend::not(self, a))
     }
 
     #[inline(always)]
     fn bitand(self, a: [uint16x8_t; 4], b: [uint16x8_t; 4]) -> [uint16x8_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U16x8Backend>::bitand(self, a[i], b[i]))
+        q4!(U16x8Backend::bitand(self, a, b))
     }
 
     #[inline(always)]
     fn bitor(self, a: [uint16x8_t; 4], b: [uint16x8_t; 4]) -> [uint16x8_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U16x8Backend>::bitor(self, a[i], b[i]))
+        q4!(U16x8Backend::bitor(self, a, b))
     }
 
     #[inline(always)]
     fn bitxor(self, a: [uint16x8_t; 4], b: [uint16x8_t; 4]) -> [uint16x8_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U16x8Backend>::bitxor(self, a[i], b[i]))
+        q4!(U16x8Backend::bitxor(self, a, b))
     }
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn widen_low_u16_to_u32(self, a: [uint16x8_t; 4]) -> [uint32x4_t; 4] {
@@ -6291,37 +6306,37 @@ impl I32x16Backend for NeonToken {
 
     #[inline(always)]
     fn add(self, a: [int32x4_t; 4], b: [int32x4_t; 4]) -> [int32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I32x4Backend>::add(self, a[i], b[i]))
+        q4!(I32x4Backend::add(self, a, b))
     }
 
     #[inline(always)]
     fn sub(self, a: [int32x4_t; 4], b: [int32x4_t; 4]) -> [int32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I32x4Backend>::sub(self, a[i], b[i]))
+        q4!(I32x4Backend::sub(self, a, b))
     }
 
     #[inline(always)]
     fn mul(self, a: [int32x4_t; 4], b: [int32x4_t; 4]) -> [int32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I32x4Backend>::mul(self, a[i], b[i]))
+        q4!(I32x4Backend::mul(self, a, b))
     }
 
     #[inline(always)]
     fn neg(self, a: [int32x4_t; 4]) -> [int32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I32x4Backend>::neg(self, a[i]))
+        q4!(I32x4Backend::neg(self, a))
     }
 
     #[inline(always)]
     fn min(self, a: [int32x4_t; 4], b: [int32x4_t; 4]) -> [int32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I32x4Backend>::min(self, a[i], b[i]))
+        q4!(I32x4Backend::min(self, a, b))
     }
 
     #[inline(always)]
     fn max(self, a: [int32x4_t; 4], b: [int32x4_t; 4]) -> [int32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I32x4Backend>::max(self, a[i], b[i]))
+        q4!(I32x4Backend::max(self, a, b))
     }
 
     #[inline(always)]
     fn abs(self, a: [int32x4_t; 4]) -> [int32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I32x4Backend>::abs(self, a[i]))
+        q4!(I32x4Backend::abs(self, a))
     }
 
     #[inline(always)]
@@ -6334,36 +6349,32 @@ impl I32x16Backend for NeonToken {
 
     #[inline(always)]
     fn shl_const<const N: i32>(self, a: [int32x4_t; 4]) -> [int32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I32x4Backend>::shl_const::<N>(self, a[i]))
+        q4!(I32x4Backend::shl_const::<N>(self, a))
     }
 
     #[inline(always)]
     fn shr_arithmetic_const<const N: i32>(self, a: [int32x4_t; 4]) -> [int32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I32x4Backend>::shr_arithmetic_const::<N>(self, a[i]))
+        q4!(I32x4Backend::shr_arithmetic_const::<N>(self, a))
     }
 
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: [int32x4_t; 4]) -> [int32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I32x4Backend>::shr_logical_const::<N>(self, a[i]))
+        q4!(I32x4Backend::shr_logical_const::<N>(self, a))
     }
 
     #[inline(always)]
     fn shl_uniform(self, a: [int32x4_t; 4], count: u32) -> [int32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I32x4Backend>::shl_uniform(self, a[i], count))
+        q4!(I32x4Backend::shl_uniform(self, a, @scalar count))
     }
 
     #[inline(always)]
     fn shr_logical_uniform(self, a: [int32x4_t; 4], count: u32) -> [int32x4_t; 4] {
-        core::array::from_fn(|i| {
-            <NeonToken as I32x4Backend>::shr_logical_uniform(self, a[i], count)
-        })
+        q4!(I32x4Backend::shr_logical_uniform(self, a, @scalar count))
     }
 
     #[inline(always)]
     fn shr_arithmetic_uniform(self, a: [int32x4_t; 4], count: u32) -> [int32x4_t; 4] {
-        core::array::from_fn(|i| {
-            <NeonToken as I32x4Backend>::shr_arithmetic_uniform(self, a[i], count)
-        })
+        q4!(I32x4Backend::shr_arithmetic_uniform(self, a, @scalar count))
     }
 
     // Reduce the quarters with vector AND/OR first, then ONE lane
@@ -6395,32 +6406,32 @@ impl I32x16Backend for NeonToken {
 
     #[inline(always)]
     fn simd_eq(self, a: [int32x4_t; 4], b: [int32x4_t; 4]) -> [int32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I32x4Backend>::simd_eq(self, a[i], b[i]))
+        q4!(I32x4Backend::simd_eq(self, a, b))
     }
 
     #[inline(always)]
     fn simd_ne(self, a: [int32x4_t; 4], b: [int32x4_t; 4]) -> [int32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I32x4Backend>::simd_ne(self, a[i], b[i]))
+        q4!(I32x4Backend::simd_ne(self, a, b))
     }
 
     #[inline(always)]
     fn simd_lt(self, a: [int32x4_t; 4], b: [int32x4_t; 4]) -> [int32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I32x4Backend>::simd_lt(self, a[i], b[i]))
+        q4!(I32x4Backend::simd_lt(self, a, b))
     }
 
     #[inline(always)]
     fn simd_le(self, a: [int32x4_t; 4], b: [int32x4_t; 4]) -> [int32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I32x4Backend>::simd_le(self, a[i], b[i]))
+        q4!(I32x4Backend::simd_le(self, a, b))
     }
 
     #[inline(always)]
     fn simd_gt(self, a: [int32x4_t; 4], b: [int32x4_t; 4]) -> [int32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I32x4Backend>::simd_gt(self, a[i], b[i]))
+        q4!(I32x4Backend::simd_gt(self, a, b))
     }
 
     #[inline(always)]
     fn simd_ge(self, a: [int32x4_t; 4], b: [int32x4_t; 4]) -> [int32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I32x4Backend>::simd_ge(self, a[i], b[i]))
+        q4!(I32x4Backend::simd_ge(self, a, b))
     }
 
     #[inline(always)]
@@ -6430,29 +6441,27 @@ impl I32x16Backend for NeonToken {
         if_true: [int32x4_t; 4],
         if_false: [int32x4_t; 4],
     ) -> [int32x4_t; 4] {
-        core::array::from_fn(|i| {
-            <NeonToken as I32x4Backend>::blend(self, mask[i], if_true[i], if_false[i])
-        })
+        q4!(I32x4Backend::blend(self, mask, if_true, if_false))
     }
 
     #[inline(always)]
     fn not(self, a: [int32x4_t; 4]) -> [int32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I32x4Backend>::not(self, a[i]))
+        q4!(I32x4Backend::not(self, a))
     }
 
     #[inline(always)]
     fn bitand(self, a: [int32x4_t; 4], b: [int32x4_t; 4]) -> [int32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I32x4Backend>::bitand(self, a[i], b[i]))
+        q4!(I32x4Backend::bitand(self, a, b))
     }
 
     #[inline(always)]
     fn bitor(self, a: [int32x4_t; 4], b: [int32x4_t; 4]) -> [int32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I32x4Backend>::bitor(self, a[i], b[i]))
+        q4!(I32x4Backend::bitor(self, a, b))
     }
 
     #[inline(always)]
     fn bitxor(self, a: [int32x4_t; 4], b: [int32x4_t; 4]) -> [int32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I32x4Backend>::bitxor(self, a[i], b[i]))
+        q4!(I32x4Backend::bitxor(self, a, b))
     }
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn narrow_saturating_i32_to_i16(self, a: [int32x4_t; 4], b: [int32x4_t; 4]) -> [int16x8_t; 4] {
@@ -6547,33 +6556,33 @@ impl U32x16Backend for NeonToken {
 
     #[inline(always)]
     fn add(self, a: [uint32x4_t; 4], b: [uint32x4_t; 4]) -> [uint32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U32x4Backend>::add(self, a[i], b[i]))
+        q4!(U32x4Backend::add(self, a, b))
     }
 
     #[inline(always)]
     fn sub(self, a: [uint32x4_t; 4], b: [uint32x4_t; 4]) -> [uint32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U32x4Backend>::sub(self, a[i], b[i]))
+        q4!(U32x4Backend::sub(self, a, b))
     }
 
     #[inline(always)]
     fn mul(self, a: [uint32x4_t; 4], b: [uint32x4_t; 4]) -> [uint32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U32x4Backend>::mul(self, a[i], b[i]))
+        q4!(U32x4Backend::mul(self, a, b))
     }
 
     #[inline(always)]
     fn neg(self, a: [uint32x4_t; 4]) -> [uint32x4_t; 4] {
         let z = <NeonToken as U32x4Backend>::zero(self);
-        core::array::from_fn(|i| <NeonToken as U32x4Backend>::sub(self, z, a[i]))
+        q4!(U32x4Backend::sub(self, @scalar z, a))
     }
 
     #[inline(always)]
     fn min(self, a: [uint32x4_t; 4], b: [uint32x4_t; 4]) -> [uint32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U32x4Backend>::min(self, a[i], b[i]))
+        q4!(U32x4Backend::min(self, a, b))
     }
 
     #[inline(always)]
     fn max(self, a: [uint32x4_t; 4], b: [uint32x4_t; 4]) -> [uint32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U32x4Backend>::max(self, a[i], b[i]))
+        q4!(U32x4Backend::max(self, a, b))
     }
 
     #[inline(always)]
@@ -6586,36 +6595,32 @@ impl U32x16Backend for NeonToken {
 
     #[inline(always)]
     fn shl_const<const N: i32>(self, a: [uint32x4_t; 4]) -> [uint32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U32x4Backend>::shl_const::<N>(self, a[i]))
+        q4!(U32x4Backend::shl_const::<N>(self, a))
     }
 
     #[inline(always)]
     fn shr_arithmetic_const<const N: i32>(self, a: [uint32x4_t; 4]) -> [uint32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U32x4Backend>::shr_logical_const::<N>(self, a[i]))
+        q4!(U32x4Backend::shr_logical_const::<N>(self, a))
     }
 
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: [uint32x4_t; 4]) -> [uint32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U32x4Backend>::shr_logical_const::<N>(self, a[i]))
+        q4!(U32x4Backend::shr_logical_const::<N>(self, a))
     }
 
     #[inline(always)]
     fn shl_uniform(self, a: [uint32x4_t; 4], count: u32) -> [uint32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U32x4Backend>::shl_uniform(self, a[i], count))
+        q4!(U32x4Backend::shl_uniform(self, a, @scalar count))
     }
 
     #[inline(always)]
     fn shr_logical_uniform(self, a: [uint32x4_t; 4], count: u32) -> [uint32x4_t; 4] {
-        core::array::from_fn(|i| {
-            <NeonToken as U32x4Backend>::shr_logical_uniform(self, a[i], count)
-        })
+        q4!(U32x4Backend::shr_logical_uniform(self, a, @scalar count))
     }
 
     #[inline(always)]
     fn shr_arithmetic_uniform(self, a: [uint32x4_t; 4], count: u32) -> [uint32x4_t; 4] {
-        core::array::from_fn(|i| {
-            <NeonToken as U32x4Backend>::shr_logical_uniform(self, a[i], count)
-        })
+        q4!(U32x4Backend::shr_logical_uniform(self, a, @scalar count))
     }
 
     // Reduce the quarters with vector AND/OR first, then ONE lane
@@ -6647,32 +6652,32 @@ impl U32x16Backend for NeonToken {
 
     #[inline(always)]
     fn simd_eq(self, a: [uint32x4_t; 4], b: [uint32x4_t; 4]) -> [uint32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U32x4Backend>::simd_eq(self, a[i], b[i]))
+        q4!(U32x4Backend::simd_eq(self, a, b))
     }
 
     #[inline(always)]
     fn simd_ne(self, a: [uint32x4_t; 4], b: [uint32x4_t; 4]) -> [uint32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U32x4Backend>::simd_ne(self, a[i], b[i]))
+        q4!(U32x4Backend::simd_ne(self, a, b))
     }
 
     #[inline(always)]
     fn simd_lt(self, a: [uint32x4_t; 4], b: [uint32x4_t; 4]) -> [uint32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U32x4Backend>::simd_lt(self, a[i], b[i]))
+        q4!(U32x4Backend::simd_lt(self, a, b))
     }
 
     #[inline(always)]
     fn simd_le(self, a: [uint32x4_t; 4], b: [uint32x4_t; 4]) -> [uint32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U32x4Backend>::simd_le(self, a[i], b[i]))
+        q4!(U32x4Backend::simd_le(self, a, b))
     }
 
     #[inline(always)]
     fn simd_gt(self, a: [uint32x4_t; 4], b: [uint32x4_t; 4]) -> [uint32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U32x4Backend>::simd_gt(self, a[i], b[i]))
+        q4!(U32x4Backend::simd_gt(self, a, b))
     }
 
     #[inline(always)]
     fn simd_ge(self, a: [uint32x4_t; 4], b: [uint32x4_t; 4]) -> [uint32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U32x4Backend>::simd_ge(self, a[i], b[i]))
+        q4!(U32x4Backend::simd_ge(self, a, b))
     }
 
     #[inline(always)]
@@ -6682,29 +6687,27 @@ impl U32x16Backend for NeonToken {
         if_true: [uint32x4_t; 4],
         if_false: [uint32x4_t; 4],
     ) -> [uint32x4_t; 4] {
-        core::array::from_fn(|i| {
-            <NeonToken as U32x4Backend>::blend(self, mask[i], if_true[i], if_false[i])
-        })
+        q4!(U32x4Backend::blend(self, mask, if_true, if_false))
     }
 
     #[inline(always)]
     fn not(self, a: [uint32x4_t; 4]) -> [uint32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U32x4Backend>::not(self, a[i]))
+        q4!(U32x4Backend::not(self, a))
     }
 
     #[inline(always)]
     fn bitand(self, a: [uint32x4_t; 4], b: [uint32x4_t; 4]) -> [uint32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U32x4Backend>::bitand(self, a[i], b[i]))
+        q4!(U32x4Backend::bitand(self, a, b))
     }
 
     #[inline(always)]
     fn bitor(self, a: [uint32x4_t; 4], b: [uint32x4_t; 4]) -> [uint32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U32x4Backend>::bitor(self, a[i], b[i]))
+        q4!(U32x4Backend::bitor(self, a, b))
     }
 
     #[inline(always)]
     fn bitxor(self, a: [uint32x4_t; 4], b: [uint32x4_t; 4]) -> [uint32x4_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U32x4Backend>::bitxor(self, a[i], b[i]))
+        q4!(U32x4Backend::bitxor(self, a, b))
     }
 }
 
@@ -6780,32 +6783,32 @@ impl I64x8Backend for NeonToken {
 
     #[inline(always)]
     fn add(self, a: [int64x2_t; 4], b: [int64x2_t; 4]) -> [int64x2_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I64x2Backend>::add(self, a[i], b[i]))
+        q4!(I64x2Backend::add(self, a, b))
     }
 
     #[inline(always)]
     fn sub(self, a: [int64x2_t; 4], b: [int64x2_t; 4]) -> [int64x2_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I64x2Backend>::sub(self, a[i], b[i]))
+        q4!(I64x2Backend::sub(self, a, b))
     }
 
     #[inline(always)]
     fn neg(self, a: [int64x2_t; 4]) -> [int64x2_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I64x2Backend>::neg(self, a[i]))
+        q4!(I64x2Backend::neg(self, a))
     }
 
     #[inline(always)]
     fn min(self, a: [int64x2_t; 4], b: [int64x2_t; 4]) -> [int64x2_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I64x2Backend>::min(self, a[i], b[i]))
+        q4!(I64x2Backend::min(self, a, b))
     }
 
     #[inline(always)]
     fn max(self, a: [int64x2_t; 4], b: [int64x2_t; 4]) -> [int64x2_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I64x2Backend>::max(self, a[i], b[i]))
+        q4!(I64x2Backend::max(self, a, b))
     }
 
     #[inline(always)]
     fn abs(self, a: [int64x2_t; 4]) -> [int64x2_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I64x2Backend>::abs(self, a[i]))
+        q4!(I64x2Backend::abs(self, a))
     }
 
     #[inline(always)]
@@ -6818,17 +6821,17 @@ impl I64x8Backend for NeonToken {
 
     #[inline(always)]
     fn shl_const<const N: i32>(self, a: [int64x2_t; 4]) -> [int64x2_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I64x2Backend>::shl_const::<N>(self, a[i]))
+        q4!(I64x2Backend::shl_const::<N>(self, a))
     }
 
     #[inline(always)]
     fn shr_arithmetic_const<const N: i32>(self, a: [int64x2_t; 4]) -> [int64x2_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I64x2Backend>::shr_arithmetic_const::<N>(self, a[i]))
+        q4!(I64x2Backend::shr_arithmetic_const::<N>(self, a))
     }
 
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: [int64x2_t; 4]) -> [int64x2_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I64x2Backend>::shr_logical_const::<N>(self, a[i]))
+        q4!(I64x2Backend::shr_logical_const::<N>(self, a))
     }
 
     // Reduce the quarters with vector AND/OR first, then ONE lane
@@ -6860,32 +6863,32 @@ impl I64x8Backend for NeonToken {
 
     #[inline(always)]
     fn simd_eq(self, a: [int64x2_t; 4], b: [int64x2_t; 4]) -> [int64x2_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I64x2Backend>::simd_eq(self, a[i], b[i]))
+        q4!(I64x2Backend::simd_eq(self, a, b))
     }
 
     #[inline(always)]
     fn simd_ne(self, a: [int64x2_t; 4], b: [int64x2_t; 4]) -> [int64x2_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I64x2Backend>::simd_ne(self, a[i], b[i]))
+        q4!(I64x2Backend::simd_ne(self, a, b))
     }
 
     #[inline(always)]
     fn simd_lt(self, a: [int64x2_t; 4], b: [int64x2_t; 4]) -> [int64x2_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I64x2Backend>::simd_lt(self, a[i], b[i]))
+        q4!(I64x2Backend::simd_lt(self, a, b))
     }
 
     #[inline(always)]
     fn simd_le(self, a: [int64x2_t; 4], b: [int64x2_t; 4]) -> [int64x2_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I64x2Backend>::simd_le(self, a[i], b[i]))
+        q4!(I64x2Backend::simd_le(self, a, b))
     }
 
     #[inline(always)]
     fn simd_gt(self, a: [int64x2_t; 4], b: [int64x2_t; 4]) -> [int64x2_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I64x2Backend>::simd_gt(self, a[i], b[i]))
+        q4!(I64x2Backend::simd_gt(self, a, b))
     }
 
     #[inline(always)]
     fn simd_ge(self, a: [int64x2_t; 4], b: [int64x2_t; 4]) -> [int64x2_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I64x2Backend>::simd_ge(self, a[i], b[i]))
+        q4!(I64x2Backend::simd_ge(self, a, b))
     }
 
     #[inline(always)]
@@ -6895,29 +6898,27 @@ impl I64x8Backend for NeonToken {
         if_true: [int64x2_t; 4],
         if_false: [int64x2_t; 4],
     ) -> [int64x2_t; 4] {
-        core::array::from_fn(|i| {
-            <NeonToken as I64x2Backend>::blend(self, mask[i], if_true[i], if_false[i])
-        })
+        q4!(I64x2Backend::blend(self, mask, if_true, if_false))
     }
 
     #[inline(always)]
     fn not(self, a: [int64x2_t; 4]) -> [int64x2_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I64x2Backend>::not(self, a[i]))
+        q4!(I64x2Backend::not(self, a))
     }
 
     #[inline(always)]
     fn bitand(self, a: [int64x2_t; 4], b: [int64x2_t; 4]) -> [int64x2_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I64x2Backend>::bitand(self, a[i], b[i]))
+        q4!(I64x2Backend::bitand(self, a, b))
     }
 
     #[inline(always)]
     fn bitor(self, a: [int64x2_t; 4], b: [int64x2_t; 4]) -> [int64x2_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I64x2Backend>::bitor(self, a[i], b[i]))
+        q4!(I64x2Backend::bitor(self, a, b))
     }
 
     #[inline(always)]
     fn bitxor(self, a: [int64x2_t; 4], b: [int64x2_t; 4]) -> [int64x2_t; 4] {
-        core::array::from_fn(|i| <NeonToken as I64x2Backend>::bitxor(self, a[i], b[i]))
+        q4!(I64x2Backend::bitxor(self, a, b))
     }
 }
 
@@ -6993,28 +6994,28 @@ impl U64x8Backend for NeonToken {
 
     #[inline(always)]
     fn add(self, a: [uint64x2_t; 4], b: [uint64x2_t; 4]) -> [uint64x2_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U64x2Backend>::add(self, a[i], b[i]))
+        q4!(U64x2Backend::add(self, a, b))
     }
 
     #[inline(always)]
     fn sub(self, a: [uint64x2_t; 4], b: [uint64x2_t; 4]) -> [uint64x2_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U64x2Backend>::sub(self, a[i], b[i]))
+        q4!(U64x2Backend::sub(self, a, b))
     }
 
     #[inline(always)]
     fn neg(self, a: [uint64x2_t; 4]) -> [uint64x2_t; 4] {
         let z = <NeonToken as U64x2Backend>::zero(self);
-        core::array::from_fn(|i| <NeonToken as U64x2Backend>::sub(self, z, a[i]))
+        q4!(U64x2Backend::sub(self, @scalar z, a))
     }
 
     #[inline(always)]
     fn min(self, a: [uint64x2_t; 4], b: [uint64x2_t; 4]) -> [uint64x2_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U64x2Backend>::min(self, a[i], b[i]))
+        q4!(U64x2Backend::min(self, a, b))
     }
 
     #[inline(always)]
     fn max(self, a: [uint64x2_t; 4], b: [uint64x2_t; 4]) -> [uint64x2_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U64x2Backend>::max(self, a[i], b[i]))
+        q4!(U64x2Backend::max(self, a, b))
     }
 
     #[inline(always)]
@@ -7027,17 +7028,17 @@ impl U64x8Backend for NeonToken {
 
     #[inline(always)]
     fn shl_const<const N: i32>(self, a: [uint64x2_t; 4]) -> [uint64x2_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U64x2Backend>::shl_const::<N>(self, a[i]))
+        q4!(U64x2Backend::shl_const::<N>(self, a))
     }
 
     #[inline(always)]
     fn shr_arithmetic_const<const N: i32>(self, a: [uint64x2_t; 4]) -> [uint64x2_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U64x2Backend>::shr_logical_const::<N>(self, a[i]))
+        q4!(U64x2Backend::shr_logical_const::<N>(self, a))
     }
 
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: [uint64x2_t; 4]) -> [uint64x2_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U64x2Backend>::shr_logical_const::<N>(self, a[i]))
+        q4!(U64x2Backend::shr_logical_const::<N>(self, a))
     }
 
     // Reduce the quarters with vector AND/OR first, then ONE lane
@@ -7069,32 +7070,32 @@ impl U64x8Backend for NeonToken {
 
     #[inline(always)]
     fn simd_eq(self, a: [uint64x2_t; 4], b: [uint64x2_t; 4]) -> [uint64x2_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U64x2Backend>::simd_eq(self, a[i], b[i]))
+        q4!(U64x2Backend::simd_eq(self, a, b))
     }
 
     #[inline(always)]
     fn simd_ne(self, a: [uint64x2_t; 4], b: [uint64x2_t; 4]) -> [uint64x2_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U64x2Backend>::simd_ne(self, a[i], b[i]))
+        q4!(U64x2Backend::simd_ne(self, a, b))
     }
 
     #[inline(always)]
     fn simd_lt(self, a: [uint64x2_t; 4], b: [uint64x2_t; 4]) -> [uint64x2_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U64x2Backend>::simd_lt(self, a[i], b[i]))
+        q4!(U64x2Backend::simd_lt(self, a, b))
     }
 
     #[inline(always)]
     fn simd_le(self, a: [uint64x2_t; 4], b: [uint64x2_t; 4]) -> [uint64x2_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U64x2Backend>::simd_le(self, a[i], b[i]))
+        q4!(U64x2Backend::simd_le(self, a, b))
     }
 
     #[inline(always)]
     fn simd_gt(self, a: [uint64x2_t; 4], b: [uint64x2_t; 4]) -> [uint64x2_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U64x2Backend>::simd_gt(self, a[i], b[i]))
+        q4!(U64x2Backend::simd_gt(self, a, b))
     }
 
     #[inline(always)]
     fn simd_ge(self, a: [uint64x2_t; 4], b: [uint64x2_t; 4]) -> [uint64x2_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U64x2Backend>::simd_ge(self, a[i], b[i]))
+        q4!(U64x2Backend::simd_ge(self, a, b))
     }
 
     #[inline(always)]
@@ -7104,28 +7105,26 @@ impl U64x8Backend for NeonToken {
         if_true: [uint64x2_t; 4],
         if_false: [uint64x2_t; 4],
     ) -> [uint64x2_t; 4] {
-        core::array::from_fn(|i| {
-            <NeonToken as U64x2Backend>::blend(self, mask[i], if_true[i], if_false[i])
-        })
+        q4!(U64x2Backend::blend(self, mask, if_true, if_false))
     }
 
     #[inline(always)]
     fn not(self, a: [uint64x2_t; 4]) -> [uint64x2_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U64x2Backend>::not(self, a[i]))
+        q4!(U64x2Backend::not(self, a))
     }
 
     #[inline(always)]
     fn bitand(self, a: [uint64x2_t; 4], b: [uint64x2_t; 4]) -> [uint64x2_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U64x2Backend>::bitand(self, a[i], b[i]))
+        q4!(U64x2Backend::bitand(self, a, b))
     }
 
     #[inline(always)]
     fn bitor(self, a: [uint64x2_t; 4], b: [uint64x2_t; 4]) -> [uint64x2_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U64x2Backend>::bitor(self, a[i], b[i]))
+        q4!(U64x2Backend::bitor(self, a, b))
     }
 
     #[inline(always)]
     fn bitxor(self, a: [uint64x2_t; 4], b: [uint64x2_t; 4]) -> [uint64x2_t; 4] {
-        core::array::from_fn(|i| <NeonToken as U64x2Backend>::bitxor(self, a[i], b[i]))
+        q4!(U64x2Backend::bitxor(self, a, b))
     }
 }

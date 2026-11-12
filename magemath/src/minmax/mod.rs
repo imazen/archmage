@@ -88,7 +88,7 @@ pub use api::*;
 pub use options::*;
 
 macro_rules! graph {
-    ($name:ident, $v:ident, $bound:ident, $float:ident, $n:literal) => {
+    ($name:ident, $v:ident, $bound:ident, $float:ident, $wasm_mm:ident, $neon_mm:ident) => {
         #[inline(always)]
         pub(super) fn $name<const O: u32, const MAX: bool, T: magetypes::simd::backends::$bound>(
             t: T,
@@ -128,14 +128,13 @@ macro_rules! graph {
             }
             let nan = (O >> 2) & 3;
             let backend_zero = O & 16 != 0;
-            // A normal-input proof removes all exceptional cases, so relaxed
-            // WASM min/max is exact on that restricted domain too.
-            #[cfg(all(target_arch = "wasm32", target_feature = "relaxed-simd"))]
+            // On WASM SIMD128, relaxed_min/max (with Wasm128RelaxedToken) and
+            // baseline pmin/pmax (`b < a ? b : a` / `a < b ? b : a`) both satisfy
+            // Normal, Finite+BackendZero, and Relaxed in one register instruction.
+            #[cfg(target_arch = "wasm32")]
             if domain == 2 || (backend_zero && (nan == 2 || domain == 1)) {
-                if let Some(r) =
-                    crate::primitive_wasm::$float::<T, MAX, $n>(t, a.to_array(), b.to_array())
-                {
-                    return Ok(V::from_array_t(t, r));
+                if let Some(r) = crate::primitive_wasm::$wasm_mm::<MAX, T>(t, a, b) {
+                    return Ok(r);
                 }
             }
             // Under Normal, ties have identical encodings; native satisfies
@@ -157,10 +156,8 @@ macro_rules! graph {
             }
             #[cfg(target_arch = "aarch64")]
             if !backend_zero && (nan == 1 || domain == 1) {
-                if let Some(r) =
-                    crate::primitive_neon::$float::<T, MAX, $n>(t, a.to_array(), b.to_array())
-                {
-                    return Ok(V::from_array_t(t, r));
+                if let Some(r) = crate::primitive_neon::$neon_mm::<MAX, T>(t, a, b) {
+                    return Ok(r);
                 }
             }
             let mut r = if nan == 2 || domain == 1 {
@@ -185,11 +182,39 @@ macro_rules! graph {
         }
     };
 }
-graph!(graph4, f32x4, F32x4Backend, f32, 4);
-graph!(graph8, f32x8, F32x8Backend, f32, 8);
+graph!(graph4, f32x4, F32x4Backend, f32, minmax_f32x4, minmax_f32x4);
+graph!(graph8, f32x8, F32x8Backend, f32, minmax_f32x8, minmax_f32x8);
 #[cfg(feature = "w512")]
-graph!(graph16, f32x16, F32x16Backend, f32, 16);
-graph!(graph64x2, f64x2, F64x2Backend, f64, 2);
-graph!(graph64x4, f64x4, F64x4Backend, f64, 4);
+graph!(
+    graph16,
+    f32x16,
+    F32x16Backend,
+    f32,
+    minmax_f32x16,
+    minmax_f32x16
+);
+graph!(
+    graph64x2,
+    f64x2,
+    F64x2Backend,
+    f64,
+    minmax_f64x2,
+    minmax_f64x2
+);
+graph!(
+    graph64x4,
+    f64x4,
+    F64x4Backend,
+    f64,
+    minmax_f64x4,
+    minmax_f64x4
+);
 #[cfg(feature = "w512")]
-graph!(graph64x8, f64x8, F64x8Backend, f64, 8);
+graph!(
+    graph64x8,
+    f64x8,
+    F64x8Backend,
+    f64,
+    minmax_f64x8,
+    minmax_f64x8
+);

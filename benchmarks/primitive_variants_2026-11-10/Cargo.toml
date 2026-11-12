@@ -18,9 +18,9 @@ magemath = { path = "../../magemath", default-features = false }
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 zenbench = "0.1.11"
 
-# Pin post-release admission/counter fixes used by this qualification.
+# Pin post-release admission/counter/macOS-QoS fixes used by this qualification.
 [patch.crates-io]
-zenbench = { git = "https://github.com/imazen/zenbench", rev = "73302a1c115836b2646f6a9adc32058c20d1a66f" }
+zenbench = { git = "https://github.com/imazen/zenbench", rev = "952dd1f09fc79d1203a2a75a091c43e7e1ce54fc" }
 
 [[bin]]
 name = "recip_wasm_host"
