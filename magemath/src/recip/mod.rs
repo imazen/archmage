@@ -78,6 +78,8 @@
 #![doc = include_str!("timings/dev-scalar-rsqrt.md")]
 #![doc = include_str!("timings/dev-v3-recip.md")]
 #![doc = include_str!("timings/dev-v3-rsqrt.md")]
+#![doc = include_str!("timings/dev-v4-recip.md")]
+#![doc = include_str!("timings/dev-v4-rsqrt.md")]
 // END GENERATED TIMING DOCUMENTS
 mod api;
 mod options;

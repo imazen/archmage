@@ -47,7 +47,7 @@ In particular, equal machine code never makes zero valid for Normal.
 
 | Cells / graph | Contract on accepted inputs | Measured error evidence |
 |---|---|---|
-| All min/max cells | Exact selected operand; requested NaN and zero policies | No arithmetic approximation. Zero signs and NaN class are checked separately, not hidden in a relative-error score. |
+| All min/max cells | Exact selected non-NaN value; requested NaN class and zero policies | No arithmetic approximation. Zero signs and NaN class are checked separately, not hidden in a relative-error score. |
 | Reciprocal HIGHP | Rounded f32 `1/x`, non-NaN bits portable | Independent exact-rational fixtures; the fixed benchmark preflight also compares to f32 division. |
 | Rsqrt HIGHP | Rounded f32 `1 / rounded_sqrt(x)` | Independent graph fixtures. This is not correctly rounded mathematical rsqrt; observed mathematical deviation is reported separately. |
 | Portable LOWP recip / rsqrt | Fixed seed + one fused Newton step; relative error ≤6e-3 | Full x4 [1,4) scan: 3.362326737260e-3 / 1.752338672098e-3 versus f64 references. |
@@ -91,6 +91,11 @@ including signed zeros and subnormals; the four Normal cells are explicitly
 unsupported on that workload. There are **66 groups / 1,566 arms per context**,
 including the existing Magetypes baseline in each group.
 
+Zero-clamp64 reads its second operand from an opaque zero-filled buffer.
+It measures zero-valued inputs; it does not measure compiler specialization
+for a literal zero at the call site. NaN/infinity-heavy Full-domain streams
+also remain separate, unmeasured input distributions in this matrix.
+
 These are **typed kernel** timings: the supplied token and width are retained.
 Caller/Automatic still selects the scalar fusion provider where applicable.
 Scalar/array API-dispatch overhead, first-use detection and invalid-input error
@@ -111,12 +116,12 @@ is retained; there is no favorable retry or threshold change. Per-case numerical
 preflight runs before timing. Its observed error on fixed inputs/chain states
 is reported independently from the prior full scans and normative bounds.
 
-The complete Zen 5 Scalar/V3, Intel V3 and M6 exploratory tables are included directly in the
+The complete Zen 5 Scalar/V3/V4, Intel V3 and M6 exploratory tables are included directly in the
 [min/max rustdoc](../magemath/src/minmax/mod.rs) and
 [reciprocal/rsqrt rustdoc](../magemath/src/recip/mod.rs), nested by operation,
 type and width. They contain all supported canonical cells and workloads,
 including the explicit Normal/zero-clamp exclusions. Intel has 32/66 fully
-clean groups, but its whole suite fails admission. Zen 5 Scalar/V3 have no fully
+clean groups, but its whole suite fails admission. Zen 5 Scalar/V3/V4 have no fully
 clean group; Automatic scalar fusion selection is explicitly not a speed win
 in its flagged data. All 3,300 M6 group-round
 observations are resource-flagged; none establishes strict promotion.

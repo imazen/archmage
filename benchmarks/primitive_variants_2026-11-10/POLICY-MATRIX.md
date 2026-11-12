@@ -1,6 +1,6 @@
 # Complete primitive option matrix — 2026-11-11
 
-AMD V4/V4x and hosted WASM timings are in progress. AMD Scalar/V3, Intel V3 and
+AMD V4x and hosted WASM timings are in progress. AMD Scalar/V3/V4, Intel V3 and
 the M6 exploratory matrix are complete: all 46 canonical flag sets, 66 workload groups and 1,566 arms,
 including existing Magetypes baselines. No default or numerical implementation
 changes in this expansion. Pow/exp/log timing expansion is deferred by the owner;
@@ -29,6 +29,12 @@ to the builders in the adjoining permutation tables.
   Streams of 64 and 4096 elements, 64-step vector dependency chains, and
   min/max zero-clamp64 with signed zeros and subnormals. Normal configurations
   are unsupported on the zero workload and are never timed on invalid inputs.
+- Ordinary inputs repeat a fixed 64-value pattern; min/max and reciprocal
+  include both signs, rsqrt is positive. The min/max chain computes
+  `op(x, 2) + 1/32`; reciprocal/root chains compute `op(x) + 1/2`, starting
+  from opaque 0.75. Zero-clamp64 reads a zero-filled second buffer: it does
+  not measure specialization with a compiler-known literal zero. Full-domain
+  NaN/infinity-heavy streams remain unmeasured input distributions here.
 - Typed vector proof retained, constant integer flags through the hot graph.
   Automatic/Caller are both instantiated. No scalar frontend/array dispatch,
   first-use detection, invalid-input latency or tail speed claim.
@@ -190,6 +196,15 @@ existing Magetypes recip  ██████████████████
 R33                       ██████████████████████████████████████ 177.7ns
 ```
 
+## Zen 5 V4: wide results remain flagged
+
+The V4 suite has 10,032/16,500 clean observations and no fully clean group.
+For f32x16 reciprocal chain64, existing Magetypes takes 170.8448 ns, HIGHP R00
+83.2854 ns, portable MIDP R33 184.9541 ns and backend MIDP R3b 140.4351 ns.
+For rsqrt chain64 the same order is 228.5043, 244.0332, 281.3762 and
+202.5815 ns. These are descriptive costs under the V4 proof on Zen 5, not
+confirmed optimizations. The tables preserve all other widths and flag sets.
+
 ## Orchestration and resources
 
 The initial Intel run hit the default 300-second child supervisor timeout
@@ -214,6 +229,8 @@ Zen 5 Scalar timing uses 1,799 s / peak-RSS 0.29 GiB, minimum available RAM
 42,245 MiB and peak load 2.62; its return code 1 retains failed confirmation.
 Zen 5 V3 timing uses 1,692 s / peak-RSS 0.29 GiB, minimum available RAM
 42,287 MiB and peak load 2.29; its return code 1 also retains failed confirmation.
+Zen 5 V4 timing uses 1,735 s / peak-RSS 0.29 GiB, minimum available RAM
+42,065 MiB and peak load 2.81; its return code 1 retains failed confirmation.
 The first analysis launch lacked NumPy; a task-local venv supplies NumPy 2.4.2.
 No timing rerun was needed for that analysis dependency.
 

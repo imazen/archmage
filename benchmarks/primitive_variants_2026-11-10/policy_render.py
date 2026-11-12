@@ -31,6 +31,8 @@ def render(context, op, rows):
              'Whole-suite confirmation: ' + ('passed.' if all(r['confirmation_passed'] for r in selected) else 'not established; read cell status separately.'), '']
     if context == 'wasm/nonfusing':
         lines += ['The nonfusing engine uses the baseline x86_64 target, which disables more features than FMA. This is not an isolated FMA-cost comparison.', '']
+    if op in ('min', 'max'):
+        lines += ['Zero-clamp64 reads an opaque zero-filled second buffer. Literal-zero compiler specialization and NaN/infinity-heavy input timings are unmeasured.', '']
     for ty in dict.fromkeys(r['group'].split('/')[2] for r in selected):
         rs = [r for r in selected if r['group'].split('/')[2] == ty]
         workloads = ['stream64', 'stream4096', 'chain64'] + (['zero-clamp64'] if op in ('min', 'max') else [])

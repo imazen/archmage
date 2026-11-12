@@ -11,6 +11,8 @@ C marks a group whose 250/250 observations are fresh and clean; D marks a flagge
 Display values are rounded; decisions use the full-precision analysis and original samples.
 Whole-suite confirmation: not established; read cell status separately.
 
+Zero-clamp64 reads an opaque zero-filled second buffer. Literal-zero compiler specialization and NaN/infinity-heavy input timings are unmeasured.
+
 <details><summary>f32x4: all canonical cells × workloads</summary>
 
 | Cell | Observed error | stream64 | stream4096 | chain64 | zero-clamp64 |
