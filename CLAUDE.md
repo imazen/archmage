@@ -1216,6 +1216,13 @@ fn process(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 
 ## Known Bugs
 
+Complete option-matrix cost, 2026-11-11: Intel V3 f32x8 reciprocal chain64
+retains 250/250 clean observations. Portable MIDP AssumeValid Caller R33
+costs 290.8175 ns versus existing Magetypes 270.7577 ns, ratio 1.074088
+(process-family95 1.067217–1.081004), above the 2% bound. Backend MIDP R3b
+costs 188.5439 ns in that cell. The whole suite fails admission; no blanket
+replacement is promoted. See `benchmarks/primitive_variants_2026-11-10/POLICY-MATRIX.md`.
+
 Policy matrix orchestration, 2026-11-11: the full 66-group benchmark exceeds
 zenbench's default 300-second child supervisor timeout. The incomplete attempt
 and its child logs are retained. After verifying its owner process had exited,
