@@ -1177,3 +1177,9 @@ primitive-recip-certified-matrix results study:
 
 primitive-recip-certified-table results:
     python3 -B benchmarks/primitive_variants_2026-11-10/certified_table.py "{{results}}"
+
+# Compiles the actual builder source and private validity predicates unchanged.
+primitive-policy-inventory output:
+    mkdir -p "{{output}}"
+    cargo run --release --manifest-path benchmarks/primitive_variants_2026-11-10/Cargo.toml --bin policy_inventory > "{{output}}/std.tsv"
+    cargo run --release --manifest-path benchmarks/primitive_variants_2026-11-10/Cargo.toml --bin policy_inventory --no-default-features --features w512 > "{{output}}/no-std.tsv"
