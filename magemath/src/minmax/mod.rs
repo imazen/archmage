@@ -66,6 +66,8 @@
 // BEGIN GENERATED TIMING DOCUMENTS
 #![doc = include_str!("timings/mac-neon-min.md")]
 #![doc = include_str!("timings/mac-neon-max.md")]
+#![doc = include_str!("timings/i265-v3-min.md")]
+#![doc = include_str!("timings/i265-v3-max.md")]
 // END GENERATED TIMING DOCUMENTS
 mod api;
 mod options;

@@ -1,7 +1,7 @@
 # Complete primitive option matrix — 2026-11-11
 
-AMD, Intel and hosted WASM timings are in progress. The M6 exploratory matrix
-is complete: all 46 canonical flag sets, 66 workload groups and 1,566 arms,
+AMD and hosted WASM timings are in progress. Intel V3 and the M6 exploratory
+matrix are complete: all 46 canonical flag sets, 66 workload groups and 1,566 arms,
 including existing Magetypes baselines. No default or numerical implementation
 changes in this expansion. Pow/exp/log timing expansion is deferred by the owner;
 their supported options and redirects are fully inventoried.
@@ -87,6 +87,46 @@ Finite unchecked with ordered zeros. All use Automatic execution and retain
 the supplied NEON token. Their contracts differ even where ordinary-input
 timings are indistinguishable. Full bars and paired samples are preserved.
 
+## Intel V3: clean cells inside a failed-admission suite
+
+The aggregate is unreliable: 424/16,500 paired group-round observations are
+flagged; 32/66 groups are entirely fresh and clean. All five processes and all
+50 rounds remain in each comparison. There is no whole-suite promotion.
+
+The clean f32x8 reciprocal chain (250/250 clean) shows a real portable MIDP
+cost: R33 takes 290.8175 ns versus existing Magetypes 270.7577 ns, ratio
+1.074088 with process-family95 [1.067217, 1.081004]. Its lower endpoint exceeds
+the 1.02 bound. Unchecked Caller backend MIDP R3b instead takes 188.5439 ns,
+ratio 0.696356 [0.690249, 0.702519]. Their error contracts differ; these are
+named configuration tradeoffs, not an unnoticed numerical-default change.
+
+The clean f32x8 reciprocal stream64 takes 10.1082 ns for existing Magetypes,
+7.8038 ns for R33 and 4.5859 ns for R3b. HIGHP R00 costs 17.1906 ns here but
+only 90.4758 ns on the chain. Throughput and dependency workloads can reverse
+the ordering, so one cannot rank a grade from a single ns column.
+
+The f32x8 zero-clamp64 group is flagged (245/250 clean); its descriptive costs
+are 3.3892 ns existing min, 6.7906 ns M21 Finite unchecked ordered zeros and
+3.3861 ns M31 Finite unchecked backend zeros. Unlike the M6 observation,
+ordered zero repairs have visible work here. Normal is still not required for
+the inexpensive permissive-zero path, and still cannot accept this workload.
+
+Selected original zenbench bars for `v3/recip/f32x8/chain64`:
+
+```text
+R3d                       ██████████ 76.4ns
+R00                       ████████████ 90.5ns
+R35                       ████████████████████████ 176.6ns
+R3b                       ██████████████████████████ 188.5ns
+existing Magetypes recip  █████████████████████████████████████ 270.8ns
+R33                       ████████████████████████████████████████ 290.8ns
+```
+
+R00 is Full HIGHP Automatic; R33/R35 are Normal portable MIDP/LOWP,
+AssumeValid Caller; R3b/R3d are Normal backend MIDP/LOWP, AssumeValid Caller.
+All retain the supplied V3 token. The same configured kernels process the
+streams; no runtime-options argument is passed through the hot loop.
+
 ## Orchestration and resources
 
 The initial Intel run hit the default 300-second child supervisor timeout
@@ -104,6 +144,9 @@ work and is not a whole-build memory claim. M6 analysis uses 2 s / 0.17 GiB.
 M6 native timing uses 285 s / peak-RSS 0.03 GiB (minimum proxy-available RAM
 9,279 MiB, peak load 2.69); its exploratory return code is zero despite the
 retained resource flags. Zero exit does not qualify this unconfined run.
+Intel native timing uses 1,601 s / peak-RSS 0.05 GiB, minimum available RAM
+21,570 MiB and peak load 1.59. Its return code 1 preserves the confirmation
+failure. Intel retained-pair analysis uses 3 s / 0.27 GiB on the M6.
 The first analysis launch lacked NumPy; a task-local venv supplies NumPy 2.4.2.
 No timing rerun was needed for that analysis dependency.
 

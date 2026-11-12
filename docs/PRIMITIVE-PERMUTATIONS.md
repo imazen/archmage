@@ -105,11 +105,12 @@ is retained; there is no favorable retry or threshold change. Per-case numerical
 preflight runs before timing. Its observed error on fixed inputs/chain states
 is reported independently from the prior full scans and normative bounds.
 
-The complete M6 exploratory tables are included directly in the
+The complete Intel V3 and M6 exploratory tables are included directly in the
 [min/max rustdoc](../magemath/src/minmax/mod.rs) and
 [reciprocal/rsqrt rustdoc](../magemath/src/recip/mod.rs), nested by operation,
 type and width. They contain all supported canonical cells and workloads,
-including the explicit Normal/zero-clamp exclusions. All 3,300 M6 group-round
+including the explicit Normal/zero-clamp exclusions. Intel has 32/66 fully
+clean groups, but its whole suite fails admission. All 3,300 M6 group-round
 observations are resource-flagged; none establishes strict promotion.
 The [matrix report](../benchmarks/primitive_variants_2026-11-10/POLICY-MATRIX.md)
 records source identity, method, resource usage and remaining contexts.
