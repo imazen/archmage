@@ -1,4 +1,4 @@
-//! Const-configured cube-root (`cbrtf`) graphs.
+//! Const-configured cube-root (`cbrtf`) graphs with in-register SIMD Kahan seed.
 use super::{CbrtfError, CbrtfErrorKind, CbrtfOptions};
 
 const MAGIC: i32 = 0x2a50_8c2d;
@@ -67,12 +67,17 @@ macro_rules! graph {
             let sign = work_input & sp(-0.0);
             let abs_x = work_input.abs();
 
-            // Kahan bit-hack initial seed (0.9.31 scalar `/ 3` baseline):
-            let mut arr = abs_x.to_array();
-            for elem in &mut arr {
-                *elem = f32::from_bits((elem.to_bits() / 3) + MAGIC as u32);
-            }
-            let mut y = V::from_array_t(token, arr);
+            // In-register vectorized Kahan bit-hack seed (#162):
+            // Approximate `u / 3` for non-negative 31-bit IEEE-754 bit pattern `u` via
+            //   1/3 = (1/4 + 1/16) * (1 + 2^-4) * (1 + 2^-8) * (1 + 2^-16) * (1 + O(2^-32))
+            // Completely eliminates the scalar `to_array()` + integer `div 3` + `from_array()`
+            // roundtrip across all SIMD lanes.
+            let u = abs_x.bitcast_to_i32();
+            let mut d = u.shr_arithmetic_const::<2>() + u.shr_arithmetic_const::<4>();
+            d = d + d.shr_arithmetic_const::<4>();
+            d = d + d.shr_arithmetic_const::<8>();
+            d = d + d.shr_arithmetic_const::<16>();
+            let mut y = (d + ip(MAGIC)).bitcast_to_f32();
 
             // Halley iteration: y *= (y^3 + 2x) / (2y^3 + x)
             // Triples precision per step: ~5 -> ~15 bits (LOWP) -> ~45 bits (MIDP).
