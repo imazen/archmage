@@ -1,4 +1,4 @@
-//! Configurable f32 pow, exponential and logarithm approximations.
+//! Configurable f32 pow, exponential, logarithm, and cube-root approximations.
 //!
 //! Each family has an operation-specific const builder ending in `.bits()`.
 //! Profiles name precision, range, validation and portability; these are not
@@ -27,6 +27,7 @@
 extern crate alloc;
 #[cfg(any(feature = "std", test))]
 extern crate std;
+pub mod cbrtf;
 pub mod expf;
 pub mod logf;
 pub mod powf;
