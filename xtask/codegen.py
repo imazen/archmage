@@ -29,6 +29,18 @@ def normalize(s):
     return re.sub(r"Cs[0-9a-zA-Z]+_13storage_probe", "CsHASH_13storage_probe", s)
 
 
+def toolchain_arg():
+    toolchain = os.environ.get("RUSTUP_TOOLCHAIN")
+    return [f"+{toolchain}"] if toolchain else ["+stable"]
+
+
+def find_emitted_asm(release_dir: pathlib.Path, stem: str) -> pathlib.Path:
+    """Locate `--emit=asm` output across Cargo <1.100 (`deps/`) and 1.100+ (`build/.../out/`)."""
+    files = sorted(release_dir.rglob(f"{stem}-*.s"))
+    assert len(files) == 1, (release_dir, stem, files)
+    return files[0]
+
+
 def parse(s):
     s = re.sub(r"Cs[0-9a-zA-Z]+_", "CsHASH_", s)
     # Resolve local data by contents, not LLVM's unstable label numbers. Keep
@@ -1118,7 +1130,7 @@ def storage_access_probes():
         completed = subprocess.run(
             [
                 "cargo",
-                "+stable",
+                *toolchain_arg(),
                 "rustc",
                 "--manifest-path",
                 str(root / "Cargo.toml"),
@@ -1136,11 +1148,8 @@ def storage_access_probes():
         (root / f"{target}.log").write_text(completed.stdout + completed.stderr)
         if completed.returncode:
             raise RuntimeError(completed.stderr)
-        files = list(
-            (root / "target" / target / "release/deps").glob("access_probe-*.s")
-        )
-        assert len(files) == 1
-        assembly = files[0].read_text()
+        asm_file = find_emitted_asm(root / "target" / target / "release", "access_probe")
+        assembly = asm_file.read_text()
         (root / f"{target}.s").write_text(assembly)
         functions = parse(assembly)
         assert {n for n in functions if n.startswith(("api_", "hand_"))} == {
@@ -1531,7 +1540,7 @@ def integer_probes():
         completed = subprocess.run(
             [
                 "cargo",
-                "+stable",
+                *toolchain_arg(),
                 "rustc",
                 "--manifest-path",
                 str(root / "Cargo.toml"),
@@ -1549,11 +1558,8 @@ def integer_probes():
         (root / f"{target}.log").write_text(completed.stdout + completed.stderr)
         if completed.returncode:
             raise RuntimeError(completed.stderr)
-        files = list(
-            (root / "target" / target / "release/deps").glob("integer_probe-*.s")
-        )
-        assert len(files) == 1
-        assembly = files[0].read_text()
+        asm_file = find_emitted_asm(root / "target" / target / "release", "integer_probe")
+        assembly = asm_file.read_text()
         (root / f"{target}.s").write_text(assembly)
         functions = parse(assembly)
         assert {n for n in functions if n.startswith(("api_", "hand_"))} == {
@@ -1668,14 +1674,13 @@ pub fn hand_{i}(a: &[u32; 8], out: &mut [u32; 8]) {{
 }}
 ''')
         (root / "src/lib.rs").write_text("\n".join(code))
-        run = subprocess.run(["cargo", "rustc", "--manifest-path", str(root / "Cargo.toml"),
+        run = subprocess.run(["cargo", *toolchain_arg(), "rustc", "--manifest-path", str(root / "Cargo.toml"),
                               "--release", "--lib", "--target", target, "--", "--emit=asm"],
                              env=env, capture_output=True, text=True)
         (root / f"{target}.log").write_text(run.stdout + run.stderr)
         assert run.returncode == 0, run.stderr
-        files = list((root / "target" / target / "release/deps").glob("context_probe-*.s"))
-        assert len(files) == 1, files
-        assembly = files[0].read_text()
+        asm_file = find_emitted_asm(root / "target" / target / "release", "context_probe")
+        assembly = asm_file.read_text()
         (root / f"{target}.s").write_text(assembly)
         functions = parse(assembly)
         for i in range(len(cases)):
@@ -2032,7 +2037,7 @@ def main():
             assert expected.setdefault(target, probe_names) == probe_names
             cmd = [
                 "cargo",
-                "+stable",
+                *toolchain_arg(),
                 "rustc",
                 "--manifest-path",
                 str(p / "Cargo.toml"),
@@ -2047,11 +2052,8 @@ def main():
             (root / f"{variant}-{target}.log").write_text(out.stdout + out.stderr)
             if out.returncode:
                 raise RuntimeError(out.stderr)
-            files = list(
-                (p / "target" / target / "release/deps").glob("storage_probe-*.s")
-            )
-            assert len(files) == 1, files
-            (root / f"{variant}-{target}.s").write_text(files[0].read_text())
+            asm_file = find_emitted_asm(p / "target" / target / "release", "storage_probe")
+            (root / f"{variant}-{target}.s").write_text(asm_file.read_text())
             print(variant, target, count, flush=True)
     result = {}
     for target in targets:
@@ -2074,7 +2076,7 @@ def main():
             "diff_lines": len(diff.splitlines()),
         }
         print(target, result[target], flush=True)
-    result["rustc"] = subprocess.check_output(["rustc", "+stable", "-Vv"], text=True)
+    result["rustc"] = subprocess.check_output(["rustc", *toolchain_arg(), "-Vv"], text=True)
     (root / "results.json").write_text(json.dumps(result, indent=2) + "\n")
     compare(root, expected)
 

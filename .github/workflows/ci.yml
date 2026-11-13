@@ -1022,16 +1022,44 @@ jobs:
         # The bare form builds only the root crate's tests — magetypes (where
         # the SIMD types and their backend-arm tests live) must be built
         # explicitly or the emulated tiers never exercise it at all.
+        # Capture exact executable paths from Cargo's JSON stream: Cargo 1.100+
+        # places per-unit test binaries under target/debug/build/.../out/
+        # instead of target/debug/deps/.
         run: |
-          cargo test --features "${{ env.FEATURES }}" --no-run
-          cargo test -p magetypes --features "std avx512" --no-run
+          cargo test --features "${{ env.FEATURES }}" --no-run --message-format=json-render-diagnostics > sde-artifacts.jsonl
+          cargo test -p magetypes --features "std avx512" --no-run --message-format=json-render-diagnostics >> sde-artifacts.jsonl
+          python3 - <<'PY' > sde-tests.tsv
+          import json
+          from pathlib import Path
+
+          seen = set()
+          archmage_unit = None
+          for line in Path("sde-artifacts.jsonl").read_text().splitlines():
+              msg = json.loads(line)
+              exe = msg.get("executable")
+              if msg.get("reason") != "compiler-artifact" or not msg.get("profile", {}).get("test") or not exe:
+                  continue
+              if exe in seen:
+                  continue
+              seen.add(exe)
+              target = msg["target"]
+              name = target["name"]
+              kind = ",".join(target["kind"])
+              if name == "archmage" and "lib" in target["kind"]:
+                  archmage_unit = exe
+              print(f"{name}\t{kind}\t{exe}")
+          assert archmage_unit is not None, "archmage lib test executable missing from Cargo output"
+          assert len(seen) >= 2, f"expected archmage + magetypes test executables, got {len(seen)}"
+          Path("sde-archmage-unit.txt").write_text(archmage_unit + "\n")
+          PY
+          wc -l sde-tests.tsv
 
       - name: Run tests under SDE (${{ matrix.cpu.name }})
         run: |
-          # Find the test binary
-          TEST_BIN=$(find target/debug/deps -name 'archmage-*' -type f -executable | head -1)
+          TEST_BIN="$(tr -d '\r\n' < sde-archmage-unit.txt)"
+          test -n "$TEST_BIN" && test -x "$TEST_BIN"
           echo "Running: sde64 ${{ matrix.cpu.flag }} -- $TEST_BIN"
-          sde64 ${{ matrix.cpu.flag }} -- $TEST_BIN
+          sde64 ${{ matrix.cpu.flag }} -- "$TEST_BIN"
 
       - name: Run integration tests under SDE
         # Failures MUST propagate. This loop ran with `|| true` from its
@@ -1041,29 +1069,36 @@ jobs:
         # through exactly this hole.
         run: |
           fails=""
-          for test in target/debug/deps/*-*; do
-            if [ -x "$test" ] && [ -f "$test" ]; then
-              name=$(basename "$test")
-              # Skip macro_expand — it spawns cargo-expand subprocesses (not CPU-specific)
-              # Skip compile_fail — trybuild spawns rustc (not CPU-specific)
-              # Skip soundness_exploits — trybuild too; under sde64 the spawned
-              #   toolchain runs emulated (19 min for the binary) and compile-fail
-              #   verdicts diverge from the native ones (an environment artifact —
-              #   the same binary passes natively in Test x64)
-              # Skip lib*.so — proc-macro dylibs are not test binaries
-              case "$name" in
-                macro_expand-*|compile_fail-*|soundness_exploits-*|lib*.so) echo "Skipping: $name (not CPU-specific)"; continue ;;
-              esac
-              cpu_flag="${{ matrix.cpu.flag }}"
-              # Raw native roundtrips require V3; execute them on Haswell even
-              # in the baseline lane. Every assertion runs; no test is omitted.
-              case "$name:$cpu_flag" in
-                raw_interop-*:-nhm) cpu_flag="-hsw" ;;
-              esac
-              echo "Running: sde64 $cpu_flag -- $test"
-              sde64 "$cpu_flag" -- "$test" || fails="$fails $name"
+          count=0
+          while IFS=$'\t' read -r target_name target_kind test; do
+            name="$(basename "$test")"
+            # Skip archmage lib unit binary — already executed in the step above
+            if [ "$target_name" = "archmage" ] && [ "$target_kind" = "lib" ]; then
+              continue
             fi
-          done
+            # Skip macro_expand — it spawns cargo-expand subprocesses (not CPU-specific)
+            # Skip compile_fail — trybuild spawns rustc (not CPU-specific)
+            # Skip soundness_exploits — trybuild too; under sde64 the spawned
+            #   toolchain runs emulated (19 min for the binary) and compile-fail
+            #   verdicts diverge from the native ones (an environment artifact —
+            #   the same binary passes natively in Test x64)
+            case "$target_name" in
+              macro_expand|compile_fail|soundness_exploits) echo "Skipping: $name (not CPU-specific)"; continue ;;
+            esac
+            cpu_flag="${{ matrix.cpu.flag }}"
+            # Raw native roundtrips require V3; execute them on Haswell even
+            # in the baseline lane. Every assertion runs; no test is omitted.
+            case "$target_name:$cpu_flag" in
+              raw_interop:-nhm) cpu_flag="-hsw" ;;
+            esac
+            count=$((count + 1))
+            echo "Running: sde64 $cpu_flag -- $test"
+            sde64 "$cpu_flag" -- "$test" || fails="$fails $name"
+          done < sde-tests.tsv
+          if [ "$count" -eq 0 ]; then
+            echo "::error::No integration test binaries discovered for SDE ${{ matrix.cpu.flag }}"
+            exit 1
+          fi
           if [ -n "$fails" ]; then
             echo "::error::Tests failed under SDE ${{ matrix.cpu.flag }}:$fails"
             exit 1
