@@ -40,6 +40,21 @@ fn select_impl<T: SimdToken>(token: T, execution: LogfExecution) -> Plan {
             if let Some(t) = any.downcast_ref::<archmage::X64V4xToken>() {
                 return Plan::V4x(*t);
             }
+            if let Some(t) = any.downcast_ref::<archmage::Avx512Fp16Token>() {
+                return Plan::V4(t.v4());
+            }
+        }
+        #[cfg(not(feature = "avx512"))]
+        {
+            if let Some(t) = any.downcast_ref::<archmage::X64V4Token>() {
+                return Plan::V3(t.v3());
+            }
+            if let Some(t) = any.downcast_ref::<archmage::X64V4xToken>() {
+                return Plan::V3(t.v3());
+            }
+            if let Some(t) = any.downcast_ref::<archmage::Avx512Fp16Token>() {
+                return Plan::V3(t.v3());
+            }
         }
     }
     #[cfg(target_arch = "aarch64")]
@@ -47,8 +62,14 @@ fn select_impl<T: SimdToken>(token: T, execution: LogfExecution) -> Plan {
         return Plan::Neon(*t);
     }
     #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
-    if let Some(t) = any.downcast_ref::<archmage::Wasm128Token>() {
-        return Plan::Wasm(*t);
+    {
+        if let Some(t) = any.downcast_ref::<archmage::Wasm128Token>() {
+            return Plan::Wasm(*t);
+        }
+        #[cfg(target_feature = "relaxed-simd")]
+        if let Some(t) = any.downcast_ref::<archmage::Wasm128RelaxedFmaToken>() {
+            return Plan::Wasm(t.wasm128());
+        }
     }
     if execution == LogfExecution::Caller {
         return Plan::Software;

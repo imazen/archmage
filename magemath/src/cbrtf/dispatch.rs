@@ -39,6 +39,21 @@ fn select_impl<T: SimdToken>(token: T, execution: CbrtfExecution) -> Plan {
             if let Some(t) = any.downcast_ref::<archmage::X64V4xToken>() {
                 return Plan::V4x(*t);
             }
+            if let Some(t) = any.downcast_ref::<archmage::Avx512Fp16Token>() {
+                return Plan::V4(t.v4());
+            }
+        }
+        #[cfg(not(feature = "avx512"))]
+        {
+            if let Some(t) = any.downcast_ref::<archmage::X64V4Token>() {
+                return Plan::V3(t.v3());
+            }
+            if let Some(t) = any.downcast_ref::<archmage::X64V4xToken>() {
+                return Plan::V3(t.v3());
+            }
+            if let Some(t) = any.downcast_ref::<archmage::Avx512Fp16Token>() {
+                return Plan::V3(t.v3());
+            }
         }
     }
     #[cfg(target_arch = "aarch64")]

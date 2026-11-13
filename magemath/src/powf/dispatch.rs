@@ -43,6 +43,21 @@ fn select_impl<T: SimdToken, const EXACT: bool, const DOUBLE: bool>(
             if let Some(t) = any.downcast_ref::<archmage::X64V4xToken>() {
                 return Plan::V4x(*t);
             }
+            if let Some(t) = any.downcast_ref::<archmage::Avx512Fp16Token>() {
+                return Plan::V4(t.v4());
+            }
+        }
+        #[cfg(not(feature = "avx512"))]
+        {
+            if let Some(t) = any.downcast_ref::<archmage::X64V4Token>() {
+                return Plan::V3(t.v3());
+            }
+            if let Some(t) = any.downcast_ref::<archmage::X64V4xToken>() {
+                return Plan::V3(t.v3());
+            }
+            if let Some(t) = any.downcast_ref::<archmage::Avx512Fp16Token>() {
+                return Plan::V3(t.v3());
+            }
         }
     }
     #[cfg(target_arch = "aarch64")]
@@ -50,16 +65,22 @@ fn select_impl<T: SimdToken, const EXACT: bool, const DOUBLE: bool>(
         return Plan::Neon(*t);
     }
     #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
-    if let Some(t) = any.downcast_ref::<archmage::Wasm128Token>() {
-        return Plan::Wasm(
-            *t,
-            !EXACT
-                || if DOUBLE {
-                    crate::wasm_fma::powf_f64_fuses()
-                } else {
-                    crate::wasm_fma::powf_f32_fuses()
-                },
-        );
+    {
+        if let Some(t) = any.downcast_ref::<archmage::Wasm128Token>() {
+            return Plan::Wasm(
+                *t,
+                !EXACT
+                    || if DOUBLE {
+                        crate::wasm_fma::powf_f64_fuses()
+                    } else {
+                        crate::wasm_fma::powf_f32_fuses()
+                    },
+            );
+        }
+        #[cfg(target_feature = "relaxed-simd")]
+        if let Some(t) = any.downcast_ref::<archmage::Wasm128RelaxedFmaToken>() {
+            return Plan::Wasm(t.wasm128(), true);
+        }
     }
     if execution == PowfExecution::Caller {
         return Plan::Software;

@@ -25,7 +25,7 @@ builders ending in `.bits()`, specialized through the caller and kernel.
 | `log2_lowp*`, `log2_midp*` | `magemath::logf::try_log2_f32xN_with` |
 | `ln_lowp*`, `ln_midp*` | `magemath::logf::try_ln_f32xN_with` |
 | `log10_lowp*`, `log10_midp*` | `magemath::logf::try_log10_f32xN_with` |
-| `cbrt_lowp*`, `cbrt_midp*` | `magemath::cbrtf::try_cbrtf_f32xN_with` |
+| `cbrt_lowp*`, `cbrt_midp*` | `magemath::cbrtf::try_cbrt_f32xN_with` |
 
 `N` is 4 or 8, and 16 with `w512`. Each family also has scalar and array entry
 points. The new crate's exp/log/cbrt precision enums contain MIDP and LOWP, without
@@ -65,12 +65,12 @@ that admits them.
   budget and can have large relative error near 1. In particular LOWP log1p
   retains the rational log2 bias near zero and can be negative for tiny positive
   arguments. Use MIDP there; no corrected LOWP small-x graph is added here.
-- **Cbrtf:** `FiniteNormal` rejects NaN, infinities, zeros and subnormals;
-  `SignedFiniteNormal` preserves `±0.0` and negative normal cube roots while
-  rejecting subnormals, infinities and NaN; `Specials` adds subnormal scaling via
-  `2^24 * x` and propagates `±0.0`, `±inf` and NaN. All presets share the
-  in-register `i32` shift-add Kahan bit-hack seed followed by one (`Lowp`, ~15 bits)
-  or two (`Midp`, max ~1–2 ULP) Halley iterations.
+- **Cbrtf:** `Bounded` preserves `±0.0` and normal finite cube roots with
+  `|x| < f32::MAX / 3`, rejecting subnormals, `|x| >= f32::MAX / 3`, infinities
+  and NaN; `Full` rescales subnormals via `2^24` / `2^-8`, scales large normals
+  (`|x| >= 1e36`) via `1/8` and `2`, and propagates `±0.0`, `±inf` and NaN. All
+  presets share the in-register `i32` shift-add Kahan bit-hack seed followed by
+  one (`Lowp`, <= 259 ULP) or two (`Midp`, <= 3.2 ULP) Halley iterations.
 
 All numerical guarantees assume round-to-nearest and gradual underflow. NaN
 payloads/signs and floating exception flags are not portable-result contracts.
