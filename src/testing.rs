@@ -208,20 +208,22 @@ fn build_token_slots() -> Vec<TokenSlot> {
     let mut slots = Vec::new();
 
     // x86/x86_64 hierarchy:
-    //   V1(0) → V2(1) → Crypto(2) → V3Crypto(4) → V3GfniCrypto(5) → V4x(7)
+    //   V1(0) → V2(1) → Crypto(2) → V3Crypto(4) → V3GfniCrypto(5) → V3Vnni(6)
+    //                                                             → V4x(8)
     //                  → V3(3)     → V3Crypto(4)
-    //                              → V4(6) → V4x(7)
-    //                                      → Fp16(8)
-    //           Crypto(2)          → V4(6)
+    //                              → V4(7) → V4x(8)
+    //                                      → Fp16(9)
+    //           Crypto(2)          → V4(7)
     #[cfg(target_arch = "x86_64")]
     {
-        slots.push(token_slot!(crate::X64V1Token, &[1, 2, 3, 4, 5, 6, 7, 8]));
-        slots.push(token_slot!(crate::X64V2Token, &[2, 3, 4, 5, 6, 7, 8]));
-        slots.push(token_slot!(crate::X64CryptoToken, &[4, 5, 6, 7, 8]));
-        slots.push(token_slot!(crate::X64V3Token, &[4, 5, 6, 7, 8]));
-        slots.push(token_slot!(crate::X64V3CryptoToken, &[5, 7]));
-        slots.push(token_slot!(crate::X64V3GfniCryptoToken, &[7]));
-        slots.push(token_slot!(crate::X64V4Token, &[7, 8]));
+        slots.push(token_slot!(crate::X64V1Token, &[1, 2, 3, 4, 5, 6, 7, 8, 9]));
+        slots.push(token_slot!(crate::X64V2Token, &[2, 3, 4, 5, 6, 7, 8, 9]));
+        slots.push(token_slot!(crate::X64CryptoToken, &[4, 5, 6, 7, 8, 9]));
+        slots.push(token_slot!(crate::X64V3Token, &[4, 5, 6, 7, 8, 9]));
+        slots.push(token_slot!(crate::X64V3CryptoToken, &[5, 6, 8]));
+        slots.push(token_slot!(crate::X64V3GfniCryptoToken, &[6, 8]));
+        slots.push(token_slot!(crate::X64V3VnniToken, &[]));
+        slots.push(token_slot!(crate::X64V4Token, &[8, 9]));
         slots.push(token_slot!(crate::X64V4xToken, &[]));
         slots.push(token_slot!(crate::Avx512Fp16Token, &[]));
     }
@@ -238,9 +240,18 @@ fn build_token_slots() -> Vec<TokenSlot> {
         slots.push(token_slot!(crate::Arm64V3Token, &[]));
     }
 
-    // WASM: Wasm128Token is compile-time only (can't be disabled).
+    // WASM hierarchy:
+    //   Wasm128(0) → Wasm128Relaxed(1) → Wasm128RelaxedFma(2)
+    // Wasm128Token and Wasm128RelaxedToken require `testable_dispatch` to be
+    // disabled at runtime when their target features are enabled;
+    // Wasm128RelaxedFmaToken probes runtime FMA fusion and can always be disabled.
     // ScalarToken: always available (can't be disabled).
-    // Neither contributes to permutations.
+    #[cfg(target_arch = "wasm32")]
+    {
+        slots.push(token_slot!(crate::Wasm128Token, &[1, 2]));
+        slots.push(token_slot!(crate::Wasm128RelaxedToken, &[2]));
+        slots.push(token_slot!(crate::Wasm128RelaxedFmaToken, &[]));
+    }
 
     slots
 }
@@ -428,5 +439,57 @@ pub fn for_each_token_permutation(
     PermutationReport {
         warnings,
         permutations_run,
+    }
+}
+
+#[cfg(test)]
+mod wasm_fma_tests {
+    use crate::SimdToken;
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn wasm128_relaxed_fma_unavailable_off_wasm() {
+        assert!(crate::Wasm128RelaxedFmaToken::summon().is_none());
+        assert_eq!(crate::Wasm128RelaxedFmaToken::compiled_with(), Some(false));
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    #[test]
+    fn wasm128_relaxed_fma_probe_and_permutations() {
+        #[cfg(all(target_feature = "simd128", target_feature = "relaxed-simd"))]
+        assert_eq!(crate::Wasm128RelaxedFmaToken::compiled_with(), None);
+        #[cfg(not(all(target_feature = "simd128", target_feature = "relaxed-simd")))]
+        assert_eq!(crate::Wasm128RelaxedFmaToken::compiled_with(), Some(false));
+
+        #[cfg(not(all(target_feature = "simd128", target_feature = "relaxed-simd")))]
+        assert!(crate::Wasm128RelaxedFmaToken::summon().is_none());
+
+        if let Ok(expect) = std::env::var("ARCHMAGE_EXPECT_RELAXED_FUSION") {
+            let expected = match expect.as_str() {
+                "yes" => true,
+                "no" => false,
+                other => panic!("unexpected ARCHMAGE_EXPECT_RELAXED_FUSION={other:?}"),
+            };
+            assert_eq!(
+                crate::Wasm128RelaxedFmaToken::summon().is_some(),
+                expected,
+                "Wasm128RelaxedFmaToken::summon() disagreed with ARCHMAGE_EXPECT_RELAXED_FUSION={expect}"
+            );
+        }
+
+        if crate::Wasm128RelaxedFmaToken::summon().is_some() {
+            let mut saw_enabled = false;
+            let mut saw_disabled = false;
+            let report = super::for_each_token_permutation(super::CompileTimePolicy::Warn, |_| {
+                if crate::Wasm128RelaxedFmaToken::summon().is_some() {
+                    saw_enabled = true;
+                } else {
+                    saw_disabled = true;
+                }
+            });
+            assert!(report.permutations_run >= 2);
+            assert!(saw_enabled && saw_disabled);
+            assert!(crate::Wasm128RelaxedFmaToken::summon().is_some());
+        }
     }
 }

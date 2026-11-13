@@ -93,6 +93,30 @@ pub(crate) fn token_to_features(token_name: &str) -> Option<&'static [&'static s
             "vaes",
             "gfni",
         ]),
+        "X64V3VnniToken" => Some(&[
+            "sse",
+            "sse2",
+            "sse3",
+            "ssse3",
+            "sse4.1",
+            "sse4.2",
+            "popcnt",
+            "cmpxchg16b",
+            "avx",
+            "avx2",
+            "fma",
+            "bmi1",
+            "bmi2",
+            "f16c",
+            "lzcnt",
+            "movbe",
+            "pclmulqdq",
+            "aes",
+            "vpclmulqdq",
+            "vaes",
+            "gfni",
+            "avxvnni",
+        ]),
         "X64V4Token" | "Avx512Token" | "Server64" => Some(&[
             "sse",
             "sse2",
@@ -189,6 +213,7 @@ pub(crate) fn token_to_features(token_name: &str) -> Option<&'static [&'static s
         ]),
         "Wasm128Token" => Some(&["simd128"]),
         "Wasm128RelaxedToken" => Some(&["simd128", "relaxed-simd"]),
+        "Wasm128RelaxedFmaToken" => Some(&["simd128", "relaxed-simd"]),
         "ScalarToken" => Some(&[]),
         _ => None,
     }
@@ -204,6 +229,7 @@ pub(crate) fn token_to_features_csv(name: &str) -> Option<&'static str> {
         "X64V3Token" | "Desktop64" | "Avx2FmaToken" => Some("sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"),
         "X64V3CryptoToken" => Some("sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,vpclmulqdq,vaes"),
         "X64V3GfniCryptoToken" => Some("sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,vpclmulqdq,vaes,gfni"),
+        "X64V3VnniToken" => Some("sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,vpclmulqdq,vaes,gfni,avxvnni"),
         "X64V4Token" | "Avx512Token" | "Server64" => Some("sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"),
         "X64V4xToken" | "Avx512ModernToken" => Some("sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"),
         "Avx512Fp16Token" => Some("sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512fp16"),
@@ -215,6 +241,7 @@ pub(crate) fn token_to_features_csv(name: &str) -> Option<&'static str> {
         "Arm64V3Token" => Some("neon,crc,rdm,dotprod,fp16,aes,sha2,fhm,fcma,sha3,i8mm,bf16"),
         "Wasm128Token" => Some("simd128"),
         "Wasm128RelaxedToken" => Some("simd128,relaxed-simd"),
+        "Wasm128RelaxedFmaToken" => Some("simd128,relaxed-simd"),
         "ScalarToken" => Some(""),
         _ => None,
     }
@@ -358,6 +385,30 @@ pub(crate) fn trait_to_features(trait_name: &str) -> Option<&'static [&'static s
             "vaes",
             "gfni",
         ]),
+        "X64V3VnniToken" => Some(&[
+            "sse",
+            "sse2",
+            "sse3",
+            "ssse3",
+            "sse4.1",
+            "sse4.2",
+            "popcnt",
+            "cmpxchg16b",
+            "avx",
+            "avx2",
+            "fma",
+            "bmi1",
+            "bmi2",
+            "f16c",
+            "lzcnt",
+            "movbe",
+            "pclmulqdq",
+            "aes",
+            "vpclmulqdq",
+            "vaes",
+            "gfni",
+            "avxvnni",
+        ]),
         "X64V4Token" | "Avx512Token" | "Server64" => Some(&[
             "sse",
             "sse2",
@@ -454,6 +505,7 @@ pub(crate) fn trait_to_features(trait_name: &str) -> Option<&'static [&'static s
         ]),
         "Wasm128Token" => Some(&["simd128"]),
         "Wasm128RelaxedToken" => Some(&["simd128", "relaxed-simd"]),
+        "Wasm128RelaxedFmaToken" => Some(&["simd128", "relaxed-simd"]),
 
         _ => None,
     }
@@ -470,6 +522,7 @@ pub(crate) fn token_to_arch(token_name: &str) -> Option<&'static str> {
         "X64V3Token" | "Desktop64" | "Avx2FmaToken" => Some("x86_64"),
         "X64V3CryptoToken" => Some("x86_64"),
         "X64V3GfniCryptoToken" => Some("x86_64"),
+        "X64V3VnniToken" => Some("x86_64"),
         "X64V4Token" | "Avx512Token" | "Server64" => Some("x86_64"),
         "X64V4xToken" | "Avx512ModernToken" => Some("x86_64"),
         "Avx512Fp16Token" => Some("x86_64"),
@@ -481,6 +534,7 @@ pub(crate) fn token_to_arch(token_name: &str) -> Option<&'static str> {
         "Arm64V3Token" => Some("aarch64"),
         "Wasm128Token" => Some("wasm32"),
         "Wasm128RelaxedToken" => Some("wasm32"),
+        "Wasm128RelaxedFmaToken" => Some("wasm32"),
         _ => None,
     }
 }
@@ -497,6 +551,7 @@ pub(crate) fn token_to_magetypes_namespace(token_name: &str) -> Option<&'static 
         "X64V3Token" | "Desktop64" | "Avx2FmaToken" => Some("v3"),
         "X64V3CryptoToken" => Some("v3"),
         "X64V3GfniCryptoToken" => Some("v3"),
+        "X64V3VnniToken" => Some("v3"),
         "X64V4Token" | "Avx512Token" | "Server64" => Some("v4"),
         "X64V4xToken" | "Avx512ModernToken" => Some("v4x"),
         "Avx512Fp16Token" => Some("v4"),
@@ -508,6 +563,7 @@ pub(crate) fn token_to_magetypes_namespace(token_name: &str) -> Option<&'static 
         "Arm64V3Token" => Some("neon"),
         "Wasm128Token" => Some("wasm128"),
         "Wasm128RelaxedToken" => Some("wasm128"),
+        "Wasm128RelaxedFmaToken" => Some("wasm128"),
         "ScalarToken" => Some("scalar"),
         _ => None,
     }
@@ -537,6 +593,7 @@ pub(crate) fn trait_to_magetypes_namespace(trait_name: &str) -> Option<&'static 
         "X64V3Token" | "Desktop64" | "Avx2FmaToken" => Some("v3"),
         "X64V3CryptoToken" => Some("v3"),
         "X64V3GfniCryptoToken" => Some("v3"),
+        "X64V3VnniToken" => Some("v3"),
         "X64V4Token" | "Avx512Token" | "Server64" => Some("v4"),
         "X64V4xToken" | "Avx512ModernToken" => Some("v4x"),
         "Avx512Fp16Token" => Some("v4"),
@@ -548,6 +605,7 @@ pub(crate) fn trait_to_magetypes_namespace(trait_name: &str) -> Option<&'static 
         "Arm64V3Token" => Some("neon"),
         "Wasm128Token" => Some("wasm128"),
         "Wasm128RelaxedToken" => Some("wasm128"),
+        "Wasm128RelaxedFmaToken" => Some("wasm128"),
 
         _ => None,
     }
@@ -577,6 +635,7 @@ pub(crate) fn trait_to_arch(trait_name: &str) -> Option<&'static str> {
         "X64V3Token" | "Desktop64" | "Avx2FmaToken" => Some("x86_64"),
         "X64V3CryptoToken" => Some("x86_64"),
         "X64V3GfniCryptoToken" => Some("x86_64"),
+        "X64V3VnniToken" => Some("x86_64"),
         "X64V4Token" | "Avx512Token" | "Server64" => Some("x86_64"),
         "X64V4xToken" | "Avx512ModernToken" => Some("x86_64"),
         "Avx512Fp16Token" => Some("x86_64"),
@@ -588,6 +647,7 @@ pub(crate) fn trait_to_arch(trait_name: &str) -> Option<&'static str> {
         "Arm64V3Token" => Some("aarch64"),
         "Wasm128Token" => Some("wasm32"),
         "Wasm128RelaxedToken" => Some("wasm32"),
+        "Wasm128RelaxedFmaToken" => Some("wasm32"),
 
         _ => None,
     }
@@ -608,6 +668,7 @@ pub(crate) fn tier_to_canonical_token(tier_name: &str) -> Option<&'static str> {
         "v3" => Some("X64V3Token"),
         "v3_crypto" => Some("X64V3CryptoToken"),
         "v3_gfni_crypto" => Some("X64V3GfniCryptoToken"),
+        "v3_vnni" => Some("X64V3VnniToken"),
         "v4" => Some("X64V4Token"),
         "avx512" => Some("X64V4Token"),
         "v4x" => Some("X64V4xToken"),
@@ -620,6 +681,7 @@ pub(crate) fn tier_to_canonical_token(tier_name: &str) -> Option<&'static str> {
         "arm_v3" => Some("Arm64V3Token"),
         "wasm128" => Some("Wasm128Token"),
         "wasm128_relaxed" => Some("Wasm128RelaxedToken"),
+        "wasm128_relaxed_fma" => Some("Wasm128RelaxedFmaToken"),
         "scalar" => Some("ScalarToken"),
         _ => None,
     }
@@ -637,6 +699,7 @@ pub(crate) fn canonical_token_to_tier_suffix(token_name: &str) -> Option<&'stati
         "X64V3Token" | "Desktop64" | "Avx2FmaToken" => Some("v3"),
         "X64V3CryptoToken" => Some("v3_crypto"),
         "X64V3GfniCryptoToken" => Some("v3_gfni_crypto"),
+        "X64V3VnniToken" => Some("v3_vnni"),
         "X64V4Token" | "Avx512Token" | "Server64" => Some("v4"),
         "X64V4xToken" | "Avx512ModernToken" => Some("v4x"),
         "Avx512Fp16Token" => Some("fp16"),
@@ -648,14 +711,43 @@ pub(crate) fn canonical_token_to_tier_suffix(token_name: &str) -> Option<&'stati
         "Arm64V3Token" => Some("arm_v3"),
         "Wasm128Token" => Some("wasm128"),
         "Wasm128RelaxedToken" => Some("wasm128_relaxed"),
+        "Wasm128RelaxedFmaToken" => Some("wasm128_relaxed_fma"),
         "ScalarToken" => Some("scalar"),
         _ => None,
     }
 }
 
+/// Returns true when `token_name` requires a runtime semantic probe
+/// beyond compile-time `#[target_feature]` validation.
+pub(crate) fn token_requires_runtime_probe(token_name: &str) -> bool {
+    matches!(token_name, "Wasm128RelaxedFmaToken")
+}
+
+/// Returns true when `magetypes` implements the full SIMD backend
+/// trait suite directly for `token_name`.
+pub(crate) fn token_has_magetypes_backend(token_name: &str) -> bool {
+    matches!(
+        token_name,
+        "ScalarToken"
+            | "X64V3Token"
+            | "Desktop64"
+            | "Avx2FmaToken"
+            | "X64V4Token"
+            | "Avx512Token"
+            | "Server64"
+            | "X64V4xToken"
+            | "Avx512ModernToken"
+            | "NeonToken"
+            | "Arm64"
+            | "Wasm128Token"
+            | "Wasm128RelaxedFmaToken"
+    )
+}
+
 /// Check if tier `from_suffix` can downgrade to tier `to_suffix`.
 ///
-/// Derived from feature set math: true when `from.features ⊃ to.features`.
+/// True when `to` is an explicit ancestor of `from` or when `to`
+/// requires no runtime semantic probe and `from.features ⊃ to.features`.
 /// Identity (from == to) returns false (use direct pass, no method needed).
 pub(crate) fn can_downgrade_tier(from_suffix: &str, to_suffix: &str) -> bool {
     if from_suffix == to_suffix {
@@ -670,6 +762,10 @@ pub(crate) fn can_downgrade_tier(from_suffix: &str, to_suffix: &str) -> bool {
             | (
                 "v3_gfni_crypto",
                 "v1" | "v2" | "v3" | "v3_crypto" | "x64_crypto"
+            )
+            | (
+                "v3_vnni",
+                "v1" | "v2" | "v3" | "v3_crypto" | "v3_gfni_crypto" | "x64_crypto"
             )
             | ("v4", "v1" | "v2" | "v3" | "x64_crypto")
             | (
@@ -686,6 +782,7 @@ pub(crate) fn can_downgrade_tier(from_suffix: &str, to_suffix: &str) -> bool {
                 "arm_v2" | "neon" | "neon_aes" | "neon_crc" | "neon_sha3"
             )
             | ("wasm128_relaxed", "wasm128")
+            | ("wasm128_relaxed_fma", "wasm128" | "wasm128_relaxed")
     )
 }
 
@@ -702,6 +799,7 @@ pub(crate) fn expected_tier_tag(token_name: &str) -> Option<u32> {
         "X64V3Token" | "Desktop64" | "Avx2FmaToken" => Some(0xF38B284B),
         "X64V3CryptoToken" => Some(0x01EAE708),
         "X64V3GfniCryptoToken" => Some(0x49A7BE90),
+        "X64V3VnniToken" => Some(0x256B958C),
         "X64V4Token" | "Avx512Token" | "Server64" => Some(0xFE1B900C),
         "X64V4xToken" | "Avx512ModernToken" => Some(0x8F63232A),
         "Avx512Fp16Token" => Some(0x2F39FFC0),
@@ -713,6 +811,7 @@ pub(crate) fn expected_tier_tag(token_name: &str) -> Option<u32> {
         "Arm64V3Token" => Some(0xB2F6E2D5),
         "Wasm128Token" => Some(0x1E0DF26B),
         "Wasm128RelaxedToken" => Some(0x821D5452),
+        "Wasm128RelaxedFmaToken" => Some(0x735B647C),
         _ => None,
     }
 }
@@ -729,6 +828,7 @@ pub(crate) const ALL_CONCRETE_TOKENS: &[&str] = &[
     "Avx2FmaToken",
     "X64V3CryptoToken",
     "X64V3GfniCryptoToken",
+    "X64V3VnniToken",
     "X64V4Token",
     "Avx512Token",
     "Server64",
@@ -744,6 +844,7 @@ pub(crate) const ALL_CONCRETE_TOKENS: &[&str] = &[
     "Arm64V3Token",
     "Wasm128Token",
     "Wasm128RelaxedToken",
+    "Wasm128RelaxedFmaToken",
 ];
 
 /// All trait names that exist in the runtime crate.

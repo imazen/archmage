@@ -27,8 +27,11 @@ impl Process for Filter {
         }
         #[cfg(target_arch = "wasm32")]
         {
-            if let Some(__t) = archmage::Wasm128Token::summon() {
-                return self.process_wasm128(__t, data);
+            #[cfg(target_feature = "simd128")]
+            {
+                if let Some(__t) = archmage::Wasm128Token::summon() {
+                    return self.process_wasm128(__t, data);
+                }
             }
         }
         self.process_scalar(archmage::ScalarToken, data)
@@ -115,7 +118,7 @@ impl Process for Filter {
         let _: () = <archmage::NeonToken>::__ARCHMAGE_ASSERT_TIER_72CB52B2;
         unsafe { __simd_inner_process_neon(self, __archmage_token, data) }
     }
-    #[cfg(target_arch = "wasm32")]
+    #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
     #[target_feature(enable = "simd128")]
     #[inline]
     #[allow(dead_code)]

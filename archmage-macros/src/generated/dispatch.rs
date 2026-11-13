@@ -31,6 +31,15 @@ pub(crate) const DISPATCH_TIERS: &[TierDescriptor] = &[
         priority: 40,
     },
     TierDescriptor {
+        name: "v3_vnni",
+        suffix: "v3_vnni",
+        token_path: "archmage::X64V3VnniToken",
+        as_method: "as_x64v3_vnni",
+        target_arch: Some("x86_64"),
+        cfg_feature: None,
+        priority: 38,
+    },
+    TierDescriptor {
         name: "v3_gfni_crypto",
         suffix: "v3_gfni_crypto",
         token_path: "archmage::X64V3GfniCryptoToken",
@@ -137,6 +146,15 @@ pub(crate) const DISPATCH_TIERS: &[TierDescriptor] = &[
         target_arch: Some("aarch64"),
         cfg_feature: None,
         priority: 20,
+    },
+    TierDescriptor {
+        name: "wasm128_relaxed_fma",
+        suffix: "wasm128_relaxed_fma",
+        token_path: "archmage::Wasm128RelaxedFmaToken",
+        as_method: "as_wasm128_relaxed_fma",
+        target_arch: Some("wasm32"),
+        cfg_feature: None,
+        priority: 22,
     },
     TierDescriptor {
         name: "wasm128_relaxed",

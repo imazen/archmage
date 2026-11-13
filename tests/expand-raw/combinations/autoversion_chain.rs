@@ -20,8 +20,11 @@ fn inner(data: &[f32; 4]) -> f32 {
     }
     #[cfg(target_arch = "wasm32")]
     {
-        if let Some(__t) = archmage::Wasm128Token::summon() {
-            return inner_wasm128(__t, data);
+        #[cfg(target_feature = "simd128")]
+        {
+            if let Some(__t) = archmage::Wasm128Token::summon() {
+                return inner_wasm128(__t, data);
+            }
         }
     }
     inner_scalar(archmage::ScalarToken, data)
@@ -72,7 +75,7 @@ fn inner_neon(__archmage_token: archmage::NeonToken, data: &[f32; 4]) -> f32 {
     let _: () = <archmage::NeonToken>::__ARCHMAGE_ASSERT_TIER_72CB52B2;
     unsafe { __arcane_inner_neon(__archmage_token, data) }
 }
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
 #[target_feature(enable = "simd128")]
 #[inline]
 #[allow(dead_code)]
@@ -103,8 +106,11 @@ fn outer(data: &[f32; 4], scale: f32) -> f32 {
     }
     #[cfg(target_arch = "wasm32")]
     {
-        if let Some(__t) = archmage::Wasm128Token::summon() {
-            return outer_wasm128(__t, data, scale);
+        #[cfg(target_feature = "simd128")]
+        {
+            if let Some(__t) = archmage::Wasm128Token::summon() {
+                return outer_wasm128(__t, data, scale);
+            }
         }
     }
     outer_scalar(archmage::ScalarToken, data, scale)
@@ -159,7 +165,7 @@ fn outer_neon(
     let _: () = <archmage::NeonToken>::__ARCHMAGE_ASSERT_TIER_72CB52B2;
     unsafe { __arcane_outer_neon(__archmage_token, data, scale) }
 }
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
 #[target_feature(enable = "simd128")]
 #[inline]
 #[allow(dead_code)]

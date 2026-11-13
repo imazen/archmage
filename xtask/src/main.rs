@@ -178,12 +178,37 @@ fn validate_summon(reg: &registry::Registry) -> Result<()> {
 
             // Handle special cases before parsing
             if *arch == "wasm" {
-                // Wasm128Token uses #[cfg(target_feature)], not runtime detection
-                println!(
-                    "  {} — compile-time cfg check (no runtime detection)",
-                    token_name
-                );
-                verified += 1;
+                if token_def.runtime_probe {
+                    let detect_fn = "fn wasm128_relaxed_fma_detect()";
+                    let has_detect = content.contains(detect_fn);
+                    let has_f32 = content.contains("f32x4_relaxed_madd")
+                        && content.contains("f32x4_extract_lane::<0>")
+                        && content.contains("f32x4_extract_lane::<1>")
+                        && content.contains("f32x4_extract_lane::<2>")
+                        && content.contains("f32x4_extract_lane::<3>");
+                    let has_f64 = content.contains("f64x2_relaxed_madd")
+                        && content.contains("f64x2_extract_lane::<0>")
+                        && content.contains("f64x2_extract_lane::<1>");
+                    if has_detect && has_f32 && has_f64 {
+                        println!(
+                            "  {} — WASM runtime fusion probe verified (f32x4 4-lane + f64x2 2-lane)",
+                            token_name
+                        );
+                        verified += 1;
+                    } else {
+                        errors.push(format!(
+                            "{}: wasm.rs missing complete runtime fusion probe (detect={has_detect}, f32={has_f32}, f64={has_f64})",
+                            token_name
+                        ));
+                    }
+                } else {
+                    // Wasm128Token / Wasm128RelaxedToken use #[cfg(target_feature)], not runtime detection
+                    println!(
+                        "  {} — compile-time cfg check (no runtime detection)",
+                        token_name
+                    );
+                    verified += 1;
+                }
                 continue;
             }
 
@@ -530,6 +555,12 @@ fn generate_x86_reference(db: &HashMap<String, IntrinsicEntry>) -> String {
             name: "X64V3Token (AVX2, FMA)",
             token: "X64V3Token",
             features: &["avx", "avx2", "fma", "bmi1", "bmi2", "f16c", "lzcnt"],
+            intrinsics: BTreeMap::new(),
+        },
+        TierInfo {
+            name: "X64V3VnniToken (AVX-VNNI)",
+            token: "X64V3VnniToken",
+            features: &["avxvnni"],
             intrinsics: BTreeMap::new(),
         },
         TierInfo {
@@ -1211,81 +1242,224 @@ fn main() -> Result<()> {
 /// Only files the target actually compiles are counted: `impls/mod.rs`
 /// cfg-gates `arm_neon` and `wasm128` away on x86, so a NEON-only change
 /// costs an x86 build nothing.
-const COMPILE_BUDGETS: &[(&str, &[&str], usize)] = &[
-    (
-        "x86_64",
-        &[
-            "magetypes/src/simd/impls/x86_v3.rs",
-            "magetypes/src/simd/impls/x86_v4.rs",
-            "magetypes/src/simd/impls/x86_v4_f32_delegated.rs",
-            "magetypes/src/simd/impls/x86_v4_f32_overrides.rs",
-            "magetypes/src/simd/impls/scalar.rs",
-            "magetypes/src/simd/backends/",
-        ],
-        31_700, // measured 30 197
-    ),
-    (
-        "aarch64",
-        &[
-            "magetypes/src/simd/impls/arm_neon.rs",
-            "magetypes/src/simd/impls/scalar.rs",
-            "magetypes/src/simd/backends/",
-        ],
-        26_100, // measured 24 890
-    ),
-    (
-        "wasm32",
-        &[
-            "magetypes/src/simd/impls/wasm128.rs",
-            "magetypes/src/simd/impls/scalar.rs",
-            "magetypes/src/simd/backends/",
-        ],
-        25_700, // measured 24 442
-    ),
+///
+/// Unlike a hardcoded file list, [`check_compile_budgets`] parses
+/// `magetypes/src/simd/impls/mod.rs` directly, verifies that every `.rs` file
+/// in `magetypes/src/simd/impls/` is declared there, attributes each module to
+/// its matching `target_arch` targets, checks `magetypes/src/simd/generic/generated/`
+/// as well, and rejects unapproved `macro_rules!` inside generated backend
+/// files so delegation bloat cannot hide behind macro expansion.
+const COMPILE_BUDGETS: &[(&str, usize)] = &[
+    // Measured 39 572 (reduced from 40 063 by delegating X64V4xToken's base W512
+    // backends + F32x16Convert to X64V4Token in x86_v4_w512_delegated.rs).
+    ("x86_64", 41_000),
+    ("aarch64", 26_100), // measured 25 043
+    // Measured 30 056 (includes wasm128_fma_delegated.rs + wasm128_fma_overrides.rs
+    // for Wasm128RelaxedFmaToken, cfg-gated to target_arch = "wasm32" only).
+    ("wasm32", 31_200),
 ];
 
-/// Check the generated backend surface against [`COMPILE_BUDGETS`].
-fn check_compile_budgets() -> Result<()> {
-    println!("\n=== Generated backend surface (compile budget) ===");
-    let count = |spec: &str| -> Result<usize> {
-        let mut files: Vec<PathBuf> = Vec::new();
-        if let Some(dir) = spec.strip_suffix('/') {
-            for entry in std::fs::read_dir(dir)
-                .with_context(|| format!("reading {dir}"))?
-                .flatten()
-            {
-                let p = entry.path();
-                if p.extension().is_some_and(|e| e == "rs") {
-                    files.push(p);
-                }
+/// Budget for `magetypes/src/simd/generic/generated/*.rs` (target-common
+/// wrapper definitions; measured 27 760 lines).
+const GENERIC_GENERATED_BUDGET: usize = 29_000;
+
+/// Single-method helper macros audited to stay 1:1 with source lines (never
+/// generating whole `impl ... for Token` blocks).
+const ALLOWED_IMPL_MACROS: &[(&str, &str)] =
+    &[("magetypes/src/simd/impls/x86_v3.rs", "sse2_baseline")];
+
+/// Parse `#[cfg(...)]` attributes on a `mod <stem>;` item in `impls/mod.rs`
+/// and return which budgeted `target_arch` values compile it.
+fn impl_mod_arches(mod_name: &str, attrs: &[syn::Attribute]) -> Result<Vec<&'static str>> {
+    const ALL: &[&str] = &["x86_64", "aarch64", "wasm32"];
+    let mut matched: Option<Vec<&'static str>> = None;
+
+    for attr in attrs {
+        if !attr.path().is_ident("cfg") {
+            continue;
+        }
+        let tokens = attr.meta.require_list()?.tokens.to_string();
+        if !tokens.contains("target_arch") {
+            continue;
+        }
+        if tokens.contains("not(") || tokens.contains("not (") {
+            anyhow::bail!(
+                "impls/mod.rs: negated target_arch cfg on `mod {mod_name};` is not supported by check_compile_budgets"
+            );
+        }
+        let mut arches = Vec::new();
+        for &arch in ALL {
+            let needle = format!("\"{arch}\"");
+            if tokens.contains(&needle) {
+                arches.push(arch);
             }
-        } else {
-            files.push(PathBuf::from(spec));
         }
-        files.sort();
-        let mut total = 0usize;
-        for f in files {
-            let text =
-                std::fs::read_to_string(&f).with_context(|| format!("reading {}", f.display()))?;
-            total += text.lines().count();
+        if arches.is_empty() {
+            anyhow::bail!(
+                "impls/mod.rs: `mod {mod_name};` has a target_arch cfg matching none of {ALL:?}: #[cfg({tokens})]"
+            );
         }
-        Ok(total)
+        matched = Some(match matched {
+            None => arches,
+            Some(prev) => prev.into_iter().filter(|a| arches.contains(a)).collect(),
+        });
+    }
+
+    Ok(matched.unwrap_or_else(|| ALL.to_vec()))
+}
+
+/// Reject `macro_rules!` inside generated backend/trait files unless listed in
+/// [`ALLOWED_IMPL_MACROS`], preventing macro-compressed trait delegation from
+/// hiding `rustc` expansion and monomorphization cost from [`COMPILE_BUDGETS`].
+fn check_no_hidden_impl_macros(rel_path: &str, text: &str) -> Result<()> {
+    let parsed =
+        syn::parse_file(text).with_context(|| format!("parsing {rel_path} for macro audit"))?;
+    for item in &parsed.items {
+        if let syn::Item::Macro(mac) = item
+            && mac.mac.path.is_ident("macro_rules")
+        {
+            let name = mac
+                .ident
+                .as_ref()
+                .map(ToString::to_string)
+                .unwrap_or_else(|| "<unnamed>".to_string());
+            let allowed = ALLOWED_IMPL_MACROS
+                .iter()
+                .any(|(p, n)| *p == rel_path && *n == name);
+            if !allowed {
+                anyhow::bail!(
+                    "{rel_path}: unapproved `macro_rules! {name}` inside generated backend surface.\n\
+                     Macro-compressed backend impls hide rustc expansion and monomorphization cost\n\
+                     from COMPILE_BUDGETS. Prefer zero-KLOC #[attune(..., define(...))] namespace\n\
+                     mapping or explicit audited code."
+                );
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Check the generated backend and wrapper surface against [`COMPILE_BUDGETS`]
+/// and [`GENERIC_GENERATED_BUDGET`].
+fn check_compile_budgets() -> Result<()> {
+    check_compile_budgets_in(std::path::Path::new("."))
+}
+
+fn check_compile_budgets_in(root: &std::path::Path) -> Result<()> {
+    println!("\n=== Generated backend surface (compile budget) ===");
+
+    let read_rs_dir = |rel_dir: &str| -> Result<Vec<(String, String, usize)>> {
+        let dir = root.join(rel_dir);
+        let mut entries = Vec::new();
+        for entry in std::fs::read_dir(&dir)
+            .with_context(|| format!("reading {}", dir.display()))?
+            .flatten()
+        {
+            let p = entry.path();
+            if p.extension().is_some_and(|e| e == "rs") {
+                let fname = p
+                    .file_name()
+                    .and_then(|s| s.to_str())
+                    .context("non-UTF-8 filename")?;
+                let rel = format!("{rel_dir}/{fname}");
+                let text = std::fs::read_to_string(&p)
+                    .with_context(|| format!("reading {}", p.display()))?;
+                let lines = text.lines().count();
+                entries.push((rel, text, lines));
+            }
+        }
+        entries.sort_by(|a, b| a.0.cmp(&b.0));
+        Ok(entries)
     };
 
-    let mut over: Vec<String> = Vec::new();
-    for (arch, specs, budget) in COMPILE_BUDGETS {
-        let mut lines = 0usize;
-        for spec in *specs {
-            lines += count(spec)?;
+    let impl_files = read_rs_dir("magetypes/src/simd/impls")?;
+    let backend_files = read_rs_dir("magetypes/src/simd/backends")?;
+    let generic_files = read_rs_dir("magetypes/src/simd/generic/generated")?;
+
+    for (rel, text, _) in impl_files.iter().chain(backend_files.iter()) {
+        check_no_hidden_impl_macros(rel, text)?;
+    }
+
+    // Parse impls/mod.rs so every impls/*.rs file is accounted for automatically.
+    let mod_rs_rel = "magetypes/src/simd/impls/mod.rs";
+    let (_, mod_rs_text, mod_rs_lines) = impl_files
+        .iter()
+        .find(|(rel, _, _)| rel == mod_rs_rel)
+        .with_context(|| format!("missing {mod_rs_rel}"))?;
+    let mod_ast = syn::parse_file(mod_rs_text).with_context(|| format!("parsing {mod_rs_rel}"))?;
+
+    let mut declared_mods: std::collections::BTreeMap<String, Vec<&'static str>> =
+        std::collections::BTreeMap::new();
+    for item in &mod_ast.items {
+        if let syn::Item::Mod(m) = item {
+            if m.content.is_some() {
+                anyhow::bail!(
+                    "{mod_rs_rel}: inline `mod {} {{ ... }}` is not allowed",
+                    m.ident
+                );
+            }
+            let name = m.ident.to_string();
+            let arches = impl_mod_arches(&name, &m.attrs)?;
+            declared_mods.insert(name, arches);
         }
+    }
+
+    let mut impl_lines_by_arch: std::collections::BTreeMap<&str, usize> = COMPILE_BUDGETS
+        .iter()
+        .map(|(a, _)| (*a, *mod_rs_lines))
+        .collect();
+
+    for (rel, _, lines) in &impl_files {
+        if rel == mod_rs_rel {
+            continue;
+        }
+        let stem = std::path::Path::new(rel)
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .context("missing file stem")?;
+        let Some(arches) = declared_mods.remove(stem) else {
+            anyhow::bail!(
+                "{rel} exists on disk in magetypes/src/simd/impls/ but is not declared in {mod_rs_rel}"
+            );
+        };
+        for arch in arches {
+            *impl_lines_by_arch.entry(arch).or_default() += *lines;
+        }
+    }
+    if !declared_mods.is_empty() {
+        let missing: Vec<_> = declared_mods.keys().cloned().collect();
+        anyhow::bail!(
+            "{mod_rs_rel} declares modules without matching .rs files: {}",
+            missing.join(", ")
+        );
+    }
+
+    let backend_lines: usize = backend_files.iter().map(|(_, _, n)| *n).sum();
+    let generic_lines: usize = generic_files.iter().map(|(_, _, n)| *n).sum();
+
+    let mut over: Vec<String> = Vec::new();
+    for (arch, budget) in COMPILE_BUDGETS {
+        let lines = impl_lines_by_arch[arch] + backend_lines;
         let pct = (lines as f64 / *budget as f64) * 100.0;
-        println!("  {arch:<8} {lines:>6} lines / {budget:>6} budget  ({pct:.1}%)");
+        println!("  {arch:<18} {lines:>6} lines / {budget:>6} budget  ({pct:.1}%)");
         if lines > *budget {
             over.push(format!(
                 "  {arch}: {lines} lines exceeds the {budget} budget by {}",
                 lines - budget
             ));
         }
+    }
+
+    let generic_pct = (generic_lines as f64 / GENERIC_GENERATED_BUDGET as f64) * 100.0;
+    println!(
+        "  {:<18} {:>6} lines / {:>6} budget  ({generic_pct:.1}%)",
+        "generic/generated", generic_lines, GENERIC_GENERATED_BUDGET
+    );
+    if generic_lines > GENERIC_GENERATED_BUDGET {
+        over.push(format!(
+            "  generic/generated: {generic_lines} lines exceeds the {GENERIC_GENERATED_BUDGET} budget by {}",
+            generic_lines - GENERIC_GENERATED_BUDGET
+        ));
     }
 
     if !over.is_empty() {
@@ -3204,4 +3378,74 @@ fn refresh_intrinsics_database() -> Result<()> {
     println!("\nSaved to {}", db_path.display());
 
     Ok(())
+}
+
+#[cfg(test)]
+mod compile_budget_tests {
+    use super::{check_compile_budgets_in, check_no_hidden_impl_macros, impl_mod_arches};
+
+    #[test]
+    fn repo_compile_budgets_pass() {
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .expect("workspace root");
+        check_compile_budgets_in(root).expect("repo compile budgets should pass");
+    }
+
+    #[test]
+    fn rejects_hidden_macro_rules_in_impls() {
+        let err = check_no_hidden_impl_macros(
+            "magetypes/src/simd/impls/x86_v3_higher_delegated.rs",
+            "macro_rules! delegate_all { () => {}; }\n",
+        )
+        .unwrap_err();
+        assert!(
+            err.to_string()
+                .contains("unapproved `macro_rules! delegate_all`")
+        );
+
+        // Audited single-method SSE2 baseline helper remains allowed in x86_v3.rs.
+        check_no_hidden_impl_macros(
+            "magetypes/src/simd/impls/x86_v3.rs",
+            "macro_rules! sse2_baseline { () => {}; }\n",
+        )
+        .expect("sse2_baseline is explicitly audited");
+    }
+
+    #[test]
+    fn impl_mod_arches_parses_cfg_accurately() {
+        let parsed = syn::parse_file(
+            r#"
+            #[cfg(target_arch = "x86_64")]
+            mod x86_v3;
+            #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+            mod x86_v4;
+            mod scalar;
+            #[cfg(not(target_arch = "x86_64"))]
+            mod bad_negated;
+            "#,
+        )
+        .unwrap();
+        let mods: Vec<_> = parsed
+            .items
+            .into_iter()
+            .filter_map(|i| match i {
+                syn::Item::Mod(m) => Some(m),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(
+            impl_mod_arches(&mods[0].ident.to_string(), &mods[0].attrs).unwrap(),
+            vec!["x86_64"]
+        );
+        assert_eq!(
+            impl_mod_arches(&mods[1].ident.to_string(), &mods[1].attrs).unwrap(),
+            vec!["x86_64"]
+        );
+        assert_eq!(
+            impl_mod_arches(&mods[2].ident.to_string(), &mods[2].attrs).unwrap(),
+            vec!["x86_64", "aarch64", "wasm32"]
+        );
+        assert!(impl_mod_arches(&mods[3].ident.to_string(), &mods[3].attrs).is_err());
+    }
 }

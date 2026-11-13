@@ -425,6 +425,10 @@ mod wasm32_tests {
             "  Wasm128Relaxed:   {}",
             Wasm128RelaxedToken::summon().is_some()
         );
+        println!(
+            "  Wasm128RelaxedFma: {}",
+            Wasm128RelaxedFmaToken::summon().is_some()
+        );
     }
 }
 
@@ -474,6 +478,10 @@ fn wrong_arch_tokens_return_none() {
         assert!(
             Wasm128RelaxedToken::summon().is_none(),
             "WASM relaxed tokens should be None on non-WASM"
+        );
+        assert!(
+            Wasm128RelaxedFmaToken::summon().is_none(),
+            "WASM relaxed FMA tokens should be None on non-WASM"
         );
     }
 }

@@ -87,6 +87,7 @@ traits = ["HasX64V2", "Has128BitSimd", "Has256BitSimd"]
 display_name = "x86-64-v3"
 short_name = "v3"
 magetypes_namespace = "v3"
+has_magetypes_backend = true
 parents = ["X64V2Token"]
 doc = "Proof that AVX2 + FMA + BMI1/2 + F16C + LZCNT are available (x86-64-v3 level).\n\nx86-64-v3 implies all of v2 plus: AVX, AVX2, FMA, BMI1, BMI2, F16C, LZCNT, MOVBE.\nThis is the Haswell (2013) / Zen 1 (2017) baseline.\n\nThis is the most commonly targeted level for high-performance SIMD code."
 
@@ -130,6 +131,27 @@ magetypes_namespace = "v3"
 doc = "Proof that AVX2 + GFNI + VPCLMULQDQ + VAES are available.\n\nGFNI provides GF(2^8) affine transforms and field multiplication over the\nAES/Rijndael polynomial. Its 256-bit VEX forms operate on YMM registers without\nrequiring AVX-512. At the x86-64-v3 level, GFNI-capable CPUs also provide the\nAES, PCLMULQDQ, VAES, and VPCLMULQDQ features inherited from\n`X64V3CryptoToken`.\n\nAvailable without AVX-512 on Intel Alder Lake, Raptor Lake, Meteor Lake, Arrow\nLake, Lunar Lake, Sierra Forest, and later related CPUs. Also available on AMD\nZen 4+.\n\nUse for Reed-Solomon erasure coding, GF(2^8) and binary-tower field arithmetic,\nbit permutation, and byte-wise affine transforms."
 
 [[token]]
+name = "X64V3VnniToken"
+dispatch_priority = 38
+dispatch_as = "as_x64v3_vnni"
+arch = "x86"
+features = [
+    "sse", "sse2",
+    "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt", "cmpxchg16b",
+    "avx", "avx2", "fma", "bmi1", "bmi2", "f16c", "lzcnt", "movbe",
+    "pclmulqdq", "aes",
+    "vpclmulqdq", "vaes",
+    "gfni",
+    "avxvnni",
+]
+traits = ["HasX64V2", "Has128BitSimd", "Has256BitSimd"]
+parents = ["X64V3GfniCryptoToken"]
+display_name = "x86-64-v3 VNNI"
+short_name = "v3_vnni"
+magetypes_namespace = "v3"
+doc = "Proof that VEX-encoded AVX-VNNI (`avxvnni`) is available on top of `X64V3GfniCryptoToken`.\n\n`avxvnni` provides VEX-encoded 128/256-bit `VPDPBUSD`, `VPDPBUSDS`, `VPDPWSSD`,\nand `VPDPWSSDS` (`_mm256_dpbusd_avx_epi32`, `_mm256_dpwssd_avx_epi32`, etc.) for\nINT8 (`u8 × i8 -> i32`) and INT16 (`i16 × i16 -> i32`) dot-product accumulation\nwithout requiring AVX-512.\n\nAvailable without AVX-512 on Intel Alder Lake, Raptor Lake, Meteor Lake, Arrow\nLake, Lunar Lake, Sierra Forest, and later client/hybrid/E-core x86-64 CPUs.\nNote that AVX-512 server/desktop parts (`X64V4Token` / `X64V4xToken` on Ice Lake\nand Zen 4) provide EVEX `avx512vnni` rather than VEX `avxvnni`, so this token is\na leaf under `X64V3GfniCryptoToken` and is not implied by `X64V4xToken`."
+
+[[token]]
 name = "X64V4Token"
 dispatch_priority = 40
 dispatch_as = "as_x64v4"
@@ -147,6 +169,7 @@ traits = ["HasX64V2", "HasX64V4", "Has128BitSimd", "Has256BitSimd", "Has512BitSi
 display_name = "AVX-512"
 short_name = "v4"
 magetypes_namespace = "v4"
+has_magetypes_backend = true
 parents = ["X64V3Token", "X64CryptoToken"]
 extraction_aliases = ["avx512"]
 doc = "Proof that AVX-512 (F + CD + VL + DQ + BW) is available.\n\nThis is the complete x86-64-v4 AVX-512 feature set, available on:\n- Intel Skylake-X (2017+), Ice Lake, Sapphire Rapids\n- AMD Zen 4+ (2022+)\n\nNote: Intel 12th-14th gen consumer CPUs do NOT have AVX-512."
@@ -172,6 +195,7 @@ traits = ["HasX64V2", "HasX64V4", "Has128BitSimd", "Has256BitSimd", "Has512BitSi
 display_name = "x86-64-v4x"
 short_name = "v4x"
 magetypes_namespace = "v4x"
+has_magetypes_backend = true
 parents = ["X64V4Token", "X64V3GfniCryptoToken"]
 doc = "Proof that extended AVX-512 features are available (x86-64-v4x = Ice Lake / Zen 4 level).\n\nThis includes all of `X64V4Token` (F+CD+VL+DQ+BW) plus:\n- VPOPCNTDQ, IFMA, VBMI, VBMI2, BITALG, VNNI\n- VPCLMULQDQ, GFNI, VAES\n\nAvailable on Intel Ice Lake (2019+), Sapphire Rapids, AMD Zen 4+.\nNOT available on Skylake-X (lacks VBMI2, VNNI, etc.)."
 
@@ -209,6 +233,7 @@ traits = ["HasNeon", "Has128BitSimd"]
 display_name = "NEON"
 short_name = "neon"
 magetypes_namespace = "neon"
+has_magetypes_backend = true
 doc = "Proof that NEON is available.\n\nNEON is available on virtually all AArch64 processors, but requires\nruntime detection via `summon()` unless compiled with `-Ctarget-feature=+neon`."
 
 [[token]]
@@ -288,6 +313,7 @@ traits = ["Has128BitSimd"]
 display_name = "WASM SIMD128"
 short_name = "wasm128"
 magetypes_namespace = "wasm128"
+has_magetypes_backend = true
 doc = "Proof that WASM SIMD128 is available."
 
 [[token]]
@@ -302,6 +328,21 @@ display_name = "WASM Relaxed SIMD"
 short_name = "wasm128_relaxed"
 magetypes_namespace = "wasm128"
 doc = "Proof that WASM Relaxed SIMD is available.\n\nRelaxed SIMD (Wasm 3.0) provides 28 instructions that trade strict\ncross-platform determinism for performance: FMA, relaxed lane-select,\nrelaxed min/max, dot products, and relaxed truncation.\n\nThis token proves instruction availability, not single-rounding FMA.\nRelaxed multiply-add may round once or twice, depending on the engine.\nModules containing relaxed instructions require relaxed-SIMD support at load\ntime; select a compatible build with WebAssembly.validate.\nStable in Rust since 1.82."
+
+[[token]]
+name = "Wasm128RelaxedFmaToken"
+dispatch_priority = 22
+dispatch_as = "as_wasm128_relaxed_fma"
+arch = "wasm"
+features = ["simd128", "relaxed-simd"]
+traits = ["Has128BitSimd"]
+parents = ["Wasm128RelaxedToken"]
+display_name = "WASM Relaxed FMA"
+short_name = "wasm128_relaxed_fma"
+magetypes_namespace = "wasm128"
+runtime_probe = true
+has_magetypes_backend = true
+doc = "Proof that WASM Relaxed SIMD is available AND both `f32x4.relaxed_madd` and `f64x2.relaxed_madd` fuse to single-rounding FMA on the executing engine.\n\nUnlike [`Wasm128RelaxedToken`], which only proves the `+relaxed-simd` instruction set is enabled, `Wasm128RelaxedFmaToken::summon()` runs a cached one-time runtime probe verifying that all lanes of `f32x4.relaxed_madd` and `f64x2.relaxed_madd` round once rather than twice.\n\nWhen available (e.g., Wasmtime/V8/SpiderMonkey/JavaScriptCore on x86-64 with FMA or AArch64), `magetypes` float vectors parameterized by `Wasm128RelaxedFmaToken` emit bare `f32x4.relaxed_madd` / `f64x2.relaxed_madd` for `.mul_add_portable()` and `.mul_sub_portable()` with zero per-op probe loads or fallback branches. On deterministic or non-fusing engines, `summon()` returns `None` so dispatch falls back to `Wasm128RelaxedToken` or `Wasm128Token`."
 
 # ──── Traits ────
 #

@@ -122,6 +122,7 @@ const REQUIRED_FILE_FLOORS: &[(&str, usize)] = &[
     ("magetypes/src/simd/generic/cross_width.rs", 6), // measured 8
     ("magetypes/src/simd/generic/convert_f16.rs", 18), // measured 26
     ("magetypes/src/simd_storage.rs", 13),       // measured 18 (gather/scatter)
+    ("src/tokens/generated/wasm.rs", 8),         // measured 12 (runtime FMA probe)
 ];
 
 /// The one magetypes file allowed `unsafe` of any kind, `unsafe impl Pod`, and

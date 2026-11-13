@@ -400,3 +400,188 @@ fn suppress_const_test_controls_token_assertion_on_proof_boundaries() {
     .unwrap_err();
     assert!(direct_err.to_string().contains("requires a proof wrapper"));
 }
+
+#[test]
+fn define_maps_subtiers_to_representation_backend_tokens() {
+    for (attr, expected_backend, expected_feature) in [
+        (quote!(v3_vnni, define(f32x8)), "X64V3Token", "avxvnni"),
+        (quote!(v3_crypto, define(f32x8)), "X64V3Token", "vaes"),
+        (quote!(arm_v2, define(f32x4)), "NeonToken", "dotprod"),
+        (quote!(arm_v3, define(f32x4)), "NeonToken", "i8mm"),
+        (
+            quote!(wasm128_relaxed, define(f32x4)),
+            "Wasm128Token",
+            "relaxed-simd",
+        ),
+        (
+            quote!(wasm128_relaxed_fma, define(f32x4)),
+            "Wasm128RelaxedFmaToken",
+            "relaxed-simd",
+        ),
+        (quote!(fp16, define(f32x16)), "X64V4Token", "avx512fp16"),
+        (quote!(v4x, define(f32x16)), "X64V4xToken", "avx512vnni"),
+    ] {
+        let text = super::expand(
+            attr,
+            quote!(
+                fn kernel(x: f32) -> f32 {
+                    x
+                }
+            ),
+        )
+        .unwrap()
+        .to_string();
+        assert!(
+            text.contains(expected_backend),
+            "expected {expected_backend} in {text}"
+        );
+        assert!(
+            text.contains(expected_feature),
+            "expected {expected_feature} in {text}"
+        );
+    }
+
+    // Tiers below `v3` (`v2` lacks AVX2) must NOT resolve to `X64V3Token`.
+    let v2 = super::expand(
+        quote!(v2, define(f32x8)),
+        quote!(
+            fn kernel(x: f32) -> f32 {
+                x
+            }
+        ),
+    )
+    .unwrap()
+    .to_string();
+    assert!(
+        v2.contains("X64V2Token") && !v2.contains("X64V3Token"),
+        "{v2}"
+    );
+}
+
+#[test]
+fn runtime_probed_wasm_fma_is_not_covered_by_relaxed_feature_context() {
+    // Same compile-time features (`simd128,relaxed-simd`), but `Wasm128RelaxedToken`
+    // does not prove single-rounding FMA and must be rejected as proof for a
+    // `_wasm128_relaxed_fma_t` wrapper.
+    let mismatch = super::expand(
+        quote!(),
+        quote!(
+            fn work_wasm128_relaxed_fma_t(proof: Wasm128RelaxedToken, x: f32) -> f32 {
+                let _ = proof;
+                x
+            }
+        ),
+    )
+    .unwrap_err();
+    assert!(
+        mismatch
+            .to_string()
+            .contains("proof parameter does not match the inferred tier suffix"),
+        "{mismatch}"
+    );
+
+    // Inside `#[attune(wasm128_relaxed)]`, contextual `attuned!` must NOT treat
+    // `wasm128_relaxed_fma` as covered by the enclosing feature set alone.
+    let text = super::expand(
+        quote!(wasm128_relaxed),
+        quote!(
+            fn caller(x: f32) -> f32 {
+                attuned!(callee(x), [wasm128_relaxed_fma, wasm128_relaxed, scalar])
+            }
+        ),
+    )
+    .unwrap()
+    .to_string();
+    assert!(text.contains("callee_wasm128_relaxed"), "{text}");
+    assert!(!text.contains("callee_wasm128_relaxed_fma"), "{text}");
+
+    // Inside `#[attune(wasm128_relaxed_fma)]`, contextual `attuned!` DOES cover
+    // `wasm128_relaxed_fma` directly without re-probing.
+    let fma_text = super::expand(
+        quote!(wasm128_relaxed_fma),
+        quote!(
+            fn caller(x: f32) -> f32 {
+                attuned!(callee(x), [wasm128_relaxed_fma, wasm128_relaxed, scalar])
+            }
+        ),
+    )
+    .unwrap()
+    .to_string();
+    assert!(
+        fma_text.contains("callee_wasm128_relaxed_fma"),
+        "{fma_text}"
+    );
+    assert!(!fma_text.contains("summon"), "{fma_text}");
+    assert!(
+        fma_text.contains("target_feature = \"simd128\"")
+            && fma_text.contains("target_feature = \"relaxed-simd\""),
+        "{fma_text}"
+    );
+}
+
+#[test]
+fn wasm_items_and_dispatch_arms_gate_on_compile_time_target_features_while_scalar_always_exists() {
+    let family = super::expand(
+        quote!(
+            _wasm128,
+            _wasm128_relaxed,
+            _wasm128_relaxed_fma,
+            _scalar,
+            dispatch
+        ),
+        quote!(
+            pub fn kernel(x: f32) -> f32 {
+                x
+            }
+        ),
+    )
+    .unwrap()
+    .to_string();
+    let fns = syn::parse2::<syn::File>(family.parse().unwrap())
+        .unwrap()
+        .items;
+    let find_fn = |name: &str| -> &syn::ItemFn {
+        fns.iter()
+            .find_map(|item| match item {
+                syn::Item::Fn(f) if f.sig.ident == name => Some(f),
+                _ => None,
+            })
+            .unwrap_or_else(|| panic!("missing {name} in {family}"))
+    };
+    let wasm128_attrs = find_fn("kernel_wasm128")
+        .attrs
+        .iter()
+        .map(|a| a.to_token_stream().to_string())
+        .collect::<Vec<_>>()
+        .join(" ");
+    assert!(
+        wasm128_attrs.contains("target_feature = \"simd128\""),
+        "{wasm128_attrs}"
+    );
+    assert!(!wasm128_attrs.contains("relaxed-simd"), "{wasm128_attrs}");
+
+    for relaxed_name in ["kernel_wasm128_relaxed", "kernel_wasm128_relaxed_fma"] {
+        let attrs = find_fn(relaxed_name)
+            .attrs
+            .iter()
+            .map(|a| a.to_token_stream().to_string())
+            .collect::<Vec<_>>()
+            .join(" ");
+        assert!(attrs.contains("target_feature = \"simd128\""), "{attrs}");
+        assert!(
+            attrs.contains("target_feature = \"relaxed-simd\""),
+            "{attrs}"
+        );
+    }
+
+    let scalar_attrs = find_fn("kernel_scalar")
+        .attrs
+        .iter()
+        .map(|a| a.to_token_stream().to_string())
+        .collect::<Vec<_>>()
+        .join(" ");
+    assert!(
+        !scalar_attrs.contains("cfg"),
+        "scalar must always exist: {scalar_attrs}"
+    );
+}

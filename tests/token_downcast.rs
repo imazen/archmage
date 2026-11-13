@@ -190,6 +190,14 @@ mod wasm_downcast {
             let _wasm128: Wasm128Token = token.wasm128();
         }
     }
+
+    #[test]
+    fn wasm128_relaxed_fma_extracts_to_relaxed_and_wasm128() {
+        if let Some(token) = Wasm128RelaxedFmaToken::summon() {
+            let _relaxed: Wasm128RelaxedToken = token.wasm128_relaxed();
+            let _wasm128: Wasm128Token = token.wasm128();
+        }
+    }
 }
 
 // ============================================================================
@@ -310,6 +318,24 @@ mod into_concrete {
             token.as_wasm128().is_none(),
             "Relaxed is not base Wasm128 (different type)"
         );
+        assert!(token.as_wasm128_relaxed_fma().is_none());
+        assert!(token.as_neon().is_none());
+    }
+
+    #[test]
+    #[allow(unused_unsafe)]
+    fn wasm128_relaxed_fma_into_concrete() {
+        let token = if let Some(t) = Wasm128RelaxedFmaToken::summon() {
+            t
+        } else {
+            unsafe { Wasm128RelaxedFmaToken::forge_token_dangerously() }
+        };
+        assert!(token.as_wasm128_relaxed_fma().is_some());
+        assert!(
+            token.as_wasm128_relaxed().is_none(),
+            "Relaxed FMA is not Relaxed (different type)"
+        );
+        assert!(token.as_wasm128().is_none());
         assert!(token.as_neon().is_none());
     }
 
@@ -368,6 +394,7 @@ mod into_concrete {
         assert!(token.as_arm_v3().is_none());
         assert!(token.as_wasm128().is_none());
         assert!(token.as_wasm128_relaxed().is_none());
+        assert!(token.as_wasm128_relaxed_fma().is_none());
     }
 
     #[cfg(feature = "avx512")]
@@ -574,6 +601,10 @@ mod wasm_features {
     #[test]
     fn wasm128_relaxed_name_is_nonempty() {
         assert!(!Wasm128RelaxedToken::NAME.is_empty());
+        assert!(!Wasm128RelaxedFmaToken::NAME.is_empty());
+        let fma_features = Wasm128RelaxedFmaToken::TARGET_FEATURES;
+        assert!(fma_features.contains("simd128"));
+        assert!(fma_features.contains("relaxed-simd"));
     }
 }
 

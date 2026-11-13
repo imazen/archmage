@@ -43,10 +43,19 @@ pub(crate) fn expand(attr: TokenStream, item: TokenStream) -> syn::Result<TokenS
             // otherwise ensure the existing proof declares the named context.
             let placeholder = input.sig.inputs.iter().any(placeholder_parameter);
             if let Some(proof) = crate::token_discovery::find_token_param(&input.sig) {
-                let expected = crate::generated::tier_to_canonical_token(tier.name)
-                    .and_then(crate::generated::token_to_features)
-                    .expect("registered tier");
+                let canonical =
+                    crate::generated::tier_to_canonical_token(tier.name).expect("registered tier");
+                let expected =
+                    crate::generated::token_to_features(canonical).expect("registered tier");
+                let runtime_probe_mismatch =
+                    crate::generated::token_requires_runtime_probe(canonical)
+                        && proof
+                            .token_type_name
+                            .as_deref()
+                            .and_then(crate::generated::canonical_token_to_tier_suffix)
+                            != Some(tier.suffix);
                 if proof.target_arch != tier.target_arch
+                    || runtime_probe_mismatch
                     || proof.features.len() != expected.len()
                     || !expected.iter().all(|f| proof.features.contains(f))
                 {
@@ -133,15 +142,24 @@ fn direct(
         ));
     }
     // Raw functions without aliases need no token path or substitution pass.
-    let token_path = if args.family || !args.options.defines.is_empty() {
-        Some(tier.token_path.parse::<TokenStream>()?)
-    } else {
-        None
-    };
+    // `define(...)` resolves sub-tier proof contexts (`v3_vnni`, `arm_v2`,
+    // `wasm128_relaxed`, `fp16`, etc.) to their width-namespace representation
+    // token (`X64V3Token`, `NeonToken`, `Wasm128Token`, `X64V4Token`) so sub-tiers
+    // share the base vector representation at zero KLOC / `.rmeta` cost.
+    let token_path = args
+        .family
+        .then(|| tier.token_path.parse::<TokenStream>())
+        .transpose()?;
+    let define_token_path = (!args.options.defines.is_empty())
+        .then(|| tier.define_backend_token_path().parse::<TokenStream>())
+        .transpose()?;
     let defines = args.options.defines.iter().map(|name| {
+        let backend = define_token_path
+            .as_ref()
+            .expect("defines checked non-empty");
         quote! {
             #[allow(non_camel_case_types, dead_code)]
-            type #name = ::magetypes::simd::generic::#name<::#token_path>;
+            type #name = ::magetypes::simd::generic::#name<::#backend>;
         }
     });
     prepend_to_body(&mut input.body, quote!(#(#defines)*));
@@ -154,7 +172,7 @@ fn direct(
     };
     // Signature proof discovery must see each family's concrete parameter;
     // body Token markers remain intact until contextual calls are rewritten.
-    if args.family
+    if let Some(token_path) = &token_path
         && input
             .sig
             .inputs
@@ -168,7 +186,9 @@ fn direct(
     // A single raw context preserves the written signature and identifiers.
     // Token is a substitution placeholder only for generated families.
     Ok(
-        if args.family && tokens_contain_ident(&function, &["Token"]) {
+        if let Some(token_path) = &token_path
+            && tokens_contain_ident(&function, &["Token"])
+        {
             replace_ident_in_tokens(function, "Token", &quote!(::#token_path))
         } else {
             function
@@ -343,7 +363,7 @@ fn family(mut input: LightFn, args: Args) -> syn::Result<TokenStream> {
                 args.options.in_impl,
                 Some(quote!(__attune_proof)),
             );
-            let guard = gen_cfg_guard(tier.target_arch, gate);
+            let guard = gen_target_cfg_guard(tier.target_arch, gate, tier_wasm_features(tier.name));
             dispatch_arms.push(if tier.name == "scalar" {
                 let invocation = forward(&forward_sig, &proof_name, args.options.in_impl, Some(quote!(::archmage::ScalarToken)));
                 quote!(#guard { break '__attune_dispatch #invocation; })
@@ -454,9 +474,10 @@ fn proof_entry(
         // proof, and the sibling exists in the same definition scope.
         crate::engine::boundary::proof_call(invocation)
     };
-    let guard = gen_cfg_guard(
+    let guard = gen_target_cfg_guard(
         tier.target_arch,
         gate.or(args.options.imports.cfg_feature.as_deref()),
+        tier_wasm_features(tier.name),
     );
     Ok(quote!(#guard #wrapper))
 }
