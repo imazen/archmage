@@ -168,6 +168,7 @@ fn resolution_expands_wildcards_and_keeps_dispatch_additions_hidden() {
 fn duplicate_options_and_unknown_syntax_never_silently_overwrite() {
     for source in [
         "wrap, wrap",
+        "wrap, suppress_const_test, suppress_const_test",
         "in_trait, nested",
         "in_impl, in_impl",
         "inline(hint), inline(hint)",
@@ -212,6 +213,9 @@ fn duplicate_options_and_unknown_syntax_never_silently_overwrite() {
 fn incompatible_options_fail_before_emission() {
     for (source, message) in [
         ("wrap, v3", "wrap derives"),
+        ("v3, suppress_const_test", "requires a proof wrapper"),
+        ("_v3, suppress_const_test", "requires a proof wrapper"),
+        ("_*, suppress_const_test", "requires a proof wrapper"),
         ("wrap, define(f32x8)", "define(...) requires"),
         ("v3, _v3", "cannot be combined"),
         ("wrap, _v3", "cannot be combined"),
