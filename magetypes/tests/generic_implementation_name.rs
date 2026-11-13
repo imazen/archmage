@@ -109,7 +109,7 @@ fn neon_implementation_names() {
 // wasm32 — Wasm128 native 128; Wasm128 polyfill 256/512
 // ============================================================================
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
 #[test]
 fn wasm128_implementation_names() {
     assert_eq!(

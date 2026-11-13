@@ -647,7 +647,21 @@ pub fn generate_backend_files() -> BTreeMap<String, String> {
         );
 
         // 10e. X64V4xToken W512 backends + F32x16Convert delegated to
-        // X64V4Token (`self.v4()`).
+        // X64V4Token (`self.v4()`), plus Wasm128RelaxedFmaToken's full 43-trait
+        // delegation to Wasm128Token (`self.wasm128()`) with single-rounding
+        // relaxed FMA overrides.
+        let mut w128_w256_all_specs = vec![
+            (
+                "F32x4Backend".to_string(),
+                files["backends/f32x4.rs"].clone(),
+            ),
+            (
+                "F32x8Backend".to_string(),
+                files["backends/f32x8.rs"].clone(),
+            ),
+        ];
+        w128_w256_all_specs.extend(specs);
+
         let mut w512_specs: Vec<(String, String)> = w512_types
             .iter()
             .map(|ty| {
@@ -665,6 +679,10 @@ pub fn generate_backend_files() -> BTreeMap<String, String> {
         files.insert(
             "impls/x86_v4_w512_delegated.rs".to_string(),
             super::v4_delegation_gen::generate_v4x_w512(&w512_specs),
+        );
+        files.insert(
+            "impls/wasm128_fma_delegated.rs".to_string(),
+            super::v4_delegation_gen::generate_wasm_fma(&w128_w256_all_specs, &w512_specs),
         );
     }
 
@@ -698,6 +716,7 @@ fn generate_sealed() -> String {
         impl Sealed for archmage::NeonSha3Token {{}}
         impl Sealed for archmage::NeonCrcToken {{}}
         impl Sealed for archmage::Wasm128Token {{}}
+        impl Sealed for archmage::Wasm128RelaxedFmaToken {{}}
         impl Sealed for archmage::ScalarToken {{}}
     "#}
 }
@@ -1138,8 +1157,20 @@ fn generate_impls_mod() -> String {
         #[cfg(target_arch = "aarch64")]
         mod arm_neon;
 
-        #[cfg(target_arch = "wasm32")]
+        #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
         mod wasm128;
+        #[cfg(all(
+            target_arch = "wasm32",
+            target_feature = "simd128",
+            target_feature = "relaxed-simd"
+        ))]
+        mod wasm128_fma_delegated;
+        #[cfg(all(
+            target_arch = "wasm32",
+            target_feature = "simd128",
+            target_feature = "relaxed-simd"
+        ))]
+        mod wasm128_fma_overrides;
 
         mod scalar;
     "#}

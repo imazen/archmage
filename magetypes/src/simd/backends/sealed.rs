@@ -16,4 +16,5 @@ impl Sealed for archmage::NeonAesToken {}
 impl Sealed for archmage::NeonSha3Token {}
 impl Sealed for archmage::NeonCrcToken {}
 impl Sealed for archmage::Wasm128Token {}
+impl Sealed for archmage::Wasm128RelaxedFmaToken {}
 impl Sealed for archmage::ScalarToken {}

@@ -30,7 +30,19 @@ mod x86_v4_w512_delegated;
 #[cfg(target_arch = "aarch64")]
 mod arm_neon;
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
 mod wasm128;
+#[cfg(all(
+    target_arch = "wasm32",
+    target_feature = "simd128",
+    target_feature = "relaxed-simd"
+))]
+mod wasm128_fma_delegated;
+#[cfg(all(
+    target_arch = "wasm32",
+    target_feature = "simd128",
+    target_feature = "relaxed-simd"
+))]
+mod wasm128_fma_overrides;
 
 mod scalar;
