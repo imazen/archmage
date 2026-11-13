@@ -33,6 +33,7 @@ more archmage tokens via `#[target_feature]`.
 | `f16c` | 1.68 | V3+ | FP16 conversion |
 | `lzcnt` | 1.27 | V3+ | Leading zero count |
 | `movbe` | 1.70 | V3+ | Byte-swap load/store |
+| `avxvnni` | 1.89 | X64V3VnniToken | VEX-encoded VNNI (Alder Lake+, Arrow Lake+, Zen 5) |
 | `pclmulqdq` | 1.27 | X64CryptoToken, V3Crypto, V3GfniCrypto, V4, V4x, Fp16 | 128-bit carry-less multiply |
 | `aes` | 1.27 | X64CryptoToken, V3Crypto, V3GfniCrypto, V4, V4x, Fp16 | AES-NI |
 | `vpclmulqdq` | 1.89 | X64V3CryptoToken, X64V3GfniCryptoToken, V4x | 256/512-bit carry-less multiply |
@@ -82,8 +83,8 @@ still useful — it just can't be used for direct intrinsic calls yet.
 
 | Feature | Stable since | Token(s) | Notes |
 |---------|-------------|----------|-------|
-| `simd128` | 1.54 | Wasm128Token | ~100+ intrinsics |
-| `relaxed-simd` | 1.82 | Wasm128RelaxedToken | 28 relaxed instructions |
+| `simd128` | 1.54 | Wasm128Token, Wasm128RelaxedToken, Wasm128RelaxedFmaToken | ~100+ intrinsics |
+| `relaxed-simd` | 1.82 | Wasm128RelaxedToken, Wasm128RelaxedFmaToken | 28 relaxed instructions (`Wasm128RelaxedFmaToken` additionally probes runtime single-rounding `relaxed_madd` fusion) |
 
 ---
 
@@ -106,7 +107,6 @@ These have stable intrinsics and real use cases for SIMD compute or ML workloads
 | Feature | Stable since | Intrinsics | Hardware | Candidate token | Notes |
 |---------|-------------|-----------|----------|----------------|-------|
 | `avx512bf16` | 1.89 | ~24 stable | Cooper Lake, Sapphire Rapids+, Zen 4+ | Avx512Bf16Token (V4 + bf16) | BFloat16 dot product + conversion. NOT on Ice Lake/Tiger Lake/Rocket Lake, so doesn't belong in V4x. |
-| `avxvnni` | 1.89 | stable | Alder Lake+, Zen 5 | V3 + avxvnni | VNNI without AVX-512. For CPUs that dropped AVX-512. |
 | `avxifma` | 1.89 | stable | Sierra Forest+, Zen 5 | — | Integer FMA without AVX-512. |
 | `avxneconvert` | 1.89 | stable | Sierra Forest+ | — | FP conversion without AVX-512. |
 | `avxvnniint8` | 1.89 | stable | Sierra Forest+ | — | VNNI 8-bit without AVX-512. |
@@ -242,9 +242,9 @@ Features that exist but we have no plans for.
   X64V3CryptoToken → X64V3GfniCryptoToken.
 
 - **VEX-encoded ML extensions** (`avxvnni`, `avxifma`, `avxneconvert`, `avxvnniint8`,
-  `avxvnniint16`) exist for CPUs that dropped AVX-512 (Alder Lake, Sierra Forest). These
-  bring select AVX-512 functionality to V3-class CPUs. Potentially useful for ML inference
-  on consumer hardware, but no users have requested them.
+  `avxvnniint16`) exist for CPUs that dropped AVX-512 (Alder Lake, Arrow Lake, Sierra Forest)
+  and Zen 5. `X64V3VnniToken` covers `avxvnni` (`VPDPBUSD`, `VPDPBUSDS`, `VPDPWSSD`, `VPDPWSSDS`)
+  on V3-class CPUs; the remaining VEX ML extensions are not yet allocated to tokens.
 
 - **`avx512vp2intersect`** was implemented in Tiger Lake, then removed from all subsequent
   Intel CPUs. Do not add a token for it.

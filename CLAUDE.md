@@ -234,7 +234,13 @@ for the existing dispatched API, not for separate hardware-only methods.
 Rust generics monomorphize; trait bounds are not inherently indirect calls or
 inlining barriers. `#[magetypes]` supports type and const generics and supplies
 per-tier contexts. `define(f32x8)` is shorthand for the same generic vector with
-`Token` substituted; explicit `f32x8::<Token>` is equally idiomatic.
+`Token` substituted; explicit `f32x8::<Token>` is equally idiomatic. Subtier
+variants (`arm_v2`, `arm_v3`, `v3_vnni`, `avx512_fp16`, `wasm128_relaxed`) bind
+`define(...)` aliases to their parent magetypes backend token (`NeonToken`,
+`X64V3Token`, `X64V4Token`, `Wasm128Token`); extract the backend token with
+`magetypes::simd::MagetypesToken::magetypes(token)` and pass `token` directly to
+subtier-gated operations (such as `Arm64V2Token` dotprod, `Arm64V3Token` FHM,
+`X64V3VnniToken` AVX-VNNI, or `Wasm128RelaxedToken` relaxed-SIMD methods).
 
 A plain backend-generic helper needs a feature-enabled caller and appropriate
 inlining for good codegen. Neither `#[inline(always)]` nor a concrete token
@@ -369,9 +375,9 @@ that set and `-scalar`/`-default` drop the auto-appended fallback. All-plain sta
 override (replace defaults). `default` and `scalar` are interchangeable fallback
 slots (`+default` replaces `scalar`).
 
-Known tiers: `v1`, `v2`, `x64_crypto`, `v3`, `v3_crypto`, `v3_gfni_crypto`, `v4`, `v4x`,
-`arm_v2`, `arm_v3`, `neon`, `neon_aes`, `neon_sha3`, `neon_crc`, `wasm128`,
-`wasm128_relaxed`, `scalar`.
+Known tiers: `v1`, `v2`, `x64_crypto`, `v3`, `v3_vnni`, `v3_crypto`, `v3_gfni_crypto`, `v4`, `v4x`,
+`avx512_fp16`, `arm_v2`, `arm_v3`, `neon`, `neon_aes`, `neon_sha3`, `neon_crc`, `wasm128`,
+`wasm128_relaxed`, `wasm128_relaxed_fma`, `scalar`.
 Always include `scalar` in explicit tier lists. Currently auto-appended if omitted; will become a compile error in v1.0.
 
 **Passthrough mode** (already have token):
@@ -453,9 +459,9 @@ fallback). All-plain stays override.
 - `#[autoversion]` generates its own dispatcher. `#[magetypes]` requires separate `incant!`.
 - Use `#[autoversion]` for scalar auto-vectorization. Use `#[magetypes]` + `incant!` for hand-written intrinsics.
 
-Known tiers: `v1`, `v2`, `v3`, `v3_crypto`, `v3_gfni_crypto`, `v4`, `v4x`, `neon`,
-`neon_aes`, `neon_sha3`, `neon_crc`, `arm_v2`, `arm_v3`, `wasm128`,
-`wasm128_relaxed`, `x64_crypto`, `scalar`.
+Known tiers: `v1`, `v2`, `v3`, `v3_vnni`, `v3_crypto`, `v3_gfni_crypto`, `v4`, `v4x`,
+`avx512_fp16`, `neon`, `neon_aes`, `neon_sha3`, `neon_crc`, `arm_v2`, `arm_v3`, `wasm128`,
+`wasm128_relaxed`, `wasm128_relaxed_fma`, `x64_crypto`, `scalar`.
 
 ### `ScalarToken`
 
@@ -491,6 +497,7 @@ On ARM, `f32x8` is emulated with two `f32x4` operations. The API is identical.
 | **v2** | + SSE3, SSSE3, SSE4.1, SSE4.2, POPCNT | `X64V2Token` | `HasX64V2` |
 | **crypto** | v2 + PCLMULQDQ, AES-NI | `X64CryptoToken` | Use token directly |
 | **v3** | + AVX, AVX2, FMA, BMI1, BMI2, F16C | `X64V3Token` | Use token directly |
+| **v3_vnni** | v3 + AVXVNNI | `X64V3VnniToken` | Use token directly |
 | **v3_crypto** | v3 + VPCLMULQDQ, VAES | `X64V3CryptoToken` | Use token directly |
 | **v3_gfni_crypto** | v3_crypto + GFNI | `X64V3GfniCryptoToken` | Use token directly |
 | **v4** | + AVX512F, AVX512BW, AVX512CD, AVX512DQ, AVX512VL | `X64V4Token` / `Avx512Token` | `HasX64V4` |
@@ -801,7 +808,7 @@ Every token's feature claims MUST be verified by exercising real intrinsics on t
 | `tests/avx512_intrinsics_exercise.rs` | x86_64 | X64V4Token, X64V4xToken (AVX-512 F/BW/CD/DQ/VL + extensions) |
 | `tests/avx512fp16_intrinsics.rs` | x86_64 | Avx512Fp16Token (hierarchy only; no intrinsic exercise yet, see the FP16 row below) |
 | `tests/arm_feature_intrinsics.rs` | aarch64 | Arm64V2Token (RDM, DotProd, SHA2), NeonAesToken, NeonCrcToken, NeonSha3Token |
-| `tests/wasm_intrinsics_exercise.rs` | wasm32 | Wasm128Token (SIMD128 — ~100 intrinsics) |
+| `tests/wasm_intrinsics_exercise.rs` | wasm32 | Wasm128Token (SIMD128 — ~100 intrinsics), Wasm128RelaxedToken (all 28 relaxed-simd intrinsics), Wasm128RelaxedFmaToken (single-rounding FMA) |
 | `tests/feature_consistency.rs` | all | Token hierarchy, cross-arch None checks, feature detection consistency |
 | `magetypes/tests/harvest_shapes.rs` | all | 233 macro signature shapes harvested from 50 consumer crates (`just harvest-shapes ROOT`); compile-only, placeholder types, stub bodies |
 
@@ -832,6 +839,7 @@ Every token's feature claims MUST be verified by exercising real intrinsics on t
 | vpclmulqdq + vaes (256-bit) | ~8 | Full | Tested in x86_crypto_intrinsics.rs |
 | gfni (128/256-bit unmasked) | 6 | Full | Tested in x86_crypto_intrinsics.rs |
 | simd128 (wasm) | ~100+ | Full | Tested in wasm_intrinsics_exercise.rs |
+| relaxed-simd (wasm) | 28/28 | Full | All 28 intrinsics + single-rounding FMA tested in wasm_intrinsics_exercise.rs |
 
 **Features with zero stable intrinsics** (bf16, and fcma/i8mm until they stabilize) are documented but cannot have exercise tests on stable Rust. When these stabilize, add tests immediately. dotprod, fhm and avx512fp16 have stable intrinsics now; check `tests/arm_feature_intrinsics.rs` and `tests/avx512fp16_intrinsics.rs` for their exercise tests.
 
@@ -844,12 +852,13 @@ live in `token-registry.toml`. Everything else is derived:
 - `archmage-macros/src/generated/` — macro registry, generated by xtask
 - `magetypes/src/simd/generated/` — SIMD types, generated by xtask
 - `magetypes/src/simd/impls/` — **per-backend trait impls** (`arm_neon.rs`,
-  `x86_v3.rs`, `x86_v4.rs`, `wasm128.rs`, `scalar.rs`, `mod.rs`, and
-  `x86_v4_f32_delegated.rs`, the AVX-512 tokens' W128/W256 f32 backends derived
-  from the trait definitions by `xtask/src/simd_types/v4_delegation_gen.rs`),
-  generated by xtask. The one hand-written file there is
-  `x86_v4_f32_overrides.rs`: the three AVX-512VL pixel-packing helpers the
-  generated delegation calls.
+  `x86_v3.rs`, `x86_v4.rs`, `wasm128.rs`, `scalar.rs`, `mod.rs`, and the four
+  parent-delegation files `x86_v4_f32_delegated.rs`, `x86_v4_narrow_delegated.rs`,
+  `x86_v4_w512_delegated.rs`, and `wasm128_fma_delegated.rs` derived from the
+  trait definitions by `xtask/src/simd_types/v4_delegation_gen.rs`), generated
+  by xtask. The two hand-written files there are `x86_v4_f32_overrides.rs`
+  (AVX-512VL pixel-packing helpers) and `wasm128_fma_overrides.rs`
+  (`Wasm128RelaxedFmaToken` single-rounding `relaxed_madd` helpers).
 - `magetypes/src/simd/generic/generated/` — generic wrapper types, generated by xtask
 - `magetypes/tests/scalar_parity.rs`, `cross_arch_parity.rs`,
   `generated_simd_types.rs` — generated tests (`xtask/src/simd_types/scalar_parity_gen.rs`,
@@ -1141,6 +1150,7 @@ When touching ANY codegen file, convert `writeln!` chains to `formatdoc!` in the
 - `X64V2Token` - SSE4.2 + POPCNT (Nehalem 2008+)
 - `X64CryptoToken` - V2 + PCLMULQDQ + AES-NI (Westmere 2010+)
 - `X64V3Token` - AVX2 + FMA + BMI2 (Haswell 2013+, Zen 1+)
+- `X64V3VnniToken` - V3 + AVXVNNI (Alder Lake 2021+, Arrow Lake 2024+, Zen 5 2024+)
 - `X64V3CryptoToken` - V3 + VPCLMULQDQ + VAES (Zen 3+ 2020, Alder Lake 2021+)
 - `X64V4Token` / `Avx512Token` - + AVX-512 F/BW/CD/DQ/VL + AES-NI (Skylake-X 2017+, Zen 4+)
 - `X64V4xToken` - + modern extensions + VAES/VPCLMULQDQ/GFNI (Ice Lake 2019+, Zen 4+)
@@ -1155,6 +1165,11 @@ When touching ANY codegen file, convert `writeln!` chains to `formatdoc!` in the
 - `NeonAesToken` - neon + AES
 - `NeonSha3Token` - neon + SHA3
 - `NeonCrcToken` - neon + CRC
+
+**WebAssembly:**
+- `Wasm128Token` - SIMD128 (compile-time `simd128`)
+- `Wasm128RelaxedToken` - SIMD128 + Relaxed SIMD (compile-time `relaxed-simd`)
+- `Wasm128RelaxedFmaToken` - Relaxed SIMD + runtime-verified single-rounding `relaxed_madd` fusion
 
 ## Tier Traits
 
@@ -1219,9 +1234,11 @@ fn process(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 Magemath migration (2026-11-10): LOWP log1p retains the rational log2 fit's bias
 near zero; a tiny positive input can produce a negative approximation. MIDP
 remains available. This refactor does not introduce a new small-x LOWP graph or
-promote the experimental normal-output exp2 range. Reciprocal/root primitives
-remain in Magetypes until separately implemented and measured replacements
-exist. See `docs/MAGEMATH-MIGRATION.md`.
+promote the experimental normal-output exp2 range. `magemath::cbrtf` provides
+cube root with an in-register `i32` shift-add Kahan seed (`magetypes` flat
+`cbrt_*` methods are deprecated since `0.9.32`); reciprocal and reciprocal-sqrt
+primitives remain in Magetypes until separately implemented and measured
+replacements exist. See `docs/MAGEMATH-MIGRATION.md`.
 
 Canonical HIGHP packed performance (2026-11-09, draft held): the first M6
 32-cell exploratory matrix has 24 Full packed cells within the 2% std cost
