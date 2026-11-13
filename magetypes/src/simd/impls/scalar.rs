@@ -140,6 +140,24 @@ impl F32x4Backend for archmage::ScalarToken {
     }
 
     #[inline(always)]
+    fn min_fast(self, a: [f32; 4], b: [f32; 4]) -> [f32; 4] {
+        let mut r = [0.0f32; 4];
+        for i in 0..4 {
+            r[i] = if a[i] < b[i] { a[i] } else { b[i] };
+        }
+        r
+    }
+
+    #[inline(always)]
+    fn max_fast(self, a: [f32; 4], b: [f32; 4]) -> [f32; 4] {
+        let mut r = [0.0f32; 4];
+        for i in 0..4 {
+            r[i] = if a[i] > b[i] { a[i] } else { b[i] };
+        }
+        r
+    }
+
+    #[inline(always)]
     fn sqrt(self, a: [f32; 4]) -> [f32; 4] {
         let mut r = [0.0f32; 4];
         for i in 0..4 {
@@ -399,6 +417,52 @@ impl F32x4Backend for archmage::ScalarToken {
             f32::from_bits(a[3].to_bits() ^ b[3].to_bits()),
         ]
     }
+
+    #[inline(always)]
+    fn broadcast_lane<const N: usize>(self, a: [f32; 4]) -> [f32; 4] {
+        const { assert!(N < 4, "lane index out of bounds") };
+        [a[N]; 4]
+    }
+
+    #[inline(always)]
+    fn shift_left_lanes<const N: usize>(self, a: [f32; 4]) -> [f32; 4] {
+        const { assert!(N <= 4, "shift count out of bounds") };
+        let mut out = [0.0f32; 4];
+        let mut i = N;
+        while i < 4 {
+            out[i] = a[i - N];
+            i += 1;
+        }
+        out
+    }
+
+    #[inline(always)]
+    fn shift_right_lanes<const N: usize>(self, a: [f32; 4]) -> [f32; 4] {
+        const { assert!(N <= 4, "shift count out of bounds") };
+        let mut out = [0.0f32; 4];
+        let mut i = 0;
+        while i + N < 4 {
+            out[i] = a[i + N];
+            i += 1;
+        }
+        out
+    }
+
+    #[inline(always)]
+    fn mul_add_lane_relaxed<const LANE: i32>(
+        self,
+        a: [f32; 4],
+        v_in: [f32; 4],
+        acc: [f32; 4],
+    ) -> [f32; 4] {
+        const { assert!(LANE >= 0 && (LANE as usize) < 4, "LANE out of bounds") };
+        let b = v_in[LANE as usize];
+        let mut out = [0.0f32; 4];
+        for i in 0..4 {
+            out[i] = a[i] * b + acc[i];
+        }
+        out
+    }
 }
 
 impl F32x8Backend for archmage::ScalarToken {
@@ -527,6 +591,24 @@ impl F32x8Backend for archmage::ScalarToken {
             a[6].max(b[6]),
             a[7].max(b[7]),
         ]
+    }
+
+    #[inline(always)]
+    fn min_fast(self, a: [f32; 8], b: [f32; 8]) -> [f32; 8] {
+        let mut r = [0.0f32; 8];
+        for i in 0..8 {
+            r[i] = if a[i] < b[i] { a[i] } else { b[i] };
+        }
+        r
+    }
+
+    #[inline(always)]
+    fn max_fast(self, a: [f32; 8], b: [f32; 8]) -> [f32; 8] {
+        let mut r = [0.0f32; 8];
+        for i in 0..8 {
+            r[i] = if a[i] > b[i] { a[i] } else { b[i] };
+        }
+        r
     }
 
     #[inline(always)]
@@ -821,6 +903,52 @@ impl F32x8Backend for archmage::ScalarToken {
             f32::from_bits(a[7].to_bits() ^ b[7].to_bits()),
         ]
     }
+
+    #[inline(always)]
+    fn broadcast_lane<const N: usize>(self, a: [f32; 8]) -> [f32; 8] {
+        const { assert!(N < 8, "lane index out of bounds") };
+        [a[N]; 8]
+    }
+
+    #[inline(always)]
+    fn shift_left_lanes<const N: usize>(self, a: [f32; 8]) -> [f32; 8] {
+        const { assert!(N <= 8, "shift count out of bounds") };
+        let mut out = [0.0f32; 8];
+        let mut i = N;
+        while i < 8 {
+            out[i] = a[i - N];
+            i += 1;
+        }
+        out
+    }
+
+    #[inline(always)]
+    fn shift_right_lanes<const N: usize>(self, a: [f32; 8]) -> [f32; 8] {
+        const { assert!(N <= 8, "shift count out of bounds") };
+        let mut out = [0.0f32; 8];
+        let mut i = 0;
+        while i + N < 8 {
+            out[i] = a[i + N];
+            i += 1;
+        }
+        out
+    }
+
+    #[inline(always)]
+    fn mul_add_lane_relaxed<const LANE: i32>(
+        self,
+        a: [f32; 8],
+        v_in: [f32; 8],
+        acc: [f32; 8],
+    ) -> [f32; 8] {
+        const { assert!(LANE >= 0 && (LANE as usize) < 8, "LANE out of bounds") };
+        let b = v_in[LANE as usize];
+        let mut out = [0.0f32; 8];
+        for i in 0..8 {
+            out[i] = a[i] * b + acc[i];
+        }
+        out
+    }
 }
 
 impl F64x2Backend for archmage::ScalarToken {
@@ -895,6 +1023,24 @@ impl F64x2Backend for archmage::ScalarToken {
     #[inline(always)]
     fn max(self, a: [f64; 2], b: [f64; 2]) -> [f64; 2] {
         [a[0].max(b[0]), a[1].max(b[1])]
+    }
+
+    #[inline(always)]
+    fn min_fast(self, a: [f64; 2], b: [f64; 2]) -> [f64; 2] {
+        let mut r = [0.0f64; 2];
+        for i in 0..2 {
+            r[i] = if a[i] < b[i] { a[i] } else { b[i] };
+        }
+        r
+    }
+
+    #[inline(always)]
+    fn max_fast(self, a: [f64; 2], b: [f64; 2]) -> [f64; 2] {
+        let mut r = [0.0f64; 2];
+        for i in 0..2 {
+            r[i] = if a[i] > b[i] { a[i] } else { b[i] };
+        }
+        r
     }
 
     #[inline(always)]
@@ -1215,6 +1361,24 @@ impl F64x4Backend for archmage::ScalarToken {
             a[2].max(b[2]),
             a[3].max(b[3]),
         ]
+    }
+
+    #[inline(always)]
+    fn min_fast(self, a: [f64; 4], b: [f64; 4]) -> [f64; 4] {
+        let mut r = [0.0f64; 4];
+        for i in 0..4 {
+            r[i] = if a[i] < b[i] { a[i] } else { b[i] };
+        }
+        r
+    }
+
+    #[inline(always)]
+    fn max_fast(self, a: [f64; 4], b: [f64; 4]) -> [f64; 4] {
+        let mut r = [0.0f64; 4];
+        for i in 0..4 {
+            r[i] = if a[i] > b[i] { a[i] } else { b[i] };
+        }
+        r
     }
 
     #[inline(always)]
@@ -6414,6 +6578,11 @@ impl I16x8Backend for archmage::ScalarToken {
     }
 
     #[inline(always)]
+    fn mul_hrs_q15(self, a: [i16; 8], b: [i16; 8]) -> [i16; 8] {
+        core::array::from_fn(|i| ((a[i] as i32 * b[i] as i32 + 0x4000) >> 15) as i16)
+    }
+
+    #[inline(always)]
     fn neg(self, a: [i16; 8]) -> [i16; 8] {
         [
             a[0].wrapping_neg(),
@@ -6907,6 +7076,11 @@ impl I16x16Backend for archmage::ScalarToken {
             a[14].wrapping_mul(b[14]),
             a[15].wrapping_mul(b[15]),
         ]
+    }
+
+    #[inline(always)]
+    fn mul_hrs_q15(self, a: [i16; 16], b: [i16; 16]) -> [i16; 16] {
+        core::array::from_fn(|i| ((a[i] as i32 * b[i] as i32 + 0x4000) >> 15) as i16)
     }
 
     #[inline(always)]
@@ -10302,6 +10476,11 @@ impl I16x32Backend for archmage::ScalarToken {
     #[inline(always)]
     fn mul(self, a: [i16; 32], b: [i16; 32]) -> [i16; 32] {
         core::array::from_fn(|i| a[i].wrapping_mul(b[i]))
+    }
+
+    #[inline(always)]
+    fn mul_hrs_q15(self, a: [i16; 32], b: [i16; 32]) -> [i16; 32] {
+        core::array::from_fn(|i| ((a[i] as i32 * b[i] as i32 + 0x4000) >> 15) as i16)
     }
 
     #[inline(always)]

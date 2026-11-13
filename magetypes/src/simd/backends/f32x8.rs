@@ -71,6 +71,20 @@ pub trait F32x8Backend: SimdToken + Sealed + Copy + 'static {
     /// Lane-wise maximum.
     fn max(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
+    /// Fast single-instruction lane-wise minimum (NaN and `-0.0`/`+0.0`
+    /// tie-breaking are unspecified). Defaults to [`min`](Self::min).
+    #[inline(always)]
+    fn min_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        <Self as F32x8Backend>::min(self, a, b)
+    }
+
+    /// Fast single-instruction lane-wise maximum (NaN and `-0.0`/`+0.0`
+    /// tie-breaking are unspecified). Defaults to [`max`](Self::max).
+    #[inline(always)]
+    fn max_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        <Self as F32x8Backend>::max(self, a, b)
+    }
+
     /// Square root.
     fn sqrt(self, a: Self::Repr) -> Self::Repr;
 
@@ -208,6 +222,56 @@ pub trait F32x8Backend: SimdToken + Sealed + Copy + 'static {
     #[inline(always)]
     fn rsqrt(self, a: Self::Repr) -> Self::Repr {
         Self::rsqrt_approx(self, a)
+    }
+
+    /// Broadcast lane `N` across all 8 lanes.
+    #[inline(always)]
+    fn broadcast_lane<const N: usize>(self, a: Self::Repr) -> Self::Repr {
+        const { assert!(N < 8, "lane index out of bounds") };
+        let arr = <Self as F32x8Backend>::to_array(self, a);
+        <Self as F32x8Backend>::splat(self, arr[N])
+    }
+
+    /// Shift lanes toward higher indices by `N`, filling vacated low lanes with `0.0`.
+    #[inline(always)]
+    fn shift_left_lanes<const N: usize>(self, a: Self::Repr) -> Self::Repr {
+        const { assert!(N <= 8, "shift count out of bounds") };
+        let arr = <Self as F32x8Backend>::to_array(self, a);
+        let mut out = [0.0f32; 8];
+        let mut i = N;
+        while i < 8 {
+            out[i] = arr[i - N];
+            i += 1;
+        }
+        <Self as F32x8Backend>::from_array(self, out)
+    }
+
+    /// Shift lanes toward lower indices by `N`, filling vacated high lanes with `0.0`.
+    #[inline(always)]
+    fn shift_right_lanes<const N: usize>(self, a: Self::Repr) -> Self::Repr {
+        const { assert!(N <= 8, "shift count out of bounds") };
+        let arr = <Self as F32x8Backend>::to_array(self, a);
+        let mut out = [0.0f32; 8];
+        let mut i = 0;
+        while i + N < 8 {
+            out[i] = arr[i + N];
+            i += 1;
+        }
+        <Self as F32x8Backend>::from_array(self, out)
+    }
+
+    /// Lane-indexed multiply-add: `a * v_in[LANE] + acc`.
+    #[inline(always)]
+    fn mul_add_lane_relaxed<const LANE: i32>(
+        self,
+        a: Self::Repr,
+        v_in: Self::Repr,
+        acc: Self::Repr,
+    ) -> Self::Repr {
+        const { assert!(LANE >= 0 && (LANE as usize) < 8, "LANE out of bounds") };
+        let arr = <Self as F32x8Backend>::to_array(self, v_in);
+        let b = <Self as F32x8Backend>::splat(self, arr[LANE as usize]);
+        <Self as F32x8Backend>::mul_add(self, a, b, acc)
     }
 
     // ====== Pixel pack (f32 only) ======

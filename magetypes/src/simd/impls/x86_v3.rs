@@ -303,6 +303,57 @@ impl F32x4Backend for X64V3Token {
     }
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn broadcast_lane<const N: usize>(self, a: __m128) -> __m128 {
+        const { assert!(N < 4, "lane index out of bounds") };
+        match N {
+            0 => _mm_permute_ps::<0x00>(a),
+            1 => _mm_permute_ps::<0x55>(a),
+            2 => _mm_permute_ps::<0xAA>(a),
+            3 => _mm_permute_ps::<0xFF>(a),
+            _ => unreachable!(),
+        }
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn shift_left_lanes<const N: usize>(self, a: __m128) -> __m128 {
+        const { assert!(N <= 4, "shift count out of bounds") };
+        match N {
+            0 => a,
+            1 => _mm_castsi128_ps(_mm_slli_si128::<4>(_mm_castps_si128(a))),
+            2 => _mm_castsi128_ps(_mm_slli_si128::<8>(_mm_castps_si128(a))),
+            3 => _mm_castsi128_ps(_mm_slli_si128::<12>(_mm_castps_si128(a))),
+            4 => _mm_setzero_ps(),
+            _ => unreachable!(),
+        }
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn shift_right_lanes<const N: usize>(self, a: __m128) -> __m128 {
+        const { assert!(N <= 4, "shift count out of bounds") };
+        match N {
+            0 => a,
+            1 => _mm_castsi128_ps(_mm_srli_si128::<4>(_mm_castps_si128(a))),
+            2 => _mm_castsi128_ps(_mm_srli_si128::<8>(_mm_castps_si128(a))),
+            3 => _mm_castsi128_ps(_mm_srli_si128::<12>(_mm_castps_si128(a))),
+            4 => _mm_setzero_ps(),
+            _ => unreachable!(),
+        }
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn mul_add_lane_relaxed<const LANE: i32>(self, a: __m128, v_in: __m128, acc: __m128) -> __m128 {
+        const { assert!(LANE >= 0 && LANE < 4, "LANE must be in 0..4") };
+        let splat = match LANE {
+            0 => _mm_permute_ps::<0x00>(v_in),
+            1 => _mm_permute_ps::<0x55>(v_in),
+            2 => _mm_permute_ps::<0xAA>(v_in),
+            3 => _mm_permute_ps::<0xFF>(v_in),
+            _ => unreachable!(),
+        };
+        _mm_fmadd_ps(a, splat, acc)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
     fn to_u8_bytes(self, a: __m128) -> [u8; 4] {
         // Clamp above at 255 first: cvtps turns +inf and anything past
         // i32::MAX into i32::MIN, which the packs would saturate to 0.
@@ -604,6 +655,105 @@ impl F32x8Backend for X64V3Token {
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn bitxor(self, a: __m256, b: __m256) -> __m256 {
         _mm256_xor_ps(a, b)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn broadcast_lane<const N: usize>(self, a: __m256) -> __m256 {
+        const { assert!(N < 8, "lane index out of bounds") };
+        match N {
+            0 => _mm256_broadcastss_ps(_mm256_castps256_ps128(a)),
+            1 => _mm256_broadcastss_ps(_mm_permute_ps::<0x55>(_mm256_castps256_ps128(a))),
+            2 => _mm256_broadcastss_ps(_mm_permute_ps::<0xAA>(_mm256_castps256_ps128(a))),
+            3 => _mm256_broadcastss_ps(_mm_permute_ps::<0xFF>(_mm256_castps256_ps128(a))),
+            4 => _mm256_broadcastss_ps(_mm256_extractf128_ps::<1>(a)),
+            5 => _mm256_permute_ps::<0x55>(_mm256_permute2f128_ps::<0x11>(a, a)),
+            6 => _mm256_permute_ps::<0xAA>(_mm256_permute2f128_ps::<0x11>(a, a)),
+            7 => _mm256_permute_ps::<0xFF>(_mm256_permute2f128_ps::<0x11>(a, a)),
+            _ => unreachable!(),
+        }
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn shift_left_lanes<const N: usize>(self, a: __m256) -> __m256 {
+        const { assert!(N <= 8, "shift count out of bounds") };
+        let vi = _mm256_castps_si256(a);
+        match N {
+            0 => a,
+            1 => _mm256_castsi256_ps(_mm256_alignr_epi8::<12>(
+                vi,
+                _mm256_permute2x128_si256::<0x08>(vi, vi),
+            )),
+            2 => _mm256_castsi256_ps(_mm256_alignr_epi8::<8>(
+                vi,
+                _mm256_permute2x128_si256::<0x08>(vi, vi),
+            )),
+            3 => _mm256_castsi256_ps(_mm256_alignr_epi8::<4>(
+                vi,
+                _mm256_permute2x128_si256::<0x08>(vi, vi),
+            )),
+            4 => _mm256_castsi256_ps(_mm256_permute2x128_si256::<0x08>(vi, vi)),
+            5 => _mm256_castsi256_ps(_mm256_bslli_epi128::<4>(_mm256_permute2x128_si256::<0x08>(
+                vi, vi,
+            ))),
+            6 => _mm256_castsi256_ps(_mm256_bslli_epi128::<8>(_mm256_permute2x128_si256::<0x08>(
+                vi, vi,
+            ))),
+            7 => _mm256_castsi256_ps(_mm256_bslli_epi128::<12>(
+                _mm256_permute2x128_si256::<0x08>(vi, vi),
+            )),
+            8 => _mm256_setzero_ps(),
+            _ => unreachable!(),
+        }
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn shift_right_lanes<const N: usize>(self, a: __m256) -> __m256 {
+        const { assert!(N <= 8, "shift count out of bounds") };
+        let vi = _mm256_castps_si256(a);
+        match N {
+            0 => a,
+            1 => _mm256_castsi256_ps(_mm256_alignr_epi8::<4>(
+                _mm256_permute2x128_si256::<0x81>(vi, vi),
+                vi,
+            )),
+            2 => _mm256_castsi256_ps(_mm256_alignr_epi8::<8>(
+                _mm256_permute2x128_si256::<0x81>(vi, vi),
+                vi,
+            )),
+            3 => _mm256_castsi256_ps(_mm256_alignr_epi8::<12>(
+                _mm256_permute2x128_si256::<0x81>(vi, vi),
+                vi,
+            )),
+            4 => _mm256_castsi256_ps(_mm256_permute2x128_si256::<0x81>(vi, vi)),
+            5 => _mm256_castsi256_ps(_mm256_bsrli_epi128::<4>(_mm256_permute2x128_si256::<0x81>(
+                vi, vi,
+            ))),
+            6 => _mm256_castsi256_ps(_mm256_bsrli_epi128::<8>(_mm256_permute2x128_si256::<0x81>(
+                vi, vi,
+            ))),
+            7 => _mm256_castsi256_ps(_mm256_bsrli_epi128::<12>(
+                _mm256_permute2x128_si256::<0x81>(vi, vi),
+            )),
+            8 => _mm256_setzero_ps(),
+            _ => unreachable!(),
+        }
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn mul_add_lane_relaxed<const LANE: i32>(self, a: __m256, v_in: __m256, acc: __m256) -> __m256 {
+        const { assert!(LANE >= 0 && LANE < 8, "LANE must be in 0..8") };
+        let splat = match LANE {
+            0 => _mm256_broadcastss_ps(_mm256_castps256_ps128(v_in)),
+            1 => _mm256_broadcastss_ps(_mm_permute_ps::<0x55>(_mm256_castps256_ps128(v_in))),
+            2 => _mm256_broadcastss_ps(_mm_permute_ps::<0xAA>(_mm256_castps256_ps128(v_in))),
+            3 => _mm256_broadcastss_ps(_mm_permute_ps::<0xFF>(_mm256_castps256_ps128(v_in))),
+            4 => _mm256_broadcastss_ps(_mm256_extractf128_ps::<1>(v_in)),
+            5 => _mm256_permute_ps::<0x55>(_mm256_permute2f128_ps::<0x11>(v_in, v_in)),
+            6 => _mm256_permute_ps::<0xAA>(_mm256_permute2f128_ps::<0x11>(v_in, v_in)),
+            7 => _mm256_permute_ps::<0xFF>(_mm256_permute2f128_ps::<0x11>(v_in, v_in)),
+            _ => unreachable!(),
+        };
+        _mm256_fmadd_ps(a, splat, acc)
     }
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
@@ -3313,6 +3463,10 @@ impl I16x8Backend for X64V3Token {
         _mm_mullo_epi16(a, b)
     }
     #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn mul_hrs_q15(self, a: __m128i, b: __m128i) -> __m128i {
+        _mm_mulhrs_epi16(a, b)
+    }
+    #[arcane(suppress_const_test, _self = X64V3Token)]
     fn neg(self, a: __m128i) -> __m128i {
         _mm_sub_epi16(_mm_setzero_si128(), a)
     }
@@ -3551,6 +3705,10 @@ impl I16x16Backend for X64V3Token {
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn mul(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_mullo_epi16(a, b)
+    }
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn mul_hrs_q15(self, a: __m256i, b: __m256i) -> __m256i {
+        _mm256_mulhrs_epi16(a, b)
     }
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn neg(self, a: __m256i) -> __m256i {
@@ -6081,6 +6239,14 @@ impl I16x32Backend for X64V3Token {
         [
             <X64V3Token as I16x16Backend>::mul(self, a[0], b[0]),
             <X64V3Token as I16x16Backend>::mul(self, a[1], b[1]),
+        ]
+    }
+
+    #[inline(always)]
+    fn mul_hrs_q15(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+        [
+            <X64V3Token as I16x16Backend>::mul_hrs_q15(self, a[0], b[0]),
+            <X64V3Token as I16x16Backend>::mul_hrs_q15(self, a[1], b[1]),
         ]
     }
 

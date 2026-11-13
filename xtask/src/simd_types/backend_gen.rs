@@ -800,6 +800,63 @@ fn generate_float_backend_trait(ty: &FloatVecType) -> String {
         String::new()
     };
 
+    let lane_ops_trait = if elem == "f32" {
+        formatdoc! {r#"
+
+            /// Broadcast lane `N` across all {lanes} lanes.
+            #[inline(always)]
+            fn broadcast_lane<const N: usize>(self, a: Self::Repr) -> Self::Repr {{
+                const {{ assert!(N < {lanes}, "lane index out of bounds") }};
+                let arr = <Self as {trait_name}>::to_array(self, a);
+                <Self as {trait_name}>::splat(self, arr[N])
+            }}
+
+            /// Shift lanes toward higher indices by `N`, filling vacated low lanes with `0.0`.
+            #[inline(always)]
+            fn shift_left_lanes<const N: usize>(self, a: Self::Repr) -> Self::Repr {{
+                const {{ assert!(N <= {lanes}, "shift count out of bounds") }};
+                let arr = <Self as {trait_name}>::to_array(self, a);
+                let mut out = [0.0f32; {lanes}];
+                let mut i = N;
+                while i < {lanes} {{
+                    out[i] = arr[i - N];
+                    i += 1;
+                }}
+                <Self as {trait_name}>::from_array(self, out)
+            }}
+
+            /// Shift lanes toward lower indices by `N`, filling vacated high lanes with `0.0`.
+            #[inline(always)]
+            fn shift_right_lanes<const N: usize>(self, a: Self::Repr) -> Self::Repr {{
+                const {{ assert!(N <= {lanes}, "shift count out of bounds") }};
+                let arr = <Self as {trait_name}>::to_array(self, a);
+                let mut out = [0.0f32; {lanes}];
+                let mut i = 0;
+                while i + N < {lanes} {{
+                    out[i] = arr[i + N];
+                    i += 1;
+                }}
+                <Self as {trait_name}>::from_array(self, out)
+            }}
+
+            /// Lane-indexed multiply-add: `a * v_in[LANE] + acc`.
+            #[inline(always)]
+            fn mul_add_lane_relaxed<const LANE: i32>(
+                self,
+                a: Self::Repr,
+                v_in: Self::Repr,
+                acc: Self::Repr,
+            ) -> Self::Repr {{
+                const {{ assert!(LANE >= 0 && (LANE as usize) < {lanes}, "LANE out of bounds") }};
+                let arr = <Self as {trait_name}>::to_array(self, v_in);
+                let b = <Self as {trait_name}>::splat(self, arr[LANE as usize]);
+                <Self as {trait_name}>::mul_add(self, a, b, acc)
+            }}
+        "#}
+    } else {
+        String::new()
+    };
+
     formatdoc! {r#"
         //! Backend trait for `{name}<T>` — {lanes}-lane {elem} SIMD vector.
         //!
@@ -873,6 +930,20 @@ fn generate_float_backend_trait(ty: &FloatVecType) -> String {
 
             /// Lane-wise maximum.
             fn max(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
+
+            /// Fast single-instruction lane-wise minimum (NaN and `-0.0`/`+0.0`
+            /// tie-breaking are unspecified). Defaults to [`min`](Self::min).
+            #[inline(always)]
+            fn min_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {{
+                <Self as {trait_name}>::min(self, a, b)
+            }}
+
+            /// Fast single-instruction lane-wise maximum (NaN and `-0.0`/`+0.0`
+            /// tie-breaking are unspecified). Defaults to [`max`](Self::max).
+            #[inline(always)]
+            fn max_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {{
+                <Self as {trait_name}>::max(self, a, b)
+            }}
 
             /// Square root.
             fn sqrt(self, a: Self::Repr) -> Self::Repr;
@@ -1004,6 +1075,7 @@ fn generate_float_backend_trait(ty: &FloatVecType) -> String {
             /// contract shape.
             #[inline(always)]
             fn rsqrt(self, a: Self::Repr) -> Self::Repr {{ Self::rsqrt_approx(self, a) }}
+            {lane_ops_trait}
             {to_u8_trait}
             {transpose_trait}
         }}
@@ -1649,6 +1721,144 @@ fn generate_x86_float_impl(ty: &FloatVecType, token: &str) -> String {
         String::new()
     };
 
+    let lane_ops_x86 = match (elem, bits) {
+        ("f32", 128) => formatdoc! {r#"
+
+            {arcane}
+            fn broadcast_lane<const N: usize>(self, a: {inner}) -> {inner} {{
+                const {{ assert!(N < 4, "lane index out of bounds") }};
+                match N {{
+                    0 => _mm_permute_ps::<0x00>(a),
+                    1 => _mm_permute_ps::<0x55>(a),
+                    2 => _mm_permute_ps::<0xAA>(a),
+                    3 => _mm_permute_ps::<0xFF>(a),
+                    _ => unreachable!(),
+                }}
+            }}
+
+            {arcane}
+            fn shift_left_lanes<const N: usize>(self, a: {inner}) -> {inner} {{
+                const {{ assert!(N <= 4, "shift count out of bounds") }};
+                match N {{
+                    0 => a,
+                    1 => _mm_castsi128_ps(_mm_slli_si128::<4>(_mm_castps_si128(a))),
+                    2 => _mm_castsi128_ps(_mm_slli_si128::<8>(_mm_castps_si128(a))),
+                    3 => _mm_castsi128_ps(_mm_slli_si128::<12>(_mm_castps_si128(a))),
+                    4 => _mm_setzero_ps(),
+                    _ => unreachable!(),
+                }}
+            }}
+
+            {arcane}
+            fn shift_right_lanes<const N: usize>(self, a: {inner}) -> {inner} {{
+                const {{ assert!(N <= 4, "shift count out of bounds") }};
+                match N {{
+                    0 => a,
+                    1 => _mm_castsi128_ps(_mm_srli_si128::<4>(_mm_castps_si128(a))),
+                    2 => _mm_castsi128_ps(_mm_srli_si128::<8>(_mm_castps_si128(a))),
+                    3 => _mm_castsi128_ps(_mm_srli_si128::<12>(_mm_castps_si128(a))),
+                    4 => _mm_setzero_ps(),
+                    _ => unreachable!(),
+                }}
+            }}
+
+            {arcane}
+            fn mul_add_lane_relaxed<const LANE: i32>(
+                self,
+                a: {inner},
+                v_in: {inner},
+                acc: {inner},
+            ) -> {inner} {{
+                const {{ assert!(LANE >= 0 && LANE < 4, "LANE must be in 0..4") }};
+                let splat = match LANE {{
+                    0 => _mm_permute_ps::<0x00>(v_in),
+                    1 => _mm_permute_ps::<0x55>(v_in),
+                    2 => _mm_permute_ps::<0xAA>(v_in),
+                    3 => _mm_permute_ps::<0xFF>(v_in),
+                    _ => unreachable!(),
+                }};
+                _mm_fmadd_ps(a, splat, acc)
+            }}
+        "#},
+        ("f32", 256) => formatdoc! {r#"
+
+            {arcane}
+            fn broadcast_lane<const N: usize>(self, a: {inner}) -> {inner} {{
+                const {{ assert!(N < 8, "lane index out of bounds") }};
+                match N {{
+                    0 => _mm256_broadcastss_ps(_mm256_castps256_ps128(a)),
+                    1 => _mm256_broadcastss_ps(_mm_permute_ps::<0x55>(_mm256_castps256_ps128(a))),
+                    2 => _mm256_broadcastss_ps(_mm_permute_ps::<0xAA>(_mm256_castps256_ps128(a))),
+                    3 => _mm256_broadcastss_ps(_mm_permute_ps::<0xFF>(_mm256_castps256_ps128(a))),
+                    4 => _mm256_broadcastss_ps(_mm256_extractf128_ps::<1>(a)),
+                    5 => _mm256_permute_ps::<0x55>(_mm256_permute2f128_ps::<0x11>(a, a)),
+                    6 => _mm256_permute_ps::<0xAA>(_mm256_permute2f128_ps::<0x11>(a, a)),
+                    7 => _mm256_permute_ps::<0xFF>(_mm256_permute2f128_ps::<0x11>(a, a)),
+                    _ => unreachable!(),
+                }}
+            }}
+
+            {arcane}
+            fn shift_left_lanes<const N: usize>(self, a: {inner}) -> {inner} {{
+                const {{ assert!(N <= 8, "shift count out of bounds") }};
+                let vi = _mm256_castps_si256(a);
+                match N {{
+                    0 => a,
+                    1 => _mm256_castsi256_ps(_mm256_alignr_epi8::<12>(vi, _mm256_permute2x128_si256::<0x08>(vi, vi))),
+                    2 => _mm256_castsi256_ps(_mm256_alignr_epi8::<8>(vi, _mm256_permute2x128_si256::<0x08>(vi, vi))),
+                    3 => _mm256_castsi256_ps(_mm256_alignr_epi8::<4>(vi, _mm256_permute2x128_si256::<0x08>(vi, vi))),
+                    4 => _mm256_castsi256_ps(_mm256_permute2x128_si256::<0x08>(vi, vi)),
+                    5 => _mm256_castsi256_ps(_mm256_bslli_epi128::<4>(_mm256_permute2x128_si256::<0x08>(vi, vi))),
+                    6 => _mm256_castsi256_ps(_mm256_bslli_epi128::<8>(_mm256_permute2x128_si256::<0x08>(vi, vi))),
+                    7 => _mm256_castsi256_ps(_mm256_bslli_epi128::<12>(_mm256_permute2x128_si256::<0x08>(vi, vi))),
+                    8 => _mm256_setzero_ps(),
+                    _ => unreachable!(),
+                }}
+            }}
+
+            {arcane}
+            fn shift_right_lanes<const N: usize>(self, a: {inner}) -> {inner} {{
+                const {{ assert!(N <= 8, "shift count out of bounds") }};
+                let vi = _mm256_castps_si256(a);
+                match N {{
+                    0 => a,
+                    1 => _mm256_castsi256_ps(_mm256_alignr_epi8::<4>(_mm256_permute2x128_si256::<0x81>(vi, vi), vi)),
+                    2 => _mm256_castsi256_ps(_mm256_alignr_epi8::<8>(_mm256_permute2x128_si256::<0x81>(vi, vi), vi)),
+                    3 => _mm256_castsi256_ps(_mm256_alignr_epi8::<12>(_mm256_permute2x128_si256::<0x81>(vi, vi), vi)),
+                    4 => _mm256_castsi256_ps(_mm256_permute2x128_si256::<0x81>(vi, vi)),
+                    5 => _mm256_castsi256_ps(_mm256_bsrli_epi128::<4>(_mm256_permute2x128_si256::<0x81>(vi, vi))),
+                    6 => _mm256_castsi256_ps(_mm256_bsrli_epi128::<8>(_mm256_permute2x128_si256::<0x81>(vi, vi))),
+                    7 => _mm256_castsi256_ps(_mm256_bsrli_epi128::<12>(_mm256_permute2x128_si256::<0x81>(vi, vi))),
+                    8 => _mm256_setzero_ps(),
+                    _ => unreachable!(),
+                }}
+            }}
+
+            {arcane}
+            fn mul_add_lane_relaxed<const LANE: i32>(
+                self,
+                a: {inner},
+                v_in: {inner},
+                acc: {inner},
+            ) -> {inner} {{
+                const {{ assert!(LANE >= 0 && LANE < 8, "LANE must be in 0..8") }};
+                let splat = match LANE {{
+                    0 => _mm256_broadcastss_ps(_mm256_castps256_ps128(v_in)),
+                    1 => _mm256_broadcastss_ps(_mm_permute_ps::<0x55>(_mm256_castps256_ps128(v_in))),
+                    2 => _mm256_broadcastss_ps(_mm_permute_ps::<0xAA>(_mm256_castps256_ps128(v_in))),
+                    3 => _mm256_broadcastss_ps(_mm_permute_ps::<0xFF>(_mm256_castps256_ps128(v_in))),
+                    4 => _mm256_broadcastss_ps(_mm256_extractf128_ps::<1>(v_in)),
+                    5 => _mm256_permute_ps::<0x55>(_mm256_permute2f128_ps::<0x11>(v_in, v_in)),
+                    6 => _mm256_permute_ps::<0xAA>(_mm256_permute2f128_ps::<0x11>(v_in, v_in)),
+                    7 => _mm256_permute_ps::<0xFF>(_mm256_permute2f128_ps::<0x11>(v_in, v_in)),
+                    _ => unreachable!(),
+                }};
+                _mm256_fmadd_ps(a, splat, acc)
+            }}
+        "#},
+        _ => String::new(),
+    };
+
     formatdoc! {r#"
         impl {trait_name} for archmage::{token} {{
             type Repr = {inner};
@@ -1857,6 +2067,7 @@ fn generate_x86_float_impl(ty: &FloatVecType, token: &str) -> String {
                 {p}_xor_{s}(a, b)
             }}
             {baseline_end}
+            {lane_ops_x86}
             {to_u8_x86}
             {store_rgba_x86}
             {transpose_8x8_x86}
@@ -2334,6 +2545,24 @@ fn generate_scalar_float_impl(ty: &FloatVecType) -> String {
             }}
 
             #[inline(always)]
+            fn min_fast(self, a: {array}, b: {array}) -> {array} {{
+                let mut r = [{zero_lit}; {lanes}];
+                for i in 0..{lanes} {{
+                    r[i] = if a[i] < b[i] {{ a[i] }} else {{ b[i] }};
+                }}
+                r
+            }}
+
+            #[inline(always)]
+            fn max_fast(self, a: {array}, b: {array}) -> {array} {{
+                let mut r = [{zero_lit}; {lanes}];
+                for i in 0..{lanes} {{
+                    r[i] = if a[i] > b[i] {{ a[i] }} else {{ b[i] }};
+                }}
+                r
+            }}
+
+            #[inline(always)]
             fn sqrt(self, a: {array}) -> {array} {{
                 let mut r = [{zero_lit}; {lanes}];
                 for i in 0..{lanes} {{
@@ -2512,8 +2741,61 @@ fn generate_scalar_float_impl(ty: &FloatVecType) -> String {
             fn bitxor(self, a: {array}, b: {array}) -> {array} {{
                 {xor_lanes}
             }}
+            {lane_ops_scalar}
         }}
     "#,
+        lane_ops_scalar = if elem == "f32" {
+            formatdoc! {r#"
+
+            #[inline(always)]
+            fn broadcast_lane<const N: usize>(self, a: {array}) -> {array} {{
+                const {{ assert!(N < {lanes}, "lane index out of bounds") }};
+                [a[N]; {lanes}]
+            }}
+
+            #[inline(always)]
+            fn shift_left_lanes<const N: usize>(self, a: {array}) -> {array} {{
+                const {{ assert!(N <= {lanes}, "shift count out of bounds") }};
+                let mut out = [0.0f32; {lanes}];
+                let mut i = N;
+                while i < {lanes} {{
+                    out[i] = a[i - N];
+                    i += 1;
+                }}
+                out
+            }}
+
+            #[inline(always)]
+            fn shift_right_lanes<const N: usize>(self, a: {array}) -> {array} {{
+                const {{ assert!(N <= {lanes}, "shift count out of bounds") }};
+                let mut out = [0.0f32; {lanes}];
+                let mut i = 0;
+                while i + N < {lanes} {{
+                    out[i] = a[i + N];
+                    i += 1;
+                }}
+                out
+            }}
+
+            #[inline(always)]
+            fn mul_add_lane_relaxed<const LANE: i32>(
+                self,
+                a: {array},
+                v_in: {array},
+                acc: {array},
+            ) -> {array} {{
+                const {{ assert!(LANE >= 0 && (LANE as usize) < {lanes}, "LANE out of bounds") }};
+                let b = v_in[LANE as usize];
+                let mut out = [0.0f32; {lanes}];
+                for i in 0..{lanes} {{
+                    out[i] = a[i] * b + acc[i];
+                }}
+                out
+            }}
+            "#}
+        } else {
+            String::new()
+        },
         add_lanes = binary_lanes("+"),
         sub_lanes = binary_lanes("-"),
         mul_lanes = binary_lanes("*"),
@@ -2969,10 +3251,91 @@ fn generate_neon_float_impl(ty: &FloatVecType) -> String {
             fn bitxor(self, a: {repr}, b: {repr}) -> {repr} {{
                 {xor_body}
             }}
+            {lane_ops_arm_poly}
             {to_u8_arm_poly}
             {store_rgba_arm_poly}
         }}
     "#,
+        lane_ops_arm_poly = if elem == "f32" && lanes == 8 {
+            formatdoc! {r#"
+
+            {arcane}
+            fn broadcast_lane<const N: usize>(self, a: {repr}) -> {repr} {{
+                const {{ assert!(N < 8, "lane index out of bounds") }};
+                let s = match N {{
+                    0 => vdupq_laneq_f32::<0>(a[0]),
+                    1 => vdupq_laneq_f32::<1>(a[0]),
+                    2 => vdupq_laneq_f32::<2>(a[0]),
+                    3 => vdupq_laneq_f32::<3>(a[0]),
+                    4 => vdupq_laneq_f32::<0>(a[1]),
+                    5 => vdupq_laneq_f32::<1>(a[1]),
+                    6 => vdupq_laneq_f32::<2>(a[1]),
+                    7 => vdupq_laneq_f32::<3>(a[1]),
+                    _ => unreachable!(),
+                }};
+                [s, s]
+            }}
+
+            {arcane}
+            fn shift_left_lanes<const N: usize>(self, a: {repr}) -> {repr} {{
+                const {{ assert!(N <= 8, "shift count out of bounds") }};
+                let z = vdupq_n_f32(0.0);
+                match N {{
+                    0 => a,
+                    1 => [vextq_f32::<3>(z, a[0]), vextq_f32::<3>(a[0], a[1])],
+                    2 => [vextq_f32::<2>(z, a[0]), vextq_f32::<2>(a[0], a[1])],
+                    3 => [vextq_f32::<1>(z, a[0]), vextq_f32::<1>(a[0], a[1])],
+                    4 => [z, a[0]],
+                    5 => [z, vextq_f32::<3>(z, a[0])],
+                    6 => [z, vextq_f32::<2>(z, a[0])],
+                    7 => [z, vextq_f32::<1>(z, a[0])],
+                    8 => [z, z],
+                    _ => unreachable!(),
+                }}
+            }}
+
+            {arcane}
+            fn shift_right_lanes<const N: usize>(self, a: {repr}) -> {repr} {{
+                const {{ assert!(N <= 8, "shift count out of bounds") }};
+                let z = vdupq_n_f32(0.0);
+                match N {{
+                    0 => a,
+                    1 => [vextq_f32::<1>(a[0], a[1]), vextq_f32::<1>(a[1], z)],
+                    2 => [vextq_f32::<2>(a[0], a[1]), vextq_f32::<2>(a[1], z)],
+                    3 => [vextq_f32::<3>(a[0], a[1]), vextq_f32::<3>(a[1], z)],
+                    4 => [a[1], z],
+                    5 => [vextq_f32::<1>(a[1], z), z],
+                    6 => [vextq_f32::<2>(a[1], z), z],
+                    7 => [vextq_f32::<3>(a[1], z), z],
+                    8 => [z, z],
+                    _ => unreachable!(),
+                }}
+            }}
+
+            {arcane}
+            fn mul_add_lane_relaxed<const LANE: i32>(
+                self,
+                a: {repr},
+                v_in: {repr},
+                acc: {repr},
+            ) -> {repr} {{
+                const {{ assert!(LANE >= 0 && LANE < 8, "LANE must be in 0..8") }};
+                match LANE {{
+                    0 => [vfmaq_laneq_f32::<0>(acc[0], a[0], v_in[0]), vfmaq_laneq_f32::<0>(acc[1], a[1], v_in[0])],
+                    1 => [vfmaq_laneq_f32::<1>(acc[0], a[0], v_in[0]), vfmaq_laneq_f32::<1>(acc[1], a[1], v_in[0])],
+                    2 => [vfmaq_laneq_f32::<2>(acc[0], a[0], v_in[0]), vfmaq_laneq_f32::<2>(acc[1], a[1], v_in[0])],
+                    3 => [vfmaq_laneq_f32::<3>(acc[0], a[0], v_in[0]), vfmaq_laneq_f32::<3>(acc[1], a[1], v_in[0])],
+                    4 => [vfmaq_laneq_f32::<0>(acc[0], a[0], v_in[1]), vfmaq_laneq_f32::<0>(acc[1], a[1], v_in[1])],
+                    5 => [vfmaq_laneq_f32::<1>(acc[0], a[0], v_in[1]), vfmaq_laneq_f32::<1>(acc[1], a[1], v_in[1])],
+                    6 => [vfmaq_laneq_f32::<2>(acc[0], a[0], v_in[1]), vfmaq_laneq_f32::<2>(acc[1], a[1], v_in[1])],
+                    7 => [vfmaq_laneq_f32::<3>(acc[0], a[0], v_in[1]), vfmaq_laneq_f32::<3>(acc[1], a[1], v_in[1])],
+                    _ => unreachable!(),
+                }}
+            }}
+            "#}
+        } else {
+            String::new()
+        },
         v4_copies = (0..sub_count).map(|_| "v4").collect::<Vec<_>>().join(", "),
         z_copies = (0..sub_count).map(|_| "z").collect::<Vec<_>>().join(", "),
         add_body = binary_op(&format!("vaddq_{ns}")),
@@ -3336,10 +3699,74 @@ fn generate_neon_native_impl(ty: &FloatVecType) -> String {
             fn bitxor(self, a: {repr}, b: {repr}) -> {repr} {{
                 vreinterpretq_{ns}_u{eb}(veorq_u{eb}(vreinterpretq_u{eb}_{ns}(a), vreinterpretq_u{eb}_{ns}(b)))
             }}
+            {lane_ops_arm}
             {to_u8_arm}
             {store_rgba_arm}
         }}
     "#,
+        lane_ops_arm = if elem == "f32" && lanes == 4 {
+            formatdoc! {r#"
+
+            {arcane}
+            fn broadcast_lane<const N: usize>(self, a: {repr}) -> {repr} {{
+                const {{ assert!(N < 4, "lane index out of bounds") }};
+                match N {{
+                    0 => vdupq_laneq_f32::<0>(a),
+                    1 => vdupq_laneq_f32::<1>(a),
+                    2 => vdupq_laneq_f32::<2>(a),
+                    3 => vdupq_laneq_f32::<3>(a),
+                    _ => unreachable!(),
+                }}
+            }}
+
+            {arcane}
+            fn shift_left_lanes<const N: usize>(self, a: {repr}) -> {repr} {{
+                const {{ assert!(N <= 4, "shift count out of bounds") }};
+                let z = vdupq_n_f32(0.0);
+                match N {{
+                    0 => a,
+                    1 => vextq_f32::<3>(z, a),
+                    2 => vextq_f32::<2>(z, a),
+                    3 => vextq_f32::<1>(z, a),
+                    4 => z,
+                    _ => unreachable!(),
+                }}
+            }}
+
+            {arcane}
+            fn shift_right_lanes<const N: usize>(self, a: {repr}) -> {repr} {{
+                const {{ assert!(N <= 4, "shift count out of bounds") }};
+                let z = vdupq_n_f32(0.0);
+                match N {{
+                    0 => a,
+                    1 => vextq_f32::<1>(a, z),
+                    2 => vextq_f32::<2>(a, z),
+                    3 => vextq_f32::<3>(a, z),
+                    4 => z,
+                    _ => unreachable!(),
+                }}
+            }}
+
+            {arcane}
+            fn mul_add_lane_relaxed<const LANE: i32>(
+                self,
+                a: {repr},
+                v_in: {repr},
+                acc: {repr},
+            ) -> {repr} {{
+                const {{ assert!(LANE >= 0 && LANE < 4, "LANE must be in 0..4") }};
+                match LANE {{
+                    0 => vfmaq_laneq_f32::<0>(acc, a, v_in),
+                    1 => vfmaq_laneq_f32::<1>(acc, a, v_in),
+                    2 => vfmaq_laneq_f32::<2>(acc, a, v_in),
+                    3 => vfmaq_laneq_f32::<3>(acc, a, v_in),
+                    _ => unreachable!(),
+                }}
+            }}
+            "#}
+        } else {
+            String::new()
+        },
         reduce_add = reduce_pairwise(&format!("vpaddq_{ns}")),
         reduce_min = reduce_pairwise(&format!("vpminnmq_{ns}")),
         reduce_max = reduce_pairwise(&format!("vpmaxnmq_{ns}")),
@@ -3535,6 +3962,10 @@ fn generate_wasm_float_impl(ty: &FloatVecType) -> String {
             #[inline(always)]
             fn max(self, a: {repr}, b: {repr}) -> {repr} {{ {max} }}
             #[inline(always)]
+            fn min_fast(self, a: {repr}, b: {repr}) -> {repr} {{ [{min_fast_lanes}] }}
+            #[inline(always)]
+            fn max_fast(self, a: {repr}, b: {repr}) -> {repr} {{ [{max_fast_lanes}] }}
+            #[inline(always)]
             fn sqrt(self, a: {repr}) -> {repr} {{ {sqrt} }}
             #[inline(always)]
             fn abs(self, a: {repr}) -> {repr} {{ {abs} }}
@@ -3627,9 +4058,100 @@ fn generate_wasm_float_impl(ty: &FloatVecType) -> String {
             fn bitor(self, a: {repr}, b: {repr}) -> {repr} {{ {or} }}
             #[inline(always)]
             fn bitxor(self, a: {repr}, b: {repr}) -> {repr} {{ {xor} }}
+        {lane_ops_wasm_poly}
         {pixel_pack}
         }}
     "#,
+        min_fast_lanes = (0..sub_count)
+            .map(|i| format!("{wp}_pmin(b[{i}], a[{i}])"))
+            .collect::<Vec<_>>().join(", "),
+        max_fast_lanes = (0..sub_count)
+            .map(|i| format!("{wp}_pmax(b[{i}], a[{i}])"))
+            .collect::<Vec<_>>().join(", "),
+        lane_ops_wasm_poly = if elem == "f32" && lanes == 8 {
+            formatdoc! {r#"
+
+            #[inline(always)]
+            fn broadcast_lane<const N: usize>(self, a: {repr}) -> {repr} {{
+                const {{ assert!(N < 8, "lane index out of bounds") }};
+                let s = match N {{
+                    0 => i32x4_shuffle::<0, 0, 0, 0>(a[0], a[0]),
+                    1 => i32x4_shuffle::<1, 1, 1, 1>(a[0], a[0]),
+                    2 => i32x4_shuffle::<2, 2, 2, 2>(a[0], a[0]),
+                    3 => i32x4_shuffle::<3, 3, 3, 3>(a[0], a[0]),
+                    4 => i32x4_shuffle::<0, 0, 0, 0>(a[1], a[1]),
+                    5 => i32x4_shuffle::<1, 1, 1, 1>(a[1], a[1]),
+                    6 => i32x4_shuffle::<2, 2, 2, 2>(a[1], a[1]),
+                    7 => i32x4_shuffle::<3, 3, 3, 3>(a[1], a[1]),
+                    _ => unreachable!(),
+                }};
+                [s, s]
+            }}
+
+            #[inline(always)]
+            fn shift_left_lanes<const N: usize>(self, a: {repr}) -> {repr} {{
+                const {{ assert!(N <= 8, "shift count out of bounds") }};
+                let z = f32x4_splat(0.0);
+                match N {{
+                    0 => a,
+                    1 => [i32x4_shuffle::<0, 4, 5, 6>(z, a[0]), i32x4_shuffle::<3, 4, 5, 6>(a[0], a[1])],
+                    2 => [i32x4_shuffle::<0, 1, 4, 5>(z, a[0]), i32x4_shuffle::<2, 3, 4, 5>(a[0], a[1])],
+                    3 => [i32x4_shuffle::<0, 1, 2, 4>(z, a[0]), i32x4_shuffle::<1, 2, 3, 4>(a[0], a[1])],
+                    4 => [z, a[0]],
+                    5 => [z, i32x4_shuffle::<0, 4, 5, 6>(z, a[0])],
+                    6 => [z, i32x4_shuffle::<0, 1, 4, 5>(z, a[0])],
+                    7 => [z, i32x4_shuffle::<0, 1, 2, 4>(z, a[0])],
+                    8 => [z, z],
+                    _ => unreachable!(),
+                }}
+            }}
+
+            #[inline(always)]
+            fn shift_right_lanes<const N: usize>(self, a: {repr}) -> {repr} {{
+                const {{ assert!(N <= 8, "shift count out of bounds") }};
+                let z = f32x4_splat(0.0);
+                match N {{
+                    0 => a,
+                    1 => [i32x4_shuffle::<1, 2, 3, 4>(a[0], a[1]), i32x4_shuffle::<1, 2, 3, 4>(a[1], z)],
+                    2 => [i32x4_shuffle::<2, 3, 4, 5>(a[0], a[1]), i32x4_shuffle::<2, 3, 4, 5>(a[1], z)],
+                    3 => [i32x4_shuffle::<3, 4, 5, 6>(a[0], a[1]), i32x4_shuffle::<3, 4, 5, 6>(a[1], z)],
+                    4 => [a[1], z],
+                    5 => [i32x4_shuffle::<1, 2, 3, 4>(a[1], z), z],
+                    6 => [i32x4_shuffle::<2, 3, 4, 5>(a[1], z), z],
+                    7 => [i32x4_shuffle::<3, 4, 5, 6>(a[1], z), z],
+                    8 => [z, z],
+                    _ => unreachable!(),
+                }}
+            }}
+
+            #[inline(always)]
+            fn mul_add_lane_relaxed<const LANE: i32>(
+                self,
+                a: {repr},
+                v_in: {repr},
+                acc: {repr},
+            ) -> {repr} {{
+                const {{ assert!(LANE >= 0 && LANE < 8, "LANE must be in 0..8") }};
+                let splat = match LANE {{
+                    0 => i32x4_shuffle::<0, 0, 0, 0>(v_in[0], v_in[0]),
+                    1 => i32x4_shuffle::<1, 1, 1, 1>(v_in[0], v_in[0]),
+                    2 => i32x4_shuffle::<2, 2, 2, 2>(v_in[0], v_in[0]),
+                    3 => i32x4_shuffle::<3, 3, 3, 3>(v_in[0], v_in[0]),
+                    4 => i32x4_shuffle::<0, 0, 0, 0>(v_in[1], v_in[1]),
+                    5 => i32x4_shuffle::<1, 1, 1, 1>(v_in[1], v_in[1]),
+                    6 => i32x4_shuffle::<2, 2, 2, 2>(v_in[1], v_in[1]),
+                    7 => i32x4_shuffle::<3, 3, 3, 3>(v_in[1], v_in[1]),
+                    _ => unreachable!(),
+                }};
+                [
+                    crate::wasm_fma::madd_f32x4(self, a[0], splat, acc[0]),
+                    crate::wasm_fma::madd_f32x4(self, a[1], splat, acc[1]),
+                ]
+            }}
+            "#}
+        } else {
+            String::new()
+        },
         v4_copies = (0..sub_count).map(|_| "v4").collect::<Vec<_>>().join(", "),
         z_copies = (0..sub_count).map(|_| "z").collect::<Vec<_>>().join(", "),
         load_lanes = format!("[{}]", (0..sub_count)
@@ -3832,6 +4354,10 @@ fn generate_wasm_native_impl(ty: &FloatVecType) -> String {
             #[inline(always)]
             fn max(self, a: v128, b: v128) -> v128 {{ {wp}_max(a, b) }}
             #[inline(always)]
+            fn min_fast(self, a: v128, b: v128) -> v128 {{ {wp}_pmin(b, a) }}
+            #[inline(always)]
+            fn max_fast(self, a: v128, b: v128) -> v128 {{ {wp}_pmax(b, a) }}
+            #[inline(always)]
             fn sqrt(self, a: v128) -> v128 {{ {wp}_sqrt(a) }}
             #[inline(always)]
             fn abs(self, a: v128) -> v128 {{ {wp}_abs(a) }}
@@ -3886,9 +4412,74 @@ fn generate_wasm_native_impl(ty: &FloatVecType) -> String {
             fn bitor(self, a: v128, b: v128) -> v128 {{ v128_or(a, b) }}
             #[inline(always)]
             fn bitxor(self, a: v128, b: v128) -> v128 {{ v128_xor(a, b) }}
+        {lane_ops_wasm_native}
         {pixel_pack}
         }}
     "#,
+        lane_ops_wasm_native = if elem == "f32" && lanes == 4 {
+            formatdoc! {r#"
+
+            #[inline(always)]
+            fn broadcast_lane<const N: usize>(self, a: v128) -> v128 {{
+                const {{ assert!(N < 4, "lane index out of bounds") }};
+                match N {{
+                    0 => i32x4_shuffle::<0, 0, 0, 0>(a, a),
+                    1 => i32x4_shuffle::<1, 1, 1, 1>(a, a),
+                    2 => i32x4_shuffle::<2, 2, 2, 2>(a, a),
+                    3 => i32x4_shuffle::<3, 3, 3, 3>(a, a),
+                    _ => unreachable!(),
+                }}
+            }}
+
+            #[inline(always)]
+            fn shift_left_lanes<const N: usize>(self, a: v128) -> v128 {{
+                const {{ assert!(N <= 4, "shift count out of bounds") }};
+                let z = f32x4_splat(0.0);
+                match N {{
+                    0 => a,
+                    1 => i32x4_shuffle::<0, 4, 5, 6>(z, a),
+                    2 => i32x4_shuffle::<0, 1, 4, 5>(z, a),
+                    3 => i32x4_shuffle::<0, 1, 2, 4>(z, a),
+                    4 => z,
+                    _ => unreachable!(),
+                }}
+            }}
+
+            #[inline(always)]
+            fn shift_right_lanes<const N: usize>(self, a: v128) -> v128 {{
+                const {{ assert!(N <= 4, "shift count out of bounds") }};
+                let z = f32x4_splat(0.0);
+                match N {{
+                    0 => a,
+                    1 => i32x4_shuffle::<1, 2, 3, 4>(a, z),
+                    2 => i32x4_shuffle::<2, 3, 4, 5>(a, z),
+                    3 => i32x4_shuffle::<3, 4, 5, 6>(a, z),
+                    4 => z,
+                    _ => unreachable!(),
+                }}
+            }}
+
+            #[inline(always)]
+            fn mul_add_lane_relaxed<const LANE: i32>(
+                self,
+                a: v128,
+                v_in: v128,
+                acc: v128,
+            ) -> v128 {{
+                const {{ assert!(LANE >= 0 && LANE < 4, "LANE must be in 0..4") }};
+                let splat = match LANE {{
+                    0 => i32x4_shuffle::<0, 0, 0, 0>(v_in, v_in),
+                    1 => i32x4_shuffle::<1, 1, 1, 1>(v_in, v_in),
+                    2 => i32x4_shuffle::<2, 2, 2, 2>(v_in, v_in),
+                    3 => i32x4_shuffle::<3, 3, 3, 3>(v_in, v_in),
+                    _ => unreachable!(),
+                }};
+                crate::wasm_fma::madd_f32x4(self, a, splat, acc)
+            }}
+            "#}
+        } else {
+            String::new()
+        },
         reduce_add = reduce_add_body(),
         reduce_min = reduce_minmax("min"),
         reduce_max = reduce_minmax("max"),
@@ -4145,6 +4736,15 @@ fn generate_convert_traits() -> String {
                 <Self as F32x4Convert>::convert_f32_to_i32(self, a)
             }}
 
+            /// Fast single-instruction truncation toward zero for finite in-range
+            /// values (`-2147483520.0..=2147483520.0`). Out-of-range and NaN lanes
+            /// produce an unspecified `i32`. Defaults to [`convert_f32_to_i32`](Self::convert_f32_to_i32);
+            /// `Wasm128RelaxedFmaToken` overrides with `i32x4.relaxed_trunc_f32x4_s`.
+            #[inline(always)]
+            fn convert_f32_to_i32_fast(self, a: <Self as F32x4Backend>::Repr) -> <Self as I32x4Backend>::Repr {{
+                <Self as F32x4Convert>::convert_f32_to_i32(self, a)
+            }}
+
             /// Convert f32x4 to i32x4 with rounding to nearest.
             fn convert_f32_to_i32_round(self, a: <Self as F32x4Backend>::Repr) -> <Self as I32x4Backend>::Repr;
 
@@ -4175,6 +4775,15 @@ fn generate_convert_traits() -> String {
             /// NaN there — issue #80).
             #[inline(always)]
             fn convert_f32_to_i32_saturating(self, a: <Self as F32x8Backend>::Repr) -> <Self as I32x8Backend>::Repr {{
+                <Self as F32x8Convert>::convert_f32_to_i32(self, a)
+            }}
+
+            /// Fast single-instruction truncation toward zero for finite in-range
+            /// values (`-2147483520.0..=2147483520.0`). Out-of-range and NaN lanes
+            /// produce an unspecified `i32`. Defaults to [`convert_f32_to_i32`](Self::convert_f32_to_i32);
+            /// `Wasm128RelaxedFmaToken` overrides with `i32x4.relaxed_trunc_f32x4_s`.
+            #[inline(always)]
+            fn convert_f32_to_i32_fast(self, a: <Self as F32x8Backend>::Repr) -> <Self as I32x8Backend>::Repr {{
                 <Self as F32x8Convert>::convert_f32_to_i32(self, a)
             }}
 
@@ -4209,6 +4818,15 @@ fn generate_convert_traits() -> String {
             /// NaN there — issue #80).
             #[inline(always)]
             fn convert_f32_to_i32_saturating(self, a: <Self as F32x16Backend>::Repr) -> <Self as I32x16Backend>::Repr {{
+                <Self as F32x16Convert>::convert_f32_to_i32(self, a)
+            }}
+
+            /// Fast single-instruction truncation toward zero for finite in-range
+            /// values (`-2147483520.0..=2147483520.0`). Out-of-range and NaN lanes
+            /// produce an unspecified `i32`. Defaults to [`convert_f32_to_i32`](Self::convert_f32_to_i32);
+            /// `Wasm128RelaxedFmaToken` overrides with `i32x4.relaxed_trunc_f32x4_s`.
+            #[inline(always)]
+            fn convert_f32_to_i32_fast(self, a: <Self as F32x16Backend>::Repr) -> <Self as I32x16Backend>::Repr {{
                 <Self as F32x16Convert>::convert_f32_to_i32(self, a)
             }}
 

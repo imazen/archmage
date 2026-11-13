@@ -89,6 +89,14 @@ impl F32x4Backend for archmage::X64V4Token {
         <archmage::X64V3Token as F32x4Backend>::max(self.v3(), a, b)
     }
     #[inline(always)]
+    fn min_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F32x4Backend>::min_fast(self.v3(), a, b)
+    }
+    #[inline(always)]
+    fn max_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F32x4Backend>::max_fast(self.v3(), a, b)
+    }
+    #[inline(always)]
     fn sqrt(self, a: Self::Repr) -> Self::Repr {
         <archmage::X64V3Token as F32x4Backend>::sqrt(self.v3(), a)
     }
@@ -199,6 +207,32 @@ impl F32x4Backend for archmage::X64V4Token {
     #[inline(always)]
     fn rsqrt(self, a: Self::Repr) -> Self::Repr {
         <archmage::X64V3Token as F32x4Backend>::rsqrt(self.v3(), a)
+    }
+    #[inline(always)]
+    fn broadcast_lane<const N: usize>(self, a: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F32x4Backend>::broadcast_lane::<N>(self.v3(), a)
+    }
+    #[inline(always)]
+    fn shift_left_lanes<const N: usize>(self, a: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F32x4Backend>::shift_left_lanes::<N>(self.v3(), a)
+    }
+    #[inline(always)]
+    fn shift_right_lanes<const N: usize>(self, a: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F32x4Backend>::shift_right_lanes::<N>(self.v3(), a)
+    }
+    #[inline(always)]
+    fn mul_add_lane_relaxed<const LANE: i32>(
+        self,
+        a: Self::Repr,
+        v_in: Self::Repr,
+        acc: Self::Repr,
+    ) -> Self::Repr {
+        <archmage::X64V3Token as F32x4Backend>::mul_add_lane_relaxed::<LANE>(
+            self.v3(),
+            a,
+            v_in,
+            acc,
+        )
     }
     #[inline(always)]
     fn to_u8_bytes(self, a: Self::Repr) -> [u8; 4] {
@@ -271,6 +305,14 @@ impl F32x4Backend for archmage::X64V4xToken {
         <archmage::X64V3Token as F32x4Backend>::max(self.v3(), a, b)
     }
     #[inline(always)]
+    fn min_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F32x4Backend>::min_fast(self.v3(), a, b)
+    }
+    #[inline(always)]
+    fn max_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F32x4Backend>::max_fast(self.v3(), a, b)
+    }
+    #[inline(always)]
     fn sqrt(self, a: Self::Repr) -> Self::Repr {
         <archmage::X64V3Token as F32x4Backend>::sqrt(self.v3(), a)
     }
@@ -381,6 +423,32 @@ impl F32x4Backend for archmage::X64V4xToken {
     #[inline(always)]
     fn rsqrt(self, a: Self::Repr) -> Self::Repr {
         <archmage::X64V3Token as F32x4Backend>::rsqrt(self.v3(), a)
+    }
+    #[inline(always)]
+    fn broadcast_lane<const N: usize>(self, a: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F32x4Backend>::broadcast_lane::<N>(self.v3(), a)
+    }
+    #[inline(always)]
+    fn shift_left_lanes<const N: usize>(self, a: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F32x4Backend>::shift_left_lanes::<N>(self.v3(), a)
+    }
+    #[inline(always)]
+    fn shift_right_lanes<const N: usize>(self, a: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F32x4Backend>::shift_right_lanes::<N>(self.v3(), a)
+    }
+    #[inline(always)]
+    fn mul_add_lane_relaxed<const LANE: i32>(
+        self,
+        a: Self::Repr,
+        v_in: Self::Repr,
+        acc: Self::Repr,
+    ) -> Self::Repr {
+        <archmage::X64V3Token as F32x4Backend>::mul_add_lane_relaxed::<LANE>(
+            self.v3(),
+            a,
+            v_in,
+            acc,
+        )
     }
     #[inline(always)]
     fn to_u8_bytes(self, a: Self::Repr) -> [u8; 4] {
@@ -453,6 +521,14 @@ impl F32x4Backend for archmage::Avx512Fp16Token {
         <archmage::X64V3Token as F32x4Backend>::max(self.v3(), a, b)
     }
     #[inline(always)]
+    fn min_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F32x4Backend>::min_fast(self.v3(), a, b)
+    }
+    #[inline(always)]
+    fn max_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F32x4Backend>::max_fast(self.v3(), a, b)
+    }
+    #[inline(always)]
     fn sqrt(self, a: Self::Repr) -> Self::Repr {
         <archmage::X64V3Token as F32x4Backend>::sqrt(self.v3(), a)
     }
@@ -565,6 +641,32 @@ impl F32x4Backend for archmage::Avx512Fp16Token {
         <archmage::X64V3Token as F32x4Backend>::rsqrt(self.v3(), a)
     }
     #[inline(always)]
+    fn broadcast_lane<const N: usize>(self, a: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F32x4Backend>::broadcast_lane::<N>(self.v3(), a)
+    }
+    #[inline(always)]
+    fn shift_left_lanes<const N: usize>(self, a: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F32x4Backend>::shift_left_lanes::<N>(self.v3(), a)
+    }
+    #[inline(always)]
+    fn shift_right_lanes<const N: usize>(self, a: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F32x4Backend>::shift_right_lanes::<N>(self.v3(), a)
+    }
+    #[inline(always)]
+    fn mul_add_lane_relaxed<const LANE: i32>(
+        self,
+        a: Self::Repr,
+        v_in: Self::Repr,
+        acc: Self::Repr,
+    ) -> Self::Repr {
+        <archmage::X64V3Token as F32x4Backend>::mul_add_lane_relaxed::<LANE>(
+            self.v3(),
+            a,
+            v_in,
+            acc,
+        )
+    }
+    #[inline(always)]
     fn to_u8_bytes(self, a: Self::Repr) -> [u8; 4] {
         overrides::to_u8_bytes_x4_v4(self.v4(), a)
     }
@@ -633,6 +735,14 @@ impl F32x8Backend for archmage::X64V4Token {
     #[inline(always)]
     fn max(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
         <archmage::X64V3Token as F32x8Backend>::max(self.v3(), a, b)
+    }
+    #[inline(always)]
+    fn min_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F32x8Backend>::min_fast(self.v3(), a, b)
+    }
+    #[inline(always)]
+    fn max_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F32x8Backend>::max_fast(self.v3(), a, b)
     }
     #[inline(always)]
     fn sqrt(self, a: Self::Repr) -> Self::Repr {
@@ -745,6 +855,32 @@ impl F32x8Backend for archmage::X64V4Token {
     #[inline(always)]
     fn rsqrt(self, a: Self::Repr) -> Self::Repr {
         <archmage::X64V3Token as F32x8Backend>::rsqrt(self.v3(), a)
+    }
+    #[inline(always)]
+    fn broadcast_lane<const N: usize>(self, a: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F32x8Backend>::broadcast_lane::<N>(self.v3(), a)
+    }
+    #[inline(always)]
+    fn shift_left_lanes<const N: usize>(self, a: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F32x8Backend>::shift_left_lanes::<N>(self.v3(), a)
+    }
+    #[inline(always)]
+    fn shift_right_lanes<const N: usize>(self, a: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F32x8Backend>::shift_right_lanes::<N>(self.v3(), a)
+    }
+    #[inline(always)]
+    fn mul_add_lane_relaxed<const LANE: i32>(
+        self,
+        a: Self::Repr,
+        v_in: Self::Repr,
+        acc: Self::Repr,
+    ) -> Self::Repr {
+        <archmage::X64V3Token as F32x8Backend>::mul_add_lane_relaxed::<LANE>(
+            self.v3(),
+            a,
+            v_in,
+            acc,
+        )
     }
     #[inline(always)]
     fn to_u8_bytes(self, a: Self::Repr) -> [u8; 8] {
@@ -821,6 +957,14 @@ impl F32x8Backend for archmage::X64V4xToken {
         <archmage::X64V3Token as F32x8Backend>::max(self.v3(), a, b)
     }
     #[inline(always)]
+    fn min_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F32x8Backend>::min_fast(self.v3(), a, b)
+    }
+    #[inline(always)]
+    fn max_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F32x8Backend>::max_fast(self.v3(), a, b)
+    }
+    #[inline(always)]
     fn sqrt(self, a: Self::Repr) -> Self::Repr {
         <archmage::X64V3Token as F32x8Backend>::sqrt(self.v3(), a)
     }
@@ -931,6 +1075,32 @@ impl F32x8Backend for archmage::X64V4xToken {
     #[inline(always)]
     fn rsqrt(self, a: Self::Repr) -> Self::Repr {
         <archmage::X64V3Token as F32x8Backend>::rsqrt(self.v3(), a)
+    }
+    #[inline(always)]
+    fn broadcast_lane<const N: usize>(self, a: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F32x8Backend>::broadcast_lane::<N>(self.v3(), a)
+    }
+    #[inline(always)]
+    fn shift_left_lanes<const N: usize>(self, a: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F32x8Backend>::shift_left_lanes::<N>(self.v3(), a)
+    }
+    #[inline(always)]
+    fn shift_right_lanes<const N: usize>(self, a: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F32x8Backend>::shift_right_lanes::<N>(self.v3(), a)
+    }
+    #[inline(always)]
+    fn mul_add_lane_relaxed<const LANE: i32>(
+        self,
+        a: Self::Repr,
+        v_in: Self::Repr,
+        acc: Self::Repr,
+    ) -> Self::Repr {
+        <archmage::X64V3Token as F32x8Backend>::mul_add_lane_relaxed::<LANE>(
+            self.v3(),
+            a,
+            v_in,
+            acc,
+        )
     }
     #[inline(always)]
     fn to_u8_bytes(self, a: Self::Repr) -> [u8; 8] {
@@ -1007,6 +1177,14 @@ impl F32x8Backend for archmage::Avx512Fp16Token {
         <archmage::X64V3Token as F32x8Backend>::max(self.v3(), a, b)
     }
     #[inline(always)]
+    fn min_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F32x8Backend>::min_fast(self.v3(), a, b)
+    }
+    #[inline(always)]
+    fn max_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F32x8Backend>::max_fast(self.v3(), a, b)
+    }
+    #[inline(always)]
     fn sqrt(self, a: Self::Repr) -> Self::Repr {
         <archmage::X64V3Token as F32x8Backend>::sqrt(self.v3(), a)
     }
@@ -1117,6 +1295,32 @@ impl F32x8Backend for archmage::Avx512Fp16Token {
     #[inline(always)]
     fn rsqrt(self, a: Self::Repr) -> Self::Repr {
         <archmage::X64V3Token as F32x8Backend>::rsqrt(self.v3(), a)
+    }
+    #[inline(always)]
+    fn broadcast_lane<const N: usize>(self, a: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F32x8Backend>::broadcast_lane::<N>(self.v3(), a)
+    }
+    #[inline(always)]
+    fn shift_left_lanes<const N: usize>(self, a: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F32x8Backend>::shift_left_lanes::<N>(self.v3(), a)
+    }
+    #[inline(always)]
+    fn shift_right_lanes<const N: usize>(self, a: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F32x8Backend>::shift_right_lanes::<N>(self.v3(), a)
+    }
+    #[inline(always)]
+    fn mul_add_lane_relaxed<const LANE: i32>(
+        self,
+        a: Self::Repr,
+        v_in: Self::Repr,
+        acc: Self::Repr,
+    ) -> Self::Repr {
+        <archmage::X64V3Token as F32x8Backend>::mul_add_lane_relaxed::<LANE>(
+            self.v3(),
+            a,
+            v_in,
+            acc,
+        )
     }
     #[inline(always)]
     fn to_u8_bytes(self, a: Self::Repr) -> [u8; 8] {

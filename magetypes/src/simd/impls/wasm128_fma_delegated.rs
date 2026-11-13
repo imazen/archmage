@@ -78,6 +78,14 @@ impl F32x4Backend for archmage::Wasm128RelaxedFmaToken {
         <archmage::Wasm128Token as F32x4Backend>::max(self.wasm128(), a, b)
     }
     #[inline(always)]
+    fn min_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        overrides::min_fast_f32x4(self, a, b)
+    }
+    #[inline(always)]
+    fn max_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        overrides::max_fast_f32x4(self, a, b)
+    }
+    #[inline(always)]
     fn sqrt(self, a: Self::Repr) -> Self::Repr {
         <archmage::Wasm128Token as F32x4Backend>::sqrt(self.wasm128(), a)
     }
@@ -190,6 +198,27 @@ impl F32x4Backend for archmage::Wasm128RelaxedFmaToken {
         <archmage::Wasm128Token as F32x4Backend>::rsqrt(self.wasm128(), a)
     }
     #[inline(always)]
+    fn broadcast_lane<const N: usize>(self, a: Self::Repr) -> Self::Repr {
+        <archmage::Wasm128Token as F32x4Backend>::broadcast_lane::<N>(self.wasm128(), a)
+    }
+    #[inline(always)]
+    fn shift_left_lanes<const N: usize>(self, a: Self::Repr) -> Self::Repr {
+        <archmage::Wasm128Token as F32x4Backend>::shift_left_lanes::<N>(self.wasm128(), a)
+    }
+    #[inline(always)]
+    fn shift_right_lanes<const N: usize>(self, a: Self::Repr) -> Self::Repr {
+        <archmage::Wasm128Token as F32x4Backend>::shift_right_lanes::<N>(self.wasm128(), a)
+    }
+    #[inline(always)]
+    fn mul_add_lane_relaxed<const LANE: i32>(
+        self,
+        a: Self::Repr,
+        v_in: Self::Repr,
+        acc: Self::Repr,
+    ) -> Self::Repr {
+        overrides::mul_add_lane_f32x4::<LANE>(self, a, v_in, acc)
+    }
+    #[inline(always)]
     fn to_u8_bytes(self, a: Self::Repr) -> [u8; 4] {
         <archmage::Wasm128Token as F32x4Backend>::to_u8_bytes(self.wasm128(), a)
     }
@@ -258,6 +287,14 @@ impl F32x8Backend for archmage::Wasm128RelaxedFmaToken {
     #[inline(always)]
     fn max(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
         <archmage::Wasm128Token as F32x8Backend>::max(self.wasm128(), a, b)
+    }
+    #[inline(always)]
+    fn min_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        overrides::min_fast_f32x8(self, a, b)
+    }
+    #[inline(always)]
+    fn max_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        overrides::max_fast_f32x8(self, a, b)
     }
     #[inline(always)]
     fn sqrt(self, a: Self::Repr) -> Self::Repr {
@@ -372,6 +409,27 @@ impl F32x8Backend for archmage::Wasm128RelaxedFmaToken {
         <archmage::Wasm128Token as F32x8Backend>::rsqrt(self.wasm128(), a)
     }
     #[inline(always)]
+    fn broadcast_lane<const N: usize>(self, a: Self::Repr) -> Self::Repr {
+        <archmage::Wasm128Token as F32x8Backend>::broadcast_lane::<N>(self.wasm128(), a)
+    }
+    #[inline(always)]
+    fn shift_left_lanes<const N: usize>(self, a: Self::Repr) -> Self::Repr {
+        <archmage::Wasm128Token as F32x8Backend>::shift_left_lanes::<N>(self.wasm128(), a)
+    }
+    #[inline(always)]
+    fn shift_right_lanes<const N: usize>(self, a: Self::Repr) -> Self::Repr {
+        <archmage::Wasm128Token as F32x8Backend>::shift_right_lanes::<N>(self.wasm128(), a)
+    }
+    #[inline(always)]
+    fn mul_add_lane_relaxed<const LANE: i32>(
+        self,
+        a: Self::Repr,
+        v_in: Self::Repr,
+        acc: Self::Repr,
+    ) -> Self::Repr {
+        overrides::mul_add_lane_f32x8::<LANE>(self, a, v_in, acc)
+    }
+    #[inline(always)]
     fn to_u8_bytes(self, a: Self::Repr) -> [u8; 8] {
         <archmage::Wasm128Token as F32x8Backend>::to_u8_bytes(self.wasm128(), a)
     }
@@ -444,6 +502,14 @@ impl F64x2Backend for archmage::Wasm128RelaxedFmaToken {
     #[inline(always)]
     fn max(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
         <archmage::Wasm128Token as F64x2Backend>::max(self.wasm128(), a, b)
+    }
+    #[inline(always)]
+    fn min_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        overrides::min_fast_f64x2(self, a, b)
+    }
+    #[inline(always)]
+    fn max_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        overrides::max_fast_f64x2(self, a, b)
     }
     #[inline(always)]
     fn sqrt(self, a: Self::Repr) -> Self::Repr {
@@ -612,6 +678,14 @@ impl F64x4Backend for archmage::Wasm128RelaxedFmaToken {
     #[inline(always)]
     fn max(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
         <archmage::Wasm128Token as F64x4Backend>::max(self.wasm128(), a, b)
+    }
+    #[inline(always)]
+    fn min_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        overrides::min_fast_f64x4(self, a, b)
+    }
+    #[inline(always)]
+    fn max_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        overrides::max_fast_f64x4(self, a, b)
     }
     #[inline(always)]
     fn sqrt(self, a: Self::Repr) -> Self::Repr {
@@ -1066,6 +1140,10 @@ impl I16x8Backend for archmage::Wasm128RelaxedFmaToken {
         <archmage::Wasm128Token as I16x8Backend>::mul(self.wasm128(), a, b)
     }
     #[inline(always)]
+    fn mul_hrs_q15(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        overrides::mul_hrs_q15_x8(self, a, b)
+    }
+    #[inline(always)]
     fn neg(self, a: Self::Repr) -> Self::Repr {
         <archmage::Wasm128Token as I16x8Backend>::neg(self.wasm128(), a)
     }
@@ -1274,6 +1352,10 @@ impl I16x16Backend for archmage::Wasm128RelaxedFmaToken {
     #[inline(always)]
     fn mul(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
         <archmage::Wasm128Token as I16x16Backend>::mul(self.wasm128(), a, b)
+    }
+    #[inline(always)]
+    fn mul_hrs_q15(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        overrides::mul_hrs_q15_x16(self, a, b)
     }
     #[inline(always)]
     fn neg(self, a: Self::Repr) -> Self::Repr {
@@ -3180,6 +3262,13 @@ impl F32x4Convert for archmage::Wasm128RelaxedFmaToken {
         <archmage::Wasm128Token as F32x4Convert>::convert_f32_to_i32_saturating(self.wasm128(), a)
     }
     #[inline(always)]
+    fn convert_f32_to_i32_fast(
+        self,
+        a: <Self as F32x4Backend>::Repr,
+    ) -> <Self as I32x4Backend>::Repr {
+        overrides::convert_f32_to_i32_fast_x4(self, a)
+    }
+    #[inline(always)]
     fn convert_f32_to_i32_round(
         self,
         a: <Self as F32x4Backend>::Repr,
@@ -3211,6 +3300,13 @@ impl F32x8Convert for archmage::Wasm128RelaxedFmaToken {
         a: <Self as F32x8Backend>::Repr,
     ) -> <Self as I32x8Backend>::Repr {
         <archmage::Wasm128Token as F32x8Convert>::convert_f32_to_i32_saturating(self.wasm128(), a)
+    }
+    #[inline(always)]
+    fn convert_f32_to_i32_fast(
+        self,
+        a: <Self as F32x8Backend>::Repr,
+    ) -> <Self as I32x8Backend>::Repr {
+        overrides::convert_f32_to_i32_fast_x8(self, a)
     }
     #[inline(always)]
     fn convert_f32_to_i32_round(
@@ -3391,6 +3487,14 @@ impl F32x16Backend for archmage::Wasm128RelaxedFmaToken {
         <archmage::Wasm128Token as F32x16Backend>::max(self.wasm128(), a, b)
     }
     #[inline(always)]
+    fn min_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        overrides::min_fast_f32x16(self, a, b)
+    }
+    #[inline(always)]
+    fn max_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        overrides::max_fast_f32x16(self, a, b)
+    }
+    #[inline(always)]
     fn sqrt(self, a: Self::Repr) -> Self::Repr {
         <archmage::Wasm128Token as F32x16Backend>::sqrt(self.wasm128(), a)
     }
@@ -3558,6 +3662,14 @@ impl F64x8Backend for archmage::Wasm128RelaxedFmaToken {
     #[inline(always)]
     fn max(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
         <archmage::Wasm128Token as F64x8Backend>::max(self.wasm128(), a, b)
+    }
+    #[inline(always)]
+    fn min_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        overrides::min_fast_f64x8(self, a, b)
+    }
+    #[inline(always)]
+    fn max_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        overrides::max_fast_f64x8(self, a, b)
     }
     #[inline(always)]
     fn sqrt(self, a: Self::Repr) -> Self::Repr {
@@ -4032,6 +4144,10 @@ impl I16x32Backend for archmage::Wasm128RelaxedFmaToken {
     #[inline(always)]
     fn mul(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
         <archmage::Wasm128Token as I16x32Backend>::mul(self.wasm128(), a, b)
+    }
+    #[inline(always)]
+    fn mul_hrs_q15(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        overrides::mul_hrs_q15_x32(self, a, b)
     }
     #[inline(always)]
     fn neg(self, a: Self::Repr) -> Self::Repr {
@@ -4971,6 +5087,13 @@ impl F32x16Convert for archmage::Wasm128RelaxedFmaToken {
         a: <Self as F32x16Backend>::Repr,
     ) -> <Self as I32x16Backend>::Repr {
         <archmage::Wasm128Token as F32x16Convert>::convert_f32_to_i32_saturating(self.wasm128(), a)
+    }
+    #[inline(always)]
+    fn convert_f32_to_i32_fast(
+        self,
+        a: <Self as F32x16Backend>::Repr,
+    ) -> <Self as I32x16Backend>::Repr {
+        overrides::convert_f32_to_i32_fast_x16(self, a)
     }
     #[inline(always)]
     fn convert_f32_to_i32_round(

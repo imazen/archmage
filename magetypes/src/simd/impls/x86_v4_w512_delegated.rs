@@ -70,6 +70,14 @@ impl F32x16Backend for archmage::X64V4xToken {
         <archmage::X64V4Token as F32x16Backend>::max(self.v4(), a, b)
     }
     #[inline(always)]
+    fn min_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        <archmage::X64V4Token as F32x16Backend>::min_fast(self.v4(), a, b)
+    }
+    #[inline(always)]
+    fn max_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        <archmage::X64V4Token as F32x16Backend>::max_fast(self.v4(), a, b)
+    }
+    #[inline(always)]
     fn sqrt(self, a: Self::Repr) -> Self::Repr {
         <archmage::X64V4Token as F32x16Backend>::sqrt(self.v4(), a)
     }
@@ -236,6 +244,14 @@ impl F64x8Backend for archmage::X64V4xToken {
     #[inline(always)]
     fn max(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
         <archmage::X64V4Token as F64x8Backend>::max(self.v4(), a, b)
+    }
+    #[inline(always)]
+    fn min_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        <archmage::X64V4Token as F64x8Backend>::min_fast(self.v4(), a, b)
+    }
+    #[inline(always)]
+    fn max_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        <archmage::X64V4Token as F64x8Backend>::max_fast(self.v4(), a, b)
     }
     #[inline(always)]
     fn sqrt(self, a: Self::Repr) -> Self::Repr {
@@ -707,6 +723,10 @@ impl I16x32Backend for archmage::X64V4xToken {
     #[inline(always)]
     fn mul(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
         <archmage::X64V4Token as I16x32Backend>::mul(self.v4(), a, b)
+    }
+    #[inline(always)]
+    fn mul_hrs_q15(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        <archmage::X64V4Token as I16x32Backend>::mul_hrs_q15(self.v4(), a, b)
     }
     #[inline(always)]
     fn neg(self, a: Self::Repr) -> Self::Repr {
@@ -1632,6 +1652,13 @@ impl F32x16Convert for archmage::X64V4xToken {
         a: <Self as F32x16Backend>::Repr,
     ) -> <Self as I32x16Backend>::Repr {
         <archmage::X64V4Token as F32x16Convert>::convert_f32_to_i32_saturating(self.v4(), a)
+    }
+    #[inline(always)]
+    fn convert_f32_to_i32_fast(
+        self,
+        a: <Self as F32x16Backend>::Repr,
+    ) -> <Self as I32x16Backend>::Repr {
+        <archmage::X64V4Token as F32x16Convert>::convert_f32_to_i32_fast(self.v4(), a)
     }
     #[inline(always)]
     fn convert_f32_to_i32_round(

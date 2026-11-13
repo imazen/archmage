@@ -971,6 +971,11 @@ impl I16x32Backend for X64V4Token {
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn mul_hrs_q15(self, a: __m512i, b: __m512i) -> __m512i {
+        _mm512_mulhrs_epi16(a, b)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
     fn neg(self, a: __m512i) -> __m512i {
         _mm512_sub_epi16(_mm512_setzero_si512(), a)
     }

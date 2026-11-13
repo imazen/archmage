@@ -57,34 +57,66 @@ const V4_F32_OVERRIDES: &[(&str, &str, &str)] = &[
     ("F32x8Backend", "to_u8_bytes", "to_u8_bytes_x8_v4"),
 ];
 
-/// Float multiply-add/sub methods on `Wasm128RelaxedFmaToken` routed to bare
-/// single-rounding `f32x4.relaxed_madd` / `f64x2.relaxed_madd` helpers in
-/// `wasm128_fma_overrides.rs`.
+/// Methods on `Wasm128RelaxedFmaToken` routed to hardware `+relaxed-simd`
+/// helpers in `wasm128_fma_overrides.rs` (single-rounding FMA, relaxed min/max,
+/// lane-indexed FMA, relaxed float-to-int truncation, and Q15 rounding mul).
 const WASM_FMA_OVERRIDES: &[(&str, &str, &str)] = &[
     ("F32x4Backend", "mul_add", "mul_add_f32x4"),
     ("F32x4Backend", "mul_sub", "mul_sub_f32x4"),
     ("F32x4Backend", "mul_add_portable", "mul_add_f32x4"),
     ("F32x4Backend", "mul_sub_portable", "mul_sub_f32x4"),
+    ("F32x4Backend", "min_fast", "min_fast_f32x4"),
+    ("F32x4Backend", "max_fast", "max_fast_f32x4"),
+    ("F32x4Backend", "mul_add_lane_relaxed", "mul_add_lane_f32x4"),
     ("F32x8Backend", "mul_add", "mul_add_f32x8"),
     ("F32x8Backend", "mul_sub", "mul_sub_f32x8"),
     ("F32x8Backend", "mul_add_portable", "mul_add_f32x8"),
     ("F32x8Backend", "mul_sub_portable", "mul_sub_f32x8"),
+    ("F32x8Backend", "min_fast", "min_fast_f32x8"),
+    ("F32x8Backend", "max_fast", "max_fast_f32x8"),
+    ("F32x8Backend", "mul_add_lane_relaxed", "mul_add_lane_f32x8"),
     ("F32x16Backend", "mul_add", "mul_add_f32x16"),
     ("F32x16Backend", "mul_sub", "mul_sub_f32x16"),
     ("F32x16Backend", "mul_add_portable", "mul_add_f32x16"),
     ("F32x16Backend", "mul_sub_portable", "mul_sub_f32x16"),
+    ("F32x16Backend", "min_fast", "min_fast_f32x16"),
+    ("F32x16Backend", "max_fast", "max_fast_f32x16"),
     ("F64x2Backend", "mul_add", "mul_add_f64x2"),
     ("F64x2Backend", "mul_sub", "mul_sub_f64x2"),
     ("F64x2Backend", "mul_add_portable", "mul_add_f64x2"),
     ("F64x2Backend", "mul_sub_portable", "mul_sub_f64x2"),
+    ("F64x2Backend", "min_fast", "min_fast_f64x2"),
+    ("F64x2Backend", "max_fast", "max_fast_f64x2"),
     ("F64x4Backend", "mul_add", "mul_add_f64x4"),
     ("F64x4Backend", "mul_sub", "mul_sub_f64x4"),
     ("F64x4Backend", "mul_add_portable", "mul_add_f64x4"),
     ("F64x4Backend", "mul_sub_portable", "mul_sub_f64x4"),
+    ("F64x4Backend", "min_fast", "min_fast_f64x4"),
+    ("F64x4Backend", "max_fast", "max_fast_f64x4"),
     ("F64x8Backend", "mul_add", "mul_add_f64x8"),
     ("F64x8Backend", "mul_sub", "mul_sub_f64x8"),
     ("F64x8Backend", "mul_add_portable", "mul_add_f64x8"),
     ("F64x8Backend", "mul_sub_portable", "mul_sub_f64x8"),
+    ("F64x8Backend", "min_fast", "min_fast_f64x8"),
+    ("F64x8Backend", "max_fast", "max_fast_f64x8"),
+    (
+        "F32x4Convert",
+        "convert_f32_to_i32_fast",
+        "convert_f32_to_i32_fast_x4",
+    ),
+    (
+        "F32x8Convert",
+        "convert_f32_to_i32_fast",
+        "convert_f32_to_i32_fast_x8",
+    ),
+    (
+        "F32x16Convert",
+        "convert_f32_to_i32_fast",
+        "convert_f32_to_i32_fast_x16",
+    ),
+    ("I16x8Backend", "mul_hrs_q15", "mul_hrs_q15_x8"),
+    ("I16x16Backend", "mul_hrs_q15", "mul_hrs_q15_x16"),
+    ("I16x32Backend", "mul_hrs_q15", "mul_hrs_q15_x32"),
 ];
 
 /// Generate `impls/x86_v4_f32_delegated.rs` from the `F32x4Backend` and
@@ -441,7 +473,7 @@ fn delegating_impl(
                 format_ident!("{helper}")
             });
         let body = match override_helper {
-            Some(helper) => quote! { overrides::#helper(#override_proof, #(#args),*) },
+            Some(helper) => quote! { overrides::#helper #turbofish(#override_proof, #(#args),*) },
             None => {
                 quote! { <#parent_path as #trait_ident>::#name #turbofish(#parent_expr, #(#args),*) }
             }

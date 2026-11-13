@@ -262,6 +262,63 @@ impl F32x4Backend for NeonToken {
     }
 
     #[arcane(suppress_const_test, _self = NeonToken)]
+    fn broadcast_lane<const N: usize>(self, a: float32x4_t) -> float32x4_t {
+        const { assert!(N < 4, "lane index out of bounds") };
+        match N {
+            0 => vdupq_laneq_f32::<0>(a),
+            1 => vdupq_laneq_f32::<1>(a),
+            2 => vdupq_laneq_f32::<2>(a),
+            3 => vdupq_laneq_f32::<3>(a),
+            _ => unreachable!(),
+        }
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn shift_left_lanes<const N: usize>(self, a: float32x4_t) -> float32x4_t {
+        const { assert!(N <= 4, "shift count out of bounds") };
+        let z = vdupq_n_f32(0.0);
+        match N {
+            0 => a,
+            1 => vextq_f32::<3>(z, a),
+            2 => vextq_f32::<2>(z, a),
+            3 => vextq_f32::<1>(z, a),
+            4 => z,
+            _ => unreachable!(),
+        }
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn shift_right_lanes<const N: usize>(self, a: float32x4_t) -> float32x4_t {
+        const { assert!(N <= 4, "shift count out of bounds") };
+        let z = vdupq_n_f32(0.0);
+        match N {
+            0 => a,
+            1 => vextq_f32::<1>(a, z),
+            2 => vextq_f32::<2>(a, z),
+            3 => vextq_f32::<3>(a, z),
+            4 => z,
+            _ => unreachable!(),
+        }
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn mul_add_lane_relaxed<const LANE: i32>(
+        self,
+        a: float32x4_t,
+        v_in: float32x4_t,
+        acc: float32x4_t,
+    ) -> float32x4_t {
+        const { assert!(LANE >= 0 && LANE < 4, "LANE must be in 0..4") };
+        match LANE {
+            0 => vfmaq_laneq_f32::<0>(acc, a, v_in),
+            1 => vfmaq_laneq_f32::<1>(acc, a, v_in),
+            2 => vfmaq_laneq_f32::<2>(acc, a, v_in),
+            3 => vfmaq_laneq_f32::<3>(acc, a, v_in),
+            _ => unreachable!(),
+        }
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn to_u8_bytes(self, a: float32x4_t) -> [u8; 4] {
         let i16s = vqmovn_s32(vcvtnq_s32_f32(a));
         let u8s = vqmovun_s16(vcombine_s16(i16s, i16s));
@@ -611,6 +668,104 @@ impl F32x8Backend for NeonToken {
                 vreinterpretq_u32_f32(b[1]),
             )),
         ]
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn broadcast_lane<const N: usize>(self, a: [float32x4_t; 2]) -> [float32x4_t; 2] {
+        const { assert!(N < 8, "lane index out of bounds") };
+        let s = match N {
+            0 => vdupq_laneq_f32::<0>(a[0]),
+            1 => vdupq_laneq_f32::<1>(a[0]),
+            2 => vdupq_laneq_f32::<2>(a[0]),
+            3 => vdupq_laneq_f32::<3>(a[0]),
+            4 => vdupq_laneq_f32::<0>(a[1]),
+            5 => vdupq_laneq_f32::<1>(a[1]),
+            6 => vdupq_laneq_f32::<2>(a[1]),
+            7 => vdupq_laneq_f32::<3>(a[1]),
+            _ => unreachable!(),
+        };
+        [s, s]
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn shift_left_lanes<const N: usize>(self, a: [float32x4_t; 2]) -> [float32x4_t; 2] {
+        const { assert!(N <= 8, "shift count out of bounds") };
+        let z = vdupq_n_f32(0.0);
+        match N {
+            0 => a,
+            1 => [vextq_f32::<3>(z, a[0]), vextq_f32::<3>(a[0], a[1])],
+            2 => [vextq_f32::<2>(z, a[0]), vextq_f32::<2>(a[0], a[1])],
+            3 => [vextq_f32::<1>(z, a[0]), vextq_f32::<1>(a[0], a[1])],
+            4 => [z, a[0]],
+            5 => [z, vextq_f32::<3>(z, a[0])],
+            6 => [z, vextq_f32::<2>(z, a[0])],
+            7 => [z, vextq_f32::<1>(z, a[0])],
+            8 => [z, z],
+            _ => unreachable!(),
+        }
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn shift_right_lanes<const N: usize>(self, a: [float32x4_t; 2]) -> [float32x4_t; 2] {
+        const { assert!(N <= 8, "shift count out of bounds") };
+        let z = vdupq_n_f32(0.0);
+        match N {
+            0 => a,
+            1 => [vextq_f32::<1>(a[0], a[1]), vextq_f32::<1>(a[1], z)],
+            2 => [vextq_f32::<2>(a[0], a[1]), vextq_f32::<2>(a[1], z)],
+            3 => [vextq_f32::<3>(a[0], a[1]), vextq_f32::<3>(a[1], z)],
+            4 => [a[1], z],
+            5 => [vextq_f32::<1>(a[1], z), z],
+            6 => [vextq_f32::<2>(a[1], z), z],
+            7 => [vextq_f32::<3>(a[1], z), z],
+            8 => [z, z],
+            _ => unreachable!(),
+        }
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn mul_add_lane_relaxed<const LANE: i32>(
+        self,
+        a: [float32x4_t; 2],
+        v_in: [float32x4_t; 2],
+        acc: [float32x4_t; 2],
+    ) -> [float32x4_t; 2] {
+        const { assert!(LANE >= 0 && LANE < 8, "LANE must be in 0..8") };
+        match LANE {
+            0 => [
+                vfmaq_laneq_f32::<0>(acc[0], a[0], v_in[0]),
+                vfmaq_laneq_f32::<0>(acc[1], a[1], v_in[0]),
+            ],
+            1 => [
+                vfmaq_laneq_f32::<1>(acc[0], a[0], v_in[0]),
+                vfmaq_laneq_f32::<1>(acc[1], a[1], v_in[0]),
+            ],
+            2 => [
+                vfmaq_laneq_f32::<2>(acc[0], a[0], v_in[0]),
+                vfmaq_laneq_f32::<2>(acc[1], a[1], v_in[0]),
+            ],
+            3 => [
+                vfmaq_laneq_f32::<3>(acc[0], a[0], v_in[0]),
+                vfmaq_laneq_f32::<3>(acc[1], a[1], v_in[0]),
+            ],
+            4 => [
+                vfmaq_laneq_f32::<0>(acc[0], a[0], v_in[1]),
+                vfmaq_laneq_f32::<0>(acc[1], a[1], v_in[1]),
+            ],
+            5 => [
+                vfmaq_laneq_f32::<1>(acc[0], a[0], v_in[1]),
+                vfmaq_laneq_f32::<1>(acc[1], a[1], v_in[1]),
+            ],
+            6 => [
+                vfmaq_laneq_f32::<2>(acc[0], a[0], v_in[1]),
+                vfmaq_laneq_f32::<2>(acc[1], a[1], v_in[1]),
+            ],
+            7 => [
+                vfmaq_laneq_f32::<3>(acc[0], a[0], v_in[1]),
+                vfmaq_laneq_f32::<3>(acc[1], a[1], v_in[1]),
+            ],
+            _ => unreachable!(),
+        }
     }
 
     #[arcane(suppress_const_test, _self = NeonToken)]
@@ -3161,6 +3316,10 @@ impl I16x8Backend for NeonToken {
         vmulq_s16(a, b)
     }
     #[arcane(suppress_const_test, _self = NeonToken)]
+    fn mul_hrs_q15(self, a: int16x8_t, b: int16x8_t) -> int16x8_t {
+        vqrdmulhq_s16(a, b)
+    }
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn neg(self, a: int16x8_t) -> int16x8_t {
         vnegq_s16(a)
     }
@@ -3371,6 +3530,10 @@ impl I16x16Backend for NeonToken {
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn mul(self, a: [int16x8_t; 2], b: [int16x8_t; 2]) -> [int16x8_t; 2] {
         [vmulq_s16(a[0], b[0]), vmulq_s16(a[1], b[1])]
+    }
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn mul_hrs_q15(self, a: [int16x8_t; 2], b: [int16x8_t; 2]) -> [int16x8_t; 2] {
+        [vqrdmulhq_s16(a[0], b[0]), vqrdmulhq_s16(a[1], b[1])]
     }
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn neg(self, a: [int16x8_t; 2]) -> [int16x8_t; 2] {
@@ -5712,6 +5875,11 @@ impl I16x32Backend for NeonToken {
     #[inline(always)]
     fn mul(self, a: [int16x8_t; 4], b: [int16x8_t; 4]) -> [int16x8_t; 4] {
         core::array::from_fn(|i| <NeonToken as I16x8Backend>::mul(self, a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn mul_hrs_q15(self, a: [int16x8_t; 4], b: [int16x8_t; 4]) -> [int16x8_t; 4] {
+        core::array::from_fn(|i| <NeonToken as I16x8Backend>::mul_hrs_q15(self, a[i], b[i]))
     }
 
     #[inline(always)]

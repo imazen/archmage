@@ -74,6 +74,14 @@ impl F32x4Backend for archmage::Wasm128Token {
         f32x4_max(a, b)
     }
     #[inline(always)]
+    fn min_fast(self, a: v128, b: v128) -> v128 {
+        f32x4_pmin(b, a)
+    }
+    #[inline(always)]
+    fn max_fast(self, a: v128, b: v128) -> v128 {
+        f32x4_pmax(b, a)
+    }
+    #[inline(always)]
     fn sqrt(self, a: v128) -> v128 {
         f32x4_sqrt(a)
     }
@@ -202,6 +210,59 @@ impl F32x4Backend for archmage::Wasm128Token {
     }
 
     #[inline(always)]
+    fn broadcast_lane<const N: usize>(self, a: v128) -> v128 {
+        const { assert!(N < 4, "lane index out of bounds") };
+        match N {
+            0 => i32x4_shuffle::<0, 0, 0, 0>(a, a),
+            1 => i32x4_shuffle::<1, 1, 1, 1>(a, a),
+            2 => i32x4_shuffle::<2, 2, 2, 2>(a, a),
+            3 => i32x4_shuffle::<3, 3, 3, 3>(a, a),
+            _ => unreachable!(),
+        }
+    }
+
+    #[inline(always)]
+    fn shift_left_lanes<const N: usize>(self, a: v128) -> v128 {
+        const { assert!(N <= 4, "shift count out of bounds") };
+        let z = f32x4_splat(0.0);
+        match N {
+            0 => a,
+            1 => i32x4_shuffle::<0, 4, 5, 6>(z, a),
+            2 => i32x4_shuffle::<0, 1, 4, 5>(z, a),
+            3 => i32x4_shuffle::<0, 1, 2, 4>(z, a),
+            4 => z,
+            _ => unreachable!(),
+        }
+    }
+
+    #[inline(always)]
+    fn shift_right_lanes<const N: usize>(self, a: v128) -> v128 {
+        const { assert!(N <= 4, "shift count out of bounds") };
+        let z = f32x4_splat(0.0);
+        match N {
+            0 => a,
+            1 => i32x4_shuffle::<1, 2, 3, 4>(a, z),
+            2 => i32x4_shuffle::<2, 3, 4, 5>(a, z),
+            3 => i32x4_shuffle::<3, 4, 5, 6>(a, z),
+            4 => z,
+            _ => unreachable!(),
+        }
+    }
+
+    #[inline(always)]
+    fn mul_add_lane_relaxed<const LANE: i32>(self, a: v128, v_in: v128, acc: v128) -> v128 {
+        const { assert!(LANE >= 0 && LANE < 4, "LANE must be in 0..4") };
+        let splat = match LANE {
+            0 => i32x4_shuffle::<0, 0, 0, 0>(v_in, v_in),
+            1 => i32x4_shuffle::<1, 1, 1, 1>(v_in, v_in),
+            2 => i32x4_shuffle::<2, 2, 2, 2>(v_in, v_in),
+            3 => i32x4_shuffle::<3, 3, 3, 3>(v_in, v_in),
+            _ => unreachable!(),
+        };
+        crate::wasm_fma::madd_f32x4(self, a, splat, acc)
+    }
+
+    #[inline(always)]
     fn to_u8_bytes(self, a: v128) -> [u8; 4] {
         let i32s = i32x4_trunc_sat_f32x4(f32x4_nearest(a));
         let i16s = i16x8_narrow_i32x4(i32s, i32s);
@@ -291,6 +352,14 @@ impl F32x8Backend for archmage::Wasm128Token {
     #[inline(always)]
     fn max(self, a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
         [f32x4_max(a[0], b[0]), f32x4_max(a[1], b[1])]
+    }
+    #[inline(always)]
+    fn min_fast(self, a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
+        [f32x4_pmin(b[0], a[0]), f32x4_pmin(b[1], a[1])]
+    }
+    #[inline(always)]
+    fn max_fast(self, a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
+        [f32x4_pmax(b[0], a[0]), f32x4_pmax(b[1], a[1])]
     }
     #[inline(always)]
     fn sqrt(self, a: [v128; 2]) -> [v128; 2] {
@@ -444,6 +513,102 @@ impl F32x8Backend for archmage::Wasm128Token {
     }
 
     #[inline(always)]
+    fn broadcast_lane<const N: usize>(self, a: [v128; 2]) -> [v128; 2] {
+        const { assert!(N < 8, "lane index out of bounds") };
+        let s = match N {
+            0 => i32x4_shuffle::<0, 0, 0, 0>(a[0], a[0]),
+            1 => i32x4_shuffle::<1, 1, 1, 1>(a[0], a[0]),
+            2 => i32x4_shuffle::<2, 2, 2, 2>(a[0], a[0]),
+            3 => i32x4_shuffle::<3, 3, 3, 3>(a[0], a[0]),
+            4 => i32x4_shuffle::<0, 0, 0, 0>(a[1], a[1]),
+            5 => i32x4_shuffle::<1, 1, 1, 1>(a[1], a[1]),
+            6 => i32x4_shuffle::<2, 2, 2, 2>(a[1], a[1]),
+            7 => i32x4_shuffle::<3, 3, 3, 3>(a[1], a[1]),
+            _ => unreachable!(),
+        };
+        [s, s]
+    }
+
+    #[inline(always)]
+    fn shift_left_lanes<const N: usize>(self, a: [v128; 2]) -> [v128; 2] {
+        const { assert!(N <= 8, "shift count out of bounds") };
+        let z = f32x4_splat(0.0);
+        match N {
+            0 => a,
+            1 => [
+                i32x4_shuffle::<0, 4, 5, 6>(z, a[0]),
+                i32x4_shuffle::<3, 4, 5, 6>(a[0], a[1]),
+            ],
+            2 => [
+                i32x4_shuffle::<0, 1, 4, 5>(z, a[0]),
+                i32x4_shuffle::<2, 3, 4, 5>(a[0], a[1]),
+            ],
+            3 => [
+                i32x4_shuffle::<0, 1, 2, 4>(z, a[0]),
+                i32x4_shuffle::<1, 2, 3, 4>(a[0], a[1]),
+            ],
+            4 => [z, a[0]],
+            5 => [z, i32x4_shuffle::<0, 4, 5, 6>(z, a[0])],
+            6 => [z, i32x4_shuffle::<0, 1, 4, 5>(z, a[0])],
+            7 => [z, i32x4_shuffle::<0, 1, 2, 4>(z, a[0])],
+            8 => [z, z],
+            _ => unreachable!(),
+        }
+    }
+
+    #[inline(always)]
+    fn shift_right_lanes<const N: usize>(self, a: [v128; 2]) -> [v128; 2] {
+        const { assert!(N <= 8, "shift count out of bounds") };
+        let z = f32x4_splat(0.0);
+        match N {
+            0 => a,
+            1 => [
+                i32x4_shuffle::<1, 2, 3, 4>(a[0], a[1]),
+                i32x4_shuffle::<1, 2, 3, 4>(a[1], z),
+            ],
+            2 => [
+                i32x4_shuffle::<2, 3, 4, 5>(a[0], a[1]),
+                i32x4_shuffle::<2, 3, 4, 5>(a[1], z),
+            ],
+            3 => [
+                i32x4_shuffle::<3, 4, 5, 6>(a[0], a[1]),
+                i32x4_shuffle::<3, 4, 5, 6>(a[1], z),
+            ],
+            4 => [a[1], z],
+            5 => [i32x4_shuffle::<1, 2, 3, 4>(a[1], z), z],
+            6 => [i32x4_shuffle::<2, 3, 4, 5>(a[1], z), z],
+            7 => [i32x4_shuffle::<3, 4, 5, 6>(a[1], z), z],
+            8 => [z, z],
+            _ => unreachable!(),
+        }
+    }
+
+    #[inline(always)]
+    fn mul_add_lane_relaxed<const LANE: i32>(
+        self,
+        a: [v128; 2],
+        v_in: [v128; 2],
+        acc: [v128; 2],
+    ) -> [v128; 2] {
+        const { assert!(LANE >= 0 && LANE < 8, "LANE must be in 0..8") };
+        let splat = match LANE {
+            0 => i32x4_shuffle::<0, 0, 0, 0>(v_in[0], v_in[0]),
+            1 => i32x4_shuffle::<1, 1, 1, 1>(v_in[0], v_in[0]),
+            2 => i32x4_shuffle::<2, 2, 2, 2>(v_in[0], v_in[0]),
+            3 => i32x4_shuffle::<3, 3, 3, 3>(v_in[0], v_in[0]),
+            4 => i32x4_shuffle::<0, 0, 0, 0>(v_in[1], v_in[1]),
+            5 => i32x4_shuffle::<1, 1, 1, 1>(v_in[1], v_in[1]),
+            6 => i32x4_shuffle::<2, 2, 2, 2>(v_in[1], v_in[1]),
+            7 => i32x4_shuffle::<3, 3, 3, 3>(v_in[1], v_in[1]),
+            _ => unreachable!(),
+        };
+        [
+            crate::wasm_fma::madd_f32x4(self, a[0], splat, acc[0]),
+            crate::wasm_fma::madd_f32x4(self, a[1], splat, acc[1]),
+        ]
+    }
+
+    #[inline(always)]
     fn to_u8_bytes(self, a: [v128; 2]) -> [u8; 8] {
         let i0 = i32x4_trunc_sat_f32x4(f32x4_nearest(a[0]));
         let i1 = i32x4_trunc_sat_f32x4(f32x4_nearest(a[1]));
@@ -527,6 +692,14 @@ impl F64x2Backend for archmage::Wasm128Token {
     #[inline(always)]
     fn max(self, a: v128, b: v128) -> v128 {
         f64x2_max(a, b)
+    }
+    #[inline(always)]
+    fn min_fast(self, a: v128, b: v128) -> v128 {
+        f64x2_pmin(b, a)
+    }
+    #[inline(always)]
+    fn max_fast(self, a: v128, b: v128) -> v128 {
+        f64x2_pmax(b, a)
     }
     #[inline(always)]
     fn sqrt(self, a: v128) -> v128 {
@@ -714,6 +887,14 @@ impl F64x4Backend for archmage::Wasm128Token {
     #[inline(always)]
     fn max(self, a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
         [f64x2_max(a[0], b[0]), f64x2_max(a[1], b[1])]
+    }
+    #[inline(always)]
+    fn min_fast(self, a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
+        [f64x2_pmin(b[0], a[0]), f64x2_pmin(b[1], a[1])]
+    }
+    #[inline(always)]
+    fn max_fast(self, a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
+        [f64x2_pmax(b[0], a[0]), f64x2_pmax(b[1], a[1])]
     }
     #[inline(always)]
     fn sqrt(self, a: [v128; 2]) -> [v128; 2] {
@@ -2688,6 +2869,10 @@ impl I16x8Backend for archmage::Wasm128Token {
         i16x8_mul(a, b)
     }
     #[inline(always)]
+    fn mul_hrs_q15(self, a: v128, b: v128) -> v128 {
+        i16x8_q15mulr_sat(a, b)
+    }
+    #[inline(always)]
     fn neg(self, a: v128) -> v128 {
         i16x8_neg(a)
     }
@@ -2892,6 +3077,10 @@ impl I16x16Backend for archmage::Wasm128Token {
     #[inline(always)]
     fn mul(self, a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
         [i16x8_mul(a[0], b[0]), i16x8_mul(a[1], b[1])]
+    }
+    #[inline(always)]
+    fn mul_hrs_q15(self, a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
+        [i16x8_q15mulr_sat(a[0], b[0]), i16x8_q15mulr_sat(a[1], b[1])]
     }
     #[inline(always)]
     fn neg(self, a: [v128; 2]) -> [v128; 2] {
@@ -4067,6 +4256,20 @@ impl F32x16Backend for archmage::Wasm128Token {
     }
 
     #[inline(always)]
+    fn min_fast(self, a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| {
+            <archmage::Wasm128Token as F32x4Backend>::min_fast(self, a[i], b[i])
+        })
+    }
+
+    #[inline(always)]
+    fn max_fast(self, a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| {
+            <archmage::Wasm128Token as F32x4Backend>::max_fast(self, a[i], b[i])
+        })
+    }
+
+    #[inline(always)]
     fn sqrt(self, a: [v128; 4]) -> [v128; 4] {
         core::array::from_fn(|i| <archmage::Wasm128Token as F32x4Backend>::sqrt(self, a[i]))
     }
@@ -4353,6 +4556,20 @@ impl F64x8Backend for archmage::Wasm128Token {
     #[inline(always)]
     fn max(self, a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
         core::array::from_fn(|i| <archmage::Wasm128Token as F64x2Backend>::max(self, a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn min_fast(self, a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| {
+            <archmage::Wasm128Token as F64x2Backend>::min_fast(self, a[i], b[i])
+        })
+    }
+
+    #[inline(always)]
+    fn max_fast(self, a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| {
+            <archmage::Wasm128Token as F64x2Backend>::max_fast(self, a[i], b[i])
+        })
     }
 
     #[inline(always)]
@@ -5238,6 +5455,13 @@ impl I16x32Backend for archmage::Wasm128Token {
     #[inline(always)]
     fn mul(self, a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
         core::array::from_fn(|i| <archmage::Wasm128Token as I16x8Backend>::mul(self, a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn mul_hrs_q15(self, a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| {
+            <archmage::Wasm128Token as I16x8Backend>::mul_hrs_q15(self, a[i], b[i])
+        })
     }
 
     #[inline(always)]
