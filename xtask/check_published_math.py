@@ -32,7 +32,7 @@ def main():
         actual = methods(path.read_text())
         assert actual == reference['methods'], f'published flat math changed: {vector}'
     lib = (ROOT / 'magetypes/src/lib.rs').read_text()
-    for family in ['powf', 'expf', 'logf']:
+    for family in ['powf', 'expf', 'logf', 'cbrtf']:
         assert not re.search(r'\bmod\s+' + family + r'\s*;', lib), family
         assert not (ROOT / 'magetypes/src' / family).exists(), family
         assert re.search(r'pub mod\s+' + family + r'\s*;', (ROOT / 'magemath/src/lib.rs').read_text()), family

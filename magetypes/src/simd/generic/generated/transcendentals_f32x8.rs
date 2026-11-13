@@ -552,6 +552,10 @@ impl<T: F32x8Convert> f32x8<T> {
     ///
     /// Returns ±0 for ±0 input. Does not handle denormals or infinity — use
     /// `cbrt_midp_precise` for those.
+    #[deprecated(
+        since = "0.9.32",
+        note = "use magemath::cbrtf::try_cbrt_f32x8_with with CbrtfOptions::PORTABLE_LOWP and the caller token; see docs/MAGEMATH-MIGRATION.md"
+    )]
     #[inline(always)]
     pub fn cbrt_lowp(self) -> Self {
         const MAGIC: u32 = 0x2a50_8c2d;
@@ -594,6 +598,10 @@ impl<T: F32x8Convert> f32x8<T> {
     /// overflow an intermediate and return NaN (±inf for a few just above
     /// the limit), and denormals and infinity are not handled: use
     /// `cbrt_midp_precise` for those.
+    #[deprecated(
+        since = "0.9.32",
+        note = "use magemath::cbrtf::try_cbrt_f32x8_with with CbrtfOptions::PORTABLE_MIDP and the caller token; see docs/MAGEMATH-MIGRATION.md"
+    )]
     #[inline(always)]
     pub fn cbrt_midp(self) -> Self {
         const MAGIC: u32 = 0x2a50_8c2d;
@@ -629,6 +637,10 @@ impl<T: F32x8Convert> f32x8<T> {
     /// Wraps `cbrt_midp()`: denormals are scaled up first, magnitudes from
     /// 1e36 up run on x/8 with the result doubled so the Halley step cannot
     /// overflow, and ±0 and ±inf return themselves.
+    #[deprecated(
+        since = "0.9.32",
+        note = "use magemath::cbrtf::try_cbrt_f32x8_with with CbrtfOptions::PORTABLE_MIDP_FULL and the caller token; see docs/MAGEMATH-MIGRATION.md"
+    )]
     #[inline(always)]
     pub fn cbrt_midp_precise(self) -> Self {
         let zero = splat_f32::<T>(self.1, 0.0);
