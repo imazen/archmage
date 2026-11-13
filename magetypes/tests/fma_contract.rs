@@ -5,7 +5,7 @@
 #[cfg(any(
     target_arch = "x86_64",
     target_arch = "aarch64",
-    target_arch = "wasm32"
+    all(target_arch = "wasm32", target_feature = "simd128")
 ))]
 use archmage::SimdToken;
 use archmage::{ScalarToken, magetypes};
@@ -45,10 +45,11 @@ macro_rules! check {
                 let expected = $float::from_bits(rows[i][3]);
                 same!(add[i], expected);
                 same!(sub[i], expected);
-                // Hardware native paths share the exact oracle. Scalar and WASM
-                // use separate multiply/add or the engine's relaxed instruction.
+                // Hardware native paths (and runtime-verified Wasm128RelaxedFmaToken)
+                // share the exact oracle. Scalar and base Wasm128Token use separate
+                // multiply/add or the engine's unscreened relaxed instruction.
                 let fast = if ($token).type_id() == core::any::TypeId::of::<ScalarToken>()
-                    || cfg!(target_arch = "wasm32")
+                    || ($token).type_id() == core::any::TypeId::of::<archmage::Wasm128Token>()
                 {
                     a[i].mul_add_expected(b[i], c[i], $token)
                 } else {
@@ -61,7 +62,7 @@ macro_rules! check {
     };
 }
 
-#[magetypes(v3, v4, v4x, neon, wasm128, scalar)]
+#[magetypes(v3, v4, v4x, neon, wasm128_relaxed_fma, wasm128, scalar)]
 fn vectors(token: Token) {
     check!(token, f32x4, f32, 4, fixtures::F32);
     check!(token, f32x8, f32, 8, fixtures::F32);
@@ -110,10 +111,21 @@ fn selected_backend_contract() {
         "v4x" => vectors_v4x(archmage::X64V4xToken::summon().expect("requested v4x")),
         #[cfg(target_arch = "aarch64")]
         "neon" => vectors_neon(archmage::NeonToken::summon().expect("requested neon")),
-        #[cfg(target_arch = "wasm32")]
+        #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
         "wasm128" => vectors_wasm128(archmage::Wasm128Token::summon().expect("requested wasm128")),
+        #[cfg(all(
+            target_arch = "wasm32",
+            target_feature = "simd128",
+            target_feature = "relaxed-simd"
+        ))]
+        "wasm128_relaxed_fma" => vectors_wasm128_relaxed_fma(
+            archmage::Wasm128RelaxedFmaToken::summon().expect("requested wasm128_relaxed_fma"),
+        ),
         "auto" => {
-            archmage::incant!(vectors(), [v4x, v4, v3, neon, wasm128, scalar]);
+            archmage::incant!(
+                vectors(),
+                [v4x, v4, v3, neon, wasm128_relaxed_fma, wasm128, scalar]
+            );
         }
         tier => panic!("unsupported requested tier {tier}"),
     }

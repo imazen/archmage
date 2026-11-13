@@ -13,7 +13,7 @@ pub(super) enum Plan {
     V4x(archmage::X64V4xToken),
     #[cfg(target_arch = "aarch64")]
     Neon(archmage::NeonToken),
-    #[cfg(target_arch = "wasm32")]
+    #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
     Wasm(archmage::Wasm128Token),
     Software,
 }
@@ -24,7 +24,7 @@ fn select_impl<T: SimdToken>(token: T, execution: LogfExecution) -> Plan {
     #[cfg(any(
         target_arch = "x86_64",
         target_arch = "aarch64",
-        target_arch = "wasm32"
+        all(target_arch = "wasm32", target_feature = "simd128")
     ))]
     let any: &dyn core::any::Any = &token;
     #[cfg(target_arch = "x86_64")]
@@ -46,7 +46,7 @@ fn select_impl<T: SimdToken>(token: T, execution: LogfExecution) -> Plan {
     if let Some(t) = any.downcast_ref::<archmage::NeonToken>() {
         return Plan::Neon(*t);
     }
-    #[cfg(target_arch = "wasm32")]
+    #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
     if let Some(t) = any.downcast_ref::<archmage::Wasm128Token>() {
         return Plan::Wasm(*t);
     }
@@ -83,7 +83,7 @@ macro_rules! run_const {
                 Plan::V4x(t) => graph::$v4x::<OPTIONS>(t, input),
                 #[cfg(target_arch = "aarch64")]
                 Plan::Neon(t) => graph::$neon::<OPTIONS>(t, input),
-                #[cfg(target_arch = "wasm32")]
+                #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
                 Plan::Wasm(t) => graph::$wasm::<OPTIONS>(t, input),
                 Plan::Software => graph::$scalar::<OPTIONS>(ScalarToken, input),
             }

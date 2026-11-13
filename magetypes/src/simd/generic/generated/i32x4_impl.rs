@@ -665,7 +665,7 @@ impl i32x4<archmage::NeonToken> {
     }
 }
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
 impl i32x4<archmage::Wasm128Token> {
     /// Implementation identifier for this backend.
     pub const fn implementation_name() -> &'static str {
@@ -730,7 +730,7 @@ impl i32x4<archmage::NeonToken> {
         Self(value, archmage::NeonToken::from_context())
     }
 }
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
 impl i32x4<archmage::Wasm128Token> {
     /// Get the raw `v128` value.
     #[inline(always)]

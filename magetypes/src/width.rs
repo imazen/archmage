@@ -1341,7 +1341,7 @@ mod arm_impl {
     }
 }
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
 mod wasm_impl {
     use super::WidthDispatch;
     use archmage::Wasm128Token;

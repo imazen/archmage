@@ -126,6 +126,8 @@ mod relaxed_probe {
         let c = w::f32x4_splat(black_box(-(1.0 + 1.0 / 2048.0)));
         let r = w::f32x4_relaxed_madd(x, x, c);
         w::f32x4_extract_lane::<0>(r) == 1.0 / 16_777_216.0
+            && w::f32x4_extract_lane::<1>(r) == 1.0 / 16_777_216.0
+            && w::f32x4_extract_lane::<2>(r) == 1.0 / 16_777_216.0
             && w::f32x4_extract_lane::<3>(r) == 1.0 / 16_777_216.0
     }
 

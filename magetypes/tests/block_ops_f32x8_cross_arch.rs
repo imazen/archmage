@@ -23,8 +23,10 @@ use magetypes::simd::generic::f32x8;
 type Tok = archmage::X64V3Token;
 #[cfg(target_arch = "aarch64")]
 type Tok = archmage::NeonToken;
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
 type Tok = archmage::Wasm128Token;
+#[cfg(all(target_arch = "wasm32", not(target_feature = "simd128")))]
+type Tok = archmage::ScalarToken;
 
 #[cfg(any(
     target_arch = "x86_64",

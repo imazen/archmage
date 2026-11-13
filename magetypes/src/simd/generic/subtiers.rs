@@ -185,76 +185,54 @@ mod arm_v2 {
     }
 }
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(
+    target_arch = "wasm32",
+    target_feature = "simd128",
+    target_feature = "relaxed-simd"
+))]
 mod wasm_relaxed {
     use super::super::{f32x4, f64x2, i8x16, i32x4};
     use archmage::{Wasm128RelaxedToken, Wasm128Token};
-    #[cfg(not(target_feature = "relaxed-simd"))]
-    use core::arch::wasm32::{
-        f32x4_pmax, f32x4_pmin, f64x2_pmax, f64x2_pmin, i16x8_extmul_high_i8x16,
-        i16x8_extmul_low_i8x16, i32x4_add, i32x4_extadd_pairwise_i16x8, i32x4_shuffle,
-    };
-    #[cfg(target_feature = "relaxed-simd")]
     use core::arch::wasm32::{
         f32x4_relaxed_max, f32x4_relaxed_min, f64x2_relaxed_max, f64x2_relaxed_min,
         i32x4_relaxed_dot_i8x16_i7x16_add,
     };
 
     impl f32x4<Wasm128Token> {
-        /// Lane-wise relaxed minimum (`f32x4.relaxed_min` when compiled with
-        /// `+relaxed-simd`; exact behavior on NaN or `-0.0`/`+0.0` is
-        /// implementation-defined).
+        /// Lane-wise relaxed minimum (`f32x4.relaxed_min`; exact behavior on
+        /// NaN or `-0.0`/`+0.0` is implementation-defined).
         #[archmage::attune(wrap, suppress_const_test)]
         pub fn min_relaxed(self, _token: Wasm128RelaxedToken, other: Self) -> Self {
-            #[cfg(target_feature = "relaxed-simd")]
-            let out = f32x4_relaxed_min(self.0, other.0);
-            #[cfg(not(target_feature = "relaxed-simd"))]
-            let out = f32x4_pmin(self.0, other.0);
-            Self(out, self.1)
+            Self(f32x4_relaxed_min(self.0, other.0), self.1)
         }
 
-        /// Lane-wise relaxed maximum (`f32x4.relaxed_max` when compiled with
-        /// `+relaxed-simd`; exact behavior on NaN or `-0.0`/`+0.0` is
-        /// implementation-defined).
+        /// Lane-wise relaxed maximum (`f32x4.relaxed_max`; exact behavior on
+        /// NaN or `-0.0`/`+0.0` is implementation-defined).
         #[archmage::attune(wrap, suppress_const_test)]
         pub fn max_relaxed(self, _token: Wasm128RelaxedToken, other: Self) -> Self {
-            #[cfg(target_feature = "relaxed-simd")]
-            let out = f32x4_relaxed_max(self.0, other.0);
-            #[cfg(not(target_feature = "relaxed-simd"))]
-            let out = f32x4_pmax(self.0, other.0);
-            Self(out, self.1)
+            Self(f32x4_relaxed_max(self.0, other.0), self.1)
         }
     }
 
     impl f64x2<Wasm128Token> {
-        /// Lane-wise relaxed minimum (`f64x2.relaxed_min` when compiled with
-        /// `+relaxed-simd`; exact behavior on NaN or `-0.0`/`+0.0` is
-        /// implementation-defined).
+        /// Lane-wise relaxed minimum (`f64x2.relaxed_min`; exact behavior on
+        /// NaN or `-0.0`/`+0.0` is implementation-defined).
         #[archmage::attune(wrap, suppress_const_test)]
         pub fn min_relaxed(self, _token: Wasm128RelaxedToken, other: Self) -> Self {
-            #[cfg(target_feature = "relaxed-simd")]
-            let out = f64x2_relaxed_min(self.0, other.0);
-            #[cfg(not(target_feature = "relaxed-simd"))]
-            let out = f64x2_pmin(self.0, other.0);
-            Self(out, self.1)
+            Self(f64x2_relaxed_min(self.0, other.0), self.1)
         }
 
-        /// Lane-wise relaxed maximum (`f64x2.relaxed_max` when compiled with
-        /// `+relaxed-simd`; exact behavior on NaN or `-0.0`/`+0.0` is
-        /// implementation-defined).
+        /// Lane-wise relaxed maximum (`f64x2.relaxed_max`; exact behavior on
+        /// NaN or `-0.0`/`+0.0` is implementation-defined).
         #[archmage::attune(wrap, suppress_const_test)]
         pub fn max_relaxed(self, _token: Wasm128RelaxedToken, other: Self) -> Self {
-            #[cfg(target_feature = "relaxed-simd")]
-            let out = f64x2_relaxed_max(self.0, other.0);
-            #[cfg(not(target_feature = "relaxed-simd"))]
-            let out = f64x2_pmax(self.0, other.0);
-            Self(out, self.1)
+            Self(f64x2_relaxed_max(self.0, other.0), self.1)
         }
     }
 
     impl i32x4<Wasm128Token> {
         /// Relaxed 4-way `i8 * i7` dot-product accumulate into `self`
-        /// (`i32x4.relaxed_dot_i8x16_i7x16_add` when compiled with `+relaxed-simd`).
+        /// (`i32x4.relaxed_dot_i8x16_i7x16_add`).
         ///
         /// Bytes of `b` must be in `0..=127` (`i7`) so signed and unsigned
         /// hardware interpretations agree.
@@ -265,17 +243,7 @@ mod wasm_relaxed {
             a: i8x16<Wasm128Token>,
             b: i8x16<Wasm128Token>,
         ) -> Self {
-            #[cfg(target_feature = "relaxed-simd")]
-            let out = i32x4_relaxed_dot_i8x16_i7x16_add(a.0, b.0, self.0);
-            #[cfg(not(target_feature = "relaxed-simd"))]
-            let out = {
-                let lo = i16x8_extmul_low_i8x16(a.0, b.0);
-                let hi = i16x8_extmul_high_i8x16(a.0, b.0);
-                let lo32 = i32x4_extadd_pairwise_i16x8(lo);
-                let hi32 = i32x4_extadd_pairwise_i16x8(hi);
-                i32x4_add(self.0, i32x4_shuffle::<0, 1, 4, 5>(lo32, hi32))
-            };
-            Self(out, self.1)
+            Self(i32x4_relaxed_dot_i8x16_i7x16_add(a.0, b.0, self.0), self.1)
         }
     }
 }

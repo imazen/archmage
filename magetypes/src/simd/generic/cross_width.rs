@@ -234,7 +234,7 @@ impl F32x8FromHalves for archmage::NeonToken {
 }
 
 // Wasm128Token — same shape as NEON: polyfill via `[v128; 2]`.
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
 impl F32x8FromHalves for archmage::Wasm128Token {
     #[inline(always)]
     fn from_halves(
@@ -254,6 +254,30 @@ impl F32x8FromHalves for archmage::Wasm128Token {
     fn high(self, wide: [core::arch::wasm32::v128; 2]) -> core::arch::wasm32::v128 {
         let _ = self;
         wide[1]
+    }
+}
+
+#[cfg(all(
+    target_arch = "wasm32",
+    target_feature = "simd128",
+    target_feature = "relaxed-simd"
+))]
+impl F32x8FromHalves for archmage::Wasm128RelaxedFmaToken {
+    #[inline(always)]
+    fn from_halves(
+        self,
+        lo: core::arch::wasm32::v128,
+        hi: core::arch::wasm32::v128,
+    ) -> [core::arch::wasm32::v128; 2] {
+        <archmage::Wasm128Token as F32x8FromHalves>::from_halves(self.wasm128(), lo, hi)
+    }
+    #[inline(always)]
+    fn low(self, wide: [core::arch::wasm32::v128; 2]) -> core::arch::wasm32::v128 {
+        <archmage::Wasm128Token as F32x8FromHalves>::low(self.wasm128(), wide)
+    }
+    #[inline(always)]
+    fn high(self, wide: [core::arch::wasm32::v128; 2]) -> core::arch::wasm32::v128 {
+        <archmage::Wasm128Token as F32x8FromHalves>::high(self.wasm128(), wide)
     }
 }
 
@@ -461,7 +485,7 @@ impl F32x16FromHalves for archmage::NeonToken {
 }
 
 // Wasm128Token — cascade polyfill, same shape as NEON.
-#[cfg(all(target_arch = "wasm32", feature = "w512"))]
+#[cfg(all(target_arch = "wasm32", target_feature = "simd128", feature = "w512"))]
 impl F32x16FromHalves for archmage::Wasm128Token {
     #[inline(always)]
     fn from_halves(
@@ -481,6 +505,31 @@ impl F32x16FromHalves for archmage::Wasm128Token {
     fn high(self, wide: [core::arch::wasm32::v128; 4]) -> [core::arch::wasm32::v128; 2] {
         let _ = self;
         [wide[2], wide[3]]
+    }
+}
+
+#[cfg(all(
+    target_arch = "wasm32",
+    target_feature = "simd128",
+    target_feature = "relaxed-simd",
+    feature = "w512"
+))]
+impl F32x16FromHalves for archmage::Wasm128RelaxedFmaToken {
+    #[inline(always)]
+    fn from_halves(
+        self,
+        lo: [core::arch::wasm32::v128; 2],
+        hi: [core::arch::wasm32::v128; 2],
+    ) -> [core::arch::wasm32::v128; 4] {
+        <archmage::Wasm128Token as F32x16FromHalves>::from_halves(self.wasm128(), lo, hi)
+    }
+    #[inline(always)]
+    fn low(self, wide: [core::arch::wasm32::v128; 4]) -> [core::arch::wasm32::v128; 2] {
+        <archmage::Wasm128Token as F32x16FromHalves>::low(self.wasm128(), wide)
+    }
+    #[inline(always)]
+    fn high(self, wide: [core::arch::wasm32::v128; 4]) -> [core::arch::wasm32::v128; 2] {
+        <archmage::Wasm128Token as F32x16FromHalves>::high(self.wasm128(), wide)
     }
 }
 

@@ -504,7 +504,7 @@ mod into_concrete_token_tests {
             return super::sum_neon(t, data);
         }
 
-        #[cfg(target_arch = "wasm32")]
+        #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
         if let Some(t) = token.as_wasm128() {
             return super::sum_wasm128(t, data);
         }

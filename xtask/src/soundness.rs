@@ -115,13 +115,17 @@ const MIN_VERIFIED_CALLS: usize = 4000;
 /// stay visible to the scanner. Floors sit ~25% below measured so normal
 /// churn doesn't trip them.
 const REQUIRED_FILE_FLOORS: &[(&str, usize)] = &[
-    ("magetypes/src/simd/impls/x86_v3.rs", 750), // measured 993
-    ("magetypes/src/simd/impls/x86_v4.rs", 790), // measured 1056
-    ("magetypes/src/simd/impls/arm_neon.rs", 1080), // measured 1445
-    ("magetypes/src/simd/impls/wasm128.rs", 700), // measured 942
+    ("magetypes/src/simd/impls/x86_v3.rs", 750), // measured 1260
+    // Measured 589 after delegating X64V4xToken's duplicate base W512 backends
+    // to X64V4Token in x86_v4_w512_delegated.rs (was 1056 with duplicated impls).
+    ("magetypes/src/simd/impls/x86_v4.rs", 440),
+    ("magetypes/src/simd/impls/arm_neon.rs", 1080), // measured 1705
+    ("magetypes/src/simd/impls/wasm128.rs", 700),   // measured 1227
+    ("magetypes/src/simd/impls/wasm128_fma_overrides.rs", 5), // measured 6
     ("magetypes/src/simd/generic/cross_width.rs", 6), // measured 8
     ("magetypes/src/simd/generic/convert_f16.rs", 18), // measured 26
-    ("magetypes/src/simd_storage.rs", 13),       // measured 18 (gather/scatter)
+    ("magetypes/src/simd_storage.rs", 13),          // measured 18 (gather/scatter)
+    ("src/tokens/generated/wasm.rs", 8),            // measured 12 (runtime FMA probe)
 ];
 
 /// The one magetypes file allowed `unsafe` of any kind, `unsafe impl Pod`, and

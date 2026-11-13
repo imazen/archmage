@@ -154,7 +154,7 @@ impl SimdTypes for archmage::NeonToken {
 // wasm32 implementations
 // =============================================================================
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
 impl SimdTypes for archmage::Wasm128Token {
     type F32 = crate::simd::generic::f32x4<archmage::Wasm128Token>;
     type F64 = crate::simd::generic::f64x2<archmage::Wasm128Token>;

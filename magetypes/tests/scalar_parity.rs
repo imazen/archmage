@@ -16,7 +16,7 @@
     not(any(
         target_arch = "x86_64",
         target_arch = "aarch64",
-        target_arch = "wasm32"
+        all(target_arch = "wasm32", target_feature = "simd128")
     )),
     allow(dead_code, unused_macros)
 )]
@@ -3250,7 +3250,7 @@ mod arm {
     scalar_vs_native!(archmage::NeonToken);
 }
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
 mod wasm {
     scalar_vs_native!(archmage::Wasm128Token);
 }

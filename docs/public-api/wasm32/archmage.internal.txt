@@ -10,20 +10,20 @@
 ## summary
 #
 #   pub modules                                 1
-#   pub consts/statics                         37
+#   pub consts/statics                         39
 #   free functions                              1
-#   inherent methods                           24
+#   inherent methods                           25
 #   re-exports                                  2
-#   trait roster entries (type × trait)        20
+#   trait roster entries (type × trait)        21
 #
 # per-module pub lines:
 #   (root)                            3
 #   __private                         1
 #   prelude                           2
 #   testing                           1
-#   tokens                           58
+#   tokens                           61
 
-## items (65 lines)
+## items (68 lines)
 
 pub const tokens::Arm64V2Token::__ARCHMAGE_ASSERT_TIER_B0231590: ()
 pub const tokens::Arm64V2Token::__ARCHMAGE_TIER_TAG: u32
@@ -40,6 +40,8 @@ pub const tokens::NeonSha3Token::__ARCHMAGE_TIER_TAG: u32
 pub const tokens::NeonToken::__ARCHMAGE_ASSERT_TIER_72CB52B2: ()
 pub const tokens::NeonToken::__ARCHMAGE_TIER_TAG: u32
 pub const tokens::ScalarToken::__ARCHMAGE_TIER_TAG: u32
+pub const tokens::Wasm128RelaxedFmaToken::__ARCHMAGE_ASSERT_TIER_735B647C: ()
+pub const tokens::Wasm128RelaxedFmaToken::__ARCHMAGE_TIER_TAG: u32
 pub const tokens::Wasm128RelaxedToken::__ARCHMAGE_ASSERT_TIER_821D5452: ()
 pub const tokens::Wasm128RelaxedToken::__ARCHMAGE_TIER_TAG: u32
 pub const tokens::Wasm128Token::__ARCHMAGE_ASSERT_TIER_1E0DF26B: ()
@@ -76,6 +78,7 @@ pub fn tokens::NeonToken::try_new() -> core::option::Option<Self>
 pub fn tokens::ScalarToken::assert_fields_are_eq(&self)
 pub fn tokens::ScalarToken::try_new() -> core::option::Option<Self>
 pub fn tokens::SimdToken::try_new() -> core::option::Option<Self>
+pub fn tokens::Wasm128RelaxedFmaToken::try_new() -> core::option::Option<Self>
 pub fn tokens::Wasm128RelaxedToken::try_new() -> core::option::Option<Self>
 pub fn tokens::Wasm128Token::try_new() -> core::option::Option<Self>
 pub fn tokens::X64CryptoToken::try_new() -> core::option::Option<Self>
@@ -91,7 +94,7 @@ pub mod __private
 pub use prelude::simd_fn
 pub use simd_fn
 
-## trait impls (20 types)
+## trait impls (21 types)
 
 testing::CompileTimePolicy: TrivialClone
 tokens::Arm64V2Token: TrivialClone
@@ -102,6 +105,7 @@ tokens::NeonCrcToken: TrivialClone
 tokens::NeonSha3Token: TrivialClone
 tokens::NeonToken: TrivialClone
 tokens::ScalarToken: TrivialClone
+tokens::Wasm128RelaxedFmaToken: TrivialClone
 tokens::Wasm128RelaxedToken: TrivialClone
 tokens::Wasm128Token: TrivialClone
 tokens::X64CryptoToken: TrivialClone

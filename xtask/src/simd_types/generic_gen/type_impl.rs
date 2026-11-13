@@ -1617,7 +1617,7 @@ fn gen_platform(ty: &SimdType) -> String {
                     }}
                 }}
 
-                #[cfg(target_arch = \"wasm32\")]
+                #[cfg(all(target_arch = \"wasm32\", target_feature = \"simd128\"))]
                 impl {name}<archmage::Wasm128Token> {{
                     /// Implementation identifier for this backend.
                     pub const fn implementation_name() -> &'static str {{
@@ -1661,7 +1661,7 @@ fn gen_platform(ty: &SimdType) -> String {
                     }}
                 }}
 
-                #[cfg(target_arch = \"wasm32\")]
+                #[cfg(all(target_arch = \"wasm32\", target_feature = \"simd128\"))]
                 impl {name}<archmage::Wasm128Token> {{
                     /// Implementation identifier for this backend.
                     pub const fn implementation_name() -> &'static str {{
@@ -1718,7 +1718,7 @@ fn gen_platform(ty: &SimdType) -> String {
                     }}
                 }}
 
-                #[cfg(target_arch = \"wasm32\")]
+                #[cfg(all(target_arch = \"wasm32\", target_feature = \"simd128\"))]
                 impl {name}<archmage::Wasm128Token> {{
                     /// Implementation identifier for this backend.
                     pub const fn implementation_name() -> &'static str {{
@@ -1756,7 +1756,13 @@ pub(super) fn gen_raw_interop(ty: &SimdType, registry: &crate::registry::Registr
         SimdWidth::W128 => {
             platforms.push(("x86_64", "X64V3Token", "v3", x86_raw_type(ty), ""));
             platforms.push(("aarch64", "NeonToken", "neon", arm_repr_hint(ty), ""));
-            platforms.push(("wasm32", "Wasm128Token", "wasm128", "v128", ""));
+            platforms.push((
+                "wasm32",
+                "Wasm128Token",
+                "wasm128",
+                "v128",
+                ", target_feature = \"simd128\"",
+            ));
         }
         SimdWidth::W256 => {
             platforms.push(("x86_64", "X64V3Token", "v3", x86_raw_type(ty), ""));

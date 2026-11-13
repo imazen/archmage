@@ -178,12 +178,37 @@ fn validate_summon(reg: &registry::Registry) -> Result<()> {
 
             // Handle special cases before parsing
             if *arch == "wasm" {
-                // Wasm128Token uses #[cfg(target_feature)], not runtime detection
-                println!(
-                    "  {} — compile-time cfg check (no runtime detection)",
-                    token_name
-                );
-                verified += 1;
+                if token_def.runtime_probe {
+                    let detect_fn = "fn wasm128_relaxed_fma_detect()";
+                    let has_detect = content.contains(detect_fn);
+                    let has_f32 = content.contains("f32x4_relaxed_madd")
+                        && content.contains("f32x4_extract_lane::<0>")
+                        && content.contains("f32x4_extract_lane::<1>")
+                        && content.contains("f32x4_extract_lane::<2>")
+                        && content.contains("f32x4_extract_lane::<3>");
+                    let has_f64 = content.contains("f64x2_relaxed_madd")
+                        && content.contains("f64x2_extract_lane::<0>")
+                        && content.contains("f64x2_extract_lane::<1>");
+                    if has_detect && has_f32 && has_f64 {
+                        println!(
+                            "  {} — WASM runtime fusion probe verified (f32x4 4-lane + f64x2 2-lane)",
+                            token_name
+                        );
+                        verified += 1;
+                    } else {
+                        errors.push(format!(
+                            "{}: wasm.rs missing complete runtime fusion probe (detect={has_detect}, f32={has_f32}, f64={has_f64})",
+                            token_name
+                        ));
+                    }
+                } else {
+                    // Wasm128Token / Wasm128RelaxedToken use #[cfg(target_feature)], not runtime detection
+                    println!(
+                        "  {} — compile-time cfg check (no runtime detection)",
+                        token_name
+                    );
+                    verified += 1;
+                }
                 continue;
             }
 
@@ -1225,11 +1250,13 @@ fn main() -> Result<()> {
 /// as well, and rejects unapproved `macro_rules!` inside generated backend
 /// files so delegation bloat cannot hide behind macro expansion.
 const COMPILE_BUDGETS: &[(&str, usize)] = &[
-    // Measured 40 063 (includes x86_v4_narrow_delegated.rs's 8 867 lines, which
-    // the previous hardcoded list omitted).
-    ("x86_64", 41_500),
-    ("aarch64", 26_100), // measured 25 034
-    ("wasm32", 25_700),  // measured 24 678
+    // Measured 39 572 (reduced from 40 063 by delegating X64V4xToken's base W512
+    // backends + F32x16Convert to X64V4Token in x86_v4_w512_delegated.rs).
+    ("x86_64", 41_000),
+    ("aarch64", 26_100), // measured 25 043
+    // Measured 30 056 (includes wasm128_fma_delegated.rs + wasm128_fma_overrides.rs
+    // for Wasm128RelaxedFmaToken, cfg-gated to target_arch = "wasm32" only).
+    ("wasm32", 31_200),
 ];
 
 /// Budget for `magetypes/src/simd/generic/generated/*.rs` (target-common

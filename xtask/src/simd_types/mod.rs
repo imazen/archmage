@@ -469,12 +469,12 @@ fn generate_simd128_namespace(types: &[SimdType]) -> String {
         types,
         SimdWidth::W128,
         "Wasm128Token",
-        "target_arch = \"wasm32\"",
+        "all(target_arch = \"wasm32\", target_feature = \"simd128\")",
         "_w128_aliases",
     );
 
     // xN aliases (natural width = 128-bit)
-    code.push_str("    #[cfg(target_arch = \"wasm32\")]\n");
+    code.push_str("    #[cfg(all(target_arch = \"wasm32\", target_feature = \"simd128\"))]\n");
     code.push_str("    pub use _w128_aliases::{\n");
     code.push_str("        f32x4 as f32xN, f64x2 as f64xN, i8x16 as i8xN, i16x8 as i16xN,\n");
     code.push_str("        i32x4 as i32xN, i64x2 as i64xN, u8x16 as u8xN, u16x8 as u16xN,\n");
@@ -487,7 +487,7 @@ fn generate_simd128_namespace(types: &[SimdType]) -> String {
         types,
         SimdWidth::W256,
         "Wasm128Token",
-        "target_arch = \"wasm32\"",
+        "all(target_arch = \"wasm32\", target_feature = \"simd128\")",
         "_w256_aliases",
     );
 

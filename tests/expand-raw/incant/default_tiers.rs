@@ -70,8 +70,11 @@ fn dispatch(x: f32) -> f32 {
         }
         #[cfg(target_arch = "wasm32")]
         {
-            if let Some(__t) = archmage::Wasm128Token::summon() {
-                break '__incant inner_wasm128(__t, x);
+            #[cfg(target_feature = "simd128")]
+            {
+                if let Some(__t) = archmage::Wasm128Token::summon() {
+                    break '__incant inner_wasm128(__t, x);
+                }
             }
         }
         inner_scalar(archmage::ScalarToken, x)

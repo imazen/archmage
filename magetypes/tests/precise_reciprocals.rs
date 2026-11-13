@@ -412,7 +412,7 @@ fn recip_and_rsqrt_meet_their_precision_contract() {
         rails_f64x8(t, "x86_v4x");
     }
 
-    #[cfg(target_arch = "wasm32")]
+    #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
     if let Some(t) = archmage::Wasm128Token::summon() {
         check_all_widths!(t, 0, 0, "wasm128");
     }

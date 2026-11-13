@@ -1,43 +1,120 @@
-//! `impls/x86_v4_f32_delegated.rs`: the AVX-512 tokens' `F32x4Backend` /
-//! `F32x8Backend` impls, forwarded to `X64V3Token`'s.
+//! Declarative parent-backend trait delegation generator.
 //!
-//! Derived from the generated trait definitions, so every method the trait
-//! declares is forwarded and a new trait method cannot silently fall back to
-//! its scalar default body for the AVX-512 tokens (issue #60). The three
-//! methods with a cheaper AVX-512VL form call the hand-written helpers in
-//! `impls/x86_v4_f32_overrides.rs` instead.
+//! Derived directly from the generated `backends/*.rs` trait definitions, so
+//! every method a backend trait declares is explicitly forwarded to a parent
+//! token's implementation (or routed to an audited override helper) and a newly
+//! added trait method can never silently fall back to a scalar default body
+//! (issue #60).
+//!
+//! Generates four files:
+//! - `impls/x86_v4_f32_delegated.rs`: `X64V4Token` / `X64V4xToken` /
+//!   `Avx512Fp16Token` W128/W256 `F32x4Backend` + `F32x8Backend` -> `X64V3Token`
+//!   (`self.v3()`), with AVX-512VL pixel-packing overrides.
+//! - `impls/x86_v4_narrow_delegated.rs`: `X64V4Token` / `X64V4xToken` /
+//!   `Avx512Fp16Token` remaining W128/W256 backends + `*Convert` / `*Bitcast`
+//!   -> `X64V3Token` (`self.v3()`).
+//! - `impls/x86_v4_w512_delegated.rs`: `X64V4xToken` W512 backends +
+//!   `F32x16Convert` -> `X64V4Token` (`self.v4()`), eliminating duplicate
+//!   `#[arcane]` AVX-512 bodies in `x86_v4.rs`.
+//! - `impls/wasm128_fma_delegated.rs`: `Wasm128RelaxedFmaToken` all 43 W128 /
+//!   W256 / W512 backends + `*Convert` / `*Bitcast` -> `Wasm128Token`
+//!   (`self.wasm128()`), overriding the 24 float `mul_add*` / `mul_sub*`
+//!   methods via `wasm128_fma_overrides.rs`.
+
+use std::collections::HashSet;
 
 use indoc::formatdoc;
 use quote::{ToTokens, format_ident, quote};
 use syn::{FnArg, Item, Pat, TraitItem};
 
-/// The tokens that delegate, with the expression that yields the
-/// `X64V4Token` the override helpers take as proof.
-const TOKENS: &[(&str, &str)] = &[
+/// Declarative parent-delegation specification for one `(child -> parent)` pair.
+struct DelegationRule<'a> {
+    /// Concrete child token path implementing the trait (e.g. `"archmage::X64V4xToken"`).
+    child_token: &'a str,
+    /// Parent token path whose trait impl is forwarded to (e.g. `"archmage::X64V4Token"`).
+    parent_token: &'a str,
+    /// Expression extracting `parent_token` from `self` (e.g. `"self.v4()"`).
+    parent_expr: &'a str,
+    /// Expression extracting the proof token expected by `overrides::<helper>` from `self`.
+    override_proof_expr: &'a str,
+    /// `(trait_name, method_name, override_fn_name)` triples routed to `overrides::<helper>`.
+    overrides: &'a [(&'a str, &'a str, &'a str)],
+}
+
+/// AVX-512 tokens delegating W128/W256 traits to `X64V3Token`, paired with the
+/// expression yielding `X64V4Token` for AVX-512VL pixel-packing overrides.
+const V4_TO_V3_TOKENS: &[(&str, &str)] = &[
     ("archmage::X64V4Token", "self"),
     ("archmage::X64V4xToken", "self.v4()"),
     ("archmage::Avx512Fp16Token", "self.v4()"),
 ];
 
-/// Methods that take the AVX-512VL path: (trait, method, helper).
-const OVERRIDES: &[(&str, &str, &str)] = &[
+/// Methods that take the AVX-512VL path in `x86_v4_f32_overrides.rs`:
+/// `(trait, method, helper)`.
+const V4_F32_OVERRIDES: &[(&str, &str, &str)] = &[
     ("F32x4Backend", "to_u8_bytes", "to_u8_bytes_x4_v4"),
     ("F32x4Backend", "store_rgba_bytes", "store_rgba_bytes_x4_v4"),
     ("F32x8Backend", "to_u8_bytes", "to_u8_bytes_x8_v4"),
 ];
 
-/// Generate the delegation file from the two trait sources.
+/// Float multiply-add/sub methods on `Wasm128RelaxedFmaToken` routed to bare
+/// single-rounding `f32x4.relaxed_madd` / `f64x2.relaxed_madd` helpers in
+/// `wasm128_fma_overrides.rs`.
+const WASM_FMA_OVERRIDES: &[(&str, &str, &str)] = &[
+    ("F32x4Backend", "mul_add", "mul_add_f32x4"),
+    ("F32x4Backend", "mul_sub", "mul_sub_f32x4"),
+    ("F32x4Backend", "mul_add_portable", "mul_add_f32x4"),
+    ("F32x4Backend", "mul_sub_portable", "mul_sub_f32x4"),
+    ("F32x8Backend", "mul_add", "mul_add_f32x8"),
+    ("F32x8Backend", "mul_sub", "mul_sub_f32x8"),
+    ("F32x8Backend", "mul_add_portable", "mul_add_f32x8"),
+    ("F32x8Backend", "mul_sub_portable", "mul_sub_f32x8"),
+    ("F32x16Backend", "mul_add", "mul_add_f32x16"),
+    ("F32x16Backend", "mul_sub", "mul_sub_f32x16"),
+    ("F32x16Backend", "mul_add_portable", "mul_add_f32x16"),
+    ("F32x16Backend", "mul_sub_portable", "mul_sub_f32x16"),
+    ("F64x2Backend", "mul_add", "mul_add_f64x2"),
+    ("F64x2Backend", "mul_sub", "mul_sub_f64x2"),
+    ("F64x2Backend", "mul_add_portable", "mul_add_f64x2"),
+    ("F64x2Backend", "mul_sub_portable", "mul_sub_f64x2"),
+    ("F64x4Backend", "mul_add", "mul_add_f64x4"),
+    ("F64x4Backend", "mul_sub", "mul_sub_f64x4"),
+    ("F64x4Backend", "mul_add_portable", "mul_add_f64x4"),
+    ("F64x4Backend", "mul_sub_portable", "mul_sub_f64x4"),
+    ("F64x8Backend", "mul_add", "mul_add_f64x8"),
+    ("F64x8Backend", "mul_sub", "mul_sub_f64x8"),
+    ("F64x8Backend", "mul_add_portable", "mul_add_f64x8"),
+    ("F64x8Backend", "mul_sub_portable", "mul_sub_f64x8"),
+];
+
+/// Generate `impls/x86_v4_f32_delegated.rs` from the `F32x4Backend` and
+/// `F32x8Backend` trait sources.
 pub(crate) fn generate(f32x4_trait_src: &str, f32x8_trait_src: &str) -> String {
     let mut body = String::new();
+    let mut matched = HashSet::new();
     for (trait_name, src) in [
         ("F32x4Backend", f32x4_trait_src),
         ("F32x8Backend", f32x8_trait_src),
     ] {
         let trait_item = find_trait(src, trait_name);
-        for (token, v4_expr) in TOKENS {
-            body.push_str(&delegating_impl(trait_name, &trait_item, token, v4_expr));
+        for &(child_token, v4_expr) in V4_TO_V3_TOKENS {
+            let rule = DelegationRule {
+                child_token,
+                parent_token: "archmage::X64V3Token",
+                parent_expr: "self.v3()",
+                override_proof_expr: v4_expr,
+                overrides: V4_F32_OVERRIDES,
+            };
+            body.push_str(&delegating_impl(
+                trait_name,
+                &trait_item,
+                None,
+                &rule,
+                &mut matched,
+            ));
         }
     }
+    assert_all_overrides_matched(&matched, V4_F32_OVERRIDES);
 
     formatdoc! {r#"
         //! W128 / W256 f32 backend delegation for `X64V4Token` / `X64V4xToken` /
@@ -83,19 +160,28 @@ pub(crate) fn generate(f32x4_trait_src: &str, f32x8_trait_src: &str) -> String {
 /// `impls/x86_v4_narrow_delegated.rs`: every other W128/W256 backend the
 /// AVX-512 tokens lack — f64x2/f64x4, the i8/i16/i32/i64 and
 /// u8/u16/u32/u64 families — plus the float↔int `*Convert` and `*Bitcast`
-/// traits (needed for `F32x8Convert`-bounded kernels like iwssim's
-/// infow map). Same delegation proof as the f32 file; no overrides —
-/// every method forwards to `X64V3Token`.
-///
-/// `specs` is `(trait_name, trait_source)` pairs read from the generated
-/// `backends/*.rs` sources, so a new method cannot fall back to its
-/// scalar default body (issue #60).
+/// traits. Same delegation proof as the f32 file; no overrides — every
+/// method forwards to `X64V3Token`.
 pub(crate) fn generate_narrow(specs: &[(String, String)]) -> String {
     let mut body = String::new();
+    let mut matched = HashSet::new();
     for (trait_name, src) in specs {
         let trait_item = find_trait(src, trait_name);
-        for (token, v4_expr) in TOKENS {
-            body.push_str(&delegating_impl(trait_name, &trait_item, token, v4_expr));
+        for &(child_token, v4_expr) in V4_TO_V3_TOKENS {
+            let rule = DelegationRule {
+                child_token,
+                parent_token: "archmage::X64V3Token",
+                parent_expr: "self.v3()",
+                override_proof_expr: v4_expr,
+                overrides: &[],
+            };
+            body.push_str(&delegating_impl(
+                trait_name,
+                &trait_item,
+                None,
+                &rule,
+                &mut matched,
+            ));
         }
     }
 
@@ -140,6 +226,134 @@ pub(crate) fn generate_narrow(specs: &[(String, String)]) -> String {
     "#}
 }
 
+/// `impls/x86_v4_w512_delegated.rs`: `X64V4xToken`'s 10 W512 `*Backend`
+/// traits plus `F32x16Convert`, forwarded to `X64V4Token` via `self.v4()`.
+///
+/// `X64V4xToken`'s Modern-only `*PopcntBackend` extension traits remain in
+/// `impls/x86_v4.rs`.
+pub(crate) fn generate_v4x_w512(w512_specs: &[(String, String)]) -> String {
+    let mut body = String::new();
+    let mut matched = HashSet::new();
+    let rule = DelegationRule {
+        child_token: "archmage::X64V4xToken",
+        parent_token: "archmage::X64V4Token",
+        parent_expr: "self.v4()",
+        override_proof_expr: "self",
+        overrides: &[],
+    };
+    for (trait_name, src) in w512_specs {
+        let trait_item = find_trait(src, trait_name);
+        body.push_str(&delegating_impl(
+            trait_name,
+            &trait_item,
+            None,
+            &rule,
+            &mut matched,
+        ));
+    }
+
+    formatdoc! {r#"
+        //! W512 backend and conversion delegation for `X64V4xToken` -> `X64V4Token`.
+        //! Generated by xtask from the backend trait definitions; do not edit.
+        //!
+        //! ## Why this file exists
+        //!
+        //! Base W512 vector operations (`F32x16Backend`, `F64x8Backend`, the eight
+        //! 512-bit integer backends, and `F32x16Convert`) emit identical AVX-512
+        //! F/BW/CD/DQ/VL instructions on `X64V4Token` and `X64V4xToken`. Forwarding
+        //! `X64V4xToken` to `X64V4Token` via `self.v4()` avoids ~250 duplicate
+        //! `#[arcane]` proc-macro expansions in `x86_v4.rs` while keeping
+        //! `X64V4xToken`'s native VPOPCNTDQ/BITALG `*PopcntBackend` impls in
+        //! `x86_v4.rs`.
+
+        #![cfg(all(target_arch = "x86_64", feature = "avx512", feature = "w512"))]
+
+        use crate::simd::backends::*;
+
+        {body}
+    "#}
+}
+
+/// `impls/wasm128_fma_delegated.rs`: `Wasm128RelaxedFmaToken` backend and
+/// conversion delegation to `Wasm128Token` (`self.wasm128()`), overriding the
+/// 24 float `mul_add*` / `mul_sub*` methods via `wasm128_fma_overrides.rs`.
+pub(crate) fn generate_wasm_fma(
+    narrow_specs: &[(String, String)],
+    w512_specs: &[(String, String)],
+) -> String {
+    let mut body = String::new();
+    let mut matched = HashSet::new();
+    let rule = DelegationRule {
+        child_token: "archmage::Wasm128RelaxedFmaToken",
+        parent_token: "archmage::Wasm128Token",
+        parent_expr: "self.wasm128()",
+        override_proof_expr: "self",
+        overrides: WASM_FMA_OVERRIDES,
+    };
+    for (trait_name, src) in narrow_specs {
+        let trait_item = find_trait(src, trait_name);
+        body.push_str(&delegating_impl(
+            trait_name,
+            &trait_item,
+            None,
+            &rule,
+            &mut matched,
+        ));
+    }
+    for (trait_name, src) in w512_specs {
+        let trait_item = find_trait(src, trait_name);
+        body.push_str(&delegating_impl(
+            trait_name,
+            &trait_item,
+            Some("feature = \"w512\""),
+            &rule,
+            &mut matched,
+        ));
+    }
+    assert_all_overrides_matched(&matched, WASM_FMA_OVERRIDES);
+
+    formatdoc! {r#"
+        //! Backend and conversion delegation for [`archmage::Wasm128RelaxedFmaToken`],
+        //! forwarded to [`archmage::Wasm128Token`] (`self.wasm128()`) except for the
+        //! 24 float `mul_add` / `mul_sub` / `mul_add_portable` / `mul_sub_portable`
+        //! methods routed to `wasm128_fma_overrides.rs`. Generated by xtask from the
+        //! backend trait definitions; do not edit.
+        //!
+        //! ## Deductive safety proof
+        //!
+        //! `Wasm128RelaxedFmaToken` proves `+simd128,+relaxed-simd` plus runtime-probed
+        //! single-rounding fusion of all lanes of `f32x4.relaxed_madd` and
+        //! `f64x2.relaxed_madd`. Every `Wasm128Token` instruction (`+simd128`) is a
+        //! strict subset of that capability, and `Self::Repr` is identical (`v128` /
+        //! `[v128; 2]` / `[v128; 4]`). The 24 overridden float FMA methods pass `self`
+        //! directly to `wasm128_fma_overrides`, eliminating per-op `AtomicU8` probe
+        //! loads and software-FMA fallback branches.
+
+        #![cfg(all(
+            target_arch = "wasm32",
+            target_feature = "simd128",
+            target_feature = "relaxed-simd"
+        ))]
+
+        use crate::simd::backends::*;
+        use super::wasm128_fma_overrides as overrides;
+
+        {body}
+    "#}
+}
+
+fn assert_all_overrides_matched(
+    matched: &HashSet<(String, String)>,
+    overrides: &[(&str, &str, &str)],
+) {
+    for &(trait_name, method_name, helper) in overrides {
+        assert!(
+            matched.contains(&(trait_name.to_string(), method_name.to_string())),
+            "delegation override ({trait_name}::{method_name} -> {helper}) matched no trait method"
+        );
+    }
+}
+
 fn find_trait(src: &str, name: &str) -> syn::ItemTrait {
     let file = syn::parse_file(src).expect("generated backend trait source must parse");
     file.items
@@ -154,12 +368,16 @@ fn find_trait(src: &str, name: &str) -> syn::ItemTrait {
 fn delegating_impl(
     trait_name: &str,
     trait_item: &syn::ItemTrait,
-    token: &str,
-    v4_expr: &str,
+    item_cfg: Option<&str>,
+    rule: &DelegationRule<'_>,
+    matched_overrides: &mut HashSet<(String, String)>,
 ) -> String {
     let trait_ident = format_ident!("{trait_name}");
-    let token_path: syn::Path = syn::parse_str(token).expect("token path");
-    let v4: syn::Expr = syn::parse_str(v4_expr).expect("v4 expression");
+    let child_path: syn::Path = syn::parse_str(rule.child_token).expect("child token path");
+    let parent_path: syn::Path = syn::parse_str(rule.parent_token).expect("parent token path");
+    let parent_expr: syn::Expr = syn::parse_str(rule.parent_expr).expect("parent expression");
+    let override_proof: syn::Expr =
+        syn::parse_str(rule.override_proof_expr).expect("override proof expression");
     let mut methods = Vec::new();
     for item in &trait_item.items {
         let TraitItem::Fn(method) = item else {
@@ -214,14 +432,18 @@ fn delegating_impl(
                 quote! { ::<#(#params),*> }
             }
         };
-        let override_helper = OVERRIDES
+        let override_helper = rule
+            .overrides
             .iter()
             .find(|(t, m, _)| *t == trait_name && name == m)
-            .map(|(_, _, helper)| format_ident!("{helper}"));
+            .map(|(_, _, helper)| {
+                matched_overrides.insert((trait_name.to_string(), name.to_string()));
+                format_ident!("{helper}")
+            });
         let body = match override_helper {
-            Some(helper) => quote! { overrides::#helper(#v4, #(#args),*) },
+            Some(helper) => quote! { overrides::#helper(#override_proof, #(#args),*) },
             None => {
-                quote! { <archmage::X64V3Token as #trait_ident>::#name #turbofish(self.v3(), #(#args),*) }
+                quote! { <#parent_path as #trait_ident>::#name #turbofish(#parent_expr, #(#args),*) }
             }
         };
         methods.push(quote! {
@@ -237,10 +459,15 @@ fn delegating_impl(
         .iter()
         .any(|item| matches!(item, TraitItem::Type(_)));
     let repr_impl = has_repr.then(|| {
-        quote! { type Repr = <archmage::X64V3Token as #trait_ident>::Repr; }
+        quote! { type Repr = <#parent_path as #trait_ident>::Repr; }
+    });
+    let cfg_attr = item_cfg.map(|cfg_str| {
+        let cfg_meta: syn::Meta = syn::parse_str(cfg_str).expect("valid item cfg");
+        quote! { #[cfg(#cfg_meta)] }
     });
     let tokens = quote! {
-        impl #trait_ident for #token_path {
+        #cfg_attr
+        impl #trait_ident for #child_path {
             #repr_impl
             #(#methods)*
         }

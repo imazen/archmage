@@ -15,7 +15,7 @@ pub(super) const CLAMP: u32 = 256;
 // debug graphs for Caller/Automatic and portable/backend-dependent adapters.
 #[cfg(debug_assertions)]
 const KERNEL_FLAGS: u32 = PowfOptions::LOWP | PowfOptions::ASSUME;
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
 pub(super) const WASM_SOFTWARE: usize = 3;
 #[cfg(all(feature = "std", not(miri)))]
 pub(super) const STD: usize = 2;
@@ -109,7 +109,7 @@ macro_rules! graph {
                     a.mul_add_fused(b, c)
                 } else {
                     let (a, b, c) = (a.to_array(), b.to_array(), c.to_array());
-                    #[cfg(target_arch = "wasm32")]
+                    #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
                     if ARITHMETIC == WASM_SOFTWARE {
                         let any: &dyn core::any::Any = &token;
                         let proof = any

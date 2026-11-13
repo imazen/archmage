@@ -464,7 +464,7 @@ mod arm_tests {
 // WASM tests (compile on wasm32)
 // =============================================================================
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
 mod wasm_tests {
     use archmage::{SimdToken, Wasm128Token, arcane};
 

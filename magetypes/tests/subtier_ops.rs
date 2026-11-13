@@ -12,7 +12,63 @@ fn foreign_subtier_tokens_never_summon() {
     #[cfg(not(target_arch = "aarch64"))]
     assert!(archmage::Arm64V2Token::summon().is_none());
     #[cfg(not(target_arch = "wasm32"))]
-    assert!(archmage::Wasm128RelaxedToken::summon().is_none());
+    {
+        assert!(archmage::Wasm128RelaxedToken::summon().is_none());
+        assert!(archmage::Wasm128RelaxedFmaToken::summon().is_none());
+        assert_eq!(
+            archmage::Wasm128RelaxedFmaToken::compiled_with(),
+            Some(false)
+        );
+    }
+}
+
+#[cfg(all(target_arch = "x86_64", feature = "avx512", feature = "w512"))]
+mod x86_v4x_w512_delegation_tests {
+    use archmage::{SimdToken, X64V4xToken, attune};
+
+    #[attune(_v4x_t, define(f32x8, f32x16, f64x8, i32x16, u64x8))]
+    fn check_v4x_w512(token: Token) {
+        let e32 = 1.0f32 / 4096.0;
+        let a16 = f32x16::splat_t(token, core::hint::black_box(1.0 + e32));
+        let c16 = f32x16::splat_t(token, core::hint::black_box(-(1.0 + 2.0 * e32)));
+        assert_eq!(a16.mul_add_portable(a16, c16).to_array(), [e32 * e32; 16]);
+
+        let rounded =
+            f32x16::from_array_t(token, core::array::from_fn(|i| (i as f32) * 1.5 - 10.25))
+                .to_i32_round()
+                .to_array();
+        assert_eq!(rounded[0], -10);
+        assert_eq!(rounded[15], 12);
+
+        let lo = f32x8::splat_t(token, 3.0);
+        let hi = f32x8::splat_t(token, 7.0);
+        let wide = f32x16::from_halves_t(token, lo, hi);
+        assert_eq!(wide.low().to_array(), [3.0; 8]);
+        assert_eq!(wide.high().to_array(), [7.0; 8]);
+
+        let e64 = 1.0f64 / 134_217_728.0;
+        let a8 = f64x8::splat_t(token, core::hint::black_box(1.0 + e64));
+        let c8 = f64x8::splat_t(token, core::hint::black_box(-(1.0 + 2.0 * e64)));
+        assert_eq!(a8.mul_add_portable(a8, c8).to_array(), [e64 * e64; 8]);
+
+        let vi = i32x16::from_array_t(token, core::array::from_fn(|i| (1i32 << i) | 1));
+        let pop_i = vi.popcnt().to_array();
+        assert_eq!(pop_i[0], 1);
+        assert_eq!(pop_i[5], 2);
+
+        let vu = u64x8::from_array_t(token, core::array::from_fn(|i| (1u64 << (i * 8)) - 1));
+        let pop_u = vu.popcnt().to_array();
+        for (i, &got) in pop_u.iter().enumerate() {
+            assert_eq!(got, (i * 8) as u64);
+        }
+    }
+
+    #[test]
+    fn v4x_w512_delegation_and_popcnt_work() {
+        if let Some(token) = X64V4xToken::summon() {
+            check_v4x_w512_v4x_t(token);
+        }
+    }
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -297,11 +353,11 @@ mod arm_v2_tests {
 
 #[cfg(target_arch = "wasm32")]
 mod wasm_relaxed_tests {
-    use archmage::{SimdToken, Wasm128RelaxedToken, Wasm128Token, attune};
+    use archmage::{SimdToken, Wasm128RelaxedToken, attune};
 
     #[attune(wasm128_relaxed, define(f32x4))]
     fn axpy_wasm_relaxed_body(x: &[f32; 4], a: f32, b: f32) -> [f32; 4] {
-        let base = Wasm128Token::from_context();
+        let base = archmage::Wasm128Token::from_context();
         f32x4::load_t(base, x)
             .mul_add_relaxed(f32x4::splat_t(base, a), f32x4::splat_t(base, b))
             .to_array()
@@ -350,20 +406,245 @@ mod wasm_relaxed_tests {
 
     #[test]
     fn wasm_relaxed_ops_match_scalar_reference() {
-        #[cfg(target_feature = "relaxed-simd")]
-        assert!(
-            Wasm128RelaxedToken::summon().is_some(),
-            "relaxed-simd enabled at compile time must summon Wasm128RelaxedToken"
-        );
-        #[cfg(not(target_feature = "relaxed-simd"))]
-        assert!(
-            Wasm128RelaxedToken::summon().is_none(),
-            "strict WASM without +relaxed-simd must not summon Wasm128RelaxedToken"
-        );
-        if let Some(token) = Wasm128RelaxedToken::summon() {
+        #[cfg(all(target_feature = "simd128", target_feature = "relaxed-simd"))]
+        {
+            assert_ne!(Wasm128RelaxedToken::compiled_with(), Some(false));
+            let token = Wasm128RelaxedToken::summon().expect(
+                "simd128+relaxed-simd enabled at compile time must summon Wasm128RelaxedToken",
+            );
             let got = call_axpy_wasm_relaxed(token, &[1.0, -2.0, 3.0, 4.0], 2.0, 0.5);
             assert_eq!(got, [2.5, -3.5, 6.5, 8.5]);
             check_wasm_relaxed_wasm128_relaxed_t(token);
+        }
+        #[cfg(not(all(target_feature = "simd128", target_feature = "relaxed-simd")))]
+        {
+            assert_eq!(Wasm128RelaxedToken::compiled_with(), Some(false));
+            assert!(
+                Wasm128RelaxedToken::summon().is_none(),
+                "WASM without +simd128,+relaxed-simd must not summon Wasm128RelaxedToken"
+            );
+        }
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+mod wasm_relaxed_fma_tests {
+    use archmage::{SimdToken, Wasm128RelaxedFmaToken, attune};
+
+    /// Single-rounding witness across 128-bit and 256-bit float/int/convert/cross-width ops.
+    /// `(1 + 2^-12)^2 - (1 + 2^-11)` is `2^-24` with one rounding and `0.0` with two;
+    /// `(1 + 2^-27)^2 - (1 + 2^-26)` is `2^-54` with one rounding and `0.0` with two.
+    #[attune(
+        _*_t,
+        +wasm128_relaxed_fma,
+        define(f32x4, f32x8, f64x2, f64x4, i32x4)
+    )]
+    fn verify_single_rounding_narrow(token: Token, e32: f32, e64: f64) -> (f32, f64, i32) {
+        let x4 = f32x4::from_array_t(token, [1.0 + e32, -(1.0 + e32), 1.0 + e32, -(1.0 + e32)]);
+        let b4 = f32x4::from_array_t(token, [1.0 + e32, -(1.0 + e32), -(1.0 + e32), 1.0 + e32]);
+        let pos_c32 = 1.0 + 2.0 * e32;
+        let c4_add = f32x4::from_array_t(token, [-pos_c32, -pos_c32, pos_c32, pos_c32]);
+        let c4_sub = f32x4::from_array_t(token, [pos_c32, pos_c32, -pos_c32, -pos_c32]);
+        let expect32 = [e32 * e32, e32 * e32, -(e32 * e32), -(e32 * e32)];
+        assert_eq!(x4.mul_add_portable(b4, c4_add).to_array(), expect32);
+        assert_eq!(x4.mul_sub_portable(b4, c4_sub).to_array(), expect32);
+
+        let x8 = f32x8::from_halves_t(token, x4, x4);
+        let b8 = f32x8::from_halves_t(token, b4, b4);
+        let c8_add = f32x8::from_halves_t(token, c4_add, c4_add);
+        let c8_sub = f32x8::from_halves_t(token, c4_sub, c4_sub);
+        let expect32_8 = [
+            e32 * e32,
+            e32 * e32,
+            -(e32 * e32),
+            -(e32 * e32),
+            e32 * e32,
+            e32 * e32,
+            -(e32 * e32),
+            -(e32 * e32),
+        ];
+        assert_eq!(x8.mul_add_portable(b8, c8_add).to_array(), expect32_8);
+        assert_eq!(x8.mul_sub_portable(b8, c8_sub).to_array(), expect32_8);
+
+        let x2 = f64x2::from_array_t(token, [1.0 + e64, -(1.0 + e64)]);
+        let b2 = f64x2::from_array_t(token, [1.0 + e64, 1.0 + e64]);
+        let pos_c64 = 1.0 + 2.0 * e64;
+        let c2_add = f64x2::from_array_t(token, [-pos_c64, pos_c64]);
+        let c2_sub = f64x2::from_array_t(token, [pos_c64, -pos_c64]);
+        let expect64 = [e64 * e64, -(e64 * e64)];
+        assert_eq!(x2.mul_add_portable(b2, c2_add).to_array(), expect64);
+        assert_eq!(x2.mul_sub_portable(b2, c2_sub).to_array(), expect64);
+
+        let x4d = f64x4::from_array_t(token, [1.0 + e64, -(1.0 + e64), -(1.0 + e64), 1.0 + e64]);
+        let b4d = f64x4::from_array_t(token, [1.0 + e64, -(1.0 + e64), 1.0 + e64, -(1.0 + e64)]);
+        let c4d_add = f64x4::from_array_t(token, [-pos_c64, -pos_c64, pos_c64, pos_c64]);
+        let c4d_sub = f64x4::from_array_t(token, [pos_c64, pos_c64, -pos_c64, -pos_c64]);
+        let expect64_4 = [e64 * e64, e64 * e64, -(e64 * e64), -(e64 * e64)];
+        assert_eq!(x4d.mul_add_portable(b4d, c4d_add).to_array(), expect64_4);
+        assert_eq!(x4d.mul_sub_portable(b4d, c4d_sub).to_array(), expect64_4);
+
+        let conv = f32x4::from_array_t(token, [1.25, 2.75, -1.25, -2.75]).to_i32_round();
+        let sum = (conv + i32x4::splat_t(token, 10)).reduce_add();
+        (
+            x4.mul_add_portable(b4, c4_add).to_array()[0],
+            x2.mul_add_portable(b2, c2_add).to_array()[0],
+            sum,
+        )
+    }
+
+    #[cfg(feature = "w512")]
+    #[archmage::magetypes(
+        wasm128_relaxed_fma,
+        wasm128,
+        scalar,
+        define(f32x8, f32x16, f64x8, i32x16)
+    )]
+    fn verify_single_rounding_w512(token: Token, e32: f32, e64: f64) {
+        let pos_c32 = 1.0 + 2.0 * e32;
+        let x16 = f32x16::splat_t(token, 1.0 + e32);
+        let c16_add = f32x16::splat_t(token, -pos_c32);
+        let c16_sub = f32x16::splat_t(token, pos_c32);
+        assert_eq!(
+            x16.mul_add_portable(x16, c16_add).to_array(),
+            [e32 * e32; 16]
+        );
+        assert_eq!(
+            x16.mul_sub_portable(x16, c16_sub).to_array(),
+            [e32 * e32; 16]
+        );
+        assert_eq!(x16.mul_add_relaxed(x16, c16_add).to_array().len(), 16);
+
+        let halves = f32x16::from_halves_t(
+            token,
+            f32x8::splat_t(token, 2.0),
+            f32x8::splat_t(token, -2.0),
+        );
+        let rounded: i32 = (halves.to_i32_round() + i32x16::splat_t(token, 1)).reduce_add();
+        assert_eq!(rounded, 16);
+
+        let pos_c64 = 1.0 + 2.0 * e64;
+        let x8d = f64x8::splat_t(token, 1.0 + e64);
+        let c8d_add = f64x8::splat_t(token, -pos_c64);
+        let c8d_sub = f64x8::splat_t(token, pos_c64);
+        assert_eq!(
+            x8d.mul_add_portable(x8d, c8d_add).to_array(),
+            [e64 * e64; 8]
+        );
+        assert_eq!(
+            x8d.mul_sub_portable(x8d, c8d_sub).to_array(),
+            [e64 * e64; 8]
+        );
+    }
+
+    #[attune(_wasm128_relaxed_fma_t, define(f32x4, f64x2))]
+    fn check_extractions_and_fast_fma(token: Token, e32: f32, e64: f64) {
+        let relaxed: archmage::Wasm128RelaxedToken = token.wasm128_relaxed();
+        let base: archmage::Wasm128Token = token.wasm128();
+        let _ = (relaxed, base);
+
+        // On `Wasm128RelaxedFmaToken`, even `.mul_add_relaxed()` / `.mul_sub_relaxed()`
+        // run on a runtime-verified fusing engine and round once on all lanes.
+        let x4 = f32x4::splat_t(token, 1.0 + e32);
+        let c4 = f32x4::splat_t(token, -(1.0 + 2.0 * e32));
+        assert_eq!(x4.mul_add_relaxed(x4, c4).to_array(), [e32 * e32; 4]);
+        assert_eq!(
+            x4.mul_sub_relaxed(x4, f32x4::splat_t(token, 1.0 + 2.0 * e32))
+                .to_array(),
+            [e32 * e32; 4]
+        );
+
+        let x2 = f64x2::splat_t(token, 1.0 + e64);
+        let c2 = f64x2::splat_t(token, -(1.0 + 2.0 * e64));
+        assert_eq!(x2.mul_add_relaxed(x2, c2).to_array(), [e64 * e64; 2]);
+        assert_eq!(
+            x2.mul_sub_relaxed(x2, f64x2::splat_t(token, 1.0 + 2.0 * e64))
+                .to_array(),
+            [e64 * e64; 2]
+        );
+    }
+
+    #[test]
+    fn wasm_relaxed_fma_backend_and_dispatch() {
+        #[cfg(all(target_feature = "simd128", target_feature = "relaxed-simd"))]
+        assert_eq!(Wasm128RelaxedFmaToken::compiled_with(), None);
+        #[cfg(not(all(target_feature = "simd128", target_feature = "relaxed-simd")))]
+        assert_eq!(Wasm128RelaxedFmaToken::compiled_with(), Some(false));
+
+        #[cfg(not(all(target_feature = "simd128", target_feature = "relaxed-simd")))]
+        assert!(
+            Wasm128RelaxedFmaToken::summon().is_none(),
+            "WASM without +simd128,+relaxed-simd must not summon Wasm128RelaxedFmaToken"
+        );
+
+        let e32 = core::hint::black_box(1.0f32 / 4096.0);
+        let e64 = core::hint::black_box(1.0f64 / 134_217_728.0);
+
+        let (r32, r64, sum) = archmage::attuned!(
+            verify_single_rounding_narrow(e32, e64),
+            [_wasm128_relaxed_fma_t, _wasm128_t, _scalar_t]
+        );
+        assert_eq!(r32, e32 * e32);
+        assert_eq!(r64, e64 * e64);
+        assert_eq!(sum, 40);
+
+        #[cfg(feature = "w512")]
+        archmage::incant!(
+            verify_single_rounding_w512(e32, e64),
+            [wasm128_relaxed_fma, wasm128, scalar]
+        );
+
+        #[cfg(all(target_feature = "simd128", target_feature = "relaxed-simd"))]
+        if let Some(token) = Wasm128RelaxedFmaToken::summon() {
+            check_extractions_and_fast_fma_wasm128_relaxed_fma_t(token, e32, e64);
+        }
+
+        #[cfg(feature = "std")]
+        {
+            if let Ok(expect) = std::env::var("ARCHMAGE_EXPECT_RELAXED_FUSION") {
+                let expected = match expect.as_str() {
+                    "yes" => true,
+                    "no" => false,
+                    other => panic!("unexpected ARCHMAGE_EXPECT_RELAXED_FUSION={other:?}"),
+                };
+                assert_eq!(
+                    Wasm128RelaxedFmaToken::summon().is_some(),
+                    expected,
+                    "Wasm128RelaxedFmaToken::summon() disagreed with ARCHMAGE_EXPECT_RELAXED_FUSION={expect}"
+                );
+            }
+
+            // Exercise every reachable token permutation (including disabling
+            // `Wasm128RelaxedFmaToken` on fusing engines so dispatch falls back to
+            // `Wasm128Token` while preserving bit-exact single-rounding results).
+            let had_fma = Wasm128RelaxedFmaToken::summon().is_some();
+            let mut saw_enabled = false;
+            let mut saw_disabled = false;
+            let report = archmage::testing::for_each_token_permutation(
+                archmage::testing::CompileTimePolicy::Warn,
+                |_| {
+                    if Wasm128RelaxedFmaToken::summon().is_some() {
+                        saw_enabled = true;
+                    } else {
+                        saw_disabled = true;
+                    }
+                    let (p32, p64, psum) = archmage::attuned!(
+                        verify_single_rounding_narrow(e32, e64),
+                        [_wasm128_relaxed_fma_t, _wasm128_t, _scalar_t]
+                    );
+                    assert_eq!(p32, e32 * e32);
+                    assert_eq!(p64, e64 * e64);
+                    assert_eq!(psum, 40);
+                    #[cfg(feature = "w512")]
+                    archmage::incant!(
+                        verify_single_rounding_w512(e32, e64),
+                        [wasm128_relaxed_fma, wasm128, scalar]
+                    );
+                },
+            );
+            if had_fma {
+                assert!(report.permutations_run >= 2);
+                assert!(saw_enabled && saw_disabled);
+            }
         }
     }
 }

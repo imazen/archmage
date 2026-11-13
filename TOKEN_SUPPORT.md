@@ -27,6 +27,17 @@ Data collected via `cargo run --example cpu_survey --features "avx512"`.
 | Qualcomm Snapdragon X (Oryon, 2024) | V3 | + | + | + | + | + | + |
 | Azure Cobalt 100 on Windows | V3 | + | + | + | + | + | + |
 
+### WebAssembly (`wasm32`)
+
+WASM instruction legality is compile-time (`-C target-feature`); `Wasm128RelaxedFmaToken` adds a cached one-time runtime probe verifying that the host engine fuses `f32x4.relaxed_madd` and `f64x2.relaxed_madd` with single IEEE rounding across all lanes.
+
+| Compile flags & Engine | Highest Token | Wasm128 | Wasm128Relaxed | Wasm128RelaxedFma |
+|------------------------|--------------|:-------:|:--------------:|:-----------------:|
+| Default scalar (`wasm32-*`) | ScalarToken | | | |
+| `+simd128` (all SIMD128 engines) | Wasm128 | + | | |
+| `+simd128,+relaxed-simd` (non-FMA host or deterministic mode) | Wasm128Relaxed | + | + | |
+| `+simd128,+relaxed-simd` (V8 / Wasmtime on x86_64+FMA or AArch64) | Wasm128RelaxedFma *(opt-in)* | + | + | + |
+
 ## Detailed Feature Tables
 
 ### x86_64 Features

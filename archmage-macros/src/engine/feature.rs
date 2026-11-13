@@ -124,6 +124,7 @@ pub(crate) fn emit(
             crate::attune::call::Context {
                 features: &tier.features,
                 target_arch: tier.target_arch,
+                tier_suffix: None,
             },
             Some(&variant_fn.sig),
         );
@@ -173,9 +174,17 @@ pub(crate) fn emit(
     );
 
     // Emit the function behind its cfg guard (empty for trait bounds and the
-    // default tier, which have no architecture).
-    let cfg_guard = gen_cfg_guard(tier.target_arch, options.cfg_feature.as_deref());
+    // default tier, which have no architecture; includes target_feature on WASM).
+    let cfg_guard = gen_target_cfg_guard(
+        tier.target_arch,
+        options.cfg_feature.as_deref(),
+        &tier.features,
+    );
     drop_attrs_equal_to(&mut variant_fn.attrs, &cfg_guard);
+    drop_attrs_equal_to(
+        &mut variant_fn.attrs,
+        &gen_cfg_guard(tier.target_arch, options.cfg_feature.as_deref()),
+    );
     let vis = &variant_fn.vis;
     let sig = &variant_fn.sig;
     let attrs = &variant_fn.attrs;
