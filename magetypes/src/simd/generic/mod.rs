@@ -16,6 +16,7 @@ mod gather;
 mod generated;
 mod lane_ops;
 mod quant_ops;
+mod rgb_block_ops;
 mod subtiers;
 pub use convert_f16::F16Convert;
 pub use cross_width::F32x8FromHalves;
