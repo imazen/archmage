@@ -22,6 +22,10 @@ mod x86_v4_f32_overrides;
 // float↔int convert/bitcast traits, forwarded to V3's the same way.
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 mod x86_v4_narrow_delegated;
+// X64V4xToken's base W512 backends + F32x16Convert, forwarded to
+// X64V4Token (`self.v4()`).
+#[cfg(all(target_arch = "x86_64", feature = "avx512", feature = "w512"))]
+mod x86_v4_w512_delegated;
 
 #[cfg(target_arch = "aarch64")]
 mod arm_neon;
