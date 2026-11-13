@@ -6,7 +6,7 @@
 # impls omitted; re-export duplicates annotated `[also: path]`.
 # DO NOT EDIT BY HAND — commit regenerated changes with the code.
 #
-# files: magetypes.txt 2677 lines (supported surface) | magetypes.features.txt 12 added (features: avx512,std,w512) | magetypes.internal.txt 36 lines (48 hidden + 0 excluded-feature)
+# files: magetypes.txt 2685 lines (supported surface) | magetypes.features.txt 12 added (features: avx512,std,w512) | magetypes.internal.txt 36 lines (48 hidden + 0 excluded-feature)
 
 ## summary
 #
@@ -14,7 +14,7 @@
 #   pub types (struct/enum/trait/alias)       275
 #   pub consts/statics                        168
 #   free functions                           3808
-#   inherent methods                         1294
+#   inherent methods                         1302
 #   enum variants                               1
 #   re-exports                                  2
 #   trait roster entries (type × trait)       700
@@ -26,9 +26,9 @@
 #   (root)                          261
 #   cast                              3
 #   prelude                        3660
-#   simd                           1636
+#   simd                           1644
 
-## items (2454 lines)
+## items (2462 lines)
 
 pub mod magetypes
 pub use archmage
@@ -995,10 +995,13 @@ pub fn simd::backends::F32x4Backend::blend(self, Self::Repr, Self::Repr, Self::R
 pub fn simd::backends::F32x4Backend::broadcast_lane<const N: usize>(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x4Backend::ceil(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x4Backend::clamp(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::F32x4Backend::deinterleave_3ch_repr(self, [Self::Repr; 3]) -> [Self::Repr; 3]
 pub fn simd::backends::F32x4Backend::div(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x4Backend::floor(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x4Backend::from_array(self, [f32; 4]) -> Self::Repr
+pub fn simd::backends::F32x4Backend::interleave_3ch_repr(self, [Self::Repr; 3]) -> [Self::Repr; 3]
 pub fn simd::backends::F32x4Backend::load(self, &[f32; 4]) -> Self::Repr
+pub fn simd::backends::F32x4Backend::load_rgb_bytes(self, &[u8; 12]) -> (Self::Repr, Self::Repr, Self::Repr)
 pub fn simd::backends::F32x4Backend::max(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x4Backend::max_fast(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x4Backend::min(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -1030,6 +1033,7 @@ pub fn simd::backends::F32x4Backend::simd_ne(self, Self::Repr, Self::Repr) -> Se
 pub fn simd::backends::F32x4Backend::splat(self, f32) -> Self::Repr
 pub fn simd::backends::F32x4Backend::sqrt(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x4Backend::store(self, Self::Repr, &mut [f32; 4])
+pub fn simd::backends::F32x4Backend::store_rgb_bytes(self, Self::Repr, Self::Repr, Self::Repr) -> [u8; 12]
 pub fn simd::backends::F32x4Backend::store_rgba_bytes(self, Self::Repr, Self::Repr, Self::Repr, Self::Repr) -> [u8; 16]
 pub fn simd::backends::F32x4Backend::sub(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x4Backend::to_array(self, Self::Repr) -> [f32; 4]
@@ -1054,10 +1058,13 @@ pub fn simd::backends::F32x8Backend::blend(self, Self::Repr, Self::Repr, Self::R
 pub fn simd::backends::F32x8Backend::broadcast_lane<const N: usize>(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x8Backend::ceil(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x8Backend::clamp(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::F32x8Backend::deinterleave_3ch_repr(self, [Self::Repr; 3]) -> [Self::Repr; 3]
 pub fn simd::backends::F32x8Backend::div(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x8Backend::floor(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x8Backend::from_array(self, [f32; 8]) -> Self::Repr
+pub fn simd::backends::F32x8Backend::interleave_3ch_repr(self, [Self::Repr; 3]) -> [Self::Repr; 3]
 pub fn simd::backends::F32x8Backend::load(self, &[f32; 8]) -> Self::Repr
+pub fn simd::backends::F32x8Backend::load_rgb_bytes(self, &[u8; 24]) -> (Self::Repr, Self::Repr, Self::Repr)
 pub fn simd::backends::F32x8Backend::max(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x8Backend::max_fast(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x8Backend::min(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -1089,6 +1096,7 @@ pub fn simd::backends::F32x8Backend::simd_ne(self, Self::Repr, Self::Repr) -> Se
 pub fn simd::backends::F32x8Backend::splat(self, f32) -> Self::Repr
 pub fn simd::backends::F32x8Backend::sqrt(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x8Backend::store(self, Self::Repr, &mut [f32; 8])
+pub fn simd::backends::F32x8Backend::store_rgb_bytes(self, Self::Repr, Self::Repr, Self::Repr) -> [u8; 24]
 pub fn simd::backends::F32x8Backend::store_rgba_bytes(self, Self::Repr, Self::Repr, Self::Repr, Self::Repr) -> [u8; 32]
 pub fn simd::backends::F32x8Backend::sub(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x8Backend::to_array(self, Self::Repr) -> [f32; 8]

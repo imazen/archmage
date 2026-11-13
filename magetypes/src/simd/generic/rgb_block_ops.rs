@@ -25,14 +25,8 @@ impl<T: F32x4Backend> f32x4<T> {
     #[inline(always)]
     pub fn deinterleave_3ch(rgb: [Self; 3]) -> [Self; 3] {
         let token = rgb[0].1;
-        let v0 = rgb[0].to_array();
-        let v1 = rgb[1].to_array();
-        let v2 = rgb[2].to_array();
-        [
-            Self::from_array_t(token, [v0[0], v0[3], v1[2], v2[1]]),
-            Self::from_array_t(token, [v0[1], v1[0], v1[3], v2[2]]),
-            Self::from_array_t(token, [v0[2], v1[1], v2[0], v2[3]]),
-        ]
+        let [r, g, b] = T::deinterleave_3ch_repr(token, [rgb[0].0, rgb[1].0, rgb[2].0]);
+        [Self(r, token), Self(g, token), Self(b, token)]
     }
 
     /// Interleave 3 planar [`f32x4`] channels (`[R, G, B]`) from SoA into 3
@@ -45,28 +39,17 @@ impl<T: F32x4Backend> f32x4<T> {
     #[inline(always)]
     pub fn interleave_3ch(channels: [Self; 3]) -> [Self; 3] {
         let token = channels[0].1;
-        let r = channels[0].to_array();
-        let g = channels[1].to_array();
-        let b = channels[2].to_array();
-        [
-            Self::from_array_t(token, [r[0], g[0], b[0], r[1]]),
-            Self::from_array_t(token, [g[1], b[1], r[2], g[2]]),
-            Self::from_array_t(token, [b[2], r[3], g[3], b[3]]),
-        ]
+        let [v0, v1, v2] =
+            T::interleave_3ch_repr(token, [channels[0].0, channels[1].0, channels[2].0]);
+        [Self(v0, token), Self(v1, token), Self(v2, token)]
     }
 
     /// Load 4 packed RGB `u8` pixels (`12` bytes) and deinterleave into 3 planar
     /// [`f32x4`] channel vectors `(R, G, B)` with values in `[0.0, 255.0]`.
     #[inline(always)]
     pub fn load_4_rgb_u8_t(token: T, rgb: &[u8; 12]) -> (Self, Self, Self) {
-        let r: [f32; 4] = core::array::from_fn(|i| rgb[i * 3] as f32);
-        let g: [f32; 4] = core::array::from_fn(|i| rgb[i * 3 + 1] as f32);
-        let b: [f32; 4] = core::array::from_fn(|i| rgb[i * 3 + 2] as f32);
-        (
-            Self::from_array_t(token, r),
-            Self::from_array_t(token, g),
-            Self::from_array_t(token, b),
-        )
+        let (r, g, b) = T::load_rgb_bytes(token, rgb);
+        (Self(r, token), Self(g, token), Self(b, token))
     }
 
     /// Round, clamp to `[0, 255]`, and interleave 3 planar [`f32x4`] channel
@@ -76,11 +59,7 @@ impl<T: F32x4Backend> f32x4<T> {
     /// [`Self::store_4_rgba_u8`] and [`Self::to_u8`].
     #[inline(always)]
     pub fn store_4_rgb_u8(r: Self, g: Self, b: Self) -> [u8; 12] {
-        let rgba = Self::store_4_rgba_u8(r, g, b, Self::zero_t(r.1));
-        [
-            rgba[0], rgba[1], rgba[2], rgba[4], rgba[5], rgba[6], rgba[8], rgba[9], rgba[10],
-            rgba[12], rgba[13], rgba[14],
-        ]
+        T::store_rgb_bytes(r.1, r.0, g.0, b.0)
     }
 }
 
@@ -98,23 +77,8 @@ impl<T: F32x8Backend> f32x8<T> {
     #[inline(always)]
     pub fn deinterleave_3ch(rgb: [Self; 3]) -> [Self; 3] {
         let token = rgb[0].1;
-        let v0 = rgb[0].to_array();
-        let v1 = rgb[1].to_array();
-        let v2 = rgb[2].to_array();
-        [
-            Self::from_array_t(
-                token,
-                [v0[0], v0[3], v0[6], v1[1], v1[4], v1[7], v2[2], v2[5]],
-            ),
-            Self::from_array_t(
-                token,
-                [v0[1], v0[4], v0[7], v1[2], v1[5], v2[0], v2[3], v2[6]],
-            ),
-            Self::from_array_t(
-                token,
-                [v0[2], v0[5], v1[0], v1[3], v1[6], v2[1], v2[4], v2[7]],
-            ),
-        ]
+        let [r, g, b] = T::deinterleave_3ch_repr(token, [rgb[0].0, rgb[1].0, rgb[2].0]);
+        [Self(r, token), Self(g, token), Self(b, token)]
     }
 
     /// Interleave 3 planar [`f32x8`] channels (`[R, G, B]`) from SoA into 3
@@ -127,28 +91,17 @@ impl<T: F32x8Backend> f32x8<T> {
     #[inline(always)]
     pub fn interleave_3ch(channels: [Self; 3]) -> [Self; 3] {
         let token = channels[0].1;
-        let r = channels[0].to_array();
-        let g = channels[1].to_array();
-        let b = channels[2].to_array();
-        [
-            Self::from_array_t(token, [r[0], g[0], b[0], r[1], g[1], b[1], r[2], g[2]]),
-            Self::from_array_t(token, [b[2], r[3], g[3], b[3], r[4], g[4], b[4], r[5]]),
-            Self::from_array_t(token, [g[5], b[5], r[6], g[6], b[6], r[7], g[7], b[7]]),
-        ]
+        let [v0, v1, v2] =
+            T::interleave_3ch_repr(token, [channels[0].0, channels[1].0, channels[2].0]);
+        [Self(v0, token), Self(v1, token), Self(v2, token)]
     }
 
     /// Load 8 packed RGB `u8` pixels (`24` bytes) and deinterleave into 3 planar
     /// [`f32x8`] channel vectors `(R, G, B)` with values in `[0.0, 255.0]`.
     #[inline(always)]
     pub fn load_8_rgb_u8_t(token: T, rgb: &[u8; 24]) -> (Self, Self, Self) {
-        let r: [f32; 8] = core::array::from_fn(|i| rgb[i * 3] as f32);
-        let g: [f32; 8] = core::array::from_fn(|i| rgb[i * 3 + 1] as f32);
-        let b: [f32; 8] = core::array::from_fn(|i| rgb[i * 3 + 2] as f32);
-        (
-            Self::from_array_t(token, r),
-            Self::from_array_t(token, g),
-            Self::from_array_t(token, b),
-        )
+        let (r, g, b) = T::load_rgb_bytes(token, rgb);
+        (Self(r, token), Self(g, token), Self(b, token))
     }
 
     /// Round, clamp to `[0, 255]`, and interleave 3 planar [`f32x8`] channel
@@ -158,7 +111,6 @@ impl<T: F32x8Backend> f32x8<T> {
     /// [`Self::store_8_rgba_u8`] and [`Self::to_u8`].
     #[inline(always)]
     pub fn store_8_rgb_u8(r: Self, g: Self, b: Self) -> [u8; 24] {
-        let rgba = Self::store_8_rgba_u8(r, g, b, Self::zero_t(r.1));
-        core::array::from_fn(|i| rgba[(i / 3) * 4 + (i % 3)])
+        T::store_rgb_bytes(r.1, r.0, g.0, b.0)
     }
 }

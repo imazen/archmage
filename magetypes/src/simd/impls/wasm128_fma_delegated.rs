@@ -232,6 +232,22 @@ impl F32x4Backend for archmage::Wasm128RelaxedFmaToken {
     ) -> [u8; 16] {
         <archmage::Wasm128Token as F32x4Backend>::store_rgba_bytes(self.wasm128(), r, g, b, a)
     }
+    #[inline(always)]
+    fn deinterleave_3ch_repr(self, rgb: [Self::Repr; 3]) -> [Self::Repr; 3] {
+        <archmage::Wasm128Token as F32x4Backend>::deinterleave_3ch_repr(self.wasm128(), rgb)
+    }
+    #[inline(always)]
+    fn interleave_3ch_repr(self, channels: [Self::Repr; 3]) -> [Self::Repr; 3] {
+        <archmage::Wasm128Token as F32x4Backend>::interleave_3ch_repr(self.wasm128(), channels)
+    }
+    #[inline(always)]
+    fn load_rgb_bytes(self, rgb: &[u8; 12]) -> (Self::Repr, Self::Repr, Self::Repr) {
+        <archmage::Wasm128Token as F32x4Backend>::load_rgb_bytes(self.wasm128(), rgb)
+    }
+    #[inline(always)]
+    fn store_rgb_bytes(self, r: Self::Repr, g: Self::Repr, b: Self::Repr) -> [u8; 12] {
+        <archmage::Wasm128Token as F32x4Backend>::store_rgb_bytes(self.wasm128(), r, g, b)
+    }
 }
 
 impl F32x8Backend for archmage::Wasm128RelaxedFmaToken {
@@ -442,6 +458,22 @@ impl F32x8Backend for archmage::Wasm128RelaxedFmaToken {
         a: Self::Repr,
     ) -> [u8; 32] {
         <archmage::Wasm128Token as F32x8Backend>::store_rgba_bytes(self.wasm128(), r, g, b, a)
+    }
+    #[inline(always)]
+    fn deinterleave_3ch_repr(self, rgb: [Self::Repr; 3]) -> [Self::Repr; 3] {
+        <archmage::Wasm128Token as F32x8Backend>::deinterleave_3ch_repr(self.wasm128(), rgb)
+    }
+    #[inline(always)]
+    fn interleave_3ch_repr(self, channels: [Self::Repr; 3]) -> [Self::Repr; 3] {
+        <archmage::Wasm128Token as F32x8Backend>::interleave_3ch_repr(self.wasm128(), channels)
+    }
+    #[inline(always)]
+    fn load_rgb_bytes(self, rgb: &[u8; 24]) -> (Self::Repr, Self::Repr, Self::Repr) {
+        <archmage::Wasm128Token as F32x8Backend>::load_rgb_bytes(self.wasm128(), rgb)
+    }
+    #[inline(always)]
+    fn store_rgb_bytes(self, r: Self::Repr, g: Self::Repr, b: Self::Repr) -> [u8; 24] {
+        <archmage::Wasm128Token as F32x8Backend>::store_rgb_bytes(self.wasm128(), r, g, b)
     }
     #[inline(always)]
     fn transpose_8x8_repr(self, rows: [Self::Repr; 8]) -> [Self::Repr; 8] {

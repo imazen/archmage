@@ -281,6 +281,64 @@ impl F32x4Backend for archmage::Wasm128Token {
         );
         crate::simd_storage::cast(pixels)
     }
+
+    #[inline(always)]
+    fn interleave_3ch_repr(self, channels: [v128; 3]) -> [v128; 3] {
+        let [r, g, b] = channels;
+        let rg01 = i32x4_shuffle::<0, 4, 1, 5>(r, g);
+        let rg23 = i32x4_shuffle::<2, 6, 3, 7>(r, g);
+        let gb123 = i32x4_shuffle::<1, 5, 6, 7>(g, b);
+        let out0 = i32x4_shuffle::<0, 1, 4, 2>(rg01, b);
+        let out1 = i32x4_shuffle::<0, 1, 4, 5>(gb123, rg23);
+        let out2 = i32x4_shuffle::<2, 6, 7, 3>(gb123, rg23);
+        [out0, out1, out2]
+    }
+
+    #[inline(always)]
+    fn load_rgb_bytes(self, rgb: &[u8; 12]) -> (v128, v128, v128) {
+        let lo8 = u64x2(
+            crate::simd_storage::copy(rgb.first_chunk::<8>().unwrap()),
+            0,
+        );
+        let hi4 = u32x4(
+            crate::simd_storage::copy(rgb.last_chunk::<4>().unwrap()),
+            0,
+            0,
+            0,
+        );
+        // Extract all 12 bytes [R0..3, G0..3, B0..3, 0..0] in one shuffle;
+        // lane 8 references lo8's zeroed high half so LLVM emits v128.load64_zero.
+        let rgb8 = i8x16_shuffle::<0, 3, 6, 17, 1, 4, 7, 18, 2, 5, 16, 19, 8, 8, 8, 8>(lo8, hi4);
+        let rg16 = u16x8_extend_low_u8x16(rgb8);
+        let b16 = u16x8_extend_high_u8x16(rgb8);
+        (
+            f32x4_convert_u32x4(u32x4_extend_low_u16x8(rg16)),
+            f32x4_convert_u32x4(u32x4_extend_high_u16x8(rg16)),
+            f32x4_convert_u32x4(u32x4_extend_low_u16x8(b16)),
+        )
+    }
+
+    #[inline(always)]
+    fn store_rgb_bytes(self, r: v128, g: v128, b: v128) -> [u8; 12] {
+        let narrow4 = |v: v128| -> v128 {
+            let i32s = i32x4_trunc_sat_f32x4(f32x4_nearest(v));
+            let i16s = i16x8_narrow_i32x4(i32s, i32s);
+            u8x16_narrow_i16x8(i16s, i16s)
+        };
+        let rg8 = i32x4_shuffle::<0, 4, 0, 0>(narrow4(r), narrow4(g));
+        let packed =
+            i8x16_shuffle::<0, 4, 16, 1, 5, 17, 2, 6, 18, 3, 7, 19, 0, 0, 0, 0>(rg8, narrow4(b));
+        let mut out = [0u8; 12];
+        crate::simd_storage::store(
+            u64x2_extract_lane::<0>(packed),
+            out.first_chunk_mut::<8>().unwrap(),
+        );
+        crate::simd_storage::store(
+            u32x4_extract_lane::<2>(packed),
+            out.last_chunk_mut::<4>().unwrap(),
+        );
+        out
+    }
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -631,6 +689,76 @@ impl F32x8Backend for archmage::Wasm128Token {
             )
         };
         crate::simd_storage::cast([pack(r[0], g[0], b[0], a[0]), pack(r[1], g[1], b[1], a[1])])
+    }
+
+    #[inline(always)]
+    fn interleave_3ch_repr(self, channels: [[v128; 2]; 3]) -> [[v128; 2]; 3] {
+        let [r, g, b] = channels;
+        let int4 = |r: v128, g: v128, b: v128| -> (v128, v128, v128) {
+            let rg01 = i32x4_shuffle::<0, 4, 1, 5>(r, g);
+            let rg23 = i32x4_shuffle::<2, 6, 3, 7>(r, g);
+            let gb123 = i32x4_shuffle::<1, 5, 6, 7>(g, b);
+            let out0 = i32x4_shuffle::<0, 1, 4, 2>(rg01, b);
+            let out1 = i32x4_shuffle::<0, 1, 4, 5>(gb123, rg23);
+            let out2 = i32x4_shuffle::<2, 6, 7, 3>(gb123, rg23);
+            (out0, out1, out2)
+        };
+        let (q0, q1, q2) = int4(r[0], g[0], b[0]);
+        let (q3, q4, q5) = int4(r[1], g[1], b[1]);
+        [[q0, q1], [q2, q3], [q4, q5]]
+    }
+
+    #[inline(always)]
+    fn load_rgb_bytes(self, rgb: &[u8; 24]) -> ([v128; 2], [v128; 2], [v128; 2]) {
+        let lo16: v128 = crate::simd_storage::copy(rgb.first_chunk::<16>().unwrap());
+        let hi8 = u64x2(crate::simd_storage::copy(rgb.last_chunk::<8>().unwrap()), 0);
+        let rg8 =
+            i8x16_shuffle::<0, 3, 6, 9, 12, 15, 18, 21, 1, 4, 7, 10, 13, 16, 19, 22>(lo16, hi8);
+        let b8 =
+            i8x16_shuffle::<2, 5, 8, 11, 14, 17, 20, 23, 24, 24, 24, 24, 24, 24, 24, 24>(lo16, hi8);
+        let r16 = u16x8_extend_low_u8x16(rg8);
+        let g16 = u16x8_extend_high_u8x16(rg8);
+        let b16 = u16x8_extend_low_u8x16(b8);
+        (
+            [
+                f32x4_convert_u32x4(u32x4_extend_low_u16x8(r16)),
+                f32x4_convert_u32x4(u32x4_extend_high_u16x8(r16)),
+            ],
+            [
+                f32x4_convert_u32x4(u32x4_extend_low_u16x8(g16)),
+                f32x4_convert_u32x4(u32x4_extend_high_u16x8(g16)),
+            ],
+            [
+                f32x4_convert_u32x4(u32x4_extend_low_u16x8(b16)),
+                f32x4_convert_u32x4(u32x4_extend_high_u16x8(b16)),
+            ],
+        )
+    }
+
+    #[inline(always)]
+    fn store_rgb_bytes(self, r: [v128; 2], g: [v128; 2], b: [v128; 2]) -> [u8; 24] {
+        // Narrow each channel to u8x16 individually before combining so LLVM
+        // preserves hardware i16x8.narrow_i32x4_s + i8x16.narrow_i16x8_u.
+        let narrow8 = |v: [v128; 2]| -> v128 {
+            let i16s = i16x8_narrow_i32x4(
+                i32x4_trunc_sat_f32x4(f32x4_nearest(v[0])),
+                i32x4_trunc_sat_f32x4(f32x4_nearest(v[1])),
+            );
+            u8x16_narrow_i16x8(i16s, i16s)
+        };
+        let r8 = narrow8(r);
+        let g8 = narrow8(g);
+        let b8 = narrow8(b);
+        let rg8 = i64x2_shuffle::<0, 2>(r8, g8);
+        let lo16 = i8x16_shuffle::<0, 8, 16, 1, 9, 17, 2, 10, 18, 3, 11, 19, 4, 12, 20, 5>(rg8, b8);
+        let hi8 = i8x16_shuffle::<13, 21, 6, 14, 22, 7, 15, 23, 0, 0, 0, 0, 0, 0, 0, 0>(rg8, b8);
+        let mut out = [0u8; 24];
+        crate::simd_storage::store(lo16, out.first_chunk_mut::<16>().unwrap());
+        crate::simd_storage::store(
+            u64x2_extract_lane::<0>(hi8),
+            out.last_chunk_mut::<8>().unwrap(),
+        );
+        out
     }
 }
 

@@ -401,6 +401,160 @@ where
     let raw8: [u8; 24] = core::array::from_fn(|i| (i as u8).wrapping_mul(11));
     let (lr8, lg8, lb8) = f32x8::load_8_rgb_u8_t(token, &raw8);
     assert_eq!(f32x8::store_8_rgb_u8(lr8, lg8, lb8), raw8);
+
+    // Exhaustive RGB backend parity (#169):
+    // 1. Bit-exact preservation across deinterleave_3ch <-> interleave_3ch
+    //    for -0.0, subnormals, infinities, and distinct quiet NaN payloads.
+    let bit_patterns_12: [u32; 12] = [
+        0x8000_0000, // -0.0
+        0x0000_0001, // smallest positive subnormal
+        0x8000_0001, // smallest negative subnormal
+        0x7f80_0000, // +inf
+        0xff80_0000, // -inf
+        0x7fc0_0001, // qNaN payload 1
+        0x7fc0_0002, // qNaN payload 2
+        0x7fc0_1234, // qNaN payload 0x1234
+        0xffc0_5678, // negative qNaN payload 0x5678
+        0x3f80_0000, // 1.0
+        0xbf80_0000, // -1.0
+        0x437f_0000, // 255.0
+    ];
+    let bits_v4 = [
+        f32x4::from_array_t(
+            token,
+            core::array::from_fn(|i| f32::from_bits(bit_patterns_12[i])),
+        ),
+        f32x4::from_array_t(
+            token,
+            core::array::from_fn(|i| f32::from_bits(bit_patterns_12[4 + i])),
+        ),
+        f32x4::from_array_t(
+            token,
+            core::array::from_fn(|i| f32::from_bits(bit_patterns_12[8 + i])),
+        ),
+    ];
+    let [br4, bg4, bb4] = f32x4::deinterleave_3ch(bits_v4);
+    for p in 0..4 {
+        assert_eq!(br4.to_array()[p].to_bits(), bit_patterns_12[p * 3]);
+        assert_eq!(bg4.to_array()[p].to_bits(), bit_patterns_12[p * 3 + 1]);
+        assert_eq!(bb4.to_array()[p].to_bits(), bit_patterns_12[p * 3 + 2]);
+    }
+    let bits_re4 = f32x4::interleave_3ch([br4, bg4, bb4]);
+    for vec_idx in 0..3 {
+        for lane in 0..4 {
+            assert_eq!(
+                bits_re4[vec_idx].to_array()[lane].to_bits(),
+                bit_patterns_12[vec_idx * 4 + lane]
+            );
+        }
+    }
+
+    let bit_patterns_24: [u32; 24] = core::array::from_fn(|i| {
+        if i < 12 {
+            bit_patterns_12[i]
+        } else {
+            (0x3f00_0000 + ((i as u32) << 13)) ^ (((i as u32) & 1) << 31)
+        }
+    });
+    let bits_v8 = [
+        f32x8::from_array_t(
+            token,
+            core::array::from_fn(|i| f32::from_bits(bit_patterns_24[i])),
+        ),
+        f32x8::from_array_t(
+            token,
+            core::array::from_fn(|i| f32::from_bits(bit_patterns_24[8 + i])),
+        ),
+        f32x8::from_array_t(
+            token,
+            core::array::from_fn(|i| f32::from_bits(bit_patterns_24[16 + i])),
+        ),
+    ];
+    let [br8, bg8, bb8] = f32x8::deinterleave_3ch(bits_v8);
+    for p in 0..8 {
+        assert_eq!(br8.to_array()[p].to_bits(), bit_patterns_24[p * 3]);
+        assert_eq!(bg8.to_array()[p].to_bits(), bit_patterns_24[p * 3 + 1]);
+        assert_eq!(bb8.to_array()[p].to_bits(), bit_patterns_24[p * 3 + 2]);
+    }
+    let bits_re8 = f32x8::interleave_3ch([br8, bg8, bb8]);
+    for vec_idx in 0..3 {
+        for lane in 0..8 {
+            assert_eq!(
+                bits_re8[vec_idx].to_array()[lane].to_bits(),
+                bit_patterns_24[vec_idx * 8 + lane]
+            );
+        }
+    }
+
+    // 2. Full 0..=255 load + store roundtrip across non-symmetric RGB bytes and
+    //    unaligned slice tails, plus exact parity with store_{4,8}_rgba_u8 on
+    //    halfway ties, NaNs, infinities, negatives, and huge floats.
+    let mut full_rgb = [0u8; 256 * 3 + 7];
+    for p in 0..256 {
+        full_rgb[3 + p * 3] = p as u8;
+        full_rgb[3 + p * 3 + 1] = (255 - p) as u8;
+        full_rgb[3 + p * 3 + 2] = (p as u8).wrapping_mul(73).wrapping_add(19);
+    }
+    for base in (3..(3 + 256 * 3)).step_by(24) {
+        let chunk24: &[u8; 24] = full_rgb[base..base + 24].try_into().unwrap();
+        let (r, g, b) = f32x8::load_8_rgb_u8_t(token, chunk24);
+        let exp_r: [f32; 8] = core::array::from_fn(|i| chunk24[i * 3] as f32);
+        let exp_g: [f32; 8] = core::array::from_fn(|i| chunk24[i * 3 + 1] as f32);
+        let exp_b: [f32; 8] = core::array::from_fn(|i| chunk24[i * 3 + 2] as f32);
+        assert_eq!(r.to_array(), exp_r);
+        assert_eq!(g.to_array(), exp_g);
+        assert_eq!(b.to_array(), exp_b);
+        assert_eq!(&f32x8::store_8_rgb_u8(r, g, b), chunk24);
+
+        let chunk12_lo: &[u8; 12] = chunk24[..12].try_into().unwrap();
+        let chunk12_hi: &[u8; 12] = chunk24[12..].try_into().unwrap();
+        let (r4l, g4l, b4l) = f32x4::load_4_rgb_u8_t(token, chunk12_lo);
+        let (r4h, g4h, b4h) = f32x4::load_4_rgb_u8_t(token, chunk12_hi);
+        assert_eq!(&f32x4::store_4_rgb_u8(r4l, g4l, b4l), chunk12_lo);
+        assert_eq!(&f32x4::store_4_rgb_u8(r4h, g4h, b4h), chunk12_hi);
+    }
+
+    let edge_vals: [f32; 24] = [
+        0.0,
+        -0.0,
+        0.5,
+        1.5,
+        2.5,
+        3.5,
+        127.5,
+        128.5,
+        253.5,
+        254.5,
+        255.0,
+        255.5,
+        256.0,
+        -0.5,
+        -1.0,
+        -1e30,
+        1e30,
+        1e38,
+        f32::INFINITY,
+        f32::NEG_INFINITY,
+        f32::NAN,
+        f32::from_bits(0xffc0_0001),
+        0.499_999_97,
+        254.500_02,
+    ];
+    let er8 = f32x8::from_array_t(token, core::array::from_fn(|i| edge_vals[i]));
+    let eg8 = f32x8::from_array_t(token, core::array::from_fn(|i| edge_vals[8 + i]));
+    let eb8 = f32x8::from_array_t(token, core::array::from_fn(|i| edge_vals[16 + i]));
+    let rgba8_ref = f32x8::store_8_rgba_u8(er8, eg8, eb8, f32x8::zero_t(token));
+    let rgb8_expected: [u8; 24] = core::array::from_fn(|i| rgba8_ref[(i / 3) * 4 + (i % 3)]);
+    assert_eq!(f32x8::store_8_rgb_u8(er8, eg8, eb8), rgb8_expected);
+
+    for half in [0usize, 4usize] {
+        let er4 = f32x4::from_array_t(token, core::array::from_fn(|i| edge_vals[half + i]));
+        let eg4 = f32x4::from_array_t(token, core::array::from_fn(|i| edge_vals[8 + half + i]));
+        let eb4 = f32x4::from_array_t(token, core::array::from_fn(|i| edge_vals[16 + half + i]));
+        let rgba4_ref = f32x4::store_4_rgba_u8(er4, eg4, eb4, f32x4::zero_t(token));
+        let rgb4_expected: [u8; 12] = core::array::from_fn(|i| rgba4_ref[(i / 3) * 4 + (i % 3)]);
+        assert_eq!(f32x4::store_4_rgb_u8(er4, eg4, eb4), rgb4_expected);
+    }
 }
 
 #[cfg(feature = "w512")]
@@ -499,6 +653,13 @@ fn neural_vision_ops_across_all_backends() {
             }
             if let Some(t) = archmage::Avx512Fp16Token::summon() {
                 check_narrow_backend(t.magetypes());
+                // Exercise Avx512Fp16Token's direct F32x4Backend / F32x8Backend delegation too:
+                let raw4: [u8; 12] = [1, 2, 3, 40, 50, 60, 70, 80, 90, 200, 210, 220];
+                let (r4, g4, b4) = f32x4::load_4_rgb_u8_t(t, &raw4);
+                assert_eq!(f32x4::store_4_rgb_u8(r4, g4, b4), raw4);
+                let raw8: [u8; 24] = core::array::from_fn(|i| (i as u8) * 9 + 7);
+                let (r8, g8, b8) = f32x8::load_8_rgb_u8_t(t, &raw8);
+                assert_eq!(f32x8::store_8_rgb_u8(r8, g8, b8), raw8);
             }
         }
     }

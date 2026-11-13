@@ -315,4 +315,66 @@ pub trait F32x4Backend: SimdToken + Sealed + Copy + 'static {
         }
         out
     }
+
+    // ====== 3-channel RGB block ops (f32x4 / f32x8) ======
+
+    /// Deinterleave 4 packed RGB pixels (12 floats across 3 vectors)
+    /// from AoS into SoA planar `[R, G, B]`.
+    #[inline(always)]
+    fn deinterleave_3ch_repr(self, rgb: [Self::Repr; 3]) -> [Self::Repr; 3] {
+        let v0 = <Self as F32x4Backend>::to_array(self, rgb[0]);
+        let v1 = <Self as F32x4Backend>::to_array(self, rgb[1]);
+        let v2 = <Self as F32x4Backend>::to_array(self, rgb[2]);
+        [
+            <Self as F32x4Backend>::from_array(self, [v0[0], v0[3], v1[2], v2[1]]),
+            <Self as F32x4Backend>::from_array(self, [v0[1], v1[0], v1[3], v2[2]]),
+            <Self as F32x4Backend>::from_array(self, [v0[2], v1[1], v2[0], v2[3]]),
+        ]
+    }
+
+    /// Interleave 3 planar `[R, G, B]` channel vectors (4 pixels) from SoA
+    /// into 3 contiguous AoS RGB vectors (12 floats).
+    #[inline(always)]
+    fn interleave_3ch_repr(self, channels: [Self::Repr; 3]) -> [Self::Repr; 3] {
+        let r = <Self as F32x4Backend>::to_array(self, channels[0]);
+        let g = <Self as F32x4Backend>::to_array(self, channels[1]);
+        let b = <Self as F32x4Backend>::to_array(self, channels[2]);
+        [
+            <Self as F32x4Backend>::from_array(self, [r[0], g[0], b[0], r[1]]),
+            <Self as F32x4Backend>::from_array(self, [g[1], b[1], r[2], g[2]]),
+            <Self as F32x4Backend>::from_array(self, [b[2], r[3], g[3], b[3]]),
+        ]
+    }
+
+    /// Load 4 packed RGB `u8` pixels (12 bytes) and deinterleave
+    /// into 3 planar `f32` channel vectors `(R, G, B)` in `[0.0, 255.0]`.
+    #[inline(always)]
+    fn load_rgb_bytes(self, rgb: &[u8; 12]) -> (Self::Repr, Self::Repr, Self::Repr) {
+        let r: [f32; 4] = core::array::from_fn(|i| rgb[i * 3] as f32);
+        let g: [f32; 4] = core::array::from_fn(|i| rgb[i * 3 + 1] as f32);
+        let b: [f32; 4] = core::array::from_fn(|i| rgb[i * 3 + 2] as f32);
+        (
+            <Self as F32x4Backend>::from_array(self, r),
+            <Self as F32x4Backend>::from_array(self, g),
+            <Self as F32x4Backend>::from_array(self, b),
+        )
+    }
+
+    /// Round-to-nearest-even, clamp to `0..=255`, and interleave 3 planar
+    /// channels into 4 packed RGB `u8` pixels (12 bytes).
+    #[inline(always)]
+    fn store_rgb_bytes(self, r: Self::Repr, g: Self::Repr, b: Self::Repr) -> [u8; 12] {
+        let rb = <Self as F32x4Backend>::to_u8_bytes(self, r);
+        let gb = <Self as F32x4Backend>::to_u8_bytes(self, g);
+        let bb = <Self as F32x4Backend>::to_u8_bytes(self, b);
+        let mut out = [0u8; 12];
+        let mut i = 0;
+        while i < 4 {
+            out[i * 3] = rb[i];
+            out[i * 3 + 1] = gb[i];
+            out[i * 3 + 2] = bb[i];
+            i += 1;
+        }
+        out
+    }
 }

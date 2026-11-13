@@ -25,9 +25,9 @@
 //!
 //! ## The exception: pixel packing
 //!
-//! `to_u8_bytes` (both widths) and `f32x4::store_rgba_bytes` call the
-//! hand-written AVX-512VL helpers in `x86_v4_f32_overrides.rs`, which take
-//! a concrete `X64V4Token` (`self` for V4, `self.v4()` for V4x and FP16).
+//! `to_u8_bytes` (both widths) and `f32x4::{store_rgba_bytes, store_rgb_bytes}`
+//! call the hand-written AVX-512VL helpers in `x86_v4_f32_overrides.rs`, which
+//! take a concrete `X64V4Token` (`self` for V4, `self.v4()` for V4x and FP16).
 
 #![cfg(all(target_arch = "x86_64", feature = "avx512"))]
 
@@ -248,6 +248,22 @@ impl F32x4Backend for archmage::X64V4Token {
     ) -> [u8; 16] {
         overrides::store_rgba_bytes_x4_v4(self, r, g, b, a)
     }
+    #[inline(always)]
+    fn deinterleave_3ch_repr(self, rgb: [Self::Repr; 3]) -> [Self::Repr; 3] {
+        <archmage::X64V3Token as F32x4Backend>::deinterleave_3ch_repr(self.v3(), rgb)
+    }
+    #[inline(always)]
+    fn interleave_3ch_repr(self, channels: [Self::Repr; 3]) -> [Self::Repr; 3] {
+        <archmage::X64V3Token as F32x4Backend>::interleave_3ch_repr(self.v3(), channels)
+    }
+    #[inline(always)]
+    fn load_rgb_bytes(self, rgb: &[u8; 12]) -> (Self::Repr, Self::Repr, Self::Repr) {
+        <archmage::X64V3Token as F32x4Backend>::load_rgb_bytes(self.v3(), rgb)
+    }
+    #[inline(always)]
+    fn store_rgb_bytes(self, r: Self::Repr, g: Self::Repr, b: Self::Repr) -> [u8; 12] {
+        overrides::store_rgb_bytes_x4_v4(self, r, g, b)
+    }
 }
 
 impl F32x4Backend for archmage::X64V4xToken {
@@ -463,6 +479,22 @@ impl F32x4Backend for archmage::X64V4xToken {
         a: Self::Repr,
     ) -> [u8; 16] {
         overrides::store_rgba_bytes_x4_v4(self.v4(), r, g, b, a)
+    }
+    #[inline(always)]
+    fn deinterleave_3ch_repr(self, rgb: [Self::Repr; 3]) -> [Self::Repr; 3] {
+        <archmage::X64V3Token as F32x4Backend>::deinterleave_3ch_repr(self.v3(), rgb)
+    }
+    #[inline(always)]
+    fn interleave_3ch_repr(self, channels: [Self::Repr; 3]) -> [Self::Repr; 3] {
+        <archmage::X64V3Token as F32x4Backend>::interleave_3ch_repr(self.v3(), channels)
+    }
+    #[inline(always)]
+    fn load_rgb_bytes(self, rgb: &[u8; 12]) -> (Self::Repr, Self::Repr, Self::Repr) {
+        <archmage::X64V3Token as F32x4Backend>::load_rgb_bytes(self.v3(), rgb)
+    }
+    #[inline(always)]
+    fn store_rgb_bytes(self, r: Self::Repr, g: Self::Repr, b: Self::Repr) -> [u8; 12] {
+        overrides::store_rgb_bytes_x4_v4(self.v4(), r, g, b)
     }
 }
 
@@ -680,6 +712,22 @@ impl F32x4Backend for archmage::Avx512Fp16Token {
     ) -> [u8; 16] {
         overrides::store_rgba_bytes_x4_v4(self.v4(), r, g, b, a)
     }
+    #[inline(always)]
+    fn deinterleave_3ch_repr(self, rgb: [Self::Repr; 3]) -> [Self::Repr; 3] {
+        <archmage::X64V3Token as F32x4Backend>::deinterleave_3ch_repr(self.v3(), rgb)
+    }
+    #[inline(always)]
+    fn interleave_3ch_repr(self, channels: [Self::Repr; 3]) -> [Self::Repr; 3] {
+        <archmage::X64V3Token as F32x4Backend>::interleave_3ch_repr(self.v3(), channels)
+    }
+    #[inline(always)]
+    fn load_rgb_bytes(self, rgb: &[u8; 12]) -> (Self::Repr, Self::Repr, Self::Repr) {
+        <archmage::X64V3Token as F32x4Backend>::load_rgb_bytes(self.v3(), rgb)
+    }
+    #[inline(always)]
+    fn store_rgb_bytes(self, r: Self::Repr, g: Self::Repr, b: Self::Repr) -> [u8; 12] {
+        overrides::store_rgb_bytes_x4_v4(self.v4(), r, g, b)
+    }
 }
 
 impl F32x8Backend for archmage::X64V4Token {
@@ -895,6 +943,22 @@ impl F32x8Backend for archmage::X64V4Token {
         a: Self::Repr,
     ) -> [u8; 32] {
         <archmage::X64V3Token as F32x8Backend>::store_rgba_bytes(self.v3(), r, g, b, a)
+    }
+    #[inline(always)]
+    fn deinterleave_3ch_repr(self, rgb: [Self::Repr; 3]) -> [Self::Repr; 3] {
+        <archmage::X64V3Token as F32x8Backend>::deinterleave_3ch_repr(self.v3(), rgb)
+    }
+    #[inline(always)]
+    fn interleave_3ch_repr(self, channels: [Self::Repr; 3]) -> [Self::Repr; 3] {
+        <archmage::X64V3Token as F32x8Backend>::interleave_3ch_repr(self.v3(), channels)
+    }
+    #[inline(always)]
+    fn load_rgb_bytes(self, rgb: &[u8; 24]) -> (Self::Repr, Self::Repr, Self::Repr) {
+        <archmage::X64V3Token as F32x8Backend>::load_rgb_bytes(self.v3(), rgb)
+    }
+    #[inline(always)]
+    fn store_rgb_bytes(self, r: Self::Repr, g: Self::Repr, b: Self::Repr) -> [u8; 24] {
+        <archmage::X64V3Token as F32x8Backend>::store_rgb_bytes(self.v3(), r, g, b)
     }
     #[inline(always)]
     fn transpose_8x8_repr(self, rows: [Self::Repr; 8]) -> [Self::Repr; 8] {
@@ -1117,6 +1181,22 @@ impl F32x8Backend for archmage::X64V4xToken {
         <archmage::X64V3Token as F32x8Backend>::store_rgba_bytes(self.v3(), r, g, b, a)
     }
     #[inline(always)]
+    fn deinterleave_3ch_repr(self, rgb: [Self::Repr; 3]) -> [Self::Repr; 3] {
+        <archmage::X64V3Token as F32x8Backend>::deinterleave_3ch_repr(self.v3(), rgb)
+    }
+    #[inline(always)]
+    fn interleave_3ch_repr(self, channels: [Self::Repr; 3]) -> [Self::Repr; 3] {
+        <archmage::X64V3Token as F32x8Backend>::interleave_3ch_repr(self.v3(), channels)
+    }
+    #[inline(always)]
+    fn load_rgb_bytes(self, rgb: &[u8; 24]) -> (Self::Repr, Self::Repr, Self::Repr) {
+        <archmage::X64V3Token as F32x8Backend>::load_rgb_bytes(self.v3(), rgb)
+    }
+    #[inline(always)]
+    fn store_rgb_bytes(self, r: Self::Repr, g: Self::Repr, b: Self::Repr) -> [u8; 24] {
+        <archmage::X64V3Token as F32x8Backend>::store_rgb_bytes(self.v3(), r, g, b)
+    }
+    #[inline(always)]
     fn transpose_8x8_repr(self, rows: [Self::Repr; 8]) -> [Self::Repr; 8] {
         <archmage::X64V3Token as F32x8Backend>::transpose_8x8_repr(self.v3(), rows)
     }
@@ -1335,6 +1415,22 @@ impl F32x8Backend for archmage::Avx512Fp16Token {
         a: Self::Repr,
     ) -> [u8; 32] {
         <archmage::X64V3Token as F32x8Backend>::store_rgba_bytes(self.v3(), r, g, b, a)
+    }
+    #[inline(always)]
+    fn deinterleave_3ch_repr(self, rgb: [Self::Repr; 3]) -> [Self::Repr; 3] {
+        <archmage::X64V3Token as F32x8Backend>::deinterleave_3ch_repr(self.v3(), rgb)
+    }
+    #[inline(always)]
+    fn interleave_3ch_repr(self, channels: [Self::Repr; 3]) -> [Self::Repr; 3] {
+        <archmage::X64V3Token as F32x8Backend>::interleave_3ch_repr(self.v3(), channels)
+    }
+    #[inline(always)]
+    fn load_rgb_bytes(self, rgb: &[u8; 24]) -> (Self::Repr, Self::Repr, Self::Repr) {
+        <archmage::X64V3Token as F32x8Backend>::load_rgb_bytes(self.v3(), rgb)
+    }
+    #[inline(always)]
+    fn store_rgb_bytes(self, r: Self::Repr, g: Self::Repr, b: Self::Repr) -> [u8; 24] {
+        <archmage::X64V3Token as F32x8Backend>::store_rgb_bytes(self.v3(), r, g, b)
     }
     #[inline(always)]
     fn transpose_8x8_repr(self, rows: [Self::Repr; 8]) -> [Self::Repr; 8] {

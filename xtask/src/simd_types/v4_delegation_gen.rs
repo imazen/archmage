@@ -54,6 +54,7 @@ const V4_TO_V3_TOKENS: &[(&str, &str)] = &[
 const V4_F32_OVERRIDES: &[(&str, &str, &str)] = &[
     ("F32x4Backend", "to_u8_bytes", "to_u8_bytes_x4_v4"),
     ("F32x4Backend", "store_rgba_bytes", "store_rgba_bytes_x4_v4"),
+    ("F32x4Backend", "store_rgb_bytes", "store_rgb_bytes_x4_v4"),
     ("F32x8Backend", "to_u8_bytes", "to_u8_bytes_x8_v4"),
 ];
 
@@ -176,9 +177,9 @@ pub(crate) fn generate(f32x4_trait_src: &str, f32x8_trait_src: &str) -> String {
         //!
         //! ## The exception: pixel packing
         //!
-        //! `to_u8_bytes` (both widths) and `f32x4::store_rgba_bytes` call the
-        //! hand-written AVX-512VL helpers in `x86_v4_f32_overrides.rs`, which take
-        //! a concrete `X64V4Token` (`self` for V4, `self.v4()` for V4x and FP16).
+        //! `to_u8_bytes` (both widths) and `f32x4::{{store_rgba_bytes, store_rgb_bytes}}`
+        //! call the hand-written AVX-512VL helpers in `x86_v4_f32_overrides.rs`, which
+        //! take a concrete `X64V4Token` (`self` for V4, `self.v4()` for V4x and FP16).
 
         #![cfg(all(target_arch = "x86_64", feature = "avx512"))]
 
