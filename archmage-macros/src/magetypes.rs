@@ -59,7 +59,7 @@ pub(crate) fn magetypes_impl(
         && has_dispatch
         && crate::token_discovery::find_token_param(&input_fn.sig).is_none()
         && !input_fn.sig.inputs.iter().any(|arg| {
-            let syn::FnArg::Typed(param) = arg else {
+            let FnArg::Typed(param) = arg else {
                 return false;
             };
             matches!(

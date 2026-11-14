@@ -14,10 +14,10 @@ use crate::tiers::*;
 pub(crate) struct IncantInput {
     /// Function path to call (e.g. `func` or `module::func`)
     pub(crate) func_path: syn::Path,
-    /// Arguments to pass
-    pub(crate) args: Vec<syn::Expr>,
-    /// Optional token variable for passthrough mode (`with token_expr`).
-    pub(crate) with_token: Option<syn::Expr>,
+    /// Arguments to pass (kept as opaque token slices — no `syn::Expr` AST)
+    pub(crate) args: Vec<TokenStream>,
+    /// Optional token expression for passthrough mode (`with token_expr`).
+    pub(crate) with_token: Option<TokenStream>,
     /// Tokenless mode (`without token`): inside a tier-macro body, rewrite to the
     /// caller's exact-tier variant called with NO token (`f_v3(args)`). Only
     /// valid in a tier-macro body; errors in plain/cold code.
@@ -36,10 +36,7 @@ impl Parse for IncantInput {
         // Parse parenthesized arguments
         let content;
         syn::parenthesized!(content in input);
-        let args = content
-            .parse_terminated(syn::Expr::parse, Token![,])?
-            .into_iter()
-            .collect();
+        let args = parse_comma_args(&content)?;
 
         // Modifier slot: `with <token_expr>` (passthrough) | `without token` (tokenless).
         let mut with_token = None;
@@ -47,7 +44,7 @@ impl Parse for IncantInput {
         if input.peek(Ident) {
             let kw: Ident = input.parse()?;
             if kw == "with" {
-                with_token = Some(input.parse()?);
+                with_token = Some(parse_expr_until_top_comma(input)?);
             } else if kw == "without" {
                 let t: Ident = input.parse()?;
                 if t != "token" {
@@ -276,8 +273,8 @@ pub(crate) fn incant_impl(input: IncantInput) -> TokenStream {
 /// Generate incant! passthrough mode (already have a token).
 pub(crate) fn gen_incant_passthrough(
     func_path: &syn::Path,
-    args: &[syn::Expr],
-    token_expr: &syn::Expr,
+    args: &[TokenStream],
+    token_expr: &TokenStream,
     tiers: &[ResolvedTier],
 ) -> TokenStream {
     // Every non-fallback arm binds the same token name.
@@ -356,7 +353,7 @@ pub(crate) fn gen_incant_passthrough(
 /// with `return`).
 pub(crate) fn gen_incant_entry(
     func_path: &syn::Path,
-    args: &[syn::Expr],
+    args: &[TokenStream],
     tiers: &[ResolvedTier],
 ) -> TokenStream {
     // Every non-fallback arm binds the same token name.
