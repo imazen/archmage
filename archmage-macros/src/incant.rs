@@ -363,7 +363,7 @@ pub(crate) fn gen_incant_entry(
     let call_args = build_call_args(args, &quote! { __t });
     let dispatch_arms = gen_dispatch_arms(tiers, |rt| {
         let fn_suffixed = suffix_path(func_path, rt.suffix);
-        let token_path: syn::Path = syn::parse_str(rt.token_path).unwrap();
+        let token_path = colon_path_tokens(rt.token_path, false);
         quote! {
             if let Some(__t) = #token_path::summon() {
                 break '__incant #fn_suffixed(#call_args);

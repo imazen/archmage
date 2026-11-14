@@ -48,14 +48,14 @@ impl Candidate {
                 };
                 let concrete = match info {
                     TokenTypeInfo::Concrete(name) => {
-                        let Some(tier) = crate::generated::canonical_token_to_tier_suffix(&name)
+                        let Some(tier) = crate::generated::canonical_token_to_tier_suffix(name)
                         else {
                             continue;
                         };
                         Some(tier)
                     }
                     TokenTypeInfo::ImplTrait(bounds) => {
-                        if !bounds.iter().any(|b| b == "IntoConcreteToken") {
+                        if !bounds.iter().any(|b| **b == "IntoConcreteToken") {
                             continue;
                         }
                         None
@@ -66,8 +66,8 @@ impl Candidate {
                         {
                             continue;
                         }
-                        if !token_discovery::find_generic_bounds(signature, &name)
-                            .is_some_and(|bounds| bounds.iter().any(|b| b == "IntoConcreteToken"))
+                        if !token_discovery::find_generic_bounds(signature, name)
+                            .is_some_and(|bounds| bounds.iter().any(|b| *b == "IntoConcreteToken"))
                         {
                             continue;
                         }

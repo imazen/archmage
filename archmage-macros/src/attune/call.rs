@@ -45,7 +45,8 @@ impl Parse for Call {
                 let mut entries = Vec::new();
                 while !inner.is_empty() {
                     let name: Ident = inner.parse()?;
-                    let (tier, form) = syntax::selector(&name.to_string(), name.span())?;
+                    let (tier, form) =
+                        crate::common::with_ident_str(&name, |s| syntax::selector(s, name.span()))?;
                     let gate = syntax::gate(&inner)?;
                     entries.push(Selection {
                         tier,
@@ -63,8 +64,11 @@ impl Parse for Call {
                 selections = Some(entries);
             } else {
                 let name: Ident = input.parse()?;
-                match name.to_string().as_str() {
-                    "names" => names = syntax::parse_names(input)?,
+                crate::common::with_ident_str(&name, |kw| match kw {
+                    "names" => {
+                        names = syntax::parse_names(input)?;
+                        Ok(())
+                    }
                     "using" => {
                         if proof.is_some() {
                             return Err(input.error("duplicate using(...)"));
@@ -75,14 +79,13 @@ impl Parse for Call {
                         if !inner.is_empty() {
                             return Err(inner.error("expected one proof expression"));
                         }
+                        Ok(())
                     }
-                    _ => {
-                        return Err(syn::Error::new(
-                            name.span(),
-                            "expected a callee list, names(...), or using(...)",
-                        ));
-                    }
-                }
+                    _ => Err(syn::Error::new(
+                        name.span(),
+                        "expected a callee list, names(...), or using(...)",
+                    )),
+                })?;
             }
         }
         Ok(Self {
@@ -224,8 +227,7 @@ impl Call {
             } else {
                 None
             };
-            let token: syn::Path =
-                syn::parse_str(&format!("::{}", tier.token_path)).expect("registered token path");
+            let token = crate::common::colon_path_tokens(tier.token_path, true);
             let runtime = !covered || self.proof.is_some();
             let form = if caller.is_none() || runtime {
                 Form::Proof
@@ -304,7 +306,7 @@ impl Call {
 }
 
 fn selection_condition(caller: Option<Context<'_>>, selection: &Selection) -> Option<TokenStream> {
-    let mut preds = Vec::new();
+    let mut preds = crate::common::SmallVec::<TokenStream, 5>::new();
     if let Some(arch) = selection.tier.target_arch {
         let same_arch = caller.is_some_and(|c| c.target_arch == Some(arch));
         if !same_arch {
@@ -324,10 +326,13 @@ fn selection_condition(caller: Option<Context<'_>>, selection: &Selection) -> Op
     if let Some(f) = selection.gate.as_deref() {
         preds.push(quote!(feature = #f));
     }
-    match preds.as_slice() {
-        [] => None,
-        [only] => Some(only.clone()),
-        many => Some(quote!(all(#(#many),*))),
+    match preds.len() {
+        0 => None,
+        1 => preds.iter().next().cloned(),
+        _ => {
+            let many = preds.iter();
+            Some(quote!(all(#(#many),*)))
+        }
     }
 }
 

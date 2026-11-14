@@ -249,51 +249,56 @@ fn rewrite_single_incant(input: &IncantInput, ctx: &CallerContext) -> Option<Tok
 
     // Build the upgrade attempt arms (need labeled block + break)
     let mut upgrade_arms = Vec::new();
-    for rt in &upgrade_tiers {
-        let fn_suffixed = suffix_path(func_path, rt.suffix);
-        let token_path: syn::Path = syn::parse_str(rt.token_path).unwrap();
+    let caller_ident = crate::common::with_ident_str(token_ident, |caller_ident| {
+        for rt in &upgrade_tiers {
+            let fn_suffixed = suffix_path(func_path, rt.suffix);
+            let token_path = crate::common::colon_path_tokens(rt.token_path, false);
 
-        let token_expr = quote! { __t };
-        let caller_ident = token_ident.to_string();
-        let call_args =
-            crate::common::build_call_args_with_ident(args, &token_expr, Some(&caller_ident));
-        let check = quote! {
-            if let Some(__t) = #token_path::summon() {
-                break '__incant_rewrite #fn_suffixed(#call_args);
-            }
-        };
+            let token_expr = quote! { __t };
+            let call_args =
+                crate::common::build_call_args_with_ident(args, &token_expr, Some(caller_ident));
+            let check = quote! {
+                if let Some(__t) = #token_path::summon() {
+                    break '__incant_rewrite #fn_suffixed(#call_args);
+                }
+            };
 
-        let mut preds = Vec::new();
-        if ctx.target_arch == Some("wasm32") {
-            let caller_feats = crate::common::tier_wasm_features(ctx.tier_suffix);
-            for tf in crate::common::tier_wasm_features(rt.name) {
-                if !caller_feats.contains(tf) {
-                    preds.push(quote! { target_feature = #tf });
+            let mut preds = crate::common::SmallVec::<TokenStream, 4>::new();
+            if ctx.target_arch == Some("wasm32") {
+                let caller_feats = crate::common::tier_wasm_features(ctx.tier_suffix);
+                for tf in crate::common::tier_wasm_features(rt.name) {
+                    if !caller_feats.contains(tf) {
+                        preds.push(quote! { target_feature = #tf });
+                    }
                 }
             }
-        }
-        if let Some(feat) = &rt.feature_gate {
-            preds.push(quote! { feature = #feat });
-        }
-        if !preds.is_empty() {
-            let allow_attr = if rt.allow_unexpected_cfg && rt.feature_gate.is_some() {
-                quote! { #[allow(unexpected_cfgs)] }
+            if let Some(feat) = &rt.feature_gate {
+                preds.push(quote! { feature = #feat });
+            }
+            if !preds.is_empty() {
+                let allow_attr = if rt.allow_unexpected_cfg && rt.feature_gate.is_some() {
+                    quote! { #[allow(unexpected_cfgs)] }
+                } else {
+                    quote! {}
+                };
+                let cfg_attr = if preds.len() == 1 {
+                    let only = preds.iter().next().unwrap();
+                    quote! { #[cfg(#only)] }
+                } else {
+                    let many = preds.iter();
+                    quote! { #[cfg(all(#(#many),*))] }
+                };
+                upgrade_arms.push(quote! {
+                    #allow_attr
+                    #cfg_attr
+                    { #check }
+                });
             } else {
-                quote! {}
-            };
-            let cfg_attr = match preds.as_slice() {
-                [only] => quote! { #[cfg(#only)] },
-                many => quote! { #[cfg(all(#(#many),*))] },
-            };
-            upgrade_arms.push(quote! {
-                #allow_attr
-                #cfg_attr
-                { #check }
-            });
-        } else {
-            upgrade_arms.push(check);
+                upgrade_arms.push(check);
+            }
         }
-    }
+        caller_ident.to_owned()
+    });
 
     // The direct calls (guaranteed hits, no summon). A gated tier becomes a
     // `#[cfg(feature)]` arm; the first ungated one is the terminal call. Each
@@ -301,7 +306,6 @@ fn rewrite_single_incant(input: &IncantInput, ctx: &CallerContext) -> Option<Tok
     // exactly one guaranteed arm survives cfg evaluation and it is the
     // block's value: no unconditional `break` leaves the fallback unreachable
     // (unreachable_code in the caller's crate when the gate is on).
-    let caller_ident = token_ident.to_string();
     let mut direct_arms = Vec::new();
     let mut direct_gates: Vec<&str> = Vec::new();
     let mut gates_allow_unexpected = false;
@@ -441,7 +445,7 @@ fn rewrite_tokenless_incant(input: &IncantInput, ctx: &CallerContext) -> Option<
             let token = if tier.name == "scalar" {
                 quote! { archmage::ScalarToken }
             } else {
-                let token_path: syn::Path = syn::parse_str(tier.token_path).ok()?;
+                let token_path = crate::common::colon_path_tokens(tier.token_path, false);
                 quote! { #token_path::from_context() }
             };
             let args = crate::common::build_call_args(&input.args, &token);
