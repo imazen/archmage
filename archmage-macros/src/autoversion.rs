@@ -120,26 +120,27 @@ pub(crate) fn find_autoversion_token_param(
             && let Type::Path(type_path) = ty.as_ref()
             && let Some(seg) = type_path.path.segments.last()
         {
-            let name = seg.ident.to_string();
-
-            // Recognized autoversion tokens
-            let kind = if name == "SimdToken" {
-                AutoversionTokenKind::SimdToken
-            } else if name == "ScalarToken" {
-                AutoversionTokenKind::ScalarToken
-            } else if token_to_features(&name).is_some() {
-                // It's a concrete SIMD token (X64V3Token, NeonToken, etc.)
-                return Err(syn::Error::new_spanned(
-                    ty,
-                    format!(
-                        "#[autoversion] generates multi-tier dispatch — it can't take a \
-                         concrete token like `{name}`.\n\
-                         Use #[arcane] or #[rite] for single-token functions.\n\
-                         Use #[autoversion] with no token parameter (recommended) or \
-                         ScalarToken for incant! nesting."
-                    ),
-                ));
-            } else {
+            let kind_res = with_ident_str(&seg.ident, |name| {
+                if name == "SimdToken" {
+                    Ok(Some(AutoversionTokenKind::SimdToken))
+                } else if name == "ScalarToken" {
+                    Ok(Some(AutoversionTokenKind::ScalarToken))
+                } else if token_to_features(name).is_some() {
+                    Err(syn::Error::new_spanned(
+                        ty,
+                        format!(
+                            "#[autoversion] generates multi-tier dispatch — it can't take a \
+                             concrete token like `{name}`.\n\
+                             Use #[arcane] or #[rite] for single-token functions.\n\
+                             Use #[autoversion] with no token parameter (recommended) or \
+                             ScalarToken for incant! nesting."
+                        ),
+                    ))
+                } else {
+                    Ok(None)
+                }
+            })?;
+            let Some(kind) = kind_res else {
                 continue;
             };
 
@@ -317,15 +318,17 @@ pub(crate) fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> 
                     variant_fn.sig.inputs[0] = receiver_param;
                 }
                 let self_ident = format_ident!("_self");
-                variant_fn.body = replace_self_value_in_tokens(
-                    replace_self_in_tokens(variant_fn.body.clone(), self_ty),
-                    &self_ident,
-                );
-                variant_fn.sig = syn::parse2(replace_self_in_tokens(
-                    variant_fn.sig.to_token_stream(),
-                    self_ty,
-                ))
-                .expect("replacing Self keeps the signature parseable");
+                if tokens_contain_ident(&variant_fn.body, &["Self"]) {
+                    variant_fn.body = replace_self_in_tokens(variant_fn.body, self_ty);
+                }
+                if tokens_contain_ident(&variant_fn.body, &["self"]) {
+                    variant_fn.body = replace_self_value_in_tokens(variant_fn.body, &self_ident);
+                }
+                let sig_ts = variant_fn.sig.to_token_stream();
+                if tokens_contain_ident(&sig_ts, &["Self"]) {
+                    variant_fn.sig = syn::parse2(replace_self_in_tokens(sig_ts, self_ty))
+                        .expect("replacing Self keeps the signature parseable");
+                }
             }
         } else if (tier.name == "scalar" || tier.name == "default")
             && has_self
@@ -382,7 +385,7 @@ pub(crate) fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> 
                 nested: self_type.is_some(),
                 self_type,
                 in_impl: !args.in_trait && args.in_impl,
-                wrapper_attrs: vec![parse_quote!(#[allow(dead_code)])],
+                wrapper_attrs: quote!(#[allow(dead_code)]),
                 shared: SharedOptions {
                     cfg_feature: tier.feature_gate.clone(),
                     ..Default::default()
@@ -486,7 +489,7 @@ pub(crate) fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> 
 
     let dispatch_arms = gen_dispatch_arms(&tiers, |rt| {
         let suffixed = format_ident!("{}_{}", fn_name, rt.suffix);
-        let token_path: syn::Path = syn::parse_str(rt.token_path).unwrap();
+        let token_path = colon_path_tokens(rt.token_path, false);
         let call = variant_call(&suffixed, Some(quote! { __t }));
         quote! {
             if let Some(__t) = #token_path::summon() {
