@@ -69,10 +69,10 @@ impl FeatureContext {
 /// Reject safe tokenless/wrong-token `#[attune]`/`#[rite]` functions on WASM
 /// tiers whose contract requires a runtime probe beyond `#[target_feature]`.
 pub(crate) fn runtime_probe_direct_error(
-    sig: &syn::Signature,
+    sig: &Signature,
     tier: &FeatureContext,
 ) -> Option<syn::Error> {
-    if tier.target_arch != Some("wasm32") || matches!(sig.safety, syn::Safety::Unsafe(_)) {
+    if tier.target_arch != Some("wasm32") || matches!(sig.safety, Safety::Unsafe(_)) {
         return None;
     }
     let token_name = tier.token?;

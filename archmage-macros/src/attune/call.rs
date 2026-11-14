@@ -1,7 +1,7 @@
 //! Calls use the same tier/form descriptors as definitions. Runtime probing is
 //! confined to ordinary callers and explicit reattune invocations.
 use proc_macro2::{Delimiter, Group, TokenStream, TokenTree};
-use quote::{ToTokens, format_ident, quote};
+use quote::{format_ident, quote};
 use syn::{
     Ident, Token,
     parse::{Parse, ParseStream},
@@ -13,10 +13,10 @@ use crate::tiers::{TierDescriptor, find_tier};
 
 pub(crate) struct Call {
     path: syn::Path,
-    args: Vec<syn::Expr>,
+    args: Vec<TokenStream>,
     selections: Vec<Selection>,
     names: Vec<Rename>,
-    proof: Option<syn::Expr>,
+    proof: Option<TokenStream>,
 }
 
 impl Parse for Call {
@@ -24,10 +24,7 @@ impl Parse for Call {
         let path = input.parse()?;
         let inner;
         syn::parenthesized!(inner in input);
-        let args = inner
-            .parse_terminated(syn::Expr::parse, Token![,])?
-            .into_iter()
-            .collect();
+        let args = crate::common::parse_comma_args(&inner)?;
         let mut selections = None;
         let mut names = Vec::new();
         let mut proof = None;
@@ -75,10 +72,11 @@ impl Parse for Call {
                         }
                         let inner;
                         syn::parenthesized!(inner in input);
-                        proof = Some(inner.parse()?);
+                        let proof_ts = crate::common::parse_expr_until_top_comma(&inner)?;
                         if !inner.is_empty() {
                             return Err(inner.error("expected one proof expression"));
                         }
+                        proof = Some(proof_ts);
                         Ok(())
                     }
                     _ => Err(syn::Error::new(
@@ -186,8 +184,8 @@ impl Call {
             .args
             .iter()
             .map(|arg| match caller {
-                Some(context) => rewrite_scoped(arg.to_token_stream(), context, parent, serial),
-                None => arg.to_token_stream(),
+                Some(context) => rewrite_scoped(arg.clone(), context, parent, serial),
+                None => arg.clone(),
             })
             .collect();
         let has_marker = self
@@ -296,8 +294,8 @@ impl Call {
         };
         let supplied = self.proof.as_ref().map(|proof| {
             let proof = match caller {
-                Some(context) => rewrite_scoped(proof.to_token_stream(), context, parent, serial),
-                None => proof.to_token_stream(),
+                Some(context) => rewrite_scoped(proof.clone(), context, parent, serial),
+                None => proof.clone(),
             };
             quote!(let #supplied_ident = #proof;)
         });
@@ -350,7 +348,7 @@ fn branch_guard(condition: &Option<TokenStream>, guarantees: &[TokenStream]) -> 
 pub(crate) fn rewrite(
     body: TokenStream,
     caller: &TierDescriptor,
-    signature: Option<&syn::Signature>,
+    signature: Option<&crate::common::Signature>,
 ) -> TokenStream {
     let features = crate::generated::tier_to_canonical_token(caller.name)
         .and_then(crate::generated::token_to_features)
@@ -368,7 +366,7 @@ pub(crate) fn rewrite(
 pub(crate) fn rewrite_context(
     body: TokenStream,
     caller: Context<'_>,
-    signature: Option<&syn::Signature>,
+    signature: Option<&crate::common::Signature>,
 ) -> TokenStream {
     if !crate::common::tokens_contain_ident(&body, &["attuned", "reattune"]) {
         return body;

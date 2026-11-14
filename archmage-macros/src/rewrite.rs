@@ -70,7 +70,7 @@ pub(crate) fn rewrite_incant_in_body(body: TokenStream, ctx: &CallerContext) -> 
 pub(crate) fn rewrite_incant_in_function(
     body: TokenStream,
     ctx: &CallerContext,
-    signature: Option<&syn::Signature>,
+    signature: Option<&crate::common::Signature>,
 ) -> TokenStream {
     // Most kernels have no dispatch inside them. Keep their original groups,
     // spans, and token storage instead of allocating two vectors at every depth.
@@ -354,13 +354,10 @@ fn rewrite_single_incant(input: &IncantInput, ctx: &CallerContext) -> Option<Tok
             if has_default {
                 let fn_default = suffix_path(func_path, "default");
                 // Strip token markers from args for tokenless default call
-                let default_args: Vec<&syn::Expr> = args
-                    .iter()
-                    .filter(|a| {
-                        !crate::common::is_bare_ident(a, "Token")
-                            && !crate::common::is_bare_ident(a, &caller_ident)
-                    })
-                    .collect();
+                let default_args = args.iter().filter(|a| {
+                    !crate::common::is_bare_ident(a, "Token")
+                        && !crate::common::is_bare_ident(a, &caller_ident)
+                });
                 quote! { #fn_default(#(#default_args),*) }
             } else {
                 // The caller's named token is replaced like in the arms above,
