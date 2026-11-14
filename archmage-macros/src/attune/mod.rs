@@ -10,7 +10,7 @@ mod syntax;
 
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
-use syn::{FnArg, parse_quote};
+use syn::parse_quote;
 
 use crate::{
     common::*,
@@ -232,7 +232,7 @@ fn placeholder_parameter(arg: &FnArg) -> bool {
 }
 
 fn forward(
-    sig: &syn::Signature,
+    sig: &Signature,
     target: &syn::Ident,
     in_impl: bool,
     proof: Option<TokenStream>,
@@ -241,7 +241,7 @@ fn forward(
     let has_placeholder = sig.inputs.iter().any(placeholder_parameter);
     let arguments = sig.inputs.iter().filter_map(|arg| match arg {
         FnArg::Typed(p) => match p.pat.as_ref() {
-            syn::Pat::Ident(p) => {
+            Pat::Ident(p) => {
                 let name = &p.ident;
                 Some(if placeholder_parameter(arg) {
                     proof.clone().unwrap_or_else(|| quote!(#name))
@@ -373,7 +373,7 @@ fn family(mut input: LightFn, args: Args) -> syn::Result<TokenStream> {
                 &args,
             )?);
             let token = colon_path_tokens(tier.token_path, true);
-            let input_is_unsafe = matches!(input.sig.safety, syn::Safety::Unsafe(_));
+            let input_is_unsafe = matches!(input.sig.safety, Safety::Unsafe(_));
             let invocation = forward(
                 &forward_sig,
                 &proof_name,
@@ -510,7 +510,7 @@ fn proof_entry(
         (false, true) => quote!(#[allow(dead_code)]),
         (false, false) => TokenStream::new(),
     };
-    let body = if !matches!(sig.safety, syn::Safety::Unsafe(_))
+    let body = if !matches!(sig.safety, Safety::Unsafe(_))
         && (tier.name == "scalar" || tier.target_arch == Some("wasm32"))
     {
         invocation

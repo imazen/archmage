@@ -6,7 +6,7 @@
 use proc_macro2::TokenStream;
 use quote::{ToTokens, format_ident, quote, quote_spanned};
 use syn::{
-    Attribute, FnArg, Ident, PatType, Signature, Token, Type,
+    Attribute, Ident, Token, Type,
     parse::{Parse, ParseStream},
     parse_quote,
 };
@@ -145,8 +145,8 @@ pub(crate) fn find_autoversion_token_param(
             };
 
             let ident = match pat.as_ref() {
-                syn::Pat::Ident(pi) => pi.ident.clone(),
-                syn::Pat::Wild(w) => Ident::new("__autoversion_token", w.underscore_token.span),
+                Pat::Ident(pi) => pi.ident.clone(),
+                Pat::Wild(w) => Ident::new("__autoversion_token", w.underscore_token.span),
                 _ => continue,
             };
             return Ok(Some(AutoversionTokenParam {
@@ -440,7 +440,7 @@ pub(crate) fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> 
                 return None; // Skip the kept token param
             }
             if let FnArg::Typed(PatType { pat, .. }) = arg
-                && let syn::Pat::Ident(pi) = pat.as_ref()
+                && let Pat::Ident(pi) = pat.as_ref()
             {
                 return Some(pi.ident.clone());
             }
@@ -457,7 +457,7 @@ pub(crate) fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> 
     // `Signature::safety: Safety`. A free `fn` can only parse as `Unsafe` or
     // `Default` (the `safe` qualifier is only accepted inside `unsafe extern`
     // blocks), so this matches the old `unsafety.is_some()` exactly.
-    let is_unsafe = matches!(input_fn.sig.safety, syn::Safety::Unsafe(_));
+    let is_unsafe = matches!(input_fn.sig.safety, Safety::Unsafe(_));
 
     // How the dispatcher reaches a variant: a nested fn taking `self` first
     // (`in_trait`), a method through `self`, a `Self::` path (`in_impl`), or a
