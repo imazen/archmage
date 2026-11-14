@@ -781,6 +781,62 @@ pub(crate) fn expected_tier_tag(token_name: &str) -> Option<u32> {
     }
 }
 
+/// Maps any recognized concrete token spelling (including aliases and `ScalarToken`)
+/// to a `'static` string slice with zero heap allocation.
+///
+/// Generated from token-registry.toml.
+pub(crate) fn known_token_str(name: &str) -> Option<&'static str> {
+    match name {
+        "ScalarToken" => Some("ScalarToken"),
+        "X64V1Token" => Some("X64V1Token"),
+        "Sse2Token" => Some("Sse2Token"),
+        "X64V2Token" => Some("X64V2Token"),
+        "X64CryptoToken" => Some("X64CryptoToken"),
+        "X64V3Token" => Some("X64V3Token"),
+        "Desktop64" => Some("Desktop64"),
+        "Avx2FmaToken" => Some("Avx2FmaToken"),
+        "X64V3CryptoToken" => Some("X64V3CryptoToken"),
+        "X64V3GfniCryptoToken" => Some("X64V3GfniCryptoToken"),
+        "X64V3VnniToken" => Some("X64V3VnniToken"),
+        "X64V4Token" => Some("X64V4Token"),
+        "Avx512Token" => Some("Avx512Token"),
+        "Server64" => Some("Server64"),
+        "X64V4xToken" => Some("X64V4xToken"),
+        "Avx512ModernToken" => Some("Avx512ModernToken"),
+        "Avx512Fp16Token" => Some("Avx512Fp16Token"),
+        "NeonToken" => Some("NeonToken"),
+        "Arm64" => Some("Arm64"),
+        "NeonAesToken" => Some("NeonAesToken"),
+        "NeonSha3Token" => Some("NeonSha3Token"),
+        "NeonCrcToken" => Some("NeonCrcToken"),
+        "Arm64V2Token" => Some("Arm64V2Token"),
+        "Arm64V3Token" => Some("Arm64V3Token"),
+        "Wasm128Token" => Some("Wasm128Token"),
+        "Wasm128RelaxedToken" => Some("Wasm128RelaxedToken"),
+        _ => None,
+    }
+}
+
+/// Maps any recognized feature-bearing trait or token bound spelling to a `'static`
+/// string slice with zero heap allocation.
+///
+/// Generated from token-registry.toml.
+pub(crate) fn known_trait_str(name: &str) -> Option<&'static str> {
+    match name {
+        "Has128BitSimd" => Some("Has128BitSimd"),
+        "Has256BitSimd" => Some("Has256BitSimd"),
+        "Has512BitSimd" => Some("Has512BitSimd"),
+        "HasX64V2" => Some("HasX64V2"),
+        "HasX64V4" => Some("HasX64V4"),
+        "HasNeon" => Some("HasNeon"),
+        "HasNeonAes" => Some("HasNeonAes"),
+        "HasNeonSha3" => Some("HasNeonSha3"),
+        "HasArm64V2" => Some("HasArm64V2"),
+        "HasArm64V3" => Some("HasArm64V3"),
+        other => known_token_str(other).filter(|t| trait_to_features(t).is_some()),
+    }
+}
+
 /// All concrete token names that exist in the runtime crate.
 #[cfg(test)]
 pub(crate) const ALL_CONCRETE_TOKENS: &[&str] = &[

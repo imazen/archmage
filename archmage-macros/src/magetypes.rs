@@ -78,7 +78,7 @@ pub(crate) fn magetypes_impl(
             };
             matches!(
                 crate::token_discovery::extract_token_type_info(&param.ty),
-                Some(crate::token_discovery::TokenTypeInfo::Generic(name)) if name == "Token"
+                Some(crate::token_discovery::TokenTypeInfo::Generic(name)) if *name == "Token"
             )
         });
     let mut variants = Vec::with_capacity(tiers.len());
@@ -115,11 +115,8 @@ pub(crate) fn magetypes_impl(
         }
 
         let cfg_guard = tier.variant_cfg_guard();
-        let token = (!tier.token_path.is_empty()).then(|| {
-            tier.token_path
-                .parse::<TokenStream>()
-                .expect("tier token_path must be valid tokens")
-        });
+        let token =
+            (!tier.token_path.is_empty()).then(|| colon_path_tokens(tier.token_path, false));
 
         // Fallbacks need no feature emitter. Substitute their output directly,
         // without reparsing syntax that no later stage will inspect.

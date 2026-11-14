@@ -8,12 +8,12 @@ use crate::rite::DEFAULT_TIER_SENTINEL;
 use crate::token_discovery::TokenParamInfo;
 use proc_macro2::TokenStream;
 use quote::quote;
-use syn::{Attribute, Ident, parse_quote};
+use syn::Ident;
 
 /// Where a `#[rite]` variant gets its features from.
 pub(crate) struct FeatureContext {
     /// Canonical token name (`X64V3Token`), or `None` for the tokenless `default` tier.
-    pub(crate) token: Option<String>,
+    pub(crate) token: Option<&'static str>,
     /// The tier suffix (`v3`, `scalar`, `default`), when the tier is one the
     /// registry knows; it selects the nested `incant!` rewrite.
     pub(crate) suffix: Option<&'static str>,
@@ -23,7 +23,7 @@ pub(crate) struct FeatureContext {
     /// The token parameter when the features came from the signature.
     pub(crate) token_ident: Option<Ident>,
     /// Tier traits to re-state through `::archmage::` (trait or generic bound).
-    pub(crate) tier_traits: Vec<String>,
+    pub(crate) tier_traits: Vec<&'static str>,
 }
 
 impl FeatureContext {
@@ -40,12 +40,13 @@ impl FeatureContext {
                 tier_traits: Vec::new(),
             });
         }
+        let token = crate::generated::known_token_str(tier_token)?;
         Some(FeatureContext {
-            token: Some(tier_token.to_string()),
-            suffix: canonical_token_to_tier_suffix(tier_token),
-            features: std::borrow::Cow::Borrowed(token_to_features(tier_token)?),
-            target_arch: token_to_arch(tier_token),
-            magetypes_namespace: token_to_magetypes_namespace(tier_token),
+            token: Some(token),
+            suffix: canonical_token_to_tier_suffix(token),
+            features: std::borrow::Cow::Borrowed(token_to_features(token)?),
+            target_arch: token_to_arch(token),
+            magetypes_namespace: token_to_magetypes_namespace(token),
             token_ident: None,
             tier_traits: Vec::new(),
         })
@@ -55,7 +56,6 @@ impl FeatureContext {
         FeatureContext {
             suffix: info
                 .token_type_name
-                .as_deref()
                 .and_then(canonical_token_to_tier_suffix),
             token: info.token_type_name,
             features: info.features,
@@ -80,7 +80,7 @@ pub(crate) fn emit(
     if let Some(err) = reject_manual_target_feature(&variant_fn.attrs) {
         return Err(err.to_compile_error());
     }
-    let token_desc = tier.token.as_deref().unwrap_or("an AVX-512 token");
+    let token_desc = tier.token.unwrap_or("an AVX-512 token");
     if let Some(err) = avx512_import_error(
         &variant_fn.sig,
         options.import_intrinsics,
@@ -109,7 +109,7 @@ pub(crate) fn emit(
             None => crate::rewrite::CallerContext {
                 tier_suffix,
                 target_arch: resolved.target_arch,
-                token_ident: quote::format_ident!("_"),
+                token_ident: Ident::new("_", proc_macro2::Span::call_site()),
                 has_token: false,
                 derive_token: true,
             },
@@ -132,40 +132,38 @@ pub(crate) fn emit(
         );
     }
 
-    // Build the attribute list. Scalar and default tiers have no features —
-    // emit only `#[inline]` without `#[target_feature]` (enable="" is an error).
-    let mut new_attrs: Vec<Attribute> = Vec::new();
-    if !tier.features.is_empty() {
-        let features_csv =
-            crate::token_discovery::features_csv(tier.token.as_deref(), &tier.features);
-        new_attrs.push(parse_quote!(#[target_feature(enable = #features_csv)]));
-    }
+    // Build target_feature + inline tokens directly without `parse_quote!` round-trips.
+    // Scalar and default tiers have no features — emit only `#[inline]` without
+    // `#[target_feature]` (enable="" is an error).
+    let target_feature_tokens = if !tier.features.is_empty() {
+        let features_csv = crate::token_discovery::features_csv(tier.token, &tier.features);
+        quote!(#[target_feature(enable = #features_csv)])
+    } else {
+        TokenStream::new()
+    };
     // Explicit policy replaces source inline attributes, including when it
     // deliberately emits no attribute. Legacy callers keep their old defaults.
-    if let Some(policy) = inline {
-        new_attrs.extend(policy.attribute(&variant_fn.vis));
+    let inline_tokens = if let Some(policy) = inline {
+        policy.tokens(&variant_fn.vis)
     } else if !preserve_inline || !variant_fn.attrs.iter().any(|a| a.path().is_ident("inline")) {
-        new_attrs.push(parse_quote!(#[inline]));
+        quote!(#[inline])
+    } else {
+        TokenStream::new()
+    };
+    if !preserve_inline || inline.is_some() {
+        variant_fn
+            .attrs
+            .retain(|attr| !attr.path().is_ident("inline"));
     }
-    for attr in variant_fn
-        .attrs
-        .into_iter()
-        .filter(|attr| (preserve_inline && inline.is_none()) || !attr.path().is_ident("inline"))
-    {
-        new_attrs.push(attr);
-    }
-    variant_fn.attrs = new_attrs;
 
-    // `#[rite]` has no wrapper — it puts `#[target_feature]` on the function
-    // itself — so a trait/generic bound is authenticated at the top of the body.
-    // Concrete tokens keep their tier-tag const in `#[arcane]`'s wrapper; a
-    // tokenless tier form (`#[rite(v3)]`) has no bound to authenticate.
     let body_imports = generate_imports(
         tier.target_arch,
         tier.magetypes_namespace,
         options.import_intrinsics,
         options.import_magetypes,
     );
+    // `#[rite]` has no wrapper — it puts `#[target_feature]` on the function
+    // itself — so a trait/generic bound is authenticated at the top of the body.
     let tier_trait_assertion = match &tier.token_ident {
         Some(ident) => gen_tier_trait_assertion(&tier.tier_traits, ident),
         None => quote! {},
@@ -189,6 +187,8 @@ pub(crate) fn emit(
     let body = braced_body(&variant_fn.brace_token, &variant_fn.body);
     Ok(quote! {
         #cfg_guard
+        #target_feature_tokens
+        #inline_tokens
         #(#attrs)*
         #vis #sig #body
     })

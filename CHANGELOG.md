@@ -87,6 +87,15 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 
 ### [Unreleased]
 
+#### Fixed
+
+- Reject receiver-only `_self = Type` proof discovery on explicitly typed receivers (`self: &Type`, `self: Box<Type>`, etc.) so an unrelated receiver type cannot enter a native `#[target_feature]` body without holding the declared proof token (#211).
+- Check callee shadowing against the emitted `format_ident!` callee identifier (stripping `r#` on raw-ident function names such as `fn r#move`) instead of a `format!`-rendered string (#211).
+
+#### Changed
+
+- Optimize `archmage-macros` hot paths: emit `#[inline]` / `#[target_feature]` / `#[allow]` / `::archmage::*` token paths directly without `parse_quote!` / `syn::parse_str`, generate `known_token_str` / `known_trait_str` from `token-registry.toml`, inspect `_self = Type` without cloning `syn::Signature`, and avoid body clones in `#[attune]` proof wrappers (#211, #176).
+
 #### QUEUED DEPRECATIONS (next 0.9.x)
 
 - Use `#[attune]`, `attuned!`, and `reattune!` instead of legacy `#[arcane]`, `#[rite]`, `#[magetypes]`, `#[autoversion]`, `incant!`, `dispatch_variant!`, `#[simd_fn]`, `simd_route!`, `#[token_target_features]`, and `#[token_target_features_boundary]`:

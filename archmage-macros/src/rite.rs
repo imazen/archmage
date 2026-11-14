@@ -202,11 +202,10 @@ pub(crate) fn rite_single_impl(mut input_fn: LightFn, args: RiteArgs) -> TokenSt
         }
     };
     // In token-param mode one token decides the features (see #122).
-    if tier.token_ident.is_some() {
-        let token_params = token_param_idents(&input_fn.sig);
-        if token_params.len() > 1 {
-            return multiple_tokens_error(&input_fn.sig, "rite", &token_params);
-        }
+    if tier.token_ident.is_some()
+        && let Some(err) = check_single_token_param(&input_fn.sig, "rite")
+    {
+        return err;
     }
     match crate::engine::feature::emit(input_fn, &args.shared, None, false, tier) {
         Ok(tokens) => tokens,

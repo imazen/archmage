@@ -220,8 +220,7 @@ impl Call {
             } else {
                 None
             };
-            let token: syn::Path =
-                syn::parse_str(&format!("::{}", tier.token_path)).expect("registered token path");
+            let token = crate::common::colon_path_tokens(tier.token_path, true);
             let runtime = !covered || self.proof.is_some();
             let form = if caller.is_none() || runtime {
                 Form::Proof
