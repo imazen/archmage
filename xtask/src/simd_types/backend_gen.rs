@@ -542,14 +542,16 @@ pub fn generate_backend_files() -> BTreeMap<String, String> {
     // 10. Implementation files
     files.insert(
         "impls/x86_v3.rs".to_string(),
-        generate_x86_impls(&types, "X64V3Token", 256)
-            + &generate_x86_i32_impls(&i32_types, "X64V3Token", 256)
-            + &generate_x86_u32_impls(&u32_types, "X64V3Token", 256)
-            + &generate_x86_i64_impls(&i64_types, "X64V3Token", 256)
-            + &generate_x86_int_impls(&remaining_int_types, "X64V3Token", 256)
-            + &generate_x86_convert_impls("X64V3Token")
-            + &generate_x86_additional_convert_impls("X64V3Token")
-            + &gate_w512_impls(generate_x86_v3_w512_impls(&w512_types)),
+        super::backend_syntax::rewrite_arcane_methods(
+            generate_x86_impls(&types, "X64V3Token", 256)
+                + &generate_x86_i32_impls(&i32_types, "X64V3Token", 256)
+                + &generate_x86_u32_impls(&u32_types, "X64V3Token", 256)
+                + &generate_x86_i64_impls(&i64_types, "X64V3Token", 256)
+                + &generate_x86_int_impls(&remaining_int_types, "X64V3Token", 256)
+                + &generate_x86_convert_impls("X64V3Token")
+                + &generate_x86_additional_convert_impls("X64V3Token")
+                + &gate_w512_impls(generate_x86_v3_w512_impls(&w512_types)),
+        ),
     );
     files.insert(
         "impls/scalar.rs".to_string(),
@@ -564,14 +566,16 @@ pub fn generate_backend_files() -> BTreeMap<String, String> {
     );
     files.insert(
         "impls/arm_neon.rs".to_string(),
-        generate_neon_impls(&types)
-            + &generate_neon_i32_impls(&i32_types)
-            + &generate_neon_u32_impls(&u32_types)
-            + &generate_neon_i64_impls(&i64_types)
-            + &generate_neon_int_impls(&remaining_int_types)
-            + &generate_neon_convert_impls()
-            + &generate_neon_additional_convert_impls()
-            + &gate_w512_impls(generate_neon_w512_impls(&w512_types)),
+        super::backend_syntax::rewrite_arcane_methods(
+            generate_neon_impls(&types)
+                + &generate_neon_i32_impls(&i32_types)
+                + &generate_neon_u32_impls(&u32_types)
+                + &generate_neon_i64_impls(&i64_types)
+                + &generate_neon_int_impls(&remaining_int_types)
+                + &generate_neon_convert_impls()
+                + &generate_neon_additional_convert_impls()
+                + &gate_w512_impls(generate_neon_w512_impls(&w512_types)),
+        ),
     );
     files.insert(
         "impls/wasm128.rs".to_string(),
@@ -591,7 +595,9 @@ pub fn generate_backend_files() -> BTreeMap<String, String> {
     // implies `w512` (and we want a single gate scheme).
     files.insert(
         "impls/x86_v4.rs".to_string(),
-        gate_w512_impls(generate_x86_v4_impls_file(&w512_types)),
+        super::backend_syntax::rewrite_arcane_methods(gate_w512_impls(generate_x86_v4_impls_file(
+            &w512_types,
+        ))),
     );
 
     // 10c. The AVX-512 tokens' W128/W256 f32 backends, forwarded to V3's,
@@ -1373,9 +1379,10 @@ fn impls_safety_contract(token_desc: &str) -> String {
         return indoc! {"
             //! # Safety (audit contract — checked backend boundaries)
             //!
-            //! `#[arcane]` checks value intrinsics against the receiver token's features.
-            //! SSE2-only arithmetic runs in `#[arcane]` regions for `X64V1Token`, the
-            //! x86-64 baseline, so it inlines into callers without AVX.
+            //! `arcane_fn!` (`archmage::__arcane_fn!`) checks value intrinsics against the
+            //! receiver token's `#[target_feature]` set and `$crate` concrete token type.
+            //! SSE2-only arithmetic runs in `X64V1Token` boundaries, the x86-64 baseline,
+            //! so it inlines into callers without AVX.
             //! Whole-array loads/stores and bit casts use `crate::simd_storage` helpers,
             //! which require POD storage and enforce equal sizes at compile time.
             //! Token-bearing wrappers never implement the storage POD trait.
@@ -1417,7 +1424,7 @@ fn generate_x86_v4_impls_file(w512_types: &[super::backend_gen_w512::W512Type]) 
         use core::arch::x86_64::*;
 
         #[cfg(target_arch = "x86_64")]
-        use archmage::{{arcane, X64V4Token, X64V4xToken}};
+        use archmage::{{__arcane_fn as arcane_fn, X64V4Token, X64V4xToken}};
 
         use crate::simd::backends::*;
 
@@ -1517,7 +1524,7 @@ fn generate_x86_impls(types: &[FloatVecType], token: &str, max_width: usize) -> 
         use core::arch::x86_64::*;
 
         #[cfg(target_arch = "x86_64")]
-        use archmage::{{arcane, {token}}};
+        use archmage::{{__arcane_fn as arcane_fn, {token}}};
 
         use crate::simd::backends::*;
 
@@ -3127,7 +3134,7 @@ fn generate_neon_impls(types: &[FloatVecType]) -> String {
         use core::arch::aarch64::*;
 
         #[cfg(target_arch = "aarch64")]
-        use archmage::{{arcane, NeonToken}};
+        use archmage::{{__arcane_fn as arcane_fn, NeonToken}};
 
         use crate::simd::backends::*;
 
