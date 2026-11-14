@@ -28,7 +28,7 @@ ATTR = re.compile(
 KEEP_TYPES = {
     # tokens
     'X64V1Token', 'Sse2Token', 'X64V2Token', 'X64CryptoToken', 'X64V3Token',
-    'X64V3CryptoToken', 'X64V3GfniCryptoToken', 'X64V4Token', 'Avx512Token',
+    'X64V3CryptoToken', 'X64V3GfniCryptoToken', 'X64V3VnniToken', 'X64V4Token', 'Avx512Token',
     'X64V4xToken', 'Avx512Fp16Token', 'Server64', 'Desktop64', 'NeonToken',
     'Arm64', 'Arm64V2Token', 'Arm64V3Token', 'NeonAesToken', 'NeonSha3Token',
     'NeonCrcToken', 'Wasm128Token', 'Wasm128RelaxedToken', 'ScalarToken',

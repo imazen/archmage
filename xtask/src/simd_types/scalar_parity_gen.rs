@@ -38,7 +38,11 @@ fn file_header() -> String {
         #![allow(clippy::float_cmp)]
         // Other architectures have no native backend to compare against.
         #![cfg_attr(
-            not(any(target_arch = "x86_64", target_arch = "aarch64", target_arch = "wasm32")),
+            not(any(
+                target_arch = "x86_64",
+                target_arch = "aarch64",
+                target_arch = "wasm32"
+            )),
             allow(dead_code, unused_macros)
         )]
 

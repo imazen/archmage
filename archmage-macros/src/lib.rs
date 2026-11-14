@@ -703,6 +703,8 @@ mod tests;
 /// `inline(none)`, `inline(hint)`, and `inline(never)` select explicit body policies.
 /// Per-output `make(inline(...) _v3)` overrides the definition-level policy.
 /// Definition-level policy does not alter proof-wrapper or dispatcher defaults.
+/// Trusted code generators may pass `suppress_const_test` on proof wrappers
+/// (`wrap` or `_t`) to omit the token-name mismatch const check.
 #[proc_macro_attribute]
 pub fn attune(attr: TokenStream, item: TokenStream) -> TokenStream {
     attune::expand(attr.into(), item.into())

@@ -262,6 +262,63 @@ impl F32x4Backend for NeonToken {
     }
 
     #[arcane(suppress_const_test, _self = NeonToken)]
+    fn broadcast_lane<const N: usize>(self, a: float32x4_t) -> float32x4_t {
+        const { assert!(N < 4, "lane index out of bounds") };
+        match N {
+            0 => vdupq_laneq_f32::<0>(a),
+            1 => vdupq_laneq_f32::<1>(a),
+            2 => vdupq_laneq_f32::<2>(a),
+            3 => vdupq_laneq_f32::<3>(a),
+            _ => unreachable!(),
+        }
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn shift_left_lanes<const N: usize>(self, a: float32x4_t) -> float32x4_t {
+        const { assert!(N <= 4, "shift count out of bounds") };
+        let z = vdupq_n_f32(0.0);
+        match N {
+            0 => a,
+            1 => vextq_f32::<3>(z, a),
+            2 => vextq_f32::<2>(z, a),
+            3 => vextq_f32::<1>(z, a),
+            4 => z,
+            _ => unreachable!(),
+        }
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn shift_right_lanes<const N: usize>(self, a: float32x4_t) -> float32x4_t {
+        const { assert!(N <= 4, "shift count out of bounds") };
+        let z = vdupq_n_f32(0.0);
+        match N {
+            0 => a,
+            1 => vextq_f32::<1>(a, z),
+            2 => vextq_f32::<2>(a, z),
+            3 => vextq_f32::<3>(a, z),
+            4 => z,
+            _ => unreachable!(),
+        }
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn mul_add_lane_relaxed<const LANE: i32>(
+        self,
+        a: float32x4_t,
+        v_in: float32x4_t,
+        acc: float32x4_t,
+    ) -> float32x4_t {
+        const { assert!(LANE >= 0 && LANE < 4, "LANE must be in 0..4") };
+        match LANE {
+            0 => vfmaq_laneq_f32::<0>(acc, a, v_in),
+            1 => vfmaq_laneq_f32::<1>(acc, a, v_in),
+            2 => vfmaq_laneq_f32::<2>(acc, a, v_in),
+            3 => vfmaq_laneq_f32::<3>(acc, a, v_in),
+            _ => unreachable!(),
+        }
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn to_u8_bytes(self, a: float32x4_t) -> [u8; 4] {
         let i16s = vqmovn_s32(vcvtnq_s32_f32(a));
         let u8s = vqmovun_s16(vcombine_s16(i16s, i16s));
@@ -288,6 +345,92 @@ impl F32x4Backend for NeonToken {
             vorrq_u32(vshlq_n_u32::<16>(bi), vshlq_n_u32::<24>(ai)),
         );
         crate::simd_storage::cast(vreinterpretq_u8_u32(pixels))
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn deinterleave_3ch_repr(self, rgb: [float32x4_t; 3]) -> [float32x4_t; 3] {
+        let idx_r: uint8x16_t = crate::simd_storage::cast([
+            0u8, 1, 2, 3, 12, 13, 14, 15, 24, 25, 26, 27, 36, 37, 38, 39,
+        ]);
+        let idx_g: uint8x16_t = crate::simd_storage::cast([
+            4u8, 5, 6, 7, 16, 17, 18, 19, 28, 29, 30, 31, 40, 41, 42, 43,
+        ]);
+        let idx_b: uint8x16_t = crate::simd_storage::cast([
+            8u8, 9, 10, 11, 20, 21, 22, 23, 32, 33, 34, 35, 44, 45, 46, 47,
+        ]);
+        let tbl = uint8x16x3_t(
+            vreinterpretq_u8_f32(rgb[0]),
+            vreinterpretq_u8_f32(rgb[1]),
+            vreinterpretq_u8_f32(rgb[2]),
+        );
+        [
+            vreinterpretq_f32_u8(vqtbl3q_u8(tbl, idx_r)),
+            vreinterpretq_f32_u8(vqtbl3q_u8(tbl, idx_g)),
+            vreinterpretq_f32_u8(vqtbl3q_u8(tbl, idx_b)),
+        ]
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn interleave_3ch_repr(self, channels: [float32x4_t; 3]) -> [float32x4_t; 3] {
+        let idx_0: uint8x16_t =
+            crate::simd_storage::cast([0u8, 1, 2, 3, 16, 17, 18, 19, 32, 33, 34, 35, 4, 5, 6, 7]);
+        let idx_1: uint8x16_t = crate::simd_storage::cast([
+            20u8, 21, 22, 23, 36, 37, 38, 39, 8, 9, 10, 11, 24, 25, 26, 27,
+        ]);
+        let idx_2: uint8x16_t = crate::simd_storage::cast([
+            40u8, 41, 42, 43, 12, 13, 14, 15, 28, 29, 30, 31, 44, 45, 46, 47,
+        ]);
+        let tbl = uint8x16x3_t(
+            vreinterpretq_u8_f32(channels[0]),
+            vreinterpretq_u8_f32(channels[1]),
+            vreinterpretq_u8_f32(channels[2]),
+        );
+        [
+            vreinterpretq_f32_u8(vqtbl3q_u8(tbl, idx_0)),
+            vreinterpretq_f32_u8(vqtbl3q_u8(tbl, idx_1)),
+            vreinterpretq_f32_u8(vqtbl3q_u8(tbl, idx_2)),
+        ]
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn load_rgb_bytes(self, rgb: &[u8; 12]) -> (float32x4_t, float32x4_t, float32x4_t) {
+        let lo8: uint8x8_t = crate::simd_storage::copy(rgb.first_chunk::<8>().unwrap());
+        let hi4: u32 = crate::simd_storage::copy(rgb.last_chunk::<4>().unwrap());
+        let raw = vreinterpretq_u8_u32(vsetq_lane_u32::<2>(
+            hi4,
+            vreinterpretq_u32_u8(vcombine_u8(lo8, vdup_n_u8(0))),
+        ));
+        // All 12 channel bytes fit in one 16B tbl: [R0..3, G0..3, B0..3, 0..0].
+        let idx: uint8x16_t =
+            crate::simd_storage::cast([0u8, 3, 6, 9, 1, 4, 7, 10, 2, 5, 8, 11, 255, 255, 255, 255]);
+        let rgb8 = vqtbl1q_u8(raw, idx);
+        let rg16 = vmovl_u8(vget_low_u8(rgb8));
+        let b16 = vmovl_high_u8(rgb8);
+        (
+            vcvtq_f32_u32(vmovl_u16(vget_low_u16(rg16))),
+            vcvtq_f32_u32(vmovl_high_u16(rg16)),
+            vcvtq_f32_u32(vmovl_u16(vget_low_u16(b16))),
+        )
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn store_rgb_bytes(self, r: float32x4_t, g: float32x4_t, b: float32x4_t) -> [u8; 12] {
+        let ri = vqmovn_s32(vcvtnq_s32_f32(r));
+        let gi = vqmovn_s32(vcvtnq_s32_f32(g));
+        let bi = vqmovn_s32(vcvtnq_s32_f32(b));
+        let rg8 = vqmovun_s16(vcombine_s16(ri, gi));
+        let b8 = vqmovun_s16(vcombine_s16(bi, bi));
+        let planes = vcombine_u8(rg8, b8);
+        let idx: uint8x16_t =
+            crate::simd_storage::cast([0u8, 4, 8, 1, 5, 9, 2, 6, 10, 3, 7, 11, 255, 255, 255, 255]);
+        let packed = vqtbl1q_u8(planes, idx);
+        let mut out = [0u8; 12];
+        crate::simd_storage::store(vget_low_u8(packed), out.first_chunk_mut::<8>().unwrap());
+        crate::simd_storage::store(
+            vgetq_lane_u32::<2>(vreinterpretq_u32_u8(packed)),
+            out.last_chunk_mut::<4>().unwrap(),
+        );
+        out
     }
 }
 
@@ -614,6 +757,104 @@ impl F32x8Backend for NeonToken {
     }
 
     #[arcane(suppress_const_test, _self = NeonToken)]
+    fn broadcast_lane<const N: usize>(self, a: [float32x4_t; 2]) -> [float32x4_t; 2] {
+        const { assert!(N < 8, "lane index out of bounds") };
+        let s = match N {
+            0 => vdupq_laneq_f32::<0>(a[0]),
+            1 => vdupq_laneq_f32::<1>(a[0]),
+            2 => vdupq_laneq_f32::<2>(a[0]),
+            3 => vdupq_laneq_f32::<3>(a[0]),
+            4 => vdupq_laneq_f32::<0>(a[1]),
+            5 => vdupq_laneq_f32::<1>(a[1]),
+            6 => vdupq_laneq_f32::<2>(a[1]),
+            7 => vdupq_laneq_f32::<3>(a[1]),
+            _ => unreachable!(),
+        };
+        [s, s]
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn shift_left_lanes<const N: usize>(self, a: [float32x4_t; 2]) -> [float32x4_t; 2] {
+        const { assert!(N <= 8, "shift count out of bounds") };
+        let z = vdupq_n_f32(0.0);
+        match N {
+            0 => a,
+            1 => [vextq_f32::<3>(z, a[0]), vextq_f32::<3>(a[0], a[1])],
+            2 => [vextq_f32::<2>(z, a[0]), vextq_f32::<2>(a[0], a[1])],
+            3 => [vextq_f32::<1>(z, a[0]), vextq_f32::<1>(a[0], a[1])],
+            4 => [z, a[0]],
+            5 => [z, vextq_f32::<3>(z, a[0])],
+            6 => [z, vextq_f32::<2>(z, a[0])],
+            7 => [z, vextq_f32::<1>(z, a[0])],
+            8 => [z, z],
+            _ => unreachable!(),
+        }
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn shift_right_lanes<const N: usize>(self, a: [float32x4_t; 2]) -> [float32x4_t; 2] {
+        const { assert!(N <= 8, "shift count out of bounds") };
+        let z = vdupq_n_f32(0.0);
+        match N {
+            0 => a,
+            1 => [vextq_f32::<1>(a[0], a[1]), vextq_f32::<1>(a[1], z)],
+            2 => [vextq_f32::<2>(a[0], a[1]), vextq_f32::<2>(a[1], z)],
+            3 => [vextq_f32::<3>(a[0], a[1]), vextq_f32::<3>(a[1], z)],
+            4 => [a[1], z],
+            5 => [vextq_f32::<1>(a[1], z), z],
+            6 => [vextq_f32::<2>(a[1], z), z],
+            7 => [vextq_f32::<3>(a[1], z), z],
+            8 => [z, z],
+            _ => unreachable!(),
+        }
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn mul_add_lane_relaxed<const LANE: i32>(
+        self,
+        a: [float32x4_t; 2],
+        v_in: [float32x4_t; 2],
+        acc: [float32x4_t; 2],
+    ) -> [float32x4_t; 2] {
+        const { assert!(LANE >= 0 && LANE < 8, "LANE must be in 0..8") };
+        match LANE {
+            0 => [
+                vfmaq_laneq_f32::<0>(acc[0], a[0], v_in[0]),
+                vfmaq_laneq_f32::<0>(acc[1], a[1], v_in[0]),
+            ],
+            1 => [
+                vfmaq_laneq_f32::<1>(acc[0], a[0], v_in[0]),
+                vfmaq_laneq_f32::<1>(acc[1], a[1], v_in[0]),
+            ],
+            2 => [
+                vfmaq_laneq_f32::<2>(acc[0], a[0], v_in[0]),
+                vfmaq_laneq_f32::<2>(acc[1], a[1], v_in[0]),
+            ],
+            3 => [
+                vfmaq_laneq_f32::<3>(acc[0], a[0], v_in[0]),
+                vfmaq_laneq_f32::<3>(acc[1], a[1], v_in[0]),
+            ],
+            4 => [
+                vfmaq_laneq_f32::<0>(acc[0], a[0], v_in[1]),
+                vfmaq_laneq_f32::<0>(acc[1], a[1], v_in[1]),
+            ],
+            5 => [
+                vfmaq_laneq_f32::<1>(acc[0], a[0], v_in[1]),
+                vfmaq_laneq_f32::<1>(acc[1], a[1], v_in[1]),
+            ],
+            6 => [
+                vfmaq_laneq_f32::<2>(acc[0], a[0], v_in[1]),
+                vfmaq_laneq_f32::<2>(acc[1], a[1], v_in[1]),
+            ],
+            7 => [
+                vfmaq_laneq_f32::<3>(acc[0], a[0], v_in[1]),
+                vfmaq_laneq_f32::<3>(acc[1], a[1], v_in[1]),
+            ],
+            _ => unreachable!(),
+        }
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn to_u8_bytes(self, a: [float32x4_t; 2]) -> [u8; 8] {
         let i0 = vqmovn_s32(vcvtnq_s32_f32(a[0]));
         let i1 = vqmovn_s32(vcvtnq_s32_f32(a[1]));
@@ -648,6 +889,147 @@ impl F32x8Backend for NeonToken {
             vorrq_u32(vshlq_n_u32::<16>(b1), vshlq_n_u32::<24>(a1)),
         );
         crate::simd_storage::cast([vreinterpretq_u8_u32(p0), vreinterpretq_u8_u32(p1)])
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn deinterleave_3ch_repr(self, rgb: [[float32x4_t; 2]; 3]) -> [[float32x4_t; 2]; 3] {
+        let idx_r: uint8x16_t = crate::simd_storage::cast([
+            0u8, 1, 2, 3, 12, 13, 14, 15, 24, 25, 26, 27, 36, 37, 38, 39,
+        ]);
+        let idx_g: uint8x16_t = crate::simd_storage::cast([
+            4u8, 5, 6, 7, 16, 17, 18, 19, 28, 29, 30, 31, 40, 41, 42, 43,
+        ]);
+        let idx_b: uint8x16_t = crate::simd_storage::cast([
+            8u8, 9, 10, 11, 20, 21, 22, 23, 32, 33, 34, 35, 44, 45, 46, 47,
+        ]);
+        let tbl_lo = uint8x16x3_t(
+            vreinterpretq_u8_f32(rgb[0][0]),
+            vreinterpretq_u8_f32(rgb[0][1]),
+            vreinterpretq_u8_f32(rgb[1][0]),
+        );
+        let tbl_hi = uint8x16x3_t(
+            vreinterpretq_u8_f32(rgb[1][1]),
+            vreinterpretq_u8_f32(rgb[2][0]),
+            vreinterpretq_u8_f32(rgb[2][1]),
+        );
+        [
+            [
+                vreinterpretq_f32_u8(vqtbl3q_u8(tbl_lo, idx_r)),
+                vreinterpretq_f32_u8(vqtbl3q_u8(tbl_hi, idx_r)),
+            ],
+            [
+                vreinterpretq_f32_u8(vqtbl3q_u8(tbl_lo, idx_g)),
+                vreinterpretq_f32_u8(vqtbl3q_u8(tbl_hi, idx_g)),
+            ],
+            [
+                vreinterpretq_f32_u8(vqtbl3q_u8(tbl_lo, idx_b)),
+                vreinterpretq_f32_u8(vqtbl3q_u8(tbl_hi, idx_b)),
+            ],
+        ]
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn interleave_3ch_repr(self, channels: [[float32x4_t; 2]; 3]) -> [[float32x4_t; 2]; 3] {
+        let [r, g, b] = channels;
+        let idx_0: uint8x16_t =
+            crate::simd_storage::cast([0u8, 1, 2, 3, 16, 17, 18, 19, 32, 33, 34, 35, 4, 5, 6, 7]);
+        let idx_1: uint8x16_t = crate::simd_storage::cast([
+            20u8, 21, 22, 23, 36, 37, 38, 39, 8, 9, 10, 11, 24, 25, 26, 27,
+        ]);
+        let idx_2: uint8x16_t = crate::simd_storage::cast([
+            40u8, 41, 42, 43, 12, 13, 14, 15, 28, 29, 30, 31, 44, 45, 46, 47,
+        ]);
+        let tbl_lo = uint8x16x3_t(
+            vreinterpretq_u8_f32(r[0]),
+            vreinterpretq_u8_f32(g[0]),
+            vreinterpretq_u8_f32(b[0]),
+        );
+        let tbl_hi = uint8x16x3_t(
+            vreinterpretq_u8_f32(r[1]),
+            vreinterpretq_u8_f32(g[1]),
+            vreinterpretq_u8_f32(b[1]),
+        );
+        [
+            [
+                vreinterpretq_f32_u8(vqtbl3q_u8(tbl_lo, idx_0)),
+                vreinterpretq_f32_u8(vqtbl3q_u8(tbl_lo, idx_1)),
+            ],
+            [
+                vreinterpretq_f32_u8(vqtbl3q_u8(tbl_lo, idx_2)),
+                vreinterpretq_f32_u8(vqtbl3q_u8(tbl_hi, idx_0)),
+            ],
+            [
+                vreinterpretq_f32_u8(vqtbl3q_u8(tbl_hi, idx_1)),
+                vreinterpretq_f32_u8(vqtbl3q_u8(tbl_hi, idx_2)),
+            ],
+        ]
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn load_rgb_bytes(
+        self,
+        rgb: &[u8; 24],
+    ) -> ([float32x4_t; 2], [float32x4_t; 2], [float32x4_t; 2]) {
+        let lo16: uint8x16_t = crate::simd_storage::copy(rgb.first_chunk::<16>().unwrap());
+        let hi8: uint8x8_t = crate::simd_storage::copy(rgb.last_chunk::<8>().unwrap());
+        let tbl = uint8x16x2_t(lo16, vcombine_u8(hi8, vdup_n_u8(0)));
+        let rg_idx: uint8x16_t =
+            crate::simd_storage::cast([0u8, 3, 6, 9, 12, 15, 18, 21, 1, 4, 7, 10, 13, 16, 19, 22]);
+        let b_idx: uint8x16_t = crate::simd_storage::cast([
+            2u8, 5, 8, 11, 14, 17, 20, 23, 255, 255, 255, 255, 255, 255, 255, 255,
+        ]);
+        let rg8 = vqtbl2q_u8(tbl, rg_idx);
+        let b8 = vqtbl2q_u8(tbl, b_idx);
+        let r16 = vmovl_u8(vget_low_u8(rg8));
+        let g16 = vmovl_high_u8(rg8);
+        let b16 = vmovl_u8(vget_low_u8(b8));
+        (
+            [
+                vcvtq_f32_u32(vmovl_u16(vget_low_u16(r16))),
+                vcvtq_f32_u32(vmovl_high_u16(r16)),
+            ],
+            [
+                vcvtq_f32_u32(vmovl_u16(vget_low_u16(g16))),
+                vcvtq_f32_u32(vmovl_high_u16(g16)),
+            ],
+            [
+                vcvtq_f32_u32(vmovl_u16(vget_low_u16(b16))),
+                vcvtq_f32_u32(vmovl_high_u16(b16)),
+            ],
+        )
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn store_rgb_bytes(
+        self,
+        r: [float32x4_t; 2],
+        g: [float32x4_t; 2],
+        b: [float32x4_t; 2],
+    ) -> [u8; 24] {
+        let r8 = vqmovun_s16(vcombine_s16(
+            vqmovn_s32(vcvtnq_s32_f32(r[0])),
+            vqmovn_s32(vcvtnq_s32_f32(r[1])),
+        ));
+        let g8 = vqmovun_s16(vcombine_s16(
+            vqmovn_s32(vcvtnq_s32_f32(g[0])),
+            vqmovn_s32(vcvtnq_s32_f32(g[1])),
+        ));
+        let b8 = vqmovun_s16(vcombine_s16(
+            vqmovn_s32(vcvtnq_s32_f32(b[0])),
+            vqmovn_s32(vcvtnq_s32_f32(b[1])),
+        ));
+        let tbl = uint8x16x2_t(vcombine_u8(r8, g8), vcombine_u8(b8, b8));
+        let idx_lo: uint8x16_t =
+            crate::simd_storage::cast([0u8, 8, 16, 1, 9, 17, 2, 10, 18, 3, 11, 19, 4, 12, 20, 5]);
+        let idx_hi: uint8x16_t = crate::simd_storage::cast([
+            13u8, 21, 6, 14, 22, 7, 15, 23, 255, 255, 255, 255, 255, 255, 255, 255,
+        ]);
+        let lo16 = vqtbl2q_u8(tbl, idx_lo);
+        let hi8 = vqtbl2q_u8(tbl, idx_hi);
+        let mut out = [0u8; 24];
+        crate::simd_storage::store(lo16, out.first_chunk_mut::<16>().unwrap());
+        crate::simd_storage::store(vget_low_u8(hi8), out.last_chunk_mut::<8>().unwrap());
+        out
     }
 }
 
@@ -3161,6 +3543,10 @@ impl I16x8Backend for NeonToken {
         vmulq_s16(a, b)
     }
     #[arcane(suppress_const_test, _self = NeonToken)]
+    fn mul_hrs_q15(self, a: int16x8_t, b: int16x8_t) -> int16x8_t {
+        vqrdmulhq_s16(a, b)
+    }
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn neg(self, a: int16x8_t) -> int16x8_t {
         vnegq_s16(a)
     }
@@ -3371,6 +3757,10 @@ impl I16x16Backend for NeonToken {
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn mul(self, a: [int16x8_t; 2], b: [int16x8_t; 2]) -> [int16x8_t; 2] {
         [vmulq_s16(a[0], b[0]), vmulq_s16(a[1], b[1])]
+    }
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn mul_hrs_q15(self, a: [int16x8_t; 2], b: [int16x8_t; 2]) -> [int16x8_t; 2] {
+        [vqrdmulhq_s16(a[0], b[0]), vqrdmulhq_s16(a[1], b[1])]
     }
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn neg(self, a: [int16x8_t; 2]) -> [int16x8_t; 2] {
@@ -5712,6 +6102,11 @@ impl I16x32Backend for NeonToken {
     #[inline(always)]
     fn mul(self, a: [int16x8_t; 4], b: [int16x8_t; 4]) -> [int16x8_t; 4] {
         core::array::from_fn(|i| <NeonToken as I16x8Backend>::mul(self, a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn mul_hrs_q15(self, a: [int16x8_t; 4], b: [int16x8_t; 4]) -> [int16x8_t; 4] {
+        core::array::from_fn(|i| <NeonToken as I16x8Backend>::mul_hrs_q15(self, a[i], b[i]))
     }
 
     #[inline(always)]

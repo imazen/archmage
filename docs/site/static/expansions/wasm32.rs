@@ -1,4 +1,4 @@
-// Rust 1.99.0; cargo-expand 1.0.126; wasm32-unknown-unknown; features: default
+// Rust 1.99.0; cargo-expand 1.0.126; wasm32-unknown-unknown; features: default; rustflags: -Ctarget-feature=+simd128
 // example: direct
 pub mod direct {
     use archmage::prelude::*;

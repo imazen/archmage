@@ -81,7 +81,7 @@ const _: () = {
     );
 };
 
-#[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
+#[cfg(target_arch = "wasm32")]
 const _: () = {
     assert!(
         size_of::<f32x4<archmage::Wasm128Token>>()
@@ -1016,6 +1016,7 @@ impl f32x4<archmage::Wasm128Token> {
     /// # Safety
     /// The CPU must support the enabled target features. Safe calls require a
     /// matching or stronger feature context, which Rust checks.
+    #[cfg(target_feature = "simd128")]
     #[target_feature(enable = "simd128")]
     #[inline]
     pub fn from_raw(value: core::arch::wasm32::v128) -> Self {

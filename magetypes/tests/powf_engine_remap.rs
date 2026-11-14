@@ -4,7 +4,7 @@
 #[cfg(any(
     target_arch = "x86_64",
     target_arch = "aarch64",
-    target_arch = "wasm32"
+    all(target_arch = "wasm32", target_feature = "simd128")
 ))]
 use archmage::SimdToken;
 #[archmage::magetypes(v4x(cfg(avx512)), v3, neon, wasm128, scalar)]
@@ -83,6 +83,6 @@ fn published_power_matches_frozen_composition() {
     }
     #[cfg(target_arch = "aarch64")]
     check_neon(archmage::NeonToken::summon().unwrap());
-    #[cfg(target_arch = "wasm32")]
+    #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
     check_wasm128(archmage::Wasm128Token::summon().unwrap());
 }

@@ -57,7 +57,11 @@ pub(super) fn run<const OPTIONS: u32, const N: usize>(
     exponent: f32,
 ) -> Result<[f32; N], PowfError> {
     check_bases::<OPTIONS, N>(&bases, exponent)?;
-    let result = bases.map(|x| x.powf(exponent));
+    // Prevent LLVM's `@llvm.pow.f32(2^k, y) -> exp2f(k * y)` rewrite on
+    // constant power-of-two bases, which rounds `k * y` in binary32 (~6 ULP)
+    // and breaks parity between constant-folded scalar calls and vector packs.
+    let exp = core::hint::black_box(exponent);
+    let result = bases.map(|x| core::hint::black_box(x).powf(exp));
     check_results::<OPTIONS, N>(&bases, &result, exponent)?;
     Ok(result)
 }

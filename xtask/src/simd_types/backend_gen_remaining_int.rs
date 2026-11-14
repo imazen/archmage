@@ -426,6 +426,24 @@ pub(super) fn generate_int_backend_trait(ty: &IntVecType) -> String {
         "#, elem_bits = ty.elem_bits});
     }
 
+    if ty.elem == "i16" {
+        methods.push_str(&formatdoc! {r#"
+            /// Fixed-point Q15 rounding multiply: `((a * b + 0x4000) >> 15)` per lane.
+            ///
+            /// Exact for all inputs except `(i16::MIN, i16::MIN)`, where x86/Scalar
+            /// wrap to `i16::MIN` and NEON/WASM saturate (or relaxed-select) to `i16::MAX`.
+            #[inline(always)]
+            fn mul_hrs_q15(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {{
+                let aa = <Self as {trait_name}>::to_array(self, a);
+                let bb = <Self as {trait_name}>::to_array(self, b);
+                <Self as {trait_name}>::from_array(
+                    self,
+                    core::array::from_fn(|i| ((aa[i] as i32 * bb[i] as i32 + 0x4000) >> 15) as i16),
+                )
+            }}
+        "#});
+    }
+
     // Neg only for signed types
     if ty.signed {
         methods.push_str(&formatdoc! {r#"
@@ -727,6 +745,15 @@ fn generate_x86_int_impl(ty: &IntVecType, token: &str) -> String {
             {arcane}
             fn mul(self, a: {inner}, b: {inner}) -> {inner} {{
                 {p}_mullo_epi16(a, b)
+            }}
+        "#});
+    }
+
+    if ty.elem == "i16" {
+        body.push_str(&formatdoc! {r#"
+            {arcane}
+            fn mul_hrs_q15(self, a: {inner}, b: {inner}) -> {inner} {{
+                {p}_mulhrs_epi16(a, b)
             }}
         "#});
     }
@@ -1399,6 +1426,16 @@ fn generate_scalar_int_impl(ty: &IntVecType) -> String {
         });
     }
 
+    if ty.elem == "i16" {
+        body.push_str(&formatdoc! {r#"
+
+            #[inline(always)]
+            fn mul_hrs_q15(self, a: {array}, b: {array}) -> {array} {{
+                core::array::from_fn(|i| ((a[i] as i32 * b[i] as i32 + 0x4000) >> 15) as i16)
+            }}
+        "#});
+    }
+
     if ty.signed {
         let neg_items: Vec<String> = (0..lanes)
             .map(|i| format!("a[{i}].wrapping_neg()"))
@@ -1714,6 +1751,13 @@ fn generate_neon_native_int_impl(ty: &IntVecType) -> String {
         body.push_str(&formatdoc! {r#"
             {arcane}
             fn mul(self, a: {nt}, b: {nt}) -> {nt} {{ vmulq_{ns}(a, b) }}
+        "#});
+    }
+
+    if ty.elem == "i16" {
+        body.push_str(&formatdoc! {r#"
+            {arcane}
+            fn mul_hrs_q15(self, a: {nt}, b: {nt}) -> {nt} {{ vqrdmulhq_s16(a, b) }}
         "#});
     }
 
@@ -2189,6 +2233,13 @@ fn generate_neon_polyfill_int_impl(ty: &IntVecType) -> String {
         "#, mul = binary_op(&format!("vmulq_{ns}"))});
     }
 
+    if ty.elem == "i16" {
+        code.push_str(&formatdoc! {r#"
+            {arcane}
+            fn mul_hrs_q15(self, a: {repr}, b: {repr}) -> {repr} {{ {q15} }}
+        "#, q15 = binary_op("vqrdmulhq_s16")});
+    }
+
     if ty.signed {
         code.push_str(&formatdoc! {r#"
             {arcane}
@@ -2519,6 +2570,13 @@ fn generate_wasm_native_int_impl(ty: &IntVecType) -> String {
         body.push_str(&formatdoc! {r#"
             #[inline(always)]
             fn mul(self, a: v128, b: v128) -> v128 {{ {arith_wp}_mul(a, b) }}
+        "#});
+    }
+
+    if ty.elem == "i16" {
+        body.push_str(&formatdoc! {r#"
+            #[inline(always)]
+            fn mul_hrs_q15(self, a: v128, b: v128) -> v128 {{ i16x8_q15mulr_sat(a, b) }}
         "#});
     }
 
@@ -2947,6 +3005,13 @@ fn generate_wasm_polyfill_int_impl(ty: &IntVecType) -> String {
             #[inline(always)]
             fn mul(self, a: {repr}, b: {repr}) -> {repr} {{ {mul} }}
         "#, mul = binary_op(&format!("{signed_wp}_mul"))});
+    }
+
+    if ty.elem == "i16" {
+        code.push_str(&formatdoc! {r#"
+            #[inline(always)]
+            fn mul_hrs_q15(self, a: {repr}, b: {repr}) -> {repr} {{ {q15} }}
+        "#, q15 = binary_op("i16x8_q15mulr_sat")});
     }
 
     if ty.signed {

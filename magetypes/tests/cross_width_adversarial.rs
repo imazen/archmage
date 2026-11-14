@@ -272,7 +272,7 @@ fn neon_w256_w512_cascade_polyfill() {
     }
 }
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
 #[test]
 fn wasm128_w128_w256() {
     if let Some(t) = archmage::Wasm128Token::summon() {
@@ -283,7 +283,7 @@ fn wasm128_w128_w256() {
     }
 }
 
-#[cfg(all(target_arch = "wasm32", feature = "w512"))]
+#[cfg(all(target_arch = "wasm32", target_feature = "simd128", feature = "w512"))]
 #[test]
 fn wasm128_w256_w512_cascade_polyfill() {
     if let Some(t) = archmage::Wasm128Token::summon() {
@@ -351,7 +351,7 @@ fn neon_bit_precise() {
     }
 }
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
 #[test]
 fn wasm128_bit_precise() {
     if let Some(t) = archmage::Wasm128Token::summon() {

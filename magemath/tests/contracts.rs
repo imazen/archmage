@@ -241,7 +241,7 @@ fn vectors_and_tails_reuse_the_same_caller_graph() {
     #[cfg(any(
         target_arch = "x86_64",
         target_arch = "aarch64",
-        target_arch = "wasm32"
+        all(target_arch = "wasm32", target_feature = "simd128")
     ))]
     use archmage::SimdToken;
     check_tails_scalar(archmage::ScalarToken);
@@ -262,7 +262,7 @@ fn vectors_and_tails_reuse_the_same_caller_graph() {
     if let Some(t) = archmage::NeonToken::summon() {
         check_tails_neon(t);
     }
-    #[cfg(target_arch = "wasm32")]
+    #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
     if let Some(t) = archmage::Wasm128Token::summon() {
         check_tails_wasm128(t);
     }

@@ -71,6 +71,17 @@ pub struct TokenDef {
     /// Used by `import_magetypes` parameter in `#[arcane]`/`#[rite]`.
     #[serde(default)]
     pub magetypes_namespace: Option<String>,
+    /// True when availability requires a runtime semantic probe beyond
+    /// compile-time `#[target_feature]` validation (e.g. `Wasm128RelaxedFmaToken`
+    /// checking single-rounding fusion of `f32x4`/`f64x2` `relaxed_madd`).
+    /// Makes `from_context()` `unsafe` even on `wasm32` and blocks static
+    /// target-feature promotion without an explicit runtime proof.
+    #[serde(default)]
+    pub runtime_probe: bool,
+    /// True when `magetypes` implements the full SIMD backend trait suite
+    /// directly for this token (either natively or via parent delegation).
+    #[serde(default)]
+    pub has_magetypes_backend: bool,
 }
 
 /// A trait definition.
@@ -198,6 +209,26 @@ impl Registry {
     #[allow(dead_code)]
     pub fn all_trait_names(&self) -> Vec<&str> {
         self.traits.iter().map(|t| t.name.as_str()).collect()
+    }
+
+    /// BFS through parent DAG and collect all ancestors (deduplicated, stable order).
+    pub fn collect_ancestors<'a>(&'a self, token: &'a TokenDef) -> Vec<&'a TokenDef> {
+        let mut ancestors = Vec::new();
+        let mut visited = HashSet::new();
+        let mut queue: std::collections::VecDeque<&str> =
+            token.parents.iter().map(|s| s.as_str()).collect();
+        while let Some(name) = queue.pop_front() {
+            if !visited.insert(name) {
+                continue;
+            }
+            if let Some(parent) = self.token.iter().find(|t| t.name == name) {
+                ancestors.push(parent);
+                for gp in &parent.parents {
+                    queue.push_back(gp.as_str());
+                }
+            }
+        }
+        ancestors
     }
 }
 
@@ -468,13 +499,20 @@ mod tests {
         let registry = Registry::load(&path).expect("Failed to load token-registry.toml");
 
         // Basic counts
-        assert_eq!(registry.token.len(), 17, "Expected 17 tokens");
+        assert_eq!(registry.token.len(), 19, "Expected 19 tokens");
         assert_eq!(registry.traits.len(), 10, "Expected 10 traits");
         assert_eq!(
             registry.width_namespace.len(),
             4,
             "Expected 4 width namespaces"
         );
+        // Spot-check Wasm128RelaxedFmaToken
+        let wasm_fma = registry
+            .find_token("Wasm128RelaxedFmaToken")
+            .expect("Wasm128RelaxedFmaToken not found");
+        assert!(wasm_fma.runtime_probe);
+        assert!(wasm_fma.has_magetypes_backend);
+        assert_eq!(wasm_fma.parents, vec!["Wasm128RelaxedToken"]);
         // Spot-check X64V3Token
         let v3 = registry
             .find_token("X64V3Token")
@@ -493,6 +531,16 @@ mod tests {
             v3_gfni_crypto.parents,
             vec!["X64V3CryptoToken"],
             "V3 GFNI Crypto should extend V3 Crypto"
+        );
+
+        let v3_vnni = registry
+            .find_token("X64V3VnniToken")
+            .expect("X64V3VnniToken not found");
+        assert!(v3_vnni.features.contains(&"avxvnni".to_string()));
+        assert_eq!(
+            v3_vnni.parents,
+            vec!["X64V3GfniCryptoToken"],
+            "V3 VNNI should extend V3 GFNI Crypto"
         );
 
         // Spot-check aliases

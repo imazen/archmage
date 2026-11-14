@@ -6,7 +6,7 @@ use archmage::ScalarToken;
 #[cfg(any(
     target_arch = "x86_64",
     target_arch = "aarch64",
-    target_arch = "wasm32"
+    all(target_arch = "wasm32", target_feature = "simd128")
 ))]
 use archmage::SimdToken;
 use std::{
@@ -305,7 +305,7 @@ mod neon {
     }
 }
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
 mod wasm {
     use archmage::{Wasm128Token, arcane};
     use magetypes::simd::generic::f32x4;
@@ -506,7 +506,7 @@ fn main() {
     if let Some(t) = archmage::NeonToken::summon() {
         run_tier!(neon, t, "neon/f32x4", 4, samples, bench);
     }
-    #[cfg(target_arch = "wasm32")]
+    #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
     if let Some(t) = archmage::Wasm128Token::summon() {
         run_tier!(wasm, t, "wasm/f32x4", 4, samples, bench);
     }

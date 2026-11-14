@@ -20,7 +20,7 @@
 #[cfg(any(
     target_arch = "x86_64",
     target_arch = "aarch64",
-    target_arch = "wasm32"
+    all(target_arch = "wasm32", target_feature = "simd128")
 ))]
 use archmage::SimdToken;
 use magetypes::simd::backends::{
@@ -284,7 +284,7 @@ fn neon_uses_the_sign_bit_contract() {
     check_all!(token);
 }
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
 #[test]
 fn wasm128_uses_the_sign_bit_contract() {
     let Some(token) = archmage::Wasm128Token::summon() else {

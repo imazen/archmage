@@ -128,6 +128,18 @@ macro_rules! is_x86_feature_available {
     ("aes") => {
         $crate::__impl_feature_check!("aes")
     };
+    ("vpclmulqdq") => {
+        $crate::__impl_feature_check!("vpclmulqdq")
+    };
+    ("vaes") => {
+        $crate::__impl_feature_check!("vaes")
+    };
+    ("gfni") => {
+        $crate::__impl_feature_check!("gfni")
+    };
+    ("avxvnni") => {
+        $crate::__impl_feature_check!("avxvnni")
+    };
     ("sha") => {
         $crate::__impl_feature_check!("sha")
     };
@@ -340,6 +352,46 @@ macro_rules! __impl_feature_check {
         #[cfg(not(target_feature = "aes"))]
         {
             $crate::__impl_runtime_only_check!("aes")
+        }
+    }};
+    ("vpclmulqdq") => {{
+        #[cfg(target_feature = "vpclmulqdq")]
+        {
+            true
+        }
+        #[cfg(not(target_feature = "vpclmulqdq"))]
+        {
+            $crate::__impl_runtime_only_check!("vpclmulqdq")
+        }
+    }};
+    ("vaes") => {{
+        #[cfg(target_feature = "vaes")]
+        {
+            true
+        }
+        #[cfg(not(target_feature = "vaes"))]
+        {
+            $crate::__impl_runtime_only_check!("vaes")
+        }
+    }};
+    ("gfni") => {{
+        #[cfg(target_feature = "gfni")]
+        {
+            true
+        }
+        #[cfg(not(target_feature = "gfni"))]
+        {
+            $crate::__impl_runtime_only_check!("gfni")
+        }
+    }};
+    ("avxvnni") => {{
+        #[cfg(target_feature = "avxvnni")]
+        {
+            true
+        }
+        #[cfg(not(target_feature = "avxvnni"))]
+        {
+            $crate::__impl_runtime_only_check!("avxvnni")
         }
     }};
     ("sha") => {{

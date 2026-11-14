@@ -303,6 +303,57 @@ impl F32x4Backend for X64V3Token {
     }
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn broadcast_lane<const N: usize>(self, a: __m128) -> __m128 {
+        const { assert!(N < 4, "lane index out of bounds") };
+        match N {
+            0 => _mm_permute_ps::<0x00>(a),
+            1 => _mm_permute_ps::<0x55>(a),
+            2 => _mm_permute_ps::<0xAA>(a),
+            3 => _mm_permute_ps::<0xFF>(a),
+            _ => unreachable!(),
+        }
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn shift_left_lanes<const N: usize>(self, a: __m128) -> __m128 {
+        const { assert!(N <= 4, "shift count out of bounds") };
+        match N {
+            0 => a,
+            1 => _mm_castsi128_ps(_mm_slli_si128::<4>(_mm_castps_si128(a))),
+            2 => _mm_castsi128_ps(_mm_slli_si128::<8>(_mm_castps_si128(a))),
+            3 => _mm_castsi128_ps(_mm_slli_si128::<12>(_mm_castps_si128(a))),
+            4 => _mm_setzero_ps(),
+            _ => unreachable!(),
+        }
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn shift_right_lanes<const N: usize>(self, a: __m128) -> __m128 {
+        const { assert!(N <= 4, "shift count out of bounds") };
+        match N {
+            0 => a,
+            1 => _mm_castsi128_ps(_mm_srli_si128::<4>(_mm_castps_si128(a))),
+            2 => _mm_castsi128_ps(_mm_srli_si128::<8>(_mm_castps_si128(a))),
+            3 => _mm_castsi128_ps(_mm_srli_si128::<12>(_mm_castps_si128(a))),
+            4 => _mm_setzero_ps(),
+            _ => unreachable!(),
+        }
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn mul_add_lane_relaxed<const LANE: i32>(self, a: __m128, v_in: __m128, acc: __m128) -> __m128 {
+        const { assert!(LANE >= 0 && LANE < 4, "LANE must be in 0..4") };
+        let splat = match LANE {
+            0 => _mm_permute_ps::<0x00>(v_in),
+            1 => _mm_permute_ps::<0x55>(v_in),
+            2 => _mm_permute_ps::<0xAA>(v_in),
+            3 => _mm_permute_ps::<0xFF>(v_in),
+            _ => unreachable!(),
+        };
+        _mm_fmadd_ps(a, splat, acc)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
     fn to_u8_bytes(self, a: __m128) -> [u8; 4] {
         // Clamp above at 255 first: cvtps turns +inf and anything past
         // i32::MAX into i32::MIN, which the packs would saturate to 0.
@@ -329,6 +380,81 @@ impl F32x4Backend for X64V3Token {
         let packed = _mm_packus_epi16(rg, ba);
         let shuf = _mm_setr_epi8(0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15);
         crate::simd_storage::cast(_mm_shuffle_epi8(packed, shuf))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn deinterleave_3ch_repr(self, rgb: [__m128; 3]) -> [__m128; 3] {
+        let [v0, v1, v2] = rgb;
+        let t_r = _mm_shuffle_ps::<0b01_01_10_10>(v1, v2);
+        let r = _mm_shuffle_ps::<0b10_00_11_00>(v0, t_r);
+        let t_g0 = _mm_shuffle_ps::<0b00_00_01_01>(v0, v1);
+        let t_g1 = _mm_shuffle_ps::<0b10_10_11_11>(v1, v2);
+        let g = _mm_shuffle_ps::<0b10_00_10_00>(t_g0, t_g1);
+        let t_b = _mm_shuffle_ps::<0b01_01_10_10>(v0, v1);
+        let b = _mm_shuffle_ps::<0b11_00_10_00>(t_b, v2);
+        [r, g, b]
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn interleave_3ch_repr(self, channels: [__m128; 3]) -> [__m128; 3] {
+        let [r, g, b] = channels;
+        let rg_lo = _mm_unpacklo_ps(r, g);
+        let rg_hi = _mm_unpackhi_ps(r, g);
+        let gb_lo = _mm_unpacklo_ps(g, b);
+        let gb_hi = _mm_unpackhi_ps(g, b);
+        let br01 = _mm_shuffle_ps::<0b01_01_00_00>(b, r);
+        let out0 = _mm_shuffle_ps::<0b10_00_01_00>(rg_lo, br01);
+        let out1 = _mm_shuffle_ps::<0b01_00_11_10>(gb_lo, rg_hi);
+        let br23 = _mm_shuffle_ps::<0b11_11_10_10>(b, r);
+        let out2 = _mm_shuffle_ps::<0b11_10_10_00>(br23, gb_hi);
+        [out0, out1, out2]
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn load_rgb_bytes(self, rgb: &[u8; 12]) -> (__m128, __m128, __m128) {
+        let lo8: u64 = crate::simd_storage::copy(rgb.first_chunk::<8>().unwrap());
+        let hi4: u32 = crate::simd_storage::copy(rgb.last_chunk::<4>().unwrap());
+        let raw = _mm_insert_epi32::<2>(_mm_cvtsi64_si128(lo8 as i64), hi4 as i32);
+        let r32 = _mm_shuffle_epi8(
+            raw,
+            _mm_setr_epi8(0, -1, -1, -1, 3, -1, -1, -1, 6, -1, -1, -1, 9, -1, -1, -1),
+        );
+        let g32 = _mm_shuffle_epi8(
+            raw,
+            _mm_setr_epi8(1, -1, -1, -1, 4, -1, -1, -1, 7, -1, -1, -1, 10, -1, -1, -1),
+        );
+        let b32 = _mm_shuffle_epi8(
+            raw,
+            _mm_setr_epi8(2, -1, -1, -1, 5, -1, -1, -1, 8, -1, -1, -1, 11, -1, -1, -1),
+        );
+        (
+            _mm_cvtepi32_ps(r32),
+            _mm_cvtepi32_ps(g32),
+            _mm_cvtepi32_ps(b32),
+        )
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn store_rgb_bytes(self, r: __m128, g: __m128, b: __m128) -> [u8; 12] {
+        let max = _mm_set1_ps(255.0);
+        let rg16 = _mm_packs_epi32(
+            _mm_cvtps_epi32(_mm_min_ps(max, r)),
+            _mm_cvtps_epi32(_mm_min_ps(max, g)),
+        );
+        let b16 = _mm_packs_epi32(_mm_cvtps_epi32(_mm_min_ps(max, b)), _mm_setzero_si128());
+        let rgb8 = _mm_packus_epi16(rg16, b16);
+        let shuf = _mm_setr_epi8(0, 4, 8, 1, 5, 9, 2, 6, 10, 3, 7, 11, -1, -1, -1, -1);
+        let packed = _mm_shuffle_epi8(rgb8, shuf);
+        let mut out = [0u8; 12];
+        crate::simd_storage::store(
+            _mm_cvtsi128_si64(packed) as u64,
+            out.first_chunk_mut::<8>().unwrap(),
+        );
+        crate::simd_storage::store(
+            _mm_extract_epi32::<2>(packed) as u32,
+            out.last_chunk_mut::<4>().unwrap(),
+        );
+        out
     }
 }
 
@@ -607,6 +733,105 @@ impl F32x8Backend for X64V3Token {
     }
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn broadcast_lane<const N: usize>(self, a: __m256) -> __m256 {
+        const { assert!(N < 8, "lane index out of bounds") };
+        match N {
+            0 => _mm256_broadcastss_ps(_mm256_castps256_ps128(a)),
+            1 => _mm256_broadcastss_ps(_mm_permute_ps::<0x55>(_mm256_castps256_ps128(a))),
+            2 => _mm256_broadcastss_ps(_mm_permute_ps::<0xAA>(_mm256_castps256_ps128(a))),
+            3 => _mm256_broadcastss_ps(_mm_permute_ps::<0xFF>(_mm256_castps256_ps128(a))),
+            4 => _mm256_broadcastss_ps(_mm256_extractf128_ps::<1>(a)),
+            5 => _mm256_permute_ps::<0x55>(_mm256_permute2f128_ps::<0x11>(a, a)),
+            6 => _mm256_permute_ps::<0xAA>(_mm256_permute2f128_ps::<0x11>(a, a)),
+            7 => _mm256_permute_ps::<0xFF>(_mm256_permute2f128_ps::<0x11>(a, a)),
+            _ => unreachable!(),
+        }
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn shift_left_lanes<const N: usize>(self, a: __m256) -> __m256 {
+        const { assert!(N <= 8, "shift count out of bounds") };
+        let vi = _mm256_castps_si256(a);
+        match N {
+            0 => a,
+            1 => _mm256_castsi256_ps(_mm256_alignr_epi8::<12>(
+                vi,
+                _mm256_permute2x128_si256::<0x08>(vi, vi),
+            )),
+            2 => _mm256_castsi256_ps(_mm256_alignr_epi8::<8>(
+                vi,
+                _mm256_permute2x128_si256::<0x08>(vi, vi),
+            )),
+            3 => _mm256_castsi256_ps(_mm256_alignr_epi8::<4>(
+                vi,
+                _mm256_permute2x128_si256::<0x08>(vi, vi),
+            )),
+            4 => _mm256_castsi256_ps(_mm256_permute2x128_si256::<0x08>(vi, vi)),
+            5 => _mm256_castsi256_ps(_mm256_bslli_epi128::<4>(_mm256_permute2x128_si256::<0x08>(
+                vi, vi,
+            ))),
+            6 => _mm256_castsi256_ps(_mm256_bslli_epi128::<8>(_mm256_permute2x128_si256::<0x08>(
+                vi, vi,
+            ))),
+            7 => _mm256_castsi256_ps(_mm256_bslli_epi128::<12>(
+                _mm256_permute2x128_si256::<0x08>(vi, vi),
+            )),
+            8 => _mm256_setzero_ps(),
+            _ => unreachable!(),
+        }
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn shift_right_lanes<const N: usize>(self, a: __m256) -> __m256 {
+        const { assert!(N <= 8, "shift count out of bounds") };
+        let vi = _mm256_castps_si256(a);
+        match N {
+            0 => a,
+            1 => _mm256_castsi256_ps(_mm256_alignr_epi8::<4>(
+                _mm256_permute2x128_si256::<0x81>(vi, vi),
+                vi,
+            )),
+            2 => _mm256_castsi256_ps(_mm256_alignr_epi8::<8>(
+                _mm256_permute2x128_si256::<0x81>(vi, vi),
+                vi,
+            )),
+            3 => _mm256_castsi256_ps(_mm256_alignr_epi8::<12>(
+                _mm256_permute2x128_si256::<0x81>(vi, vi),
+                vi,
+            )),
+            4 => _mm256_castsi256_ps(_mm256_permute2x128_si256::<0x81>(vi, vi)),
+            5 => _mm256_castsi256_ps(_mm256_bsrli_epi128::<4>(_mm256_permute2x128_si256::<0x81>(
+                vi, vi,
+            ))),
+            6 => _mm256_castsi256_ps(_mm256_bsrli_epi128::<8>(_mm256_permute2x128_si256::<0x81>(
+                vi, vi,
+            ))),
+            7 => _mm256_castsi256_ps(_mm256_bsrli_epi128::<12>(
+                _mm256_permute2x128_si256::<0x81>(vi, vi),
+            )),
+            8 => _mm256_setzero_ps(),
+            _ => unreachable!(),
+        }
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn mul_add_lane_relaxed<const LANE: i32>(self, a: __m256, v_in: __m256, acc: __m256) -> __m256 {
+        const { assert!(LANE >= 0 && LANE < 8, "LANE must be in 0..8") };
+        let splat = match LANE {
+            0 => _mm256_broadcastss_ps(_mm256_castps256_ps128(v_in)),
+            1 => _mm256_broadcastss_ps(_mm_permute_ps::<0x55>(_mm256_castps256_ps128(v_in))),
+            2 => _mm256_broadcastss_ps(_mm_permute_ps::<0xAA>(_mm256_castps256_ps128(v_in))),
+            3 => _mm256_broadcastss_ps(_mm_permute_ps::<0xFF>(_mm256_castps256_ps128(v_in))),
+            4 => _mm256_broadcastss_ps(_mm256_extractf128_ps::<1>(v_in)),
+            5 => _mm256_permute_ps::<0x55>(_mm256_permute2f128_ps::<0x11>(v_in, v_in)),
+            6 => _mm256_permute_ps::<0xAA>(_mm256_permute2f128_ps::<0x11>(v_in, v_in)),
+            7 => _mm256_permute_ps::<0xFF>(_mm256_permute2f128_ps::<0x11>(v_in, v_in)),
+            _ => unreachable!(),
+        };
+        _mm256_fmadd_ps(a, splat, acc)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
     fn to_u8_bytes(self, a: __m256) -> [u8; 8] {
         // Clamp above at 255 before cvtps; see the 128-bit form.
         let i32s = _mm256_cvtps_epi32(_mm256_min_ps(_mm256_set1_ps(255.0), a));
@@ -635,6 +860,103 @@ impl F32x8Backend for X64V3Token {
             10, 14, 3, 7, 11, 15,
         );
         crate::simd_storage::cast(_mm256_shuffle_epi8(packed, shuf))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn deinterleave_3ch_repr(self, rgb: [__m256; 3]) -> [__m256; 3] {
+        // Since gcd(3, 8) = 1, each channel's 8 elements occupy all 8 lane
+        // positions mod 8 across v0, v1, v2: two blends gather them into one
+        // register and a single vpermps orders them.
+        let [v0, v1, v2] = rgb;
+        let r_mix = _mm256_blend_ps::<0x24>(_mm256_blend_ps::<0x92>(v0, v1), v2);
+        let g_mix = _mm256_blend_ps::<0x49>(_mm256_blend_ps::<0x24>(v0, v1), v2);
+        let b_mix = _mm256_blend_ps::<0x92>(_mm256_blend_ps::<0x49>(v0, v1), v2);
+        [
+            _mm256_permutevar8x32_ps(r_mix, _mm256_setr_epi32(0, 3, 6, 1, 4, 7, 2, 5)),
+            _mm256_permutevar8x32_ps(g_mix, _mm256_setr_epi32(1, 4, 7, 2, 5, 0, 3, 6)),
+            _mm256_permutevar8x32_ps(b_mix, _mm256_setr_epi32(2, 5, 0, 3, 6, 1, 4, 7)),
+        ]
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn interleave_3ch_repr(self, channels: [__m256; 3]) -> [__m256; 3] {
+        // Inverse of deinterleave_3ch_repr: one vpermps per channel places all
+        // 8 elements at their final lane positions mod 8, then two blends per
+        // output vector assemble AoS order without memory reloads.
+        let [r, g, b] = channels;
+        let rp = _mm256_permutevar8x32_ps(r, _mm256_setr_epi32(0, 3, 6, 1, 4, 7, 2, 5));
+        let gp = _mm256_permutevar8x32_ps(g, _mm256_setr_epi32(5, 0, 3, 6, 1, 4, 7, 2));
+        let bp = _mm256_permutevar8x32_ps(b, _mm256_setr_epi32(2, 5, 0, 3, 6, 1, 4, 7));
+        [
+            _mm256_blend_ps::<0x24>(_mm256_blend_ps::<0x92>(rp, gp), bp),
+            _mm256_blend_ps::<0x24>(_mm256_blend_ps::<0x49>(rp, bp), gp),
+            _mm256_blend_ps::<0x24>(_mm256_blend_ps::<0x92>(gp, bp), rp),
+        ]
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn load_rgb_bytes(self, rgb: &[u8; 24]) -> (__m256, __m256, __m256) {
+        // Overlapping 16B loads at +0 (bytes 0..16, pixels 0..4 at 0..12) and
+        // +8 (bytes 8..24, pixels 4..8 at 4..16), both strictly within [u8; 24].
+        let lo: __m128i = crate::simd_storage::copy(rgb.first_chunk::<16>().unwrap());
+        let hi: __m128i = crate::simd_storage::copy(rgb.last_chunk::<16>().unwrap());
+        let raw = _mm256_inserti128_si256::<1>(_mm256_castsi128_si256(lo), hi);
+        let r32 = _mm256_shuffle_epi8(
+            raw,
+            _mm256_setr_epi8(
+                0, -1, -1, -1, 3, -1, -1, -1, 6, -1, -1, -1, 9, -1, -1, -1, 4, -1, -1, -1, 7, -1,
+                -1, -1, 10, -1, -1, -1, 13, -1, -1, -1,
+            ),
+        );
+        let g32 = _mm256_shuffle_epi8(
+            raw,
+            _mm256_setr_epi8(
+                1, -1, -1, -1, 4, -1, -1, -1, 7, -1, -1, -1, 10, -1, -1, -1, 5, -1, -1, -1, 8, -1,
+                -1, -1, 11, -1, -1, -1, 14, -1, -1, -1,
+            ),
+        );
+        let b32 = _mm256_shuffle_epi8(
+            raw,
+            _mm256_setr_epi8(
+                2, -1, -1, -1, 5, -1, -1, -1, 8, -1, -1, -1, 11, -1, -1, -1, 6, -1, -1, -1, 9, -1,
+                -1, -1, 12, -1, -1, -1, 15, -1, -1, -1,
+            ),
+        );
+        (
+            _mm256_cvtepi32_ps(r32),
+            _mm256_cvtepi32_ps(g32),
+            _mm256_cvtepi32_ps(b32),
+        )
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn store_rgb_bytes(self, r: __m256, g: __m256, b: __m256) -> [u8; 24] {
+        let max = _mm256_set1_ps(255.0);
+        let rg16 = _mm256_packs_epi32(
+            _mm256_cvtps_epi32(_mm256_min_ps(max, r)),
+            _mm256_cvtps_epi32(_mm256_min_ps(max, g)),
+        );
+        let b16 = _mm256_packs_epi32(
+            _mm256_cvtps_epi32(_mm256_min_ps(max, b)),
+            _mm256_setzero_si256(),
+        );
+        let rgb8 = _mm256_packus_epi16(rg16, b16);
+        let shuf = _mm256_setr_epi8(
+            0, 4, 8, 1, 5, 9, 2, 6, 10, 3, 7, 11, -1, -1, -1, -1, 0, 4, 8, 1, 5, 9, 2, 6, 10, 3, 7,
+            11, -1, -1, -1, -1,
+        );
+        let packed = _mm256_shuffle_epi8(rgb8, shuf);
+        let lo12 = _mm256_castsi256_si128(packed);
+        let hi12 = _mm256_extracti128_si256::<1>(packed);
+        let lo16 = _mm_or_si128(lo12, _mm_slli_si128::<12>(hi12));
+        let hi8 = _mm_srli_si128::<4>(hi12);
+        let mut out = [0u8; 24];
+        crate::simd_storage::store(lo16, out.first_chunk_mut::<16>().unwrap());
+        crate::simd_storage::store(
+            _mm_cvtsi128_si64(hi8) as u64,
+            out.last_chunk_mut::<8>().unwrap(),
+        );
+        out
     }
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
@@ -3313,6 +3635,10 @@ impl I16x8Backend for X64V3Token {
         _mm_mullo_epi16(a, b)
     }
     #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn mul_hrs_q15(self, a: __m128i, b: __m128i) -> __m128i {
+        _mm_mulhrs_epi16(a, b)
+    }
+    #[arcane(suppress_const_test, _self = X64V3Token)]
     fn neg(self, a: __m128i) -> __m128i {
         _mm_sub_epi16(_mm_setzero_si128(), a)
     }
@@ -3551,6 +3877,10 @@ impl I16x16Backend for X64V3Token {
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn mul(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_mullo_epi16(a, b)
+    }
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn mul_hrs_q15(self, a: __m256i, b: __m256i) -> __m256i {
+        _mm256_mulhrs_epi16(a, b)
     }
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn neg(self, a: __m256i) -> __m256i {
@@ -6081,6 +6411,14 @@ impl I16x32Backend for X64V3Token {
         [
             <X64V3Token as I16x16Backend>::mul(self, a[0], b[0]),
             <X64V3Token as I16x16Backend>::mul(self, a[1], b[1]),
+        ]
+    }
+
+    #[inline(always)]
+    fn mul_hrs_q15(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+        [
+            <X64V3Token as I16x16Backend>::mul_hrs_q15(self, a[0], b[0]),
+            <X64V3Token as I16x16Backend>::mul_hrs_q15(self, a[1], b[1]),
         ]
     }
 

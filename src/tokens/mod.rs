@@ -477,6 +477,12 @@ pub trait IntoConcreteToken: SimdToken + Sized {
         None
     }
 
+    /// Try to cast to X64V3VnniToken.
+    #[inline(always)]
+    fn as_x64v3_vnni(self) -> Option<X64V3VnniToken> {
+        None
+    }
+
     /// Try to cast to X64V4Token.
     #[inline(always)]
     fn as_x64v4(self) -> Option<X64V4Token> {
@@ -543,6 +549,12 @@ pub trait IntoConcreteToken: SimdToken + Sized {
         None
     }
 
+    /// Try to cast to Wasm128RelaxedFmaToken.
+    #[inline(always)]
+    fn as_wasm128_relaxed_fma(self) -> Option<Wasm128RelaxedFmaToken> {
+        None
+    }
+
     /// Try to cast to ScalarToken.
     #[inline(always)]
     fn as_scalar(self) -> Option<ScalarToken> {
@@ -602,6 +614,14 @@ impl IntoConcreteToken for X64V3CryptoToken {
 impl IntoConcreteToken for X64V3GfniCryptoToken {
     #[inline(always)]
     fn as_x64v3_gfni_crypto(self) -> Option<X64V3GfniCryptoToken> {
+        Some(self)
+    }
+}
+
+// Implement IntoConcreteToken for X64V3VnniToken
+impl IntoConcreteToken for X64V3VnniToken {
+    #[inline(always)]
+    fn as_x64v3_vnni(self) -> Option<X64V3VnniToken> {
         Some(self)
     }
 }
@@ -690,6 +710,14 @@ impl IntoConcreteToken for Wasm128Token {
 impl IntoConcreteToken for Wasm128RelaxedToken {
     #[inline(always)]
     fn as_wasm128_relaxed(self) -> Option<Wasm128RelaxedToken> {
+        Some(self)
+    }
+}
+
+// Implement IntoConcreteToken for Wasm128RelaxedFmaToken
+impl IntoConcreteToken for Wasm128RelaxedFmaToken {
+    #[inline(always)]
+    fn as_wasm128_relaxed_fma(self) -> Option<Wasm128RelaxedFmaToken> {
         Some(self)
     }
 }

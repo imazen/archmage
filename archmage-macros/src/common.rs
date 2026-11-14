@@ -137,14 +137,44 @@ pub(crate) fn gen_cfg_guard(
     target_arch: Option<&str>,
     cfg_feature: Option<&str>,
 ) -> proc_macro2::TokenStream {
-    match (target_arch, cfg_feature) {
-        (Some(arch), Some(feat)) => {
-            quote! { #[cfg(all(target_arch = #arch, feature = #feat))] }
+    gen_target_cfg_guard::<&str>(target_arch, cfg_feature, &[])
+}
+
+/// Generate a cfg guard combining `target_arch`, WASM compile-time
+/// `target_feature` predicates (since WebAssembly validates the whole module at
+/// load time and has no runtime instruction-set detection), and an optional
+/// Cargo `feature` gate.
+pub(crate) fn gen_target_cfg_guard<S: AsRef<str>>(
+    target_arch: Option<&str>,
+    cfg_feature: Option<&str>,
+    target_features: &[S],
+) -> proc_macro2::TokenStream {
+    let mut preds = Vec::new();
+    if let Some(arch) = target_arch {
+        preds.push(quote! { target_arch = #arch });
+        if arch == "wasm32" {
+            for tf in target_features {
+                let tf = tf.as_ref();
+                preds.push(quote! { target_feature = #tf });
+            }
         }
-        (Some(arch), None) => quote! { #[cfg(target_arch = #arch)] },
-        (None, Some(feat)) => quote! { #[cfg(feature = #feat)] },
-        (None, None) => quote! {},
     }
+    if let Some(feat) = cfg_feature {
+        preds.push(quote! { feature = #feat });
+    }
+    match preds.as_slice() {
+        [] => quote! {},
+        [only] => quote! { #[cfg(#only)] },
+        many => quote! { #[cfg(all(#(#many),*))] },
+    }
+}
+
+/// Required target features for a registered tier name (used for WASM compile-time
+/// `cfg(target_feature = ...)` gating).
+pub(crate) fn tier_wasm_features(tier_name: &str) -> &'static [&'static str] {
+    crate::generated::tier_to_canonical_token(tier_name)
+        .and_then(crate::generated::token_to_features)
+        .unwrap_or(&[])
 }
 
 /// Drop from `attrs` any `#[cfg]` equal to the guard the macro emits on both

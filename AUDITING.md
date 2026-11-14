@@ -12,7 +12,7 @@ All generated from `token-registry.toml` via `cargo xtask generate`.
 
 - **`src/tokens/generated/x86.rs`** — every x86 token, V1 through Avx512Fp16 (the AVX-512 tokens are not feature-gated): runtime detection via `is_x86_feature_detected!`, atomic caching, the `from_context()` constructor and its deprecated alias, disable mechanism with cascading
 - **`src/tokens/generated/arm.rs`** — AArch64 tokens: runtime detection via `is_aarch64_feature_detected!`, same caching/disable pattern
-- **`src/tokens/generated/wasm.rs`** — WASM token: compile-time only (no runtime detection on wasm32)
+- **`src/tokens/generated/wasm.rs`** — WASM tokens: `Wasm128Token` and `Wasm128RelaxedToken` use compile-time `cfg(target_feature)` detection (with `testable_dispatch` disable support when compiled in); `Wasm128RelaxedFmaToken` adds a cached one-time runtime probe verifying single-rounding `f32x4.relaxed_madd` and `f64x2.relaxed_madd` fusion across all lanes
 
 ## Generated Stubs
 
