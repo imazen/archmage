@@ -111,7 +111,7 @@ pub(super) fn parse_names(input: ParseStream<'_>) -> syn::Result<Vec<Rename>> {
     let mut names: Vec<Rename> = Vec::new();
     while !inner.is_empty() {
         let name: Ident = inner.parse()?;
-        let (tier, form) = selector(&name.to_string(), name.span())?;
+        let (tier, form) = crate::common::with_ident_str(&name, |s| selector(s, name.span()))?;
         inner.parse::<Token![=]>()?;
         let path = inner.parse()?;
         if names
@@ -138,19 +138,17 @@ fn parse_inline(input: ParseStream<'_>) -> syn::Result<Inline> {
     let inner;
     syn::parenthesized!(inner in input);
     let value: Ident = inner.parse()?;
-    let policy = match value.to_string().as_str() {
-        "default" => Inline::Default,
-        "none" => Inline::None,
-        "hint" => Inline::Hint,
-        "always" => Inline::Always,
-        "never" => Inline::Never,
-        _ => {
-            return Err(syn::Error::new(
-                value.span(),
-                "expected default, none, hint, always, or never",
-            ));
-        }
-    };
+    let policy = crate::common::with_ident_str(&value, |s| match s {
+        "default" => Ok(Inline::Default),
+        "none" => Ok(Inline::None),
+        "hint" => Ok(Inline::Hint),
+        "always" => Ok(Inline::Always),
+        "never" => Ok(Inline::Never),
+        _ => Err(syn::Error::new(
+            value.span(),
+            "expected default, none, hint, always, or never",
+        )),
+    })?;
     if !inner.is_empty() {
         return Err(inner.error("expected one inline policy"));
     }

@@ -19,47 +19,29 @@ pub(crate) struct RiteArgs {
     /// Options spelled the same way in `#[arcane]`: imports and `cfg(feature)`.
     pub(crate) shared: SharedOptions,
     /// Tiers specified directly (e.g., `#[rite(v3)]` or `#[rite(v3, v4, neon)]`).
-    /// Stored as canonical token names (e.g., "X64V3Token"), or the sentinel
-    /// "" for the `default` tier (tokenless fallback — no `#[target_feature]`,
-    /// no cfg-gating, no ScalarToken parameter).
-    /// Single tier: generates one function (no suffix, no token parameter needed).
-    /// Multiple tiers: generates suffixed variants (e.g., `fn_v3`, `fn_v4`, `fn_neon`).
-    tier_tokens: Vec<String>,
+    /// Stored as canonical `&'static str` token names, or `""` for `default`.
+    tier_tokens: Vec<&'static str>,
 }
 
 /// The sentinel used in `tier_tokens` for the `default` tier.
-///
-/// `default` (and `_default`) is a tokenless fallback — it generates a
-/// `fn_default(...)` variant with no `#[target_feature]`, no cfg-gating,
-/// and no ScalarToken parameter. Distinct from `scalar` which is tokenful
-/// (takes `ScalarToken` and participates in `incant!` token passing).
 pub(crate) const DEFAULT_TIER_SENTINEL: &str = "";
 
 impl Parse for RiteArgs {
     fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
         let mut args = RiteArgs::default();
 
-        // Tier list, assembled with `+`/`-` modifier support (issue #48).
-        // `#[rite]` has no dispatch-default set (it only emits the variants you
-        // ask for), so the modifiers operate on the *explicit* list: plain and
-        // `+tier` add a tier, `-tier` removes a previously-listed tier. This
-        // keeps the grammar uniform with `#[magetypes]` / `incant!` so muscle
-        // memory like `#[rite(v3, -scalar)]` parses (and means "just v3" here).
-        let mut additions: Vec<String> = Vec::new();
-        let mut removals: Vec<String> = Vec::new();
+        let mut additions: SmallVec<&'static str, 6> = SmallVec::new();
+        let mut removals: SmallVec<&'static str, 6> = SmallVec::new();
 
-        // Map a tier ident to its `tier_tokens` entry (canonical token name, or
-        // the empty sentinel for `default`/`_default`). `None` ⇒ not a tier.
-        let resolve_tier = |name: &str| -> Option<String> {
+        let resolve_tier = |name: &str| -> Option<&'static str> {
             if name == "default" || name == "_default" {
-                Some(String::from(DEFAULT_TIER_SENTINEL))
+                Some(DEFAULT_TIER_SENTINEL)
             } else {
-                tier_to_canonical_token(name).map(String::from)
+                tier_to_canonical_token(name)
             }
         };
 
         while !input.is_empty() {
-            // A `+`/`-` prefix is only valid before a tier name (never a keyword).
             if input.peek(Token![+]) || input.peek(Token![-]) {
                 let is_removal = input.peek(Token![-]);
                 if is_removal {
@@ -68,27 +50,25 @@ impl Parse for RiteArgs {
                     let _: Token![+] = input.parse()?;
                 }
                 let ident: Ident = input.parse()?;
-                let name = ident.to_string();
-                match resolve_tier(&name) {
+                with_ident_str(&ident, |name| match resolve_tier(name) {
                     Some(entry) => {
                         if is_removal {
                             removals.push(entry);
                         } else {
                             additions.push(entry);
                         }
+                        Ok(())
                     }
-                    None => {
-                        return Err(syn::Error::new(
-                            ident.span(),
-                            format!(
-                                "`{name}` after `{}` is not a tier name. \
-                                 `+`/`-` modifiers apply only to tiers \
-                                 (v1, v2, v3, v4, neon, arm_v2, wasm128, scalar, default, ...).",
-                                if is_removal { "-" } else { "+" }
-                            ),
-                        ));
-                    }
-                }
+                    None => Err(syn::Error::new(
+                        ident.span(),
+                        format!(
+                            "`{name}` after `{}` is not a tier name. \
+                             `+`/`-` modifiers apply only to tiers \
+                             (v1, v2, v3, v4, neon, arm_v2, wasm128, scalar, default, ...).",
+                            if is_removal { "-" } else { "+" }
+                        ),
+                    )),
+                })?;
             } else {
                 let ident: Ident = input.parse()?;
                 if parse_shared_option(&ident, input, &mut args.shared)? {
@@ -97,40 +77,30 @@ impl Parse for RiteArgs {
                     }
                     continue;
                 }
-                match ident.to_string().as_str() {
-                    // `#[arcane]` placement flags. A trait method can never
-                    // carry `#[target_feature]` directly, and `#[rite]` has no
-                    // wrapper to call `Self::` from, so neither flag has a
-                    // meaning here; say what to use instead.
-                    "in_trait" | "nested" => {
-                        return Err(syn::Error::new(
-                            ident.span(),
-                            "`#[rite]` has no trait-method mode: it applies `#[target_feature]` \
-                             directly, which rustc rejects on a safe trait method on x86-64 \
-                             and AArch64 (wasm32's simd128 is the exception). Use \
-                             `#[arcane(in_trait, _self = Type)]` on the trait method, or have \
-                             it call a `#[rite]` free function.",
-                        ));
-                    }
-                    "in_impl" => {
-                        return Err(syn::Error::new(
-                            ident.span(),
-                            "`in_impl` is an `#[arcane]` option. `#[rite]` has no wrapper, \
-                             so an associated function in an inherent impl needs no flag.",
-                        ));
-                    }
+                with_ident_str(&ident, |s| match s {
+                    "in_trait" | "nested" => Err(syn::Error::new(
+                        ident.span(),
+                        "`#[rite]` has no trait-method mode: it applies `#[target_feature]` \
+                         directly, which rustc rejects on a safe trait method on x86-64 \
+                         and AArch64 (wasm32's simd128 is the exception). Use \
+                         `#[arcane(in_trait, _self = Type)]` on the trait method, or have \
+                         it call a `#[rite]` free function.",
+                    )),
+                    "in_impl" => Err(syn::Error::new(
+                        ident.span(),
+                        "`in_impl` is an `#[arcane]` option. `#[rite]` has no wrapper, \
+                         so an associated function in an inherent impl needs no flag.",
+                    )),
                     "default" | "_default" => {
-                        // Tokenless fallback tier. No ScalarToken parameter, no
-                        // target_feature, no cfg-gating — just an `#[inline]`
-                        // variant named `_default` that slots into `incant!`'s
-                        // suffix convention for fully portable fallbacks.
-                        additions.push(String::from(DEFAULT_TIER_SENTINEL));
+                        additions.push(DEFAULT_TIER_SENTINEL);
+                        Ok(())
                     }
                     other => {
                         if let Some(canonical) = tier_to_canonical_token(other) {
-                            additions.push(String::from(canonical));
+                            additions.push(canonical);
+                            Ok(())
                         } else {
-                            return Err(syn::Error::new(
+                            Err(syn::Error::new(
                                 ident.span(),
                                 format!(
                                     "unknown rite argument: `{}`. Supported: tier names \
@@ -139,20 +109,17 @@ impl Parse for RiteArgs {
                                      `import_intrinsics`, `import_magetypes`, `cfg(feature)`.",
                                     other
                                 ),
-                            ));
+                            ))
                         }
                     }
-                }
+                })?;
             }
             if input.peek(Token![,]) {
                 let _: Token![,] = input.parse()?;
             }
         }
 
-        // Resolve additions minus removals, preserving first-seen order and
-        // de-duplicating (so `#[rite(v3, v3)]` is one variant, `#[rite(v3, -v3)]`
-        // is none).
-        for entry in additions {
+        for &entry in &additions {
             if removals.contains(&entry) {
                 continue;
             }
@@ -167,23 +134,18 @@ impl Parse for RiteArgs {
 
 /// Implementation for the `#[rite]` macro.
 pub(crate) fn rite_impl(input_fn: LightFn, args: RiteArgs) -> TokenStream {
-    // Multi-tier mode: generate suffixed variants for each tier
     if args.tier_tokens.len() > 1 {
         return rite_multi_tier_impl(input_fn, &args);
     }
-    // Single-tier or token-param mode
     rite_single_impl(input_fn, args)
 }
 
 /// Generate a single `#[rite]` function (single tier or token-param mode).
 pub(crate) fn rite_single_impl(mut input_fn: LightFn, args: RiteArgs) -> TokenStream {
-    // Resolve features: either from tier name or from token parameter
-    let tier = if let Some(tier_token) = args.tier_tokens.first() {
-        // Tier specified directly (e.g., #[rite(v3)]) — no token param needed.
+    let tier = if let Some(&tier_token) = args.tier_tokens.first() {
         FeatureContext::from_tier_token(tier_token)
             .expect("tier_to_canonical_token returned invalid token name")
     } else {
-        // Only wildcard proof parameters need names for assertions and calls.
         rename_wildcard_token(&mut input_fn.sig);
         match find_token_param(&input_fn.sig) {
             Some(info) => FeatureContext::from_token_param(info),
@@ -201,12 +163,10 @@ pub(crate) fn rite_single_impl(mut input_fn: LightFn, args: RiteArgs) -> TokenSt
             }
         }
     };
-    // In token-param mode one token decides the features (see #122).
-    if tier.token_ident.is_some() {
-        let token_params = token_param_idents(&input_fn.sig);
-        if token_params.len() > 1 {
-            return multiple_tokens_error(&input_fn.sig, "rite", &token_params);
-        }
+    if tier.token_ident.is_some()
+        && let Some(err) = check_single_token_param(&input_fn.sig, "rite")
+    {
+        return err;
     }
     match crate::engine::feature::emit(input_fn, &args.shared, None, false, tier) {
         Ok(tokens) => tokens,
@@ -226,7 +186,7 @@ pub(crate) fn rite_multi_tier_impl(input_fn: LightFn, args: &RiteArgs) -> TokenS
     let fn_name = &input_fn.sig.ident;
     let mut variants = TokenStream::new();
 
-    for tier_token in &args.tier_tokens {
+    for &tier_token in &args.tier_tokens {
         let Some(tier) = FeatureContext::from_tier_token(tier_token) else {
             return syn::Error::new_spanned(
                 &input_fn.sig,

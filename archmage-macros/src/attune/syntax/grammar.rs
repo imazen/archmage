@@ -97,91 +97,110 @@ impl Parse for Definition {
                 definition.outputs.push(Output::parse(input, false)?);
             } else {
                 let name = input.call(Ident::parse_any)?;
-                let spelling = name.to_string();
-                let key = match spelling.as_str() {
-                    "inline" => Some(Key::Inline),
-                    "make" => Some(Key::Make),
-                    "wrap" => Some(Key::Wrap),
-                    "suppress_const_test" => Some(Key::SuppressConstTest),
-                    "in_impl" => Some(Key::Impl),
-                    "in_trait" | "nested" => Some(Key::Trait),
-                    "_self" => Some(Key::SelfType),
-                    "names" => Some(Key::Names),
-                    "define" => Some(Key::Define),
-                    "import_intrinsics" => Some(Key::Intrinsics),
-                    "import_magetypes" => Some(Key::Magetypes),
-                    "cfg" => Some(Key::Cfg),
-                    _ => None,
-                };
-                if let Some(key) = key {
-                    seen.insert(key, &name)?;
-                    let opts = &mut definition.options;
-                    match key {
-                        Key::Inline => opts.body_inline = Some(parse_inline(input)?),
-                        Key::Make => {
-                            if flat {
-                                return Err(syn::Error::new(
-                                    name.span(),
-                                    "keep all outputs inside make(...), or omit make(...)",
-                                ));
+                enum Next {
+                    Key(Key),
+                    FamilyOutput,
+                    Tier(&'static TierDescriptor, Form),
+                }
+                let next = crate::common::with_ident_str(&name, |spelling| -> syn::Result<Next> {
+                    let key = match spelling {
+                        "inline" => Some(Key::Inline),
+                        "make" => Some(Key::Make),
+                        "wrap" => Some(Key::Wrap),
+                        "suppress_const_test" => Some(Key::SuppressConstTest),
+                        "in_impl" => Some(Key::Impl),
+                        "in_trait" | "nested" => Some(Key::Trait),
+                        "_self" => Some(Key::SelfType),
+                        "names" => Some(Key::Names),
+                        "define" => Some(Key::Define),
+                        "import_intrinsics" => Some(Key::Intrinsics),
+                        "import_magetypes" => Some(Key::Magetypes),
+                        "cfg" => Some(Key::Cfg),
+                        _ => None,
+                    };
+                    if let Some(k) = key {
+                        Ok(Next::Key(k))
+                    } else if spelling.starts_with('_') || matches!(spelling, "dispatch" | "all") {
+                        Ok(Next::FamilyOutput)
+                    } else {
+                        let (tier, form) = selector(spelling, name.span())?;
+                        Ok(Next::Tier(tier, form))
+                    }
+                })?;
+                match next {
+                    Next::Key(key) => {
+                        seen.insert(key, &name)?;
+                        let opts = &mut definition.options;
+                        match key {
+                            Key::Inline => opts.body_inline = Some(parse_inline(input)?),
+                            Key::Make => {
+                                if flat {
+                                    return Err(syn::Error::new(
+                                        name.span(),
+                                        "keep all outputs inside make(...), or omit make(...)",
+                                    ));
+                                }
+                                grouped = true;
+                                let inner;
+                                syn::parenthesized!(inner in input);
+                                while !inner.is_empty() {
+                                    definition.outputs.push(Output::parse(&inner, true)?);
+                                    comma(&inner)?;
+                                }
                             }
-                            grouped = true;
-                            let inner;
-                            syn::parenthesized!(inner in input);
-                            while !inner.is_empty() {
-                                definition.outputs.push(Output::parse(&inner, true)?);
-                                comma(&inner)?;
+                            Key::Wrap => opts.wrap = true,
+                            Key::SuppressConstTest => opts.suppress_const_test = true,
+                            Key::Impl => opts.in_impl = true,
+                            Key::Trait => opts.in_trait = true,
+                            Key::SelfType => {
+                                input.parse::<Token![=]>()?;
+                                opts.self_type = Some(input.parse()?);
                             }
+                            Key::Names => opts.names = parse_names(input)?,
+                            Key::Define => {
+                                let inner;
+                                syn::parenthesized!(inner in input);
+                                opts.defines = inner
+                                    .parse_terminated(Ident::parse, Token![,])?
+                                    .into_iter()
+                                    .collect();
+                            }
+                            Key::Intrinsics | Key::Magetypes | Key::Cfg => {
+                                crate::common::parse_shared_option(
+                                    &name,
+                                    input,
+                                    &mut opts.imports,
+                                )?;
+                            }
+                            Key::Tier => unreachable!("tier is handled below"),
                         }
-                        Key::Wrap => opts.wrap = true,
-                        Key::SuppressConstTest => opts.suppress_const_test = true,
-                        Key::Impl => opts.in_impl = true,
-                        Key::Trait => opts.in_trait = true,
-                        Key::SelfType => {
-                            input.parse::<Token![=]>()?;
-                            opts.self_type = Some(input.parse()?);
-                        }
-                        Key::Names => opts.names = parse_names(input)?,
-                        Key::Define => {
-                            let inner;
-                            syn::parenthesized!(inner in input);
-                            opts.defines = inner
-                                .parse_terminated(Ident::parse, Token![,])?
-                                .into_iter()
-                                .collect();
-                        }
-                        Key::Intrinsics | Key::Magetypes | Key::Cfg => {
-                            crate::common::parse_shared_option(&name, input, &mut opts.imports)?;
-                        }
-                        Key::Tier => unreachable!("tier is handled below"),
                     }
-                } else if spelling.starts_with('_')
-                    || matches!(spelling.as_str(), "dispatch" | "all")
-                {
-                    if grouped {
-                        return Err(syn::Error::new(
-                            name.span(),
-                            "keep all outputs inside make(...), or omit make(...)",
-                        ));
+                    Next::FamilyOutput => {
+                        if grouped {
+                            return Err(syn::Error::new(
+                                name.span(),
+                                "keep all outputs inside make(...), or omit make(...)",
+                            ));
+                        }
+                        flat = true;
+                        definition.outputs.push(Output::after_name(
+                            input,
+                            name,
+                            Action::Select,
+                            OutputOptions::default(),
+                            false,
+                        )?);
                     }
-                    flat = true;
-                    definition.outputs.push(Output::after_name(
-                        input,
-                        name,
-                        Action::Select,
-                        OutputOptions::default(),
-                        false,
-                    )?);
-                } else {
-                    let (tier, form) = selector(&spelling, name.span())?;
-                    if form != Form::Direct {
-                        return Err(syn::Error::new(
-                            name.span(),
-                            "use an underscored output selector, such as _v3_t",
-                        ));
+                    Next::Tier(tier, form) => {
+                        if form != Form::Direct {
+                            return Err(syn::Error::new(
+                                name.span(),
+                                "use an underscored output selector, such as _v3_t",
+                            ));
+                        }
+                        seen.insert(Key::Tier, &name)?;
+                        definition.options.tier = Some(tier);
                     }
-                    seen.insert(Key::Tier, &name)?;
-                    definition.options.tier = Some(tier);
                 }
             }
             comma(input)?;
@@ -232,34 +251,35 @@ impl Output {
         mut options: OutputOptions,
         grouped: bool,
     ) -> syn::Result<Self> {
-        let text = name.to_string();
-        if text.starts_with("__") {
-            return Err(syn::Error::new(
-                name.span(),
-                "output selectors use one leading underscore",
-            ));
-        }
-        let target = match text.as_str() {
-            "_" if input.peek(Token![*]) => {
-                input.parse::<Token![*]>()?;
-                let form = if input.peek(Ident) {
-                    let suffix: Ident = input.parse()?;
-                    if suffix != "_t" {
-                        return Err(syn::Error::new(suffix.span(), "expected _*_t"));
-                    }
-                    Form::Proof
-                } else {
-                    Form::Direct
-                };
-                Target::Wildcard(form)
+        let target = crate::common::with_ident_str(&name, |text| -> syn::Result<Target> {
+            if text.starts_with("__") {
+                return Err(syn::Error::new(
+                    name.span(),
+                    "output selectors use one leading underscore",
+                ));
             }
-            "_" | "dispatch" => Target::Dispatcher,
-            "all" => Target::All,
-            _ => {
-                let (tier, form) = selector(&text, name.span())?;
-                Target::Tier(tier, form)
+            match text {
+                "_" if input.peek(Token![*]) => {
+                    input.parse::<Token![*]>()?;
+                    let form = if input.peek(Ident) {
+                        let suffix: Ident = input.parse()?;
+                        if suffix != "_t" {
+                            return Err(syn::Error::new(suffix.span(), "expected _*_t"));
+                        }
+                        Form::Proof
+                    } else {
+                        Form::Direct
+                    };
+                    Ok(Target::Wildcard(form))
+                }
+                "_" | "dispatch" => Ok(Target::Dispatcher),
+                "all" => Ok(Target::All),
+                _ => {
+                    let (tier, form) = selector(text, name.span())?;
+                    Ok(Target::Tier(tier, form))
+                }
             }
-        };
+        })?;
         if input.peek(syn::token::Paren) {
             let inner;
             syn::parenthesized!(inner in input);
@@ -271,34 +291,35 @@ impl Output {
                     set(&mut options.visibility, visibility, span, "visibility")?;
                 } else {
                     let key: Ident = inner.parse()?;
-                    match key.to_string().as_str() {
-                        "inline" => {
-                            set(&mut options.inline, parse_inline(&inner)?, span, "inline")?
-                        }
-                        "cfg" => {
-                            let feature;
-                            syn::parenthesized!(feature in inner);
-                            let name: Ident = feature.parse()?;
-                            if !feature.is_empty() {
-                                return Err(feature.error("expected one Cargo feature"));
+                    crate::common::with_ident_str(&key, |k| -> syn::Result<()> {
+                        match k {
+                            "inline" => {
+                                set(&mut options.inline, parse_inline(&inner)?, span, "inline")
                             }
-                            set(&mut options.gate, name.to_string(), span, "cfg")?;
-                        }
-                        // Preserve the old make(_v3(feature)) shorthand only.
-                        _ if grouped
-                            && matches!(target, Target::Tier(..))
-                            && inner.is_empty()
-                            && first =>
-                        {
-                            options.gate = Some(key.to_string());
-                        }
-                        _ => {
-                            return Err(syn::Error::new(
+                            "cfg" => {
+                                let feature;
+                                syn::parenthesized!(feature in inner);
+                                let name: Ident = feature.parse()?;
+                                if !feature.is_empty() {
+                                    return Err(feature.error("expected one Cargo feature"));
+                                }
+                                set(&mut options.gate, name.to_string(), span, "cfg")
+                            }
+                            // Preserve the old make(_v3(feature)) shorthand only.
+                            _ if grouped
+                                && matches!(target, Target::Tier(..))
+                                && inner.is_empty()
+                                && first =>
+                            {
+                                options.gate = Some(k.to_owned());
+                                Ok(())
+                            }
+                            _ => Err(syn::Error::new(
                                 span,
                                 "expected pub visibility, cfg(feature), or inline(policy)",
-                            ));
+                            )),
                         }
-                    }
+                    })?;
                 }
                 first = false;
                 comma(&inner)?;

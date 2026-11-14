@@ -8,12 +8,12 @@ use crate::rite::DEFAULT_TIER_SENTINEL;
 use crate::token_discovery::TokenParamInfo;
 use proc_macro2::TokenStream;
 use quote::quote;
-use syn::{Attribute, Ident, parse_quote};
+use syn::Ident;
 
 /// Where a `#[rite]` variant gets its features from.
 pub(crate) struct FeatureContext {
     /// Canonical token name (`X64V3Token`), or `None` for the tokenless `default` tier.
-    pub(crate) token: Option<String>,
+    pub(crate) token: Option<&'static str>,
     /// The tier suffix (`v3`, `scalar`, `default`), when the tier is one the
     /// registry knows; it selects the nested `incant!` rewrite.
     pub(crate) suffix: Option<&'static str>,
@@ -23,12 +23,12 @@ pub(crate) struct FeatureContext {
     /// The token parameter when the features came from the signature.
     pub(crate) token_ident: Option<Ident>,
     /// Tier traits to re-state through `::archmage::` (trait or generic bound).
-    pub(crate) tier_traits: Vec<String>,
+    pub(crate) tier_traits: SmallVec<&'static str, 4>,
 }
 
 impl FeatureContext {
     /// A tier named in the attribute: `#[rite(v3)]`, or `default`.
-    pub(crate) fn from_tier_token(tier_token: &str) -> Option<Self> {
+    pub(crate) fn from_tier_token(tier_token: &'static str) -> Option<Self> {
         if tier_token == DEFAULT_TIER_SENTINEL {
             return Some(FeatureContext {
                 token: None,
@@ -37,17 +37,17 @@ impl FeatureContext {
                 target_arch: None,
                 magetypes_namespace: None,
                 token_ident: None,
-                tier_traits: Vec::new(),
+                tier_traits: SmallVec::new(),
             });
         }
         Some(FeatureContext {
-            token: Some(tier_token.to_string()),
+            token: Some(tier_token),
             suffix: canonical_token_to_tier_suffix(tier_token),
             features: std::borrow::Cow::Borrowed(token_to_features(tier_token)?),
             target_arch: token_to_arch(tier_token),
             magetypes_namespace: token_to_magetypes_namespace(tier_token),
             token_ident: None,
-            tier_traits: Vec::new(),
+            tier_traits: SmallVec::new(),
         })
     }
 
@@ -55,7 +55,6 @@ impl FeatureContext {
         FeatureContext {
             suffix: info
                 .token_type_name
-                .as_deref()
                 .and_then(canonical_token_to_tier_suffix),
             token: info.token_type_name,
             features: info.features,
@@ -76,12 +75,12 @@ pub(crate) fn runtime_probe_direct_error(
     if tier.target_arch != Some("wasm32") || matches!(sig.safety, syn::Safety::Unsafe(_)) {
         return None;
     }
-    let token_name = tier.token.as_deref()?;
+    let token_name = tier.token?;
     if !crate::generated::token_requires_runtime_probe(token_name) {
         return None;
     }
     let has_matching_token = crate::token_discovery::find_token_param(sig)
-        .is_some_and(|info| info.token_type_name.as_deref() == Some(token_name));
+        .is_some_and(|info| info.token_type_name == Some(token_name));
     if has_matching_token {
         return None;
     }
@@ -110,7 +109,7 @@ pub(crate) fn emit(
     if let Some(err) = runtime_probe_direct_error(&variant_fn.sig, &tier) {
         return Err(err.to_compile_error());
     }
-    let token_desc = tier.token.as_deref().unwrap_or("an AVX-512 token");
+    let token_desc = tier.token.unwrap_or("an AVX-512 token");
     if let Some(err) = avx512_import_error(
         &variant_fn.sig,
         options.import_intrinsics,
@@ -120,11 +119,6 @@ pub(crate) fn emit(
         return Err(err);
     }
 
-    // Rewrite incant!() calls in the body to direct tier calls.
-    // - With a token param: full rewrite (token-first direct calls + `without token`).
-    // - Tokenless tier form (`#[rite(v3)]`): no token to thread, so plain incant!
-    //   constructs proof with from_context() for covered tiers; `without token`
-    //   calls tokenless helpers; `with token` stays explicit.
     if let Some(tier_suffix) = tier.suffix
         && let Some(resolved) = crate::tiers::find_tier(tier_suffix)
     {
@@ -139,7 +133,7 @@ pub(crate) fn emit(
             None => crate::rewrite::CallerContext {
                 tier_suffix,
                 target_arch: resolved.target_arch,
-                token_ident: quote::format_ident!("_"),
+                token_ident: Ident::new("_", proc_macro2::Span::call_site()),
                 has_token: false,
                 derive_token: true,
             },
@@ -162,34 +156,26 @@ pub(crate) fn emit(
         );
     }
 
-    // Build the attribute list. Scalar and default tiers have no features —
-    // emit only `#[inline]` without `#[target_feature]` (enable="" is an error).
-    let mut new_attrs: Vec<Attribute> = Vec::new();
-    if !tier.features.is_empty() {
-        let features_csv =
-            crate::token_discovery::features_csv(tier.token.as_deref(), &tier.features);
-        new_attrs.push(parse_quote!(#[target_feature(enable = #features_csv)]));
-    }
-    // Explicit policy replaces source inline attributes, including when it
-    // deliberately emits no attribute. Legacy callers keep their old defaults.
-    if let Some(policy) = inline {
-        new_attrs.extend(policy.attribute(&variant_fn.vis));
+    // Build target_feature + inline tokens directly without `parse_quote!` round-trips.
+    let target_feature_tokens = if !tier.features.is_empty() {
+        let features_csv = crate::token_discovery::features_csv(tier.token, &tier.features);
+        quote!(#[target_feature(enable = #features_csv)])
+    } else {
+        TokenStream::new()
+    };
+    let inline_tokens = if let Some(policy) = inline {
+        policy.tokens(&variant_fn.vis)
     } else if !preserve_inline || !variant_fn.attrs.iter().any(|a| a.path().is_ident("inline")) {
-        new_attrs.push(parse_quote!(#[inline]));
+        quote!(#[inline])
+    } else {
+        TokenStream::new()
+    };
+    if !preserve_inline || inline.is_some() {
+        variant_fn
+            .attrs
+            .retain(|attr| !attr.path().is_ident("inline"));
     }
-    for attr in variant_fn
-        .attrs
-        .into_iter()
-        .filter(|attr| (preserve_inline && inline.is_none()) || !attr.path().is_ident("inline"))
-    {
-        new_attrs.push(attr);
-    }
-    variant_fn.attrs = new_attrs;
 
-    // `#[rite]` has no wrapper — it puts `#[target_feature]` on the function
-    // itself — so a trait/generic bound is authenticated at the top of the body.
-    // Concrete tokens keep their tier-tag const in `#[arcane]`'s wrapper; a
-    // tokenless tier form (`#[rite(v3)]`) has no bound to authenticate.
     let body_imports = generate_imports(
         tier.target_arch,
         tier.magetypes_namespace,
@@ -205,8 +191,6 @@ pub(crate) fn emit(
         quote! { #body_imports #tier_trait_assertion },
     );
 
-    // Emit the function behind its cfg guard (empty for trait bounds and the
-    // default tier, which have no architecture; includes target_feature on WASM).
     let cfg_guard = gen_target_cfg_guard(
         tier.target_arch,
         options.cfg_feature.as_deref(),
@@ -223,6 +207,8 @@ pub(crate) fn emit(
     let body = &variant_fn.body;
     Ok(quote! {
         #cfg_guard
+        #target_feature_tokens
+        #inline_tokens
         #(#attrs)*
         #vis #sig {
             #body

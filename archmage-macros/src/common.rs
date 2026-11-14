@@ -1,8 +1,179 @@
 //! Shared utilities for all proc-macros.
 
-use proc_macro2::Ident;
+use std::fmt::Write as _;
+
+use proc_macro2::{Ident, Punct, Spacing, Span, TokenStream, TokenTree};
 use quote::{ToTokens, format_ident, quote};
 use syn::{Attribute, GenericParam, Signature, Type, parse::ParseStream, token};
+
+/// Format `ident` into a stack `[u8; 64]` buffer when possible, avoiding a heap
+/// `String` allocation on every identifier keyword/registry lookup.
+#[inline]
+pub(crate) fn with_ident_str<R>(ident: &Ident, f: impl FnOnce(&str) -> R) -> R {
+    struct Buf {
+        bytes: [u8; 64],
+        len: usize,
+        overflow: bool,
+    }
+    impl std::fmt::Write for Buf {
+        #[inline]
+        fn write_str(&mut self, s: &str) -> std::fmt::Result {
+            let next = self.len + s.len();
+            if next <= self.bytes.len() {
+                self.bytes[self.len..next].copy_from_slice(s.as_bytes());
+                self.len = next;
+            } else {
+                self.overflow = true;
+            }
+            Ok(())
+        }
+    }
+    let mut buf = Buf {
+        bytes: [0u8; 64],
+        len: 0,
+        overflow: false,
+    };
+    let _ = write!(buf, "{ident}");
+    if !buf.overflow
+        && let Ok(s) = std::str::from_utf8(&buf.bytes[..buf.len])
+    {
+        return f(s);
+    }
+    let owned = ident.to_string();
+    f(&owned)
+}
+
+/// Safe, stack-first small buffer (`0` heap allocations up to `N` items).
+#[derive(Clone, Debug)]
+pub(crate) enum SmallVec<T, const N: usize> {
+    Inline { buf: [Option<T>; N], len: usize },
+    Heap(Vec<T>),
+}
+
+impl<T, const N: usize> Default for SmallVec<T, N> {
+    #[inline]
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<T, const N: usize> SmallVec<T, N> {
+    #[inline]
+    pub(crate) const fn new() -> Self {
+        Self::Inline {
+            buf: [const { None }; N],
+            len: 0,
+        }
+    }
+
+    #[inline]
+    pub(crate) fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    #[inline]
+    pub(crate) fn len(&self) -> usize {
+        match self {
+            Self::Inline { len, .. } => *len,
+            Self::Heap(v) => v.len(),
+        }
+    }
+
+    #[inline]
+    pub(crate) fn push(&mut self, value: T) {
+        match self {
+            Self::Inline { buf, len } => {
+                if *len < N {
+                    buf[*len] = Some(value);
+                    *len += 1;
+                } else {
+                    let mut heap = Vec::with_capacity(N + 2);
+                    for slot in buf.iter_mut() {
+                        if let Some(item) = slot.take() {
+                            heap.push(item);
+                        }
+                    }
+                    heap.push(value);
+                    *self = Self::Heap(heap);
+                }
+            }
+            Self::Heap(v) => v.push(value),
+        }
+    }
+
+    #[inline]
+    pub(crate) fn iter(&self) -> SmallVecIter<'_, T> {
+        match self {
+            Self::Inline { buf, len } => SmallVecIter::Inline(buf[..*len].iter()),
+            Self::Heap(v) => SmallVecIter::Heap(v.iter()),
+        }
+    }
+
+    #[inline]
+    pub(crate) fn contains(&self, target: &T) -> bool
+    where
+        T: PartialEq,
+    {
+        self.iter().any(|item| item == target)
+    }
+}
+
+impl<T, const N: usize> Extend<T> for SmallVec<T, N> {
+    #[inline]
+    fn extend<I: IntoIterator<Item = T>>(&mut self, iter: I) {
+        for item in iter {
+            self.push(item);
+        }
+    }
+}
+
+pub(crate) enum SmallVecIter<'a, T> {
+    Inline(std::slice::Iter<'a, Option<T>>),
+    Heap(std::slice::Iter<'a, T>),
+}
+
+impl<'a, T> Iterator for SmallVecIter<'a, T> {
+    type Item = &'a T;
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        match self {
+            Self::Inline(it) => it.next().and_then(Option::as_ref),
+            Self::Heap(it) => it.next(),
+        }
+    }
+}
+
+impl<'a, T, const N: usize> IntoIterator for &'a SmallVec<T, N> {
+    type Item = &'a T;
+    type IntoIter = SmallVecIter<'a, T>;
+    #[inline]
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
+/// Emit a `::`-separated identifier path (such as `"archmage::X64V3Token"`) directly
+/// into a `TokenStream` without formatting a `String` or running `syn`'s parser.
+pub(crate) fn colon_path_tokens(path: &str, rooted: bool) -> TokenStream {
+    let mut out = TokenStream::new();
+    let span = Span::call_site();
+    if rooted {
+        out.extend([
+            TokenTree::Punct(Punct::new(':', Spacing::Joint)),
+            TokenTree::Punct(Punct::new(':', Spacing::Alone)),
+        ]);
+    }
+    for (i, seg) in path.split("::").enumerate() {
+        if i > 0 {
+            out.extend([
+                TokenTree::Punct(Punct::new(':', Spacing::Joint)),
+                TokenTree::Punct(Punct::new(':', Spacing::Alone)),
+            ]);
+        }
+        out.extend([TokenTree::Ident(Ident::new(seg, span))]);
+    }
+    out
+}
 
 /// A function parsed with the body left as an opaque TokenStream.
 ///
@@ -149,7 +320,7 @@ pub(crate) fn gen_target_cfg_guard<S: AsRef<str>>(
     cfg_feature: Option<&str>,
     target_features: &[S],
 ) -> proc_macro2::TokenStream {
-    let mut preds = Vec::new();
+    let mut preds = SmallVec::<proc_macro2::TokenStream, 5>::new();
     if let Some(arch) = target_arch {
         preds.push(quote! { target_arch = #arch });
         if arch == "wasm32" {
@@ -162,10 +333,16 @@ pub(crate) fn gen_target_cfg_guard<S: AsRef<str>>(
     if let Some(feat) = cfg_feature {
         preds.push(quote! { feature = #feat });
     }
-    match preds.as_slice() {
-        [] => quote! {},
-        [only] => quote! { #[cfg(#only)] },
-        many => quote! { #[cfg(all(#(#many),*))] },
+    match preds.len() {
+        0 => quote! {},
+        1 => {
+            let only = preds.iter().next().unwrap();
+            quote! { #[cfg(#only)] }
+        }
+        _ => {
+            let iter = preds.iter();
+            quote! { #[cfg(all(#(#iter),*))] }
+        }
     }
 }
 
@@ -182,29 +359,31 @@ pub(crate) fn tier_wasm_features(tier_name: &str) -> &'static [&'static str] {
 /// `#[cfg(target_arch = ...)]` already on it), so the wrapper, which copies
 /// the input's attributes, is not gated twice.
 pub(crate) fn drop_attrs_equal_to(attrs: &mut Vec<Attribute>, guard: &proc_macro2::TokenStream) {
+    if guard.is_empty() || !attrs.iter().any(|a| a.path().is_ident("cfg")) {
+        return;
+    }
     let wanted = guard.to_string();
     if wanted.is_empty() {
         return;
     }
-    attrs.retain(|a| a.to_token_stream().to_string() != wanted);
+    attrs.retain(|a| !a.path().is_ident("cfg") || a.to_token_stream().to_string() != wanted);
 }
 
 /// Build a turbofish token stream from a function's generics.
 pub(crate) fn build_turbofish(generics: &syn::Generics) -> proc_macro2::TokenStream {
-    let params: Vec<_> = generics
+    if !generics
         .params
         .iter()
-        .filter_map(|param| match param {
-            GenericParam::Type(tp) => Some(&tp.ident),
-            GenericParam::Const(cp) => Some(&cp.ident),
-            GenericParam::Lifetime(_) => None,
-        })
-        .collect();
-    if params.is_empty() {
-        quote! {}
-    } else {
-        quote! { ::<#(#params),*> }
+        .any(|p| matches!(p, GenericParam::Type(_) | GenericParam::Const(_)))
+    {
+        return quote! {};
     }
+    let params = generics.params.iter().filter_map(|param| match param {
+        GenericParam::Type(tp) => Some(&tp.ident),
+        GenericParam::Const(cp) => Some(&cp.ident),
+        GenericParam::Lifetime(_) => None,
+    });
+    quote! { ::<#(#params),*> }
 }
 
 /// Conservative token-level presence check. Literals and partial identifier
@@ -525,15 +704,15 @@ pub(crate) fn suffix_path(path: &syn::Path, suffix: &str) -> syn::Path {
 ///
 /// Returns nothing for a concrete token (`tier_traits` empty) — that path keeps
 /// its cheaper const assertion.
-pub(crate) fn gen_tier_trait_assertion(
-    tier_traits: &[String],
+pub(crate) fn gen_tier_trait_assertion<const N: usize>(
+    tier_traits: &SmallVec<&'static str, N>,
     token_ident: &Ident,
 ) -> proc_macro2::TokenStream {
     if tier_traits.is_empty() {
         return quote! {};
     }
     let bounds = tier_traits.iter().map(|name| {
-        let ident = format_ident!("{}", name);
+        let ident = Ident::new(name, Span::call_site());
         quote! { + ::archmage::#ident }
     });
     quote! {
@@ -572,29 +751,31 @@ pub(crate) fn parse_shared_option(
     input: ParseStream<'_>,
     opts: &mut SharedOptions,
 ) -> syn::Result<bool> {
-    match ident.to_string().as_str() {
-        "import_intrinsics" => opts.import_intrinsics = true,
-        "import_magetypes" => opts.import_magetypes = true,
-        "cfg" => {
-            let content;
-            syn::parenthesized!(content in input);
-            let feat: Ident = content.parse()?;
-            opts.cfg_feature = Some(feat.to_string());
+    with_ident_str(ident, |s| {
+        match s {
+            "import_intrinsics" => opts.import_intrinsics = true,
+            "import_magetypes" => opts.import_magetypes = true,
+            "cfg" => {
+                let content;
+                syn::parenthesized!(content in input);
+                let feat: Ident = content.parse()?;
+                opts.cfg_feature = Some(feat.to_string());
+            }
+            "stub" => {
+                return Err(syn::Error::new(
+                    ident.span(),
+                    "`stub` has been removed. Use `incant!` for cross-arch dispatch \
+                     instead — it cfg-gates each architecture automatically.\n\
+                     \n\
+                     Before: #[arcane(stub)] fn process(token: X64V3Token, ...) { ... }\n\
+                     After:  #[arcane] fn process_v3(token: X64V3Token, ...) { ... }\n\
+                     \x20       fn dispatch(...) { incant!(process(...)) }",
+                ));
+            }
+            _ => return Ok(false),
         }
-        "stub" => {
-            return Err(syn::Error::new(
-                ident.span(),
-                "`stub` has been removed. Use `incant!` for cross-arch dispatch \
-                 instead — it cfg-gates each architecture automatically.\n\
-                 \n\
-                 Before: #[arcane(stub)] fn process(token: X64V3Token, ...) { ... }\n\
-                 After:  #[arcane] fn process_v3(token: X64V3Token, ...) { ... }\n\
-                 \x20       fn dispatch(...) { incant!(process(...)) }",
-            ));
-        }
-        _ => return Ok(false),
-    }
-    Ok(true)
+        Ok(true)
+    })
 }
 
 /// The error for `import_intrinsics` with AVX-512 features when archmage was
@@ -712,13 +893,28 @@ pub(crate) fn rename_underscore_params(sig: &mut Signature) {
     for arg in &mut sig.inputs {
         if let syn::FnArg::Typed(pat_type) = arg
             && let syn::Pat::Ident(pat) = pat_type.pat.as_mut()
+            && let Some(renamed) = with_ident_str(&pat.ident, |name| {
+                if name.starts_with('_') && !name.starts_with("__") && name.len() > 1 {
+                    Some(format_ident!("__archmage{}", name, span = pat.ident.span()))
+                } else {
+                    None
+                }
+            })
         {
-            let name = pat.ident.to_string();
-            if name.starts_with('_') && !name.starts_with("__") && name.len() > 1 {
-                pat.ident = format_ident!("__archmage{}", name, span = pat.ident.span());
-            }
+            pat.ident = renamed;
         }
     }
+}
+
+/// Apply the same `_x -> __archmage_x` forwarding rename to a single identifier.
+pub(crate) fn forwarded_param_ident(ident: &Ident) -> Ident {
+    with_ident_str(ident, |name| {
+        if name.starts_with('_') && !name.starts_with("__") && name.len() > 1 {
+            format_ident!("__archmage{}", name, span = ident.span())
+        } else {
+            ident.clone()
+        }
+    })
 }
 
 /// Give a wildcard token parameter (`_: X64V3Token`) the name
@@ -726,33 +922,30 @@ pub(crate) fn rename_underscore_params(sig: &mut Signature) {
 /// the tier assertions can refer to it; every other pattern is left as
 /// written. Returns the name when something was renamed.
 pub(crate) fn rename_wildcard_token(sig: &mut Signature) -> Option<Ident> {
-    let template = sig.clone();
-    for arg in &mut sig.inputs {
+    let mut found = None;
+    for (idx, arg) in sig.inputs.iter().enumerate() {
         let syn::FnArg::Typed(pat_type) = arg else {
             continue;
         };
-        if !matches!(pat_type.pat.as_ref(), syn::Pat::Wild(_)) {
+        let syn::Pat::Wild(w) = pat_type.pat.as_ref() else {
             continue;
+        };
+        if crate::token_discovery::is_token_type_in_sig(sig, &pat_type.ty) {
+            found = Some((idx, Ident::new("__archmage_token", w.underscore_token.span)));
+            break;
         }
-        // Probe this parameter alone, with the function's generics so a
-        // `T: HasX64V2` bound still resolves.
-        let probe = Signature {
-            inputs: std::iter::once(syn::FnArg::Typed(pat_type.clone())).collect(),
-            ..template.clone()
-        };
-        let Some(info) = crate::token_discovery::find_token_param(&probe) else {
-            continue;
-        };
+    }
+    let (idx, ident) = found?;
+    if let syn::FnArg::Typed(pat_type) = &mut sig.inputs[idx] {
         *pat_type.pat = syn::Pat::Ident(syn::PatIdent {
             attrs: vec![],
             by_ref: None,
             mutability: None,
-            ident: info.ident.clone(),
+            ident: ident.clone(),
             subpat: None,
         });
-        return Some(info.ident);
     }
-    None
+    Some(ident)
 }
 
 /// Prepend statements to a function body.
@@ -777,7 +970,14 @@ pub(crate) fn nested_self_param(receiver: &syn::Receiver, self_ty: &Type) -> syn
         syn::ReceiverKind::Reference(_, lifetime, mutability) => {
             quote!(& #lifetime #mutability #self_ty)
         }
-        syn::ReceiverKind::Typed(_, ty) => replace_self_in_tokens(ty.to_token_stream(), self_ty),
+        syn::ReceiverKind::Typed(_, ty) => {
+            let ts = ty.to_token_stream();
+            if tokens_contain_ident(&ts, &["Self"]) {
+                replace_self_in_tokens(ts, self_ty)
+            } else {
+                ts
+            }
+        }
         // `#[non_exhaustive]`: a receiver shape syn adds later is passed by value.
         _ => quote!(#self_ty),
     };
@@ -821,7 +1021,12 @@ pub(crate) fn replace_self_value_in_tokens(
                 result.extend([proc_macro2::TokenTree::Group(group)]);
             }
             proc_macro2::TokenTree::Group(group) => {
-                let inner = replace_self_value_in_tokens(group.stream(), replacement);
+                let stream = group.stream();
+                if !tokens_contain_ident(&stream, &["self"]) {
+                    result.extend([proc_macro2::TokenTree::Group(group)]);
+                    continue;
+                }
+                let inner = replace_self_value_in_tokens(stream, replacement);
                 let mut new_group = proc_macro2::Group::new(group.delimiter(), inner);
                 new_group.set_span(group.span());
                 result.extend([proc_macro2::TokenTree::Group(new_group)]);
@@ -832,36 +1037,36 @@ pub(crate) fn replace_self_value_in_tokens(
     result
 }
 
-/// The identifiers of every parameter whose type is a token (concrete, trait
-/// bound or bounded generic), in signature order.
-pub(crate) fn token_param_idents(sig: &Signature) -> Vec<String> {
-    let mut out = Vec::new();
+/// Check that at most one parameter in `sig` is a token parameter; returns `None`
+/// in the valid `<= 1` fast path without allocating, and builds the diagnostic
+/// error only when 2+ token parameters are present.
+pub(crate) fn check_single_token_param(
+    sig: &Signature,
+    macro_name: &str,
+) -> Option<proc_macro2::TokenStream> {
+    let mut count = 0usize;
     for arg in &sig.inputs {
-        let syn::FnArg::Typed(syn::PatType { pat, ty, .. }) = arg else {
-            continue;
-        };
-        let Some(info) = crate::token_discovery::extract_token_type_info(ty) else {
-            continue;
-        };
-        let is_token = match &info {
-            crate::token_discovery::TokenTypeInfo::Concrete(_) => true,
-            crate::token_discovery::TokenTypeInfo::ImplTrait(names) => {
-                crate::token_discovery::traits_to_features(names).is_some()
-            }
-            crate::token_discovery::TokenTypeInfo::Generic(name) => {
-                crate::token_discovery::find_generic_bounds(sig, name)
-                    .and_then(|b| crate::token_discovery::traits_to_features(&b))
-                    .is_some()
-            }
-        };
-        if is_token {
-            out.push(match pat.as_ref() {
+        if let syn::FnArg::Typed(syn::PatType { ty, .. }) = arg
+            && crate::token_discovery::is_token_type_in_sig(sig, ty)
+        {
+            count += 1;
+        }
+    }
+    if count <= 1 {
+        return None;
+    }
+    let mut idents = Vec::with_capacity(count);
+    for arg in &sig.inputs {
+        if let syn::FnArg::Typed(syn::PatType { pat, ty, .. }) = arg
+            && crate::token_discovery::is_token_type_in_sig(sig, ty)
+        {
+            idents.push(match pat.as_ref() {
                 syn::Pat::Ident(p) => p.ident.to_string(),
                 _ => "_".to_string(),
             });
         }
     }
-    out
+    Some(multiple_tokens_error(sig, macro_name, &idents))
 }
 
 /// The error for a signature with more than one token parameter: the macros
