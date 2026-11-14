@@ -417,6 +417,8 @@ fn rewrite_tokenless_incant(input: &IncantInput, ctx: &CallerContext) -> Option<
         tier.name == "scalar"
             || tier.name == "default"
             || (tier.target_arch == ctx.target_arch
+                && !crate::generated::tier_to_canonical_token(tier.name)
+                    .is_some_and(crate::generated::token_requires_runtime_probe)
                 && (tier.suffix == ctx.tier_suffix
                     || crate::generated::can_downgrade_tier(ctx.tier_suffix, tier.suffix)))
     });

@@ -391,7 +391,7 @@ pub mod wasm128 {
     //! Also includes 256-bit polyfills (emulated via 2×128-bit WASM ops).
     //! All take `Wasm128Token`.
 
-    #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
+    #[cfg(target_arch = "wasm32")]
     #[allow(non_camel_case_types)]
     mod _w128_aliases {
         pub type f32x4 = crate::simd::generic::f32x4<archmage::Wasm128Token>;
@@ -405,16 +405,16 @@ pub mod wasm128 {
         pub type i64x2 = crate::simd::generic::i64x2<archmage::Wasm128Token>;
         pub type u64x2 = crate::simd::generic::u64x2<archmage::Wasm128Token>;
     }
-    #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
+    #[cfg(target_arch = "wasm32")]
     pub use _w128_aliases::*;
 
-    #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
+    #[cfg(target_arch = "wasm32")]
     pub use _w128_aliases::{
         f32x4 as f32xN, f64x2 as f64xN, i8x16 as i8xN, i16x8 as i16xN, i32x4 as i32xN,
         i64x2 as i64xN, u8x16 as u8xN, u16x8 as u16xN, u32x4 as u32xN, u64x2 as u64xN,
     };
 
-    #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
+    #[cfg(target_arch = "wasm32")]
     #[allow(non_camel_case_types)]
     mod _w256_aliases {
         pub type f32x8 = crate::simd::generic::f32x8<archmage::Wasm128Token>;
@@ -428,7 +428,7 @@ pub mod wasm128 {
         pub type i64x4 = crate::simd::generic::i64x4<archmage::Wasm128Token>;
         pub type u64x4 = crate::simd::generic::u64x4<archmage::Wasm128Token>;
     }
-    #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
+    #[cfg(target_arch = "wasm32")]
     pub use _w256_aliases::*;
 
     /// Token type for this width level

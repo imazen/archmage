@@ -352,11 +352,10 @@ fn gen_layout_asserts(ty: &SimdType) -> String {
         }};
     "#});
 
-    // wasm32 SIMD128 — gated on `target_feature = "simd128"` because the
-    // Wasm128Token only implements the backends on the +simd128 target.
+    // wasm32 SIMD128 — Wasm128Token backend impls are available across wasm32.
     native_blocks.push_str(&formatdoc! {r#"
 
-        #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
+        #[cfg(target_arch = "wasm32")]
         const _: () = {{
             assert!(
                 size_of::<{name}<archmage::Wasm128Token>>()
@@ -1617,7 +1616,7 @@ fn gen_platform(ty: &SimdType) -> String {
                     }}
                 }}
 
-                #[cfg(all(target_arch = \"wasm32\", target_feature = \"simd128\"))]
+                #[cfg(target_arch = \"wasm32\")]
                 impl {name}<archmage::Wasm128Token> {{
                     /// Implementation identifier for this backend.
                     pub const fn implementation_name() -> &'static str {{
@@ -1661,7 +1660,7 @@ fn gen_platform(ty: &SimdType) -> String {
                     }}
                 }}
 
-                #[cfg(all(target_arch = \"wasm32\", target_feature = \"simd128\"))]
+                #[cfg(target_arch = \"wasm32\")]
                 impl {name}<archmage::Wasm128Token> {{
                     /// Implementation identifier for this backend.
                     pub const fn implementation_name() -> &'static str {{
@@ -1718,7 +1717,7 @@ fn gen_platform(ty: &SimdType) -> String {
                     }}
                 }}
 
-                #[cfg(all(target_arch = \"wasm32\", target_feature = \"simd128\"))]
+                #[cfg(target_arch = \"wasm32\")]
                 impl {name}<archmage::Wasm128Token> {{
                     /// Implementation identifier for this backend.
                     pub const fn implementation_name() -> &'static str {{
@@ -1756,13 +1755,7 @@ pub(super) fn gen_raw_interop(ty: &SimdType, registry: &crate::registry::Registr
         SimdWidth::W128 => {
             platforms.push(("x86_64", "X64V3Token", "v3", x86_raw_type(ty), ""));
             platforms.push(("aarch64", "NeonToken", "neon", arm_repr_hint(ty), ""));
-            platforms.push((
-                "wasm32",
-                "Wasm128Token",
-                "wasm128",
-                "v128",
-                ", target_feature = \"simd128\"",
-            ));
+            platforms.push(("wasm32", "Wasm128Token", "wasm128", "v128", ""));
         }
         SimdWidth::W256 => {
             platforms.push(("x86_64", "X64V3Token", "v3", x86_raw_type(ty), ""));
@@ -1812,6 +1805,15 @@ pub(super) fn gen_raw_interop(ty: &SimdType, registry: &crate::registry::Registr
         // forwarders to `from_raw_t`. NEON, WASM and AVX-512 types never had
         // one on the generic types and do not get one.
         let legacy = raw_getter;
+        // On wasm32, calling `Wasm128Token::from_context()` safely requires
+        // compile-time `+simd128` (without it `from_context()` is `unsafe fn`
+        // and `#[forbid(unsafe_code)]` forbids calling it). `raw()` and
+        // `from_raw_t()` stay unconditionally available on wasm32.
+        let from_raw_cfg = if arch == "wasm32" {
+            "#[cfg(target_feature = \"simd128\")]\n                "
+        } else {
+            ""
+        };
         code.push_str(&formatdoc! {r#"
             #[cfg({cfg})]
             impl {name}<archmage::{token}> {{
@@ -1833,7 +1835,7 @@ pub(super) fn gen_raw_interop(ty: &SimdType, registry: &crate::registry::Registr
                 /// # Safety
                 /// The CPU must support the enabled target features. Safe calls require a
                 /// matching or stronger feature context, which Rust checks.
-                #[target_feature(enable = "{features}")]
+                {from_raw_cfg}#[target_feature(enable = "{features}")]
                 #[inline]
                 pub fn from_raw(value: core::arch::{arch}::{raw}) -> Self {{
                     Self(value, archmage::{token}::from_context())

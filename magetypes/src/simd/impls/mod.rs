@@ -30,7 +30,7 @@ mod x86_v4_w512_delegated;
 #[cfg(target_arch = "aarch64")]
 mod arm_neon;
 
-#[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
+#[cfg(target_arch = "wasm32")]
 mod wasm128;
 #[cfg(all(
     target_arch = "wasm32",

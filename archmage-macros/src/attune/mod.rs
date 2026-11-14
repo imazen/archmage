@@ -181,6 +181,9 @@ fn direct(
     {
         specialize_syntax(&mut input.sig, &quote!(::#token_path))?;
     }
+    if let Some(err) = crate::engine::feature::runtime_probe_direct_error(&input.sig, &context) {
+        return Err(err);
+    }
     let function = crate::engine::feature::emit(input, &options, inline, true, context)
         .unwrap_or_else(|diagnostic| diagnostic);
     // A single raw context preserves the written signature and identifiers.
@@ -340,6 +343,18 @@ fn family(mut input: LightFn, args: Args) -> syn::Result<TokenStream> {
         } else {
             syn::Visibility::Inherited
         };
+        let hidden_probe_proof = direct_selection.is_none()
+            && tier.target_arch == Some("wasm32")
+            && crate::generated::tier_to_canonical_token(tier.name)
+                .is_some_and(crate::generated::token_requires_runtime_probe)
+            && !input.sig.inputs.iter().any(placeholder_parameter);
+        if hidden_probe_proof {
+            let token: syn::Path = syn::parse_str(&format!("::{}", tier.token_path))?;
+            let position = usize::from(matches!(body.sig.inputs.first(), Some(FnArg::Receiver(_))));
+            body.sig
+                .inputs
+                .insert(position, parse_quote!(__attune_token: #token));
+        }
         output.extend(direct(body, tier, &args, gate, body_inline)?);
         if proof_selection.is_some() || args.dispatcher.is_some() {
             let proof_name = if proof_selection.is_some() {
@@ -350,22 +365,36 @@ fn family(mut input: LightFn, args: Args) -> syn::Result<TokenStream> {
             output.extend(proof_entry(
                 &input,
                 tier,
-                &direct_name,
-                &proof_name,
-                proof_selection,
-                gate,
+                ProofEntrySpec {
+                    direct_name: &direct_name,
+                    name: &proof_name,
+                    selection: proof_selection,
+                    gate,
+                    hidden_probe_proof,
+                },
                 &args,
             )?);
             let token: syn::Path = syn::parse_str(&format!("::{}", tier.token_path))?;
+            let input_is_unsafe = matches!(input.sig.safety, syn::Safety::Unsafe(_));
             let invocation = forward(
                 &forward_sig,
                 &proof_name,
                 args.options.in_impl,
                 Some(quote!(__attune_proof)),
             );
+            let invocation = if input_is_unsafe {
+                crate::engine::boundary::proof_call(invocation)
+            } else {
+                invocation
+            };
             let guard = gen_target_cfg_guard(tier.target_arch, gate, tier_wasm_features(tier.name));
             dispatch_arms.push(if tier.name == "scalar" {
                 let invocation = forward(&forward_sig, &proof_name, args.options.in_impl, Some(quote!(::archmage::ScalarToken)));
+                let invocation = if input_is_unsafe {
+                    crate::engine::boundary::proof_call(invocation)
+                } else {
+                    invocation
+                };
                 quote!(#guard { break '__attune_dispatch #invocation; })
             } else { quote!(#guard { if let Some(__attune_proof) = <#token as ::archmage::SimdToken>::summon() { break '__attune_dispatch #invocation; } }) });
         }
@@ -408,15 +437,27 @@ fn family(mut input: LightFn, args: Args) -> syn::Result<TokenStream> {
     Ok(output)
 }
 
+struct ProofEntrySpec<'a> {
+    direct_name: &'a syn::Ident,
+    name: &'a syn::Ident,
+    selection: Option<&'a Selection>,
+    gate: Option<&'a str>,
+    hidden_probe_proof: bool,
+}
+
 fn proof_entry(
     input: &LightFn,
     tier: &TierDescriptor,
-    direct_name: &syn::Ident,
-    name: &syn::Ident,
-    selection: Option<&Selection>,
-    gate: Option<&str>,
+    spec: ProofEntrySpec<'_>,
     args: &Args,
 ) -> syn::Result<TokenStream> {
+    let ProofEntrySpec {
+        direct_name,
+        name,
+        selection,
+        gate,
+        hidden_probe_proof,
+    } = spec;
     let mut wrapper = input.clone();
     // Check the author's names before forwarding renames them; the renamed
     // `__archmage_*` names cannot collide with the `__attune_*` callee.
@@ -428,7 +469,12 @@ fn proof_entry(
         return Ok(error);
     }
     crate::common::rename_underscore_params(&mut wrapper.sig);
-    let invocation = forward(&wrapper.sig, direct_name, args.options.in_impl, None);
+    let invocation = forward(
+        &wrapper.sig,
+        direct_name,
+        args.options.in_impl,
+        hidden_probe_proof.then(|| quote!(__attune_token)),
+    );
     let token: syn::Path = syn::parse_str(&format!("::{}", tier.token_path))?;
     let position = usize::from(matches!(
         wrapper.sig.inputs.first(),
@@ -467,11 +513,14 @@ fn proof_entry(
     if !allowed.is_empty() {
         wrapper.attrs.push(parse_quote!(#[allow(#(#allowed),*)]));
     }
-    wrapper.body = if tier.name == "scalar" || tier.target_arch == Some("wasm32") {
+    wrapper.body = if !matches!(wrapper.sig.safety, syn::Safety::Unsafe(_))
+        && (tier.name == "scalar" || tier.target_arch == Some("wasm32"))
+    {
         invocation
     } else {
         // SAFETY: this signature accepts the registry's concrete sealed
-        // proof, and the sibling exists in the same definition scope.
+        // proof (or caller upholds the `unsafe fn` contract), and the sibling
+        // exists in the same definition scope.
         crate::engine::boundary::proof_call(invocation)
     };
     let guard = gen_target_cfg_guard(

@@ -338,7 +338,7 @@ impl F32x8FromHalves for archmage::NeonToken {
 }
 
 // Wasm128Token — same shape as NEON: polyfill via `[v128; 2]`.
-#[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
+#[cfg(target_arch = "wasm32")]
 impl F32x8FromHalves for archmage::Wasm128Token {
     #[inline(always)]
     fn from_halves(
@@ -670,7 +670,7 @@ impl F32x16FromHalves for archmage::NeonToken {
 }
 
 // Wasm128Token — cascade polyfill, same shape as NEON.
-#[cfg(all(target_arch = "wasm32", target_feature = "simd128", feature = "w512"))]
+#[cfg(all(target_arch = "wasm32", feature = "w512"))]
 impl F32x16FromHalves for archmage::Wasm128Token {
     #[inline(always)]
     fn from_halves(

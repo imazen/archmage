@@ -20,7 +20,7 @@
 #[cfg(any(
     target_arch = "x86_64",
     target_arch = "aarch64",
-    target_arch = "wasm32"
+    all(target_arch = "wasm32", target_feature = "simd128")
 ))]
 use archmage::SimdToken;
 use magetypes::simd::backends::{

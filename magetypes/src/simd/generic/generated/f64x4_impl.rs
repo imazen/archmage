@@ -81,7 +81,7 @@ const _: () = {
     );
 };
 
-#[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
+#[cfg(target_arch = "wasm32")]
 const _: () = {
     assert!(
         size_of::<f64x4<archmage::Wasm128Token>>()
@@ -697,7 +697,7 @@ impl f64x4<archmage::NeonToken> {
     }
 }
 
-#[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
+#[cfg(target_arch = "wasm32")]
 impl f64x4<archmage::Wasm128Token> {
     /// Implementation identifier for this backend.
     pub const fn implementation_name() -> &'static str {

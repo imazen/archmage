@@ -34,7 +34,7 @@ fn screaming_snake(token_name: &str, suffix: &str) -> String {
 }
 
 /// Convert token name to a lower_snake_case function name with given suffix.
-fn lower_snake(token_name: &str, suffix: &str) -> String {
+pub(crate) fn lower_snake(token_name: &str, suffix: &str) -> String {
     let mut result = String::new();
     let mut prev_was_upper = false;
     for (i, c) in token_name.chars().enumerate() {
@@ -317,13 +317,125 @@ fn gen_from_context(token: &TokenDef) -> String {
     let name = &token.name;
     let features = token.features.join(",");
     let display = token.display_name.as_deref().unwrap_or(name);
-    let context_docs = if token.runtime_probe {
-        "/// Rust permits safe calls to `#[target_feature]` functions from any\n    /// WASM context. Inside an `#[attune(wasm128_relaxed_fma)]` region the\n    /// single-rounding FMA contract was already checked by the entry probe;\n    /// use [`SimdToken::summon`](crate::SimdToken::summon) at dispatch boundaries\n    /// to run and cache the runtime fusion probe."
-    } else if token.arch == "wasm" {
-        "/// Rust permits safe calls to `#[target_feature]` functions from any\n    /// WASM context: the engine validates the required instructions when the\n    /// module is loaded, so a module that runs at all has the features."
-    } else {
-        "/// A safe call requires a caller whose `#[target_feature]` attribute\n    /// enables every feature of this tier; a superset is sufficient. Outside\n    /// such a context rustc requires an `unsafe` block at the call site.\n    ///\n    /// Features enabled globally (`-C target-feature`, `-C target-cpu`) do\n    /// not satisfy this — rustc requires them on the caller's own attribute."
-    };
+    if token.runtime_probe {
+        return formatdoc! {r#"
+
+            impl {name} {{
+                /// Construct a {display} proof asserting single-rounding FMA fusion.
+                ///
+                /// Availability of this tier depends on a runtime fusion probe beyond
+                /// compile-time `#[target_feature]` validation (an engine supporting
+                /// `relaxed-simd` may still implement `relaxed_madd` with two roundings).
+                /// Always `unsafe`, even inside `+simd128,+relaxed-simd` contexts. Use
+                /// [`SimdToken::summon`](crate::SimdToken::summon) to run and cache the
+                /// runtime fusion probe safely.
+                ///
+                /// # Safety
+                ///
+                /// The caller must guarantee that `simd128` and `relaxed-simd` are
+                /// available AND that this execution engine fuses both `f32x4.relaxed_madd`
+                /// and `f64x2.relaxed_madd` with single rounding across all lanes.
+                #[inline(always)]
+                pub unsafe fn from_context() -> Self {{
+                    Self {{ _private: () }}
+                }}
+
+                /// Deprecated alias for [`{name}::from_context`].
+                ///
+                /// # Safety
+                ///
+                /// Identical to [`{name}::from_context`]: the caller must guarantee
+                /// `simd128`, `relaxed-simd`, and single-rounding `f32x4`/`f64x2` fusion.
+                #[deprecated(
+                    since = "0.9.29",
+                    note = "Renamed to from_context() — requires unsafe proof for runtime-probed tiers"
+                )]
+                #[inline(always)]
+                pub unsafe fn forge_token_dangerously() -> Self {{
+                    // SAFETY: caller upholds Self::from_context()'s safety contract.
+                    unsafe {{ Self::from_context() }}
+                }}
+            }}
+        "#};
+    }
+
+    if token.arch == "wasm" {
+        let check_features: Vec<&str> = token.features.iter().map(|s| s.as_str()).collect();
+        let all_conditions = cfg_all_features(&check_features);
+        return formatdoc! {r#"
+
+            #[cfg(all(target_arch = "wasm32", {all_conditions}))]
+            impl {name} {{
+                /// Construct a {display} proof from the compile-time WASM target features.
+                ///
+                /// The required WASM features (`{features}`) are enabled at compile time,
+                /// so the engine validates instruction support at module load time and no
+                /// runtime detection is needed.
+                ///
+                /// # Safety
+                ///
+                /// When called through an `unsafe` block, the caller must ensure every
+                /// feature in this tier is available. Safe calls have that obligation
+                /// discharged by the compiler's `#[target_feature]` check.
+                #[inline]
+                #[target_feature(enable = "{features}")]
+                pub fn from_context() -> Self {{
+                    Self {{ _private: () }}
+                }}
+
+                /// Deprecated alias for [`{name}::from_context`].
+                ///
+                /// # Safety
+                ///
+                /// Identical to [`{name}::from_context`].
+                #[deprecated(
+                    since = "0.9.29",
+                    note = "Renamed to from_context() — the constructor is checked against the caller's target-feature context"
+                )]
+                #[inline]
+                #[target_feature(enable = "{features}")]
+                pub fn forge_token_dangerously() -> Self {{
+                    Self::from_context()
+                }}
+            }}
+
+            #[cfg(all(target_arch = "wasm32", not(all({all_conditions}))))]
+            impl {name} {{
+                /// Construct a {display} proof without compile-time feature validation.
+                ///
+                /// The required WASM features (`{features}`) are NOT compile-time enabled
+                /// in this build, so WebAssembly module load validation does not guarantee
+                /// them and [`SimdToken::summon`](crate::SimdToken::summon) returns `None`.
+                ///
+                /// # Safety
+                ///
+                /// The caller must guarantee every feature in `{features}` is supported
+                /// by the executing WASM engine. Constructing this token without engine
+                /// support is undefined behavior when executing instructions from this tier.
+                #[inline(always)]
+                pub unsafe fn from_context() -> Self {{
+                    Self {{ _private: () }}
+                }}
+
+                /// Deprecated alias for [`{name}::from_context`].
+                ///
+                /// # Safety
+                ///
+                /// Identical to [`{name}::from_context`].
+                #[deprecated(
+                    since = "0.9.29",
+                    note = "Renamed to from_context() — requires unsafe proof when target features are not enabled at compile time"
+                )]
+                #[inline(always)]
+                pub unsafe fn forge_token_dangerously() -> Self {{
+                    // SAFETY: caller upholds Self::from_context()'s safety contract.
+                    unsafe {{ Self::from_context() }}
+                }}
+            }}
+        "#};
+    }
+
+    let context_docs = "/// A safe call requires a caller whose `#[target_feature]` attribute\n    /// enables every feature of this tier; a superset is sufficient. Outside\n    /// such a context rustc requires an `unsafe` block at the call site.\n    ///\n    /// Features enabled globally (`-C target-feature`, `-C target-cpu`) do\n    /// not satisfy this — rustc requires them on the caller's own attribute.";
     formatdoc! {r#"
 
         impl {name} {{
@@ -707,7 +819,8 @@ fn gen_summon_wasm(token: &TokenDef) -> String {
             {INDENT}        match {cache_name}.load(Ordering::Relaxed) {{
             {INDENT}            // 2 is only ever stored by {detect_fn_name}() after confirming
             {INDENT}            // single-rounding f32x4 and f64x2 FMA fusion across all lanes.
-            {INDENT}            2 => Some(Self::from_context()),
+            {INDENT}            // SAFETY: cached value 2 guarantees {detect_fn_name}() succeeded.
+            {INDENT}            2 => Some(unsafe {{ Self::from_context() }}),
             {INDENT}            1 => None,
             {INDENT}            _ => {detect_fn_name}(),
             {INDENT}        }}
@@ -790,9 +903,9 @@ fn gen_summon_cold_wasm(token: &TokenDef) -> String {
                 Ordering::Relaxed,
             );
             if available && !{disabled_name}.load(Ordering::Relaxed) {{
-                // Runtime probe just confirmed single-rounding f32x4 and f64x2
+                // SAFETY: Runtime probe just confirmed single-rounding f32x4 and f64x2
                 // relaxed_madd fusion across all lanes on this engine.
-                Some({name}::from_context())
+                Some(unsafe {{ {name}::from_context() }})
             }} else {{
                 None
             }}
@@ -843,8 +956,9 @@ fn gen_extraction_methods(out: &mut String, reg: &Registry, token: &TokenDef) {
             .as_deref()
             .unwrap_or("MISSING_SHORT_NAME");
         let anc_display = ancestor.display_name.as_deref().unwrap_or(anc_name);
-        // wasm32 `#[target_feature]` functions are safe to call; an `unsafe`
-        // block there is reported as unused.
+        // On wasm32, sibling tokens live in the same module so direct struct
+        // construction avoids cfg-dependent `from_context()` unsafety and
+        // `unused_unsafe` warnings when extracting a weaker parent proof.
         let safe_wasm = token.arch == "wasm";
 
         let doc = formatdoc! {"
@@ -858,8 +972,10 @@ fn gen_extraction_methods(out: &mut String, reg: &Registry, token: &TokenDef) {
             formatdoc! {"
                 {INDENT}pub fn {short}(self) -> {anc_name} {{
                 {INDENT}    // Holding `self` proves {token_display}'s feature set, a superset
-                {INDENT}    // of {anc_display}'s; wasm32 target-feature calls are safe.
-                {INDENT}    {anc_name}::from_context()
+                {INDENT}    // of {anc_display}'s; constructing the parent proof directly avoids
+                {INDENT}    // cfg-conditional `from_context()` unsafety across wasm builds.
+                {INDENT}    let _ = self;
+                {INDENT}    {anc_name} {{ _private: () }}
                 {INDENT}}}
             "}
         } else {

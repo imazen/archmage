@@ -50,7 +50,7 @@ fn generate_cross_arch_parity() -> String {
         #[cfg(any(
             target_arch = "x86_64",
             target_arch = "aarch64",
-            all(target_arch = "wasm32", target_feature = "simd128")
+            target_arch = "wasm32"
         ))]
         macro_rules! w128_parity_suite {{
             ($token_ty:ty) => {{
@@ -551,7 +551,7 @@ fn generate_cross_arch_parity() -> String {
             w128_parity_suite!(archmage::NeonToken);
         }}
 
-        #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
+        #[cfg(target_arch = "wasm32")]
         mod wasm {{
             w128_parity_suite!(archmage::Wasm128Token);
         }}

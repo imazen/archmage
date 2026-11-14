@@ -228,7 +228,7 @@ impl I32x16DotI8 for archmage::NeonToken {
     }
 }
 
-#[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
+#[cfg(target_arch = "wasm32")]
 impl I32x4DotI8 for archmage::Wasm128Token {
     #[inline(always)]
     fn dot_i8_i7_add(
@@ -250,7 +250,7 @@ impl I32x4DotI8 for archmage::Wasm128Token {
     }
 }
 
-#[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
+#[cfg(target_arch = "wasm32")]
 impl I32x8DotI8 for archmage::Wasm128Token {
     #[inline(always)]
     fn dot_i8_i7_add(
@@ -266,7 +266,7 @@ impl I32x8DotI8 for archmage::Wasm128Token {
     }
 }
 
-#[cfg(all(target_arch = "wasm32", target_feature = "simd128", feature = "w512"))]
+#[cfg(all(target_arch = "wasm32", feature = "w512"))]
 impl I32x16DotI8 for archmage::Wasm128Token {
     #[inline(always)]
     fn dot_i8_i7_add(

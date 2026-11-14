@@ -280,7 +280,7 @@ impl F32x16ToU32 for archmage::NeonToken {
     }
 }
 
-#[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
+#[cfg(target_arch = "wasm32")]
 impl F32x4ToU32 for archmage::Wasm128Token {
     #[inline(always)]
     fn convert_f32_to_u32_fast(self, a: core::arch::wasm32::v128) -> core::arch::wasm32::v128 {
@@ -289,7 +289,7 @@ impl F32x4ToU32 for archmage::Wasm128Token {
     }
 }
 
-#[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
+#[cfg(target_arch = "wasm32")]
 impl F32x8ToU32 for archmage::Wasm128Token {
     #[inline(always)]
     fn convert_f32_to_u32_fast(
@@ -303,7 +303,7 @@ impl F32x8ToU32 for archmage::Wasm128Token {
     }
 }
 
-#[cfg(all(target_arch = "wasm32", target_feature = "simd128", feature = "w512"))]
+#[cfg(all(target_arch = "wasm32", feature = "w512"))]
 impl F32x16ToU32 for archmage::Wasm128Token {
     #[inline(always)]
     fn convert_f32_to_u32_fast(

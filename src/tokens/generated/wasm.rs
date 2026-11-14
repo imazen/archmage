@@ -80,29 +80,19 @@ impl SimdToken for Wasm128Token {
     }
 }
 
+#[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
 impl Wasm128Token {
-    /// Construct a WASM SIMD128 proof from the caller's statically proven
-    /// feature context.
+    /// Construct a WASM SIMD128 proof from the compile-time WASM target features.
     ///
-    /// Rust permits safe calls to `#[target_feature]` functions from any
-    /// WASM context: the engine validates the required instructions when the
-    /// module is loaded, so a module that runs at all has the features.
-    ///
-    /// No runtime detection happens here, so this also bypasses
-    /// process-wide token disabling (including `testable_dispatch`):
-    /// the caller's feature context is already the proof. Use
-    /// [`SimdToken::summon`](crate::SimdToken::summon) when the
-    /// features have to be detected at runtime.
-    ///
-    /// Being a `#[target_feature]` function, this cannot be coerced to
-    /// a safe function pointer — there would be no call site left for
-    /// rustc to check.
+    /// The required WASM features (`simd128`) are enabled at compile time,
+    /// so the engine validates instruction support at module load time and no
+    /// runtime detection is needed.
     ///
     /// # Safety
     ///
-    /// When called through an `unsafe` block, the caller must ensure
-    /// every feature in this tier is available on the executing CPU.
-    /// Safe calls have that obligation discharged by the compiler.
+    /// When called through an `unsafe` block, the caller must ensure every
+    /// feature in this tier is available. Safe calls have that obligation
+    /// discharged by the compiler's `#[target_feature]` check.
     #[inline]
     #[target_feature(enable = "simd128")]
     pub fn from_context() -> Self {
@@ -111,16 +101,9 @@ impl Wasm128Token {
 
     /// Deprecated alias for [`Wasm128Token::from_context`].
     ///
-    /// Identical in every respect — same `#[target_feature]` gate, same
-    /// safe-call rules. The name predates the compiler-checked design
-    /// and describes only the `unsafe` half of it.
-    ///
     /// # Safety
     ///
-    /// Identical to [`Wasm128Token::from_context`]: when called through an
-    /// `unsafe` block, the caller must ensure every feature in this
-    /// tier is available on the executing CPU. Safe calls have that
-    /// obligation discharged by the compiler.
+    /// Identical to [`Wasm128Token::from_context`].
     #[deprecated(
         since = "0.9.29",
         note = "Renamed to from_context() — the constructor is checked against the caller's target-feature context"
@@ -128,8 +111,41 @@ impl Wasm128Token {
     #[inline]
     #[target_feature(enable = "simd128")]
     pub fn forge_token_dangerously() -> Self {
-        // Matching features: a safe call inside the same region.
         Self::from_context()
+    }
+}
+
+#[cfg(all(target_arch = "wasm32", not(all(target_feature = "simd128"))))]
+impl Wasm128Token {
+    /// Construct a WASM SIMD128 proof without compile-time feature validation.
+    ///
+    /// The required WASM features (`simd128`) are NOT compile-time enabled
+    /// in this build, so WebAssembly module load validation does not guarantee
+    /// them and [`SimdToken::summon`](crate::SimdToken::summon) returns `None`.
+    ///
+    /// # Safety
+    ///
+    /// The caller must guarantee every feature in `simd128` is supported
+    /// by the executing WASM engine. Constructing this token without engine
+    /// support is undefined behavior when executing instructions from this tier.
+    #[inline(always)]
+    pub unsafe fn from_context() -> Self {
+        Self { _private: () }
+    }
+
+    /// Deprecated alias for [`Wasm128Token::from_context`].
+    ///
+    /// # Safety
+    ///
+    /// Identical to [`Wasm128Token::from_context`].
+    #[deprecated(
+        since = "0.9.29",
+        note = "Renamed to from_context() — requires unsafe proof when target features are not enabled at compile time"
+    )]
+    #[inline(always)]
+    pub unsafe fn forge_token_dangerously() -> Self {
+        // SAFETY: caller upholds Self::from_context()'s safety contract.
+        unsafe { Self::from_context() }
     }
 }
 
@@ -276,29 +292,23 @@ impl SimdToken for Wasm128RelaxedToken {
     }
 }
 
+#[cfg(all(
+    target_arch = "wasm32",
+    target_feature = "simd128",
+    target_feature = "relaxed-simd"
+))]
 impl Wasm128RelaxedToken {
-    /// Construct a WASM Relaxed SIMD proof from the caller's statically proven
-    /// feature context.
+    /// Construct a WASM Relaxed SIMD proof from the compile-time WASM target features.
     ///
-    /// Rust permits safe calls to `#[target_feature]` functions from any
-    /// WASM context: the engine validates the required instructions when the
-    /// module is loaded, so a module that runs at all has the features.
-    ///
-    /// No runtime detection happens here, so this also bypasses
-    /// process-wide token disabling (including `testable_dispatch`):
-    /// the caller's feature context is already the proof. Use
-    /// [`SimdToken::summon`](crate::SimdToken::summon) when the
-    /// features have to be detected at runtime.
-    ///
-    /// Being a `#[target_feature]` function, this cannot be coerced to
-    /// a safe function pointer — there would be no call site left for
-    /// rustc to check.
+    /// The required WASM features (`simd128,relaxed-simd`) are enabled at compile time,
+    /// so the engine validates instruction support at module load time and no
+    /// runtime detection is needed.
     ///
     /// # Safety
     ///
-    /// When called through an `unsafe` block, the caller must ensure
-    /// every feature in this tier is available on the executing CPU.
-    /// Safe calls have that obligation discharged by the compiler.
+    /// When called through an `unsafe` block, the caller must ensure every
+    /// feature in this tier is available. Safe calls have that obligation
+    /// discharged by the compiler's `#[target_feature]` check.
     #[inline]
     #[target_feature(enable = "simd128,relaxed-simd")]
     pub fn from_context() -> Self {
@@ -307,16 +317,9 @@ impl Wasm128RelaxedToken {
 
     /// Deprecated alias for [`Wasm128RelaxedToken::from_context`].
     ///
-    /// Identical in every respect — same `#[target_feature]` gate, same
-    /// safe-call rules. The name predates the compiler-checked design
-    /// and describes only the `unsafe` half of it.
-    ///
     /// # Safety
     ///
-    /// Identical to [`Wasm128RelaxedToken::from_context`]: when called through an
-    /// `unsafe` block, the caller must ensure every feature in this
-    /// tier is available on the executing CPU. Safe calls have that
-    /// obligation discharged by the compiler.
+    /// Identical to [`Wasm128RelaxedToken::from_context`].
     #[deprecated(
         since = "0.9.29",
         note = "Renamed to from_context() — the constructor is checked against the caller's target-feature context"
@@ -324,8 +327,44 @@ impl Wasm128RelaxedToken {
     #[inline]
     #[target_feature(enable = "simd128,relaxed-simd")]
     pub fn forge_token_dangerously() -> Self {
-        // Matching features: a safe call inside the same region.
         Self::from_context()
+    }
+}
+
+#[cfg(all(
+    target_arch = "wasm32",
+    not(all(target_feature = "simd128", target_feature = "relaxed-simd"))
+))]
+impl Wasm128RelaxedToken {
+    /// Construct a WASM Relaxed SIMD proof without compile-time feature validation.
+    ///
+    /// The required WASM features (`simd128,relaxed-simd`) are NOT compile-time enabled
+    /// in this build, so WebAssembly module load validation does not guarantee
+    /// them and [`SimdToken::summon`](crate::SimdToken::summon) returns `None`.
+    ///
+    /// # Safety
+    ///
+    /// The caller must guarantee every feature in `simd128,relaxed-simd` is supported
+    /// by the executing WASM engine. Constructing this token without engine
+    /// support is undefined behavior when executing instructions from this tier.
+    #[inline(always)]
+    pub unsafe fn from_context() -> Self {
+        Self { _private: () }
+    }
+
+    /// Deprecated alias for [`Wasm128RelaxedToken::from_context`].
+    ///
+    /// # Safety
+    ///
+    /// Identical to [`Wasm128RelaxedToken::from_context`].
+    #[deprecated(
+        since = "0.9.29",
+        note = "Renamed to from_context() — requires unsafe proof when target features are not enabled at compile time"
+    )]
+    #[inline(always)]
+    pub unsafe fn forge_token_dangerously() -> Self {
+        // SAFETY: caller upholds Self::from_context()'s safety contract.
+        unsafe { Self::from_context() }
     }
 }
 
@@ -336,8 +375,10 @@ impl Wasm128RelaxedToken {
     #[inline(always)]
     pub fn wasm128(self) -> Wasm128Token {
         // Holding `self` proves WASM Relaxed SIMD's feature set, a superset
-        // of WASM SIMD128's; wasm32 target-feature calls are safe.
-        Wasm128Token::from_context()
+        // of WASM SIMD128's; constructing the parent proof directly avoids
+        // cfg-conditional `from_context()` unsafety across wasm builds.
+        let _ = self;
+        Wasm128Token { _private: () }
     }
 }
 
@@ -463,7 +504,8 @@ impl SimdToken for Wasm128RelaxedFmaToken {
             match WASM128_RELAXED_FMA_CACHE.load(Ordering::Relaxed) {
                 // 2 is only ever stored by wasm128_relaxed_fma_detect() after confirming
                 // single-rounding f32x4 and f64x2 FMA fusion across all lanes.
-                2 => Some(Self::from_context()),
+                // SAFETY: cached value 2 guarantees wasm128_relaxed_fma_detect() succeeded.
+                2 => Some(unsafe { Self::from_context() }),
                 1 => None,
                 _ => wasm128_relaxed_fma_detect(),
             }
@@ -480,57 +522,39 @@ impl SimdToken for Wasm128RelaxedFmaToken {
 }
 
 impl Wasm128RelaxedFmaToken {
-    /// Construct a WASM Relaxed FMA proof from the caller's statically proven
-    /// feature context.
+    /// Construct a WASM Relaxed FMA proof asserting single-rounding FMA fusion.
     ///
-    /// Rust permits safe calls to `#[target_feature]` functions from any
-    /// WASM context. Inside an `#[attune(wasm128_relaxed_fma)]` region the
-    /// single-rounding FMA contract was already checked by the entry probe;
-    /// use [`SimdToken::summon`](crate::SimdToken::summon) at dispatch boundaries
-    /// to run and cache the runtime fusion probe.
-    ///
-    /// No runtime detection happens here, so this also bypasses
-    /// process-wide token disabling (including `testable_dispatch`):
-    /// the caller's feature context is already the proof. Use
-    /// [`SimdToken::summon`](crate::SimdToken::summon) when the
-    /// features have to be detected at runtime.
-    ///
-    /// Being a `#[target_feature]` function, this cannot be coerced to
-    /// a safe function pointer — there would be no call site left for
-    /// rustc to check.
+    /// Availability of this tier depends on a runtime fusion probe beyond
+    /// compile-time `#[target_feature]` validation (an engine supporting
+    /// `relaxed-simd` may still implement `relaxed_madd` with two roundings).
+    /// Always `unsafe`, even inside `+simd128,+relaxed-simd` contexts. Use
+    /// [`SimdToken::summon`](crate::SimdToken::summon) to run and cache the
+    /// runtime fusion probe safely.
     ///
     /// # Safety
     ///
-    /// When called through an `unsafe` block, the caller must ensure
-    /// every feature in this tier is available on the executing CPU.
-    /// Safe calls have that obligation discharged by the compiler.
-    #[inline]
-    #[target_feature(enable = "simd128,relaxed-simd")]
-    pub fn from_context() -> Self {
+    /// The caller must guarantee that `simd128` and `relaxed-simd` are
+    /// available AND that this execution engine fuses both `f32x4.relaxed_madd`
+    /// and `f64x2.relaxed_madd` with single rounding across all lanes.
+    #[inline(always)]
+    pub unsafe fn from_context() -> Self {
         Self { _private: () }
     }
 
     /// Deprecated alias for [`Wasm128RelaxedFmaToken::from_context`].
     ///
-    /// Identical in every respect — same `#[target_feature]` gate, same
-    /// safe-call rules. The name predates the compiler-checked design
-    /// and describes only the `unsafe` half of it.
-    ///
     /// # Safety
     ///
-    /// Identical to [`Wasm128RelaxedFmaToken::from_context`]: when called through an
-    /// `unsafe` block, the caller must ensure every feature in this
-    /// tier is available on the executing CPU. Safe calls have that
-    /// obligation discharged by the compiler.
+    /// Identical to [`Wasm128RelaxedFmaToken::from_context`]: the caller must guarantee
+    /// `simd128`, `relaxed-simd`, and single-rounding `f32x4`/`f64x2` fusion.
     #[deprecated(
         since = "0.9.29",
-        note = "Renamed to from_context() — the constructor is checked against the caller's target-feature context"
+        note = "Renamed to from_context() — requires unsafe proof for runtime-probed tiers"
     )]
-    #[inline]
-    #[target_feature(enable = "simd128,relaxed-simd")]
-    pub fn forge_token_dangerously() -> Self {
-        // Matching features: a safe call inside the same region.
-        Self::from_context()
+    #[inline(always)]
+    pub unsafe fn forge_token_dangerously() -> Self {
+        // SAFETY: caller upholds Self::from_context()'s safety contract.
+        unsafe { Self::from_context() }
     }
 }
 
@@ -541,8 +565,10 @@ impl Wasm128RelaxedFmaToken {
     #[inline(always)]
     pub fn wasm128_relaxed(self) -> Wasm128RelaxedToken {
         // Holding `self` proves WASM Relaxed FMA's feature set, a superset
-        // of WASM Relaxed SIMD's; wasm32 target-feature calls are safe.
-        Wasm128RelaxedToken::from_context()
+        // of WASM Relaxed SIMD's; constructing the parent proof directly avoids
+        // cfg-conditional `from_context()` unsafety across wasm builds.
+        let _ = self;
+        Wasm128RelaxedToken { _private: () }
     }
     /// Extract a Wasm128Token — guaranteed because WASM Relaxed FMA implies WASM SIMD128.
     ///
@@ -550,8 +576,10 @@ impl Wasm128RelaxedFmaToken {
     #[inline(always)]
     pub fn wasm128(self) -> Wasm128Token {
         // Holding `self` proves WASM Relaxed FMA's feature set, a superset
-        // of WASM SIMD128's; wasm32 target-feature calls are safe.
-        Wasm128Token::from_context()
+        // of WASM SIMD128's; constructing the parent proof directly avoids
+        // cfg-conditional `from_context()` unsafety across wasm builds.
+        let _ = self;
+        Wasm128Token { _private: () }
     }
 }
 
@@ -611,9 +639,9 @@ fn wasm128_relaxed_fma_detect() -> Option<Wasm128RelaxedFmaToken> {
         Ordering::Relaxed,
     );
     if available && !WASM128_RELAXED_FMA_DISABLED.load(Ordering::Relaxed) {
-        // Runtime probe just confirmed single-rounding f32x4 and f64x2
+        // SAFETY: Runtime probe just confirmed single-rounding f32x4 and f64x2
         // relaxed_madd fusion across all lanes on this engine.
-        Some(Wasm128RelaxedFmaToken::from_context())
+        Some(unsafe { Wasm128RelaxedFmaToken::from_context() })
     } else {
         None
     }

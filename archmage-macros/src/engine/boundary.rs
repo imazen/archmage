@@ -197,7 +197,6 @@ pub(crate) fn expand(
             crate::attune::call::Context {
                 features: &features,
                 target_arch,
-                tier_suffix: None,
             },
             Some(&input_fn.sig),
         );

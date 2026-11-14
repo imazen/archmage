@@ -14,20 +14,20 @@
 #   pub types (struct/enum/trait/alias)       120
 #   pub consts/statics                         18
 #   free functions                              4
-#   inherent methods                          222
+#   inherent methods                          216
 #   struct fields                              12
-#   enum variants                              51
+#   enum variants                              57
 #   re-exports                                 60
 #   trait roster entries (type × trait)       179
 #   auto-trait-complete types                  25
 #   auto-trait exceptions                       1
 #
 # per-module pub lines:
-#   (root)                          145
+#   (root)                          151
 #   intrinsics                       19
 #   prelude                          94
 #   testing                          13
-#   tokens                          222
+#   tokens                          216
 
 ## items (413 lines)
 
@@ -122,8 +122,8 @@ pub const fn tokens::ScalarToken::forge_token_dangerously() -> Self [also: (root
 pub const fn tokens::ScalarToken::from_context() -> Self [also: (root)]
 pub fn tokens::Wasm128RelaxedFmaToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
 pub fn tokens::Wasm128RelaxedFmaToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
-pub fn tokens::Wasm128RelaxedFmaToken::forge_token_dangerously() -> Self
-pub fn tokens::Wasm128RelaxedFmaToken::from_context() -> Self
+pub unsafe fn tokens::Wasm128RelaxedFmaToken::forge_token_dangerously() -> Self
+pub unsafe fn tokens::Wasm128RelaxedFmaToken::from_context() -> Self
 pub fn tokens::Wasm128RelaxedFmaToken::wasm128(self) -> tokens::Wasm128Token
 pub fn tokens::Wasm128RelaxedFmaToken::wasm128_relaxed(self) -> tokens::Wasm128RelaxedToken
 pub fn tokens::Wasm128RelaxedToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
@@ -235,8 +235,8 @@ pub fn tokens::ScalarToken::dangerously_disable_token_process_wide(bool) -> core
 pub fn tokens::ScalarToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
 pub fn tokens::Wasm128RelaxedFmaToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
 pub fn tokens::Wasm128RelaxedFmaToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
-pub fn tokens::Wasm128RelaxedFmaToken::forge_token_dangerously() -> Self
-pub fn tokens::Wasm128RelaxedFmaToken::from_context() -> Self
+pub unsafe fn tokens::Wasm128RelaxedFmaToken::forge_token_dangerously() -> Self
+pub unsafe fn tokens::Wasm128RelaxedFmaToken::from_context() -> Self
 pub fn tokens::Wasm128RelaxedFmaToken::wasm128(self) -> tokens::Wasm128Token
 pub fn tokens::Wasm128RelaxedFmaToken::wasm128_relaxed(self) -> tokens::Wasm128RelaxedToken
 pub fn tokens::Wasm128RelaxedToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
@@ -345,8 +345,8 @@ pub fn tokens::ScalarToken::manually_disabled() -> core::result::Result<bool, to
 pub struct Wasm128RelaxedFmaToken [also: prelude, tokens]
 pub fn tokens::Wasm128RelaxedFmaToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
 pub fn tokens::Wasm128RelaxedFmaToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
-pub fn tokens::Wasm128RelaxedFmaToken::forge_token_dangerously() -> Self
-pub fn tokens::Wasm128RelaxedFmaToken::from_context() -> Self
+pub unsafe fn tokens::Wasm128RelaxedFmaToken::forge_token_dangerously() -> Self
+pub unsafe fn tokens::Wasm128RelaxedFmaToken::from_context() -> Self
 pub fn tokens::Wasm128RelaxedFmaToken::wasm128(self) -> tokens::Wasm128Token
 pub fn tokens::Wasm128RelaxedFmaToken::wasm128_relaxed(self) -> tokens::Wasm128RelaxedToken
 pub struct Wasm128RelaxedToken [also: prelude, tokens]

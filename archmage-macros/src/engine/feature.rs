@@ -67,6 +67,36 @@ impl FeatureContext {
     }
 }
 
+/// Reject safe tokenless/wrong-token `#[attune]`/`#[rite]` functions on WASM
+/// tiers whose contract requires a runtime probe beyond `#[target_feature]`.
+pub(crate) fn runtime_probe_direct_error(
+    sig: &syn::Signature,
+    tier: &FeatureContext,
+) -> Option<syn::Error> {
+    if tier.target_arch != Some("wasm32") || matches!(sig.safety, syn::Safety::Unsafe(_)) {
+        return None;
+    }
+    let token_name = tier.token.as_deref()?;
+    if !crate::generated::token_requires_runtime_probe(token_name) {
+        return None;
+    }
+    let has_matching_token = crate::token_discovery::find_token_param(sig)
+        .is_some_and(|info| info.token_type_name.as_deref() == Some(token_name));
+    if has_matching_token {
+        return None;
+    }
+    let suffix = tier.suffix.unwrap_or(token_name);
+    Some(syn::Error::new_spanned(
+        &sig.ident,
+        format!(
+            "`{suffix}` requires a runtime fusion probe beyond compile-time `#[target_feature]`: \
+             take a `{token_name}` parameter (e.g., `#[attune(_*_t, +{suffix})]` or `fn {}(_: {token_name})`) \
+             or mark the function `unsafe fn`",
+            sig.ident
+        ),
+    ))
+}
+
 /// Emit one `#[target_feature]` + `#[inline]` function for `tier`, with
 /// imports, nested `incant!` rewriting, the bound assertion and the cfg guard.
 /// Both the single- and multi-tier forms go through here.
@@ -77,6 +107,9 @@ pub(crate) fn emit(
     preserve_inline: bool,
     tier: FeatureContext,
 ) -> Result<TokenStream, TokenStream> {
+    if let Some(err) = runtime_probe_direct_error(&variant_fn.sig, &tier) {
+        return Err(err.to_compile_error());
+    }
     let token_desc = tier.token.as_deref().unwrap_or("an AVX-512 token");
     if let Some(err) = avx512_import_error(
         &variant_fn.sig,
@@ -124,7 +157,6 @@ pub(crate) fn emit(
             crate::attune::call::Context {
                 features: &tier.features,
                 target_arch: tier.target_arch,
-                tier_suffix: None,
             },
             Some(&variant_fn.sig),
         );

@@ -152,7 +152,7 @@ const TOKEN_CONFIGS: &[TokenConfig] = &[
     },
     TokenConfig {
         token: "Wasm128Token",
-        cfg: "all(target_arch = \"wasm32\", target_feature = \"simd128\")",
+        cfg: "target_arch = \"wasm32\"",
         mod_name: "wasm_impl",
         native_width: 128,
         poly_w256: Some("crate::simd::wasm128"),

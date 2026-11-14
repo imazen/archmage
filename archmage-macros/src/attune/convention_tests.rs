@@ -403,34 +403,91 @@ fn suppress_const_test_controls_token_assertion_on_proof_boundaries() {
 
 #[test]
 fn define_maps_subtiers_to_representation_backend_tokens() {
-    for (attr, expected_backend, expected_feature) in [
-        (quote!(v3_vnni, define(f32x8)), "X64V3Token", "avxvnni"),
-        (quote!(v3_crypto, define(f32x8)), "X64V3Token", "vaes"),
-        (quote!(arm_v2, define(f32x4)), "NeonToken", "dotprod"),
-        (quote!(arm_v3, define(f32x4)), "NeonToken", "i8mm"),
+    for (attr, body, expected_backend, expected_feature) in [
         (
-            quote!(wasm128_relaxed, define(f32x4)),
-            "Wasm128Token",
-            "relaxed-simd",
-        ),
-        (
-            quote!(wasm128_relaxed_fma, define(f32x4)),
-            "Wasm128RelaxedFmaToken",
-            "relaxed-simd",
-        ),
-        (quote!(fp16, define(f32x16)), "X64V4Token", "avx512fp16"),
-        (quote!(v4x, define(f32x16)), "X64V4xToken", "avx512vnni"),
-    ] {
-        let text = super::expand(
-            attr,
+            quote!(v3_vnni, define(f32x8)),
             quote!(
                 fn kernel(x: f32) -> f32 {
                     x
                 }
             ),
-        )
-        .unwrap()
-        .to_string();
+            "X64V3Token",
+            "avxvnni",
+        ),
+        (
+            quote!(v3_crypto, define(f32x8)),
+            quote!(
+                fn kernel(x: f32) -> f32 {
+                    x
+                }
+            ),
+            "X64V3Token",
+            "vaes",
+        ),
+        (
+            quote!(arm_v2, define(f32x4)),
+            quote!(
+                fn kernel(x: f32) -> f32 {
+                    x
+                }
+            ),
+            "NeonToken",
+            "dotprod",
+        ),
+        (
+            quote!(arm_v3, define(f32x4)),
+            quote!(
+                fn kernel(x: f32) -> f32 {
+                    x
+                }
+            ),
+            "NeonToken",
+            "i8mm",
+        ),
+        (
+            quote!(wasm128_relaxed, define(f32x4)),
+            quote!(
+                fn kernel(x: f32) -> f32 {
+                    x
+                }
+            ),
+            "Wasm128Token",
+            "relaxed-simd",
+        ),
+        (
+            // Direct tokenless `wasm128_relaxed_fma` requires `unsafe fn` because
+            // single-rounding FMA needs the runtime probe beyond `#[target_feature]`.
+            quote!(wasm128_relaxed_fma, define(f32x4)),
+            quote!(
+                unsafe fn kernel(x: f32) -> f32 {
+                    x
+                }
+            ),
+            "Wasm128RelaxedFmaToken",
+            "relaxed-simd",
+        ),
+        (
+            quote!(fp16, define(f32x16)),
+            quote!(
+                fn kernel(x: f32) -> f32 {
+                    x
+                }
+            ),
+            "X64V4Token",
+            "avx512fp16",
+        ),
+        (
+            quote!(v4x, define(f32x16)),
+            quote!(
+                fn kernel(x: f32) -> f32 {
+                    x
+                }
+            ),
+            "X64V4xToken",
+            "avx512vnni",
+        ),
+    ] {
+        let text = super::expand(attr, body).unwrap().to_string();
         assert!(
             text.contains(expected_backend),
             "expected {expected_backend} in {text}"
@@ -495,12 +552,27 @@ fn runtime_probed_wasm_fma_is_not_covered_by_relaxed_feature_context() {
     assert!(text.contains("callee_wasm128_relaxed"), "{text}");
     assert!(!text.contains("callee_wasm128_relaxed_fma"), "{text}");
 
-    // Inside `#[attune(wasm128_relaxed_fma)]`, contextual `attuned!` DOES cover
-    // `wasm128_relaxed_fma` directly without re-probing.
-    let fma_text = super::expand(
+    // Safe tokenless `#[attune(wasm128_relaxed_fma)]` is rejected because
+    // single-rounding FMA cannot be verified from compile-time #[target_feature].
+    assert!(
+        super::expand(
+            quote!(wasm128_relaxed_fma),
+            quote!(
+                fn caller(x: f32) -> f32 {
+                    attuned!(callee(x), [wasm128_relaxed_fma, wasm128_relaxed, scalar])
+                }
+            ),
+        )
+        .is_err()
+    );
+
+    // Inside tokenless `#[attune(wasm128_relaxed_fma)] unsafe fn`, contextual
+    // `attuned!` still refuses static promotion to `wasm128_relaxed_fma`
+    // without a token proof, falling back to statically-known `wasm128_relaxed`.
+    let unsafe_tokenless_text = super::expand(
         quote!(wasm128_relaxed_fma),
         quote!(
-            fn caller(x: f32) -> f32 {
+            unsafe fn caller(x: f32) -> f32 {
                 attuned!(callee(x), [wasm128_relaxed_fma, wasm128_relaxed, scalar])
             }
         ),
@@ -508,24 +580,71 @@ fn runtime_probed_wasm_fma_is_not_covered_by_relaxed_feature_context() {
     .unwrap()
     .to_string();
     assert!(
-        fma_text.contains("callee_wasm128_relaxed_fma"),
-        "{fma_text}"
+        unsafe_tokenless_text.contains("callee_wasm128_relaxed"),
+        "{unsafe_tokenless_text}"
     );
-    assert!(!fma_text.contains("summon"), "{fma_text}");
     assert!(
-        fma_text.contains("target_feature = \"simd128\"")
-            && fma_text.contains("target_feature = \"relaxed-simd\""),
-        "{fma_text}"
+        !unsafe_tokenless_text.contains("callee_wasm128_relaxed_fma"),
+        "{unsafe_tokenless_text}"
+    );
+
+    // Holding a summoned concrete `Wasm128RelaxedFmaToken` proof in `#[attune(wrap)]`
+    // forwards the runtime-probed proof without re-summoning or calling from_context().
+    let wrapped_fma_text = super::expand(
+        quote!(wrap),
+        quote!(
+            fn caller(tok: Wasm128RelaxedFmaToken, x: f32) -> f32 {
+                attuned!(callee(x), [wasm128_relaxed_fma, wasm128_relaxed, scalar])
+            }
+        ),
+    )
+    .unwrap()
+    .to_string();
+    assert!(
+        wrapped_fma_text.contains("callee_wasm128_relaxed_fma_t"),
+        "{wrapped_fma_text}"
+    );
+    assert!(!wrapped_fma_text.contains("summon"), "{wrapped_fma_text}");
+    assert!(
+        !wrapped_fma_text.contains("from_context"),
+        "{wrapped_fma_text}"
+    );
+    assert!(
+        wrapped_fma_text.contains("target_feature = \"simd128\"")
+            && wrapped_fma_text.contains("target_feature = \"relaxed-simd\""),
+        "{wrapped_fma_text}"
     );
 }
 
 #[test]
 fn wasm_items_and_dispatch_arms_gate_on_compile_time_target_features_while_scalar_always_exists() {
+    // Requesting a safe tokenless `Form::Direct` for `wasm128_relaxed_fma` is rejected.
+    assert!(
+        super::expand(
+            quote!(
+                _wasm128,
+                _wasm128_relaxed,
+                _wasm128_relaxed_fma,
+                _scalar,
+                dispatch
+            ),
+            quote!(
+                pub fn kernel(x: f32) -> f32 {
+                    x
+                }
+            ),
+        )
+        .is_err()
+    );
+
+    // Proof-based `_wasm128_relaxed_fma_t` + `dispatch` injects a hidden
+    // `Wasm128RelaxedFmaToken` parameter into the inner implementation so it stays
+    // completely safe (compatible with `#![forbid(unsafe_code)]`).
     let family = super::expand(
         quote!(
             _wasm128,
             _wasm128_relaxed,
-            _wasm128_relaxed_fma,
+            _wasm128_relaxed_fma_t,
             _scalar,
             dispatch
         ),
@@ -537,6 +656,10 @@ fn wasm_items_and_dispatch_arms_gate_on_compile_time_target_features_while_scala
     )
     .unwrap()
     .to_string();
+    assert!(
+        !family.contains("unsafe"),
+        "expected safe expansion: {family}"
+    );
     let fns = syn::parse2::<syn::File>(family.parse().unwrap())
         .unwrap()
         .items;
@@ -560,7 +683,11 @@ fn wasm_items_and_dispatch_arms_gate_on_compile_time_target_features_while_scala
     );
     assert!(!wasm128_attrs.contains("relaxed-simd"), "{wasm128_attrs}");
 
-    for relaxed_name in ["kernel_wasm128_relaxed", "kernel_wasm128_relaxed_fma"] {
+    for relaxed_name in [
+        "kernel_wasm128_relaxed",
+        "__attune_kernel_wasm128_relaxed_fma",
+        "kernel_wasm128_relaxed_fma_t",
+    ] {
         let attrs = find_fn(relaxed_name)
             .attrs
             .iter()
@@ -583,5 +710,36 @@ fn wasm_items_and_dispatch_arms_gate_on_compile_time_target_features_while_scala
     assert!(
         !scalar_attrs.contains("cfg"),
         "scalar must always exist: {scalar_attrs}"
+    );
+
+    // An `unsafe fn` family allows tokenless `_wasm128_relaxed_fma` and wraps
+    // wrapper/dispatcher forwarding calls in `unsafe { ... }`.
+    let unsafe_family = super::expand(
+        quote!(
+            _wasm128,
+            _wasm128_relaxed,
+            _wasm128_relaxed_fma,
+            _scalar,
+            dispatch
+        ),
+        quote!(
+            pub unsafe fn kernel(x: f32) -> f32 {
+                x
+            }
+        ),
+    )
+    .unwrap()
+    .to_string();
+    assert!(
+        unsafe_family.contains("kernel_wasm128_relaxed_fma"),
+        "{unsafe_family}"
+    );
+    let dispatcher_tokens = unsafe_family
+        .rsplit("pub unsafe fn kernel (x : f32)")
+        .next()
+        .unwrap_or(&unsafe_family);
+    assert!(
+        dispatcher_tokens.contains("unsafe {"),
+        "unsafe dispatcher must wrap unsafe proof wrapper calls: {unsafe_family}"
     );
 }

@@ -41,7 +41,7 @@ fn file_header() -> String {
             not(any(
                 target_arch = "x86_64",
                 target_arch = "aarch64",
-                all(target_arch = "wasm32", target_feature = "simd128")
+                target_arch = "wasm32"
             )),
             allow(dead_code, unused_macros)
         )]
@@ -1041,7 +1041,7 @@ fn cfg_gated_invocations() -> String {
             scalar_vs_native!(archmage::NeonToken);
         }}
 
-        #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
+        #[cfg(target_arch = "wasm32")]
         mod wasm {{
             scalar_vs_native!(archmage::Wasm128Token);
         }}

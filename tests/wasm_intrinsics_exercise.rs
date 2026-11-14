@@ -16,6 +16,7 @@ use core::hint::black_box;
 
 #[test]
 fn test_wasm128_intrinsics() {
+    exercise_integer_arithmetic(Wasm128Token::from_context());
     if let Some(token) = Wasm128Token::summon() {
         exercise_integer_arithmetic(token);
         exercise_float_arithmetic(token);
@@ -481,8 +482,12 @@ mod relaxed_simd_intrinsics {
         let token = Wasm128RelaxedToken::summon()
             .expect("Wasm128RelaxedToken must summon when +simd128,+relaxed-simd are enabled");
         exercise_all_relaxed_simd_intrinsics(token);
+        exercise_all_relaxed_simd_intrinsics(Wasm128RelaxedToken::from_context());
         if let Some(fma_token) = Wasm128RelaxedFmaToken::summon() {
             exercise_relaxed_fma_single_rounding(fma_token);
+            // SAFETY: `Wasm128RelaxedFmaToken::summon()` just verified runtime fusion.
+            let from_ctx = unsafe { Wasm128RelaxedFmaToken::from_context() };
+            exercise_relaxed_fma_single_rounding(from_ctx);
         }
     }
 

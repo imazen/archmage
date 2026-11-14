@@ -178,9 +178,31 @@ fn validate_summon(reg: &registry::Registry) -> Result<()> {
 
             // Handle special cases before parsing
             if *arch == "wasm" {
+                let impl_header = format!("impl {token_name} {{");
+                let ctor_block = content
+                    .match_indices(&impl_header)
+                    .filter_map(|(pos, _)| {
+                        let rest = &content[pos..];
+                        let end = rest.find("\n}\n").map(|i| i + 3).unwrap_or(rest.len());
+                        let block = &rest[..end];
+                        block.contains("fn from_context(").then_some(block)
+                    })
+                    .collect::<Vec<_>>()
+                    .join("\n");
+
                 if token_def.runtime_probe {
-                    let detect_fn = "fn wasm128_relaxed_fma_detect()";
-                    let has_detect = content.contains(detect_fn);
+                    let detect_name = crate::token_gen::lower_snake(&token_def.name, "detect");
+                    let detect_fn = format!("fn {detect_name}()");
+                    let detect_call = format!("{detect_name}()");
+                    let impl_start = cap.get(0).unwrap().start();
+                    let remaining = &content[impl_start..];
+                    let summon_end = remaining[1..]
+                        .find("\nimpl ")
+                        .unwrap_or(remaining.len() - 1);
+                    let summon_region = &remaining[..summon_end + 1];
+
+                    let has_detect =
+                        content.contains(&detect_fn) && summon_region.contains(&detect_call);
                     let has_f32 = content.contains("f32x4_relaxed_madd")
                         && content.contains("f32x4_extract_lane::<0>")
                         && content.contains("f32x4_extract_lane::<1>")
@@ -189,25 +211,39 @@ fn validate_summon(reg: &registry::Registry) -> Result<()> {
                     let has_f64 = content.contains("f64x2_relaxed_madd")
                         && content.contains("f64x2_extract_lane::<0>")
                         && content.contains("f64x2_extract_lane::<1>");
-                    if has_detect && has_f32 && has_f64 {
+                    let has_unsafe_ctors = ctor_block.contains("pub unsafe fn from_context()")
+                        && ctor_block.contains("pub unsafe fn forge_token_dangerously()")
+                        && !ctor_block.contains("pub fn from_context()")
+                        && !ctor_block.contains("pub fn forge_token_dangerously()");
+                    if has_detect && has_f32 && has_f64 && has_unsafe_ctors {
                         println!(
-                            "  {} — WASM runtime fusion probe verified (f32x4 4-lane + f64x2 2-lane)",
+                            "  {} — WASM runtime fusion probe + unsafe from_context verified ({detect_fn})",
                             token_name
                         );
                         verified += 1;
                     } else {
                         errors.push(format!(
-                            "{}: wasm.rs missing complete runtime fusion probe (detect={has_detect}, f32={has_f32}, f64={has_f64})",
+                            "{}: wasm.rs missing complete runtime fusion probe or unsafe ctors (detect={has_detect}, f32={has_f32}, f64={has_f64}, unsafe_ctors={has_unsafe_ctors})",
                             token_name
                         ));
                     }
                 } else {
-                    // Wasm128Token / Wasm128RelaxedToken use #[cfg(target_feature)], not runtime detection
-                    println!(
-                        "  {} — compile-time cfg check (no runtime detection)",
-                        token_name
-                    );
-                    verified += 1;
+                    let has_safe_ctors = ctor_block.contains("pub fn from_context()")
+                        && ctor_block.contains("pub fn forge_token_dangerously()");
+                    let has_unsafe_ctors = ctor_block.contains("pub unsafe fn from_context()")
+                        && ctor_block.contains("pub unsafe fn forge_token_dangerously()");
+                    if has_safe_ctors && has_unsafe_ctors {
+                        println!(
+                            "  {} — cfg-gated compile-time check (safe with features, unsafe fallback without)",
+                            token_name
+                        );
+                        verified += 1;
+                    } else {
+                        errors.push(format!(
+                            "{}: wasm.rs missing cfg-split from_context/forge_token_dangerously (safe={has_safe_ctors}, unsafe={has_unsafe_ctors})",
+                            token_name
+                        ));
+                    }
                 }
                 continue;
             }

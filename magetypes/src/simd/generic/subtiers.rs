@@ -199,10 +199,10 @@ mod arm_magetypes_tokens {
     }
 }
 
-#[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
+#[cfg(target_arch = "wasm32")]
 mod wasm_magetypes_tokens {
     use super::{MagetypesToken, magetypes_token_sealed::Sealed};
-    use archmage::Wasm128Token;
+    use archmage::{Wasm128RelaxedToken, Wasm128Token};
 
     impl Sealed for Wasm128Token {}
     impl MagetypesToken for Wasm128Token {
@@ -214,20 +214,20 @@ mod wasm_magetypes_tokens {
         }
     }
 
-    #[cfg(target_feature = "relaxed-simd")]
-    mod relaxed_tokens {
-        use super::{MagetypesToken, Sealed, Wasm128Token};
-        use archmage::{Wasm128RelaxedFmaToken, Wasm128RelaxedToken};
+    impl Sealed for Wasm128RelaxedToken {}
+    impl MagetypesToken for Wasm128RelaxedToken {
+        type MagetypesBackend = Wasm128Token;
 
-        impl Sealed for Wasm128RelaxedToken {}
-        impl MagetypesToken for Wasm128RelaxedToken {
-            type MagetypesBackend = Wasm128Token;
-
-            #[inline(always)]
-            fn magetypes(self) -> Self::MagetypesBackend {
-                self.wasm128()
-            }
+        #[inline(always)]
+        fn magetypes(self) -> Self::MagetypesBackend {
+            self.wasm128()
         }
+    }
+
+    #[cfg(all(target_feature = "simd128", target_feature = "relaxed-simd"))]
+    mod relaxed_tokens {
+        use super::{MagetypesToken, Sealed};
+        use archmage::Wasm128RelaxedFmaToken;
 
         impl Sealed for Wasm128RelaxedFmaToken {}
         impl MagetypesToken for Wasm128RelaxedFmaToken {

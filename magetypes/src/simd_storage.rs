@@ -92,7 +92,7 @@ const _: () = {
     );
 };
 
-#[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
+#[cfg(target_arch = "wasm32")]
 const _: () = {
     // v128 is exactly 16 initialized bytes, accepts every bit pattern, and
     // contains no pointers. Arrays of v128 have no inter-element padding.
@@ -316,7 +316,7 @@ pub(crate) fn cast<Src: Pod, Dst: Pod>(src: Src) -> Dst {
     not(any(
         target_arch = "x86_64",
         target_arch = "aarch64",
-        all(target_arch = "wasm32", target_feature = "simd128")
+        target_arch = "wasm32"
     )),
     allow(dead_code)
 )]
@@ -825,7 +825,7 @@ mod tests {
         assert_eq!(cast::<_, [u32; 4]>(halves), lanes);
     }
 
-    #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
+    #[cfg(target_arch = "wasm32")]
     #[test]
     fn wasm_vectors_preserve_bits_order_and_unaligned_destinations() {
         use core::arch::wasm32::v128;

@@ -151,6 +151,8 @@ fn public_api_surface_docs_are_current() {
                 "CARGO_TARGET_WASM32_WASIP1_RUSTFLAGS",
                 "-Ctarget-feature=+simd128,+relaxed-simd",
             );
+            // `cargo rustdoc` reads `RUSTDOCFLAGS` rather than `CARGO_TARGET_*_RUSTFLAGS`.
+            cmd.env("RUSTDOCFLAGS", "-Ctarget-feature=+simd128,+relaxed-simd");
         }
         let st = cmd
             .status()

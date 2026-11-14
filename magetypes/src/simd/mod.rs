@@ -220,140 +220,140 @@ mod _type_aliases {
     #[cfg(not(any(
         target_arch = "x86_64",
         target_arch = "aarch64",
-        all(target_arch = "wasm32", target_feature = "simd128")
+        target_arch = "wasm32"
     )))]
     pub type f32x4 = super::generic::f32x4<archmage::ScalarToken>;
     /// 8-lane f32 vector (scalar fallback, array math).
     #[cfg(not(any(
         target_arch = "x86_64",
         target_arch = "aarch64",
-        all(target_arch = "wasm32", target_feature = "simd128")
+        target_arch = "wasm32"
     )))]
     pub type f32x8 = super::generic::f32x8<archmage::ScalarToken>;
     /// 2-lane f64 vector (scalar fallback, array math).
     #[cfg(not(any(
         target_arch = "x86_64",
         target_arch = "aarch64",
-        all(target_arch = "wasm32", target_feature = "simd128")
+        target_arch = "wasm32"
     )))]
     pub type f64x2 = super::generic::f64x2<archmage::ScalarToken>;
     /// 4-lane f64 vector (scalar fallback, array math).
     #[cfg(not(any(
         target_arch = "x86_64",
         target_arch = "aarch64",
-        all(target_arch = "wasm32", target_feature = "simd128")
+        target_arch = "wasm32"
     )))]
     pub type f64x4 = super::generic::f64x4<archmage::ScalarToken>;
     /// 4-lane i32 vector (scalar fallback, array math).
     #[cfg(not(any(
         target_arch = "x86_64",
         target_arch = "aarch64",
-        all(target_arch = "wasm32", target_feature = "simd128")
+        target_arch = "wasm32"
     )))]
     pub type i32x4 = super::generic::i32x4<archmage::ScalarToken>;
     /// 8-lane i32 vector (scalar fallback, array math).
     #[cfg(not(any(
         target_arch = "x86_64",
         target_arch = "aarch64",
-        all(target_arch = "wasm32", target_feature = "simd128")
+        target_arch = "wasm32"
     )))]
     pub type i32x8 = super::generic::i32x8<archmage::ScalarToken>;
     /// 4-lane u32 vector (scalar fallback, array math).
     #[cfg(not(any(
         target_arch = "x86_64",
         target_arch = "aarch64",
-        all(target_arch = "wasm32", target_feature = "simd128")
+        target_arch = "wasm32"
     )))]
     pub type u32x4 = super::generic::u32x4<archmage::ScalarToken>;
     /// 8-lane u32 vector (scalar fallback, array math).
     #[cfg(not(any(
         target_arch = "x86_64",
         target_arch = "aarch64",
-        all(target_arch = "wasm32", target_feature = "simd128")
+        target_arch = "wasm32"
     )))]
     pub type u32x8 = super::generic::u32x8<archmage::ScalarToken>;
     /// 2-lane i64 vector (scalar fallback, array math).
     #[cfg(not(any(
         target_arch = "x86_64",
         target_arch = "aarch64",
-        all(target_arch = "wasm32", target_feature = "simd128")
+        target_arch = "wasm32"
     )))]
     pub type i64x2 = super::generic::i64x2<archmage::ScalarToken>;
     /// 4-lane i64 vector (scalar fallback, array math).
     #[cfg(not(any(
         target_arch = "x86_64",
         target_arch = "aarch64",
-        all(target_arch = "wasm32", target_feature = "simd128")
+        target_arch = "wasm32"
     )))]
     pub type i64x4 = super::generic::i64x4<archmage::ScalarToken>;
     /// 16-lane i8 vector (scalar fallback, array math).
     #[cfg(not(any(
         target_arch = "x86_64",
         target_arch = "aarch64",
-        all(target_arch = "wasm32", target_feature = "simd128")
+        target_arch = "wasm32"
     )))]
     pub type i8x16 = super::generic::i8x16<archmage::ScalarToken>;
     /// 32-lane i8 vector (scalar fallback, array math).
     #[cfg(not(any(
         target_arch = "x86_64",
         target_arch = "aarch64",
-        all(target_arch = "wasm32", target_feature = "simd128")
+        target_arch = "wasm32"
     )))]
     pub type i8x32 = super::generic::i8x32<archmage::ScalarToken>;
     /// 16-lane u8 vector (scalar fallback, array math).
     #[cfg(not(any(
         target_arch = "x86_64",
         target_arch = "aarch64",
-        all(target_arch = "wasm32", target_feature = "simd128")
+        target_arch = "wasm32"
     )))]
     pub type u8x16 = super::generic::u8x16<archmage::ScalarToken>;
     /// 32-lane u8 vector (scalar fallback, array math).
     #[cfg(not(any(
         target_arch = "x86_64",
         target_arch = "aarch64",
-        all(target_arch = "wasm32", target_feature = "simd128")
+        target_arch = "wasm32"
     )))]
     pub type u8x32 = super::generic::u8x32<archmage::ScalarToken>;
     /// 8-lane i16 vector (scalar fallback, array math).
     #[cfg(not(any(
         target_arch = "x86_64",
         target_arch = "aarch64",
-        all(target_arch = "wasm32", target_feature = "simd128")
+        target_arch = "wasm32"
     )))]
     pub type i16x8 = super::generic::i16x8<archmage::ScalarToken>;
     /// 16-lane i16 vector (scalar fallback, array math).
     #[cfg(not(any(
         target_arch = "x86_64",
         target_arch = "aarch64",
-        all(target_arch = "wasm32", target_feature = "simd128")
+        target_arch = "wasm32"
     )))]
     pub type i16x16 = super::generic::i16x16<archmage::ScalarToken>;
     /// 8-lane u16 vector (scalar fallback, array math).
     #[cfg(not(any(
         target_arch = "x86_64",
         target_arch = "aarch64",
-        all(target_arch = "wasm32", target_feature = "simd128")
+        target_arch = "wasm32"
     )))]
     pub type u16x8 = super::generic::u16x8<archmage::ScalarToken>;
     /// 16-lane u16 vector (scalar fallback, array math).
     #[cfg(not(any(
         target_arch = "x86_64",
         target_arch = "aarch64",
-        all(target_arch = "wasm32", target_feature = "simd128")
+        target_arch = "wasm32"
     )))]
     pub type u16x16 = super::generic::u16x16<archmage::ScalarToken>;
     /// 2-lane u64 vector (scalar fallback, array math).
     #[cfg(not(any(
         target_arch = "x86_64",
         target_arch = "aarch64",
-        all(target_arch = "wasm32", target_feature = "simd128")
+        target_arch = "wasm32"
     )))]
     pub type u64x2 = super::generic::u64x2<archmage::ScalarToken>;
     /// 4-lane u64 vector (scalar fallback, array math).
     #[cfg(not(any(
         target_arch = "x86_64",
         target_arch = "aarch64",
-        all(target_arch = "wasm32", target_feature = "simd128")
+        target_arch = "wasm32"
     )))]
     pub type u64x4 = super::generic::u64x4<archmage::ScalarToken>;
 
@@ -364,7 +364,7 @@ mod _type_aliases {
         not(any(
             target_arch = "x86_64",
             target_arch = "aarch64",
-            all(target_arch = "wasm32", target_feature = "simd128")
+            target_arch = "wasm32"
         )),
         feature = "w512"
     ))]
@@ -374,7 +374,7 @@ mod _type_aliases {
         not(any(
             target_arch = "x86_64",
             target_arch = "aarch64",
-            all(target_arch = "wasm32", target_feature = "simd128")
+            target_arch = "wasm32"
         )),
         feature = "w512"
     ))]
@@ -384,7 +384,7 @@ mod _type_aliases {
         not(any(
             target_arch = "x86_64",
             target_arch = "aarch64",
-            all(target_arch = "wasm32", target_feature = "simd128")
+            target_arch = "wasm32"
         )),
         feature = "w512"
     ))]
@@ -394,7 +394,7 @@ mod _type_aliases {
         not(any(
             target_arch = "x86_64",
             target_arch = "aarch64",
-            all(target_arch = "wasm32", target_feature = "simd128")
+            target_arch = "wasm32"
         )),
         feature = "w512"
     ))]
@@ -404,7 +404,7 @@ mod _type_aliases {
         not(any(
             target_arch = "x86_64",
             target_arch = "aarch64",
-            all(target_arch = "wasm32", target_feature = "simd128")
+            target_arch = "wasm32"
         )),
         feature = "w512"
     ))]
@@ -414,7 +414,7 @@ mod _type_aliases {
         not(any(
             target_arch = "x86_64",
             target_arch = "aarch64",
-            all(target_arch = "wasm32", target_feature = "simd128")
+            target_arch = "wasm32"
         )),
         feature = "w512"
     ))]
@@ -424,7 +424,7 @@ mod _type_aliases {
         not(any(
             target_arch = "x86_64",
             target_arch = "aarch64",
-            all(target_arch = "wasm32", target_feature = "simd128")
+            target_arch = "wasm32"
         )),
         feature = "w512"
     ))]
@@ -434,7 +434,7 @@ mod _type_aliases {
         not(any(
             target_arch = "x86_64",
             target_arch = "aarch64",
-            all(target_arch = "wasm32", target_feature = "simd128")
+            target_arch = "wasm32"
         )),
         feature = "w512"
     ))]
@@ -444,7 +444,7 @@ mod _type_aliases {
         not(any(
             target_arch = "x86_64",
             target_arch = "aarch64",
-            all(target_arch = "wasm32", target_feature = "simd128")
+            target_arch = "wasm32"
         )),
         feature = "w512"
     ))]
@@ -454,7 +454,7 @@ mod _type_aliases {
         not(any(
             target_arch = "x86_64",
             target_arch = "aarch64",
-            all(target_arch = "wasm32", target_feature = "simd128")
+            target_arch = "wasm32"
         )),
         feature = "w512"
     ))]
@@ -556,94 +556,94 @@ mod _type_aliases {
 
     // ======== wasm32 (Wasm128Token natural width) ========
     /// 4-lane f32 SIMD vector (WASM SIMD128-backed).
-    #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
+    #[cfg(target_arch = "wasm32")]
     pub type f32x4 = super::generic::f32x4<archmage::Wasm128Token>;
     /// 8-lane f32 SIMD vector (WASM SIMD128-backed).
-    #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
+    #[cfg(target_arch = "wasm32")]
     pub type f32x8 = super::generic::f32x8<archmage::Wasm128Token>;
     /// 2-lane f64 SIMD vector (WASM SIMD128-backed).
-    #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
+    #[cfg(target_arch = "wasm32")]
     pub type f64x2 = super::generic::f64x2<archmage::Wasm128Token>;
     /// 4-lane f64 SIMD vector (WASM SIMD128-backed).
-    #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
+    #[cfg(target_arch = "wasm32")]
     pub type f64x4 = super::generic::f64x4<archmage::Wasm128Token>;
     /// 16-lane i8 SIMD vector (WASM SIMD128-backed).
-    #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
+    #[cfg(target_arch = "wasm32")]
     pub type i8x16 = super::generic::i8x16<archmage::Wasm128Token>;
     /// 32-lane i8 SIMD vector (WASM SIMD128-backed).
-    #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
+    #[cfg(target_arch = "wasm32")]
     pub type i8x32 = super::generic::i8x32<archmage::Wasm128Token>;
     /// 16-lane u8 SIMD vector (WASM SIMD128-backed).
-    #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
+    #[cfg(target_arch = "wasm32")]
     pub type u8x16 = super::generic::u8x16<archmage::Wasm128Token>;
     /// 32-lane u8 SIMD vector (WASM SIMD128-backed).
-    #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
+    #[cfg(target_arch = "wasm32")]
     pub type u8x32 = super::generic::u8x32<archmage::Wasm128Token>;
     /// 8-lane i16 SIMD vector (WASM SIMD128-backed).
-    #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
+    #[cfg(target_arch = "wasm32")]
     pub type i16x8 = super::generic::i16x8<archmage::Wasm128Token>;
     /// 16-lane i16 SIMD vector (WASM SIMD128-backed).
-    #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
+    #[cfg(target_arch = "wasm32")]
     pub type i16x16 = super::generic::i16x16<archmage::Wasm128Token>;
     /// 8-lane u16 SIMD vector (WASM SIMD128-backed).
-    #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
+    #[cfg(target_arch = "wasm32")]
     pub type u16x8 = super::generic::u16x8<archmage::Wasm128Token>;
     /// 16-lane u16 SIMD vector (WASM SIMD128-backed).
-    #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
+    #[cfg(target_arch = "wasm32")]
     pub type u16x16 = super::generic::u16x16<archmage::Wasm128Token>;
     /// 4-lane i32 SIMD vector (WASM SIMD128-backed).
-    #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
+    #[cfg(target_arch = "wasm32")]
     pub type i32x4 = super::generic::i32x4<archmage::Wasm128Token>;
     /// 8-lane i32 SIMD vector (WASM SIMD128-backed).
-    #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
+    #[cfg(target_arch = "wasm32")]
     pub type i32x8 = super::generic::i32x8<archmage::Wasm128Token>;
     /// 4-lane u32 SIMD vector (WASM SIMD128-backed).
-    #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
+    #[cfg(target_arch = "wasm32")]
     pub type u32x4 = super::generic::u32x4<archmage::Wasm128Token>;
     /// 8-lane u32 SIMD vector (WASM SIMD128-backed).
-    #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
+    #[cfg(target_arch = "wasm32")]
     pub type u32x8 = super::generic::u32x8<archmage::Wasm128Token>;
     /// 2-lane i64 SIMD vector (WASM SIMD128-backed).
-    #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
+    #[cfg(target_arch = "wasm32")]
     pub type i64x2 = super::generic::i64x2<archmage::Wasm128Token>;
     /// 4-lane i64 SIMD vector (WASM SIMD128-backed).
-    #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
+    #[cfg(target_arch = "wasm32")]
     pub type i64x4 = super::generic::i64x4<archmage::Wasm128Token>;
     /// 2-lane u64 SIMD vector (WASM SIMD128-backed).
-    #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
+    #[cfg(target_arch = "wasm32")]
     pub type u64x2 = super::generic::u64x2<archmage::Wasm128Token>;
     /// 4-lane u64 SIMD vector (WASM SIMD128-backed).
-    #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
+    #[cfg(target_arch = "wasm32")]
     pub type u64x4 = super::generic::u64x4<archmage::Wasm128Token>;
     /// 16-lane f32 SIMD vector (WASM SIMD128-backed).
-    #[cfg(all(target_arch = "wasm32", target_feature = "simd128", feature = "w512"))]
+    #[cfg(all(target_arch = "wasm32", feature = "w512"))]
     pub type f32x16 = super::generic::f32x16<archmage::Wasm128Token>;
     /// 8-lane f64 SIMD vector (WASM SIMD128-backed).
-    #[cfg(all(target_arch = "wasm32", target_feature = "simd128", feature = "w512"))]
+    #[cfg(all(target_arch = "wasm32", feature = "w512"))]
     pub type f64x8 = super::generic::f64x8<archmage::Wasm128Token>;
     /// 64-lane i8 SIMD vector (WASM SIMD128-backed).
-    #[cfg(all(target_arch = "wasm32", target_feature = "simd128", feature = "w512"))]
+    #[cfg(all(target_arch = "wasm32", feature = "w512"))]
     pub type i8x64 = super::generic::i8x64<archmage::Wasm128Token>;
     /// 64-lane u8 SIMD vector (WASM SIMD128-backed).
-    #[cfg(all(target_arch = "wasm32", target_feature = "simd128", feature = "w512"))]
+    #[cfg(all(target_arch = "wasm32", feature = "w512"))]
     pub type u8x64 = super::generic::u8x64<archmage::Wasm128Token>;
     /// 32-lane i16 SIMD vector (WASM SIMD128-backed).
-    #[cfg(all(target_arch = "wasm32", target_feature = "simd128", feature = "w512"))]
+    #[cfg(all(target_arch = "wasm32", feature = "w512"))]
     pub type i16x32 = super::generic::i16x32<archmage::Wasm128Token>;
     /// 32-lane u16 SIMD vector (WASM SIMD128-backed).
-    #[cfg(all(target_arch = "wasm32", target_feature = "simd128", feature = "w512"))]
+    #[cfg(all(target_arch = "wasm32", feature = "w512"))]
     pub type u16x32 = super::generic::u16x32<archmage::Wasm128Token>;
     /// 16-lane i32 SIMD vector (WASM SIMD128-backed).
-    #[cfg(all(target_arch = "wasm32", target_feature = "simd128", feature = "w512"))]
+    #[cfg(all(target_arch = "wasm32", feature = "w512"))]
     pub type i32x16 = super::generic::i32x16<archmage::Wasm128Token>;
     /// 16-lane u32 SIMD vector (WASM SIMD128-backed).
-    #[cfg(all(target_arch = "wasm32", target_feature = "simd128", feature = "w512"))]
+    #[cfg(all(target_arch = "wasm32", feature = "w512"))]
     pub type u32x16 = super::generic::u32x16<archmage::Wasm128Token>;
     /// 8-lane i64 SIMD vector (WASM SIMD128-backed).
-    #[cfg(all(target_arch = "wasm32", target_feature = "simd128", feature = "w512"))]
+    #[cfg(all(target_arch = "wasm32", feature = "w512"))]
     pub type i64x8 = super::generic::i64x8<archmage::Wasm128Token>;
     /// 8-lane u64 SIMD vector (WASM SIMD128-backed).
-    #[cfg(all(target_arch = "wasm32", target_feature = "simd128", feature = "w512"))]
+    #[cfg(all(target_arch = "wasm32", feature = "w512"))]
     pub type u64x8 = super::generic::u64x8<archmage::Wasm128Token>;
 }
 // On x86_64/scalar these aliases are defined above; on aarch64/wasm32 they are

@@ -86,18 +86,17 @@ fn call_relaxed_context(_token: Wasm128RelaxedToken) -> u32 {
 }
 
 #[cfg(not(feature = "testable_dispatch"))]
-#[archmage::attune(wasm128_relaxed_fma)]
-fn fma_from_context_helper() -> u32 {
-    let _tok = Wasm128RelaxedFmaToken::from_context();
-    let _relaxed = Wasm128RelaxedToken::from_context();
-    let _base = Wasm128Token::from_context();
+#[archmage::attune(wrap)]
+fn fma_proof_helper(token: Wasm128RelaxedFmaToken) -> u32 {
+    let _relaxed = token.wasm128_relaxed();
+    let _base = token.wasm128();
     3
 }
 
 #[cfg(not(feature = "testable_dispatch"))]
 #[archmage::attune(wrap)]
-fn call_fma_context(_token: Wasm128RelaxedFmaToken) -> u32 {
-    fma_from_context_helper()
+fn call_fma_context(token: Wasm128RelaxedFmaToken) -> u32 {
+    fma_proof_helper(token)
 }
 
 #[cfg(not(feature = "testable_dispatch"))]
@@ -201,3 +200,26 @@ fn sqrt_with_proof(_token: Wasm128Token, x: f32) -> f32 {
     use core::arch::wasm32::*;
     f32x4_extract_lane::<0>(f32x4_sqrt(f32x4_splat(x)))
 }
+
+// Compile-time type contract for `from_context()`: safe fn pointer coercion holds only
+// when compile-time target features guarantee the tier without runtime probing.
+#[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
+const _: fn() -> Wasm128Token = Wasm128Token::from_context;
+#[cfg(all(target_arch = "wasm32", not(target_feature = "simd128")))]
+const _: unsafe fn() -> Wasm128Token = Wasm128Token::from_context;
+
+#[cfg(all(
+    target_arch = "wasm32",
+    target_feature = "simd128",
+    target_feature = "relaxed-simd"
+))]
+const _: fn() -> Wasm128RelaxedToken = Wasm128RelaxedToken::from_context;
+#[cfg(all(
+    target_arch = "wasm32",
+    not(all(target_feature = "simd128", target_feature = "relaxed-simd"))
+))]
+const _: unsafe fn() -> Wasm128RelaxedToken = Wasm128RelaxedToken::from_context;
+
+#[cfg(target_arch = "wasm32")]
+const _: unsafe fn() -> archmage::Wasm128RelaxedFmaToken =
+    archmage::Wasm128RelaxedFmaToken::from_context;

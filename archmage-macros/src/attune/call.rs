@@ -112,7 +112,6 @@ impl Parse for Call {
 pub(crate) struct Context<'a> {
     pub features: &'a [&'static str],
     pub target_arch: Option<&'static str>,
-    pub tier_suffix: Option<&'static str>,
 }
 
 impl Context<'_> {
@@ -127,10 +126,7 @@ impl Context<'_> {
             return false;
         };
         if crate::generated::token_requires_runtime_probe(canonical) {
-            return self.tier_suffix.is_some_and(|caller| {
-                caller == callee.suffix
-                    || crate::generated::can_downgrade_tier(caller, callee.suffix)
-            });
+            return false;
         }
         crate::generated::token_to_features(canonical).is_some_and(|features| {
             features
@@ -359,7 +355,6 @@ pub(crate) fn rewrite(
         Context {
             features,
             target_arch: caller.target_arch,
-            tier_suffix: Some(caller.suffix),
         },
         signature,
     )
