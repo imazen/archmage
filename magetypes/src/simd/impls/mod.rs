@@ -6,20 +6,20 @@
 //! **Auto-generated** by `cargo xtask generate` - do not edit manually.
 
 #[cfg(target_arch = "x86_64")]
-mod x86_v3;
+pub(crate) mod x86_v3;
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-mod x86_v4;
+pub(crate) mod x86_v4;
 
 // Hand-written AVX-512VL pixel-packing overrides called by `Sealed` hooks.
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 pub(crate) mod x86_v4_f32_overrides;
 
 #[cfg(target_arch = "aarch64")]
-mod arm_neon;
+pub(crate) mod arm_neon;
 
 #[cfg(target_arch = "wasm32")]
-mod wasm128;
+pub(crate) mod wasm128;
 #[cfg(all(
     target_arch = "wasm32",
     target_feature = "simd128",
@@ -27,8 +27,8 @@ mod wasm128;
 ))]
 pub(crate) mod wasm128_fma_overrides;
 
-mod scalar;
+pub(crate) mod scalar;
 
-// Single blanket impls over `SimdToken + Sealed` for all 43 unified
-// `*Backend` / `*Convert` / `*Bitcast` traits.
+// Single blanket impls over `SimdToken + Sealed` for all 45 unified
+// `*Backend` / `*Convert` / `*Bitcast` traits (plus `F64x8Convert`).
 mod delegated;

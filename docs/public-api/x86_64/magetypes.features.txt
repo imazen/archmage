@@ -12,7 +12,7 @@
 #   pub types (struct/enum/trait/alias)        89
 #   pub consts/statics                         40
 #   free functions                            186
-#   trait roster entries (type × trait)         8
+#   trait roster entries (type × trait)        10
 #
 # per-module pub lines:
 #   (root)                           40
@@ -169,7 +169,7 @@ pub type archmage::tokens::generated::x86::X64V4xToken::U8 = prelude::u8x64<arch
 
 ## trait impls (1 types)
 
-archmage::tokens::generated::x86::X64V4xToken: simd::backends::i16x32PopcntBackend, simd::backends::i32x16PopcntBackend, simd::backends::i64x8PopcntBackend, simd::backends::i8x64PopcntBackend, simd::backends::u16x32PopcntBackend, simd::backends::u32x16PopcntBackend, simd::backends::u64x8PopcntBackend, simd::backends::u8x64PopcntBackend
+archmage::tokens::generated::x86::X64V4xToken: prelude::DotU8I8, prelude::Int52Ifma, simd::backends::i16x32PopcntBackend, simd::backends::i32x16PopcntBackend, simd::backends::i64x8PopcntBackend, simd::backends::i8x64PopcntBackend, simd::backends::u16x32PopcntBackend, simd::backends::u32x16PopcntBackend, simd::backends::u64x8PopcntBackend, simd::backends::u8x64PopcntBackend
 
 ## removed by features (79 lines)
 

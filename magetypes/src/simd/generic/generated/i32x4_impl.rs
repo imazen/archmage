@@ -582,6 +582,28 @@ impl<T: crate::simd::backends::F32x4Convert> i32x4<T> {
     }
 }
 
+impl<T: crate::simd::backends::F64x2Convert> i32x4<T> {
+    /// Convert the low 2 lanes of `self` to `f64x2`.
+    #[inline(always)]
+    pub fn to_f64x2_low(self) -> super::f64x2<T> {
+        super::f64x2::from_repr_unchecked(self.1, T::convert_i32_low_to_f64(self.1, self.0))
+    }
+}
+
+impl<T: crate::simd::backends::F64x4Convert> i32x4<T> {
+    /// Convert to `f64x4` (numeric conversion).
+    #[inline(always)]
+    pub fn to_f64(self) -> super::f64x4<T> {
+        super::f64x4::from_repr_unchecked(self.1, T::convert_i32_to_f64(self.1, self.0))
+    }
+
+    /// Alias for [`to_f64`](Self::to_f64).
+    #[inline(always)]
+    pub fn to_f64x4(self) -> super::f64x4<T> {
+        self.to_f64()
+    }
+}
+
 // ============================================================================
 // Saturating narrowing (i32x4 -> i16x8 / u16x8)
 // ============================================================================

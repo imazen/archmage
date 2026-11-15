@@ -169,7 +169,7 @@ pub trait F32x16Backend: SimdToken + Sealed + Copy + 'static {
         a
     }
 
-    /// Fast reciprocal square root approximation — see [`rcp_approx`].
+    /// Fast reciprocal square root approximation — see [`Self::rcp_approx`].
     #[inline(always)]
     fn rsqrt_approx(self, a: Self::Repr) -> Self::Repr {
         a
@@ -204,9 +204,72 @@ pub trait F32x16Backend: SimdToken + Sealed + Copy + 'static {
         Self::rcp_approx(self, a)
     }
 
-    /// Precise reciprocal square root — see [`recip`].
+    /// Precise reciprocal square root — see [`Self::recip`].
     #[inline(always)]
     fn rsqrt(self, a: Self::Repr) -> Self::Repr {
         Self::rsqrt_approx(self, a)
+    }
+
+    // ====== Pixel pack (f32 only) ======
+
+    /// Round-to-nearest-even then saturate each lane to `u8` (`0..=255`).
+    ///
+    /// Default body is scalar; `x86` V3/V4 and `aarch64` backends override
+    /// with native cvt+pack sequences.
+    #[inline(always)]
+    fn to_u8_bytes(self, a: Self::Repr) -> [u8; 16] {
+        let arr = <Self as F32x16Backend>::to_array(self, a);
+        core::array::from_fn(|i| crate::nostd_math::roundevenf(arr[i]).clamp(0.0, 255.0) as u8)
+    }
+
+    /// Round/clamp 4 planar channels and interleave into RGBA bytes
+    /// (16 pixels = 64 bytes).
+    #[inline(always)]
+    fn store_rgba_bytes(
+        self,
+        r: Self::Repr,
+        g: Self::Repr,
+        b: Self::Repr,
+        a: Self::Repr,
+    ) -> [u8; 64] {
+        let rb = <Self as F32x16Backend>::to_u8_bytes(self, r);
+        let gb = <Self as F32x16Backend>::to_u8_bytes(self, g);
+        let bb = <Self as F32x16Backend>::to_u8_bytes(self, b);
+        let ab = <Self as F32x16Backend>::to_u8_bytes(self, a);
+        let mut out = [0u8; 64];
+        let mut i = 0;
+        while i < 16 {
+            out[i * 4] = rb[i];
+            out[i * 4 + 1] = gb[i];
+            out[i * 4 + 2] = bb[i];
+            out[i * 4 + 3] = ab[i];
+            i += 1;
+        }
+        out
+    }
+
+    // ====== Full-width matrix transposes (f32x16 only) ======
+
+    /// Transpose two independent 8x8 f32 blocks stored in 8 rows of 16
+    /// (lanes `0..8` and lanes `8..16` transposed independently).
+    #[inline(always)]
+    fn transpose_dual_8x8_repr(self, rows: [Self::Repr; 8]) -> [Self::Repr; 8] {
+        let r: [[f32; 16]; 8] =
+            core::array::from_fn(|i| <Self as F32x16Backend>::to_array(self, rows[i]));
+        core::array::from_fn(|i| {
+            let out: [f32; 16] =
+                core::array::from_fn(|k| if k < 8 { r[k][i] } else { r[k - 8][i + 8] });
+            <Self as F32x16Backend>::from_array(self, out)
+        })
+    }
+
+    /// Transpose 16 row vectors of a 16x16 f32 matrix.
+    #[inline(always)]
+    fn transpose_16x16_repr(self, rows: [Self::Repr; 16]) -> [Self::Repr; 16] {
+        let r: [[f32; 16]; 16] =
+            core::array::from_fn(|i| <Self as F32x16Backend>::to_array(self, rows[i]));
+        core::array::from_fn(|i| {
+            <Self as F32x16Backend>::from_array(self, core::array::from_fn(|j| r[j][i]))
+        })
     }
 }

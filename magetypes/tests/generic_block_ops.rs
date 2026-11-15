@@ -961,3 +961,218 @@ fn generic_brighten_v3_and_scalar() {
         assert_eq!(pixels_v3, pixels_sc);
     }
 }
+
+// ============================================================================
+// f32x16 Block Ops, u8 Pixel Pack, Dual-8x8 & 16x16 Transpose (#112 §2)
+// ============================================================================
+
+#[cfg(feature = "w512")]
+mod f32x16_block_ops {
+    #[cfg(feature = "avx512")]
+    use archmage::X64V4Token;
+    use archmage::{ScalarToken, SimdToken, X64V3Token};
+    use magetypes::simd::backends::{F32x16Backend, F32x16Convert};
+    use magetypes::simd::generic::f32x16;
+
+    fn run_f32x16_block_ops<T: F32x16Backend + F32x16Convert>(token: T) {
+        // from_u8_t & u8 roundtrip
+        let u8_in: [u8; 16] = [
+            0, 1, 17, 63, 127, 128, 129, 200, 240, 254, 255, 42, 7, 99, 150, 5,
+        ];
+        let vf = f32x16::<T>::from_u8_t(token, &u8_in);
+        let expected_f32: [f32; 16] = core::array::from_fn(|i| u8_in[i] as f32);
+        assert_eq!(vf.to_array(), expected_f32);
+        assert_eq!(vf.to_u8(), u8_in);
+
+        // to_u8 edge cases: negatives, NaN, +/-Inf, 255.4, >255, round-to-even ties
+        let edge_f32: [f32; 16] = [
+            -5.0,
+            f32::NAN,
+            f32::INFINITY,
+            f32::NEG_INFINITY,
+            255.4,
+            300.0,
+            -0.5,
+            127.5,
+            128.5,
+            0.4,
+            127.6,
+            255.0,
+            0.0,
+            254.6,
+            -0.1,
+            42.25,
+        ];
+        assert_eq!(
+            f32x16::<T>::from_array_t(token, edge_f32).to_u8(),
+            [
+                0, 0, 255, 0, 255, 255, 0, 128, 128, 0, 128, 255, 0, 255, 0, 42
+            ]
+        );
+
+        // interleave_lo, interleave_hi, interleave
+        let a_vals: [f32; 16] = core::array::from_fn(|i| i as f32);
+        let b_vals: [f32; 16] = core::array::from_fn(|i| (i + 100) as f32);
+        let va = f32x16::<T>::from_array_t(token, a_vals);
+        let vb = f32x16::<T>::from_array_t(token, b_vals);
+        let (ilo, ihi) = va.interleave(vb);
+        assert_eq!(ilo.to_array(), va.interleave_lo(vb).to_array());
+        assert_eq!(ihi.to_array(), va.interleave_hi(vb).to_array());
+
+        // 4-channel deinterleave/interleave (16 RGBA pixels across 4 AoS vectors)
+        let aos: [f32x16<T>; 4] = core::array::from_fn(|r| {
+            f32x16::<T>::from_array_t(token, core::array::from_fn(|c| (r * 16 + c + 1) as f32))
+        });
+        let soa = f32x16::<T>::deinterleave_4ch(aos);
+        for (ch, channel) in soa.iter().enumerate() {
+            let expected_ch: [f32; 16] = core::array::from_fn(|p| (p * 4 + ch + 1) as f32);
+            assert_eq!(channel.to_array(), expected_ch, "channel {ch}");
+        }
+        let restored_aos = f32x16::<T>::interleave_4ch(soa);
+        for i in 0..4 {
+            assert_eq!(restored_aos[i].to_array(), aos[i].to_array(), "aos[{i}]");
+        }
+
+        // load_16_rgba_u8_t & store_16_rgba_u8 roundtrip
+        let rgba: [u8; 64] = core::array::from_fn(|i| ((i * 7 + 3) % 256) as u8);
+        let (r, g, b, a) = f32x16::<T>::load_16_rgba_u8_t(token, &rgba);
+        for p in 0..16 {
+            assert_eq!(r.to_array()[p], rgba[p * 4] as f32);
+            assert_eq!(g.to_array()[p], rgba[p * 4 + 1] as f32);
+            assert_eq!(b.to_array()[p], rgba[p * 4 + 2] as f32);
+            assert_eq!(a.to_array()[p], rgba[p * 4 + 3] as f32);
+        }
+        assert_eq!(f32x16::<T>::store_16_rgba_u8(r, g, b, a), rgba);
+
+        // store_16_rgba_u8 edge cases
+        let r_edge = f32x16::<T>::from_array_t(token, edge_f32);
+        let g_edge = f32x16::<T>::splat_t(token, 127.5);
+        let b_edge = f32x16::<T>::splat_t(token, -3.0);
+        let a_edge = f32x16::<T>::splat_t(token, 300.0);
+        let stored_edge = f32x16::<T>::store_16_rgba_u8(r_edge, g_edge, b_edge, a_edge);
+        let r_exp = [
+            0u8, 0, 255, 0, 255, 255, 0, 128, 128, 0, 128, 255, 0, 255, 0, 42,
+        ];
+        for p in 0..16 {
+            assert_eq!(stored_edge[p * 4], r_exp[p], "rgba R[{p}]");
+            assert_eq!(stored_edge[p * 4 + 1], 128, "rgba G[{p}]");
+            assert_eq!(stored_edge[p * 4 + 2], 0, "rgba B[{p}]");
+            assert_eq!(stored_edge[p * 4 + 3], 255, "rgba A[{p}]");
+        }
+
+        // Dual 8x8 load, transpose (in-place & copy), store
+        let dual_block: [f32; 128] = core::array::from_fn(|i| (i as f32) * 0.5 - 10.0);
+        let dual_rows = f32x16::<T>::load_dual_8x8_t(token, &dual_block);
+        let mut dual_inplace = dual_rows;
+        f32x16::<T>::transpose_dual_8x8(&mut dual_inplace);
+        let dual_copy = f32x16::<T>::transpose_dual_8x8_copy(dual_rows);
+        for i in 0..8 {
+            assert_eq!(dual_inplace[i].to_array(), dual_copy[i].to_array());
+        }
+        let mut dual_out = [0.0f32; 128];
+        f32x16::<T>::store_dual_8x8(&dual_copy, &mut dual_out);
+        for r_idx in 0..8 {
+            for c_idx in 0..8 {
+                assert_eq!(
+                    dual_out[r_idx * 16 + c_idx],
+                    dual_block[c_idx * 16 + r_idx],
+                    "dual left [{r_idx}][{c_idx}]"
+                );
+                assert_eq!(
+                    dual_out[r_idx * 16 + c_idx + 8],
+                    dual_block[c_idx * 16 + r_idx + 8],
+                    "dual right [{r_idx}][{c_idx}]"
+                );
+            }
+        }
+        let dual_rt = f32x16::<T>::transpose_dual_8x8_copy(dual_copy);
+        for i in 0..8 {
+            assert_eq!(dual_rt[i].to_array(), dual_rows[i].to_array());
+        }
+
+        // 16x16 load, transpose (in-place & copy), store
+        let m16_block: [f32; 256] = core::array::from_fn(|i| (i as f32) + 1.0);
+        let m16_rows = f32x16::<T>::load_16x16_t(token, &m16_block);
+        let mut m16_inplace = m16_rows;
+        f32x16::<T>::transpose_16x16(&mut m16_inplace);
+        let m16_copy = f32x16::<T>::transpose_16x16_copy(m16_rows);
+        for i in 0..16 {
+            assert_eq!(m16_inplace[i].to_array(), m16_copy[i].to_array());
+        }
+        let mut m16_out = [0.0f32; 256];
+        f32x16::<T>::store_16x16(&m16_copy, &mut m16_out);
+        for r_idx in 0..16 {
+            for c_idx in 0..16 {
+                assert_eq!(
+                    m16_out[r_idx * 16 + c_idx],
+                    m16_block[c_idx * 16 + r_idx],
+                    "16x16 [{r_idx}][{c_idx}]"
+                );
+            }
+        }
+        let m16_rt = f32x16::<T>::transpose_16x16_copy(m16_copy);
+        for i in 0..16 {
+            assert_eq!(m16_rt[i].to_array(), m16_rows[i].to_array());
+        }
+
+        // bitcast_ref_i32 / bitcast_mut_i32 (+ aliases)
+        let mut bf = f32x16::<T>::from_array_t(token, core::array::from_fn(|i| (i + 1) as f32));
+        assert_eq!(bf.bitcast_ref_i32().to_array()[0], 1.0f32.to_bits() as i32);
+        assert_eq!(
+            bf.bitcast_ref_i32x16().to_array()[15],
+            16.0f32.to_bits() as i32
+        );
+        {
+            let bi = bf.bitcast_mut_i32();
+            let mut arr = bi.to_array();
+            arr[3] = (-2.5f32).to_bits() as i32;
+            *bi = magetypes::simd::generic::i32x16::from_array_t(token, arr);
+        }
+        assert_eq!(bf.to_array()[3], -2.5f32);
+        {
+            let bi2 = bf.bitcast_mut_i32x16();
+            let mut arr = bi2.to_array();
+            arr[12] = 99.5f32.to_bits() as i32;
+            *bi2 = magetypes::simd::generic::i32x16::from_array_t(token, arr);
+        }
+        assert_eq!(bf.to_array()[12], 99.5f32);
+    }
+
+    #[test]
+    fn f32x16_block_ops_scalar() {
+        run_f32x16_block_ops(ScalarToken);
+    }
+
+    #[test]
+    fn f32x16_block_ops_v3_matches_scalar() {
+        if let Some(t_v3) = X64V3Token::summon() {
+            run_f32x16_block_ops(t_v3);
+
+            let a_vals: [f32; 16] = core::array::from_fn(|i| (i as f32) * 1.25 - 3.0);
+            let b_vals: [f32; 16] = core::array::from_fn(|i| (i as f32) * -0.5 + 20.0);
+            let (lo_v3, hi_v3) = f32x16::<X64V3Token>::from_array_t(t_v3, a_vals)
+                .interleave(f32x16::<X64V3Token>::from_array_t(t_v3, b_vals));
+            let (lo_sc, hi_sc) = f32x16::<ScalarToken>::from_array_t(ScalarToken, a_vals)
+                .interleave(f32x16::<ScalarToken>::from_array_t(ScalarToken, b_vals));
+            assert_eq!(lo_v3.to_array(), lo_sc.to_array());
+            assert_eq!(hi_v3.to_array(), hi_sc.to_array());
+        }
+    }
+
+    #[cfg(feature = "avx512")]
+    #[test]
+    fn f32x16_block_ops_v4_matches_scalar() {
+        if let Some(t_v4) = X64V4Token::summon() {
+            run_f32x16_block_ops(t_v4);
+
+            let a_vals: [f32; 16] = core::array::from_fn(|i| (i as f32) * 1.25 - 3.0);
+            let b_vals: [f32; 16] = core::array::from_fn(|i| (i as f32) * -0.5 + 20.0);
+            let (lo_v4, hi_v4) = f32x16::<X64V4Token>::from_array_t(t_v4, a_vals)
+                .interleave(f32x16::<X64V4Token>::from_array_t(t_v4, b_vals));
+            let (lo_sc, hi_sc) = f32x16::<ScalarToken>::from_array_t(ScalarToken, a_vals)
+                .interleave(f32x16::<ScalarToken>::from_array_t(ScalarToken, b_vals));
+            assert_eq!(lo_v4.to_array(), lo_sc.to_array());
+            assert_eq!(hi_v4.to_array(), hi_sc.to_array());
+        }
+    }
+}

@@ -582,6 +582,21 @@ impl<T: crate::simd::backends::F32x8Convert> i32x8<T> {
     }
 }
 
+#[cfg(feature = "w512")]
+impl<T: crate::simd::backends::F64x8Convert> i32x8<T> {
+    /// Convert to `f64x8` (numeric conversion).
+    #[inline(always)]
+    pub fn to_f64(self) -> super::f64x8<T> {
+        super::f64x8::from_repr_unchecked(self.1, T::convert_i32_to_f64(self.1, self.0))
+    }
+
+    /// Alias for [`to_f64`](Self::to_f64).
+    #[inline(always)]
+    pub fn to_f64x8(self) -> super::f64x8<T> {
+        self.to_f64()
+    }
+}
+
 // ============================================================================
 // Saturating narrowing (i32x8 -> i16x16 / u16x16)
 // ============================================================================

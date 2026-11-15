@@ -684,6 +684,30 @@ pub trait Sealed: Copy + 'static {
     fn f16_to_f32_into_ops(self, input: &[u16], output: &mut [f32]);
 
     fn f32_to_f16_into_ops(self, input: &[f32], output: &mut [u16]);
+
+    #[cfg(feature = "w512")]
+    fn f64x8_convert_to_i32(
+        self,
+        a: <Self::W512 as super::ops::F64x8Ops>::Repr,
+    ) -> <Self::Narrow as super::ops::I32x8Ops>::Repr;
+
+    #[cfg(feature = "w512")]
+    fn f64x8_convert_to_i32_saturating(
+        self,
+        a: <Self::W512 as super::ops::F64x8Ops>::Repr,
+    ) -> <Self::Narrow as super::ops::I32x8Ops>::Repr;
+
+    #[cfg(feature = "w512")]
+    fn f64x8_convert_to_i32_round(
+        self,
+        a: <Self::W512 as super::ops::F64x8Ops>::Repr,
+    ) -> <Self::Narrow as super::ops::I32x8Ops>::Repr;
+
+    #[cfg(feature = "w512")]
+    fn f64x8_convert_from_i32(
+        self,
+        a: <Self::Narrow as super::ops::I32x8Ops>::Repr,
+    ) -> <Self::W512 as super::ops::F64x8Ops>::Repr;
 }
 
 impl Sealed for archmage::ScalarToken {
@@ -716,6 +740,26 @@ impl Sealed for archmage::ScalarToken {
     #[inline(always)]
     fn f32x16_high(self, wide: [f32; 16]) -> [f32; 8] {
         crate::simd::generic::cross_width::scalar_f32x16_high(wide)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32(self, a: [f64; 8]) -> [i32; 8] {
+        crate::simd::impls::scalar::scalar_f64x8_to_i32(a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32_saturating(self, a: [f64; 8]) -> [i32; 8] {
+        crate::simd::impls::scalar::scalar_f64x8_to_i32(a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32_round(self, a: [f64; 8]) -> [i32; 8] {
+        crate::simd::impls::scalar::scalar_f64x8_to_i32_round(a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_from_i32(self, a: [i32; 8]) -> [f64; 8] {
+        crate::simd::impls::scalar::scalar_f64x8_from_i32(a)
     }
 
     #[inline(always)]
@@ -760,6 +804,26 @@ impl Sealed for archmage::X64V1Token {
     fn f32x16_high(self, wide: [f32; 16]) -> [f32; 8] {
         crate::simd::generic::cross_width::scalar_f32x16_high(wide)
     }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32(self, a: [f64; 8]) -> [i32; 8] {
+        crate::simd::impls::scalar::scalar_f64x8_to_i32(a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32_saturating(self, a: [f64; 8]) -> [i32; 8] {
+        crate::simd::impls::scalar::scalar_f64x8_to_i32(a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32_round(self, a: [f64; 8]) -> [i32; 8] {
+        crate::simd::impls::scalar::scalar_f64x8_to_i32_round(a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_from_i32(self, a: [i32; 8]) -> [f64; 8] {
+        crate::simd::impls::scalar::scalar_f64x8_from_i32(a)
+    }
 
     #[inline(always)]
     fn f16_to_f32_into_ops(self, input: &[u16], output: &mut [f32]) {
@@ -803,6 +867,26 @@ impl Sealed for archmage::X64V2Token {
     fn f32x16_high(self, wide: [f32; 16]) -> [f32; 8] {
         crate::simd::generic::cross_width::scalar_f32x16_high(wide)
     }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32(self, a: [f64; 8]) -> [i32; 8] {
+        crate::simd::impls::scalar::scalar_f64x8_to_i32(a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32_saturating(self, a: [f64; 8]) -> [i32; 8] {
+        crate::simd::impls::scalar::scalar_f64x8_to_i32(a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32_round(self, a: [f64; 8]) -> [i32; 8] {
+        crate::simd::impls::scalar::scalar_f64x8_to_i32_round(a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_from_i32(self, a: [i32; 8]) -> [f64; 8] {
+        crate::simd::impls::scalar::scalar_f64x8_from_i32(a)
+    }
 
     #[inline(always)]
     fn f16_to_f32_into_ops(self, input: &[u16], output: &mut [f32]) {
@@ -845,6 +929,26 @@ impl Sealed for archmage::X64CryptoToken {
     #[inline(always)]
     fn f32x16_high(self, wide: [f32; 16]) -> [f32; 8] {
         crate::simd::generic::cross_width::scalar_f32x16_high(wide)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32(self, a: [f64; 8]) -> [i32; 8] {
+        crate::simd::impls::scalar::scalar_f64x8_to_i32(a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32_saturating(self, a: [f64; 8]) -> [i32; 8] {
+        crate::simd::impls::scalar::scalar_f64x8_to_i32(a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32_round(self, a: [f64; 8]) -> [i32; 8] {
+        crate::simd::impls::scalar::scalar_f64x8_to_i32_round(a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_from_i32(self, a: [i32; 8]) -> [f64; 8] {
+        crate::simd::impls::scalar::scalar_f64x8_from_i32(a)
     }
 
     #[inline(always)]
@@ -899,6 +1003,38 @@ impl Sealed for archmage::X64V3Token {
     ) -> <Self::Narrow as super::ops::F32x8Ops>::Repr {
         wide[1]
     }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32(
+        self,
+        a: [core::arch::x86_64::__m256d; 2],
+    ) -> core::arch::x86_64::__m256i {
+        crate::simd::impls::x86_v3::v3_f64x8_to_i32(self.narrow(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32_saturating(
+        self,
+        a: [core::arch::x86_64::__m256d; 2],
+    ) -> core::arch::x86_64::__m256i {
+        crate::simd::impls::x86_v3::v3_f64x8_to_i32_saturating(self.narrow(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32_round(
+        self,
+        a: [core::arch::x86_64::__m256d; 2],
+    ) -> core::arch::x86_64::__m256i {
+        crate::simd::impls::x86_v3::v3_f64x8_to_i32_round(self.narrow(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_from_i32(
+        self,
+        a: core::arch::x86_64::__m256i,
+    ) -> [core::arch::x86_64::__m256d; 2] {
+        crate::simd::impls::x86_v3::v3_f64x8_from_i32(self.narrow(), a)
+    }
 
     #[inline(always)]
     fn f16_to_f32_into_ops(self, input: &[u16], output: &mut [f32]) {
@@ -951,6 +1087,38 @@ impl Sealed for archmage::X64V3CryptoToken {
         wide: [<Self::Narrow as super::ops::F32x8Ops>::Repr; 2],
     ) -> <Self::Narrow as super::ops::F32x8Ops>::Repr {
         wide[1]
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32(
+        self,
+        a: [core::arch::x86_64::__m256d; 2],
+    ) -> core::arch::x86_64::__m256i {
+        crate::simd::impls::x86_v3::v3_f64x8_to_i32(self.narrow(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32_saturating(
+        self,
+        a: [core::arch::x86_64::__m256d; 2],
+    ) -> core::arch::x86_64::__m256i {
+        crate::simd::impls::x86_v3::v3_f64x8_to_i32_saturating(self.narrow(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32_round(
+        self,
+        a: [core::arch::x86_64::__m256d; 2],
+    ) -> core::arch::x86_64::__m256i {
+        crate::simd::impls::x86_v3::v3_f64x8_to_i32_round(self.narrow(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_from_i32(
+        self,
+        a: core::arch::x86_64::__m256i,
+    ) -> [core::arch::x86_64::__m256d; 2] {
+        crate::simd::impls::x86_v3::v3_f64x8_from_i32(self.narrow(), a)
     }
 
     #[inline(always)]
@@ -1005,6 +1173,38 @@ impl Sealed for archmage::X64V3GfniCryptoToken {
     ) -> <Self::Narrow as super::ops::F32x8Ops>::Repr {
         wide[1]
     }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32(
+        self,
+        a: [core::arch::x86_64::__m256d; 2],
+    ) -> core::arch::x86_64::__m256i {
+        crate::simd::impls::x86_v3::v3_f64x8_to_i32(self.narrow(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32_saturating(
+        self,
+        a: [core::arch::x86_64::__m256d; 2],
+    ) -> core::arch::x86_64::__m256i {
+        crate::simd::impls::x86_v3::v3_f64x8_to_i32_saturating(self.narrow(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32_round(
+        self,
+        a: [core::arch::x86_64::__m256d; 2],
+    ) -> core::arch::x86_64::__m256i {
+        crate::simd::impls::x86_v3::v3_f64x8_to_i32_round(self.narrow(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_from_i32(
+        self,
+        a: core::arch::x86_64::__m256i,
+    ) -> [core::arch::x86_64::__m256d; 2] {
+        crate::simd::impls::x86_v3::v3_f64x8_from_i32(self.narrow(), a)
+    }
 
     #[inline(always)]
     fn f16_to_f32_into_ops(self, input: &[u16], output: &mut [f32]) {
@@ -1057,6 +1257,38 @@ impl Sealed for archmage::X64V3VnniToken {
         wide: [<Self::Narrow as super::ops::F32x8Ops>::Repr; 2],
     ) -> <Self::Narrow as super::ops::F32x8Ops>::Repr {
         wide[1]
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32(
+        self,
+        a: [core::arch::x86_64::__m256d; 2],
+    ) -> core::arch::x86_64::__m256i {
+        crate::simd::impls::x86_v3::v3_f64x8_to_i32(self.narrow(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32_saturating(
+        self,
+        a: [core::arch::x86_64::__m256d; 2],
+    ) -> core::arch::x86_64::__m256i {
+        crate::simd::impls::x86_v3::v3_f64x8_to_i32_saturating(self.narrow(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32_round(
+        self,
+        a: [core::arch::x86_64::__m256d; 2],
+    ) -> core::arch::x86_64::__m256i {
+        crate::simd::impls::x86_v3::v3_f64x8_to_i32_round(self.narrow(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_from_i32(
+        self,
+        a: core::arch::x86_64::__m256i,
+    ) -> [core::arch::x86_64::__m256d; 2] {
+        crate::simd::impls::x86_v3::v3_f64x8_from_i32(self.narrow(), a)
     }
 
     #[inline(always)]
@@ -1111,6 +1343,38 @@ impl Sealed for archmage::X64V3Vnni2Token {
     ) -> <Self::Narrow as super::ops::F32x8Ops>::Repr {
         wide[1]
     }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32(
+        self,
+        a: [core::arch::x86_64::__m256d; 2],
+    ) -> core::arch::x86_64::__m256i {
+        crate::simd::impls::x86_v3::v3_f64x8_to_i32(self.narrow(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32_saturating(
+        self,
+        a: [core::arch::x86_64::__m256d; 2],
+    ) -> core::arch::x86_64::__m256i {
+        crate::simd::impls::x86_v3::v3_f64x8_to_i32_saturating(self.narrow(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32_round(
+        self,
+        a: [core::arch::x86_64::__m256d; 2],
+    ) -> core::arch::x86_64::__m256i {
+        crate::simd::impls::x86_v3::v3_f64x8_to_i32_round(self.narrow(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_from_i32(
+        self,
+        a: core::arch::x86_64::__m256i,
+    ) -> [core::arch::x86_64::__m256d; 2] {
+        crate::simd::impls::x86_v3::v3_f64x8_from_i32(self.narrow(), a)
+    }
 
     #[inline(always)]
     fn f16_to_f32_into_ops(self, input: &[u16], output: &mut [f32]) {
@@ -1157,6 +1421,32 @@ impl Sealed for archmage::X64V4Token {
     #[inline(always)]
     fn f32x16_high(self, wide: core::arch::x86_64::__m512) -> core::arch::x86_64::__m256 {
         crate::simd::generic::cross_width::v4_f32x16_high(self, wide)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32(self, a: core::arch::x86_64::__m512d) -> core::arch::x86_64::__m256i {
+        crate::simd::impls::x86_v4::v4_f64x8_to_i32(self, a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32_saturating(
+        self,
+        a: core::arch::x86_64::__m512d,
+    ) -> core::arch::x86_64::__m256i {
+        crate::simd::impls::x86_v4::v4_f64x8_to_i32_saturating(self, a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32_round(
+        self,
+        a: core::arch::x86_64::__m512d,
+    ) -> core::arch::x86_64::__m256i {
+        crate::simd::impls::x86_v4::v4_f64x8_to_i32_round(self, a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_from_i32(self, a: core::arch::x86_64::__m256i) -> core::arch::x86_64::__m512d {
+        crate::simd::impls::x86_v4::v4_f64x8_from_i32(self, a)
     }
     #[inline(always)]
     fn v4_f32x4_to_u8_bytes(
@@ -1244,6 +1534,32 @@ impl Sealed for archmage::X64V4xToken {
     #[inline(always)]
     fn f32x16_high(self, wide: core::arch::x86_64::__m512) -> core::arch::x86_64::__m256 {
         crate::simd::generic::cross_width::v4_f32x16_high(self.v4(), wide)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32(self, a: core::arch::x86_64::__m512d) -> core::arch::x86_64::__m256i {
+        crate::simd::impls::x86_v4::v4_f64x8_to_i32(self.v4(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32_saturating(
+        self,
+        a: core::arch::x86_64::__m512d,
+    ) -> core::arch::x86_64::__m256i {
+        crate::simd::impls::x86_v4::v4_f64x8_to_i32_saturating(self.v4(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32_round(
+        self,
+        a: core::arch::x86_64::__m512d,
+    ) -> core::arch::x86_64::__m256i {
+        crate::simd::impls::x86_v4::v4_f64x8_to_i32_round(self.v4(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_from_i32(self, a: core::arch::x86_64::__m256i) -> core::arch::x86_64::__m512d {
+        crate::simd::impls::x86_v4::v4_f64x8_from_i32(self.v4(), a)
     }
     #[inline(always)]
     fn v4_f32x4_to_u8_bytes(
@@ -1361,6 +1677,32 @@ impl Sealed for archmage::Avx512Fp16Token {
     fn f32x16_high(self, wide: core::arch::x86_64::__m512) -> core::arch::x86_64::__m256 {
         crate::simd::generic::cross_width::v4_f32x16_high(self.v4(), wide)
     }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32(self, a: core::arch::x86_64::__m512d) -> core::arch::x86_64::__m256i {
+        crate::simd::impls::x86_v4::v4_f64x8_to_i32(self.v4(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32_saturating(
+        self,
+        a: core::arch::x86_64::__m512d,
+    ) -> core::arch::x86_64::__m256i {
+        crate::simd::impls::x86_v4::v4_f64x8_to_i32_saturating(self.v4(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32_round(
+        self,
+        a: core::arch::x86_64::__m512d,
+    ) -> core::arch::x86_64::__m256i {
+        crate::simd::impls::x86_v4::v4_f64x8_to_i32_round(self.v4(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_from_i32(self, a: core::arch::x86_64::__m256i) -> core::arch::x86_64::__m512d {
+        crate::simd::impls::x86_v4::v4_f64x8_from_i32(self.v4(), a)
+    }
     #[inline(always)]
     fn v4_f32x4_to_u8_bytes(
         self,
@@ -1454,6 +1796,38 @@ impl Sealed for archmage::X64V4Token {
     ) -> <Self::Narrow as super::ops::F32x8Ops>::Repr {
         wide[1]
     }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32(
+        self,
+        a: [core::arch::x86_64::__m256d; 2],
+    ) -> core::arch::x86_64::__m256i {
+        crate::simd::impls::x86_v3::v3_f64x8_to_i32(self.narrow(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32_saturating(
+        self,
+        a: [core::arch::x86_64::__m256d; 2],
+    ) -> core::arch::x86_64::__m256i {
+        crate::simd::impls::x86_v3::v3_f64x8_to_i32_saturating(self.narrow(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32_round(
+        self,
+        a: [core::arch::x86_64::__m256d; 2],
+    ) -> core::arch::x86_64::__m256i {
+        crate::simd::impls::x86_v3::v3_f64x8_to_i32_round(self.narrow(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_from_i32(
+        self,
+        a: core::arch::x86_64::__m256i,
+    ) -> [core::arch::x86_64::__m256d; 2] {
+        crate::simd::impls::x86_v3::v3_f64x8_from_i32(self.narrow(), a)
+    }
 
     #[inline(always)]
     fn f16_to_f32_into_ops(self, input: &[u16], output: &mut [f32]) {
@@ -1506,6 +1880,38 @@ impl Sealed for archmage::X64V4xToken {
         wide: [<Self::Narrow as super::ops::F32x8Ops>::Repr; 2],
     ) -> <Self::Narrow as super::ops::F32x8Ops>::Repr {
         wide[1]
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32(
+        self,
+        a: [core::arch::x86_64::__m256d; 2],
+    ) -> core::arch::x86_64::__m256i {
+        crate::simd::impls::x86_v3::v3_f64x8_to_i32(self.narrow(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32_saturating(
+        self,
+        a: [core::arch::x86_64::__m256d; 2],
+    ) -> core::arch::x86_64::__m256i {
+        crate::simd::impls::x86_v3::v3_f64x8_to_i32_saturating(self.narrow(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32_round(
+        self,
+        a: [core::arch::x86_64::__m256d; 2],
+    ) -> core::arch::x86_64::__m256i {
+        crate::simd::impls::x86_v3::v3_f64x8_to_i32_round(self.narrow(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_from_i32(
+        self,
+        a: core::arch::x86_64::__m256i,
+    ) -> [core::arch::x86_64::__m256d; 2] {
+        crate::simd::impls::x86_v3::v3_f64x8_from_i32(self.narrow(), a)
     }
 
     #[inline(always)]
@@ -1560,6 +1966,38 @@ impl Sealed for archmage::Avx512Fp16Token {
     ) -> <Self::Narrow as super::ops::F32x8Ops>::Repr {
         wide[1]
     }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32(
+        self,
+        a: [core::arch::x86_64::__m256d; 2],
+    ) -> core::arch::x86_64::__m256i {
+        crate::simd::impls::x86_v3::v3_f64x8_to_i32(self.narrow(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32_saturating(
+        self,
+        a: [core::arch::x86_64::__m256d; 2],
+    ) -> core::arch::x86_64::__m256i {
+        crate::simd::impls::x86_v3::v3_f64x8_to_i32_saturating(self.narrow(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32_round(
+        self,
+        a: [core::arch::x86_64::__m256d; 2],
+    ) -> core::arch::x86_64::__m256i {
+        crate::simd::impls::x86_v3::v3_f64x8_to_i32_round(self.narrow(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_from_i32(
+        self,
+        a: core::arch::x86_64::__m256i,
+    ) -> [core::arch::x86_64::__m256d; 2] {
+        crate::simd::impls::x86_v3::v3_f64x8_from_i32(self.narrow(), a)
+    }
 
     #[inline(always)]
     fn f16_to_f32_into_ops(self, input: &[u16], output: &mut [f32]) {
@@ -1612,6 +2050,38 @@ impl Sealed for archmage::NeonToken {
         wide: [<Self::Narrow as super::ops::F32x4Ops>::Repr; 4],
     ) -> [<Self::Narrow as super::ops::F32x4Ops>::Repr; 2] {
         [wide[2], wide[3]]
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32(
+        self,
+        a: [core::arch::aarch64::float64x2_t; 4],
+    ) -> [core::arch::aarch64::int32x4_t; 2] {
+        crate::simd::impls::arm_neon::neon_f64x8_to_i32(self.narrow(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32_saturating(
+        self,
+        a: [core::arch::aarch64::float64x2_t; 4],
+    ) -> [core::arch::aarch64::int32x4_t; 2] {
+        crate::simd::impls::arm_neon::neon_f64x8_to_i32(self.narrow(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32_round(
+        self,
+        a: [core::arch::aarch64::float64x2_t; 4],
+    ) -> [core::arch::aarch64::int32x4_t; 2] {
+        crate::simd::impls::arm_neon::neon_f64x8_to_i32_round(self.narrow(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_from_i32(
+        self,
+        a: [core::arch::aarch64::int32x4_t; 2],
+    ) -> [core::arch::aarch64::float64x2_t; 4] {
+        crate::simd::impls::arm_neon::neon_f64x8_from_i32(self.narrow(), a)
     }
 
     #[inline(always)]
@@ -1666,6 +2136,38 @@ impl Sealed for archmage::NeonAesToken {
     ) -> [<Self::Narrow as super::ops::F32x4Ops>::Repr; 2] {
         [wide[2], wide[3]]
     }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32(
+        self,
+        a: [core::arch::aarch64::float64x2_t; 4],
+    ) -> [core::arch::aarch64::int32x4_t; 2] {
+        crate::simd::impls::arm_neon::neon_f64x8_to_i32(self.narrow(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32_saturating(
+        self,
+        a: [core::arch::aarch64::float64x2_t; 4],
+    ) -> [core::arch::aarch64::int32x4_t; 2] {
+        crate::simd::impls::arm_neon::neon_f64x8_to_i32(self.narrow(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32_round(
+        self,
+        a: [core::arch::aarch64::float64x2_t; 4],
+    ) -> [core::arch::aarch64::int32x4_t; 2] {
+        crate::simd::impls::arm_neon::neon_f64x8_to_i32_round(self.narrow(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_from_i32(
+        self,
+        a: [core::arch::aarch64::int32x4_t; 2],
+    ) -> [core::arch::aarch64::float64x2_t; 4] {
+        crate::simd::impls::arm_neon::neon_f64x8_from_i32(self.narrow(), a)
+    }
 
     #[inline(always)]
     fn f16_to_f32_into_ops(self, input: &[u16], output: &mut [f32]) {
@@ -1718,6 +2220,38 @@ impl Sealed for archmage::NeonSha3Token {
         wide: [<Self::Narrow as super::ops::F32x4Ops>::Repr; 4],
     ) -> [<Self::Narrow as super::ops::F32x4Ops>::Repr; 2] {
         [wide[2], wide[3]]
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32(
+        self,
+        a: [core::arch::aarch64::float64x2_t; 4],
+    ) -> [core::arch::aarch64::int32x4_t; 2] {
+        crate::simd::impls::arm_neon::neon_f64x8_to_i32(self.narrow(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32_saturating(
+        self,
+        a: [core::arch::aarch64::float64x2_t; 4],
+    ) -> [core::arch::aarch64::int32x4_t; 2] {
+        crate::simd::impls::arm_neon::neon_f64x8_to_i32(self.narrow(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32_round(
+        self,
+        a: [core::arch::aarch64::float64x2_t; 4],
+    ) -> [core::arch::aarch64::int32x4_t; 2] {
+        crate::simd::impls::arm_neon::neon_f64x8_to_i32_round(self.narrow(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_from_i32(
+        self,
+        a: [core::arch::aarch64::int32x4_t; 2],
+    ) -> [core::arch::aarch64::float64x2_t; 4] {
+        crate::simd::impls::arm_neon::neon_f64x8_from_i32(self.narrow(), a)
     }
 
     #[inline(always)]
@@ -1772,6 +2306,38 @@ impl Sealed for archmage::NeonCrcToken {
     ) -> [<Self::Narrow as super::ops::F32x4Ops>::Repr; 2] {
         [wide[2], wide[3]]
     }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32(
+        self,
+        a: [core::arch::aarch64::float64x2_t; 4],
+    ) -> [core::arch::aarch64::int32x4_t; 2] {
+        crate::simd::impls::arm_neon::neon_f64x8_to_i32(self.narrow(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32_saturating(
+        self,
+        a: [core::arch::aarch64::float64x2_t; 4],
+    ) -> [core::arch::aarch64::int32x4_t; 2] {
+        crate::simd::impls::arm_neon::neon_f64x8_to_i32(self.narrow(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32_round(
+        self,
+        a: [core::arch::aarch64::float64x2_t; 4],
+    ) -> [core::arch::aarch64::int32x4_t; 2] {
+        crate::simd::impls::arm_neon::neon_f64x8_to_i32_round(self.narrow(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_from_i32(
+        self,
+        a: [core::arch::aarch64::int32x4_t; 2],
+    ) -> [core::arch::aarch64::float64x2_t; 4] {
+        crate::simd::impls::arm_neon::neon_f64x8_from_i32(self.narrow(), a)
+    }
 
     #[inline(always)]
     fn f16_to_f32_into_ops(self, input: &[u16], output: &mut [f32]) {
@@ -1824,6 +2390,38 @@ impl Sealed for archmage::Arm64V2Token {
         wide: [<Self::Narrow as super::ops::F32x4Ops>::Repr; 4],
     ) -> [<Self::Narrow as super::ops::F32x4Ops>::Repr; 2] {
         [wide[2], wide[3]]
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32(
+        self,
+        a: [core::arch::aarch64::float64x2_t; 4],
+    ) -> [core::arch::aarch64::int32x4_t; 2] {
+        crate::simd::impls::arm_neon::neon_f64x8_to_i32(self.narrow(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32_saturating(
+        self,
+        a: [core::arch::aarch64::float64x2_t; 4],
+    ) -> [core::arch::aarch64::int32x4_t; 2] {
+        crate::simd::impls::arm_neon::neon_f64x8_to_i32(self.narrow(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32_round(
+        self,
+        a: [core::arch::aarch64::float64x2_t; 4],
+    ) -> [core::arch::aarch64::int32x4_t; 2] {
+        crate::simd::impls::arm_neon::neon_f64x8_to_i32_round(self.narrow(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_from_i32(
+        self,
+        a: [core::arch::aarch64::int32x4_t; 2],
+    ) -> [core::arch::aarch64::float64x2_t; 4] {
+        crate::simd::impls::arm_neon::neon_f64x8_from_i32(self.narrow(), a)
     }
 
     #[inline(always)]
@@ -1878,6 +2476,38 @@ impl Sealed for archmage::Arm64V3Token {
     ) -> [<Self::Narrow as super::ops::F32x4Ops>::Repr; 2] {
         [wide[2], wide[3]]
     }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32(
+        self,
+        a: [core::arch::aarch64::float64x2_t; 4],
+    ) -> [core::arch::aarch64::int32x4_t; 2] {
+        crate::simd::impls::arm_neon::neon_f64x8_to_i32(self.narrow(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32_saturating(
+        self,
+        a: [core::arch::aarch64::float64x2_t; 4],
+    ) -> [core::arch::aarch64::int32x4_t; 2] {
+        crate::simd::impls::arm_neon::neon_f64x8_to_i32(self.narrow(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32_round(
+        self,
+        a: [core::arch::aarch64::float64x2_t; 4],
+    ) -> [core::arch::aarch64::int32x4_t; 2] {
+        crate::simd::impls::arm_neon::neon_f64x8_to_i32_round(self.narrow(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_from_i32(
+        self,
+        a: [core::arch::aarch64::int32x4_t; 2],
+    ) -> [core::arch::aarch64::float64x2_t; 4] {
+        crate::simd::impls::arm_neon::neon_f64x8_from_i32(self.narrow(), a)
+    }
 
     #[inline(always)]
     fn f16_to_f32_into_ops(self, input: &[u16], output: &mut [f32]) {
@@ -1931,6 +2561,38 @@ impl Sealed for archmage::Wasm128Token {
     ) -> [<Self::Narrow as super::ops::F32x4Ops>::Repr; 2] {
         [wide[2], wide[3]]
     }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32(
+        self,
+        a: [core::arch::wasm32::v128; 4],
+    ) -> [core::arch::wasm32::v128; 2] {
+        crate::simd::impls::wasm128::wasm_f64x8_to_i32(self.narrow(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32_saturating(
+        self,
+        a: [core::arch::wasm32::v128; 4],
+    ) -> [core::arch::wasm32::v128; 2] {
+        crate::simd::impls::wasm128::wasm_f64x8_to_i32(self.narrow(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32_round(
+        self,
+        a: [core::arch::wasm32::v128; 4],
+    ) -> [core::arch::wasm32::v128; 2] {
+        crate::simd::impls::wasm128::wasm_f64x8_to_i32_round(self.narrow(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_from_i32(
+        self,
+        a: [core::arch::wasm32::v128; 2],
+    ) -> [core::arch::wasm32::v128; 4] {
+        crate::simd::impls::wasm128::wasm_f64x8_from_i32(self.narrow(), a)
+    }
 
     #[inline(always)]
     fn f16_to_f32_into_ops(self, input: &[u16], output: &mut [f32]) {
@@ -1983,6 +2645,38 @@ impl Sealed for archmage::Wasm128RelaxedToken {
         wide: [<Self::Narrow as super::ops::F32x4Ops>::Repr; 4],
     ) -> [<Self::Narrow as super::ops::F32x4Ops>::Repr; 2] {
         [wide[2], wide[3]]
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32(
+        self,
+        a: [core::arch::wasm32::v128; 4],
+    ) -> [core::arch::wasm32::v128; 2] {
+        crate::simd::impls::wasm128::wasm_f64x8_to_i32(self.narrow(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32_saturating(
+        self,
+        a: [core::arch::wasm32::v128; 4],
+    ) -> [core::arch::wasm32::v128; 2] {
+        crate::simd::impls::wasm128::wasm_f64x8_to_i32(self.narrow(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32_round(
+        self,
+        a: [core::arch::wasm32::v128; 4],
+    ) -> [core::arch::wasm32::v128; 2] {
+        crate::simd::impls::wasm128::wasm_f64x8_to_i32_round(self.narrow(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_from_i32(
+        self,
+        a: [core::arch::wasm32::v128; 2],
+    ) -> [core::arch::wasm32::v128; 4] {
+        crate::simd::impls::wasm128::wasm_f64x8_from_i32(self.narrow(), a)
     }
 
     #[inline(always)]
@@ -2040,6 +2734,38 @@ impl Sealed for archmage::Wasm128RelaxedFmaToken {
         wide: [<Self::Narrow as super::ops::F32x4Ops>::Repr; 4],
     ) -> [<Self::Narrow as super::ops::F32x4Ops>::Repr; 2] {
         [wide[2], wide[3]]
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32(
+        self,
+        a: [core::arch::wasm32::v128; 4],
+    ) -> [core::arch::wasm32::v128; 2] {
+        crate::simd::impls::wasm128::wasm_f64x8_to_i32(self.narrow(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32_saturating(
+        self,
+        a: [core::arch::wasm32::v128; 4],
+    ) -> [core::arch::wasm32::v128; 2] {
+        crate::simd::impls::wasm128::wasm_f64x8_to_i32(self.narrow(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32_round(
+        self,
+        a: [core::arch::wasm32::v128; 4],
+    ) -> [core::arch::wasm32::v128; 2] {
+        crate::simd::impls::wasm128::wasm_f64x8_to_i32_round(self.narrow(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_from_i32(
+        self,
+        a: [core::arch::wasm32::v128; 2],
+    ) -> [core::arch::wasm32::v128; 4] {
+        crate::simd::impls::wasm128::wasm_f64x8_from_i32(self.narrow(), a)
     }
     #[inline(always)]
     fn wasm_fma_f32x4_mul_add(
@@ -2537,6 +3263,38 @@ impl Sealed for archmage::Wasm128RelaxedFmaToken {
         wide: [<Self::Narrow as super::ops::F32x4Ops>::Repr; 4],
     ) -> [<Self::Narrow as super::ops::F32x4Ops>::Repr; 2] {
         [wide[2], wide[3]]
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32(
+        self,
+        a: [core::arch::wasm32::v128; 4],
+    ) -> [core::arch::wasm32::v128; 2] {
+        crate::simd::impls::wasm128::wasm_f64x8_to_i32(self.narrow(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32_saturating(
+        self,
+        a: [core::arch::wasm32::v128; 4],
+    ) -> [core::arch::wasm32::v128; 2] {
+        crate::simd::impls::wasm128::wasm_f64x8_to_i32(self.narrow(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32_round(
+        self,
+        a: [core::arch::wasm32::v128; 4],
+    ) -> [core::arch::wasm32::v128; 2] {
+        crate::simd::impls::wasm128::wasm_f64x8_to_i32_round(self.narrow(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_from_i32(
+        self,
+        a: [core::arch::wasm32::v128; 2],
+    ) -> [core::arch::wasm32::v128; 4] {
+        crate::simd::impls::wasm128::wasm_f64x8_from_i32(self.narrow(), a)
     }
 
     #[inline(always)]

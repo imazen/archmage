@@ -57,6 +57,8 @@ pub(crate) fn is_unified_trait(name: &str) -> bool {
             | "F32x4Convert"
             | "F32x8Convert"
             | "F32x16Convert"
+            | "F64x2Convert"
+            | "F64x4Convert"
             | "U32x4Bitcast"
             | "U32x8Bitcast"
             | "I64x2Bitcast"
@@ -150,11 +152,11 @@ const WASM_FMA_OVERRIDES: &[(&str, &str, &str)] = &[
 ];
 
 /// Generate `(backends/ops.rs, backends/sealed.rs, impls/delegated.rs)` from
-/// `(trait_name, trait_file_src, is_w512)` tuples for all 43 unified traits.
+/// `(trait_name, trait_file_src, is_w512)` tuples for all 45 unified traits.
 pub(crate) fn generate_ops_and_sealed_and_delegated(
     specs: &[(String, String, bool)],
 ) -> (String, String, String) {
-    assert_eq!(specs.len(), 43, "expected all 43 unified traits");
+    assert_eq!(specs.len(), 45, "expected all 45 unified traits");
 
     let mut parsed_files: BTreeMap<String, syn::File> = BTreeMap::new();
     for (_, src, _) in specs {
@@ -895,6 +897,30 @@ fn generate_sealed_rs(
             fn f16_to_f32_into_ops(self, input: &[u16], output: &mut [f32]);
 
             fn f32_to_f16_into_ops(self, input: &[f32], output: &mut [u16]);
+
+            #[cfg(feature = "w512")]
+            fn f64x8_convert_to_i32(
+                self,
+                a: <Self::W512 as super::ops::F64x8Ops>::Repr,
+            ) -> <Self::Narrow as super::ops::I32x8Ops>::Repr;
+
+            #[cfg(feature = "w512")]
+            fn f64x8_convert_to_i32_saturating(
+                self,
+                a: <Self::W512 as super::ops::F64x8Ops>::Repr,
+            ) -> <Self::Narrow as super::ops::I32x8Ops>::Repr;
+
+            #[cfg(feature = "w512")]
+            fn f64x8_convert_to_i32_round(
+                self,
+                a: <Self::W512 as super::ops::F64x8Ops>::Repr,
+            ) -> <Self::Narrow as super::ops::I32x8Ops>::Repr;
+
+            #[cfg(feature = "w512")]
+            fn f64x8_convert_from_i32(
+                self,
+                a: <Self::Narrow as super::ops::I32x8Ops>::Repr,
+            ) -> <Self::W512 as super::ops::F64x8Ops>::Repr;
         }}
 
         {impls}
@@ -913,21 +939,34 @@ fn build_sealed_token_impls(
     enum W512Halves {
         Scalar,
         Pair,
-        Cascade4,
+        Cascade4Arm,
+        Cascade4Wasm,
         V4Self,
         V4Extract,
     }
 
-    fn emit_simple_impl(
-        cfg: Option<&str>,
-        token: &str,
-        narrow_ty: &str,
-        narrow_expr: &str,
-        w512_ty: &str,
-        w512_expr: &str,
+    struct SimpleImplSpec<'a> {
+        cfg: Option<&'a str>,
+        token: &'a str,
+        narrow_ty: &'a str,
+        narrow_expr: &'a str,
+        w512_ty: &'a str,
+        w512_expr: &'a str,
         halves: W512Halves,
-        extra: &str,
-    ) -> String {
+        extra: &'a str,
+    }
+
+    fn emit_simple_impl(spec: SimpleImplSpec<'_>) -> String {
+        let SimpleImplSpec {
+            cfg,
+            token,
+            narrow_ty,
+            narrow_expr,
+            w512_ty,
+            w512_expr,
+            halves,
+            extra,
+        } = spec;
         let cfg_attr = cfg.map(|c| format!("#[cfg({c})]\n")).unwrap_or_default();
         let halves_body = match halves {
             W512Halves::Scalar => r#"
@@ -945,6 +984,26 @@ fn build_sealed_token_impls(
     #[inline(always)]
     fn f32x16_high(self, wide: [f32; 16]) -> [f32; 8] {
         crate::simd::generic::cross_width::scalar_f32x16_high(wide)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32(self, a: [f64; 8]) -> [i32; 8] {
+        crate::simd::impls::scalar::scalar_f64x8_to_i32(a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32_saturating(self, a: [f64; 8]) -> [i32; 8] {
+        crate::simd::impls::scalar::scalar_f64x8_to_i32(a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32_round(self, a: [f64; 8]) -> [i32; 8] {
+        crate::simd::impls::scalar::scalar_f64x8_to_i32_round(a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_from_i32(self, a: [i32; 8]) -> [f64; 8] {
+        crate::simd::impls::scalar::scalar_f64x8_from_i32(a)
     }"#
             .to_string(),
             W512Halves::Pair => r#"
@@ -972,9 +1031,41 @@ fn build_sealed_token_impls(
         wide: [<Self::Narrow as super::ops::F32x8Ops>::Repr; 2],
     ) -> <Self::Narrow as super::ops::F32x8Ops>::Repr {
         wide[1]
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32(
+        self,
+        a: [core::arch::x86_64::__m256d; 2],
+    ) -> core::arch::x86_64::__m256i {
+        crate::simd::impls::x86_v3::v3_f64x8_to_i32(self.narrow(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32_saturating(
+        self,
+        a: [core::arch::x86_64::__m256d; 2],
+    ) -> core::arch::x86_64::__m256i {
+        crate::simd::impls::x86_v3::v3_f64x8_to_i32_saturating(self.narrow(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32_round(
+        self,
+        a: [core::arch::x86_64::__m256d; 2],
+    ) -> core::arch::x86_64::__m256i {
+        crate::simd::impls::x86_v3::v3_f64x8_to_i32_round(self.narrow(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_from_i32(
+        self,
+        a: core::arch::x86_64::__m256i,
+    ) -> [core::arch::x86_64::__m256d; 2] {
+        crate::simd::impls::x86_v3::v3_f64x8_from_i32(self.narrow(), a)
     }"#
             .to_string(),
-            W512Halves::Cascade4 => r#"
+            W512Halves::Cascade4Arm => r#"
     #[cfg(feature = "w512")]
     #[inline(always)]
     fn f32x16_from_halves(
@@ -999,6 +1090,97 @@ fn build_sealed_token_impls(
         wide: [<Self::Narrow as super::ops::F32x4Ops>::Repr; 4],
     ) -> [<Self::Narrow as super::ops::F32x4Ops>::Repr; 2] {
         [wide[2], wide[3]]
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32(
+        self,
+        a: [core::arch::aarch64::float64x2_t; 4],
+    ) -> [core::arch::aarch64::int32x4_t; 2] {
+        crate::simd::impls::arm_neon::neon_f64x8_to_i32(self.narrow(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32_saturating(
+        self,
+        a: [core::arch::aarch64::float64x2_t; 4],
+    ) -> [core::arch::aarch64::int32x4_t; 2] {
+        crate::simd::impls::arm_neon::neon_f64x8_to_i32(self.narrow(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32_round(
+        self,
+        a: [core::arch::aarch64::float64x2_t; 4],
+    ) -> [core::arch::aarch64::int32x4_t; 2] {
+        crate::simd::impls::arm_neon::neon_f64x8_to_i32_round(self.narrow(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_from_i32(
+        self,
+        a: [core::arch::aarch64::int32x4_t; 2],
+    ) -> [core::arch::aarch64::float64x2_t; 4] {
+        crate::simd::impls::arm_neon::neon_f64x8_from_i32(self.narrow(), a)
+    }"#
+            .to_string(),
+            W512Halves::Cascade4Wasm => r#"
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f32x16_from_halves(
+        self,
+        lo: [<Self::Narrow as super::ops::F32x4Ops>::Repr; 2],
+        hi: [<Self::Narrow as super::ops::F32x4Ops>::Repr; 2],
+    ) -> [<Self::Narrow as super::ops::F32x4Ops>::Repr; 4] {
+        [lo[0], lo[1], hi[0], hi[1]]
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f32x16_low(
+        self,
+        wide: [<Self::Narrow as super::ops::F32x4Ops>::Repr; 4],
+    ) -> [<Self::Narrow as super::ops::F32x4Ops>::Repr; 2] {
+        [wide[0], wide[1]]
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f32x16_high(
+        self,
+        wide: [<Self::Narrow as super::ops::F32x4Ops>::Repr; 4],
+    ) -> [<Self::Narrow as super::ops::F32x4Ops>::Repr; 2] {
+        [wide[2], wide[3]]
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32(
+        self,
+        a: [core::arch::wasm32::v128; 4],
+    ) -> [core::arch::wasm32::v128; 2] {
+        crate::simd::impls::wasm128::wasm_f64x8_to_i32(self.narrow(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32_saturating(
+        self,
+        a: [core::arch::wasm32::v128; 4],
+    ) -> [core::arch::wasm32::v128; 2] {
+        crate::simd::impls::wasm128::wasm_f64x8_to_i32(self.narrow(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32_round(
+        self,
+        a: [core::arch::wasm32::v128; 4],
+    ) -> [core::arch::wasm32::v128; 2] {
+        crate::simd::impls::wasm128::wasm_f64x8_to_i32_round(self.narrow(), a)
+    }
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_from_i32(
+        self,
+        a: [core::arch::wasm32::v128; 2],
+    ) -> [core::arch::wasm32::v128; 4] {
+        crate::simd::impls::wasm128::wasm_f64x8_from_i32(self.narrow(), a)
     }"#
             .to_string(),
             W512Halves::V4Self | W512Halves::V4Extract => {
@@ -1027,6 +1209,26 @@ fn build_sealed_token_impls(
     #[inline(always)]
     fn f32x16_high(self, wide: core::arch::x86_64::__m512) -> core::arch::x86_64::__m256 {{
         crate::simd::generic::cross_width::v4_f32x16_high({proof}, wide)
+    }}
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32(self, a: core::arch::x86_64::__m512d) -> core::arch::x86_64::__m256i {{
+        crate::simd::impls::x86_v4::v4_f64x8_to_i32({proof}, a)
+    }}
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32_saturating(self, a: core::arch::x86_64::__m512d) -> core::arch::x86_64::__m256i {{
+        crate::simd::impls::x86_v4::v4_f64x8_to_i32_saturating({proof}, a)
+    }}
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_to_i32_round(self, a: core::arch::x86_64::__m512d) -> core::arch::x86_64::__m256i {{
+        crate::simd::impls::x86_v4::v4_f64x8_to_i32_round({proof}, a)
+    }}
+    #[cfg(feature = "w512")]
+    #[inline(always)]
+    fn f64x8_convert_from_i32(self, a: core::arch::x86_64::__m256i) -> core::arch::x86_64::__m512d {{
+        crate::simd::impls::x86_v4::v4_f64x8_from_i32({proof}, a)
     }}"#
                 )
             }
@@ -1067,16 +1269,16 @@ fn build_sealed_token_impls(
     }"#;
 
     // ScalarToken (always present on every target)
-    parts.push(emit_simple_impl(
-        None,
-        "archmage::ScalarToken",
-        "archmage::ScalarToken",
-        "self",
-        "archmage::ScalarToken",
-        "self",
-        W512Halves::Scalar,
-        soft_f16_extra,
-    ));
+    parts.push(emit_simple_impl(SimpleImplSpec {
+        cfg: None,
+        token: "archmage::ScalarToken",
+        narrow_ty: "archmage::ScalarToken",
+        narrow_expr: "self",
+        w512_ty: "archmage::ScalarToken",
+        w512_expr: "self",
+        halves: W512Halves::Scalar,
+        extra: soft_f16_extra,
+    }));
 
     // x86_64 tokens (11 total)
     for token in [
@@ -1084,16 +1286,16 @@ fn build_sealed_token_impls(
         "archmage::X64V2Token",
         "archmage::X64CryptoToken",
     ] {
-        parts.push(emit_simple_impl(
-            Some(r#"target_arch = "x86_64""#),
+        parts.push(emit_simple_impl(SimpleImplSpec {
+            cfg: Some(r#"target_arch = "x86_64""#),
             token,
-            "archmage::ScalarToken",
-            "archmage::ScalarToken",
-            "archmage::ScalarToken",
-            "archmage::ScalarToken",
-            W512Halves::Scalar,
-            soft_f16_extra,
-        ));
+            narrow_ty: "archmage::ScalarToken",
+            narrow_expr: "archmage::ScalarToken",
+            w512_ty: "archmage::ScalarToken",
+            w512_expr: "archmage::ScalarToken",
+            halves: W512Halves::Scalar,
+            extra: soft_f16_extra,
+        }));
     }
 
     let v3_f16_extra = r#"
@@ -1133,16 +1335,16 @@ fn build_sealed_token_impls(
         crate::simd::generic::convert_f16::neon_f16_encode(self.neon(), input, output);
     }"#;
 
-    parts.push(emit_simple_impl(
-        Some(r#"target_arch = "x86_64""#),
-        "archmage::X64V3Token",
-        "archmage::X64V3Token",
-        "self",
-        "archmage::X64V3Token",
-        "self",
-        W512Halves::Pair,
-        v3_f16_extra,
-    ));
+    parts.push(emit_simple_impl(SimpleImplSpec {
+        cfg: Some(r#"target_arch = "x86_64""#),
+        token: "archmage::X64V3Token",
+        narrow_ty: "archmage::X64V3Token",
+        narrow_expr: "self",
+        w512_ty: "archmage::X64V3Token",
+        w512_expr: "self",
+        halves: W512Halves::Pair,
+        extra: v3_f16_extra,
+    }));
 
     for token in [
         "archmage::X64V3CryptoToken",
@@ -1150,16 +1352,16 @@ fn build_sealed_token_impls(
         "archmage::X64V3VnniToken",
         "archmage::X64V3Vnni2Token",
     ] {
-        parts.push(emit_simple_impl(
-            Some(r#"target_arch = "x86_64""#),
+        parts.push(emit_simple_impl(SimpleImplSpec {
+            cfg: Some(r#"target_arch = "x86_64""#),
             token,
-            "archmage::X64V3Token",
-            "self.v3()",
-            "archmage::X64V3Token",
-            "self.v3()",
-            W512Halves::Pair,
-            v3_sub_f16_extra,
-        ));
+            narrow_ty: "archmage::X64V3Token",
+            narrow_expr: "self.v3()",
+            w512_ty: "archmage::X64V3Token",
+            w512_expr: "self.v3()",
+            halves: W512Halves::Pair,
+            extra: v3_sub_f16_extra,
+        }));
     }
 
     // AVX-512 tokens with feature = "avx512"
@@ -1233,36 +1435,36 @@ fn build_sealed_token_impls(
         }}
     "#};
 
-    parts.push(emit_simple_impl(
-        Some(r#"all(target_arch = "x86_64", feature = "avx512")"#),
-        "archmage::X64V4Token",
-        "archmage::X64V3Token",
-        "self.v3()",
-        "archmage::X64V4Token",
-        "self",
-        W512Halves::V4Self,
-        &v4_common_extra_self,
-    ));
-    parts.push(emit_simple_impl(
-        Some(r#"all(target_arch = "x86_64", feature = "avx512")"#),
-        "archmage::X64V4xToken",
-        "archmage::X64V3Token",
-        "self.v3()",
-        "archmage::X64V4Token",
-        "self.v4()",
-        W512Halves::V4Extract,
-        &v4x_extra,
-    ));
-    parts.push(emit_simple_impl(
-        Some(r#"all(target_arch = "x86_64", feature = "avx512")"#),
-        "archmage::Avx512Fp16Token",
-        "archmage::X64V3Token",
-        "self.v3()",
-        "archmage::X64V4Token",
-        "self.v4()",
-        W512Halves::V4Extract,
-        &v4_common_extra_v4,
-    ));
+    parts.push(emit_simple_impl(SimpleImplSpec {
+        cfg: Some(r#"all(target_arch = "x86_64", feature = "avx512")"#),
+        token: "archmage::X64V4Token",
+        narrow_ty: "archmage::X64V3Token",
+        narrow_expr: "self.v3()",
+        w512_ty: "archmage::X64V4Token",
+        w512_expr: "self",
+        halves: W512Halves::V4Self,
+        extra: &v4_common_extra_self,
+    }));
+    parts.push(emit_simple_impl(SimpleImplSpec {
+        cfg: Some(r#"all(target_arch = "x86_64", feature = "avx512")"#),
+        token: "archmage::X64V4xToken",
+        narrow_ty: "archmage::X64V3Token",
+        narrow_expr: "self.v3()",
+        w512_ty: "archmage::X64V4Token",
+        w512_expr: "self.v4()",
+        halves: W512Halves::V4Extract,
+        extra: &v4x_extra,
+    }));
+    parts.push(emit_simple_impl(SimpleImplSpec {
+        cfg: Some(r#"all(target_arch = "x86_64", feature = "avx512")"#),
+        token: "archmage::Avx512Fp16Token",
+        narrow_ty: "archmage::X64V3Token",
+        narrow_expr: "self.v3()",
+        w512_ty: "archmage::X64V4Token",
+        w512_expr: "self.v4()",
+        halves: W512Halves::V4Extract,
+        extra: &v4_common_extra_v4,
+    }));
 
     // AVX-512 tokens without feature = "avx512": fallback seamlessly to V3
     for token in [
@@ -1270,29 +1472,29 @@ fn build_sealed_token_impls(
         "archmage::X64V4xToken",
         "archmage::Avx512Fp16Token",
     ] {
-        parts.push(emit_simple_impl(
-            Some(r#"all(target_arch = "x86_64", not(feature = "avx512"))"#),
+        parts.push(emit_simple_impl(SimpleImplSpec {
+            cfg: Some(r#"all(target_arch = "x86_64", not(feature = "avx512"))"#),
             token,
-            "archmage::X64V3Token",
-            "self.v3()",
-            "archmage::X64V3Token",
-            "self.v3()",
-            W512Halves::Pair,
-            v3_sub_f16_extra,
-        ));
+            narrow_ty: "archmage::X64V3Token",
+            narrow_expr: "self.v3()",
+            w512_ty: "archmage::X64V3Token",
+            w512_expr: "self.v3()",
+            halves: W512Halves::Pair,
+            extra: v3_sub_f16_extra,
+        }));
     }
 
     // aarch64 tokens (6 total)
-    parts.push(emit_simple_impl(
-        Some(r#"target_arch = "aarch64""#),
-        "archmage::NeonToken",
-        "archmage::NeonToken",
-        "self",
-        "archmage::NeonToken",
-        "self",
-        W512Halves::Cascade4,
-        neon_self_f16_extra,
-    ));
+    parts.push(emit_simple_impl(SimpleImplSpec {
+        cfg: Some(r#"target_arch = "aarch64""#),
+        token: "archmage::NeonToken",
+        narrow_ty: "archmage::NeonToken",
+        narrow_expr: "self",
+        w512_ty: "archmage::NeonToken",
+        w512_expr: "self",
+        halves: W512Halves::Cascade4Arm,
+        extra: neon_self_f16_extra,
+    }));
     for token in [
         "archmage::NeonAesToken",
         "archmage::NeonSha3Token",
@@ -1300,39 +1502,39 @@ fn build_sealed_token_impls(
         "archmage::Arm64V2Token",
         "archmage::Arm64V3Token",
     ] {
-        parts.push(emit_simple_impl(
-            Some(r#"target_arch = "aarch64""#),
+        parts.push(emit_simple_impl(SimpleImplSpec {
+            cfg: Some(r#"target_arch = "aarch64""#),
             token,
-            "archmage::NeonToken",
-            "self.neon()",
-            "archmage::NeonToken",
-            "self.neon()",
-            W512Halves::Cascade4,
-            neon_sub_f16_extra,
-        ));
+            narrow_ty: "archmage::NeonToken",
+            narrow_expr: "self.neon()",
+            w512_ty: "archmage::NeonToken",
+            w512_expr: "self.neon()",
+            halves: W512Halves::Cascade4Arm,
+            extra: neon_sub_f16_extra,
+        }));
     }
 
     // wasm32 tokens (3 total)
-    parts.push(emit_simple_impl(
-        Some(r#"target_arch = "wasm32""#),
-        "archmage::Wasm128Token",
-        "archmage::Wasm128Token",
-        "self",
-        "archmage::Wasm128Token",
-        "self",
-        W512Halves::Cascade4,
-        soft_f16_extra,
-    ));
-    parts.push(emit_simple_impl(
-        Some(r#"target_arch = "wasm32""#),
-        "archmage::Wasm128RelaxedToken",
-        "archmage::Wasm128Token",
-        "self.wasm128()",
-        "archmage::Wasm128Token",
-        "self.wasm128()",
-        W512Halves::Cascade4,
-        soft_f16_extra,
-    ));
+    parts.push(emit_simple_impl(SimpleImplSpec {
+        cfg: Some(r#"target_arch = "wasm32""#),
+        token: "archmage::Wasm128Token",
+        narrow_ty: "archmage::Wasm128Token",
+        narrow_expr: "self",
+        w512_ty: "archmage::Wasm128Token",
+        w512_expr: "self",
+        halves: W512Halves::Cascade4Wasm,
+        extra: soft_f16_extra,
+    }));
+    parts.push(emit_simple_impl(SimpleImplSpec {
+        cfg: Some(r#"target_arch = "wasm32""#),
+        token: "archmage::Wasm128RelaxedToken",
+        narrow_ty: "archmage::Wasm128Token",
+        narrow_expr: "self.wasm128()",
+        w512_ty: "archmage::Wasm128Token",
+        w512_expr: "self.wasm128()",
+        halves: W512Halves::Cascade4Wasm,
+        extra: soft_f16_extra,
+    }));
 
     let wasm_fma_extra = formatdoc! {r#"
         {wasm_overrides}
@@ -1396,30 +1598,30 @@ fn build_sealed_token_impls(
         }}
         {soft_f16_extra}
     "#};
-    parts.push(emit_simple_impl(
-        Some(
+    parts.push(emit_simple_impl(SimpleImplSpec {
+        cfg: Some(
             r#"all(target_arch = "wasm32", target_feature = "simd128", target_feature = "relaxed-simd")"#,
         ),
-        "archmage::Wasm128RelaxedFmaToken",
-        "archmage::Wasm128Token",
-        "self.wasm128()",
-        "archmage::Wasm128Token",
-        "self.wasm128()",
-        W512Halves::Cascade4,
-        &wasm_fma_extra,
-    ));
-    parts.push(emit_simple_impl(
-        Some(
+        token: "archmage::Wasm128RelaxedFmaToken",
+        narrow_ty: "archmage::Wasm128Token",
+        narrow_expr: "self.wasm128()",
+        w512_ty: "archmage::Wasm128Token",
+        w512_expr: "self.wasm128()",
+        halves: W512Halves::Cascade4Wasm,
+        extra: &wasm_fma_extra,
+    }));
+    parts.push(emit_simple_impl(SimpleImplSpec {
+        cfg: Some(
             r#"all(target_arch = "wasm32", not(all(target_feature = "simd128", target_feature = "relaxed-simd")))"#,
         ),
-        "archmage::Wasm128RelaxedFmaToken",
-        "archmage::Wasm128Token",
-        "self.wasm128()",
-        "archmage::Wasm128Token",
-        "self.wasm128()",
-        W512Halves::Cascade4,
-        soft_f16_extra,
-    ));
+        token: "archmage::Wasm128RelaxedFmaToken",
+        narrow_ty: "archmage::Wasm128Token",
+        narrow_expr: "self.wasm128()",
+        w512_ty: "archmage::Wasm128Token",
+        w512_expr: "self.wasm128()",
+        halves: W512Halves::Cascade4Wasm,
+        extra: soft_f16_extra,
+    }));
 
     parts.join("\n")
 }
@@ -1530,10 +1732,55 @@ fn generate_delegated_rs(traits: &[(String, syn::ItemTrait, bool)]) -> String {
         );
     }
 
+    // `F64x8Convert` bridges W512 (`F64x8Backend`) and Narrow (`I32x8Backend`),
+    // so it routes through `Sealed::f64x8_convert_*` hooks rather than a single
+    // `*Ops` projection.
+    blocks.push(
+        quote! {
+            #[cfg(feature = "w512")]
+            impl<T: archmage::SimdToken + crate::simd::backends::sealed::Sealed + Copy + 'static>
+                crate::simd::backends::F64x8Convert for T
+            {
+                #[inline(always)]
+                fn convert_f64_to_i32(
+                    self,
+                    a: <Self as crate::simd::backends::F64x8Backend>::Repr,
+                ) -> <Self as crate::simd::backends::I32x8Backend>::Repr {
+                    self.f64x8_convert_to_i32(a)
+                }
+
+                #[inline(always)]
+                fn convert_f64_to_i32_saturating(
+                    self,
+                    a: <Self as crate::simd::backends::F64x8Backend>::Repr,
+                ) -> <Self as crate::simd::backends::I32x8Backend>::Repr {
+                    self.f64x8_convert_to_i32_saturating(a)
+                }
+
+                #[inline(always)]
+                fn convert_f64_to_i32_round(
+                    self,
+                    a: <Self as crate::simd::backends::F64x8Backend>::Repr,
+                ) -> <Self as crate::simd::backends::I32x8Backend>::Repr {
+                    self.f64x8_convert_to_i32_round(a)
+                }
+
+                #[inline(always)]
+                fn convert_i32_to_f64(
+                    self,
+                    a: <Self as crate::simd::backends::I32x8Backend>::Repr,
+                ) -> <Self as crate::simd::backends::F64x8Backend>::Repr {
+                    self.f64x8_convert_from_i32(a)
+                }
+            }
+        }
+        .to_string(),
+    );
+
     let body = blocks.join("\n\n");
     formatdoc! {r#"
-        //! Blanket implementations of all 43 public backend, conversion, and bitcast
-        //! traits over every sealed archmage token.
+        //! Blanket implementations of all 45 public backend, conversion, and bitcast
+        //! traits (plus `F64x8Convert`) over every sealed archmage token.
         //!
         //! Routes through `T::Narrow` / `T::W512` (`backends/ops.rs`) and optional
         //! hardware overrides on `Sealed`.

@@ -865,6 +865,18 @@ impl<T: crate::simd::backends::F32x16Convert> f32x16<T> {
     pub fn from_i32x16_t(token: T, v: super::i32x16<T>) -> Self {
         Self::from_i32_t(token, v)
     }
+
+    /// Alias for [`bitcast_ref_i32`](Self::bitcast_ref_i32) (from block_ops).
+    #[inline(always)]
+    pub fn bitcast_ref_i32x16(&self) -> &super::i32x16<T> {
+        self.bitcast_ref_i32()
+    }
+
+    /// Alias for [`bitcast_mut_i32`](Self::bitcast_mut_i32) (from block_ops).
+    #[inline(always)]
+    pub fn bitcast_mut_i32x16(&mut self) -> &mut super::i32x16<T> {
+        self.bitcast_mut_i32()
+    }
 }
 
 // ============================================================================

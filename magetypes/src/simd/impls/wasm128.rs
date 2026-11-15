@@ -4208,6 +4208,75 @@ impl I64x4BitcastOps for archmage::Wasm128Token {
 }
 
 #[cfg(target_arch = "wasm32")]
+impl F64x2ConvertOps for archmage::Wasm128Token {
+    #[inline(always)]
+    fn convert_f64_to_i32_low(self, a: v128) -> v128 {
+        i32x4_trunc_sat_f64x2_zero(a)
+    }
+
+    #[inline(always)]
+    fn convert_f64_to_i32_low_round(self, a: v128) -> v128 {
+        i32x4_trunc_sat_f64x2_zero(f64x2_nearest(a))
+    }
+
+    #[inline(always)]
+    fn convert_i32_low_to_f64(self, a: v128) -> v128 {
+        f64x2_convert_low_i32x4(a)
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+impl F64x4ConvertOps for archmage::Wasm128Token {
+    #[inline(always)]
+    fn convert_f64_to_i32(self, a: [v128; 2]) -> v128 {
+        let lo = i32x4_trunc_sat_f64x2_zero(a[0]);
+        let hi = i32x4_trunc_sat_f64x2_zero(a[1]);
+        i64x2_shuffle::<0, 2>(lo, hi)
+    }
+
+    #[inline(always)]
+    fn convert_f64_to_i32_round(self, a: [v128; 2]) -> v128 {
+        let lo = i32x4_trunc_sat_f64x2_zero(f64x2_nearest(a[0]));
+        let hi = i32x4_trunc_sat_f64x2_zero(f64x2_nearest(a[1]));
+        i64x2_shuffle::<0, 2>(lo, hi)
+    }
+
+    #[inline(always)]
+    fn convert_i32_to_f64(self, a: v128) -> [v128; 2] {
+        [
+            f64x2_convert_low_i32x4(a),
+            f64x2_convert_low_i32x4(i64x2_shuffle::<1, 0>(a, a)),
+        ]
+    }
+}
+
+#[cfg(all(target_arch = "wasm32", feature = "w512"))]
+#[inline(always)]
+pub(crate) fn wasm_f64x8_to_i32(token: archmage::Wasm128Token, a: [v128; 4]) -> [v128; 2] {
+    [
+        <archmage::Wasm128Token as F64x4ConvertOps>::convert_f64_to_i32(token, [a[0], a[1]]),
+        <archmage::Wasm128Token as F64x4ConvertOps>::convert_f64_to_i32(token, [a[2], a[3]]),
+    ]
+}
+
+#[cfg(all(target_arch = "wasm32", feature = "w512"))]
+#[inline(always)]
+pub(crate) fn wasm_f64x8_to_i32_round(token: archmage::Wasm128Token, a: [v128; 4]) -> [v128; 2] {
+    [
+        <archmage::Wasm128Token as F64x4ConvertOps>::convert_f64_to_i32_round(token, [a[0], a[1]]),
+        <archmage::Wasm128Token as F64x4ConvertOps>::convert_f64_to_i32_round(token, [a[2], a[3]]),
+    ]
+}
+
+#[cfg(all(target_arch = "wasm32", feature = "w512"))]
+#[inline(always)]
+pub(crate) fn wasm_f64x8_from_i32(token: archmage::Wasm128Token, a: [v128; 2]) -> [v128; 4] {
+    let lo = <archmage::Wasm128Token as F64x4ConvertOps>::convert_i32_to_f64(token, a[0]);
+    let hi = <archmage::Wasm128Token as F64x4ConvertOps>::convert_i32_to_f64(token, a[1]);
+    [lo[0], lo[1], hi[0], hi[1]]
+}
+
+#[cfg(target_arch = "wasm32")]
 impl I8x16BitcastOps for archmage::Wasm128Token {
     #[inline(always)]
     fn bitcast_i8_to_u8(self, a: v128) -> v128 {
@@ -4505,6 +4574,28 @@ impl F32x16Ops for archmage::Wasm128Token {
             if l > r { l } else { r }
         };
         if m01 > m23 { m01 } else { m23 }
+    }
+
+    #[inline(always)]
+    fn to_u8_bytes(self, a: [v128; 4]) -> [u8; 16] {
+        let b0 = <archmage::Wasm128Token as F32x4Ops>::to_u8_bytes(self, a[0]);
+        let b1 = <archmage::Wasm128Token as F32x4Ops>::to_u8_bytes(self, a[1]);
+        let b2 = <archmage::Wasm128Token as F32x4Ops>::to_u8_bytes(self, a[2]);
+        let b3 = <archmage::Wasm128Token as F32x4Ops>::to_u8_bytes(self, a[3]);
+        crate::simd_storage::cast([b0, b1, b2, b3])
+    }
+
+    #[inline(always)]
+    fn store_rgba_bytes(self, r: [v128; 4], g: [v128; 4], b: [v128; 4], a: [v128; 4]) -> [u8; 64] {
+        let p0 =
+            <archmage::Wasm128Token as F32x4Ops>::store_rgba_bytes(self, r[0], g[0], b[0], a[0]);
+        let p1 =
+            <archmage::Wasm128Token as F32x4Ops>::store_rgba_bytes(self, r[1], g[1], b[1], a[1]);
+        let p2 =
+            <archmage::Wasm128Token as F32x4Ops>::store_rgba_bytes(self, r[2], g[2], b[2], a[2]);
+        let p3 =
+            <archmage::Wasm128Token as F32x4Ops>::store_rgba_bytes(self, r[3], g[3], b[3], a[3]);
+        crate::simd_storage::cast([p0, p1, p2, p3])
     }
 
     #[inline(always)]

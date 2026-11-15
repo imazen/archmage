@@ -1292,24 +1292,20 @@ fn main() -> Result<()> {
 /// as well, and rejects unapproved `macro_rules!` inside generated backend
 /// files so delegation bloat cannot hide behind macro expansion.
 const COMPILE_BUDGETS: &[(&str, usize)] = &[
-    // Measured 38 562 (all 21 tokens unified via backends/{ops,sealed}.rs +
-    // impls/delegated.rs, replacing x86_v3_higher_delegated.rs,
-    // x86_v4_f32_delegated.rs, and x86_v4_w512_delegated.rs — net -1 010 vs
-    // pre-unification 39 572).
-    ("x86_64", 40_000),
-    // Measured 35 697 (+10 654 over pre-unification 25 043 because shared
-    // backends/{ops,sealed}.rs + impls/delegated.rs are target-common and give
-    // all 6 ARM tokens full unified backend coverage with zero per-token files).
-    ("aarch64", 37_000),
-    // Measured 35 552 (+5 496 over pre-unification 30 056: shared
-    // ops/sealed/delegated replaces wasm128_fma_delegated.rs while covering all
-    // 3 WASM tokens uniformly).
-    ("wasm32", 37_000),
+    // Measured 40 048 (+1 486 over PR #178 baseline 38 562 due to #112 §2
+    // f32x16 block ops/dual-8x8/16x16 transposes and #112 §3 F64x{2,4,8}Convert).
+    ("x86_64", 41_500),
+    // Measured 36 980 (+1 283 over 35 697 baseline due to #112 §2 f32x16
+    // block ops and #112 §3 F64x{2,4,8}Convert).
+    ("aarch64", 38_500),
+    // Measured 36 831 (+1 279 over 35 552 baseline due to #112 §2 f32x16
+    // block ops and #112 §3 F64x{2,4,8}Convert).
+    ("wasm32", 38_500),
 ];
 
 /// Budget for `magetypes/src/simd/generic/generated/*.rs` (target-common
-/// wrapper definitions; measured 27 760 lines).
-const GENERIC_GENERATED_BUDGET: usize = 29_000;
+/// wrapper definitions; measured 28 492 lines).
+const GENERIC_GENERATED_BUDGET: usize = 29_500;
 
 /// Single-method helper macros audited to stay 1:1 with source lines (never
 /// generating whole `impl ... for Token` blocks).
@@ -2598,12 +2594,6 @@ fn check_api_parity(strict: bool) -> Result<()> {
         "  u32x4::from_m128i — missing from: ARM, WASM",
         "  i64x2::from_m128i — missing from: ARM, WASM",
         "  u64x2::from_m128i — missing from: ARM, WASM",
-        // AVX-512 fast-path methods (only available with X64V4Token)
-        "  i64x2::abs_fast — missing from: ARM, WASM",
-        "  i64x2::min_fast — missing from: ARM, WASM",
-        "  i64x2::max_fast — missing from: ARM, WASM",
-        "  u64x2::min_fast — missing from: ARM, WASM",
-        "  u64x2::max_fast — missing from: ARM, WASM",
         // x86 W128 uses V3 token (no _mm_srai_epi64 until AVX-512)
         "  i64x2::shr_arithmetic — missing from: x86",
     ];
