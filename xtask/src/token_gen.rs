@@ -120,6 +120,9 @@ pub fn generate_token_files(reg: &Registry, major_version: u32) -> Vec<(String, 
     // Traits
     files.push(("traits.rs".into(), gen_traits(reg)));
 
+    // Declarative backend boundary macro (eliminates ~1,700 proc-macro calls in magetypes)
+    files.push(("backend_macros.rs".into(), gen_backend_macros(reg)));
+
     // Module file
     files.push(("mod.rs".into(), gen_mod_rs()));
 
@@ -1461,12 +1464,114 @@ fn gen_trait_def(out: &mut String, trait_def: &TraitDef, deprecated_trait_names:
 // Module file
 // ============================================================================
 
+fn gen_backend_macros(reg: &Registry) -> String {
+    let mut inner_arms = String::new();
+    for token in &reg.token {
+        let cfg_arch = match token.arch.as_str() {
+            "x86" => "x86_64",
+            "aarch64" => "aarch64",
+            _ => continue,
+        };
+        if token.features.is_empty() {
+            continue;
+        }
+        let name = &token.name;
+        let features = token.features.join(",");
+        inner_arms.push_str(&formatdoc! {r#"
+            (@inner {name} => ($($gen:tt)*) ($($arg:ident : $ty:ty),*) -> $ret:ty $body:block) => {{
+                #[cfg(target_arch = "{cfg_arch}")]
+                #[target_feature(enable = "{features}")]
+                #[inline]
+                fn __simd_inner $($gen)* (_: $crate::{name} $(, $arg: $ty)*) -> $ret $body
+            }};
+            (@inner {name}, $self_id:ident => ($($gen:tt)*) ($($arg:ident : $ty:ty),*) -> $ret:ty $body:block) => {{
+                #[cfg(target_arch = "{cfg_arch}")]
+                #[target_feature(enable = "{features}")]
+                #[inline]
+                #[allow(clippy::used_underscore_binding)]
+                fn __simd_inner $($gen)* ($self_id: $crate::{name} $(, $arg: $ty)*) -> $ret $body
+            }};
+        "#});
+    }
+
+    formatdoc! {r#"
+        //! Generated from token-registry.toml — DO NOT EDIT.
+        //!
+        //! Declarative target-feature boundary macro for generated SIMD backend trait
+        //! implementations in `magetypes`, avoiding ~1,700 proc-macro invocations
+        //! while preserving identical `#[target_feature]` checking and `$crate` token
+        //! type authentication.
+
+        /// Internal declarative boundary macro for generated concrete-token trait methods.
+        #[doc(hidden)]
+        #[macro_export]
+        macro_rules! __arcane_fn {{
+            ($tok:ident => fn $name:ident ( self $(, $arg:ident : $ty:ty)* $(,)? ) -> $ret:ty $body:block) => {{
+                #[inline(always)]
+                fn $name(self $(, $arg: $ty)*) -> $ret {{
+                    $crate::__arcane_fn!(@inner $tok => () ($($arg : $ty),*) -> $ret $body);
+                    // SAFETY: `__simd_inner` takes `$crate::$tok`, which rustc type-checks
+                    // against `self` (`$crate` cannot be shadowed or aliased), proving every
+                    // feature in this token's `#[target_feature]` list is available.
+                    #[allow(unsafe_code)]
+                    unsafe {{ __simd_inner(self $(, $arg)*) }}
+                }}
+            }};
+            ($tok:ident, $self_id:ident => fn $name:ident ( self $(, $arg:ident : $ty:ty)* $(,)? ) -> $ret:ty $body:block) => {{
+                #[inline(always)]
+                fn $name(self $(, $arg: $ty)*) -> $ret {{
+                    $crate::__arcane_fn!(@inner $tok, $self_id => () ($($arg : $ty),*) -> $ret $body);
+                    // SAFETY: `__simd_inner` takes `$crate::$tok`, which rustc type-checks
+                    // against `self` (`$crate` cannot be shadowed or aliased), proving every
+                    // feature in this token's `#[target_feature]` list is available.
+                    #[allow(unsafe_code)]
+                    unsafe {{ __simd_inner(self $(, $arg)*) }}
+                }}
+            }};
+            ($tok:ident => fn $name:ident < const $c:ident : $cty:ty > ( self $(, $arg:ident : $ty:ty)* $(,)? ) -> $ret:ty $body:block) => {{
+                #[inline(always)]
+                fn $name<const $c: $cty>(self $(, $arg: $ty)*) -> $ret {{
+                    $crate::__arcane_fn!(@inner $tok => (<const $c: $cty>) ($($arg : $ty),*) -> $ret $body);
+                    // SAFETY: `__simd_inner` takes `$crate::$tok`, which rustc type-checks
+                    // against `self` (`$crate` cannot be shadowed or aliased), proving every
+                    // feature in this token's `#[target_feature]` list is available.
+                    #[allow(unsafe_code)]
+                    unsafe {{ __simd_inner::<$c>(self $(, $arg)*) }}
+                }}
+            }};
+            ($tok:ident, $self_id:ident => fn $name:ident < const $c:ident : $cty:ty > ( self $(, $arg:ident : $ty:ty)* $(,)? ) -> $ret:ty $body:block) => {{
+                #[inline(always)]
+                fn $name<const $c: $cty>(self $(, $arg: $ty)*) -> $ret {{
+                    $crate::__arcane_fn!(@inner $tok, $self_id => (<const $c: $cty>) ($($arg : $ty),*) -> $ret $body);
+                    // SAFETY: `__simd_inner` takes `$crate::$tok`, which rustc type-checks
+                    // against `self` (`$crate` cannot be shadowed or aliased), proving every
+                    // feature in this token's `#[target_feature]` list is available.
+                    #[allow(unsafe_code)]
+                    unsafe {{ __simd_inner::<$c>(self $(, $arg)*) }}
+                }}
+            }};
+            (@sse2 fn $name:ident ( self $(, $arg:ident : $ty:ty)* $(,)? ) -> $ret:ty $body:block) => {{
+                #[inline(always)]
+                fn $name(self $(, $arg: $ty)*) -> $ret {{
+                    $crate::__arcane_fn!(@inner X64V1Token => () ($($arg : $ty),*) -> $ret $body);
+                    // SAFETY: `self.v1()` yields a `$crate::X64V1Token` proof (SSE + SSE2)
+                    // checked against `__simd_inner`'s parameter type.
+                    #[allow(unsafe_code)]
+                    unsafe {{ __simd_inner(self.v1() $(, $arg)*) }}
+                }}
+            }};
+            {inner_arms}
+        }}
+    "#}
+}
+
 fn gen_mod_rs() -> String {
     formatdoc! {r#"
         //! Generated from token-registry.toml — DO NOT EDIT.
         //!
         //! cfg-gated module imports and re-exports for all token types.
 
+        mod backend_macros;
         mod traits;
         pub use traits::*;
 
@@ -1653,6 +1758,7 @@ mod tests {
             "arm_stubs.rs",
             "wasm_stubs.rs",
             "traits.rs",
+            "backend_macros.rs",
             "mod.rs",
         ];
         for exp in &expected {

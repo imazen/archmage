@@ -11,19 +11,20 @@
 #
 #   pub modules                                 1
 #   pub consts/statics                         39
+#   pub macros                                  1
 #   free functions                              1
 #   inherent methods                           25
 #   re-exports                                  2
 #   trait roster entries (type × trait)        21
 #
 # per-module pub lines:
-#   (root)                            3
+#   (root)                            4
 #   __private                         1
 #   prelude                           2
 #   testing                           1
 #   tokens                           61
 
-## items (68 lines)
+## items (69 lines)
 
 pub const tokens::Arm64V2Token::__ARCHMAGE_ASSERT_TIER_B0231590: ()
 pub const tokens::Arm64V2Token::__ARCHMAGE_TIER_TAG: u32
@@ -90,6 +91,7 @@ pub fn tokens::X64V3Token::try_new() -> core::option::Option<Self>
 pub fn tokens::X64V3VnniToken::try_new() -> core::option::Option<Self>
 pub fn tokens::X64V4Token::try_new() -> core::option::Option<Self>
 pub fn tokens::X64V4xToken::try_new() -> core::option::Option<Self>
+pub macro __arcane_fn!
 pub mod __private
 pub use prelude::simd_fn
 pub use simd_fn
