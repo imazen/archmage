@@ -118,6 +118,11 @@ impl Definition {
                 "wrap derives its features from the proof parameter; omit the explicit tier",
             );
         }
+        if opts.suppress_const_test && opts.tier.is_some() {
+            return error(
+                "suppress_const_test requires a proof wrapper (wrap, a _t suffix, _*_t, or dispatch); direct target-feature bodies emit no token assertion",
+            );
+        }
         if !self.family && !opts.names.is_empty() {
             return error("names(...) on a definition requires generated outputs");
         }
@@ -226,6 +231,16 @@ fn dispatcher(args: &mut Args, output: &Output) -> syn::Result<()> {
 fn validate_outputs(args: &mut Args, span: Span) -> syn::Result<()> {
     if args.family && args.selections.is_empty() && args.dispatcher.is_none() {
         return Err(syn::Error::new(span, "declaration selects no outputs"));
+    }
+    if args.options.suppress_const_test
+        && args.family
+        && args.dispatcher.is_none()
+        && !args.selections.iter().any(|s| s.form == Form::Proof)
+    {
+        return Err(syn::Error::new(
+            span,
+            "suppress_const_test requires a proof wrapper (wrap, a _t suffix, _*_t, or dispatch); direct target-feature bodies emit no token assertion",
+        ));
     }
     // Coalesce identical selectors in place. Keep source order and avoid a
     // second allocation just to deduplicate a small tier set.

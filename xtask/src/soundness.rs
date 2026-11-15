@@ -115,13 +115,18 @@ const MIN_VERIFIED_CALLS: usize = 4000;
 /// stay visible to the scanner. Floors sit ~25% below measured so normal
 /// churn doesn't trip them.
 const REQUIRED_FILE_FLOORS: &[(&str, usize)] = &[
-    ("magetypes/src/simd/impls/x86_v3.rs", 750), // measured 993
-    ("magetypes/src/simd/impls/x86_v4.rs", 790), // measured 1056
-    ("magetypes/src/simd/impls/arm_neon.rs", 1080), // measured 1445
-    ("magetypes/src/simd/impls/wasm128.rs", 700), // measured 942
+    ("magetypes/src/simd/impls/x86_v3.rs", 750), // measured 1260
+    // Measured 589 after delegating X64V4xToken's duplicate base W512 backends
+    // to X64V4Token in x86_v4_w512_delegated.rs (was 1056 with duplicated impls).
+    ("magetypes/src/simd/impls/x86_v4.rs", 440),
+    ("magetypes/src/simd/impls/arm_neon.rs", 1080), // measured 1705
+    ("magetypes/src/simd/impls/wasm128.rs", 700),   // measured 1227
+    ("magetypes/src/simd/impls/wasm128_fma_overrides.rs", 5), // measured 6
     ("magetypes/src/simd/generic/cross_width.rs", 6), // measured 8
     ("magetypes/src/simd/generic/convert_f16.rs", 18), // measured 26
-    ("magetypes/src/simd_storage.rs", 13),       // measured 18 (gather/scatter)
+    ("magetypes/src/simd_storage.rs", 13),          // measured 18 (gather/scatter)
+    ("magetypes/src/wasm_fma.rs", 45),              // measured 62 (WasmFmaOps + relaxed_probe)
+    ("src/tokens/generated/wasm.rs", 8),            // measured 12 (runtime FMA probe)
 ];
 
 /// The one magetypes file allowed `unsafe` of any kind, `unsafe impl Pod`, and
@@ -224,6 +229,7 @@ impl<'r> Scanner<'r> {
         let text = strip_comments(raw);
         let mut out = FileScan::default();
         let spans = self.gating_spans(rel, &text, &mut out.errors);
+        let arch_aliases = arch_path_aliases(&text);
 
         for cap in self.candidate_re.captures_iter(&text) {
             let name_match = cap.get(1).unwrap();
@@ -237,7 +243,7 @@ impl<'r> Scanner<'r> {
             // path-qualified calls, only `<arch module>::name(...)` counts
             // as an intrinsic; `Self::name(...)` / `f32x4::name(...)` are
             // trait/assoc calls.
-            match preceding_context(&text, pos) {
+            match preceding_context(&text, pos, &arch_aliases) {
                 Preceding::FnKeyword | Preceding::Dot | Preceding::NonArchPath => continue,
                 Preceding::ArchPath | Preceding::Bare => {}
             }
@@ -401,7 +407,9 @@ impl<'r> Scanner<'r> {
             });
         }
 
-        // (3) fn signatures mentioning token types (parameters or generics).
+        // (3) fn input signatures mentioning token types (parameters or generics;
+        // return types after `->` never prove a feature context, and WASM token
+        // parameters require a WASM feature-enabling attribute on free fns).
         for m in self.fn_re.find_iter(text) {
             let sig_start = m.end();
             let Some((sig_end, has_body)) = find_signature_end(text, sig_start) else {
@@ -410,12 +418,16 @@ impl<'r> Scanner<'r> {
             if !has_body {
                 continue;
             }
-            let signature = &text[sig_start..sig_end];
+            let input_sig = trim_return_type(&text[sig_start..sig_end]);
+            let has_wasm_attr = has_wasm_fn_attr(text, m.start());
             let mut features: HashSet<String> = HashSet::new();
             let mut names: Vec<&str> = Vec::new();
-            for cap in self.token_name_re.captures_iter(signature) {
+            for cap in self.token_name_re.captures_iter(input_sig) {
                 let name = cap.get(1).unwrap().as_str();
                 if let Some(token) = self.reg.find_token(name) {
+                    if token.arch == "wasm" && !has_wasm_attr {
+                        continue;
+                    }
                     features.extend(token.features.iter().cloned());
                     names.push(&token.name);
                 }
@@ -435,7 +447,55 @@ impl<'r> Scanner<'r> {
             });
         }
 
+        // (4) #[attune(...)] / #[rite(...)] / #[token_target_features(...)] bodies.
+        self.attune_rite_spans(text, &mut spans);
+
+        // (5) Positive compile-time #[cfg(... target_feature = "..." ...)] guards.
+        cfg_target_feature_spans(text, &mut spans);
+
         spans
+    }
+
+    fn attune_rite_spans(&self, text: &str, spans: &mut Vec<GatingSpan>) {
+        let mut search = 0;
+        while let Some(rel_hash) = text[search..].find('#') {
+            let hash = search + rel_hash;
+            search = hash + 1;
+            let bytes = text.as_bytes();
+            let mut i = hash + 1;
+            while i < bytes.len() && bytes[i].is_ascii_whitespace() {
+                i += 1;
+            }
+            if i >= bytes.len() || bytes[i] != b'[' {
+                continue;
+            }
+            let Some(attr_close) = find_matching_bracket(text, i) else {
+                continue;
+            };
+            let attr_inner = text[i + 1..attr_close].trim();
+            let Some((path, args_inner)) = split_attr_call(attr_inner) else {
+                continue;
+            };
+            let attr_ident = path.rsplit("::").next().unwrap_or(path).trim();
+            if !matches!(attr_ident, "attune" | "rite" | "token_target_features") {
+                continue;
+            }
+            let Some(features) = resolve_macro_attr_features(self.reg, args_inner) else {
+                continue;
+            };
+            if features.is_empty() {
+                continue;
+            }
+            let after_attrs = skip_attrs_and_ws(text, attr_close + 1);
+            if let Some((start, end, true)) = find_guarded_span(text, after_attrs) {
+                spans.push(GatingSpan {
+                    start,
+                    end,
+                    features,
+                    origin: format!("#[{attr_ident}]"),
+                });
+            }
+        }
     }
 }
 
@@ -1030,7 +1090,7 @@ enum Preceding {
     Bare,
 }
 
-fn preceding_context(text: &str, ident_start: usize) -> Preceding {
+fn preceding_context(text: &str, ident_start: usize, arch_aliases: &HashSet<String>) -> Preceding {
     let bytes = text.as_bytes();
     let mut i = ident_start;
     while i > 0 && bytes[i - 1].is_ascii_whitespace() {
@@ -1049,12 +1109,442 @@ fn preceding_context(text: &str, ident_start: usize) -> Preceding {
             j -= 1;
         }
         let seg = &text[j..i - 2];
-        return match seg {
-            "x86_64" | "x86" | "aarch64" | "arm" | "wasm32" | "wasm" => Preceding::ArchPath,
-            _ => Preceding::NonArchPath,
-        };
+        if is_arch_mod_name(seg) || arch_aliases.contains(seg) {
+            return Preceding::ArchPath;
+        }
+        return Preceding::NonArchPath;
     }
     Preceding::Bare
+}
+
+fn is_arch_mod_name(seg: &str) -> bool {
+    matches!(
+        seg,
+        "x86_64" | "x86" | "aarch64" | "arm" | "wasm32" | "wasm"
+    )
+}
+
+/// Collect aliases bound to `core::arch::<arch>` / `std::arch::<arch>` via `use` items.
+fn arch_path_aliases(text: &str) -> HashSet<String> {
+    use syn::visit::{self, Visit};
+    struct Collector(HashSet<String>);
+
+    fn walk_tree(tree: &syn::UseTree, arch_mod: bool, in_arch: bool, out: &mut HashSet<String>) {
+        match tree {
+            syn::UseTree::Path(p) => {
+                let ident = p.ident.to_string();
+                if arch_mod {
+                    if is_arch_mod_name(&ident) {
+                        walk_tree(&p.tree, false, true, out);
+                    }
+                } else if ident == "arch" {
+                    walk_tree(&p.tree, true, false, out);
+                } else {
+                    walk_tree(&p.tree, false, false, out);
+                }
+            }
+            syn::UseTree::Group(g) => {
+                for item in &g.items {
+                    walk_tree(item, arch_mod, in_arch, out);
+                }
+            }
+            syn::UseTree::Rename(r)
+                if (arch_mod && is_arch_mod_name(&r.ident.to_string()))
+                    || (in_arch && r.ident == "self") =>
+            {
+                out.insert(r.rename.to_string());
+            }
+            _ => {}
+        }
+    }
+
+    impl<'ast> Visit<'ast> for Collector {
+        fn visit_item_use(&mut self, i: &'ast syn::ItemUse) {
+            // Only treat top-level `core::arch::...` / `std::arch::...` paths cleanly.
+            if let syn::UseTree::Path(root) = &i.tree
+                && matches!(root.ident.to_string().as_str(), "core" | "std")
+            {
+                walk_tree(&root.tree, false, false, &mut self.0);
+            }
+            visit::visit_item_use(self, i);
+        }
+    }
+
+    let mut collector = Collector(HashSet::new());
+    if let Ok(file) = syn::parse_file(text) {
+        collector.visit_file(&file);
+    }
+    collector.0
+}
+
+/// Strip the top-level `-> ReturnType [where ...]` suffix from a `fn` signature slice
+/// so return types mentioning tokens never grant feature access.
+fn trim_return_type(sig: &str) -> &str {
+    let bytes = sig.as_bytes();
+    let mut paren_depth = 0i32;
+    let mut bracket_depth = 0i32;
+    let mut saw_params = false;
+    let mut i = 0;
+    while i < bytes.len() {
+        match bytes[i] {
+            b'(' => {
+                paren_depth += 1;
+                saw_params = true;
+            }
+            b')' => paren_depth -= 1,
+            b'[' => bracket_depth += 1,
+            b']' => bracket_depth -= 1,
+            b'-' if saw_params
+                && paren_depth == 0
+                && bracket_depth == 0
+                && i + 1 < bytes.len()
+                && bytes[i + 1] == b'>' =>
+            {
+                return &sig[..i];
+            }
+            _ => {}
+        }
+        i += 1;
+    }
+    sig
+}
+
+/// True when `fn` at `fn_pos` carries an attribute enabling target features
+/// (`#[arcane]`, `#[attune]`, `#[rite]`, `#[target_feature]`, `#[token_target_features]`).
+fn has_wasm_fn_attr(text: &str, fn_pos: usize) -> bool {
+    let bytes = text.as_bytes();
+    let mut i = fn_pos;
+    loop {
+        while i > 0 && bytes[i - 1].is_ascii_whitespace() {
+            i -= 1;
+        }
+        if i == 0 {
+            return false;
+        }
+        // Closing `]` of an attribute `#[...]`
+        if bytes[i - 1] == b']' {
+            let Some(open) = find_matching_bracket_backwards(text, i - 1) else {
+                return false;
+            };
+            let mut j = open;
+            while j > 0 && bytes[j - 1].is_ascii_whitespace() {
+                j -= 1;
+            }
+            if j == 0 || bytes[j - 1] != b'#' {
+                return false;
+            }
+            let inner = text[open + 1..i - 1].trim();
+            let path = inner.split(['(', ' ']).next().unwrap_or("").trim();
+            let ident = path.rsplit("::").next().unwrap_or(path);
+            if matches!(
+                ident,
+                "arcane" | "attune" | "rite" | "target_feature" | "token_target_features"
+            ) {
+                return true;
+            }
+            i = j - 1;
+            continue;
+        }
+        // `pub(crate)` / visibility parens
+        if bytes[i - 1] == b')' {
+            let mut depth = 1i32;
+            let mut k = i - 1;
+            while k > 0 && depth > 0 {
+                k -= 1;
+                if bytes[k] == b')' {
+                    depth += 1;
+                } else if bytes[k] == b'(' {
+                    depth -= 1;
+                }
+            }
+            if depth == 0 {
+                i = k;
+                continue;
+            }
+            return false;
+        }
+        // ABI string literal in `extern "C"`
+        if bytes[i - 1] == b'"' {
+            let mut k = i - 1;
+            while k > 0 {
+                k -= 1;
+                if bytes[k] == b'"' && (k == 0 || bytes[k - 1] != b'\\') {
+                    i = k;
+                    break;
+                }
+            }
+            continue;
+        }
+        // Qualifiers (`pub`, `unsafe`, `const`, `async`, `extern`, `default`)
+        if bytes[i - 1].is_ascii_alphanumeric() || bytes[i - 1] == b'_' {
+            let end = i;
+            while i > 0 && (bytes[i - 1].is_ascii_alphanumeric() || bytes[i - 1] == b'_') {
+                i -= 1;
+            }
+            if matches!(
+                &text[i..end],
+                "pub" | "unsafe" | "const" | "async" | "extern" | "default"
+            ) {
+                continue;
+            }
+        }
+        return false;
+    }
+}
+
+fn find_matching_bracket(text: &str, open: usize) -> Option<usize> {
+    let bytes = text.as_bytes();
+    debug_assert_eq!(bytes[open], b'[');
+    let mut depth = 0i32;
+    let mut in_str = false;
+    let mut i = open;
+    while i < bytes.len() {
+        let b = bytes[i];
+        if in_str {
+            if b == b'\\' {
+                i += 2;
+                continue;
+            }
+            if b == b'"' {
+                in_str = false;
+            }
+        } else {
+            match b {
+                b'"' => in_str = true,
+                b'[' => depth += 1,
+                b']' => {
+                    depth -= 1;
+                    if depth == 0 {
+                        return Some(i);
+                    }
+                }
+                _ => {}
+            }
+        }
+        i += 1;
+    }
+    None
+}
+
+fn find_matching_bracket_backwards(text: &str, close: usize) -> Option<usize> {
+    let bytes = text.as_bytes();
+    debug_assert_eq!(bytes[close], b']');
+    let mut depth = 0i32;
+    let mut i = close + 1;
+    while i > 0 {
+        i -= 1;
+        match bytes[i] {
+            b']' => depth += 1,
+            b'[' => {
+                depth -= 1;
+                if depth == 0 {
+                    return Some(i);
+                }
+            }
+            _ => {}
+        }
+    }
+    None
+}
+
+fn split_attr_call(inner: &str) -> Option<(&str, &str)> {
+    let lparen = inner.find('(')?;
+    let rparen = inner.rfind(')')?;
+    if rparen < lparen {
+        return None;
+    }
+    Some((inner[..lparen].trim(), inner[lparen + 1..rparen].trim()))
+}
+
+fn resolve_macro_attr_features(reg: &Registry, args: &str) -> Option<HashSet<String>> {
+    let mut items = Vec::new();
+    let mut start = 0usize;
+    let mut depth = 0i32;
+    for (idx, b) in args.bytes().enumerate() {
+        match b {
+            b'(' | b'[' => depth += 1,
+            b')' | b']' => depth -= 1,
+            b',' if depth == 0 => {
+                items.push(args[start..idx].trim());
+                start = idx + 1;
+            }
+            _ => {}
+        }
+    }
+    let last = args[start..].trim();
+    if !last.is_empty() {
+        items.push(last);
+    }
+
+    let mut intersection: Option<HashSet<String>> = None;
+    for item in items {
+        if item.is_empty() {
+            continue;
+        }
+        let head = item.split(['(', '=', ' ']).next().unwrap_or(item).trim();
+        if matches!(
+            head,
+            "wrap"
+                | "dispatch"
+                | "nested"
+                | "in_impl"
+                | "in_trait"
+                | "import_intrinsics"
+                | "import_magetypes"
+                | "suppress_const_test"
+                | "crate"
+                | "inline"
+                | "cfg"
+                | "pub"
+                | "define"
+                | "_self"
+                | "self"
+        ) || item.contains('(')
+            || item.contains('=')
+        {
+            continue;
+        }
+        if head.starts_with("_*") {
+            return None;
+        }
+        let clean = head.trim_start_matches('+').trim_start_matches('_');
+        if matches!(clean, "scalar" | "default") {
+            return None;
+        }
+        let token = reg.token.iter().find(|t| {
+            t.short_name.as_deref() == Some(clean)
+                || t.extraction_aliases.iter().any(|a| a == clean)
+        })?;
+        if token.runtime_probe {
+            return None;
+        }
+        let set: HashSet<String> = token.features.iter().cloned().collect();
+        intersection = Some(match intersection {
+            None => set,
+            Some(prev) => prev.intersection(&set).cloned().collect(),
+        });
+    }
+    intersection
+}
+
+fn skip_attrs_and_ws(text: &str, mut idx: usize) -> usize {
+    let bytes = text.as_bytes();
+    loop {
+        while idx < bytes.len() && bytes[idx].is_ascii_whitespace() {
+            idx += 1;
+        }
+        if idx < bytes.len() && bytes[idx] == b'#' {
+            let mut j = idx + 1;
+            if j < bytes.len() && bytes[j] == b'!' {
+                j += 1;
+            }
+            while j < bytes.len() && bytes[j].is_ascii_whitespace() {
+                j += 1;
+            }
+            if j < bytes.len()
+                && bytes[j] == b'['
+                && let Some(close) = find_matching_bracket(text, j)
+            {
+                idx = close + 1;
+                continue;
+            }
+        }
+        return idx;
+    }
+}
+
+/// Find `(start, end, is_block)` of the item or statement following an attribute,
+/// stopping at `;` when a semicolon-terminated item precedes any block `{ ... }`.
+fn find_guarded_span(text: &str, from: usize) -> Option<(usize, usize, bool)> {
+    let bytes = text.as_bytes();
+    let mut paren_depth = 0i32;
+    let mut bracket_depth = 0i32;
+    let mut i = from;
+    while i < bytes.len() {
+        match bytes[i] {
+            b'(' => paren_depth += 1,
+            b')' => paren_depth -= 1,
+            b'[' => bracket_depth += 1,
+            b']' => bracket_depth -= 1,
+            b'{' if paren_depth == 0 && bracket_depth == 0 => {
+                let close = find_matching_brace(text, i)?;
+                return Some((from, close, true));
+            }
+            b';' if paren_depth == 0 && bracket_depth == 0 => {
+                return Some((from, i, false));
+            }
+            _ => {}
+        }
+        i += 1;
+    }
+    None
+}
+
+fn cfg_target_feature_spans(text: &str, spans: &mut Vec<GatingSpan>) {
+    fn extract_features(meta: &syn::Meta, out: &mut HashSet<String>) {
+        match meta {
+            syn::Meta::NameValue(nv) if nv.path.is_ident("target_feature") => {
+                if let syn::Expr::Lit(syn::ExprLit {
+                    lit: syn::Lit::Str(s),
+                    ..
+                }) = &nv.value
+                {
+                    out.insert(s.value());
+                }
+            }
+            syn::Meta::List(list) if list.path.is_ident("all") => {
+                if let Ok(nested) = list.parse_args_with(
+                    syn::punctuated::Punctuated::<syn::Meta, syn::Token![,]>::parse_terminated,
+                ) {
+                    for child in nested {
+                        extract_features(&child, out);
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+
+    let mut search = 0;
+    while let Some(rel_hash) = text[search..].find('#') {
+        let hash = search + rel_hash;
+        search = hash + 1;
+        let bytes = text.as_bytes();
+        let mut i = hash + 1;
+        while i < bytes.len() && bytes[i].is_ascii_whitespace() {
+            i += 1;
+        }
+        if i >= bytes.len() || bytes[i] != b'[' {
+            continue;
+        }
+        let Some(attr_close) = find_matching_bracket(text, i) else {
+            continue;
+        };
+        let attr_inner = text[i + 1..attr_close].trim();
+        let Some((path, args_inner)) = split_attr_call(attr_inner) else {
+            continue;
+        };
+        if path != "cfg" {
+            continue;
+        }
+        let Ok(cfg_arg) = syn::parse_str::<syn::Meta>(args_inner) else {
+            continue;
+        };
+        let mut features = HashSet::new();
+        extract_features(&cfg_arg, &mut features);
+        if features.is_empty() {
+            continue;
+        }
+        let after_attrs = skip_attrs_and_ws(text, attr_close + 1);
+        if let Some((start, end, _is_block)) = find_guarded_span(text, after_attrs) {
+            spans.push(GatingSpan {
+                start,
+                end,
+                features,
+                origin: "#[cfg(target_feature)]".to_string(),
+            });
+        }
+    }
 }
 
 /// 1-based line number of a byte offset.
@@ -1696,6 +2186,67 @@ mod tests {
             scan.errors
         );
         assert!(scan.errors[0].contains("rogue"));
+    }
+
+    #[test]
+    fn wasm_alias_cfg_and_return_type_guards() {
+        // Aliased core::arch::wasm32 path is recognized and caught when ungated.
+        let bad_alias = scan(
+            "use core::arch::wasm32::{self as w, v128};\n\
+             fn bad(a: v128, b: v128) -> v128 { w::f32x4_add(a, b) }\n",
+        );
+        assert_eq!(bad_alias.errors.len(), 1, "{:?}", bad_alias.errors);
+        assert!(bad_alias.errors[0].contains("UNGATED"));
+
+        // Return type mentioning a token never grants features.
+        let ret_tok =
+            scan("fn forge() -> X64V3Token { let _ = _mm256_add_ps(x, y); unreachable!() }\n");
+        assert_eq!(ret_tok.errors.len(), 1, "{:?}", ret_tok.errors);
+        assert!(ret_tok.errors[0].contains("UNGATED"));
+
+        // Free fn taking Wasm128Token without #[arcane]/#[attune]/#[rite]/#[target_feature] is rejected.
+        let bare_wasm = scan(
+            "use core::arch::wasm32::{self as w, v128};\n\
+             fn bad(_t: Wasm128Token, a: v128, b: v128) -> v128 { w::f32x4_add(a, b) }\n",
+        );
+        assert_eq!(bare_wasm.errors.len(), 1, "{:?}", bare_wasm.errors);
+        assert!(bare_wasm.errors[0].contains("UNGATED"));
+
+        // #[attune(wasm128)] enables simd128; relaxed-simd requires #[cfg(all(...))] or wasm128_relaxed.
+        let attune_relaxed_bad = scan(
+            "use core::arch::wasm32::{self as w, v128};\n\
+             #[archmage::attune(wasm128)]\n\
+             fn bad(a: v128, b: v128, c: v128) -> v128 { w::f32x4_relaxed_madd(a, b, c) }\n",
+        );
+        assert!(
+            attune_relaxed_bad
+                .errors
+                .iter()
+                .any(|e| e.contains("FEATURE MISMATCH")),
+            "{:?}",
+            attune_relaxed_bad.errors
+        );
+
+        // #[cfg(not(...))] and #[cfg(any(...))] never grant features, nor does #[cfg(...)] use ...; leak.
+        for bad_cfg in [
+            "#[cfg(not(target_feature = \"simd128\"))]\nfn bad(a: v128, b: v128) -> v128 { core::arch::wasm32::f32x4_add(a, b) }\n",
+            "#[cfg(any(target_feature = \"simd128\", target_arch = \"x86_64\"))]\nfn bad(a: v128, b: v128) -> v128 { core::arch::wasm32::f32x4_add(a, b) }\n",
+            "#[cfg(all(target_arch = \"wasm32\", target_feature = \"simd128\"))]\nuse core::arch::wasm32 as w;\nfn bad(a: w::v128, b: w::v128) -> w::v128 { w::f32x4_add(a, b) }\n",
+        ] {
+            let s = scan(bad_cfg);
+            assert!(!s.errors.is_empty(), "accepted {bad_cfg}");
+        }
+
+        // Positive #[cfg(all(target_feature = "simd128", target_feature = "relaxed-simd"))] grants both.
+        let ok_cfg = scan(
+            "#[cfg(all(target_feature = \"simd128\", target_feature = \"relaxed-simd\"))]\n\
+             mod relaxed {\n\
+                 use core::arch::wasm32::{self as w, v128};\n\
+                 pub fn f(a: v128, b: v128, c: v128) -> v128 { w::f32x4_relaxed_madd(a, b, c) }\n\
+             }\n",
+        );
+        assert!(ok_cfg.errors.is_empty(), "{:?}", ok_cfg.errors);
+        assert_eq!(ok_cfg.verified, 1);
     }
 
     #[test]

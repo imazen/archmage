@@ -183,11 +183,12 @@ mod arm_tiers {
 mod wasm_tiers {
     use super::*;
 
-    #[autoversion(wasm128, wasm128_relaxed, scalar)]
+    #[autoversion(wasm128, wasm128_relaxed, wasm128_relaxed_fma, scalar)]
     fn av_all_wasm(_token: SimdToken, x: f32) -> f32 {
         x + 1.0
     }
 
+    #[cfg(target_feature = "simd128")]
     #[test]
     fn wasm128_suffix() {
         if let Some(t) = archmage::Wasm128Token::summon() {
@@ -195,10 +196,19 @@ mod wasm_tiers {
         }
     }
 
+    #[cfg(all(target_feature = "simd128", target_feature = "relaxed-simd"))]
     #[test]
     fn wasm128_relaxed_suffix() {
         if let Some(t) = archmage::Wasm128RelaxedToken::summon() {
             assert_eq!(av_all_wasm_wasm128_relaxed(t, 1.0), 2.0);
+        }
+    }
+
+    #[cfg(all(target_feature = "simd128", target_feature = "relaxed-simd"))]
+    #[test]
+    fn wasm128_relaxed_fma_suffix() {
+        if let Some(t) = archmage::Wasm128RelaxedFmaToken::summon() {
+            assert_eq!(av_all_wasm_wasm128_relaxed_fma(t, 1.0), 2.0);
         }
     }
 

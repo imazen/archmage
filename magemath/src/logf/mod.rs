@@ -15,10 +15,11 @@ mod options;
 #[cfg(test)]
 mod tests;
 pub use const_api::{
-    try_ln_array_with, try_ln_runtime, try_ln_with, try_ln_with_token, try_log1p_array_runtime,
-    try_log1p_array_with, try_log1p_runtime, try_log1p_with, try_log1p_with_token,
-    try_log2_array_with, try_log2_runtime, try_log2_with, try_log2_with_token,
-    try_log10_array_with, try_log10_runtime, try_log10_with, try_log10_with_token,
+    try_ln_array_runtime, try_ln_array_with, try_ln_runtime, try_ln_with, try_ln_with_token,
+    try_log1p_array_runtime, try_log1p_array_with, try_log1p_runtime, try_log1p_with,
+    try_log1p_with_token, try_log2_array_runtime, try_log2_array_with, try_log2_runtime,
+    try_log2_with, try_log2_with_token, try_log10_array_runtime, try_log10_array_with,
+    try_log10_runtime, try_log10_with, try_log10_with_token,
 };
 pub use options::{
     LogfDomain, LogfExecution, LogfOptions, LogfPortability, LogfPrecision, LogfValidation,
@@ -70,6 +71,12 @@ pub fn try_ln(x: f32) -> Result<f32, LogfError> {
 #[inline(always)]
 pub fn try_log10(x: f32) -> Result<f32, LogfError> {
     try_log10_with::<{ LogfOptions::DEFAULT }>(x)
+}
+
+/// Positive-domain scalar log1p (`ln(1 + x)`) using the default checked MIDP domain.
+#[inline(always)]
+pub fn try_log1p(x: f32) -> Result<f32, LogfError> {
+    try_log1p_with::<{ LogfOptions::DEFAULT }>(x)
 }
 
 /// Configured log2 on a 4-lane vector, preserving the caller's feature proof.

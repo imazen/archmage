@@ -67,7 +67,7 @@ pub fn dequant_block_dct8(
         }
     }
 
-    #[cfg(target_arch = "wasm32")]
+    #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
     {
         use archmage::SimdToken;
         if let Some(token) = archmage::Wasm128Token::summon() {
@@ -442,7 +442,7 @@ fn neon_dequant_4(
 
 // --- wasm32 SIMD128 implementation ---
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
 #[inline]
 #[archmage::arcane]
 #[allow(clippy::too_many_arguments)]
@@ -542,7 +542,7 @@ pub fn dequant_dct8_wasm128(
 }
 
 /// Dequantize 4 coefficients with adjust_quant_bias, branchless WASM128.
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
 #[archmage::rite]
 #[allow(clippy::too_many_arguments)]
 fn wasm128_dequant_4(

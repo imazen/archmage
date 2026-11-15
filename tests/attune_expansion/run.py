@@ -178,6 +178,11 @@ def inspect_raw(directory, cases, raw, rejected=False):
 def check_config(directory, arch, enabled, cases, target_dir):
     failures = []
     env = dict(os.environ, CARGO_TARGET_DIR=str(target_dir))
+    if arch == "wasm32":
+        if enabled:
+            env["CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUSTFLAGS"] = "-Ctarget-feature=+simd128,+relaxed-simd"
+        else:
+            env.pop("CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUSTFLAGS", None)
     target = ["--target", TARGETS[arch]]
     features = ["--features", "avx512,optional"] if enabled else []
     base = ["--manifest-path", str(directory / "Cargo.toml"), "--lib", *target]

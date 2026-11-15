@@ -133,18 +133,28 @@ fn public_api_surface_docs_are_current() {
     let exe = env::current_exe().expect("current_exe");
     for (sub, triple) in TARGETS {
         retarget_doc_symlink(&target_dir, triple);
-        let st = Command::new(&exe)
-            .args([
-                "public_api_surface_docs_are_current",
-                "--exact",
-                "--nocapture",
-            ])
-            .env("APIDOC_TARGET", sub)
-            .env("CARGO_BUILD_TARGET", triple)
-            .env("CARGO_TARGET_DIR", &target_dir)
-            // Pin the inner zenutils-apidoc run too — its own default is the
-            // tracking `nightly`, which would reintroduce toolchain drift.
-            .env("ZEN_API_DOC_TOOLCHAIN", &toolchain)
+        let mut cmd = Command::new(&exe);
+        cmd.args([
+            "public_api_surface_docs_are_current",
+            "--exact",
+            "--nocapture",
+        ])
+        .env("APIDOC_TARGET", sub)
+        .env("CARGO_BUILD_TARGET", triple)
+        .env("CARGO_TARGET_DIR", &target_dir)
+        // Pin the inner zenutils-apidoc run too — its own default is the
+        // tracking `nightly`, which would reintroduce toolchain drift.
+        .env("ZEN_API_DOC_TOOLCHAIN", &toolchain);
+        if *sub == "wasm32" {
+            // Document the full WASM SIMD + relaxed-SIMD API surface on wasm32.
+            cmd.env(
+                "CARGO_TARGET_WASM32_WASIP1_RUSTFLAGS",
+                "-Ctarget-feature=+simd128,+relaxed-simd",
+            );
+            // `cargo rustdoc` reads `RUSTDOCFLAGS` rather than `CARGO_TARGET_*_RUSTFLAGS`.
+            cmd.env("RUSTDOCFLAGS", "-Ctarget-feature=+simd128,+relaxed-simd");
+        }
+        let st = cmd
             .status()
             .expect("failed to re-exec the test binary for a per-target run");
         assert!(

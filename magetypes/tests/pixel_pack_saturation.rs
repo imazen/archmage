@@ -8,7 +8,7 @@ use archmage::ScalarToken;
 #[cfg(any(
     target_arch = "x86_64",
     target_arch = "aarch64",
-    target_arch = "wasm32"
+    all(target_arch = "wasm32", target_feature = "simd128")
 ))]
 use archmage::SimdToken;
 use magetypes::simd::backends::{F32x4Backend, F32x8Backend};
@@ -135,7 +135,7 @@ fn neon() {
     }
 }
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
 #[test]
 fn wasm128() {
     match archmage::Wasm128Token::summon() {

@@ -133,7 +133,7 @@ fn neon_backend_saturating() {
     }
 }
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
 #[test]
 fn wasm128_backend_saturating() {
     if let Some(t) = archmage::Wasm128Token::summon() {

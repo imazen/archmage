@@ -14,7 +14,7 @@ fn compute_v3(_t: ScalarToken, data: &[f32; 4]) -> f32 {
 fn compute_neon(_t: ScalarToken, data: &[f32; 4]) -> f32 {
     data.iter().sum()
 }
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
 #[target_feature(enable = "simd128")]
 #[inline]
 fn compute_wasm128(_t: ScalarToken, data: &[f32; 4]) -> f32 {

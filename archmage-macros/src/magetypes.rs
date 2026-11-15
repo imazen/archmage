@@ -46,20 +46,6 @@ pub(crate) fn magetypes_impl(
     });
     let fn_name = &input_fn.sig.ident;
 
-    // Build the `define(...)` type-alias preamble once. Each alias RHS still
-    // references `Token` — the per-tier substitution below rewrites it to the
-    // concrete token type (`X64V3Token`, `ScalarToken`, etc.).
-    let define_preamble: TokenStream = {
-        let aliases = defines.iter().map(|name| {
-            let ident = quote::format_ident!("{name}");
-            quote! {
-                #[allow(non_camel_case_types, dead_code)]
-                type #ident = ::magetypes::simd::generic::#ident<Token>;
-            }
-        });
-        quote! { #(#aliases)* }
-    };
-
     // Dispatch presence is independent of the tier. Scan the original body
     // once, before making variants (the define preamble contains no dispatch).
     let has_dispatch = tokens_contain_ident(
@@ -88,13 +74,28 @@ pub(crate) fn magetypes_impl(
         let mut variant_fn = input_fn.clone();
         variant_fn.sig.ident = quote::format_ident!("{}_{}", fn_name, tier.suffix);
 
-        // Prepend the `define(...)` type aliases to the body. They appear
-        // inside the function scope, shadowing any outer `f32x8`/etc. for
-        // this body only.
+        // Prepend the `define(...)` type aliases to the body. Sub-tier tokens
+        // (`v3_vnni`, `arm_v2`, `arm_v3`, `wasm128_relaxed`) resolve to their
+        // base representation token (`X64V3Token`, `NeonToken`, `Wasm128Token`),
+        // matching `#[attune(..., define(...))]`.
         if !defines.is_empty() {
+            let define_token: TokenStream = if tier.token_path.is_empty() {
+                quote!(Token)
+            } else {
+                tier.define_backend_token_path()
+                    .parse()
+                    .expect("tier define_backend_token_path must be valid tokens")
+            };
+            let aliases = defines.iter().map(|name| {
+                let ident = quote::format_ident!("{name}");
+                quote! {
+                    #[allow(non_camel_case_types, dead_code)]
+                    type #ident = ::magetypes::simd::generic::#ident<#define_token>;
+                }
+            });
             let original_body = &variant_fn.body;
             variant_fn.body = quote! {
-                #define_preamble
+                #(#aliases)*
                 #original_body
             };
         }

@@ -143,7 +143,17 @@ pub fn try_exp2_runtime(x: f32, options: ExpfOptions) -> Result<f32, ExpfError> 
 /// Runtime-options scalar exp.
 #[inline(always)]
 pub fn try_exp_runtime(x: f32, options: ExpfOptions) -> Result<f32, ExpfError> {
-    try_exp2_runtime(x * core::f32::consts::LOG2_E, options)
+    try_exp_array_runtime([x], options).map(|result| result[0])
+}
+
+/// Runtime-options array exp.
+#[cfg_attr(debug_assertions, inline(never))]
+#[cfg_attr(not(debug_assertions), inline(always))]
+pub fn try_exp_array_runtime<const N: usize>(
+    inputs: [f32; N],
+    options: ExpfOptions,
+) -> Result<[f32; N], ExpfError> {
+    try_exp2_array_runtime(inputs.map(|x| x * core::f32::consts::LOG2_E), options)
 }
 
 /// Runtime-options array exp2.

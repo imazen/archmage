@@ -20,8 +20,11 @@ fn process(token: ScalarToken, data: &[f32; 4]) -> f32 {
     }
     #[cfg(target_arch = "wasm32")]
     {
-        if let Some(__t) = archmage::Wasm128Token::summon() {
-            return process_wasm128(__t, data);
+        #[cfg(target_feature = "simd128")]
+        {
+            if let Some(__t) = archmage::Wasm128Token::summon() {
+                return process_wasm128(__t, data);
+            }
         }
     }
     process_scalar(archmage::ScalarToken, data)
@@ -72,7 +75,7 @@ fn process_neon(token: archmage::NeonToken, data: &[f32; 4]) -> f32 {
     let _: () = <archmage::NeonToken>::__ARCHMAGE_ASSERT_TIER_72CB52B2;
     unsafe { __arcane_process_neon(token, data) }
 }
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
 #[target_feature(enable = "simd128")]
 #[inline]
 #[allow(dead_code)]

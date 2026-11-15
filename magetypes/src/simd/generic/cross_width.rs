@@ -107,6 +107,21 @@ pub trait F32x8FromHalves:
 
     /// Extract the high 128-bit half of a 256-bit representation.
     fn high(self, wide: <Self as F32x8Backend>::Repr) -> <Self as F32x4Backend>::Repr;
+
+    /// Multiply `a` (`f32x8`) by `v_in[LANE]` (`LANE` in `0..4`, from `f32x4`) and
+    /// accumulate into `acc`: `a * v_in[LANE] + acc`.
+    #[inline(always)]
+    fn mul_add_lane4_relaxed<const LANE: i32>(
+        self,
+        a: <Self as F32x8Backend>::Repr,
+        v_in: <Self as F32x4Backend>::Repr,
+        acc: <Self as F32x8Backend>::Repr,
+    ) -> <Self as F32x8Backend>::Repr {
+        const { assert!(LANE >= 0 && LANE < 4, "LANE must be in 0..4") };
+        let arr = <Self as F32x4Backend>::to_array(self, v_in);
+        let b = <Self as F32x8Backend>::splat(self, arr[LANE as usize]);
+        <Self as F32x8Backend>::mul_add(self, a, b, acc)
+    }
 }
 
 // X64V3Token (AVX) — load-bearing token, native intrinsics
@@ -144,6 +159,24 @@ impl F32x8FromHalves for archmage::X64V3Token {
         // returns the high lane; intrinsic is pure.
         core::arch::x86_64::_mm256_extractf128_ps(wide, 1)
     }
+    #[archmage::arcane(suppress_const_test, _self = archmage::X64V3Token)]
+    fn mul_add_lane4_relaxed<const LANE: i32>(
+        self,
+        a: core::arch::x86_64::__m256,
+        v_in: core::arch::x86_64::__m128,
+        acc: core::arch::x86_64::__m256,
+    ) -> core::arch::x86_64::__m256 {
+        use core::arch::x86_64::{_mm_permute_ps, _mm256_broadcastss_ps, _mm256_fmadd_ps};
+        const { assert!(LANE >= 0 && LANE < 4, "LANE must be in 0..4") };
+        let splat = match LANE {
+            0 => _mm256_broadcastss_ps(v_in),
+            1 => _mm256_broadcastss_ps(_mm_permute_ps::<0x55>(v_in)),
+            2 => _mm256_broadcastss_ps(_mm_permute_ps::<0xAA>(v_in)),
+            3 => _mm256_broadcastss_ps(_mm_permute_ps::<0xFF>(v_in)),
+            _ => unreachable!(),
+        };
+        _mm256_fmadd_ps(a, splat, acc)
+    }
 }
 
 // X64V4Token / X64V4xToken / Avx512Fp16Token — same Repr as V3 (delegation
@@ -168,6 +201,20 @@ impl F32x8FromHalves for archmage::X64V4Token {
     fn high(self, wide: core::arch::x86_64::__m256) -> core::arch::x86_64::__m128 {
         <archmage::X64V3Token as F32x8FromHalves>::high(self.v3(), wide)
     }
+    #[inline(always)]
+    fn mul_add_lane4_relaxed<const LANE: i32>(
+        self,
+        a: core::arch::x86_64::__m256,
+        v_in: core::arch::x86_64::__m128,
+        acc: core::arch::x86_64::__m256,
+    ) -> core::arch::x86_64::__m256 {
+        <archmage::X64V3Token as F32x8FromHalves>::mul_add_lane4_relaxed::<LANE>(
+            self.v3(),
+            a,
+            v_in,
+            acc,
+        )
+    }
 }
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 impl F32x8FromHalves for archmage::X64V4xToken {
@@ -187,6 +234,20 @@ impl F32x8FromHalves for archmage::X64V4xToken {
     fn high(self, wide: core::arch::x86_64::__m256) -> core::arch::x86_64::__m128 {
         <archmage::X64V3Token as F32x8FromHalves>::high(self.v3(), wide)
     }
+    #[inline(always)]
+    fn mul_add_lane4_relaxed<const LANE: i32>(
+        self,
+        a: core::arch::x86_64::__m256,
+        v_in: core::arch::x86_64::__m128,
+        acc: core::arch::x86_64::__m256,
+    ) -> core::arch::x86_64::__m256 {
+        <archmage::X64V3Token as F32x8FromHalves>::mul_add_lane4_relaxed::<LANE>(
+            self.v3(),
+            a,
+            v_in,
+            acc,
+        )
+    }
 }
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 impl F32x8FromHalves for archmage::Avx512Fp16Token {
@@ -205,6 +266,20 @@ impl F32x8FromHalves for archmage::Avx512Fp16Token {
     #[inline(always)]
     fn high(self, wide: core::arch::x86_64::__m256) -> core::arch::x86_64::__m128 {
         <archmage::X64V3Token as F32x8FromHalves>::high(self.v3(), wide)
+    }
+    #[inline(always)]
+    fn mul_add_lane4_relaxed<const LANE: i32>(
+        self,
+        a: core::arch::x86_64::__m256,
+        v_in: core::arch::x86_64::__m128,
+        acc: core::arch::x86_64::__m256,
+    ) -> core::arch::x86_64::__m256 {
+        <archmage::X64V3Token as F32x8FromHalves>::mul_add_lane4_relaxed::<LANE>(
+            self.v3(),
+            a,
+            v_in,
+            acc,
+        )
     }
 }
 
@@ -231,6 +306,35 @@ impl F32x8FromHalves for archmage::NeonToken {
         let _ = self;
         wide[1]
     }
+    #[archmage::arcane(suppress_const_test, _self = archmage::NeonToken)]
+    fn mul_add_lane4_relaxed<const LANE: i32>(
+        self,
+        a: [core::arch::aarch64::float32x4_t; 2],
+        v_in: core::arch::aarch64::float32x4_t,
+        acc: [core::arch::aarch64::float32x4_t; 2],
+    ) -> [core::arch::aarch64::float32x4_t; 2] {
+        use core::arch::aarch64::vfmaq_laneq_f32;
+        const { assert!(LANE >= 0 && LANE < 4, "LANE must be in 0..4") };
+        match LANE {
+            0 => [
+                vfmaq_laneq_f32::<0>(acc[0], a[0], v_in),
+                vfmaq_laneq_f32::<0>(acc[1], a[1], v_in),
+            ],
+            1 => [
+                vfmaq_laneq_f32::<1>(acc[0], a[0], v_in),
+                vfmaq_laneq_f32::<1>(acc[1], a[1], v_in),
+            ],
+            2 => [
+                vfmaq_laneq_f32::<2>(acc[0], a[0], v_in),
+                vfmaq_laneq_f32::<2>(acc[1], a[1], v_in),
+            ],
+            3 => [
+                vfmaq_laneq_f32::<3>(acc[0], a[0], v_in),
+                vfmaq_laneq_f32::<3>(acc[1], a[1], v_in),
+            ],
+            _ => unreachable!(),
+        }
+    }
 }
 
 // Wasm128Token — same shape as NEON: polyfill via `[v128; 2]`.
@@ -255,6 +359,72 @@ impl F32x8FromHalves for archmage::Wasm128Token {
         let _ = self;
         wide[1]
     }
+    #[inline(always)]
+    fn mul_add_lane4_relaxed<const LANE: i32>(
+        self,
+        a: [core::arch::wasm32::v128; 2],
+        v_in: core::arch::wasm32::v128,
+        acc: [core::arch::wasm32::v128; 2],
+    ) -> [core::arch::wasm32::v128; 2] {
+        use core::arch::wasm32::i32x4_shuffle;
+        const { assert!(LANE >= 0 && LANE < 4, "LANE must be in 0..4") };
+        let splat = match LANE {
+            0 => i32x4_shuffle::<0, 0, 0, 0>(v_in, v_in),
+            1 => i32x4_shuffle::<1, 1, 1, 1>(v_in, v_in),
+            2 => i32x4_shuffle::<2, 2, 2, 2>(v_in, v_in),
+            3 => i32x4_shuffle::<3, 3, 3, 3>(v_in, v_in),
+            _ => unreachable!(),
+        };
+        [
+            crate::wasm_fma::madd_f32x4(self, a[0], splat, acc[0]),
+            crate::wasm_fma::madd_f32x4(self, a[1], splat, acc[1]),
+        ]
+    }
+}
+
+#[cfg(all(
+    target_arch = "wasm32",
+    target_feature = "simd128",
+    target_feature = "relaxed-simd"
+))]
+impl F32x8FromHalves for archmage::Wasm128RelaxedFmaToken {
+    #[inline(always)]
+    fn from_halves(
+        self,
+        lo: core::arch::wasm32::v128,
+        hi: core::arch::wasm32::v128,
+    ) -> [core::arch::wasm32::v128; 2] {
+        <archmage::Wasm128Token as F32x8FromHalves>::from_halves(self.wasm128(), lo, hi)
+    }
+    #[inline(always)]
+    fn low(self, wide: [core::arch::wasm32::v128; 2]) -> core::arch::wasm32::v128 {
+        <archmage::Wasm128Token as F32x8FromHalves>::low(self.wasm128(), wide)
+    }
+    #[inline(always)]
+    fn high(self, wide: [core::arch::wasm32::v128; 2]) -> core::arch::wasm32::v128 {
+        <archmage::Wasm128Token as F32x8FromHalves>::high(self.wasm128(), wide)
+    }
+    #[archmage::arcane(suppress_const_test, _self = archmage::Wasm128RelaxedFmaToken)]
+    fn mul_add_lane4_relaxed<const LANE: i32>(
+        self,
+        a: [core::arch::wasm32::v128; 2],
+        v_in: core::arch::wasm32::v128,
+        acc: [core::arch::wasm32::v128; 2],
+    ) -> [core::arch::wasm32::v128; 2] {
+        use core::arch::wasm32::{f32x4_relaxed_madd, i32x4_shuffle};
+        const { assert!(LANE >= 0 && LANE < 4, "LANE must be in 0..4") };
+        let splat = match LANE {
+            0 => i32x4_shuffle::<0, 0, 0, 0>(v_in, v_in),
+            1 => i32x4_shuffle::<1, 1, 1, 1>(v_in, v_in),
+            2 => i32x4_shuffle::<2, 2, 2, 2>(v_in, v_in),
+            3 => i32x4_shuffle::<3, 3, 3, 3>(v_in, v_in),
+            _ => unreachable!(),
+        };
+        [
+            f32x4_relaxed_madd(a[0], splat, acc[0]),
+            f32x4_relaxed_madd(a[1], splat, acc[1]),
+        ]
+    }
 }
 
 // ScalarToken — pure array math. Sound on every platform.
@@ -273,6 +443,18 @@ impl F32x8FromHalves for archmage::ScalarToken {
     fn high(self, wide: [f32; 8]) -> [f32; 4] {
         let _ = self;
         [wide[4], wide[5], wide[6], wide[7]]
+    }
+    #[inline(always)]
+    fn mul_add_lane4_relaxed<const LANE: i32>(
+        self,
+        a: [f32; 8],
+        v_in: [f32; 4],
+        acc: [f32; 8],
+    ) -> [f32; 8] {
+        let _ = self;
+        const { assert!(LANE >= 0 && LANE < 4, "LANE must be in 0..4") };
+        let b = v_in[LANE as usize];
+        core::array::from_fn(|i| a[i] * b + acc[i])
     }
 }
 
@@ -308,6 +490,33 @@ impl<T: F32x8FromHalves> f32x8<T> {
     #[inline(always)]
     pub fn split(self) -> (f32x4<T>, f32x4<T>) {
         (self.low(), self.high())
+    }
+
+    /// Lane-indexed multiply-add from a 4-lane `f32x4<T>` input group:
+    /// `self * v_in[LANE] + acc` (`LANE` in `0..4`).
+    ///
+    /// Designed for NHWC pointwise (`1x1`), stem, and transposed convolutions that
+    /// load 4 consecutive input channels once into `f32x4<T>` and accumulate into
+    /// 8-lane output weight vectors (`f32x8<T>`). On ARM64 NEON this lowers to two
+    /// `vfmaq_laneq_f32` (`fmla v_acc.4s, v_w.4s, v_in.s[LANE]`) instructions with
+    /// zero `dup` / splat instructions. Fails to compile if `LANE` is outside `0..4`.
+    #[inline(always)]
+    pub fn mul_add_lane4_relaxed<const LANE: i32>(self, v_in: f32x4<T>, acc: Self) -> Self {
+        const {
+            assert!(
+                LANE >= 0 && LANE < 4,
+                "f32x8::mul_add_lane4_relaxed LANE must be in 0..4"
+            )
+        };
+        Self::from_repr_unchecked(
+            self.1,
+            <T as F32x8FromHalves>::mul_add_lane4_relaxed::<LANE>(
+                self.1,
+                self.into_repr(),
+                v_in.into_repr(),
+                acc.into_repr(),
+            ),
+        )
     }
 }
 
@@ -481,6 +690,31 @@ impl F32x16FromHalves for archmage::Wasm128Token {
     fn high(self, wide: [core::arch::wasm32::v128; 4]) -> [core::arch::wasm32::v128; 2] {
         let _ = self;
         [wide[2], wide[3]]
+    }
+}
+
+#[cfg(all(
+    target_arch = "wasm32",
+    target_feature = "simd128",
+    target_feature = "relaxed-simd",
+    feature = "w512"
+))]
+impl F32x16FromHalves for archmage::Wasm128RelaxedFmaToken {
+    #[inline(always)]
+    fn from_halves(
+        self,
+        lo: [core::arch::wasm32::v128; 2],
+        hi: [core::arch::wasm32::v128; 2],
+    ) -> [core::arch::wasm32::v128; 4] {
+        <archmage::Wasm128Token as F32x16FromHalves>::from_halves(self.wasm128(), lo, hi)
+    }
+    #[inline(always)]
+    fn low(self, wide: [core::arch::wasm32::v128; 4]) -> [core::arch::wasm32::v128; 2] {
+        <archmage::Wasm128Token as F32x16FromHalves>::low(self.wasm128(), wide)
+    }
+    #[inline(always)]
+    fn high(self, wide: [core::arch::wasm32::v128; 4]) -> [core::arch::wasm32::v128; 2] {
+        <archmage::Wasm128Token as F32x16FromHalves>::high(self.wasm128(), wide)
     }
 }
 

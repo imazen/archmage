@@ -891,6 +891,20 @@ Token: `X64V3Token`
 - `_mm_maskstore_pd` (unsafe)
 - `_mm_maskstore_ps` (unsafe)
 
+## X64V3VnniToken (AVX-VNNI) (8 intrinsics)
+Token: `X64V3VnniToken`
+
+### Other
+
+- `_mm256_dpbusd_avx_epi32`
+- `_mm256_dpbusds_avx_epi32`
+- `_mm256_dpwssd_avx_epi32`
+- `_mm256_dpwssds_avx_epi32`
+- `_mm_dpbusd_avx_epi32`
+- `_mm_dpbusds_avx_epi32`
+- `_mm_dpwssd_avx_epi32`
+- `_mm_dpwssds_avx_epi32`
+
 ## X64V4Token (AVX-512) (3826 intrinsics)
 Token: `X64V4Token / Server64`
 

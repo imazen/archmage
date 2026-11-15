@@ -30,13 +30,13 @@ mod highp_scalar;
 #[cfg(any(
     target_arch = "x86_64",
     target_arch = "aarch64",
-    target_arch = "wasm32"
+    all(target_arch = "wasm32", target_feature = "simd128")
 ))]
 mod highp_simd;
 mod std_probe;
 #[cfg(test)]
 mod tests;
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
 mod wasm;
 
 mod options;

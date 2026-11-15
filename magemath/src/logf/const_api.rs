@@ -96,9 +96,17 @@ pub fn try_log1p_with_token<const OPTIONS: u32, T: magetypes::simd::backends::F3
     token: T,
     x: f32,
 ) -> Result<f32, LogfError> {
+    use magetypes::simd::generic::f32x4;
     let (u, c) = log1p_parts(x);
-    run4::<T, OPTIONS>(token, magetypes::simd::generic::f32x4::splat_t(token, u))
-        .map(|v| log1p_finish(v.to_array()[0], c, x))
+    let xv = f32x4::splat_t(token, x);
+    run4::<T, OPTIONS>(token, f32x4::splat_t(token, u))
+        .map(|value| {
+            let result = value.mul_add_fused(
+                f32x4::splat_t(token, core::f32::consts::LN_2),
+                f32x4::splat_t(token, c),
+            );
+            f32x4::blend(xv.simd_eq(f32x4::splat_t(token, 0.0)), xv, result).to_array()[0]
+        })
         .map_err(|error| LogfError {
             lane_mask: 1,
             ..error
@@ -190,20 +198,62 @@ pub fn try_log10_array_with<const OPTIONS: u32, const N: usize>(
 pub fn try_log1p_array_with<const OPTIONS: u32, const N: usize>(
     inputs: [f32; N],
 ) -> Result<[f32; N], LogfError> {
-    let mut u = [0.0f32; N];
-    let mut c = [0.0f32; N];
-    for i in 0..N {
-        let (ui, ci) = log1p_parts(inputs[i]);
-        u[i] = ui;
-        c[i] = ci;
+    use archmage::ScalarToken;
+    use magetypes::simd::generic::{f32x4, f32x8};
+    const {
+        assert!(LogfOptions::valid(OPTIONS), "invalid logf const options");
     }
-    try_log2_array_with::<OPTIONS, N>(u).map(|o| {
-        let mut out = o;
-        for i in 0..N {
-            out[i] = log1p_finish(o[i], c[i], inputs[i]);
+    if !matches!(N, 1 | 4 | 8) && !(cfg!(feature = "w512") && N == 16) {
+        return Err(LogfError {
+            kind: LogfErrorKind::UnsupportedWidth,
+            lane_mask: 0,
+        });
+    }
+    let mut output = [0.0; N];
+    if N == 1 {
+        output[0] = try_log1p_with_token::<OPTIONS, _>(ScalarToken, inputs[0])?;
+    } else if N == 4 {
+        let mut input = [0.0; 4];
+        input.copy_from_slice(&inputs);
+        output.copy_from_slice(
+            &super::try_log1p_f32x4_with::<OPTIONS, _>(
+                ScalarToken,
+                f32x4::from_array_t(ScalarToken, input),
+            )?
+            .to_array(),
+        );
+    } else if N == 8 {
+        let mut input = [0.0; 8];
+        input.copy_from_slice(&inputs);
+        output.copy_from_slice(
+            &super::try_log1p_f32x8_with::<OPTIONS, _>(
+                ScalarToken,
+                f32x8::from_array_t(ScalarToken, input),
+            )?
+            .to_array(),
+        );
+    } else {
+        #[cfg(feature = "w512")]
+        if N == 16 {
+            use magetypes::simd::generic::f32x16;
+            let mut input = [0.0; 16];
+            input.copy_from_slice(&inputs);
+            output.copy_from_slice(
+                &super::try_log1p_f32x16_with::<OPTIONS, _>(
+                    ScalarToken,
+                    f32x16::from_array_t(ScalarToken, input),
+                )?
+                .to_array(),
+            );
+            return Ok(output);
         }
-        out
-    })
+        #[allow(unreachable_code)]
+        return Err(LogfError {
+            kind: LogfErrorKind::UnsupportedWidth,
+            lane_mask: 0,
+        });
+    }
+    Ok(output)
 }
 /// Runtime-options scalar log2.
 #[inline(always)]
@@ -213,7 +263,16 @@ pub fn try_log2_runtime(x: f32, options: LogfOptions) -> Result<f32, LogfError> 
 /// Runtime-options scalar ln.
 #[inline(always)]
 pub fn try_ln_runtime(x: f32, options: LogfOptions) -> Result<f32, LogfError> {
-    try_log2_runtime(x, options).map(|v| v * core::f32::consts::LN_2)
+    try_ln_array_runtime([x], options).map(|result| result[0])
+}
+/// Runtime-options array ln.
+#[cfg_attr(debug_assertions, inline(never))]
+#[cfg_attr(not(debug_assertions), inline(always))]
+pub fn try_ln_array_runtime<const N: usize>(
+    inputs: [f32; N],
+    options: LogfOptions,
+) -> Result<[f32; N], LogfError> {
+    try_log2_array_runtime(inputs, options).map(|o| o.map(|v| v * core::f32::consts::LN_2))
 }
 /// Runtime-options scalar log1p.
 #[inline(always)]
@@ -227,25 +286,27 @@ pub fn try_log1p_array_runtime<const N: usize>(
     inputs: [f32; N],
     options: LogfOptions,
 ) -> Result<[f32; N], LogfError> {
-    let mut u = [0.0f32; N];
-    let mut c = [0.0f32; N];
-    for i in 0..N {
-        let (ui, ci) = log1p_parts(inputs[i]);
-        u[i] = ui;
-        c[i] = ci;
-    }
-    try_log2_array_runtime::<N>(u, options).map(|o| {
-        let mut out = o;
-        for i in 0..N {
-            out[i] = log1p_finish(o[i], c[i], inputs[i]);
-        }
-        out
-    })
+    let Some(options) = LogfOptions::from_bits(options.bits()) else {
+        return Err(LogfError {
+            kind: LogfErrorKind::UnsupportedOptions,
+            lane_mask: 0,
+        });
+    };
+    token_array_log1p(archmage::ScalarToken, inputs, options.bits())
 }
 /// Runtime-options scalar log10.
 #[inline(always)]
 pub fn try_log10_runtime(x: f32, options: LogfOptions) -> Result<f32, LogfError> {
-    try_log2_runtime(x, options).map(|v| v * core::f32::consts::LOG10_2)
+    try_log10_array_runtime([x], options).map(|result| result[0])
+}
+/// Runtime-options array log10.
+#[cfg_attr(debug_assertions, inline(never))]
+#[cfg_attr(not(debug_assertions), inline(always))]
+pub fn try_log10_array_runtime<const N: usize>(
+    inputs: [f32; N],
+    options: LogfOptions,
+) -> Result<[f32; N], LogfError> {
+    try_log2_array_runtime(inputs, options).map(|o| o.map(|v| v * core::f32::consts::LOG10_2))
 }
 /// Runtime-options array log2.
 #[cfg_attr(debug_assertions, inline(never))]
@@ -319,17 +380,57 @@ fn token_array<T: archmage::SimdToken, const N: usize>(
     }
 }
 
-#[inline(always)]
-fn log1p_finish(log2: f32, correction: f32, input: f32) -> f32 {
-    if input == 0.0 {
-        return input;
+#[cfg_attr(debug_assertions, inline(never))]
+#[cfg_attr(not(debug_assertions), inline(always))]
+fn token_array_log1p<T: archmage::SimdToken, const N: usize>(
+    token: T,
+    inputs: [f32; N],
+    options: u32,
+) -> Result<[f32; N], LogfError> {
+    macro_rules! dispatch {
+        ($o:literal) => {
+            try_log1p_array_with::<$o, N>(inputs)
+        };
     }
-    #[cfg(feature = "std")]
-    {
-        log2.mul_add(core::f32::consts::LN_2, correction)
-    }
-    #[cfg(not(feature = "std"))]
-    {
-        crate::soft_fma::fmaf_soft_lanes([log2], [core::f32::consts::LN_2], [correction])[0]
+    match options {
+        0 => dispatch!(0),
+        1 => dispatch!(1),
+        4 => dispatch!(4),
+        5 => dispatch!(5),
+        8 => dispatch!(8),
+        9 => dispatch!(9),
+        12 => dispatch!(12),
+        13 => dispatch!(13),
+        16 => dispatch!(16),
+        17 => dispatch!(17),
+        20 => dispatch!(20),
+        21 => dispatch!(21),
+        24 => dispatch!(24),
+        25 => dispatch!(25),
+        28 => dispatch!(28),
+        29 => dispatch!(29),
+        32 => dispatch!(32),
+        33 => dispatch!(33),
+        36 => dispatch!(36),
+        37 => dispatch!(37),
+        40 => dispatch!(40),
+        41 => dispatch!(41),
+        44 => dispatch!(44),
+        45 => dispatch!(45),
+        48 => dispatch!(48),
+        49 => dispatch!(49),
+        52 => dispatch!(52),
+        53 => dispatch!(53),
+        56 => dispatch!(56),
+        57 => dispatch!(57),
+        60 => dispatch!(60),
+        61 => dispatch!(61),
+        _ => {
+            let _ = token;
+            Err(LogfError {
+                kind: LogfErrorKind::UnsupportedOptions,
+                lane_mask: 0,
+            })
+        }
     }
 }

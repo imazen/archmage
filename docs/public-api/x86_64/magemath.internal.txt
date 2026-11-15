@@ -9,16 +9,25 @@
 
 ## summary
 #
-#   inherent methods                           24
-#   trait roster entries (type × trait)        24
+#   inherent methods                           32
+#   trait roster entries (type × trait)        32
 #
 # per-module pub lines:
+#   cbrtf                             8
 #   expf                              8
 #   logf                              8
 #   powf                              8
 
-## items (24 lines)
+## items (32 lines)
 
+pub fn cbrtf::CbrtfDomain::assert_fields_are_eq(&self)
+pub fn cbrtf::CbrtfError::assert_fields_are_eq(&self)
+pub fn cbrtf::CbrtfErrorKind::assert_fields_are_eq(&self)
+pub fn cbrtf::CbrtfExecution::assert_fields_are_eq(&self)
+pub fn cbrtf::CbrtfOptions::assert_fields_are_eq(&self)
+pub fn cbrtf::CbrtfPortability::assert_fields_are_eq(&self)
+pub fn cbrtf::CbrtfPrecision::assert_fields_are_eq(&self)
+pub fn cbrtf::CbrtfValidation::assert_fields_are_eq(&self)
 pub fn expf::ExpfDomain::assert_fields_are_eq(&self)
 pub fn expf::ExpfError::assert_fields_are_eq(&self)
 pub fn expf::ExpfErrorKind::assert_fields_are_eq(&self)
@@ -44,8 +53,16 @@ pub fn powf::PowfPortability::assert_fields_are_eq(&self)
 pub fn powf::PowfPrecision::assert_fields_are_eq(&self)
 pub fn powf::PowfValidation::assert_fields_are_eq(&self)
 
-## trait impls (24 types)
+## trait impls (32 types)
 
+cbrtf::CbrtfDomain: TrivialClone
+cbrtf::CbrtfError: TrivialClone
+cbrtf::CbrtfErrorKind: TrivialClone
+cbrtf::CbrtfExecution: TrivialClone
+cbrtf::CbrtfOptions: TrivialClone
+cbrtf::CbrtfPortability: TrivialClone
+cbrtf::CbrtfPrecision: TrivialClone
+cbrtf::CbrtfValidation: TrivialClone
 expf::ExpfDomain: TrivialClone
 expf::ExpfError: TrivialClone
 expf::ExpfErrorKind: TrivialClone

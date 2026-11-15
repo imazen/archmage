@@ -34,6 +34,8 @@ fn main() {
     report_token::<archmage::X64CryptoToken>("X64CryptoToken", "");
     report_token::<archmage::X64V3Token>("X64V3Token", "Avx2FmaToken");
     report_token::<archmage::X64V3CryptoToken>("X64V3CryptoToken", "");
+    report_token::<archmage::X64V3VnniToken>("X64V3VnniToken", "");
+    report_token::<archmage::X64V3GfniCryptoToken>("X64V3GfniCryptoToken", "");
     report_token::<archmage::X64V4Token>("X64V4Token", "Avx512Token, Server64");
     report_token::<archmage::X64V4xToken>("X64V4xToken", "");
     report_token::<archmage::Avx512Fp16Token>("Avx512Fp16Token", "");
@@ -51,6 +53,7 @@ fn main() {
     println!("  WASM tokens:");
     report_token::<archmage::Wasm128Token>("Wasm128Token", "");
     report_token::<archmage::Wasm128RelaxedToken>("Wasm128RelaxedToken", "");
+    report_token::<archmage::Wasm128RelaxedFmaToken>("Wasm128RelaxedFmaToken", "");
     println!();
 
     println!("  Universal:");
@@ -65,7 +68,9 @@ fn main() {
     survey_aarch64();
 
     #[cfg(target_arch = "wasm32")]
-    println!("  (WASM feature detection is compile-time only)");
+    println!(
+        "  (WASM ISA features are compile-time cfg; Wasm128RelaxedFmaToken probes single-rounding fusion once at runtime)"
+    );
 
     #[cfg(not(any(
         target_arch = "x86_64",

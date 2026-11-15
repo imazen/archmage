@@ -73,8 +73,8 @@ mod impls;
 pub mod generic;
 
 // Branchless, vectorized f16 ↔ f32 converters (token-keyed `F16Convert`
-// trait methods).
-pub use generic::F16Convert;
+// trait methods) and `MagetypesToken` representation-token mapping.
+pub use generic::{F16Convert, MagetypesToken};
 
 // ============================================================================
 // Type aliases: map the 10 migrated type names to their generic versions.

@@ -52,6 +52,11 @@
 ))]
 
 use archmage::prelude::*;
+#[cfg(any(
+    target_arch = "x86_64",
+    target_arch = "aarch64",
+    all(target_arch = "wasm32", target_feature = "simd128")
+))]
 use magetypes::simd::f32x8;
 
 const INPUT: [f32; 8] = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];

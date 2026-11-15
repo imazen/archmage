@@ -461,6 +461,20 @@ fn generate_float_backend_trait(ty: &W512Type) -> String {
             /// Lane-wise maximum.
             fn max(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
+            /// Fast single-instruction lane-wise minimum (NaN and `-0.0`/`+0.0`
+            /// tie-breaking are unspecified). Defaults to [`min`](Self::min).
+            #[inline(always)]
+            fn min_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {{
+                <Self as {trait_name}>::min(self, a, b)
+            }}
+
+            /// Fast single-instruction lane-wise maximum (NaN and `-0.0`/`+0.0`
+            /// tie-breaking are unspecified). Defaults to [`max`](Self::max).
+            #[inline(always)]
+            fn max_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {{
+                <Self as {trait_name}>::max(self, a, b)
+            }}
+
             /// Square root.
             fn sqrt(self, a: Self::Repr) -> Self::Repr;
 
@@ -608,7 +622,24 @@ fn generate_int_backend_trait(ty: &W512Type) -> String {
     let new_ops_decls = w512_new_ops_trait_decls(ty);
 
     // mul only for 16-bit and 32-bit
-    let mul_section = if ty.elem_bits == 16 || ty.elem_bits == 32 {
+    let mul_section = if ty.elem == "i16" {
+        formatdoc! {r#"
+
+            /// Lane-wise multiplication (low bits of product).
+            fn mul(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
+
+            /// Fixed-point Q15 rounding multiply: `((a * b + 0x4000) >> 15)` per lane.
+            #[inline(always)]
+            fn mul_hrs_q15(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {{
+                let aa = <Self as {trait_name}>::to_array(self, a);
+                let bb = <Self as {trait_name}>::to_array(self, b);
+                <Self as {trait_name}>::from_array(
+                    self,
+                    core::array::from_fn(|i| ((aa[i] as i32 * bb[i] as i32 + 0x4000) >> 15) as i16),
+                )
+            }}
+        "#}
+    } else if ty.elem_bits == 16 || ty.elem_bits == 32 {
         formatdoc! {r#"
 
             /// Lane-wise multiplication (low bits of product).
@@ -1198,7 +1229,18 @@ fn generate_scalar_int_impl(ty: &W512Type) -> String {
     let array = ty.array_type();
     let zero_lit = ty.zero_lit();
 
-    let mul_impl = if ty.elem_bits == 16 || ty.elem_bits == 32 {
+    let mul_impl = if ty.elem == "i16" {
+        formatdoc! {r#"
+
+            #[inline(always)]
+            fn mul(self, a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| a[i].wrapping_mul(b[i])) }}
+
+            #[inline(always)]
+            fn mul_hrs_q15(self, a: {array}, b: {array}) -> {array} {{
+                core::array::from_fn(|i| ((a[i] as i32 * b[i] as i32 + 0x4000) >> 15) as i16)
+            }}
+        "#}
+    } else if ty.elem_bits == 16 || ty.elem_bits == 32 {
         formatdoc! {r#"
 
             #[inline(always)]
@@ -1548,6 +1590,18 @@ fn generate_v3_polyfill_impl(ty: &W512Type) -> String {
                 ]
             }}
         "#});
+        if ty.elem == "i16" {
+            code.push_str(&formatdoc! {r#"
+
+            #[inline(always)]
+            fn mul_hrs_q15(self, a: {v3_repr}, b: {v3_repr}) -> {v3_repr} {{
+                [
+                    <archmage::X64V3Token as {half_trait}>::mul_hrs_q15(self, a[0], b[0]),
+                    <archmage::X64V3Token as {half_trait}>::mul_hrs_q15(self, a[1], b[1]),
+                ]
+            }}
+            "#});
+        }
     }
 
     // neg: signed delegates to half backend, unsigned uses sub(zero, a)
@@ -2067,6 +2121,15 @@ fn generate_4way_polyfill_impl(
                 core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::mul(self, a[i], b[i]))
             }}
         "#});
+        if ty.elem == "i16" {
+            code.push_str(&formatdoc! {r#"
+
+            #[inline(always)]
+            fn mul_hrs_q15(self, a: {repr}, b: {repr}) -> {repr} {{
+                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::mul_hrs_q15(self, a[i], b[i]))
+            }}
+            "#});
+        }
     }
 
     // neg: signed delegates to quarter backend, unsigned uses sub(zero, a)
@@ -2103,6 +2166,20 @@ fn generate_4way_polyfill_impl(
     "#});
 
     if ty.is_float() {
+        if token == "Wasm128Token" {
+            code.push_str(&formatdoc! {r#"
+
+            #[inline(always)]
+            fn min_fast(self, a: {repr}, b: {repr}) -> {repr} {{
+                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::min_fast(self, a[i], b[i]))
+            }}
+
+            #[inline(always)]
+            fn max_fast(self, a: {repr}, b: {repr}) -> {repr} {{
+                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::max_fast(self, a[i], b[i]))
+            }}
+            "#});
+        }
         code.push_str(&formatdoc! {r#"
 
             #[inline(always)]
@@ -2718,7 +2795,20 @@ fn generate_x86_v4_int_impl_for_token(ty: &W512Type, token: &str) -> String {
     };
 
     // mul
-    let mul_impl = if ty.has_native_avx512_mul() {
+    let mul_impl = if ty.elem == "i16" {
+        formatdoc! {r#"
+
+            {arcane}
+            fn mul(self, a: __m512i, b: __m512i) -> __m512i {{
+                _mm512_mullo_{epi}(a, b)
+            }}
+
+            {arcane}
+            fn mul_hrs_q15(self, a: __m512i, b: __m512i) -> __m512i {{
+                _mm512_mulhrs_epi16(a, b)
+            }}
+        "#}
+    } else if ty.has_native_avx512_mul() {
         formatdoc! {r#"
 
             {arcane}
@@ -3030,14 +3120,10 @@ fn generate_x86_v4_w512_impls_for_token(types: &[W512Type], token: &str) -> Stri
     code
 }
 
-/// Generate all V4 native AVX-512 W512 implementations (X64V4Token only).
+/// Generate all V4 native AVX-512 W512 implementations (X64V4Token only;
+/// X64V4xToken delegates in `x86_v4_w512_delegated.rs`).
 pub(super) fn generate_x86_v4_w512_impls(types: &[W512Type]) -> String {
     generate_x86_v4_w512_impls_for_token(types, "X64V4Token")
-}
-
-/// Generate all Modern native AVX-512 W512 implementations (X64V4xToken).
-pub(super) fn generate_x86_modern_w512_impls(types: &[W512Type]) -> String {
-    generate_x86_v4_w512_impls_for_token(types, "X64V4xToken")
 }
 
 // ============================================================================

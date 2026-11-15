@@ -263,15 +263,31 @@ fn rewrite_single_incant(input: &IncantInput, ctx: &CallerContext) -> Option<Tok
             }
         };
 
+        let mut preds = Vec::new();
+        if ctx.target_arch == Some("wasm32") {
+            let caller_feats = crate::common::tier_wasm_features(ctx.tier_suffix);
+            for tf in crate::common::tier_wasm_features(rt.name) {
+                if !caller_feats.contains(tf) {
+                    preds.push(quote! { target_feature = #tf });
+                }
+            }
+        }
         if let Some(feat) = &rt.feature_gate {
-            let allow_attr = if rt.allow_unexpected_cfg {
+            preds.push(quote! { feature = #feat });
+        }
+        if !preds.is_empty() {
+            let allow_attr = if rt.allow_unexpected_cfg && rt.feature_gate.is_some() {
                 quote! { #[allow(unexpected_cfgs)] }
             } else {
                 quote! {}
             };
+            let cfg_attr = match preds.as_slice() {
+                [only] => quote! { #[cfg(#only)] },
+                many => quote! { #[cfg(all(#(#many),*))] },
+            };
             upgrade_arms.push(quote! {
                 #allow_attr
-                #[cfg(feature = #feat)]
+                #cfg_attr
                 { #check }
             });
         } else {
@@ -401,6 +417,8 @@ fn rewrite_tokenless_incant(input: &IncantInput, ctx: &CallerContext) -> Option<
         tier.name == "scalar"
             || tier.name == "default"
             || (tier.target_arch == ctx.target_arch
+                && !crate::generated::tier_to_canonical_token(tier.name)
+                    .is_some_and(crate::generated::token_requires_runtime_probe)
                 && (tier.suffix == ctx.tier_suffix
                     || crate::generated::can_downgrade_tier(ctx.tier_suffix, tier.suffix)))
     });

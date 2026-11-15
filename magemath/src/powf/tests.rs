@@ -327,9 +327,9 @@ fn automatic_plan_matches_requested_runtime_context() {
             "v3" => matches!(plan, dispatch::Plan::V3(_)),
             #[cfg(target_arch = "aarch64")]
             "neon" => matches!(plan, dispatch::Plan::Neon(_)),
-            #[cfg(target_arch = "wasm32")]
+            #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
             "wasm-fused" => matches!(plan, dispatch::Plan::Wasm(_, true)),
-            #[cfg(target_arch = "wasm32")]
+            #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
             "wasm-software" => matches!(plan, dispatch::Plan::Wasm(_, false)),
             name => panic!("unknown requested plan {name}"),
         };
@@ -444,7 +444,7 @@ macro_rules! require_tier {
             "v4x" => archmage::attuned!($family(archmage::X64V4xToken::NAME $(, $argument)*), [_v4x_t, _scalar_t]),
             #[cfg(target_arch = "aarch64")]
             "neon" => archmage::attuned!($family(archmage::NeonToken::NAME $(, $argument)*), [_neon_t, _scalar_t]),
-            #[cfg(target_arch = "wasm32")]
+            #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
             "wasm128" => archmage::attuned!($family(archmage::Wasm128Token::NAME $(, $argument)*), [_wasm128_t, _scalar_t]),
             other => panic!("unsupported requested powf backend {other}"),
         }

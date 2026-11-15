@@ -1,6 +1,6 @@
 # Magemath
 
-Configurable f32 power, exponential and logarithm approximations, built on
+Configurable f32 power, exponential, logarithm and cube-root approximations, built on
 [Magetypes](../magetypes) vectors and [Archmage](..) feature proofs.
 `no_std` by default; opt in to `std` for runtime CPU detection and native fallbacks.
 

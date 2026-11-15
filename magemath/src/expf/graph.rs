@@ -85,37 +85,29 @@ macro_rules! graph {
                 };
                 let xi = reduced.round().min(sp(127.0));
                 let xf = reduced - xi;
-                let p = if options & ExpfOptions::LOWP != 0 {
-                    // Canonical LOWP: deg-2 on the shared round split.
-                    // C0 = 1 keeps integer inputs exact; 3.06e-3 worst rel
-                    // (exhaustive, in-band) vs the legacy 5.56e-3 contract.
-                    let p = madd(sp(0.239_625_156), xf, sp(0.701_271_514));
-                    madd(p, xf, sp(1.0))
+                let (c6, c5, c4, c3, c2) = if options & ExpfOptions::LEGACY != 0 {
+                    (
+                        0.000_154_47,
+                        0.001_333_37,
+                        0.009_618_055,
+                        0.055_504_545,
+                        0.240_226_46,
+                    )
                 } else {
-                    let (c6, c5, c4, c3, c2) = if options & ExpfOptions::LEGACY != 0 {
-                        (
-                            0.000_154_47,
-                            0.001_333_37,
-                            0.009_618_055,
-                            0.055_504_545,
-                            0.240_226_46,
-                        )
-                    } else {
-                        (
-                            0.000_152_527_896_498_79,
-                            0.001_338_604_727_826_21,
-                            0.009_618_715_779_149_75,
-                            0.055_503_695_542_993_11,
-                            0.240_226_463_934_714_0,
-                        )
-                    };
-                    let p = madd(sp(c6), xf, sp(c5));
-                    let p = madd(p, xf, sp(c4));
-                    let p = madd(p, xf, sp(c3));
-                    let p = madd(p, xf, sp(c2));
-                    let p = madd(p, xf, sp(core::f32::consts::LN_2));
-                    madd(p, xf, sp(1.0))
+                    (
+                        0.000_152_527_896_498_79,
+                        0.001_338_604_727_826_21,
+                        0.009_618_715_779_149_75,
+                        0.055_503_695_542_993_11,
+                        0.240_226_463_934_714_0,
+                    )
                 };
+                let p = madd(sp(c6), xf, sp(c5));
+                let p = madd(p, xf, sp(c4));
+                let p = madd(p, xf, sp(c3));
+                let p = madd(p, xf, sp(c2));
+                let p = madd(p, xf, sp(core::f32::consts::LN_2));
+                let p = madd(p, xf, sp(1.0));
                 let integer = if core::any::TypeId::of::<T>()
                     == core::any::TypeId::of::<archmage::ScalarToken>()
                 {

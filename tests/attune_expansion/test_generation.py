@@ -39,6 +39,10 @@ class CorpusTests(unittest.TestCase):
         self.assertEqual(selection_contract(context, "attuned", gated, False, "x86_64", False)[0], "no guaranteed fallback")
         self.assertIsNone(selection_contract(context, "attuned", gated, False, "x86_64", True)[0])
         self.assertEqual(selection_contract(context, "attuned", gated, False, "aarch64", True)[0], "no guaranteed fallback")
+        wasm_only = [("wasm128", False, False)]
+        wasm_ctx = Context("wasm128", "wasm128")
+        self.assertEqual(selection_contract(wasm_ctx, "attuned", wasm_only, False, "wasm32", False)[0], "no guaranteed fallback")
+        self.assertIsNone(selection_contract(wasm_ctx, "attuned", wasm_only, False, "wasm32", True)[0])
 
     def test_generated_module_extraction_ignores_literal_braces(self):
         block = 'pub mod x { fn f() { let _ = "}"; let _ = \'{\'; /* } */ } // }\n }'

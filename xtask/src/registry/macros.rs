@@ -85,6 +85,10 @@ impl Registry {
         out.push('\n');
         self.gen_canonical_token_to_tier_suffix(&mut out);
         out.push('\n');
+        self.gen_token_requires_runtime_probe(&mut out);
+        out.push('\n');
+        self.gen_token_has_magetypes_backend(&mut out);
+        out.push('\n');
         self.gen_can_downgrade_tier(&mut out);
         out.push('\n');
         self.gen_expected_tier_tag(&mut out, major_version);
@@ -376,25 +380,67 @@ impl Registry {
         out.push_str("    }\n}\n");
     }
 
+    fn gen_token_requires_runtime_probe(&self, out: &mut String) {
+        use indoc::formatdoc;
+        let runtime_patterns: Vec<String> = self
+            .token
+            .iter()
+            .filter(|t| t.runtime_probe)
+            .map(Self::match_pattern)
+            .collect();
+        let body = if runtime_patterns.is_empty() {
+            "    let _ = token_name;\n    false".to_string()
+        } else {
+            format!("    matches!(token_name, {})", runtime_patterns.join(" | "))
+        };
+        out.push_str(&formatdoc! {"
+            /// Returns true when `token_name` requires a runtime semantic probe
+            /// beyond compile-time `#[target_feature]` validation.
+            pub(crate) fn token_requires_runtime_probe(token_name: &str) -> bool {{
+            {body}
+            }}
+        "});
+    }
+
+    fn gen_token_has_magetypes_backend(&self, out: &mut String) {
+        use indoc::formatdoc;
+        let backend_patterns: Vec<String> = self
+            .token
+            .iter()
+            .filter(|t| t.has_magetypes_backend)
+            .map(Self::match_pattern)
+            .collect();
+        let mut patterns = vec!["\"ScalarToken\"".to_string()];
+        patterns.extend(backend_patterns);
+        let joined = patterns.join(" | ");
+        out.push_str(&formatdoc! {"
+            /// Returns true when `magetypes` implements the full SIMD backend
+            /// trait suite directly for `token_name`.
+            pub(crate) fn token_has_magetypes_backend(token_name: &str) -> bool {{
+                matches!(token_name, {joined})
+            }}
+        "});
+    }
+
     /// Generate `can_downgrade_tier(from_suffix, to_suffix) -> bool`.
     ///
-    /// Derived from feature set math: `from` can downgrade to `to` when
-    /// `from.features ⊇ to.features` (strict superset). Computed at codegen
-    /// time from the actual feature lists — not from the parent DAG.
+    /// Derived from explicit parent hierarchy plus feature-subset math:
+    /// `from` can downgrade to `to` when `to` is a declared ancestor of `from`,
+    /// OR when `from` and `to` share an architecture, `to` does not require a
+    /// runtime semantic probe, and `from.features ⊃ to.features`.
     fn gen_can_downgrade_tier(&self, out: &mut String) {
         use indoc::formatdoc;
         out.push_str(&formatdoc! {"
             /// Check if tier `from_suffix` can downgrade to tier `to_suffix`.
             ///
-            /// Derived from feature set math: true when `from.features ⊃ to.features`.
+            /// True when `to` is an explicit ancestor of `from` or when `to`
+            /// requires no runtime semantic probe and `from.features ⊃ to.features`.
             /// Identity (from == to) returns false (use direct pass, no method needed).
             pub(crate) fn can_downgrade_tier(from_suffix: &str, to_suffix: &str) -> bool {{
                 if from_suffix == to_suffix {{ return false; }}
                 matches!((from_suffix, to_suffix),
         "});
 
-        // Feature subset computation: from can downgrade to to when
-        // from.features ⊇ to.features AND same architecture
         for from_token in &self.token {
             let from_suffix = match from_token.short_name.as_deref() {
                 Some(s) => s,
@@ -402,6 +448,7 @@ impl Registry {
             };
             let from_features: std::collections::BTreeSet<&str> =
                 from_token.features.iter().map(|s| s.as_str()).collect();
+            let ancestors = self.collect_ancestors(from_token);
 
             let mut downgradable = Vec::new();
             for to_token in &self.token {
@@ -415,11 +462,14 @@ impl Registry {
                 if from_token.arch != to_token.arch {
                     continue;
                 }
+                let is_ancestor = ancestors.iter().any(|a| a.name == to_token.name);
                 let to_features: std::collections::BTreeSet<&str> =
                     to_token.features.iter().map(|s| s.as_str()).collect();
+                let is_strict_feature_subset = !to_token.runtime_probe
+                    && to_features.is_subset(&from_features)
+                    && to_features != from_features;
 
-                // Strict superset: from ⊇ to AND from ≠ to
-                if to_features.is_subset(&from_features) && to_features != from_features {
+                if is_ancestor || is_strict_feature_subset {
                     downgradable.push(to_suffix);
                 }
             }

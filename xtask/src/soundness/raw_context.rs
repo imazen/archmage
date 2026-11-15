@@ -5,7 +5,9 @@ use syn::visit::{self, Visit};
 use crate::registry::Registry;
 
 pub(super) fn verify(reg: &Registry, rel: &str, text: &str, errors: &mut Vec<String>) {
-    if !rel.starts_with("magetypes/src") || !text.contains("from_context") {
+    let in_magetypes = rel.starts_with("magetypes/src");
+    let in_archmage = rel.starts_with("src/") && !rel.starts_with("src/tokens/generated/");
+    if (!in_magetypes && !in_archmage) || !text.contains("from_context") {
         return;
     }
     let file = match syn::parse_file(text) {
@@ -66,7 +68,7 @@ impl ContextVisitor<'_> {
                     .last()
                     .map(|s| s.ident.to_string())
                     .as_deref(),
-                Some("rite" | "token_target_features")
+                Some("attune" | "rite" | "token_target_features")
             ) {
                 // Explicit single-tier form only. Unknown/compound forms fail closed.
                 if let Ok(tier) = attr.parse_args::<syn::Ident>() {
@@ -75,7 +77,8 @@ impl ContextVisitor<'_> {
                     if let Some(token) = self.reg.token.iter().find(|t| {
                         t.short_name.as_deref() == Some(tier)
                             || t.extraction_aliases.iter().any(|a| a == tier)
-                    }) {
+                    }) && !token.runtime_probe
+                    {
                         self.frame.features.extend(token.features.iter().cloned());
                     }
                 }
@@ -135,6 +138,7 @@ impl<'ast> Visit<'ast> for ContextVisitor<'_> {
             };
             let valid = token.is_some_and(|t| {
                 !self.frame.name.is_empty()
+                    && !t.runtime_probe
                     && t.features.iter().all(|f| self.frame.features.contains(f))
             });
             if !valid {
@@ -218,6 +222,7 @@ mod tests {
     #[test]
     fn matching_and_superset_contexts() {
         for attribute in [
+            "archmage::attune(v3)",
             "archmage::rite(v3)",
             "archmage::rite(v4)",
             "archmage::token_target_features(v3)",
@@ -241,10 +246,27 @@ mod tests {
             "fn wrap(t: archmage::X64V3Token) { archmage::X64V3Token::from_context(); }",
             "#[archmage::rite(v3)] fn wrap() { Alias::from_context(); }",
             "#[archmage::rite(neon)] fn wrap() { archmage::X64V3Token::from_context(); }",
+            "#[archmage::rite(wasm128_relaxed)] fn wrap() { archmage::Wasm128RelaxedFmaToken::from_context(); }",
+            "#[archmage::attune(wasm128_relaxed_fma)] fn wrap() { archmage::Wasm128RelaxedFmaToken::from_context(); }",
+            "#[archmage::attune(wasm128_relaxed_fma)] fn wrap() { archmage::Wasm128RelaxedToken::from_context(); }",
             "macro_rules! wrap { () => { archmage::X64V3Token::from_context() } }",
         ] {
             assert!(!check(source).is_empty(), "accepted {source}");
         }
+        let mut src_errors = Vec::new();
+        verify(
+            &Registry::load(
+                &std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                    .parent()
+                    .unwrap()
+                    .join("token-registry.toml"),
+            )
+            .unwrap(),
+            "src/rogue.rs",
+            "fn rogue() { archmage::X64V3Token::from_context(); }",
+            &mut src_errors,
+        );
+        assert!(!src_errors.is_empty(), "src/ files must also be audited");
     }
 
     #[test]

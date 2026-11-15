@@ -123,7 +123,7 @@ fn canonical_mixed_lanes() {
                 )[i],
                 expected,
             );
-            #[cfg(target_arch = "wasm32")]
+            #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
             if let Some(t) = <archmage::Wasm128Token as archmage::SimdToken>::summon() {
                 equal(vector4_wasm128(t, x, n)[i], expected);
             }

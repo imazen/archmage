@@ -17,6 +17,10 @@ TARGETS = {
     "x86": "i686-unknown-linux-gnu",
 }
 NATIVE = {"x86_64": "v3", "aarch64": "neon", "wasm32": "wasm128", "x86": "scalar"}
+
+
+def native_tier(arch, enabled):
+    return "scalar" if arch == "wasm32" and not enabled else NATIVE[arch]
 TOKEN = {"v2": "X64V2Token", "v3": "X64V3Token", "v4x": "X64V4xToken",
          "neon": "NeonToken", "wasm128": "Wasm128Token", "scalar": "ScalarToken"}
 ARCH = {"v2": "x86_64", "v3": "x86_64", "v4x": "x86_64", "neon": "aarch64",
@@ -98,6 +102,8 @@ def definitions(arch, enabled):
         absent = ()
         if arch == "aarch64" and modifier in ("remove_neon", "remove_twice"):
             absent = ("kernel_neon", "NeonToken")
+        if arch == "wasm32" and not enabled:
+            absent += ("kernel_wasm128", "Wasm128Token")
         if modifier == "add_then_remove":
             absent += ("kernel_v4x", "X64V4xToken")
         yield Case(f"modifier_{form}_{syntax}_{modifier}", "definition-modifier",
@@ -130,7 +136,7 @@ class Context:
 
 
 def contexts(arch, enabled):
-    native = NATIVE[arch]
+    native = native_tier(arch, enabled)
     result = [Context("ordinary", None, "ordinary"), Context("scalar", "scalar"),
               Context("generic_parent", "scalar", "generic", "generic"),
               Context("where_parent", "scalar", "where", "generic"),
@@ -248,7 +254,8 @@ def selection_contract(context, macro, entries, explicit, arch, enabled):
     and disabled Cargo gates cannot provide a guarantee on this build.
     """
     active = [t for t, _, gated in (LISTS["portable"] if entries is None else entries)
-              if (not gated or enabled) and ARCH[t] in (None, arch)]
+              if (not gated or enabled) and ARCH[t] in (None, arch)
+              and not (arch == "wasm32" and not enabled and t == "wasm128")]
     probes = False
     for tier in sorted(active, key=RANK.get, reverse=True):
         if tier == "scalar":
@@ -294,13 +301,13 @@ def calls(arch, enabled):
             error = "requires `_self = Type`"
         # Body scans below exclude support, whose dispatcher legitimately probes.
         yield Case(f"call_{context.name}_{macro}_{label}_{'using' if explicit else 'implicit'}", "invocation",
-                   SUPPORT + caller(context, expression, NATIVE[arch]), error,
+                   SUPPORT + caller(context, expression, native_tier(arch, enabled)), error,
                    dict(context=context.name, macro=macro, tiers=label, proof="explicit-scalar" if explicit else "inferred-or-context",
                         runtime_probe=probes, inspect_caller=context.style not in ("family", "autoversion", "magetypes", "magetypes_rite")))
 
 
 def extra_syntax(arch, enabled):
-    native = NATIVE[arch]
+    native = native_tier(arch, enabled)
     tok = f"archmage::{TOKEN[native]}"
     for mode, args, signature in [
         ("explicit", native, "pub fn kernel(x: u32) -> u32"),
@@ -416,13 +423,13 @@ pub fn ordinary(x: u32) -> u32 {{ archmage::{macro}!(Kernel::leaf::<u32>(x), [_s
 
 
 def corpus(arch, enabled):
-    cases = list(definitions(arch, enabled)) + list(calls(arch, enabled)) + list(extra_syntax(arch, enabled)) + list(registered_tiers()) + list(nesting_and_inference(arch))
+    cases = list(definitions(arch, enabled)) + list(calls(arch, enabled)) + list(extra_syntax(arch, enabled)) + list(registered_tiers(arch, enabled)) + list(nesting_and_inference(arch, enabled))
     names = [case.name for case in cases]
     assert len(names) == len(set(names)), "duplicate case IDs"
     return cases
 
 
-def registered_tiers():
+def registered_tiers(arch=None, enabled=False):
     registry = tomllib.loads((Path(__file__).resolve().parents[2] / "token-registry.toml").read_text())
     for token in registry["token"]:
         if "dispatch_priority" not in token:
@@ -431,6 +438,37 @@ def registered_tiers():
         gate = token.get("legacy_dispatch_gate")
         options = f"(cfg({gate}))" if gate else ""
         guard = f'#[cfg(feature = "{gate}")]' if gate else ""
+        if token.get("runtime_probe"):
+            source = f"""
+#[archmage::attune(_{tier}_t{options}, dispatch)]
+pub fn leaf(x: u32) -> u32 {{ x }}
+{guard}
+#[archmage::attune(wrap)]
+pub fn proof_caller(proof: archmage::{token['name']}, x: u32) -> u32 {{
+    archmage::attuned!(leaf(x), [_{tier}_t])
+}}
+pub fn runtime_caller(x: u32) -> u32 {{ leaf(x) }}
+"""
+            present = (token["name"],) if arch == "wasm32" and enabled else ()
+            yield Case(f"registered_{tier}", "registered-tier", source,
+                       absent=("from_context", f"fn leaf_{tier}("),
+                       present=present,
+                       tags=dict(tier=tier, architecture=token["arch"], gate=gate, runtime_probe=True))
+            yield Case(f"registered_{tier}_rejects_tokenless_caller", "registered-tier", f"""
+#[archmage::attune(_{tier}_t{options}, dispatch)]
+pub fn leaf(x: u32) -> u32 {{ x }}
+#[archmage::attune({tier})]
+pub fn caller(x: u32) -> u32 {{ archmage::attuned!(leaf(x), [_{tier}_t]) }}
+""",
+                       error="requires a runtime fusion probe",
+                       tags=dict(tier=tier, architecture=token["arch"], gate=gate, runtime_probe=True))
+            yield Case(f"registered_{tier}_rejects_tokenless_direct", "registered-tier", f"""
+#[archmage::attune(_{tier}{options})]
+pub fn leaf(x: u32) -> u32 {{ x }}
+""",
+                       error="requires a runtime fusion probe",
+                       tags=dict(tier=tier, architecture=token["arch"], gate=gate, runtime_probe=True))
+            continue
         source = f"""
 #[archmage::attune(_{tier}{options}, _{tier}_t{options}, dispatch)]
 pub fn leaf(x: u32) -> u32 {{ x }}
@@ -447,8 +485,8 @@ pub fn proof_caller(proof: archmage::{token['name']}, x: u32) -> u32 {{
                    tags=dict(tier=tier, architecture=token["arch"], gate=gate))
 
 
-def nesting_and_inference(arch):
-    native = NATIVE[arch]
+def nesting_and_inference(arch, enabled):
+    native = native_tier(arch, enabled)
     token = f"archmage::{TOKEN[native]}"
     for frontend, options in (("arcane", ""), ("attune", "wrap, ")):
         for spelling in ("nested", "in_trait", "implied"):

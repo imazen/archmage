@@ -18,10 +18,10 @@ OUTPUT = ROOT / "docs/site/static/expansions"
 TOOLCHAIN = "1.99.0"
 EXPAND = "cargo-expand 1.0.126"
 PRESETS = {
-    "x86_64": ("x86_64-unknown-linux-gnu", ""),
-    "x86_64-avx512": ("x86_64-unknown-linux-gnu", "avx512"),
-    "aarch64": ("aarch64-unknown-linux-gnu", ""),
-    "wasm32": ("wasm32-unknown-unknown", ""),
+    "x86_64": ("x86_64-unknown-linux-gnu", "", ""),
+    "x86_64-avx512": ("x86_64-unknown-linux-gnu", "avx512", ""),
+    "aarch64": ("aarch64-unknown-linux-gnu", "", ""),
+    "wasm32": ("wasm32-unknown-unknown", "", "-Ctarget-feature=+simd128"),
 }
 
 
@@ -47,22 +47,27 @@ def main():
     assert len(ids) == len(set(ids)) and set(ids) == set(sources), "fixture/index mismatch"
     expected = {}
     expected["source.rs"] = source
-    for preset, (target, features) in PRESETS.items():
+    for preset, (target, features, rustflags) in PRESETS.items():
+        preset_env = env.copy()
+        if rustflags:
+            env_key = f"CARGO_TARGET_{target.upper().replace('-', '_')}_RUSTFLAGS"
+            preset_env[env_key] = rustflags
         common = ["--manifest-path", str(FIXTURE / "Cargo.toml"), "--lib", "--target", target]
         if features:
             common += ["--features", features]
-        subprocess.run(["cargo", "check", *common], cwd=ROOT, env=env, check=True)
+        subprocess.run(["cargo", "check", *common], cwd=ROOT, env=preset_env, check=True)
         modules = []
         for name in ids:
             print(f"Expand {preset}: {name}", flush=True)
             expanded = subprocess.check_output(
                 ["cargo", "expand", "--color", "never", *common, name],
-                cwd=ROOT, env=env, text=True,
+                cwd=ROOT, env=preset_env, text=True,
             )
             assert f"pub mod {name}" in expanded, f"missing module: {preset}/{name}"
             modules.append(f"// example: {name}\n" + expanded.strip() + "\n")
+        flags_note = f"; rustflags: {rustflags}" if rustflags else ""
         expected[f"{preset}.rs"] = (
-            f"// Rust {TOOLCHAIN}; {EXPAND}; {target}; features: {features or 'default'}\n"
+            f"// Rust {TOOLCHAIN}; {EXPAND}; {target}; features: {features or 'default'}{flags_note}\n"
             + "\n".join(modules)
         )
     changed = []

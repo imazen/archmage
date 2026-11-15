@@ -185,7 +185,7 @@ macro_rules! vector {
                 )
                 .map(|result| magetypes::simd::generic::$float::from_array_t(token, result));
             }
-            #[cfg(target_arch = "wasm32")]
+            #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
             if matches!(caller, dispatch::Plan::Wasm(_, false)) {
                 return graph::$profile::<T, { graph::WASM_SOFTWARE }, OPTIONS>(token, input, n);
             }

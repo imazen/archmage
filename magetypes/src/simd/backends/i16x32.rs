@@ -57,6 +57,17 @@ pub trait I16x32Backend: SimdToken + Sealed + Copy + 'static {
     /// Lane-wise multiplication (low bits of product).
     fn mul(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
+    /// Fixed-point Q15 rounding multiply: `((a * b + 0x4000) >> 15)` per lane.
+    #[inline(always)]
+    fn mul_hrs_q15(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        let aa = <Self as I16x32Backend>::to_array(self, a);
+        let bb = <Self as I16x32Backend>::to_array(self, b);
+        <Self as I16x32Backend>::from_array(
+            self,
+            core::array::from_fn(|i| ((aa[i] as i32 * bb[i] as i32 + 0x4000) >> 15) as i16),
+        )
+    }
+
     /// Lane-wise negation.
     fn neg(self, a: Self::Repr) -> Self::Repr;
 

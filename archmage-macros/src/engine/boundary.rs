@@ -241,8 +241,24 @@ pub(crate) fn expand(
     // On wasm32, #[target_feature(enable = "simd128")] functions are safe (Rust 1.54+).
     // The wasm validation model guarantees unsupported instructions trap deterministically,
     // so there's no UB from feature mismatch. Skip the unsafe wrapper entirely.
+    // Runtime-probed WASM tokens (such as Wasm128RelaxedFmaToken) still authenticate
+    // the concrete token type so local shadow structs cannot forge a proof.
     if target_arch == Some("wasm32") {
-        return arcane_impl_wasm_safe(input_fn, &args, target_feature_attrs, inline_attr);
+        if token_type_name
+            .as_deref()
+            .is_some_and(crate::generated::token_requires_runtime_probe)
+        {
+            let token_assertion =
+                gen_token_assertion(&token_type_name, &token_type, args.suppress_const_test);
+            prepend_to_body(&mut input_fn.body, token_assertion);
+        }
+        return arcane_impl_wasm_safe(
+            input_fn,
+            &args,
+            &features,
+            target_feature_attrs,
+            inline_attr,
+        );
     }
 
     let cfg_guard = gen_cfg_guard(target_arch, args.shared.cfg_feature.as_deref());
@@ -319,9 +335,13 @@ struct BoundaryParts {
 pub(crate) fn arcane_impl_wasm_safe(
     mut input_fn: LightFn,
     args: &BoundaryOptions,
+    features: &[&str],
     target_feature_attrs: Vec<Attribute>,
     inline_attr: Option<Attribute>,
 ) -> TokenStream {
+    let cfg_guard =
+        gen_target_cfg_guard(Some("wasm32"), args.shared.cfg_feature.as_deref(), features);
+    drop_attrs_equal_to(&mut input_fn.attrs, &cfg_guard);
     drop_attrs_equal_to(
         &mut input_fn.attrs,
         &gen_cfg_guard(Some("wasm32"), args.shared.cfg_feature.as_deref()),
@@ -352,7 +372,6 @@ pub(crate) fn arcane_impl_wasm_safe(
         new_attrs.push(attr.clone());
     }
 
-    let cfg_guard = gen_cfg_guard(Some("wasm32"), args.shared.cfg_feature.as_deref());
     quote! {
         #cfg_guard
         #(#new_attrs)*

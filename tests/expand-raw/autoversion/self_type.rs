@@ -24,8 +24,11 @@ impl P {
         }
         #[cfg(target_arch = "wasm32")]
         {
-            if let Some(__t) = archmage::Wasm128Token::summon() {
-                return self.apply_wasm128(__t, x);
+            #[cfg(target_feature = "simd128")]
+            {
+                if let Some(__t) = archmage::Wasm128Token::summon() {
+                    return self.apply_wasm128(__t, x);
+                }
             }
         }
         self.apply_scalar(archmage::ScalarToken, x)
@@ -82,7 +85,7 @@ impl P {
         let _: () = <archmage::NeonToken>::__ARCHMAGE_ASSERT_TIER_72CB52B2;
         unsafe { __simd_inner_apply_neon(self, __archmage_token, x) }
     }
-    #[cfg(target_arch = "wasm32")]
+    #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
     #[target_feature(enable = "simd128")]
     #[inline]
     #[allow(dead_code)]

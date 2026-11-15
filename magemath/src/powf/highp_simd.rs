@@ -116,7 +116,10 @@ macro_rules! packed {
         }
     };
 }
-#[cfg(any(target_arch = "aarch64", target_arch = "wasm32"))]
+#[cfg(any(
+    target_arch = "aarch64",
+    all(target_arch = "wasm32", target_feature = "simd128")
+))]
 packed!(packed2, f64x2, F64x2Backend, 2);
 #[cfg(target_arch = "x86_64")]
 packed!(packed4, f64x4, F64x4Backend, 4);

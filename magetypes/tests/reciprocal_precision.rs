@@ -163,7 +163,7 @@ fn f64_recip_rsqrt_is_full_precision() {
         check_f64_full!(f64x4, n, NeonToken, 4, "f64x4<Neon polyfill>", xs);
         check_f64_full!(f64x8, n, NeonToken, 8, "f64x8<Neon polyfill>", xs);
     }
-    #[cfg(target_arch = "wasm32")]
+    #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
     {
         use archmage::Wasm128Token;
         let w = Wasm128Token::summon().expect("wasm simd128");
@@ -213,7 +213,7 @@ fn f32_approx_holds_floor() {
         check_f32_approx!(f32x4, n, NeonToken, 4, "f32x4<Neon>", xs);
         check_f32_approx!(f32x8, n, NeonToken, 8, "f32x8<Neon>", xs);
     }
-    #[cfg(target_arch = "wasm32")]
+    #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
     {
         use archmage::Wasm128Token;
         let w = Wasm128Token::summon().expect("wasm simd128");
@@ -279,7 +279,7 @@ fn wasm_scalar_rsqrt_approx_is_portable_bitexact() {
         check_bitexact!(f32x8, s, ScalarToken, 8, "f32x8<Scalar>");
         check_bitexact!(f32x16, s, ScalarToken, 16, "f32x16<Scalar>");
     }
-    #[cfg(target_arch = "wasm32")]
+    #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
     {
         use archmage::Wasm128Token;
         let w = Wasm128Token::summon().expect("wasm simd128");

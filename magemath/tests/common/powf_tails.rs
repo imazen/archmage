@@ -4,7 +4,7 @@
 #[cfg(any(
     target_arch = "x86_64",
     target_arch = "aarch64",
-    target_arch = "wasm32"
+    all(target_arch = "wasm32", target_feature = "simd128")
 ))]
 use archmage::SimdToken;
 use magemath::powf::{PowfDomain, PowfExecution, PowfOptions, PowfPortability, try_powf_with};
@@ -159,6 +159,6 @@ fn single_vector_and_all_tail_remainders_match() {
     }
     #[cfg(target_arch = "aarch64")]
     bounded_widths_and_tails_neon(archmage::NeonToken::summon().unwrap());
-    #[cfg(target_arch = "wasm32")]
+    #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
     bounded_widths_and_tails_wasm128(archmage::Wasm128Token::summon().unwrap());
 }

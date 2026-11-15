@@ -341,4 +341,57 @@ mod tests {
     fn underscore_prefix_accepted() {
         assert_eq!(parse("_v3, -_scalar").tier_tokens, vec!["X64V3Token"]);
     }
+
+    #[test]
+    fn rite_rejects_safe_tokenless_wasm128_relaxed_fma() {
+        let single_args: RiteArgs = syn::parse_str("wasm128_relaxed_fma").unwrap();
+        let single_fn: LightFn = syn::parse_quote!(
+            fn kernel(x: f32) -> f32 {
+                x
+            }
+        );
+        let single_out = rite_impl(single_fn, single_args).to_string();
+        assert!(
+            single_out.contains("requires a runtime fusion probe"),
+            "{single_out}"
+        );
+
+        let multi_args: RiteArgs = syn::parse_str("wasm128, wasm128_relaxed_fma").unwrap();
+        let multi_fn: LightFn = syn::parse_quote!(
+            fn kernel(x: f32) -> f32 {
+                x
+            }
+        );
+        let multi_out = rite_multi_tier_impl(multi_fn, &multi_args).to_string();
+        assert!(
+            multi_out.contains("requires a runtime fusion probe"),
+            "{multi_out}"
+        );
+
+        let token_args: RiteArgs = syn::parse_str("wasm128_relaxed_fma").unwrap();
+        let with_token: LightFn = syn::parse_quote!(
+            fn kernel(_token: Wasm128RelaxedFmaToken, x: f32) -> f32 {
+                x
+            }
+        );
+        let ok_out = rite_impl(with_token, token_args).to_string();
+        assert!(
+            !ok_out.contains("compile_error")
+                && !ok_out.contains("requires a runtime fusion probe"),
+            "{ok_out}"
+        );
+
+        let unsafe_args: RiteArgs = syn::parse_str("wasm128_relaxed_fma").unwrap();
+        let unsafe_fn: LightFn = syn::parse_quote!(
+            unsafe fn kernel(x: f32) -> f32 {
+                x
+            }
+        );
+        let unsafe_ok = rite_impl(unsafe_fn, unsafe_args).to_string();
+        assert!(
+            !unsafe_ok.contains("compile_error")
+                && !unsafe_ok.contains("requires a runtime fusion probe"),
+            "{unsafe_ok}"
+        );
+    }
 }

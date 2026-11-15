@@ -55,8 +55,11 @@ fn pass_through<T: IntoConcreteToken>(token: T, x: f32) -> f32 {
         }
         #[cfg(target_arch = "wasm32")]
         {
-            if let Some(__t) = __incant_token.as_wasm128() {
-                break '__incant inner_wasm128(__t, x);
+            #[cfg(target_feature = "simd128")]
+            {
+                if let Some(__t) = __incant_token.as_wasm128() {
+                    break '__incant inner_wasm128(__t, x);
+                }
             }
         }
         if let Some(__t) = __incant_token.as_scalar() {

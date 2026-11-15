@@ -4,6 +4,7 @@
 //! inputs). The precise variant used to inherit the overflow: every input from
 //! 1.1342859e38 up returned NaN or +inf.
 #![forbid(unsafe_code)]
+#![allow(deprecated)] // Intentional coverage of retained Magetypes compatibility APIs.
 use archmage::{ScalarToken, incant, magetypes};
 
 /// Every 4,099th f32 from `lo` up to `hi`, plus their negatives.
