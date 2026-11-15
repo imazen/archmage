@@ -4,7 +4,9 @@ use std::fmt::Write as _;
 
 use proc_macro2::{Ident, Punct, Spacing, Span, TokenStream, TokenTree};
 use quote::{ToTokens, format_ident, quote};
-use syn::{Attribute, GenericParam, Signature, Type, parse::ParseStream, token};
+use syn::{Attribute, GenericParam, Type, parse::ParseStream, token};
+
+pub(crate) use crate::sig::*;
 
 /// Format `ident` into a stack `[u8; 64]` buffer when possible, avoiding a heap
 /// `String` allocation on every identifier keyword/registry lookup.
@@ -466,20 +468,20 @@ pub(crate) fn replace_ident_in_tokens(
                     let path: syn::Path = input.parse()?;
                     let args;
                     syn::parenthesized!(args in input);
-                    let args = args.parse_terminated(syn::Expr::parse, syn::Token![,])?;
+                    let args = parse_comma_args(&args)?;
                     let rest: proc_macro2::TokenStream = input.parse()?;
                     let path = replace_ident_in_tokens(path.to_token_stream(), target, replacement);
-                    let args = args.iter().map(|arg| {
-                        if matches!(arg, syn::Expr::Path(p) if p.path.is_ident("Token")) {
-                            arg.to_token_stream()
+                    let args = args.into_iter().map(|arg| {
+                        if is_bare_ident_tokens(&arg, "Token") {
+                            arg
                         } else {
-                            replace_ident_in_tokens(arg.to_token_stream(), target, replacement)
+                            replace_ident_in_tokens(arg, target, replacement)
                         }
                     });
                     let rest = replace_ident_in_tokens(rest, target, replacement);
                     Ok(quote! { #path(#(#args),*) #rest })
                 };
-                use syn::parse::{Parse, Parser};
+                use syn::parse::Parser;
                 let replaced = parser
                     .parse2(group.stream())
                     .unwrap_or_else(|_| group.stream());
@@ -550,13 +552,8 @@ pub(crate) fn generate_imports(
     imports
 }
 
-pub(crate) fn is_bare_ident(expr: &syn::Expr, name: &str) -> bool {
-    match expr {
-        syn::Expr::Path(p) => {
-            p.qself.is_none() && p.path.segments.len() == 1 && p.path.segments[0].ident == name
-        }
-        _ => false,
-    }
+pub(crate) fn is_bare_ident(expr: &proc_macro2::TokenStream, name: &str) -> bool {
+    is_bare_ident_tokens(expr, name)
 }
 
 /// Detect how the token is placed in incant! arguments.
@@ -582,7 +579,7 @@ pub(crate) enum TokenPlacement {
 ///
 /// Falls back to `None` (token will be prepended).
 pub(crate) fn find_token_placement(
-    args: &[syn::Expr],
+    args: &[proc_macro2::TokenStream],
     caller_token_ident: Option<&str>,
 ) -> TokenPlacement {
     for arg in args.iter() {
@@ -607,7 +604,7 @@ pub(crate) fn find_token_placement(
 /// - Caller's token variable in args: replace with `token_expr` (may downcast)
 /// - Neither: prepend `token_expr` (backward compat, deprecated)
 pub(crate) fn build_call_args(
-    args: &[syn::Expr],
+    args: &[proc_macro2::TokenStream],
     token_expr: &proc_macro2::TokenStream,
 ) -> proc_macro2::TokenStream {
     build_call_args_with_ident(args, token_expr, None)
@@ -615,7 +612,7 @@ pub(crate) fn build_call_args(
 
 /// Build call arguments, also checking for the caller's token variable name.
 pub(crate) fn build_call_args_with_ident(
-    args: &[syn::Expr],
+    args: &[proc_macro2::TokenStream],
     token_expr: &proc_macro2::TokenStream,
     caller_token_ident: Option<&str>,
 ) -> proc_macro2::TokenStream {
@@ -624,7 +621,7 @@ pub(crate) fn build_call_args_with_ident(
             // Replace Token marker with token expression
             let replaced = args
                 .iter()
-                .map(|arg| replace_ident_in_tokens(arg.to_token_stream(), "Token", token_expr));
+                .map(|arg| replace_ident_in_tokens(arg.clone(), "Token", token_expr));
             quote! { #(#replaced),* }
         }
         TokenPlacement::Variable(idx) => {
@@ -633,7 +630,7 @@ pub(crate) fn build_call_args_with_ident(
                 if i == idx {
                     token_expr.clone()
                 } else {
-                    arg.to_token_stream()
+                    arg.clone()
                 }
             });
             quote! { #(#replaced),* }
@@ -649,7 +646,9 @@ pub(crate) fn build_call_args_with_ident(
 ///
 /// If `Token` marker or caller's token variable is in args, replace with `ScalarToken`.
 /// If neither, prepend `ScalarToken`.
-pub(crate) fn build_scalar_call_args(args: &[syn::Expr]) -> proc_macro2::TokenStream {
+pub(crate) fn build_scalar_call_args(
+    args: &[proc_macro2::TokenStream],
+) -> proc_macro2::TokenStream {
     let scalar = quote! { archmage::ScalarToken };
     build_call_args(args, &scalar)
 }
@@ -855,29 +854,28 @@ pub(crate) fn rename_non_ident_params(sig: &mut Signature) -> Vec<proc_macro2::T
     let mut rebinds = Vec::new();
     let mut counter = 0u32;
     for arg in &mut sig.inputs {
-        let syn::FnArg::Typed(pat_type) = arg else {
+        let FnArg::Typed(pat_type) = arg else {
             continue;
         };
-        if matches!(pat_type.pat.as_ref(), syn::Pat::Ident(_)) {
+        if matches!(pat_type.pat.as_ref(), Pat::Ident(_)) {
             continue;
         }
         let generated = format_ident!("__archmage_arg_{}", counter);
         counter += 1;
         let original_pat = pat_type.pat.clone();
         let ty = &pat_type.ty;
-        if !matches!(original_pat.as_ref(), syn::Pat::Wild(_)) {
+        if !matches!(original_pat.as_ref(), Pat::Wild(_)) {
             rebinds.push(if matches!(ty.as_ref(), Type::ImplTrait(_)) {
                 quote! { let #original_pat = #generated; }
             } else {
                 quote! { let #original_pat: #ty = #generated; }
             });
         }
-        *pat_type.pat = syn::Pat::Ident(syn::PatIdent {
+        *pat_type.pat = Pat::Ident(PatIdent {
             attrs: vec![],
             by_ref: None,
             mutability: None,
             ident: generated,
-            subpat: None,
         });
     }
     rebinds
@@ -891,8 +889,8 @@ pub(crate) fn rename_non_ident_params(sig: &mut Signature) -> Vec<proc_macro2::T
 /// the forwarding call reads it. Feature bodies keep the author's names.
 pub(crate) fn rename_underscore_params(sig: &mut Signature) {
     for arg in &mut sig.inputs {
-        if let syn::FnArg::Typed(pat_type) = arg
-            && let syn::Pat::Ident(pat) = pat_type.pat.as_mut()
+        if let FnArg::Typed(pat_type) = arg
+            && let Pat::Ident(pat) = pat_type.pat.as_mut()
             && let Some(renamed) = with_ident_str(&pat.ident, |name| {
                 if name.starts_with('_') && !name.starts_with("__") && name.len() > 1 {
                     Some(format_ident!("__archmage{}", name, span = pat.ident.span()))
@@ -924,10 +922,10 @@ pub(crate) fn forwarded_param_ident(ident: &Ident) -> Ident {
 pub(crate) fn rename_wildcard_token(sig: &mut Signature) -> Option<Ident> {
     let mut found = None;
     for (idx, arg) in sig.inputs.iter().enumerate() {
-        let syn::FnArg::Typed(pat_type) = arg else {
+        let FnArg::Typed(pat_type) = arg else {
             continue;
         };
-        let syn::Pat::Wild(w) = pat_type.pat.as_ref() else {
+        let Pat::Wild(w) = pat_type.pat.as_ref() else {
             continue;
         };
         if crate::token_discovery::is_token_type_in_sig(sig, &pat_type.ty) {
@@ -936,13 +934,12 @@ pub(crate) fn rename_wildcard_token(sig: &mut Signature) -> Option<Ident> {
         }
     }
     let (idx, ident) = found?;
-    if let syn::FnArg::Typed(pat_type) = &mut sig.inputs[idx] {
-        *pat_type.pat = syn::Pat::Ident(syn::PatIdent {
+    if let FnArg::Typed(pat_type) = &mut sig.inputs[idx] {
+        *pat_type.pat = Pat::Ident(PatIdent {
             attrs: vec![],
             by_ref: None,
             mutability: None,
             ident: ident.clone(),
-            subpat: None,
         });
     }
     Some(ident)
@@ -964,13 +961,13 @@ pub(crate) fn prepend_to_body(
 /// with the receiver's own shape kept: `&'a self` becomes `_self: &'a Type`,
 /// `&mut self` becomes `_self: &mut Type`, `self: Box<Self>` becomes
 /// `_self: Box<Type>`, and `self` / `mut self` become `_self: Type`.
-pub(crate) fn nested_self_param(receiver: &syn::Receiver, self_ty: &Type) -> syn::FnArg {
+pub(crate) fn nested_self_param(receiver: &Receiver, self_ty: &Type) -> FnArg {
     let ty: proc_macro2::TokenStream = match &receiver.kind {
-        syn::ReceiverKind::Value => quote!(#self_ty),
-        syn::ReceiverKind::Reference(_, lifetime, mutability) => {
+        ReceiverKind::Value => quote!(#self_ty),
+        ReceiverKind::Reference(_, lifetime, mutability) => {
             quote!(& #lifetime #mutability #self_ty)
         }
-        syn::ReceiverKind::Typed(_, ty) => {
+        ReceiverKind::Typed(_, ty) => {
             let ts = ty.to_token_stream();
             if tokens_contain_ident(&ts, &["Self"]) {
                 replace_self_in_tokens(ts, self_ty)
@@ -978,10 +975,9 @@ pub(crate) fn nested_self_param(receiver: &syn::Receiver, self_ty: &Type) -> syn
                 ts
             }
         }
-        // `#[non_exhaustive]`: a receiver shape syn adds later is passed by value.
-        _ => quote!(#self_ty),
     };
-    syn::parse_quote!(_self: #ty)
+    let parsed_ty: Type = syn::parse2(ty).expect("valid nested receiver type");
+    make_typed_arg(Ident::new("_self", Span::call_site()), parsed_ty)
 }
 
 /// Replace the value `self` with another identifier, leaving `self::` paths
@@ -1046,7 +1042,7 @@ pub(crate) fn check_single_token_param(
 ) -> Option<proc_macro2::TokenStream> {
     let mut count = 0usize;
     for arg in &sig.inputs {
-        if let syn::FnArg::Typed(syn::PatType { ty, .. }) = arg
+        if let FnArg::Typed(PatType { ty, .. }) = arg
             && crate::token_discovery::is_token_type_in_sig(sig, ty)
         {
             count += 1;
@@ -1057,11 +1053,11 @@ pub(crate) fn check_single_token_param(
     }
     let mut idents = Vec::with_capacity(count);
     for arg in &sig.inputs {
-        if let syn::FnArg::Typed(syn::PatType { pat, ty, .. }) = arg
+        if let FnArg::Typed(PatType { pat, ty, .. }) = arg
             && crate::token_discovery::is_token_type_in_sig(sig, ty)
         {
             idents.push(match pat.as_ref() {
-                syn::Pat::Ident(p) => p.ident.to_string(),
+                Pat::Ident(p) => p.ident.to_string(),
                 _ => "_".to_string(),
             });
         }

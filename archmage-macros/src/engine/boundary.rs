@@ -6,7 +6,7 @@ use crate::common::*;
 use crate::token_discovery::*;
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{ToTokens, format_ident, quote};
-use syn::{FnArg, Type};
+use syn::Type;
 
 /// Validate a concrete token using the tier-specific constant supplied by archmage.
 fn gen_token_assertion(
@@ -250,13 +250,13 @@ pub(crate) fn expand(
 /// Reject a parameter named like the generated callee, so nothing a caller
 /// writes can stand between the wrapper's `unsafe` call and that function.
 pub(crate) fn reserved_param_error_ident(
-    sig: &syn::Signature,
+    sig: &Signature,
     callee: &Ident,
     macro_name: &str,
 ) -> Option<TokenStream> {
     sig.inputs.iter().find_map(|arg| match arg {
         FnArg::Typed(pat_type) => match pat_type.pat.as_ref() {
-            syn::Pat::Ident(pat) if pat.ident == *callee => Some(
+            Pat::Ident(pat) if pat.ident == *callee => Some(
                 syn::Error::new_spanned(
                     &pat.ident,
                     format!(
@@ -280,7 +280,7 @@ struct BoundaryParts {
     inline_tokens: TokenStream,
     token_assertion: TokenStream,
     tier_trait_assertion: TokenStream,
-    wrapper_sig: syn::Signature,
+    wrapper_sig: Signature,
 }
 
 pub(crate) fn arcane_impl_wasm_safe(
@@ -356,7 +356,7 @@ fn emit_boundary(input: LightFn, options: &BoundaryOptions, parts: BoundaryParts
     let forwarded = wrapper_sig.inputs.iter().filter_map(|arg| match arg {
         FnArg::Receiver(_) => options.nested.then_some(&self_ident),
         FnArg::Typed(param) => match param.pat.as_ref() {
-            syn::Pat::Ident(pat) => Some(&pat.ident),
+            Pat::Ident(pat) => Some(&pat.ident),
             _ => None,
         },
     });

@@ -27,6 +27,7 @@ mod incant;
 mod magetypes;
 mod rewrite;
 mod rite;
+mod sig;
 mod tiers;
 mod token_discovery;
 
@@ -46,8 +47,6 @@ use tiers::*;
 use generated::{token_to_features, trait_to_features};
 #[cfg(test)]
 use quote::ToTokens;
-#[cfg(test)]
-use syn::{FnArg, PatType};
 #[cfg(test)]
 use token_discovery::*;
 

@@ -3,7 +3,9 @@ use std::cell::OnceCell;
 
 use proc_macro2::{Span, TokenStream};
 use quote::{format_ident, quote};
-use syn::{FnArg, Ident, Pat, Signature, Type};
+use syn::{Ident, Type};
+
+use crate::common::{FnArg, Pat, Signature};
 
 use crate::tiers::TierDescriptor;
 use crate::token_discovery::{self, TokenTypeInfo};

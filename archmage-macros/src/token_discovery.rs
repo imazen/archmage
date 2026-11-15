@@ -6,9 +6,9 @@
 use std::borrow::Cow;
 
 use proc_macro2::Span;
-use syn::{FnArg, GenericParam, Ident, PatType, Signature, Token, Type, TypeParamBound};
+use syn::{GenericParam, Ident, Token, Type, TypeParamBound};
 
-use crate::common::{SmallVec, with_ident_str};
+use crate::common::{FnArg, Pat, PatType, Signature, SmallVec, with_ident_str};
 use crate::generated::{
     token_to_arch, token_to_features, token_to_magetypes_namespace, trait_to_arch,
     trait_to_features, trait_to_magetypes_namespace,
@@ -446,8 +446,8 @@ pub(crate) fn find_token_param(sig: &Signature) -> Option<TokenParamInfo> {
         };
         if let Some(resolved) = resolve_type_features(sig, ty) {
             let ident = match pat.as_ref() {
-                syn::Pat::Ident(pat_ident) => Some(pat_ident.ident.clone()),
-                syn::Pat::Wild(w) => Some(Ident::new("__archmage_token", w.underscore_token.span)),
+                Pat::Ident(pat_ident) => Some(pat_ident.ident.clone()),
+                Pat::Wild(w) => Some(Ident::new("__archmage_token", w.underscore_token.span)),
                 _ => None,
             };
             if let Some(ident) = ident {
