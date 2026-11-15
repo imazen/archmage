@@ -32,6 +32,7 @@ pub mod expf;
 pub mod logf;
 pub mod powf;
 mod soft_fma;
+mod token_canon;
 #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
 #[allow(dead_code)] // The copy also contains vector-primitive helpers not used here.
 mod wasm_fma;

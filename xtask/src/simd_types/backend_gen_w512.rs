@@ -3120,8 +3120,8 @@ fn generate_x86_v4_w512_impls_for_token(types: &[W512Type], token: &str) -> Stri
     code
 }
 
-/// Generate all V4 native AVX-512 W512 implementations (X64V4Token only;
-/// X64V4xToken delegates in `x86_v4_w512_delegated.rs`).
+/// Generate all V4 native AVX-512 W512 implementations (`X64V4Token` only;
+/// `X64V4xToken` and subtiers delegate via `backends/sealed.rs` + `impls/delegated.rs`).
 pub(super) fn generate_x86_v4_w512_impls(types: &[W512Type]) -> String {
     generate_x86_v4_w512_impls_for_token(types, "X64V4Token")
 }

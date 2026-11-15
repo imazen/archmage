@@ -27,49 +27,23 @@ fn select_impl<T: SimdToken>(token: T, execution: LogfExecution) -> Plan {
         all(target_arch = "wasm32", target_feature = "simd128")
     ))]
     let any: &dyn core::any::Any = &token;
-    #[cfg(target_arch = "x86_64")]
-    {
-        if let Some(t) = any.downcast_ref::<archmage::X64V3Token>() {
-            return Plan::V3(*t);
-        }
-        #[cfg(feature = "avx512")]
-        {
-            if let Some(t) = any.downcast_ref::<archmage::X64V4Token>() {
-                return Plan::V4(*t);
-            }
-            if let Some(t) = any.downcast_ref::<archmage::X64V4xToken>() {
-                return Plan::V4x(*t);
-            }
-            if let Some(t) = any.downcast_ref::<archmage::Avx512Fp16Token>() {
-                return Plan::V4(t.v4());
-            }
-        }
-        #[cfg(not(feature = "avx512"))]
-        {
-            if let Some(t) = any.downcast_ref::<archmage::X64V4Token>() {
-                return Plan::V3(t.v3());
-            }
-            if let Some(t) = any.downcast_ref::<archmage::X64V4xToken>() {
-                return Plan::V3(t.v3());
-            }
-            if let Some(t) = any.downcast_ref::<archmage::Avx512Fp16Token>() {
-                return Plan::V3(t.v3());
-            }
-        }
-    }
-    #[cfg(target_arch = "aarch64")]
-    if let Some(t) = any.downcast_ref::<archmage::NeonToken>() {
-        return Plan::Neon(*t);
-    }
-    #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
-    {
-        if let Some(t) = any.downcast_ref::<archmage::Wasm128Token>() {
-            return Plan::Wasm(*t);
-        }
-        #[cfg(target_feature = "relaxed-simd")]
-        if let Some(t) = any.downcast_ref::<archmage::Wasm128RelaxedFmaToken>() {
-            return Plan::Wasm(t.wasm128());
-        }
+    #[cfg(any(
+        target_arch = "x86_64",
+        target_arch = "aarch64",
+        all(target_arch = "wasm32", target_feature = "simd128"),
+    ))]
+    match crate::token_canon::canonicalize(any) {
+        #[cfg(target_arch = "x86_64")]
+        crate::token_canon::CanonicalToken::V3(t) => return Plan::V3(t),
+        #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+        crate::token_canon::CanonicalToken::V4(t) => return Plan::V4(t),
+        #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+        crate::token_canon::CanonicalToken::V4x(t) => return Plan::V4x(t),
+        #[cfg(target_arch = "aarch64")]
+        crate::token_canon::CanonicalToken::Neon(t) => return Plan::Neon(t),
+        #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
+        crate::token_canon::CanonicalToken::Wasm { token: t, .. } => return Plan::Wasm(t),
+        crate::token_canon::CanonicalToken::Scalar => {}
     }
     if execution == LogfExecution::Caller {
         return Plan::Software;

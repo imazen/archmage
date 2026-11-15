@@ -11,21 +11,9 @@ mod x86_v3;
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 mod x86_v4;
 
-// The AVX-512 tokens' W128 / W256 f32 backends, forwarded to V3's
-// (generated from the trait definitions; V4 ⊃ V3, so delegating is
-// sound), plus the hand-written AVX-512VL pixel-packing overrides.
+// Hand-written AVX-512VL pixel-packing overrides called by `Sealed` hooks.
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-mod x86_v4_f32_delegated;
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-mod x86_v4_f32_overrides;
-// The remaining W128 / W256 backends (f64 + int families) and the
-// float↔int convert/bitcast traits, forwarded to V3's the same way.
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-mod x86_v4_narrow_delegated;
-// X64V4xToken's base W512 backends + F32x16Convert, forwarded to
-// X64V4Token (`self.v4()`).
-#[cfg(all(target_arch = "x86_64", feature = "avx512", feature = "w512"))]
-mod x86_v4_w512_delegated;
+pub(crate) mod x86_v4_f32_overrides;
 
 #[cfg(target_arch = "aarch64")]
 mod arm_neon;
@@ -37,12 +25,10 @@ mod wasm128;
     target_feature = "simd128",
     target_feature = "relaxed-simd"
 ))]
-mod wasm128_fma_delegated;
-#[cfg(all(
-    target_arch = "wasm32",
-    target_feature = "simd128",
-    target_feature = "relaxed-simd"
-))]
-mod wasm128_fma_overrides;
+pub(crate) mod wasm128_fma_overrides;
 
 mod scalar;
+
+// Single blanket impls over `SimdToken + Sealed` for all 43 unified
+// `*Backend` / `*Convert` / `*Bitcast` traits.
+mod delegated;

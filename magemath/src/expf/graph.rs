@@ -65,9 +65,7 @@ macro_rules! graph {
                 let p = madd(sp(c3), xf, sp(c2));
                 let p = madd(p, xf, sp(core::f32::consts::LN_2));
                 let p = madd(p, xf, sp(1.0));
-                let integer = if core::any::TypeId::of::<T>()
-                    == core::any::TypeId::of::<archmage::ScalarToken>()
-                {
+                let integer = if crate::token_canon::is_scalar_backed::<T>() {
                     xi.to_i32()
                 } else {
                     xi.to_i32_round()
@@ -108,9 +106,7 @@ macro_rules! graph {
                 let p = madd(p, xf, sp(c2));
                 let p = madd(p, xf, sp(core::f32::consts::LN_2));
                 let p = madd(p, xf, sp(1.0));
-                let integer = if core::any::TypeId::of::<T>()
-                    == core::any::TypeId::of::<archmage::ScalarToken>()
-                {
+                let integer = if crate::token_canon::is_scalar_backed::<T>() {
                     xi.to_i32()
                 } else {
                     xi.to_i32_round()

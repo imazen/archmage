@@ -4,6 +4,7 @@
 
 #![allow(non_camel_case_types)]
 
+pub(crate) mod ops;
 pub(crate) mod sealed;
 
 mod f32x4;

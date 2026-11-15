@@ -8,14 +8,14 @@
 //! by `cargo xtask generate`. This file is handwritten and should not be
 //! purged during regeneration.
 
-mod convert_f16;
-mod cross_width;
-mod fast_ops;
+pub(crate) mod convert_f16;
+pub(crate) mod cross_width;
+pub(crate) mod fast_ops;
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 mod gather;
 mod generated;
 mod lane_ops;
-mod quant_ops;
+pub(crate) mod quant_ops;
 mod rgb_block_ops;
 mod subtiers;
 pub use convert_f16::F16Convert;

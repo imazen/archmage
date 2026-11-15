@@ -135,9 +135,83 @@ pub trait I32x16DotI8: I32x16Backend + I8x64Backend + SimdToken + Sealed + Copy 
     ) -> <Self as I32x16Backend>::Repr;
 }
 
-impl I32x4DotI8 for archmage::ScalarToken {
+/// Crate-private canonical implementation of narrow `dot_i8_i7_add`,
+/// implemented only for the 4 canonical narrow base tokens.
+pub trait NarrowDotI8Ops:
+    crate::simd::backends::ops::I32x4Ops
+    + crate::simd::backends::ops::I8x16Ops
+    + crate::simd::backends::ops::I32x8Ops
+    + crate::simd::backends::ops::I8x32Ops
+{
+    fn dot_i8_i7_add_x4(
+        self,
+        acc: <Self as crate::simd::backends::ops::I32x4Ops>::Repr,
+        a: <Self as crate::simd::backends::ops::I8x16Ops>::Repr,
+        b: <Self as crate::simd::backends::ops::I8x16Ops>::Repr,
+    ) -> <Self as crate::simd::backends::ops::I32x4Ops>::Repr;
+
+    fn dot_i8_i7_add_x8(
+        self,
+        acc: <Self as crate::simd::backends::ops::I32x8Ops>::Repr,
+        a: <Self as crate::simd::backends::ops::I8x32Ops>::Repr,
+        b: <Self as crate::simd::backends::ops::I8x32Ops>::Repr,
+    ) -> <Self as crate::simd::backends::ops::I32x8Ops>::Repr;
+}
+
+/// Crate-private canonical implementation of 512-bit `dot_i8_i7_add`,
+/// implemented only for the 5 canonical W512 base tokens.
+#[cfg(feature = "w512")]
+pub trait W512DotI8Ops:
+    crate::simd::backends::ops::I32x16Ops + crate::simd::backends::ops::I8x64Ops
+{
+    fn dot_i8_i7_add_x16(
+        self,
+        acc: <Self as crate::simd::backends::ops::I32x16Ops>::Repr,
+        a: <Self as crate::simd::backends::ops::I8x64Ops>::Repr,
+        b: <Self as crate::simd::backends::ops::I8x64Ops>::Repr,
+    ) -> <Self as crate::simd::backends::ops::I32x16Ops>::Repr;
+}
+
+impl<T: SimdToken + Sealed + Copy + 'static> I32x4DotI8 for T {
     #[inline(always)]
-    fn dot_i8_i7_add(self, acc: [i32; 4], a: [i8; 16], b: [i8; 16]) -> [i32; 4] {
+    fn dot_i8_i7_add(
+        self,
+        acc: <Self as I32x4Backend>::Repr,
+        a: <Self as I8x16Backend>::Repr,
+        b: <Self as I8x16Backend>::Repr,
+    ) -> <Self as I32x4Backend>::Repr {
+        self.i32x4_dot_i8_i7_add(acc, a, b)
+    }
+}
+
+impl<T: SimdToken + Sealed + Copy + 'static> I32x8DotI8 for T {
+    #[inline(always)]
+    fn dot_i8_i7_add(
+        self,
+        acc: <Self as I32x8Backend>::Repr,
+        a: <Self as I8x32Backend>::Repr,
+        b: <Self as I8x32Backend>::Repr,
+    ) -> <Self as I32x8Backend>::Repr {
+        self.i32x8_dot_i8_i7_add(acc, a, b)
+    }
+}
+
+#[cfg(feature = "w512")]
+impl<T: SimdToken + Sealed + Copy + 'static> I32x16DotI8 for T {
+    #[inline(always)]
+    fn dot_i8_i7_add(
+        self,
+        acc: <Self as I32x16Backend>::Repr,
+        a: <Self as I8x64Backend>::Repr,
+        b: <Self as I8x64Backend>::Repr,
+    ) -> <Self as I32x16Backend>::Repr {
+        self.i32x16_dot_i8_i7_add(acc, a, b)
+    }
+}
+
+impl NarrowDotI8Ops for archmage::ScalarToken {
+    #[inline(always)]
+    fn dot_i8_i7_add_x4(self, acc: [i32; 4], a: [i8; 16], b: [i8; 16]) -> [i32; 4] {
         let _ = self;
         core::array::from_fn(|lane| {
             let base = lane * 4;
@@ -148,11 +222,8 @@ impl I32x4DotI8 for archmage::ScalarToken {
             acc[lane].wrapping_add(sum)
         })
     }
-}
-
-impl I32x8DotI8 for archmage::ScalarToken {
     #[inline(always)]
-    fn dot_i8_i7_add(self, acc: [i32; 8], a: [i8; 32], b: [i8; 32]) -> [i32; 8] {
+    fn dot_i8_i7_add_x8(self, acc: [i32; 8], a: [i8; 32], b: [i8; 32]) -> [i32; 8] {
         let _ = self;
         core::array::from_fn(|lane| {
             let base = lane * 4;
@@ -166,9 +237,9 @@ impl I32x8DotI8 for archmage::ScalarToken {
 }
 
 #[cfg(feature = "w512")]
-impl I32x16DotI8 for archmage::ScalarToken {
+impl W512DotI8Ops for archmage::ScalarToken {
     #[inline(always)]
-    fn dot_i8_i7_add(self, acc: [i32; 16], a: [i8; 64], b: [i8; 64]) -> [i32; 16] {
+    fn dot_i8_i7_add_x16(self, acc: [i32; 16], a: [i8; 64], b: [i8; 64]) -> [i32; 16] {
         let _ = self;
         core::array::from_fn(|lane| {
             let base = lane * 4;
@@ -182,9 +253,9 @@ impl I32x16DotI8 for archmage::ScalarToken {
 }
 
 #[cfg(target_arch = "aarch64")]
-impl I32x4DotI8 for archmage::NeonToken {
+impl NarrowDotI8Ops for archmage::NeonToken {
     #[archmage::arcane(suppress_const_test, _self = archmage::NeonToken)]
-    fn dot_i8_i7_add(
+    fn dot_i8_i7_add_x4(
         self,
         acc: core::arch::aarch64::int32x4_t,
         a: core::arch::aarch64::int8x16_t,
@@ -197,41 +268,37 @@ impl I32x4DotI8 for archmage::NeonToken {
         let hi = vpaddlq_s16(vmull_high_s8(a, b));
         vaddq_s32(acc, vpaddq_s32(lo, hi))
     }
-}
-
-#[cfg(target_arch = "aarch64")]
-impl I32x8DotI8 for archmage::NeonToken {
     #[inline(always)]
-    fn dot_i8_i7_add(
+    fn dot_i8_i7_add_x8(
         self,
         acc: [core::arch::aarch64::int32x4_t; 2],
         a: [core::arch::aarch64::int8x16_t; 2],
         b: [core::arch::aarch64::int8x16_t; 2],
     ) -> [core::arch::aarch64::int32x4_t; 2] {
         [
-            <Self as I32x4DotI8>::dot_i8_i7_add(self, acc[0], a[0], b[0]),
-            <Self as I32x4DotI8>::dot_i8_i7_add(self, acc[1], a[1], b[1]),
+            self.dot_i8_i7_add_x4(acc[0], a[0], b[0]),
+            self.dot_i8_i7_add_x4(acc[1], a[1], b[1]),
         ]
     }
 }
 
 #[cfg(all(target_arch = "aarch64", feature = "w512"))]
-impl I32x16DotI8 for archmage::NeonToken {
+impl W512DotI8Ops for archmage::NeonToken {
     #[inline(always)]
-    fn dot_i8_i7_add(
+    fn dot_i8_i7_add_x16(
         self,
         acc: [core::arch::aarch64::int32x4_t; 4],
         a: [core::arch::aarch64::int8x16_t; 4],
         b: [core::arch::aarch64::int8x16_t; 4],
     ) -> [core::arch::aarch64::int32x4_t; 4] {
-        core::array::from_fn(|i| <Self as I32x4DotI8>::dot_i8_i7_add(self, acc[i], a[i], b[i]))
+        core::array::from_fn(|i| self.dot_i8_i7_add_x4(acc[i], a[i], b[i]))
     }
 }
 
 #[cfg(target_arch = "wasm32")]
-impl I32x4DotI8 for archmage::Wasm128Token {
+impl NarrowDotI8Ops for archmage::Wasm128Token {
     #[inline(always)]
-    fn dot_i8_i7_add(
+    fn dot_i8_i7_add_x4(
         self,
         acc: core::arch::wasm32::v128,
         a: core::arch::wasm32::v128,
@@ -248,34 +315,30 @@ impl I32x4DotI8 for archmage::Wasm128Token {
         let odds = i32x4_shuffle::<1, 3, 5, 7>(lo32, hi32);
         i32x4_add(acc, i32x4_add(evens, odds))
     }
-}
-
-#[cfg(target_arch = "wasm32")]
-impl I32x8DotI8 for archmage::Wasm128Token {
     #[inline(always)]
-    fn dot_i8_i7_add(
+    fn dot_i8_i7_add_x8(
         self,
         acc: [core::arch::wasm32::v128; 2],
         a: [core::arch::wasm32::v128; 2],
         b: [core::arch::wasm32::v128; 2],
     ) -> [core::arch::wasm32::v128; 2] {
         [
-            <Self as I32x4DotI8>::dot_i8_i7_add(self, acc[0], a[0], b[0]),
-            <Self as I32x4DotI8>::dot_i8_i7_add(self, acc[1], a[1], b[1]),
+            self.dot_i8_i7_add_x4(acc[0], a[0], b[0]),
+            self.dot_i8_i7_add_x4(acc[1], a[1], b[1]),
         ]
     }
 }
 
 #[cfg(all(target_arch = "wasm32", feature = "w512"))]
-impl I32x16DotI8 for archmage::Wasm128Token {
+impl W512DotI8Ops for archmage::Wasm128Token {
     #[inline(always)]
-    fn dot_i8_i7_add(
+    fn dot_i8_i7_add_x16(
         self,
         acc: [core::arch::wasm32::v128; 4],
         a: [core::arch::wasm32::v128; 4],
         b: [core::arch::wasm32::v128; 4],
     ) -> [core::arch::wasm32::v128; 4] {
-        core::array::from_fn(|i| <Self as I32x4DotI8>::dot_i8_i7_add(self, acc[i], a[i], b[i]))
+        core::array::from_fn(|i| self.dot_i8_i7_add_x4(acc[i], a[i], b[i]))
     }
 }
 
@@ -284,16 +347,14 @@ impl I32x16DotI8 for archmage::Wasm128Token {
     target_feature = "simd128",
     target_feature = "relaxed-simd"
 ))]
-impl I32x4DotI8 for archmage::Wasm128RelaxedFmaToken {
-    #[archmage::arcane(suppress_const_test, _self = archmage::Wasm128RelaxedFmaToken)]
-    fn dot_i8_i7_add(
-        self,
-        acc: core::arch::wasm32::v128,
-        a: core::arch::wasm32::v128,
-        b: core::arch::wasm32::v128,
-    ) -> core::arch::wasm32::v128 {
-        core::arch::wasm32::i32x4_relaxed_dot_i8x16_i7x16_add(a, b, acc)
-    }
+#[archmage::arcane(suppress_const_test)]
+pub(crate) fn wasm_fma_i32x4_dot_i8(
+    _token: archmage::Wasm128RelaxedFmaToken,
+    acc: core::arch::wasm32::v128,
+    a: core::arch::wasm32::v128,
+    b: core::arch::wasm32::v128,
+) -> core::arch::wasm32::v128 {
+    core::arch::wasm32::i32x4_relaxed_dot_i8x16_i7x16_add(a, b, acc)
 }
 
 #[cfg(all(
@@ -301,19 +362,17 @@ impl I32x4DotI8 for archmage::Wasm128RelaxedFmaToken {
     target_feature = "simd128",
     target_feature = "relaxed-simd"
 ))]
-impl I32x8DotI8 for archmage::Wasm128RelaxedFmaToken {
-    #[inline(always)]
-    fn dot_i8_i7_add(
-        self,
-        acc: [core::arch::wasm32::v128; 2],
-        a: [core::arch::wasm32::v128; 2],
-        b: [core::arch::wasm32::v128; 2],
-    ) -> [core::arch::wasm32::v128; 2] {
-        [
-            <Self as I32x4DotI8>::dot_i8_i7_add(self, acc[0], a[0], b[0]),
-            <Self as I32x4DotI8>::dot_i8_i7_add(self, acc[1], a[1], b[1]),
-        ]
-    }
+#[inline(always)]
+pub(crate) fn wasm_fma_i32x8_dot_i8(
+    token: archmage::Wasm128RelaxedFmaToken,
+    acc: [core::arch::wasm32::v128; 2],
+    a: [core::arch::wasm32::v128; 2],
+    b: [core::arch::wasm32::v128; 2],
+) -> [core::arch::wasm32::v128; 2] {
+    [
+        wasm_fma_i32x4_dot_i8(token, acc[0], a[0], b[0]),
+        wasm_fma_i32x4_dot_i8(token, acc[1], a[1], b[1]),
+    ]
 }
 
 #[cfg(all(
@@ -322,22 +381,20 @@ impl I32x8DotI8 for archmage::Wasm128RelaxedFmaToken {
     target_feature = "relaxed-simd",
     feature = "w512"
 ))]
-impl I32x16DotI8 for archmage::Wasm128RelaxedFmaToken {
-    #[inline(always)]
-    fn dot_i8_i7_add(
-        self,
-        acc: [core::arch::wasm32::v128; 4],
-        a: [core::arch::wasm32::v128; 4],
-        b: [core::arch::wasm32::v128; 4],
-    ) -> [core::arch::wasm32::v128; 4] {
-        core::array::from_fn(|i| <Self as I32x4DotI8>::dot_i8_i7_add(self, acc[i], a[i], b[i]))
-    }
+#[inline(always)]
+pub(crate) fn wasm_fma_i32x16_dot_i8(
+    token: archmage::Wasm128RelaxedFmaToken,
+    acc: [core::arch::wasm32::v128; 4],
+    a: [core::arch::wasm32::v128; 4],
+    b: [core::arch::wasm32::v128; 4],
+) -> [core::arch::wasm32::v128; 4] {
+    core::array::from_fn(|i| wasm_fma_i32x4_dot_i8(token, acc[i], a[i], b[i]))
 }
 
 #[cfg(target_arch = "x86_64")]
-impl I32x4DotI8 for archmage::X64V3Token {
+impl NarrowDotI8Ops for archmage::X64V3Token {
     #[archmage::arcane(suppress_const_test, _self = archmage::X64V3Token)]
-    fn dot_i8_i7_add(
+    fn dot_i8_i7_add_x4(
         self,
         acc: core::arch::x86_64::__m128i,
         a: core::arch::x86_64::__m128i,
@@ -350,12 +407,8 @@ impl I32x4DotI8 for archmage::X64V3Token {
         let quads = _mm_madd_epi16(pairs, _mm_set1_epi16(1));
         _mm_add_epi32(acc, quads)
     }
-}
-
-#[cfg(target_arch = "x86_64")]
-impl I32x8DotI8 for archmage::X64V3Token {
     #[archmage::arcane(suppress_const_test, _self = archmage::X64V3Token)]
-    fn dot_i8_i7_add(
+    fn dot_i8_i7_add_x8(
         self,
         acc: core::arch::x86_64::__m256i,
         a: core::arch::x86_64::__m256i,
@@ -371,103 +424,25 @@ impl I32x8DotI8 for archmage::X64V3Token {
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "w512"))]
-impl I32x16DotI8 for archmage::X64V3Token {
+impl W512DotI8Ops for archmage::X64V3Token {
     #[inline(always)]
-    fn dot_i8_i7_add(
+    fn dot_i8_i7_add_x16(
         self,
         acc: [core::arch::x86_64::__m256i; 2],
         a: [core::arch::x86_64::__m256i; 2],
         b: [core::arch::x86_64::__m256i; 2],
     ) -> [core::arch::x86_64::__m256i; 2] {
         [
-            <Self as I32x8DotI8>::dot_i8_i7_add(self, acc[0], a[0], b[0]),
-            <Self as I32x8DotI8>::dot_i8_i7_add(self, acc[1], a[1], b[1]),
+            self.dot_i8_i7_add_x8(acc[0], a[0], b[0]),
+            self.dot_i8_i7_add_x8(acc[1], a[1], b[1]),
         ]
     }
 }
 
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-impl I32x4DotI8 for archmage::X64V4Token {
-    #[inline(always)]
-    fn dot_i8_i7_add(
-        self,
-        acc: core::arch::x86_64::__m128i,
-        a: core::arch::x86_64::__m128i,
-        b: core::arch::x86_64::__m128i,
-    ) -> core::arch::x86_64::__m128i {
-        <archmage::X64V3Token as I32x4DotI8>::dot_i8_i7_add(self.v3(), acc, a, b)
-    }
-}
-
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-impl I32x4DotI8 for archmage::Avx512Fp16Token {
-    #[inline(always)]
-    fn dot_i8_i7_add(
-        self,
-        acc: core::arch::x86_64::__m128i,
-        a: core::arch::x86_64::__m128i,
-        b: core::arch::x86_64::__m128i,
-    ) -> core::arch::x86_64::__m128i {
-        <archmage::X64V3Token as I32x4DotI8>::dot_i8_i7_add(self.v3(), acc, a, b)
-    }
-}
-
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-impl I32x4DotI8 for archmage::X64V4xToken {
-    #[archmage::arcane(suppress_const_test, _self = archmage::X64V4xToken)]
-    fn dot_i8_i7_add(
-        self,
-        acc: core::arch::x86_64::__m128i,
-        a: core::arch::x86_64::__m128i,
-        b: core::arch::x86_64::__m128i,
-    ) -> core::arch::x86_64::__m128i {
-        core::arch::x86_64::_mm_dpbusd_epi32(acc, b, a)
-    }
-}
-
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-impl I32x8DotI8 for archmage::X64V4Token {
-    #[inline(always)]
-    fn dot_i8_i7_add(
-        self,
-        acc: core::arch::x86_64::__m256i,
-        a: core::arch::x86_64::__m256i,
-        b: core::arch::x86_64::__m256i,
-    ) -> core::arch::x86_64::__m256i {
-        <archmage::X64V3Token as I32x8DotI8>::dot_i8_i7_add(self.v3(), acc, a, b)
-    }
-}
-
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-impl I32x8DotI8 for archmage::Avx512Fp16Token {
-    #[inline(always)]
-    fn dot_i8_i7_add(
-        self,
-        acc: core::arch::x86_64::__m256i,
-        a: core::arch::x86_64::__m256i,
-        b: core::arch::x86_64::__m256i,
-    ) -> core::arch::x86_64::__m256i {
-        <archmage::X64V3Token as I32x8DotI8>::dot_i8_i7_add(self.v3(), acc, a, b)
-    }
-}
-
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-impl I32x8DotI8 for archmage::X64V4xToken {
-    #[archmage::arcane(suppress_const_test, _self = archmage::X64V4xToken)]
-    fn dot_i8_i7_add(
-        self,
-        acc: core::arch::x86_64::__m256i,
-        a: core::arch::x86_64::__m256i,
-        b: core::arch::x86_64::__m256i,
-    ) -> core::arch::x86_64::__m256i {
-        core::arch::x86_64::_mm256_dpbusd_epi32(acc, b, a)
-    }
-}
-
 #[cfg(all(target_arch = "x86_64", feature = "avx512", feature = "w512"))]
-impl I32x16DotI8 for archmage::X64V4Token {
+impl W512DotI8Ops for archmage::X64V4Token {
     #[archmage::arcane(suppress_const_test, _self = archmage::X64V4Token)]
-    fn dot_i8_i7_add(
+    fn dot_i8_i7_add_x16(
         self,
         acc: core::arch::x86_64::__m512i,
         a: core::arch::x86_64::__m512i,
@@ -482,17 +457,37 @@ impl I32x16DotI8 for archmage::X64V4Token {
     }
 }
 
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[archmage::arcane(suppress_const_test)]
+pub(crate) fn v4x_i32x4_dot_i8(
+    _token: archmage::X64V4xToken,
+    acc: core::arch::x86_64::__m128i,
+    a: core::arch::x86_64::__m128i,
+    b: core::arch::x86_64::__m128i,
+) -> core::arch::x86_64::__m128i {
+    core::arch::x86_64::_mm_dpbusd_epi32(acc, b, a)
+}
+
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[archmage::arcane(suppress_const_test)]
+pub(crate) fn v4x_i32x8_dot_i8(
+    _token: archmage::X64V4xToken,
+    acc: core::arch::x86_64::__m256i,
+    a: core::arch::x86_64::__m256i,
+    b: core::arch::x86_64::__m256i,
+) -> core::arch::x86_64::__m256i {
+    core::arch::x86_64::_mm256_dpbusd_epi32(acc, b, a)
+}
+
 #[cfg(all(target_arch = "x86_64", feature = "avx512", feature = "w512"))]
-impl I32x16DotI8 for archmage::X64V4xToken {
-    #[archmage::arcane(suppress_const_test, _self = archmage::X64V4xToken)]
-    fn dot_i8_i7_add(
-        self,
-        acc: core::arch::x86_64::__m512i,
-        a: core::arch::x86_64::__m512i,
-        b: core::arch::x86_64::__m512i,
-    ) -> core::arch::x86_64::__m512i {
-        core::arch::x86_64::_mm512_dpbusd_epi32(acc, b, a)
-    }
+#[archmage::arcane(suppress_const_test)]
+pub(crate) fn v4x_i32x16_dot_i8(
+    _token: archmage::X64V4xToken,
+    acc: core::arch::x86_64::__m512i,
+    a: core::arch::x86_64::__m512i,
+    b: core::arch::x86_64::__m512i,
+) -> core::arch::x86_64::__m512i {
+    core::arch::x86_64::_mm512_dpbusd_epi32(acc, b, a)
 }
 
 impl<T: I32x4DotI8> i32x4<T> {

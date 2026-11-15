@@ -1,11 +1,11 @@
 //! Backend implementations for X64V4Token and X64V4xToken (native AVX-512).
 //!
-//! Implements the W512 backend traits using native 512-bit AVX-512 intrinsics
+//! Implements the W512 `*Ops` traits using native 512-bit AVX-512 intrinsics
 //! for X64V4Token (base AVX-512), and Modern-only popcnt extension traits for
 //! X64V4xToken (+ VPOPCNTDQ, BITALG).
 //!
-//! X64V4xToken's base W512 backends and F32x16Convert forward to X64V4Token in
-//! `x86_v4_w512_delegated.rs`. W128 and W256 types delegate to X64V3Token.
+//! All public `*Backend` / `*Convert` / `*Bitcast` traits delegate via
+//! `Sealed` in `impls/delegated.rs`.
 //!
 //! **Auto-generated** by `cargo xtask generate` - do not edit manually.
 //!
@@ -26,6 +26,7 @@ use core::arch::x86_64::*;
 #[cfg(target_arch = "x86_64")]
 use archmage::{X64V4Token, X64V4xToken, arcane};
 
+use crate::simd::backends::ops::*;
 use crate::simd::backends::*;
 
 // ============================================================================
@@ -34,7 +35,7 @@ use crate::simd::backends::*;
 
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
-impl F32x16Backend for X64V4Token {
+impl F32x16Ops for X64V4Token {
     type Repr = __m512;
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
@@ -268,7 +269,7 @@ impl F32x16Backend for X64V4Token {
 
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
-impl F64x8Backend for X64V4Token {
+impl F64x8Ops for X64V4Token {
     type Repr = __m512d;
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
@@ -485,7 +486,7 @@ impl F64x8Backend for X64V4Token {
 
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
-impl I8x64Backend for X64V4Token {
+impl I8x64Ops for X64V4Token {
     type Repr = __m512i;
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
@@ -692,7 +693,7 @@ impl I8x64Backend for X64V4Token {
 
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
-impl U8x64Backend for X64V4Token {
+impl U8x64Ops for X64V4Token {
     type Repr = __m512i;
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
@@ -922,7 +923,7 @@ impl U8x64Backend for X64V4Token {
 
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
-impl I16x32Backend for X64V4Token {
+impl I16x32Ops for X64V4Token {
     type Repr = __m512i;
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
@@ -1172,7 +1173,7 @@ impl I16x32Backend for X64V4Token {
 
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
-impl U16x32Backend for X64V4Token {
+impl U16x32Ops for X64V4Token {
     type Repr = __m512i;
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
@@ -1390,7 +1391,7 @@ impl U16x32Backend for X64V4Token {
 
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
-impl I32x16Backend for X64V4Token {
+impl I32x16Ops for X64V4Token {
     type Repr = __m512i;
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
@@ -1605,7 +1606,7 @@ impl I32x16Backend for X64V4Token {
 
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
-impl U32x16Backend for X64V4Token {
+impl U32x16Ops for X64V4Token {
     type Repr = __m512i;
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
@@ -1796,7 +1797,7 @@ impl U32x16Backend for X64V4Token {
 
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
-impl I64x8Backend for X64V4Token {
+impl I64x8Ops for X64V4Token {
     type Repr = __m512i;
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
@@ -1972,7 +1973,7 @@ impl I64x8Backend for X64V4Token {
 
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
-impl U64x8Backend for X64V4Token {
+impl U64x8Ops for X64V4Token {
     type Repr = __m512i;
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
@@ -2223,7 +2224,7 @@ impl u64x8PopcntBackend for X64V4xToken {
 
 #[cfg(all(target_arch = "x86_64", feature = "w512"))]
 #[cfg(feature = "w512")]
-impl F32x16Convert for X64V4Token {
+impl F32x16ConvertOps for X64V4Token {
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn bitcast_f32_to_i32(self, a: __m512) -> __m512i {
         _mm512_castps_si512(a)

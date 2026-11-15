@@ -28,19 +28,19 @@ use core::arch::wasm32::{
 // ============================================================================
 
 #[archmage::attune(wrap, suppress_const_test)]
-pub(super) fn mul_add_f32x4(token: Wasm128RelaxedFmaToken, a: v128, b: v128, c: v128) -> v128 {
+pub(crate) fn mul_add_f32x4(token: Wasm128RelaxedFmaToken, a: v128, b: v128, c: v128) -> v128 {
     let _ = token;
     f32x4_relaxed_madd(a, b, c)
 }
 
 #[archmage::attune(wrap, suppress_const_test)]
-pub(super) fn mul_sub_f32x4(token: Wasm128RelaxedFmaToken, a: v128, b: v128, c: v128) -> v128 {
+pub(crate) fn mul_sub_f32x4(token: Wasm128RelaxedFmaToken, a: v128, b: v128, c: v128) -> v128 {
     let _ = token;
     f32x4_relaxed_madd(a, b, f32x4_neg(c))
 }
 
 #[inline(always)]
-pub(super) fn mul_add_f32x8(
+pub(crate) fn mul_add_f32x8(
     token: Wasm128RelaxedFmaToken,
     a: [v128; 2],
     b: [v128; 2],
@@ -53,7 +53,7 @@ pub(super) fn mul_add_f32x8(
 }
 
 #[inline(always)]
-pub(super) fn mul_sub_f32x8(
+pub(crate) fn mul_sub_f32x8(
     token: Wasm128RelaxedFmaToken,
     a: [v128; 2],
     b: [v128; 2],
@@ -67,7 +67,7 @@ pub(super) fn mul_sub_f32x8(
 
 #[cfg(feature = "w512")]
 #[inline(always)]
-pub(super) fn mul_add_f32x16(
+pub(crate) fn mul_add_f32x16(
     token: Wasm128RelaxedFmaToken,
     a: [v128; 4],
     b: [v128; 4],
@@ -83,7 +83,7 @@ pub(super) fn mul_add_f32x16(
 
 #[cfg(feature = "w512")]
 #[inline(always)]
-pub(super) fn mul_sub_f32x16(
+pub(crate) fn mul_sub_f32x16(
     token: Wasm128RelaxedFmaToken,
     a: [v128; 4],
     b: [v128; 4],
@@ -102,19 +102,19 @@ pub(super) fn mul_sub_f32x16(
 // ============================================================================
 
 #[archmage::attune(wrap, suppress_const_test)]
-pub(super) fn mul_add_f64x2(token: Wasm128RelaxedFmaToken, a: v128, b: v128, c: v128) -> v128 {
+pub(crate) fn mul_add_f64x2(token: Wasm128RelaxedFmaToken, a: v128, b: v128, c: v128) -> v128 {
     let _ = token;
     f64x2_relaxed_madd(a, b, c)
 }
 
 #[archmage::attune(wrap, suppress_const_test)]
-pub(super) fn mul_sub_f64x2(token: Wasm128RelaxedFmaToken, a: v128, b: v128, c: v128) -> v128 {
+pub(crate) fn mul_sub_f64x2(token: Wasm128RelaxedFmaToken, a: v128, b: v128, c: v128) -> v128 {
     let _ = token;
     f64x2_relaxed_madd(a, b, f64x2_neg(c))
 }
 
 #[inline(always)]
-pub(super) fn mul_add_f64x4(
+pub(crate) fn mul_add_f64x4(
     token: Wasm128RelaxedFmaToken,
     a: [v128; 2],
     b: [v128; 2],
@@ -127,7 +127,7 @@ pub(super) fn mul_add_f64x4(
 }
 
 #[inline(always)]
-pub(super) fn mul_sub_f64x4(
+pub(crate) fn mul_sub_f64x4(
     token: Wasm128RelaxedFmaToken,
     a: [v128; 2],
     b: [v128; 2],
@@ -141,7 +141,7 @@ pub(super) fn mul_sub_f64x4(
 
 #[cfg(feature = "w512")]
 #[inline(always)]
-pub(super) fn mul_add_f64x8(
+pub(crate) fn mul_add_f64x8(
     token: Wasm128RelaxedFmaToken,
     a: [v128; 4],
     b: [v128; 4],
@@ -157,7 +157,7 @@ pub(super) fn mul_add_f64x8(
 
 #[cfg(feature = "w512")]
 #[inline(always)]
-pub(super) fn mul_sub_f64x8(
+pub(crate) fn mul_sub_f64x8(
     token: Wasm128RelaxedFmaToken,
     a: [v128; 4],
     b: [v128; 4],
@@ -176,19 +176,19 @@ pub(super) fn mul_sub_f64x8(
 // ============================================================================
 
 #[archmage::attune(wrap, suppress_const_test)]
-pub(super) fn min_fast_f32x4(token: Wasm128RelaxedFmaToken, a: v128, b: v128) -> v128 {
+pub(crate) fn min_fast_f32x4(token: Wasm128RelaxedFmaToken, a: v128, b: v128) -> v128 {
     let _ = token;
     f32x4_relaxed_min(a, b)
 }
 
 #[archmage::attune(wrap, suppress_const_test)]
-pub(super) fn max_fast_f32x4(token: Wasm128RelaxedFmaToken, a: v128, b: v128) -> v128 {
+pub(crate) fn max_fast_f32x4(token: Wasm128RelaxedFmaToken, a: v128, b: v128) -> v128 {
     let _ = token;
     f32x4_relaxed_max(a, b)
 }
 
 #[inline(always)]
-pub(super) fn min_fast_f32x8(
+pub(crate) fn min_fast_f32x8(
     token: Wasm128RelaxedFmaToken,
     a: [v128; 2],
     b: [v128; 2],
@@ -200,7 +200,7 @@ pub(super) fn min_fast_f32x8(
 }
 
 #[inline(always)]
-pub(super) fn max_fast_f32x8(
+pub(crate) fn max_fast_f32x8(
     token: Wasm128RelaxedFmaToken,
     a: [v128; 2],
     b: [v128; 2],
@@ -213,7 +213,7 @@ pub(super) fn max_fast_f32x8(
 
 #[cfg(feature = "w512")]
 #[inline(always)]
-pub(super) fn min_fast_f32x16(
+pub(crate) fn min_fast_f32x16(
     token: Wasm128RelaxedFmaToken,
     a: [v128; 4],
     b: [v128; 4],
@@ -228,7 +228,7 @@ pub(super) fn min_fast_f32x16(
 
 #[cfg(feature = "w512")]
 #[inline(always)]
-pub(super) fn max_fast_f32x16(
+pub(crate) fn max_fast_f32x16(
     token: Wasm128RelaxedFmaToken,
     a: [v128; 4],
     b: [v128; 4],
@@ -242,19 +242,19 @@ pub(super) fn max_fast_f32x16(
 }
 
 #[archmage::attune(wrap, suppress_const_test)]
-pub(super) fn min_fast_f64x2(token: Wasm128RelaxedFmaToken, a: v128, b: v128) -> v128 {
+pub(crate) fn min_fast_f64x2(token: Wasm128RelaxedFmaToken, a: v128, b: v128) -> v128 {
     let _ = token;
     f64x2_relaxed_min(a, b)
 }
 
 #[archmage::attune(wrap, suppress_const_test)]
-pub(super) fn max_fast_f64x2(token: Wasm128RelaxedFmaToken, a: v128, b: v128) -> v128 {
+pub(crate) fn max_fast_f64x2(token: Wasm128RelaxedFmaToken, a: v128, b: v128) -> v128 {
     let _ = token;
     f64x2_relaxed_max(a, b)
 }
 
 #[inline(always)]
-pub(super) fn min_fast_f64x4(
+pub(crate) fn min_fast_f64x4(
     token: Wasm128RelaxedFmaToken,
     a: [v128; 2],
     b: [v128; 2],
@@ -266,7 +266,7 @@ pub(super) fn min_fast_f64x4(
 }
 
 #[inline(always)]
-pub(super) fn max_fast_f64x4(
+pub(crate) fn max_fast_f64x4(
     token: Wasm128RelaxedFmaToken,
     a: [v128; 2],
     b: [v128; 2],
@@ -279,7 +279,7 @@ pub(super) fn max_fast_f64x4(
 
 #[cfg(feature = "w512")]
 #[inline(always)]
-pub(super) fn min_fast_f64x8(
+pub(crate) fn min_fast_f64x8(
     token: Wasm128RelaxedFmaToken,
     a: [v128; 4],
     b: [v128; 4],
@@ -294,7 +294,7 @@ pub(super) fn min_fast_f64x8(
 
 #[cfg(feature = "w512")]
 #[inline(always)]
-pub(super) fn max_fast_f64x8(
+pub(crate) fn max_fast_f64x8(
     token: Wasm128RelaxedFmaToken,
     a: [v128; 4],
     b: [v128; 4],
@@ -312,7 +312,7 @@ pub(super) fn max_fast_f64x8(
 // ============================================================================
 
 #[archmage::attune(wrap, suppress_const_test)]
-pub(super) fn mul_add_lane_f32x4<const LANE: i32>(
+pub(crate) fn mul_add_lane_f32x4<const LANE: i32>(
     token: Wasm128RelaxedFmaToken,
     a: v128,
     v_in: v128,
@@ -331,7 +331,7 @@ pub(super) fn mul_add_lane_f32x4<const LANE: i32>(
 }
 
 #[archmage::attune(wrap, suppress_const_test)]
-pub(super) fn mul_add_lane_f32x8<const LANE: i32>(
+pub(crate) fn mul_add_lane_f32x8<const LANE: i32>(
     token: Wasm128RelaxedFmaToken,
     a: [v128; 2],
     v_in: [v128; 2],
@@ -361,13 +361,13 @@ pub(super) fn mul_add_lane_f32x8<const LANE: i32>(
 // ============================================================================
 
 #[archmage::attune(wrap, suppress_const_test)]
-pub(super) fn convert_f32_to_i32_fast_x4(token: Wasm128RelaxedFmaToken, a: v128) -> v128 {
+pub(crate) fn convert_f32_to_i32_fast_x4(token: Wasm128RelaxedFmaToken, a: v128) -> v128 {
     let _ = token;
     i32x4_relaxed_trunc_f32x4(a)
 }
 
 #[inline(always)]
-pub(super) fn convert_f32_to_i32_fast_x8(token: Wasm128RelaxedFmaToken, a: [v128; 2]) -> [v128; 2] {
+pub(crate) fn convert_f32_to_i32_fast_x8(token: Wasm128RelaxedFmaToken, a: [v128; 2]) -> [v128; 2] {
     [
         convert_f32_to_i32_fast_x4(token, a[0]),
         convert_f32_to_i32_fast_x4(token, a[1]),
@@ -376,7 +376,7 @@ pub(super) fn convert_f32_to_i32_fast_x8(token: Wasm128RelaxedFmaToken, a: [v128
 
 #[cfg(feature = "w512")]
 #[inline(always)]
-pub(super) fn convert_f32_to_i32_fast_x16(
+pub(crate) fn convert_f32_to_i32_fast_x16(
     token: Wasm128RelaxedFmaToken,
     a: [v128; 4],
 ) -> [v128; 4] {
@@ -389,13 +389,13 @@ pub(super) fn convert_f32_to_i32_fast_x16(
 }
 
 #[archmage::attune(wrap, suppress_const_test)]
-pub(super) fn mul_hrs_q15_x8(token: Wasm128RelaxedFmaToken, a: v128, b: v128) -> v128 {
+pub(crate) fn mul_hrs_q15_x8(token: Wasm128RelaxedFmaToken, a: v128, b: v128) -> v128 {
     let _ = token;
     i16x8_relaxed_q15mulr(a, b)
 }
 
 #[inline(always)]
-pub(super) fn mul_hrs_q15_x16(
+pub(crate) fn mul_hrs_q15_x16(
     token: Wasm128RelaxedFmaToken,
     a: [v128; 2],
     b: [v128; 2],
@@ -408,7 +408,7 @@ pub(super) fn mul_hrs_q15_x16(
 
 #[cfg(feature = "w512")]
 #[inline(always)]
-pub(super) fn mul_hrs_q15_x32(
+pub(crate) fn mul_hrs_q15_x32(
     token: Wasm128RelaxedFmaToken,
     a: [v128; 4],
     b: [v128; 4],

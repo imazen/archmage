@@ -219,98 +219,143 @@ pub trait F32x16ToU32: F32x16Backend + U32x16Backend + SimdToken + Sealed + Copy
     ) -> <Self as U32x16Backend>::Repr;
 }
 
-impl F32x4ToU32 for archmage::ScalarToken {
+/// Crate-private canonical implementation of narrow `to_u32_fast`,
+/// implemented only for the 4 canonical narrow base tokens.
+pub trait NarrowToU32Ops:
+    crate::simd::backends::ops::F32x4Ops
+    + crate::simd::backends::ops::F32x8Ops
+    + crate::simd::backends::ops::U32x4Ops
+    + crate::simd::backends::ops::U32x8Ops
+{
+    fn f32x4_to_u32_fast(
+        self,
+        a: <Self as crate::simd::backends::ops::F32x4Ops>::Repr,
+    ) -> <Self as crate::simd::backends::ops::U32x4Ops>::Repr;
+
+    fn f32x8_to_u32_fast(
+        self,
+        a: <Self as crate::simd::backends::ops::F32x8Ops>::Repr,
+    ) -> <Self as crate::simd::backends::ops::U32x8Ops>::Repr;
+}
+
+/// Crate-private canonical implementation of 512-bit `to_u32_fast`,
+/// implemented only for the 5 canonical W512 base tokens.
+#[cfg(feature = "w512")]
+pub trait W512ToU32Ops:
+    crate::simd::backends::ops::F32x16Ops + crate::simd::backends::ops::U32x16Ops
+{
+    fn f32x16_to_u32_fast(
+        self,
+        a: <Self as crate::simd::backends::ops::F32x16Ops>::Repr,
+    ) -> <Self as crate::simd::backends::ops::U32x16Ops>::Repr;
+}
+
+impl<T: SimdToken + Sealed + Copy + 'static> F32x4ToU32 for T {
     #[inline(always)]
-    fn convert_f32_to_u32_fast(self, a: [f32; 4]) -> [u32; 4] {
-        let _ = self;
-        core::array::from_fn(|i| a[i] as u32)
+    fn convert_f32_to_u32_fast(
+        self,
+        a: <Self as F32x4Backend>::Repr,
+    ) -> <Self as U32x4Backend>::Repr {
+        self.f32x4_to_u32_fast(a)
     }
 }
 
-impl F32x8ToU32 for archmage::ScalarToken {
+impl<T: SimdToken + Sealed + Copy + 'static> F32x8ToU32 for T {
     #[inline(always)]
-    fn convert_f32_to_u32_fast(self, a: [f32; 8]) -> [u32; 8] {
+    fn convert_f32_to_u32_fast(
+        self,
+        a: <Self as F32x8Backend>::Repr,
+    ) -> <Self as U32x8Backend>::Repr {
+        self.f32x8_to_u32_fast(a)
+    }
+}
+
+#[cfg(feature = "w512")]
+impl<T: SimdToken + Sealed + Copy + 'static> F32x16ToU32 for T {
+    #[inline(always)]
+    fn convert_f32_to_u32_fast(
+        self,
+        a: <Self as F32x16Backend>::Repr,
+    ) -> <Self as U32x16Backend>::Repr {
+        self.f32x16_to_u32_fast(a)
+    }
+}
+
+impl NarrowToU32Ops for archmage::ScalarToken {
+    #[inline(always)]
+    fn f32x4_to_u32_fast(self, a: [f32; 4]) -> [u32; 4] {
+        let _ = self;
+        core::array::from_fn(|i| a[i] as u32)
+    }
+    #[inline(always)]
+    fn f32x8_to_u32_fast(self, a: [f32; 8]) -> [u32; 8] {
         let _ = self;
         core::array::from_fn(|i| a[i] as u32)
     }
 }
 
 #[cfg(feature = "w512")]
-impl F32x16ToU32 for archmage::ScalarToken {
+impl W512ToU32Ops for archmage::ScalarToken {
     #[inline(always)]
-    fn convert_f32_to_u32_fast(self, a: [f32; 16]) -> [u32; 16] {
+    fn f32x16_to_u32_fast(self, a: [f32; 16]) -> [u32; 16] {
         let _ = self;
         core::array::from_fn(|i| a[i] as u32)
     }
 }
 
 #[cfg(target_arch = "aarch64")]
-impl F32x4ToU32 for archmage::NeonToken {
+impl NarrowToU32Ops for archmage::NeonToken {
     #[archmage::arcane(suppress_const_test, _self = archmage::NeonToken)]
-    fn convert_f32_to_u32_fast(
+    fn f32x4_to_u32_fast(
         self,
         a: core::arch::aarch64::float32x4_t,
     ) -> core::arch::aarch64::uint32x4_t {
         core::arch::aarch64::vcvtq_u32_f32(a)
     }
-}
-
-#[cfg(target_arch = "aarch64")]
-impl F32x8ToU32 for archmage::NeonToken {
     #[inline(always)]
-    fn convert_f32_to_u32_fast(
+    fn f32x8_to_u32_fast(
         self,
         a: [core::arch::aarch64::float32x4_t; 2],
     ) -> [core::arch::aarch64::uint32x4_t; 2] {
         [
-            <Self as F32x4ToU32>::convert_f32_to_u32_fast(self, a[0]),
-            <Self as F32x4ToU32>::convert_f32_to_u32_fast(self, a[1]),
+            NarrowToU32Ops::f32x4_to_u32_fast(self, a[0]),
+            NarrowToU32Ops::f32x4_to_u32_fast(self, a[1]),
         ]
     }
 }
 
 #[cfg(all(target_arch = "aarch64", feature = "w512"))]
-impl F32x16ToU32 for archmage::NeonToken {
+impl W512ToU32Ops for archmage::NeonToken {
     #[inline(always)]
-    fn convert_f32_to_u32_fast(
+    fn f32x16_to_u32_fast(
         self,
         a: [core::arch::aarch64::float32x4_t; 4],
     ) -> [core::arch::aarch64::uint32x4_t; 4] {
-        core::array::from_fn(|i| <Self as F32x4ToU32>::convert_f32_to_u32_fast(self, a[i]))
+        core::array::from_fn(|i| NarrowToU32Ops::f32x4_to_u32_fast(self, a[i]))
     }
 }
 
 #[cfg(target_arch = "wasm32")]
-impl F32x4ToU32 for archmage::Wasm128Token {
+impl NarrowToU32Ops for archmage::Wasm128Token {
     #[inline(always)]
-    fn convert_f32_to_u32_fast(self, a: core::arch::wasm32::v128) -> core::arch::wasm32::v128 {
+    fn f32x4_to_u32_fast(self, a: core::arch::wasm32::v128) -> core::arch::wasm32::v128 {
         let _ = self;
         core::arch::wasm32::u32x4_trunc_sat_f32x4(a)
     }
-}
-
-#[cfg(target_arch = "wasm32")]
-impl F32x8ToU32 for archmage::Wasm128Token {
     #[inline(always)]
-    fn convert_f32_to_u32_fast(
-        self,
-        a: [core::arch::wasm32::v128; 2],
-    ) -> [core::arch::wasm32::v128; 2] {
+    fn f32x8_to_u32_fast(self, a: [core::arch::wasm32::v128; 2]) -> [core::arch::wasm32::v128; 2] {
         [
-            <Self as F32x4ToU32>::convert_f32_to_u32_fast(self, a[0]),
-            <Self as F32x4ToU32>::convert_f32_to_u32_fast(self, a[1]),
+            NarrowToU32Ops::f32x4_to_u32_fast(self, a[0]),
+            NarrowToU32Ops::f32x4_to_u32_fast(self, a[1]),
         ]
     }
 }
 
 #[cfg(all(target_arch = "wasm32", feature = "w512"))]
-impl F32x16ToU32 for archmage::Wasm128Token {
+impl W512ToU32Ops for archmage::Wasm128Token {
     #[inline(always)]
-    fn convert_f32_to_u32_fast(
-        self,
-        a: [core::arch::wasm32::v128; 4],
-    ) -> [core::arch::wasm32::v128; 4] {
-        core::array::from_fn(|i| <Self as F32x4ToU32>::convert_f32_to_u32_fast(self, a[i]))
+    fn f32x16_to_u32_fast(self, a: [core::arch::wasm32::v128; 4]) -> [core::arch::wasm32::v128; 4] {
+        core::array::from_fn(|i| NarrowToU32Ops::f32x4_to_u32_fast(self, a[i]))
     }
 }
 
@@ -319,11 +364,12 @@ impl F32x16ToU32 for archmage::Wasm128Token {
     target_feature = "simd128",
     target_feature = "relaxed-simd"
 ))]
-impl F32x4ToU32 for archmage::Wasm128RelaxedFmaToken {
-    #[archmage::arcane(suppress_const_test, _self = archmage::Wasm128RelaxedFmaToken)]
-    fn convert_f32_to_u32_fast(self, a: core::arch::wasm32::v128) -> core::arch::wasm32::v128 {
-        core::arch::wasm32::u32x4_relaxed_trunc_f32x4(a)
-    }
+#[archmage::arcane(suppress_const_test)]
+pub(crate) fn wasm_fma_f32x4_to_u32_fast(
+    _token: archmage::Wasm128RelaxedFmaToken,
+    a: core::arch::wasm32::v128,
+) -> core::arch::wasm32::v128 {
+    core::arch::wasm32::u32x4_relaxed_trunc_f32x4(a)
 }
 
 #[cfg(all(
@@ -331,17 +377,15 @@ impl F32x4ToU32 for archmage::Wasm128RelaxedFmaToken {
     target_feature = "simd128",
     target_feature = "relaxed-simd"
 ))]
-impl F32x8ToU32 for archmage::Wasm128RelaxedFmaToken {
-    #[inline(always)]
-    fn convert_f32_to_u32_fast(
-        self,
-        a: [core::arch::wasm32::v128; 2],
-    ) -> [core::arch::wasm32::v128; 2] {
-        [
-            <Self as F32x4ToU32>::convert_f32_to_u32_fast(self, a[0]),
-            <Self as F32x4ToU32>::convert_f32_to_u32_fast(self, a[1]),
-        ]
-    }
+#[inline(always)]
+pub(crate) fn wasm_fma_f32x8_to_u32_fast(
+    token: archmage::Wasm128RelaxedFmaToken,
+    a: [core::arch::wasm32::v128; 2],
+) -> [core::arch::wasm32::v128; 2] {
+    [
+        wasm_fma_f32x4_to_u32_fast(token, a[0]),
+        wasm_fma_f32x4_to_u32_fast(token, a[1]),
+    ]
 }
 
 #[cfg(all(
@@ -350,20 +394,18 @@ impl F32x8ToU32 for archmage::Wasm128RelaxedFmaToken {
     target_feature = "relaxed-simd",
     feature = "w512"
 ))]
-impl F32x16ToU32 for archmage::Wasm128RelaxedFmaToken {
-    #[inline(always)]
-    fn convert_f32_to_u32_fast(
-        self,
-        a: [core::arch::wasm32::v128; 4],
-    ) -> [core::arch::wasm32::v128; 4] {
-        core::array::from_fn(|i| <Self as F32x4ToU32>::convert_f32_to_u32_fast(self, a[i]))
-    }
+#[inline(always)]
+pub(crate) fn wasm_fma_f32x16_to_u32_fast(
+    token: archmage::Wasm128RelaxedFmaToken,
+    a: [core::arch::wasm32::v128; 4],
+) -> [core::arch::wasm32::v128; 4] {
+    core::array::from_fn(|i| wasm_fma_f32x4_to_u32_fast(token, a[i]))
 }
 
 #[cfg(target_arch = "x86_64")]
-impl F32x4ToU32 for archmage::X64V3Token {
+impl NarrowToU32Ops for archmage::X64V3Token {
     #[archmage::arcane(suppress_const_test, _self = archmage::X64V3Token)]
-    fn convert_f32_to_u32_fast(self, a: core::arch::x86_64::__m128) -> core::arch::x86_64::__m128i {
+    fn f32x4_to_u32_fast(self, a: core::arch::x86_64::__m128) -> core::arch::x86_64::__m128i {
         use core::arch::x86_64::{
             _CMP_GE_OQ, _mm_and_ps, _mm_castps_si128, _mm_cmp_ps, _mm_cvttps_epi32, _mm_set1_ps,
             _mm_slli_epi32, _mm_sub_ps, _mm_xor_si128,
@@ -376,12 +418,8 @@ impl F32x4ToU32 for archmage::X64V3Token {
             _mm_slli_epi32::<31>(_mm_castps_si128(ge)),
         )
     }
-}
-
-#[cfg(target_arch = "x86_64")]
-impl F32x8ToU32 for archmage::X64V3Token {
     #[archmage::arcane(suppress_const_test, _self = archmage::X64V3Token)]
-    fn convert_f32_to_u32_fast(self, a: core::arch::x86_64::__m256) -> core::arch::x86_64::__m256i {
+    fn f32x8_to_u32_fast(self, a: core::arch::x86_64::__m256) -> core::arch::x86_64::__m256i {
         use core::arch::x86_64::{
             _CMP_GE_OQ, _mm256_and_ps, _mm256_castps_si256, _mm256_cmp_ps, _mm256_cvttps_epi32,
             _mm256_set1_ps, _mm256_slli_epi32, _mm256_sub_ps, _mm256_xor_si256,
@@ -397,80 +435,42 @@ impl F32x8ToU32 for archmage::X64V3Token {
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "w512"))]
-impl F32x16ToU32 for archmage::X64V3Token {
+impl W512ToU32Ops for archmage::X64V3Token {
     #[inline(always)]
-    fn convert_f32_to_u32_fast(
+    fn f32x16_to_u32_fast(
         self,
         a: [core::arch::x86_64::__m256; 2],
     ) -> [core::arch::x86_64::__m256i; 2] {
         [
-            <Self as F32x8ToU32>::convert_f32_to_u32_fast(self, a[0]),
-            <Self as F32x8ToU32>::convert_f32_to_u32_fast(self, a[1]),
+            NarrowToU32Ops::f32x8_to_u32_fast(self, a[0]),
+            NarrowToU32Ops::f32x8_to_u32_fast(self, a[1]),
         ]
     }
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-impl F32x4ToU32 for archmage::X64V4Token {
-    #[archmage::arcane(suppress_const_test, _self = archmage::X64V4Token)]
-    fn convert_f32_to_u32_fast(self, a: core::arch::x86_64::__m128) -> core::arch::x86_64::__m128i {
-        core::arch::x86_64::_mm_cvttps_epu32(a)
-    }
+#[archmage::arcane(suppress_const_test)]
+pub(crate) fn v4_f32x4_to_u32_fast(
+    _token: archmage::X64V4Token,
+    a: core::arch::x86_64::__m128,
+) -> core::arch::x86_64::__m128i {
+    core::arch::x86_64::_mm_cvttps_epu32(a)
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-impl F32x4ToU32 for archmage::X64V4xToken {
-    #[inline(always)]
-    fn convert_f32_to_u32_fast(self, a: core::arch::x86_64::__m128) -> core::arch::x86_64::__m128i {
-        <archmage::X64V4Token as F32x4ToU32>::convert_f32_to_u32_fast(self.v4(), a)
-    }
-}
-
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-impl F32x4ToU32 for archmage::Avx512Fp16Token {
-    #[inline(always)]
-    fn convert_f32_to_u32_fast(self, a: core::arch::x86_64::__m128) -> core::arch::x86_64::__m128i {
-        <archmage::X64V4Token as F32x4ToU32>::convert_f32_to_u32_fast(self.v4(), a)
-    }
-}
-
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-impl F32x8ToU32 for archmage::X64V4Token {
-    #[archmage::arcane(suppress_const_test, _self = archmage::X64V4Token)]
-    fn convert_f32_to_u32_fast(self, a: core::arch::x86_64::__m256) -> core::arch::x86_64::__m256i {
-        core::arch::x86_64::_mm256_cvttps_epu32(a)
-    }
-}
-
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-impl F32x8ToU32 for archmage::X64V4xToken {
-    #[inline(always)]
-    fn convert_f32_to_u32_fast(self, a: core::arch::x86_64::__m256) -> core::arch::x86_64::__m256i {
-        <archmage::X64V4Token as F32x8ToU32>::convert_f32_to_u32_fast(self.v4(), a)
-    }
-}
-
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-impl F32x8ToU32 for archmage::Avx512Fp16Token {
-    #[inline(always)]
-    fn convert_f32_to_u32_fast(self, a: core::arch::x86_64::__m256) -> core::arch::x86_64::__m256i {
-        <archmage::X64V4Token as F32x8ToU32>::convert_f32_to_u32_fast(self.v4(), a)
-    }
+#[archmage::arcane(suppress_const_test)]
+pub(crate) fn v4_f32x8_to_u32_fast(
+    _token: archmage::X64V4Token,
+    a: core::arch::x86_64::__m256,
+) -> core::arch::x86_64::__m256i {
+    core::arch::x86_64::_mm256_cvttps_epu32(a)
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512", feature = "w512"))]
-impl F32x16ToU32 for archmage::X64V4Token {
+impl W512ToU32Ops for archmage::X64V4Token {
     #[archmage::arcane(suppress_const_test, _self = archmage::X64V4Token)]
-    fn convert_f32_to_u32_fast(self, a: core::arch::x86_64::__m512) -> core::arch::x86_64::__m512i {
+    fn f32x16_to_u32_fast(self, a: core::arch::x86_64::__m512) -> core::arch::x86_64::__m512i {
         core::arch::x86_64::_mm512_cvttps_epu32(a)
-    }
-}
-
-#[cfg(all(target_arch = "x86_64", feature = "avx512", feature = "w512"))]
-impl F32x16ToU32 for archmage::X64V4xToken {
-    #[inline(always)]
-    fn convert_f32_to_u32_fast(self, a: core::arch::x86_64::__m512) -> core::arch::x86_64::__m512i {
-        <archmage::X64V4Token as F32x16ToU32>::convert_f32_to_u32_fast(self.v4(), a)
     }
 }
 

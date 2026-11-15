@@ -23,14 +23,14 @@ use core::arch::x86_64::{__m128, __m256};
 
 /// `f32x4::to_u8`: `max(x, 0)`, round-to-nearest-even `cvtps`, `vpmovusdb`.
 #[archmage::arcane(import_intrinsics)]
-pub(super) fn to_u8_bytes_x4_v4(_token: archmage::X64V4Token, a: __m128) -> [u8; 4] {
+pub(crate) fn to_u8_bytes_x4_v4(_token: archmage::X64V4Token, a: __m128) -> [u8; 4] {
     let bytes = _mm_cvtusepi32_epi8(_mm_cvtps_epi32(_mm_max_ps(a, _mm_setzero_ps())));
     (_mm_cvtsi128_si32(bytes) as u32).to_ne_bytes()
 }
 
 /// `f32x8::to_u8`: the same sequence at 256 bits, narrowing to 8 bytes.
 #[archmage::arcane(import_intrinsics)]
-pub(super) fn to_u8_bytes_x8_v4(_token: archmage::X64V4Token, a: __m256) -> [u8; 8] {
+pub(crate) fn to_u8_bytes_x8_v4(_token: archmage::X64V4Token, a: __m256) -> [u8; 8] {
     let bytes = _mm256_cvtusepi32_epi8(_mm256_cvtps_epi32(_mm256_max_ps(a, _mm256_setzero_ps())));
     (_mm_cvtsi128_si64(bytes) as u64).to_ne_bytes()
 }
@@ -38,7 +38,7 @@ pub(super) fn to_u8_bytes_x8_v4(_token: archmage::X64V4Token, a: __m256) -> [u8;
 /// `f32x4::store_4_rgba_u8`: two planes per 256-bit register, so `max`,
 /// `cvtps` and `vpmovusdb` each cover two planes; one `pshufb` interleaves.
 #[archmage::arcane(import_intrinsics)]
-pub(super) fn store_rgba_bytes_x4_v4(
+pub(crate) fn store_rgba_bytes_x4_v4(
     _token: archmage::X64V4Token,
     r: __m128,
     g: __m128,
@@ -59,7 +59,7 @@ pub(super) fn store_rgba_bytes_x4_v4(
 /// `f32x4::store_4_rgb_u8`: pack R+G in one 256-bit `vpmovusdb` and B in one
 /// 128-bit `vpmovusdb`, interleave 12 RGB bytes with one `pshufb`, and write 8+4B.
 #[archmage::arcane(import_intrinsics)]
-pub(super) fn store_rgb_bytes_x4_v4(
+pub(crate) fn store_rgb_bytes_x4_v4(
     _token: archmage::X64V4Token,
     r: __m128,
     g: __m128,
