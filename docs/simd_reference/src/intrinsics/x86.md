@@ -891,7 +891,7 @@ Token: `X64V3Token`
 - `_mm_maskstore_pd` (unsafe)
 - `_mm_maskstore_ps` (unsafe)
 
-## X64V3VnniToken (AVX-VNNI) (8 intrinsics)
+## X64V3VnniToken (AVX-VNNI + ADX/SHA) (15 intrinsics)
 Token: `X64V3VnniToken`
 
 ### Other
@@ -904,6 +904,49 @@ Token: `X64V3VnniToken`
 - `_mm_dpbusds_avx_epi32`
 - `_mm_dpwssd_avx_epi32`
 - `_mm_dpwssds_avx_epi32`
+- `_mm_sha1msg1_epu32`
+- `_mm_sha1msg2_epu32`
+- `_mm_sha1nexte_epu32`
+- `_mm_sha1rnds4_epu32`
+- `_mm_sha256msg1_epu32`
+- `_mm_sha256msg2_epu32`
+- `_mm_sha256rnds2_epu32`
+
+## X64V3Vnni2Token (AVX-VNNI-2) (30 intrinsics)
+Token: `X64V3Vnni2Token`
+
+### Other
+
+- `_mm256_bcstnebf16_ps` (unsafe)
+- `_mm256_bcstnesh_ps` (unsafe)
+- `_mm256_cvtneebf16_ps` (unsafe)
+- `_mm256_cvtneeph_ps` (unsafe)
+- `_mm256_cvtneobf16_ps` (unsafe)
+- `_mm256_cvtneoph_ps` (unsafe)
+- `_mm256_cvtneps_avx_pbh`
+- `_mm256_dpbssd_epi32`
+- `_mm256_dpbssds_epi32`
+- `_mm256_dpbsud_epi32`
+- `_mm256_dpbsuds_epi32`
+- `_mm256_dpbuud_epi32`
+- `_mm256_dpbuuds_epi32`
+- `_mm256_madd52hi_avx_epu64`
+- `_mm256_madd52lo_avx_epu64`
+- `_mm_bcstnebf16_ps` (unsafe)
+- `_mm_bcstnesh_ps` (unsafe)
+- `_mm_cvtneebf16_ps` (unsafe)
+- `_mm_cvtneeph_ps` (unsafe)
+- `_mm_cvtneobf16_ps` (unsafe)
+- `_mm_cvtneoph_ps` (unsafe)
+- `_mm_cvtneps_avx_pbh`
+- `_mm_dpbssd_epi32`
+- `_mm_dpbssds_epi32`
+- `_mm_dpbsud_epi32`
+- `_mm_dpbsuds_epi32`
+- `_mm_dpbuud_epi32`
+- `_mm_dpbuuds_epi32`
+- `_mm_madd52hi_avx_epu64`
+- `_mm_madd52lo_avx_epu64`
 
 ## X64V4Token (AVX-512) (3826 intrinsics)
 Token: `X64V4Token / Server64`

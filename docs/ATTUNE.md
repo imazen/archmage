@@ -296,7 +296,7 @@ assert_eq!(caller(1), 2);
 `define(f32x8)` creates a magetypes alias specialized for each generated tier.
 It requires a concrete tier or family ("define(...) requires a concrete tier;
 use a direct tier body or a family", "define(...) on a proof wrapper requires a
-generated family"). Subtier variants (`arm_v2`, `arm_v3`, `v3_vnni`,
+generated family"). Subtier variants (`arm_v2`, `arm_v3`, `v3_vnni`, `v3_vnni2`,
 `avx512_fp16`, `wasm128_relaxed`) bind `define(...)` aliases to their parent
 magetypes backend token (`NeonToken`, `X64V3Token`, `X64V4Token`, `Wasm128Token`);
 obtain the backend token via `magetypes::simd::MagetypesToken::magetypes(token)`

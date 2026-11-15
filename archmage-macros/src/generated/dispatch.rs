@@ -31,6 +31,15 @@ pub(crate) const DISPATCH_TIERS: &[TierDescriptor] = &[
         priority: 40,
     },
     TierDescriptor {
+        name: "v3_vnni2",
+        suffix: "v3_vnni2",
+        token_path: "archmage::X64V3Vnni2Token",
+        as_method: "as_x64v3_vnni2",
+        target_arch: Some("x86_64"),
+        cfg_feature: None,
+        priority: 39,
+    },
+    TierDescriptor {
         name: "v3_vnni",
         suffix: "v3_vnni",
         token_path: "archmage::X64V3VnniToken",

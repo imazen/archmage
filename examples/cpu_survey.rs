@@ -35,6 +35,7 @@ fn main() {
     report_token::<archmage::X64V3Token>("X64V3Token", "Avx2FmaToken");
     report_token::<archmage::X64V3CryptoToken>("X64V3CryptoToken", "");
     report_token::<archmage::X64V3VnniToken>("X64V3VnniToken", "");
+    report_token::<archmage::X64V3Vnni2Token>("X64V3Vnni2Token", "");
     report_token::<archmage::X64V3GfniCryptoToken>("X64V3GfniCryptoToken", "");
     report_token::<archmage::X64V4Token>("X64V4Token", "Avx512Token, Server64");
     report_token::<archmage::X64V4xToken>("X64V4xToken", "");

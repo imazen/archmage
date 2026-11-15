@@ -8,7 +8,10 @@
 fn foreign_subtier_tokens_never_summon() {
     use archmage::SimdToken;
     #[cfg(not(target_arch = "x86_64"))]
-    assert!(archmage::X64V3VnniToken::summon().is_none());
+    {
+        assert!(archmage::X64V3VnniToken::summon().is_none());
+        assert!(archmage::X64V3Vnni2Token::summon().is_none());
+    }
     #[cfg(not(target_arch = "aarch64"))]
     assert!(archmage::Arm64V2Token::summon().is_none());
     #[cfg(not(target_arch = "wasm32"))]
@@ -214,7 +217,7 @@ mod x86_v4x_w512_delegation_tests {
 
 #[cfg(target_arch = "x86_64")]
 mod x86_vnni_tests {
-    use archmage::{SimdToken, X64V3Token, X64V3VnniToken, attune};
+    use archmage::{SimdToken, X64V3Token, X64V3Vnni2Token, X64V3VnniToken, attune};
 
     #[attune(v3_vnni, define(f32x8))]
     fn axpy_v3_vnni_body(x: &[f32; 8], a: f32, b: f32) -> [f32; 8] {
@@ -380,6 +383,42 @@ mod x86_vnni_tests {
         }
         check_vnni_128_v3_vnni_t(token);
         check_vnni_256_v3_vnni_t(token);
+    }
+
+    #[attune(v3_vnni2, define(f32x8))]
+    fn axpy_v3_vnni2_body(x: &[f32; 8], a: f32, b: f32) -> [f32; 8] {
+        let base = X64V3Token::from_context();
+        let vx = f32x8::load_t(base, x);
+        let va = f32x8::splat_t(base, a);
+        let vb = f32x8::splat_t(base, b);
+        vx.mul_add_relaxed(va, vb).to_array()
+    }
+
+    #[attune(wrap)]
+    fn call_axpy_v3_vnni2(_token: X64V3Vnni2Token, x: &[f32; 8], a: f32, b: f32) -> [f32; 8] {
+        axpy_v3_vnni2_body(x, a, b)
+    }
+
+    #[test]
+    fn vnni2_magetypes_subtier_and_downcast_work() {
+        #[cfg(target_feature = "avxvnniint8")]
+        #[cfg(target_feature = "avxneconvert")]
+        #[cfg(target_feature = "avxifma")]
+        assert!(
+            X64V3Vnni2Token::summon().is_some(),
+            "vnni2 target features enabled at compile time must summon X64V3Vnni2Token"
+        );
+        let Some(token) = X64V3Vnni2Token::summon() else {
+            return;
+        };
+        let x = [1.0, -2.0, 3.5, 4.0, -0.5, 6.0, 7.25, -8.0];
+        let got = call_axpy_v3_vnni2(token, &x, 2.0, 1.0);
+        for (g, e) in got.into_iter().zip(x.map(|v| v * 2.0 + 1.0)) {
+            let diff = if g >= e { g - e } else { e - g };
+            assert!(diff <= 1e-6);
+        }
+        check_vnni_128_v3_vnni_t(token.v3_vnni());
+        check_vnni_256_v3_vnni_t(token.v3_vnni());
     }
 }
 

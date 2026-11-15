@@ -143,13 +143,14 @@ features = [
     "vpclmulqdq", "vaes",
     "gfni",
     "avxvnni",
+    "adx", "sha",
 ]
 traits = ["HasX64V2", "Has128BitSimd", "Has256BitSimd"]
 parents = ["X64V3GfniCryptoToken"]
 display_name = "x86-64-v3 VNNI"
 short_name = "v3_vnni"
 magetypes_namespace = "v3"
-doc = "Proof that VEX-encoded AVX-VNNI (`avxvnni`) is available on top of `X64V3GfniCryptoToken`.\n\n`avxvnni` provides VEX-encoded 128/256-bit `VPDPBUSD`, `VPDPBUSDS`, `VPDPWSSD`,\nand `VPDPWSSDS` (`_mm256_dpbusd_avx_epi32`, `_mm256_dpwssd_avx_epi32`, etc.) for\nINT8 (`u8 × i8 -> i32`) and INT16 (`i16 × i16 -> i32`) dot-product accumulation\nwithout requiring AVX-512.\n\nAvailable without AVX-512 on Intel Alder Lake, Raptor Lake, Meteor Lake, Arrow\nLake, Lunar Lake, Sierra Forest, and later client/hybrid/E-core x86-64 CPUs.\nNote that AVX-512 server/desktop parts (`X64V4Token` / `X64V4xToken` on Ice Lake\nand Zen 4) provide EVEX `avx512vnni` rather than VEX `avxvnni`, so this token is\na leaf under `X64V3GfniCryptoToken` and is not implied by `X64V4xToken`."
+doc = "Proof that VEX-encoded AVX-VNNI (`avxvnni`), `adx`, and `sha` are available on top of `X64V3GfniCryptoToken`.\n\n`avxvnni` provides VEX-encoded 128/256-bit `VPDPBUSD`, `VPDPBUSDS`, `VPDPWSSD`,\nand `VPDPWSSDS` (`_mm256_dpbusd_avx_epi32`, `_mm256_dpwssd_avx_epi32`, etc.) for\nINT8 (`u8 × i8 -> i32`) and INT16 (`i16 × i16 -> i32`) dot-product accumulation\nwithout requiring AVX-512, alongside `adx` (multi-precision add-carry) and `sha`\n(SHA-1/SHA-256 hardware acceleration).\n\nAvailable without AVX-512 on Intel Alder Lake, Raptor Lake, Meteor Lake, Arrow\nLake, Lunar Lake, Sierra Forest, and later client/hybrid/E-core x86-64 CPUs.\nNote that AVX-512 server/desktop parts (`X64V4Token` / `X64V4xToken` on Ice Lake\nand Zen 4) provide EVEX `avx512vnni` rather than VEX `avxvnni`, so this token\nbranches under `X64V3GfniCryptoToken` and is not implied by `X64V4xToken`."
 
 [[token]]
 name = "X64V4Token"
@@ -173,6 +174,38 @@ has_magetypes_backend = true
 parents = ["X64V3Token", "X64CryptoToken"]
 extraction_aliases = ["avx512"]
 doc = "Proof that AVX-512 (F + CD + VL + DQ + BW) is available.\n\nThis is the complete x86-64-v4 AVX-512 feature set, available on:\n- Intel Skylake-X (2017+), Ice Lake, Sapphire Rapids\n- AMD Zen 4+ (2022+)\n\nNote: Intel 12th-14th gen consumer CPUs do NOT have AVX-512."
+
+[[token]]
+name = "X64V3Vnni2Token"
+dispatch_priority = 39
+dispatch_as = "as_x64v3_vnni2"
+arch = "x86"
+features = [
+    "sse", "sse2",
+    "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt", "cmpxchg16b",
+    "avx", "avx2", "fma", "bmi1", "bmi2", "f16c", "lzcnt", "movbe",
+    "pclmulqdq", "aes",
+    "vpclmulqdq", "vaes",
+    "gfni",
+    "avxvnni",
+    "adx", "sha",
+    "avxvnniint8", "avxneconvert", "avxifma",
+]
+traits = ["HasX64V2", "Has128BitSimd", "Has256BitSimd"]
+parents = ["X64V3VnniToken"]
+display_name = "x86-64-v3 VNNI-2"
+short_name = "v3_vnni2"
+magetypes_namespace = "v3"
+doc = """Proof that x86-64-v3 VNNI plus cross-vendor AVX-VNNI-2 extensions are available.
+
+Extends [`X64V3VnniToken`] with `avxvnniint8`, `avxneconvert`, and `avxifma`
+(pure VEX encoding — does not require AVX-512).
+
+Note on `avxneconvert`: BF16/broadcast-free conversions (`_mm*_cvtneebf16_ps`,
+`_mm*_cvtneobf16_ps`, `_mm*_cvtneps_avx_pbh`) are stable since Rust 1.89, while
+the FP16 variants (`_mm*_cvtneeph_ps`, `_mm*_cvtneoph_ps`) stabilized in Rust 1.94.0.
+
+Available on: Intel Arrow Lake / Panther Lake / Sierra Forest / Clearwater Forest, AMD Zen 6."""
 
 [[token]]
 name = "X64V4xToken"

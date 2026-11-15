@@ -499,7 +499,7 @@ mod tests {
         let registry = Registry::load(&path).expect("Failed to load token-registry.toml");
 
         // Basic counts
-        assert_eq!(registry.token.len(), 19, "Expected 19 tokens");
+        assert_eq!(registry.token.len(), 20, "Expected 20 tokens");
         assert_eq!(registry.traits.len(), 10, "Expected 10 traits");
         assert_eq!(
             registry.width_namespace.len(),
@@ -537,11 +537,35 @@ mod tests {
             .find_token("X64V3VnniToken")
             .expect("X64V3VnniToken not found");
         assert!(v3_vnni.features.contains(&"avxvnni".to_string()));
+        assert!(v3_vnni.features.contains(&"adx".to_string()));
+        assert!(v3_vnni.features.contains(&"sha".to_string()));
         assert_eq!(
             v3_vnni.parents,
             vec!["X64V3GfniCryptoToken"],
             "V3 VNNI should extend V3 GFNI Crypto"
         );
+
+        let v3_vnni2 = registry
+            .find_token("X64V3Vnni2Token")
+            .expect("X64V3Vnni2Token not found");
+        assert!(v3_vnni2.features.contains(&"avxvnniint8".to_string()));
+        assert!(v3_vnni2.features.contains(&"avxneconvert".to_string()));
+        assert!(v3_vnni2.features.contains(&"avxifma".to_string()));
+        assert!(v3_vnni2.features.contains(&"adx".to_string()));
+        assert!(v3_vnni2.features.contains(&"sha".to_string()));
+        assert_eq!(
+            v3_vnni2.parents,
+            vec!["X64V3VnniToken"],
+            "V3 VNNI-2 should extend V3 VNNI"
+        );
+
+        // X64V4xToken stays without adx/sha in 0.9.x to preserve semver compatibility
+        // on safe inherent methods (deferred to 0.10.0).
+        let v4x = registry
+            .find_token("X64V4xToken")
+            .expect("X64V4xToken not found");
+        assert!(!v4x.features.contains(&"adx".to_string()));
+        assert!(!v4x.features.contains(&"sha".to_string()));
 
         // Spot-check aliases
         assert!(registry.find_token("Desktop64").is_some());

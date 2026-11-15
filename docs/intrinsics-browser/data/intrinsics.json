@@ -30,6 +30,7 @@
       "n": "_addcarryx_u32",
       "s": true,
       "sig": "fn _addcarryx_u32(c_in: u8, a: u32, b: u32, out: &mut u32) -> u8",
+      "t": "X64V3VnniToken",
       "u": false
     },
     {
@@ -60733,6 +60734,7 @@
       "n": "_mm256_madd52hi_avx_epu64",
       "s": true,
       "sig": "fn _mm256_madd52hi_avx_epu64(a: __m256i, b: __m256i, c: __m256i) -> __m256i",
+      "t": "X64V3Vnni2Token",
       "u": false
     },
     {
@@ -60776,6 +60778,7 @@
       "n": "_mm256_madd52lo_avx_epu64",
       "s": true,
       "sig": "fn _mm256_madd52lo_avx_epu64(a: __m256i, b: __m256i, c: __m256i) -> __m256i",
+      "t": "X64V3Vnni2Token",
       "u": false
     },
     {
@@ -60819,6 +60822,7 @@
       "n": "_mm_madd52hi_avx_epu64",
       "s": true,
       "sig": "fn _mm_madd52hi_avx_epu64(a: __m128i, b: __m128i, c: __m128i) -> __m128i",
+      "t": "X64V3Vnni2Token",
       "u": false
     },
     {
@@ -60862,6 +60866,7 @@
       "n": "_mm_madd52lo_avx_epu64",
       "s": true,
       "sig": "fn _mm_madd52lo_avx_epu64(a: __m128i, b: __m128i, c: __m128i) -> __m128i",
+      "t": "X64V3Vnni2Token",
       "u": false
     },
     {
@@ -63394,6 +63399,7 @@
       "n": "_mm_dpbssd_epi32",
       "s": true,
       "sig": "fn _mm_dpbssd_epi32(src: __m128i, a: __m128i, b: __m128i) -> __m128i",
+      "t": "X64V3Vnni2Token",
       "u": false
     },
     {
@@ -63404,6 +63410,7 @@
       "n": "_mm256_dpbssd_epi32",
       "s": true,
       "sig": "fn _mm256_dpbssd_epi32(src: __m256i, a: __m256i, b: __m256i) -> __m256i",
+      "t": "X64V3Vnni2Token",
       "u": false
     },
     {
@@ -63414,6 +63421,7 @@
       "n": "_mm_dpbssds_epi32",
       "s": true,
       "sig": "fn _mm_dpbssds_epi32(src: __m128i, a: __m128i, b: __m128i) -> __m128i",
+      "t": "X64V3Vnni2Token",
       "u": false
     },
     {
@@ -63424,6 +63432,7 @@
       "n": "_mm256_dpbssds_epi32",
       "s": true,
       "sig": "fn _mm256_dpbssds_epi32(src: __m256i, a: __m256i, b: __m256i) -> __m256i",
+      "t": "X64V3Vnni2Token",
       "u": false
     },
     {
@@ -63434,6 +63443,7 @@
       "n": "_mm_dpbsud_epi32",
       "s": true,
       "sig": "fn _mm_dpbsud_epi32(src: __m128i, a: __m128i, b: __m128i) -> __m128i",
+      "t": "X64V3Vnni2Token",
       "u": false
     },
     {
@@ -63444,6 +63454,7 @@
       "n": "_mm256_dpbsud_epi32",
       "s": true,
       "sig": "fn _mm256_dpbsud_epi32(src: __m256i, a: __m256i, b: __m256i) -> __m256i",
+      "t": "X64V3Vnni2Token",
       "u": false
     },
     {
@@ -63454,6 +63465,7 @@
       "n": "_mm_dpbsuds_epi32",
       "s": true,
       "sig": "fn _mm_dpbsuds_epi32(src: __m128i, a: __m128i, b: __m128i) -> __m128i",
+      "t": "X64V3Vnni2Token",
       "u": false
     },
     {
@@ -63464,6 +63476,7 @@
       "n": "_mm256_dpbsuds_epi32",
       "s": true,
       "sig": "fn _mm256_dpbsuds_epi32(src: __m256i, a: __m256i, b: __m256i) -> __m256i",
+      "t": "X64V3Vnni2Token",
       "u": false
     },
     {
@@ -63474,6 +63487,7 @@
       "n": "_mm_dpbuud_epi32",
       "s": true,
       "sig": "fn _mm_dpbuud_epi32(src: __m128i, a: __m128i, b: __m128i) -> __m128i",
+      "t": "X64V3Vnni2Token",
       "u": false
     },
     {
@@ -63484,6 +63498,7 @@
       "n": "_mm256_dpbuud_epi32",
       "s": true,
       "sig": "fn _mm256_dpbuud_epi32(src: __m256i, a: __m256i, b: __m256i) -> __m256i",
+      "t": "X64V3Vnni2Token",
       "u": false
     },
     {
@@ -63494,6 +63509,7 @@
       "n": "_mm_dpbuuds_epi32",
       "s": true,
       "sig": "fn _mm_dpbuuds_epi32(src: __m128i, a: __m128i, b: __m128i) -> __m128i",
+      "t": "X64V3Vnni2Token",
       "u": false
     },
     {
@@ -63504,6 +63520,7 @@
       "n": "_mm256_dpbuuds_epi32",
       "s": true,
       "sig": "fn _mm256_dpbuuds_epi32(src: __m256i, a: __m256i, b: __m256i) -> __m256i",
+      "t": "X64V3Vnni2Token",
       "u": false
     },
     {
@@ -63910,6 +63927,7 @@
       "n": "_mm_bcstnebf16_ps",
       "s": false,
       "sig": "fn _mm_bcstnebf16_ps(a: *bf16) -> __m128",
+      "t": "X64V3Vnni2Token",
       "u": true
     },
     {
@@ -63920,6 +63938,7 @@
       "n": "_mm256_bcstnebf16_ps",
       "s": false,
       "sig": "fn _mm256_bcstnebf16_ps(a: *bf16) -> __m256",
+      "t": "X64V3Vnni2Token",
       "u": true
     },
     {
@@ -63930,6 +63949,7 @@
       "n": "_mm_bcstnesh_ps",
       "s": false,
       "sig": "fn _mm_bcstnesh_ps(a: *f16) -> __m128",
+      "t": "X64V3Vnni2Token",
       "u": true
     },
     {
@@ -63940,6 +63960,7 @@
       "n": "_mm256_bcstnesh_ps",
       "s": false,
       "sig": "fn _mm256_bcstnesh_ps(a: *f16) -> __m256",
+      "t": "X64V3Vnni2Token",
       "u": true
     },
     {
@@ -63950,6 +63971,7 @@
       "n": "_mm_cvtneebf16_ps",
       "s": true,
       "sig": "fn _mm_cvtneebf16_ps(a: *__m128bh) -> __m128",
+      "t": "X64V3Vnni2Token",
       "tc": "Float Cvt XMM",
       "u": true
     },
@@ -63961,6 +63983,7 @@
       "n": "_mm256_cvtneebf16_ps",
       "s": true,
       "sig": "fn _mm256_cvtneebf16_ps(a: *__m256bh) -> __m256",
+      "t": "X64V3Vnni2Token",
       "tc": "Float Cvt YMM",
       "u": true
     },
@@ -63972,6 +63995,7 @@
       "n": "_mm_cvtneeph_ps",
       "s": true,
       "sig": "fn _mm_cvtneeph_ps(a: *__m128h) -> __m128",
+      "t": "X64V3Vnni2Token",
       "tc": "Float Cvt XMM",
       "u": true
     },
@@ -63983,6 +64007,7 @@
       "n": "_mm256_cvtneeph_ps",
       "s": true,
       "sig": "fn _mm256_cvtneeph_ps(a: *__m256h) -> __m256",
+      "t": "X64V3Vnni2Token",
       "tc": "Float Cvt YMM",
       "u": true
     },
@@ -63994,6 +64019,7 @@
       "n": "_mm_cvtneobf16_ps",
       "s": true,
       "sig": "fn _mm_cvtneobf16_ps(a: *__m128bh) -> __m128",
+      "t": "X64V3Vnni2Token",
       "tc": "Float Cvt XMM",
       "u": true
     },
@@ -64005,6 +64031,7 @@
       "n": "_mm256_cvtneobf16_ps",
       "s": true,
       "sig": "fn _mm256_cvtneobf16_ps(a: *__m256bh) -> __m256",
+      "t": "X64V3Vnni2Token",
       "tc": "Float Cvt YMM",
       "u": true
     },
@@ -64016,6 +64043,7 @@
       "n": "_mm_cvtneoph_ps",
       "s": true,
       "sig": "fn _mm_cvtneoph_ps(a: *__m128h) -> __m128",
+      "t": "X64V3Vnni2Token",
       "tc": "Float Cvt XMM",
       "u": true
     },
@@ -64027,6 +64055,7 @@
       "n": "_mm256_cvtneoph_ps",
       "s": true,
       "sig": "fn _mm256_cvtneoph_ps(a: *__m256h) -> __m256",
+      "t": "X64V3Vnni2Token",
       "tc": "Float Cvt YMM",
       "u": true
     },
@@ -64038,6 +64067,7 @@
       "n": "_mm_cvtneps_avx_pbh",
       "s": true,
       "sig": "fn _mm_cvtneps_avx_pbh(a: __m128) -> __m128bh",
+      "t": "X64V3Vnni2Token",
       "tc": "Float Cvt XMM",
       "u": false
     },
@@ -64049,6 +64079,7 @@
       "n": "_mm256_cvtneps_avx_pbh",
       "s": true,
       "sig": "fn _mm256_cvtneps_avx_pbh(a: __m256) -> __m128bh",
+      "t": "X64V3Vnni2Token",
       "tc": "Float Cvt YMM",
       "u": false
     },
@@ -65182,6 +65213,7 @@
       "n": "_mm_sha1msg1_epu32",
       "s": true,
       "sig": "fn _mm_sha1msg1_epu32(a: __m128i, b: __m128i) -> __m128i",
+      "t": "X64V3VnniToken",
       "u": false
     },
     {
@@ -65192,6 +65224,7 @@
       "n": "_mm_sha1msg2_epu32",
       "s": true,
       "sig": "fn _mm_sha1msg2_epu32(a: __m128i, b: __m128i) -> __m128i",
+      "t": "X64V3VnniToken",
       "u": false
     },
     {
@@ -65202,6 +65235,7 @@
       "n": "_mm_sha1nexte_epu32",
       "s": true,
       "sig": "fn _mm_sha1nexte_epu32(a: __m128i, b: __m128i) -> __m128i",
+      "t": "X64V3VnniToken",
       "u": false
     },
     {
@@ -65212,6 +65246,7 @@
       "n": "_mm_sha1rnds4_epu32",
       "s": true,
       "sig": "fn _mm_sha1rnds4_epu32<FUNC: i32>(a: __m128i, b: __m128i) -> __m128i",
+      "t": "X64V3VnniToken",
       "u": false
     },
     {
@@ -65222,6 +65257,7 @@
       "n": "_mm_sha256msg1_epu32",
       "s": true,
       "sig": "fn _mm_sha256msg1_epu32(a: __m128i, b: __m128i) -> __m128i",
+      "t": "X64V3VnniToken",
       "u": false
     },
     {
@@ -65232,6 +65268,7 @@
       "n": "_mm_sha256msg2_epu32",
       "s": true,
       "sig": "fn _mm_sha256msg2_epu32(a: __m128i, b: __m128i) -> __m128i",
+      "t": "X64V3VnniToken",
       "u": false
     },
     {
@@ -65242,6 +65279,7 @@
       "n": "_mm_sha256rnds2_epu32",
       "s": true,
       "sig": "fn _mm_sha256rnds2_epu32(a: __m128i, b: __m128i, k: __m128i) -> __m128i",
+      "t": "X64V3VnniToken",
       "u": false
     },
     {
@@ -70624,6 +70662,7 @@
       "n": "_addcarryx_u64",
       "s": true,
       "sig": "fn _addcarryx_u64(c_in: u8, a: u64, b: u64, out: &mut u64) -> u8",
+      "t": "X64V3VnniToken",
       "u": false
     },
     {
@@ -179352,7 +179391,7 @@
       "aliases": [],
       "arch": "x86_64",
       "display": "x86-64-v3 VNNI",
-      "doc": "Proof that VEX-encoded AVX-VNNI (`avxvnni`) is available on top of `X64V3GfniCryptoToken`.",
+      "doc": "Proof that VEX-encoded AVX-VNNI (`avxvnni`), `adx`, and `sha` are available on top of `X64V3GfniCryptoToken`.",
       "features": [
         "sse",
         "sse2",
@@ -179375,7 +179414,9 @@
         "vpclmulqdq",
         "vaes",
         "gfni",
-        "avxvnni"
+        "avxvnni",
+        "adx",
+        "sha"
       ],
       "name": "X64V3VnniToken",
       "parents": [
@@ -179422,6 +179463,46 @@
         "X64CryptoToken"
       ],
       "tier": "v4"
+    },
+    {
+      "aliases": [],
+      "arch": "x86_64",
+      "display": "x86-64-v3 VNNI-2",
+      "doc": "Proof that x86-64-v3 VNNI plus cross-vendor AVX-VNNI-2 extensions are available.",
+      "features": [
+        "sse",
+        "sse2",
+        "sse3",
+        "ssse3",
+        "sse4.1",
+        "sse4.2",
+        "popcnt",
+        "cmpxchg16b",
+        "avx",
+        "avx2",
+        "fma",
+        "bmi1",
+        "bmi2",
+        "f16c",
+        "lzcnt",
+        "movbe",
+        "pclmulqdq",
+        "aes",
+        "vpclmulqdq",
+        "vaes",
+        "gfni",
+        "avxvnni",
+        "adx",
+        "sha",
+        "avxvnniint8",
+        "avxneconvert",
+        "avxifma"
+      ],
+      "name": "X64V3Vnni2Token",
+      "parents": [
+        "X64V3VnniToken"
+      ],
+      "tier": "v3_vnni2"
     },
     {
       "aliases": [

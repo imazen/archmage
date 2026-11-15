@@ -67,6 +67,19 @@ mod x86_downcast {
         }
     }
 
+    #[test]
+    fn v3_vnni2_extracts_to_v3_vnni_and_ancestors() {
+        if let Some(token) = X64V3Vnni2Token::summon() {
+            let _v3_vnni: X64V3VnniToken = token.v3_vnni();
+            let _v3_gfni_crypto: X64V3GfniCryptoToken = token.v3_gfni_crypto();
+            let _v3_crypto: X64V3CryptoToken = token.v3_crypto();
+            let _v3: X64V3Token = token.v3();
+            let _crypto: X64CryptoToken = token.x64_crypto();
+            let _v2: X64V2Token = token.v2();
+            let _v1: X64V1Token = token.v1();
+        }
+    }
+
     #[cfg(feature = "avx512")]
     #[test]
     fn v4_extracts_to_v3_v2_v1() {
@@ -266,6 +279,27 @@ mod into_concrete {
             token.as_x64v3_crypto().is_none(),
             "V3 GFNI Crypto is not V3 Crypto (different type)"
         );
+        assert!(token.as_x64v3_vnni().is_none());
+        assert!(token.as_x64v3_vnni2().is_none());
+        assert!(token.as_x64v3().is_none());
+        assert!(token.as_x64_crypto().is_none());
+        assert!(token.as_neon().is_none());
+    }
+
+    #[test]
+    fn x64v3_vnni2_into_concrete() {
+        let token = if let Some(t) = X64V3Vnni2Token::summon() {
+            t
+        } else {
+            unsafe { X64V3Vnni2Token::forge_token_dangerously() }
+        };
+        assert!(token.as_x64v3_vnni2().is_some());
+        assert!(
+            token.as_x64v3_vnni().is_none(),
+            "V3 VNNI-2 is not V3 VNNI (different type)"
+        );
+        assert!(token.as_x64v3_gfni_crypto().is_none());
+        assert!(token.as_x64v3_crypto().is_none());
         assert!(token.as_x64v3().is_none());
         assert!(token.as_x64_crypto().is_none());
         assert!(token.as_neon().is_none());

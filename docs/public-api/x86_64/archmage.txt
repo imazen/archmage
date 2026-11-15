@@ -6,32 +6,32 @@
 # impls omitted; re-export duplicates annotated `[also: path]`.
 # DO NOT EDIT BY HAND — commit regenerated changes with the code.
 #
-# files: archmage.txt 625 lines (supported surface) | archmage.features.txt 384 added (features: avx512,forge-token-api,macros,safe_unaligned_simd,std,testable_dispatch) | archmage.internal.txt 94 lines (94 hidden + 0 excluded-feature)
+# files: archmage.txt 663 lines (supported surface) | archmage.features.txt 384 added (features: avx512,forge-token-api,macros,safe_unaligned_simd,std,testable_dispatch) | archmage.internal.txt 98 lines (98 hidden + 0 excluded-feature)
 
 ## summary
 #
 #   pub modules                                 7
-#   pub types (struct/enum/trait/alias)       120
+#   pub types (struct/enum/trait/alias)       123
 #   pub consts/statics                         18
 #   pub macros                                  2
 #   free functions                              7
-#   inherent methods                          369
+#   inherent methods                          405
 #   struct fields                              12
 #   enum variants                              30
 #   re-exports                                112
-#   trait roster entries (type × trait)       179
-#   auto-trait-complete types                  25
+#   trait roster entries (type × trait)       187
+#   auto-trait-complete types                  26
 #   auto-trait exceptions                       1
 #
 # per-module pub lines:
-#   (root)                          127
+#   (root)                          129
 #   detect                            3
 #   intrinsics                       45
-#   prelude                         120
+#   prelude                         122
 #   testing                          13
-#   tokens                          369
+#   tokens                          404
 
-## items (597 lines)
+## items (634 lines)
 
 pub mod archmage
 pub use arcane
@@ -232,6 +232,17 @@ pub fn tokens::X64V3Token::forge_token_dangerously() -> Self
 pub fn tokens::X64V3Token::from_context() -> Self
 pub fn tokens::X64V3Token::v1(self) -> tokens::X64V1Token
 pub fn tokens::X64V3Token::v2(self) -> tokens::X64V2Token
+pub fn tokens::X64V3Vnni2Token::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
+pub fn tokens::X64V3Vnni2Token::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub fn tokens::X64V3Vnni2Token::forge_token_dangerously() -> Self
+pub fn tokens::X64V3Vnni2Token::from_context() -> Self
+pub fn tokens::X64V3Vnni2Token::v1(self) -> tokens::X64V1Token
+pub fn tokens::X64V3Vnni2Token::v2(self) -> tokens::X64V2Token
+pub fn tokens::X64V3Vnni2Token::v3(self) -> tokens::X64V3Token
+pub fn tokens::X64V3Vnni2Token::v3_crypto(self) -> tokens::X64V3CryptoToken
+pub fn tokens::X64V3Vnni2Token::v3_gfni_crypto(self) -> tokens::X64V3GfniCryptoToken
+pub fn tokens::X64V3Vnni2Token::v3_vnni(self) -> tokens::X64V3VnniToken
+pub fn tokens::X64V3Vnni2Token::x64_crypto(self) -> tokens::X64CryptoToken
 pub fn tokens::X64V3VnniToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
 pub fn tokens::X64V3VnniToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
 pub fn tokens::X64V3VnniToken::forge_token_dangerously() -> Self
@@ -280,6 +291,7 @@ pub fn prelude::IntoConcreteToken::as_x64v3(self) -> core::option::Option<tokens
 pub fn prelude::IntoConcreteToken::as_x64v3_crypto(self) -> core::option::Option<tokens::X64V3CryptoToken>
 pub fn prelude::IntoConcreteToken::as_x64v3_gfni_crypto(self) -> core::option::Option<tokens::X64V3GfniCryptoToken>
 pub fn prelude::IntoConcreteToken::as_x64v3_vnni(self) -> core::option::Option<tokens::X64V3VnniToken>
+pub fn prelude::IntoConcreteToken::as_x64v3_vnni2(self) -> core::option::Option<tokens::X64V3Vnni2Token>
 pub fn prelude::IntoConcreteToken::as_x64v4(self) -> core::option::Option<tokens::X64V4Token>
 pub fn prelude::IntoConcreteToken::as_x64v4x(self) -> core::option::Option<tokens::X64V4xToken>
 pub const prelude::SimdToken::DISABLE_TARGET_FEATURES: &'static str
@@ -387,6 +399,17 @@ pub fn tokens::X64V3Token::forge_token_dangerously() -> Self
 pub fn tokens::X64V3Token::from_context() -> Self
 pub fn tokens::X64V3Token::v1(self) -> tokens::X64V1Token
 pub fn tokens::X64V3Token::v2(self) -> tokens::X64V2Token
+pub fn tokens::X64V3Vnni2Token::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
+pub fn tokens::X64V3Vnni2Token::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub fn tokens::X64V3Vnni2Token::forge_token_dangerously() -> Self
+pub fn tokens::X64V3Vnni2Token::from_context() -> Self
+pub fn tokens::X64V3Vnni2Token::v1(self) -> tokens::X64V1Token
+pub fn tokens::X64V3Vnni2Token::v2(self) -> tokens::X64V2Token
+pub fn tokens::X64V3Vnni2Token::v3(self) -> tokens::X64V3Token
+pub fn tokens::X64V3Vnni2Token::v3_crypto(self) -> tokens::X64V3CryptoToken
+pub fn tokens::X64V3Vnni2Token::v3_gfni_crypto(self) -> tokens::X64V3GfniCryptoToken
+pub fn tokens::X64V3Vnni2Token::v3_vnni(self) -> tokens::X64V3VnniToken
+pub fn tokens::X64V3Vnni2Token::x64_crypto(self) -> tokens::X64CryptoToken
 pub fn tokens::X64V3VnniToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
 pub fn tokens::X64V3VnniToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
 pub fn tokens::X64V3VnniToken::forge_token_dangerously() -> Self
@@ -435,6 +458,7 @@ pub fn tokens::IntoConcreteToken::as_x64v3(self) -> core::option::Option<tokens:
 pub fn tokens::IntoConcreteToken::as_x64v3_crypto(self) -> core::option::Option<tokens::X64V3CryptoToken>
 pub fn tokens::IntoConcreteToken::as_x64v3_gfni_crypto(self) -> core::option::Option<tokens::X64V3GfniCryptoToken>
 pub fn tokens::IntoConcreteToken::as_x64v3_vnni(self) -> core::option::Option<tokens::X64V3VnniToken>
+pub fn tokens::IntoConcreteToken::as_x64v3_vnni2(self) -> core::option::Option<tokens::X64V3Vnni2Token>
 pub fn tokens::IntoConcreteToken::as_x64v4(self) -> core::option::Option<tokens::X64V4Token>
 pub fn tokens::IntoConcreteToken::as_x64v4x(self) -> core::option::Option<tokens::X64V4xToken>
 pub const tokens::SimdToken::DISABLE_TARGET_FEATURES: &'static str
@@ -549,6 +573,18 @@ pub fn tokens::X64V3Token::forge_token_dangerously() -> Self
 pub fn tokens::X64V3Token::from_context() -> Self
 pub fn tokens::X64V3Token::v1(self) -> tokens::X64V1Token
 pub fn tokens::X64V3Token::v2(self) -> tokens::X64V2Token
+pub struct X64V3Vnni2Token [also: prelude, tokens]
+pub fn tokens::X64V3Vnni2Token::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
+pub fn tokens::X64V3Vnni2Token::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub fn tokens::X64V3Vnni2Token::forge_token_dangerously() -> Self
+pub fn tokens::X64V3Vnni2Token::from_context() -> Self
+pub fn tokens::X64V3Vnni2Token::v1(self) -> tokens::X64V1Token
+pub fn tokens::X64V3Vnni2Token::v2(self) -> tokens::X64V2Token
+pub fn tokens::X64V3Vnni2Token::v3(self) -> tokens::X64V3Token
+pub fn tokens::X64V3Vnni2Token::v3_crypto(self) -> tokens::X64V3CryptoToken
+pub fn tokens::X64V3Vnni2Token::v3_gfni_crypto(self) -> tokens::X64V3GfniCryptoToken
+pub fn tokens::X64V3Vnni2Token::v3_vnni(self) -> tokens::X64V3VnniToken
+pub fn tokens::X64V3Vnni2Token::x64_crypto(self) -> tokens::X64CryptoToken
 pub struct X64V3VnniToken [also: prelude, tokens]
 pub fn tokens::X64V3VnniToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
 pub fn tokens::X64V3VnniToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
@@ -611,6 +647,7 @@ pub fn IntoConcreteToken::as_x64v3(self) -> core::option::Option<tokens::X64V3To
 pub fn IntoConcreteToken::as_x64v3_crypto(self) -> core::option::Option<tokens::X64V3CryptoToken>
 pub fn IntoConcreteToken::as_x64v3_gfni_crypto(self) -> core::option::Option<tokens::X64V3GfniCryptoToken>
 pub fn IntoConcreteToken::as_x64v3_vnni(self) -> core::option::Option<tokens::X64V3VnniToken>
+pub fn IntoConcreteToken::as_x64v3_vnni2(self) -> core::option::Option<tokens::X64V3Vnni2Token>
 pub fn IntoConcreteToken::as_x64v4(self) -> core::option::Option<tokens::X64V4Token>
 pub fn IntoConcreteToken::as_x64v4x(self) -> core::option::Option<tokens::X64V4xToken>
 pub trait SimdToken: tokens::sealed::Sealed + core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync + 'static [also: prelude, tokens]
@@ -631,7 +668,7 @@ pub type Desktop64 = tokens::X64V3Token [also: prelude, tokens]
 pub type Server64 = tokens::X64V4Token [also: prelude, tokens]
 pub type Sse2Token = tokens::X64V1Token [also: prelude, tokens]
 
-## trait impls (26 types)
+## trait impls (27 types)
 
 testing::CompileTimePolicy: Clone, Copy, Debug, Eq, PartialEq
 testing::PermutationReport: Clone, Debug, Display
@@ -656,11 +693,12 @@ tokens::X64V2Token: Clone, Copy, Debug, tokens::Has128BitSimd, tokens::HasX64V2,
 tokens::X64V3CryptoToken: Clone, Copy, Debug, tokens::Has128BitSimd, tokens::Has256BitSimd, tokens::HasX64V2, tokens::IntoConcreteToken, tokens::SimdToken
 tokens::X64V3GfniCryptoToken: Clone, Copy, Debug, tokens::Has128BitSimd, tokens::Has256BitSimd, tokens::HasX64V2, tokens::IntoConcreteToken, tokens::SimdToken
 tokens::X64V3Token: Clone, Copy, Debug, tokens::Has128BitSimd, tokens::Has256BitSimd, tokens::HasX64V2, tokens::IntoConcreteToken, tokens::SimdToken
+tokens::X64V3Vnni2Token: Clone, Copy, Debug, tokens::Has128BitSimd, tokens::Has256BitSimd, tokens::HasX64V2, tokens::IntoConcreteToken, tokens::SimdToken
 tokens::X64V3VnniToken: Clone, Copy, Debug, tokens::Has128BitSimd, tokens::Has256BitSimd, tokens::HasX64V2, tokens::IntoConcreteToken, tokens::SimdToken
 tokens::X64V4Token: Clone, Copy, Debug, tokens::Has128BitSimd, tokens::Has256BitSimd, tokens::Has512BitSimd, tokens::HasX64V2, tokens::HasX64V4, tokens::IntoConcreteToken, tokens::SimdToken
 tokens::X64V4xToken: Clone, Copy, Debug, tokens::Has128BitSimd, tokens::Has256BitSimd, tokens::Has512BitSimd, tokens::HasX64V2, tokens::HasX64V4, tokens::IntoConcreteToken, tokens::SimdToken
 
 ## auto traits
 
-25 types implement all of: Freeze, RefUnwindSafe, Send, Sync, Unpin, UnwindSafe
+26 types implement all of: Freeze, RefUnwindSafe, Send, Sync, Unpin, UnwindSafe
 testing::TokenTestGuard: !Send
