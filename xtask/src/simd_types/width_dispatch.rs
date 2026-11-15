@@ -1,7 +1,8 @@
 //! Width dispatch code generation.
 //!
 //! Generates `magetypes/src/width.rs` with the `WidthDispatch` trait and
-//! implementations for X64V3Token, NeonToken, and Wasm128Token.
+//! a unified blanket implementation for every token supporting all 128/256-bit
+//! backend traits.
 
 use crate::registry::Registry;
 use indoc::formatdoc;
@@ -104,95 +105,6 @@ fn assoc_type_name(elem: &ElemType, width: u32) -> String {
     )
 }
 
-/// What kind of constructor strategy to use.
-enum Strategy {
-    /// Native width or narrower: pass self directly. `type_name::splat_t(self, v)`
-    /// Works because wider tokens downcast to narrower tokens' required type.
-    Native,
-    /// Polyfill exists: `poly_mod::type_name::splat_t(self, v)`
-    Polyfill { poly_mod: &'static str },
-    /// No polyfill: array of w128. `[part, part, part, part]`
-    Array { w128_type: String, chunks: u32 },
-}
-
-/// Token implementation config.
-struct TokenConfig {
-    token: &'static str,
-    cfg: &'static str,
-    mod_name: &'static str,
-    native_width: u32,
-    /// Polyfill module for w256 (when native is 128)
-    poly_w256: Option<&'static str>,
-    /// Polyfill module for w512
-    poly_w512: Option<&'static str>,
-}
-
-const TOKEN_CONFIGS: &[TokenConfig] = &[
-    TokenConfig {
-        token: "X64V3Token",
-        cfg: "target_arch = \"x86_64\"",
-        mod_name: "x86_impl",
-        native_width: 256,
-        poly_w256: None, // native
-        // 512-bit: array of four native 128-bit parts. The generic
-        // `simd::v3::f32x16` (2×256 polyfill) is `w512`-feature-gated, but this
-        // trait is compiled unconditionally, so it uses the always-available
-        // array form — the same fallback ARM/WASM use.
-        poly_w512: None,
-    },
-    TokenConfig {
-        token: "NeonToken",
-        cfg: "target_arch = \"aarch64\"",
-        mod_name: "arm_impl",
-        native_width: 128,
-        // 256-bit via the generic `simd::neon` namespace (2×128 polyfill lives
-        // inside the backend now; the old concrete `polyfill::neon` is retired).
-        poly_w256: Some("crate::simd::neon"),
-        poly_w512: None, // array fallback
-    },
-    TokenConfig {
-        token: "Wasm128Token",
-        cfg: "target_arch = \"wasm32\"",
-        mod_name: "wasm_impl",
-        native_width: 128,
-        poly_w256: Some("crate::simd::wasm128"),
-        poly_w512: None, // array fallback
-    },
-];
-
-fn strategy(tc: &TokenConfig, elem: &ElemType, width: u32) -> Strategy {
-    match width {
-        128 => {
-            // Native or narrower than native: pass self directly.
-            // e.g. X64V3Token (native 256) can be passed to w128 types
-            // that accept X64V3Token — no forging needed.
-            Strategy::Native
-        }
-        256 => {
-            if tc.native_width >= 256 {
-                Strategy::Native
-            } else if let Some(poly) = tc.poly_w256 {
-                Strategy::Polyfill { poly_mod: poly }
-            } else {
-                unreachable!("no w256 strategy for {}", tc.token);
-            }
-        }
-        512 => {
-            if let Some(poly) = tc.poly_w512 {
-                Strategy::Polyfill { poly_mod: poly }
-            } else {
-                // Array of w128 parts
-                let chunks = 512 / 128;
-                Strategy::Array {
-                    w128_type: type_name(elem, 128),
-                    chunks,
-                }
-            }
-        }
-        _ => unreachable!(),
-    }
-}
-
 /// Generate the trait definition.
 fn generate_trait_def() -> String {
     let mut code = String::with_capacity(4096);
@@ -236,178 +148,125 @@ fn generate_trait_def() -> String {
     code
 }
 
-/// Generate a constructor body based on strategy.
-fn gen_splat(strat: &Strategy, _tc: &TokenConfig, tn: &str, scalar: &str) -> String {
-    match strat {
-        Strategy::Native => format!("{tn}::splat_t(self, v)"),
-        Strategy::Polyfill { poly_mod } => format!("{poly_mod}::{tn}::splat_t(self, v)"),
-        Strategy::Array { w128_type, .. } => {
-            let _ = scalar;
-            formatdoc! {r#"
-                {{
-                            let part = {w128_type}::splat_t(self, v);
-                            [part, part, part, part]
-                        }}"#
-            }
-        }
-    }
-}
-
-fn gen_zero(strat: &Strategy, _tc: &TokenConfig, tn: &str) -> String {
-    match strat {
-        Strategy::Native => format!("{tn}::zero_t(self)"),
-        Strategy::Polyfill { poly_mod } => format!("{poly_mod}::{tn}::zero_t(self)"),
-        Strategy::Array { w128_type, .. } => {
-            formatdoc! {r#"
-                {{
-                            let part = {w128_type}::zero_t(self);
-                            [part, part, part, part]
-                        }}"#
-            }
-        }
-    }
-}
-
-fn gen_load(strat: &Strategy, _tc: &TokenConfig, tn: &str, elem: &ElemType, width: u32) -> String {
-    match strat {
-        Strategy::Native => format!("{tn}::load_t(self, data)"),
-        Strategy::Polyfill { poly_mod } => format!("{poly_mod}::{tn}::load_t(self, data)"),
-        Strategy::Array { w128_type, chunks } => {
-            let w128_lanes = lanes(elem, 128);
-            let mut parts = String::new();
-            for i in 0..*chunks {
-                let start = i * w128_lanes;
-                let end = start + w128_lanes;
-                if i > 0 {
-                    parts.push_str(",\n                    ");
-                }
-                parts.push_str(&format!(
-                    "{w128_type}::load_t(self, data[{start}..{end}].try_into().unwrap())"
-                ));
-            }
-            let _ = width;
-            formatdoc! {r#"
-                {{
-                            [
-                                {parts}
-                            ]
-                        }}"#
-            }
-        }
-    }
-}
-
-/// Generate the associated type for a given token config + element + width.
-fn gen_assoc_type(tc: &TokenConfig, elem: &ElemType, width: u32) -> String {
-    let strat = strategy(tc, elem, width);
-    let tn = type_name(elem, width);
-    match strat {
-        Strategy::Native => tn,
-        Strategy::Polyfill { poly_mod } => format!("{poly_mod}::{tn}"),
-        Strategy::Array { w128_type, chunks } => {
-            format!("[{w128_type}; {chunks}]")
-        }
-    }
-}
-
-/// Generate a full impl block for one token config.
-fn generate_impl_block(tc: &TokenConfig) -> String {
-    let mut code = String::with_capacity(8192);
-    let token = tc.token;
-    let cfg = tc.cfg;
-    let mod_name = tc.mod_name;
-
-    // Module wrapper with cfg + imports
-    code.push_str(&format!(
-        "#[cfg({cfg})]\nmod {mod_name} {{\n    use super::WidthDispatch;\n    use archmage::{token};\n"
-    ));
-
-    // Collect all native imports needed
-    let mut native_imports: Vec<String> = Vec::new();
-
-    for &width in WIDTHS {
-        for elem in ELEM_TYPES {
-            let strat = strategy(tc, elem, width);
-            let tn = type_name(elem, width);
-            match &strat {
-                Strategy::Native => {
-                    if !native_imports.contains(&tn) {
-                        native_imports.push(tn);
-                    }
-                }
-                Strategy::Polyfill { .. } => {
-                    // Polyfill types use full path, no import needed
-                }
-                Strategy::Array { w128_type, .. } => {
-                    if !native_imports.contains(w128_type) {
-                        native_imports.push(w128_type.clone());
-                    }
-                }
-            }
-        }
-    }
-
-    // Write native type imports
-    if !native_imports.is_empty() {
-        native_imports.sort();
-        let imports = native_imports.join(", ");
-        code.push_str(&format!("\n    use crate::simd::{{{imports}}};\n"));
-    }
-
-    // Start impl block
-    code.push_str(&format!("\n    impl WidthDispatch for {token} {{\n"));
-
-    // Associated types
-    for &width in WIDTHS {
-        code.push_str(&format!("        // {width}-bit types\n"));
+/// Narrow (128-bit and 256-bit) backend traits required by the blanket
+/// `WidthDispatch` implementation.
+fn narrow_backend_bounds() -> String {
+    let mut bounds = Vec::new();
+    for &width in &[128u32, 256u32] {
         for elem in ELEM_TYPES {
             let assoc = assoc_type_name(elem, width);
-            let concrete = gen_assoc_type(tc, elem, width);
-            code.push_str(&format!("        type {assoc} = {concrete};\n"));
+            bounds.push(format!("crate::simd::backends::{assoc}Backend"));
+        }
+    }
+    bounds.join("\n        + ")
+}
+
+/// Generate the single blanket `impl<T> WidthDispatch for T` block.
+fn generate_blanket_impl_block() -> String {
+    let mut code = String::with_capacity(8192);
+    let bounds = narrow_backend_bounds();
+
+    code.push_str(&formatdoc! {r#"
+        use crate::simd::generic;
+
+        impl<T> WidthDispatch for T
+        where
+            T: SimdToken
+                + Copy
+                + {bounds},
+        {{
+    "#});
+
+    for &width in WIDTHS {
+        code.push_str(&format!("    // {width}-bit types\n"));
+        for elem in ELEM_TYPES {
+            let assoc = assoc_type_name(elem, width);
+            let concrete = if width == 512 {
+                let w128 = type_name(elem, 128);
+                format!("[generic::{w128}<T>; 4]")
+            } else {
+                let tn = type_name(elem, width);
+                format!("generic::{tn}<T>")
+            };
+            code.push_str(&format!("    type {assoc} = {concrete};\n"));
         }
         code.push('\n');
     }
 
-    // Constructor methods
     for &width in WIDTHS {
         for elem in ELEM_TYPES {
             let tn = type_name(elem, width);
             let assoc = assoc_type_name(elem, width);
             let scalar = elem.scalar;
             let l = lanes(elem, width);
-            let strat = strategy(tc, elem, width);
 
-            let splat_body = gen_splat(&strat, tc, &tn, scalar);
-            let zero_body = gen_zero(&strat, tc, &tn);
-            let load_body = gen_load(&strat, tc, &tn, elem, width);
+            let (splat_body, zero_body, load_body) = if width == 512 {
+                let w128 = type_name(elem, 128);
+                let w128_lanes = lanes(elem, 128);
+                let mut parts = Vec::with_capacity(4);
+                for i in 0..4 {
+                    let start = i * w128_lanes;
+                    let end = start + w128_lanes;
+                    parts.push(format!(
+                        "generic::{w128}::load_t(self, data[{start}..{end}].try_into().unwrap())"
+                    ));
+                }
+                let joined = parts.join(",\n                ");
+                (
+                    formatdoc! {r#"
+                        {{
+                                    let part = generic::{w128}::splat_t(self, v);
+                                    [part, part, part, part]
+                                }}"#
+                    },
+                    formatdoc! {r#"
+                        {{
+                                    let part = generic::{w128}::zero_t(self);
+                                    [part, part, part, part]
+                                }}"#
+                    },
+                    formatdoc! {r#"
+                        {{
+                                    [
+                                        {joined}
+                                    ]
+                                }}"#
+                    },
+                )
+            } else {
+                (
+                    format!("generic::{tn}::splat_t(self, v)"),
+                    format!("generic::{tn}::zero_t(self)"),
+                    format!("generic::{tn}::load_t(self, data)"),
+                )
+            };
 
             code.push_str(&formatdoc! {r#"
-                        #[inline(always)]
-                        fn {tn}_splat(self, v: {scalar}) -> Self::{assoc} {{
-                            {splat_body}
-                        }}
+                    #[inline(always)]
+                    fn {tn}_splat(self, v: {scalar}) -> Self::{assoc} {{
+                        {splat_body}
+                    }}
 
-                        #[inline(always)]
-                        fn {tn}_zero(self) -> Self::{assoc} {{
-                            {zero_body}
-                        }}
+                    #[inline(always)]
+                    fn {tn}_zero(self) -> Self::{assoc} {{
+                        {zero_body}
+                    }}
 
-                        #[inline(always)]
-                        fn {tn}_load(self, data: &[{scalar}; {l}]) -> Self::{assoc} {{
-                            {load_body}
-                        }}
+                    #[inline(always)]
+                    fn {tn}_load(self, data: &[{scalar}; {l}]) -> Self::{assoc} {{
+                        {load_body}
+                    }}
             "#});
         }
     }
 
-    // Close impl + module
-    code.push_str("    }\n}\n");
+    code.push_str("}\n");
     code
 }
 
 /// Generate the complete width.rs file.
 pub fn generate_width_dispatch(_reg: &Registry) -> String {
-    let mut code = String::with_capacity(32768);
+    let mut code = String::with_capacity(16384);
 
     code.push_str(
         r#"//! Width dispatch trait for token-based SIMD type construction.
@@ -425,15 +284,8 @@ use archmage::SimdToken;
 "#,
     );
 
-    // Trait definition
     code.push_str(&generate_trait_def());
     code.push('\n');
-
-    // Impl blocks for each token
-    for tc in TOKEN_CONFIGS {
-        code.push_str(&generate_impl_block(tc));
-        code.push('\n');
-    }
-
+    code.push_str(&generate_blanket_impl_block());
     code
 }

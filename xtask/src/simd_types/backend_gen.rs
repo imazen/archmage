@@ -460,8 +460,8 @@ pub fn generate_backend_files() -> BTreeMap<String, String> {
     let w512_types = all_w512_types();
     let mut files = BTreeMap::new();
 
-    // 1. sealed.rs
-    files.insert("backends/sealed.rs".to_string(), generate_sealed());
+    // 1. sealed.rs is emitted together with ops.rs and impls/delegated.rs in step 10c below
+    // once all public backend trait definitions are in `files`.
 
     // 2. Backend trait definitions (float)
     for ty in &types {
@@ -539,87 +539,114 @@ pub fn generate_backend_files() -> BTreeMap<String, String> {
         ),
     );
 
-    // 10. Implementation files
+    // 10. Canonical base implementation files (`*Ops` traits)
     files.insert(
         "impls/x86_v3.rs".to_string(),
-        generate_x86_impls(&types, "X64V3Token", 256)
-            + &generate_x86_i32_impls(&i32_types, "X64V3Token", 256)
-            + &generate_x86_u32_impls(&u32_types, "X64V3Token", 256)
-            + &generate_x86_i64_impls(&i64_types, "X64V3Token", 256)
-            + &generate_x86_int_impls(&remaining_int_types, "X64V3Token", 256)
-            + &generate_x86_convert_impls("X64V3Token")
-            + &generate_x86_additional_convert_impls("X64V3Token")
-            + &gate_w512_impls(generate_x86_v3_w512_impls(&w512_types)),
+        super::unify_gen::to_ops_impls(
+            &(generate_x86_impls(&types, "X64V3Token", 256)
+                + &generate_x86_i32_impls(&i32_types, "X64V3Token", 256)
+                + &generate_x86_u32_impls(&u32_types, "X64V3Token", 256)
+                + &generate_x86_i64_impls(&i64_types, "X64V3Token", 256)
+                + &generate_x86_int_impls(&remaining_int_types, "X64V3Token", 256)
+                + &generate_x86_convert_impls("X64V3Token")
+                + &generate_x86_additional_convert_impls("X64V3Token")
+                + &gate_w512_impls(generate_x86_v3_w512_impls(&w512_types))),
+        ),
     );
     files.insert(
         "impls/scalar.rs".to_string(),
-        generate_scalar_impls(&types)
-            + &generate_scalar_i32_impls(&i32_types)
-            + &generate_scalar_u32_impls(&u32_types)
-            + &generate_scalar_i64_impls(&i64_types)
-            + &generate_scalar_int_impls(&remaining_int_types)
-            + &generate_scalar_convert_impls()
-            + &generate_scalar_additional_convert_impls()
-            + &gate_w512_impls(generate_scalar_w512_impls(&w512_types)),
+        super::unify_gen::to_ops_impls(
+            &(generate_scalar_impls(&types)
+                + &generate_scalar_i32_impls(&i32_types)
+                + &generate_scalar_u32_impls(&u32_types)
+                + &generate_scalar_i64_impls(&i64_types)
+                + &generate_scalar_int_impls(&remaining_int_types)
+                + &generate_scalar_convert_impls()
+                + &generate_scalar_additional_convert_impls()
+                + &gate_w512_impls(generate_scalar_w512_impls(&w512_types))),
+        ),
     );
     files.insert(
         "impls/arm_neon.rs".to_string(),
-        generate_neon_impls(&types)
-            + &generate_neon_i32_impls(&i32_types)
-            + &generate_neon_u32_impls(&u32_types)
-            + &generate_neon_i64_impls(&i64_types)
-            + &generate_neon_int_impls(&remaining_int_types)
-            + &generate_neon_convert_impls()
-            + &generate_neon_additional_convert_impls()
-            + &gate_w512_impls(generate_neon_w512_impls(&w512_types)),
+        super::unify_gen::to_ops_impls(
+            &(generate_neon_impls(&types)
+                + &generate_neon_i32_impls(&i32_types)
+                + &generate_neon_u32_impls(&u32_types)
+                + &generate_neon_i64_impls(&i64_types)
+                + &generate_neon_int_impls(&remaining_int_types)
+                + &generate_neon_convert_impls()
+                + &generate_neon_additional_convert_impls()
+                + &gate_w512_impls(generate_neon_w512_impls(&w512_types))),
+        ),
     );
     files.insert(
         "impls/wasm128.rs".to_string(),
-        generate_wasm_impls(&types)
-            + &generate_wasm_i32_impls(&i32_types)
-            + &generate_wasm_u32_impls(&u32_types)
-            + &generate_wasm_i64_impls(&i64_types)
-            + &generate_wasm_int_impls(&remaining_int_types)
-            + &generate_wasm_convert_impls()
-            + &generate_wasm_additional_convert_impls()
-            + &gate_w512_impls(generate_wasm_w512_impls(&w512_types)),
-    );
-
-    // 10b. x86 V4 native AVX-512 implementation (W512 types only). Already
-    // gated by `feature = "avx512"` at the `mod x86_v4` declaration, but we
-    // also need the individual impls to be `w512`-gated because `avx512`
-    // implies `w512` (and we want a single gate scheme).
-    files.insert(
-        "impls/x86_v4.rs".to_string(),
-        gate_w512_impls(generate_x86_v4_impls_file(&w512_types)),
-    );
-
-    // 10c. The AVX-512 tokens' W128/W256 f32 backends, forwarded to V3's,
-    // derived from the trait definitions generated above so no method can be
-    // left to its scalar default body.
-    files.insert(
-        "impls/x86_v4_f32_delegated.rs".to_string(),
-        super::v4_delegation_gen::generate(
-            &files["backends/f32x4.rs"],
-            &files["backends/f32x8.rs"],
+        super::unify_gen::to_ops_impls(
+            &(generate_wasm_impls(&types)
+                + &generate_wasm_i32_impls(&i32_types)
+                + &generate_wasm_u32_impls(&u32_types)
+                + &generate_wasm_i64_impls(&i64_types)
+                + &generate_wasm_int_impls(&remaining_int_types)
+                + &generate_wasm_convert_impls()
+                + &generate_wasm_additional_convert_impls()
+                + &gate_w512_impls(generate_wasm_w512_impls(&w512_types))),
         ),
     );
 
-    // 10d. Every other W128/W256 backend — f64, i8/i16/i32/i64, u8/u16/u32/u64
-    // — plus the float↔int `*Convert` and `*Bitcast` traits, delegated to
-    // V3 the same way. Without these, `T: F64x4Backend` / `T: F32x8Convert`
-    // generic kernels cannot accept a V4 token (the iwssim `+v4` blocker).
-    // Popcnt extension backends are excluded: they exist only natively on
-    // V4x (AVX-512 VPOPCNTDQ) and have no V3 impls to forward to.
+    // 10b. x86 V4 native AVX-512 implementation (W512 `*Ops` for X64V4Token plus
+    // `*PopcntBackend` extension traits for X64V4xToken). Already gated by
+    // `feature = "avx512"` at `mod x86_v4`, and also `w512`-gated per impl.
+    files.insert(
+        "impls/x86_v4.rs".to_string(),
+        super::unify_gen::to_ops_impls(&gate_w512_impls(generate_x86_v4_impls_file(&w512_types))),
+    );
+
+    // 10c. Canonical `*Ops` traits (`backends/ops.rs`), 21-token `Sealed` map
+    // (`backends/sealed.rs`), and single blanket impls for all 43 unified
+    // `*Backend`/`*Convert`/`*Bitcast` traits (`impls/delegated.rs`).
     {
-        let mut specs: Vec<(String, String)> = Vec::new();
-        for name in [
-            "f64x2", "f64x4", "i8x16", "i8x32", "i16x8", "i16x16", "i32x4", "i32x8", "i64x2",
-            "i64x4", "u8x16", "u8x32", "u16x8", "u16x16", "u32x4", "u32x8", "u64x2", "u64x4",
-        ] {
-            // `f64x4` → `F64x4Backend`, `u8x16` → `U8x16Backend`, …
-            let trait_name = format!("{}Backend", name[..1].to_uppercase() + &name[1..]);
-            specs.push((trait_name, files[&format!("backends/{name}.rs")].clone()));
+        let mut specs: Vec<(String, String, bool)> = Vec::with_capacity(43);
+        for ty in &types {
+            specs.push((
+                ty.trait_name(),
+                files[&format!("backends/{}.rs", ty.name())].clone(),
+                false,
+            ));
+        }
+        for ty in &i32_types {
+            specs.push((
+                ty.trait_name(),
+                files[&format!("backends/{}.rs", ty.name())].clone(),
+                false,
+            ));
+        }
+        for ty in &u32_types {
+            specs.push((
+                ty.trait_name(),
+                files[&format!("backends/{}.rs", ty.name())].clone(),
+                false,
+            ));
+        }
+        for ty in &i64_types {
+            specs.push((
+                ty.trait_name(),
+                files[&format!("backends/{}.rs", ty.name())].clone(),
+                false,
+            ));
+        }
+        for ty in &remaining_int_types {
+            specs.push((
+                ty.trait_name(),
+                files[&format!("backends/{}.rs", ty.name())].clone(),
+                false,
+            ));
+        }
+        for ty in &w512_types {
+            specs.push((
+                ty.trait_name(),
+                files[&format!("backends/{}.rs", ty.name())].clone(),
+                true,
+            ));
         }
         for name in [
             "F32x4Convert",
@@ -629,8 +656,17 @@ pub fn generate_backend_files() -> BTreeMap<String, String> {
             "I64x2Bitcast",
             "I64x4Bitcast",
         ] {
-            specs.push((name.to_string(), files["backends/convert.rs"].clone()));
+            specs.push((
+                name.to_string(),
+                files["backends/convert.rs"].clone(),
+                false,
+            ));
         }
+        specs.push((
+            "F32x16Convert".to_string(),
+            files["backends/convert.rs"].clone(),
+            true,
+        ));
         for name in [
             "I8x16Bitcast",
             "I8x32Bitcast",
@@ -639,86 +675,24 @@ pub fn generate_backend_files() -> BTreeMap<String, String> {
             "U64x2Bitcast",
             "U64x4Bitcast",
         ] {
-            specs.push((name.to_string(), files["backends/convert_int.rs"].clone()));
+            specs.push((
+                name.to_string(),
+                files["backends/convert_int.rs"].clone(),
+                false,
+            ));
         }
-        files.insert(
-            "impls/x86_v4_narrow_delegated.rs".to_string(),
-            super::v4_delegation_gen::generate_narrow(&specs),
-        );
 
-        // 10e. X64V4xToken W512 backends + F32x16Convert delegated to
-        // X64V4Token (`self.v4()`), plus Wasm128RelaxedFmaToken's full 43-trait
-        // delegation to Wasm128Token (`self.wasm128()`) with single-rounding
-        // relaxed FMA overrides.
-        let mut w128_w256_all_specs = vec![
-            (
-                "F32x4Backend".to_string(),
-                files["backends/f32x4.rs"].clone(),
-            ),
-            (
-                "F32x8Backend".to_string(),
-                files["backends/f32x8.rs"].clone(),
-            ),
-        ];
-        w128_w256_all_specs.extend(specs);
-
-        let mut w512_specs: Vec<(String, String)> = w512_types
-            .iter()
-            .map(|ty| {
-                (
-                    ty.trait_name(),
-                    files[&format!("backends/{}.rs", ty.name())].clone(),
-                )
-            })
-            .collect();
-        w512_specs.push((
-            "F32x16Convert".to_string(),
-            files["backends/convert.rs"].clone(),
-        ));
-
-        files.insert(
-            "impls/x86_v4_w512_delegated.rs".to_string(),
-            super::v4_delegation_gen::generate_v4x_w512(&w512_specs),
-        );
-        files.insert(
-            "impls/wasm128_fma_delegated.rs".to_string(),
-            super::v4_delegation_gen::generate_wasm_fma(&w128_w256_all_specs, &w512_specs),
-        );
+        let (ops_rs, sealed_rs, delegated_rs) =
+            super::unify_gen::generate_ops_and_sealed_and_delegated(&specs);
+        files.insert("backends/ops.rs".to_string(), ops_rs);
+        files.insert("backends/sealed.rs".to_string(), sealed_rs);
+        files.insert("impls/delegated.rs".to_string(), delegated_rs);
     }
 
     // 11. impls/mod.rs
     files.insert("impls/mod.rs".to_string(), generate_impls_mod());
 
     files
-}
-
-// ============================================================================
-// Sealed Trait
-// ============================================================================
-
-fn generate_sealed() -> String {
-    formatdoc! {r#"
-        //! Sealed trait to prevent external implementations of backend traits.
-        //!
-        //! **Auto-generated** by `cargo xtask generate` - do not edit manually.
-
-        /// Sealed trait — only archmage token types can implement backend traits.
-        pub trait Sealed {{}}
-
-        impl Sealed for archmage::X64V1Token {{}}
-        impl Sealed for archmage::X64V2Token {{}}
-        impl Sealed for archmage::X64V3Token {{}}
-        impl Sealed for archmage::X64V4Token {{}}
-        impl Sealed for archmage::X64V4xToken {{}}
-        impl Sealed for archmage::Avx512Fp16Token {{}}
-        impl Sealed for archmage::NeonToken {{}}
-        impl Sealed for archmage::NeonAesToken {{}}
-        impl Sealed for archmage::NeonSha3Token {{}}
-        impl Sealed for archmage::NeonCrcToken {{}}
-        impl Sealed for archmage::Wasm128Token {{}}
-        impl Sealed for archmage::Wasm128RelaxedFmaToken {{}}
-        impl Sealed for archmage::ScalarToken {{}}
-    "#}
 }
 
 // ============================================================================
@@ -1214,6 +1188,7 @@ fn generate_backends_mod(
 
         #![allow(non_camel_case_types)]
 
+        pub(crate) mod ops;
         pub(crate) mod sealed;
 
     "#};
@@ -1321,21 +1296,9 @@ fn generate_impls_mod() -> String {
         #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
         mod x86_v4;
 
-        // The AVX-512 tokens' W128 / W256 f32 backends, forwarded to V3's
-        // (generated from the trait definitions; V4 ⊃ V3, so delegating is
-        // sound), plus the hand-written AVX-512VL pixel-packing overrides.
+        // Hand-written AVX-512VL pixel-packing overrides called by `Sealed` hooks.
         #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-        mod x86_v4_f32_delegated;
-        #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-        mod x86_v4_f32_overrides;
-        // The remaining W128 / W256 backends (f64 + int families) and the
-        // float↔int convert/bitcast traits, forwarded to V3's the same way.
-        #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-        mod x86_v4_narrow_delegated;
-        // X64V4xToken's base W512 backends + F32x16Convert, forwarded to
-        // X64V4Token (`self.v4()`).
-        #[cfg(all(target_arch = "x86_64", feature = "avx512", feature = "w512"))]
-        mod x86_v4_w512_delegated;
+        pub(crate) mod x86_v4_f32_overrides;
 
         #[cfg(target_arch = "aarch64")]
         mod arm_neon;
@@ -1347,15 +1310,13 @@ fn generate_impls_mod() -> String {
             target_feature = "simd128",
             target_feature = "relaxed-simd"
         ))]
-        mod wasm128_fma_delegated;
-        #[cfg(all(
-            target_arch = "wasm32",
-            target_feature = "simd128",
-            target_feature = "relaxed-simd"
-        ))]
-        mod wasm128_fma_overrides;
+        pub(crate) mod wasm128_fma_overrides;
 
         mod scalar;
+
+        // Single blanket impls over `SimdToken + Sealed` for all 43 unified
+        // `*Backend` / `*Convert` / `*Bitcast` traits.
+        mod delegated;
     "#}
 }
 
@@ -1392,10 +1353,10 @@ fn impls_safety_contract(token_desc: &str) -> String {
     "#}
 }
 
-/// Contains W512 backend impls for X64V4Token plus Modern-specific extension
-/// impls (popcnt) for X64V4xToken.
-/// X64V4xToken's base W512 backends + F32x16Convert are delegated to X64V4Token
-/// in `impls/x86_v4_w512_delegated.rs`. W128 and W256 types delegate to X64V3Token.
+/// Contains W512 `*Ops` backend impls for X64V4Token plus Modern-specific
+/// extension impls (popcnt) for X64V4xToken.
+/// All public `*Backend` / `*Convert` / `*Bitcast` traits delegate to `*Ops`
+/// via `Sealed` + blanket impls in `impls/delegated.rs`.
 fn generate_x86_v4_impls_file(w512_types: &[super::backend_gen_w512::W512Type]) -> String {
     use super::backend_gen_w512::{generate_popcnt_impls, generate_x86_v4_w512_impls};
 
@@ -1403,12 +1364,12 @@ fn generate_x86_v4_impls_file(w512_types: &[super::backend_gen_w512::W512Type]) 
     let mut code = formatdoc! {r#"
         //! Backend implementations for X64V4Token and X64V4xToken (native AVX-512).
         //!
-        //! Implements the W512 backend traits using native 512-bit AVX-512 intrinsics
+        //! Implements the W512 `*Ops` traits using native 512-bit AVX-512 intrinsics
         //! for X64V4Token (base AVX-512), and Modern-only popcnt extension traits for
         //! X64V4xToken (+ VPOPCNTDQ, BITALG).
         //!
-        //! X64V4xToken's base W512 backends and F32x16Convert forward to X64V4Token in
-        //! `x86_v4_w512_delegated.rs`. W128 and W256 types delegate to X64V3Token.
+        //! All public `*Backend` / `*Convert` / `*Bitcast` traits delegate via
+        //! `Sealed` in `impls/delegated.rs`.
         //!
         //! **Auto-generated** by `cargo xtask generate` - do not edit manually.
         //!
@@ -1443,7 +1404,7 @@ fn generate_x86_v4_impls_file(w512_types: &[super::backend_gen_w512::W512Type]) 
     );
     code.push_str(&generate_popcnt_impls(w512_types));
 
-    // F32x16Convert impl for V4 (V4x delegates in x86_v4_w512_delegated.rs)
+    // F32x16Convert impl for V4 (all other tokens delegate via backends/sealed.rs + impls/delegated.rs)
     code.push_str(
         "\n// ============================================================================\n",
     );

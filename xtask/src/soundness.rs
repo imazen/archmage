@@ -116,8 +116,8 @@ const MIN_VERIFIED_CALLS: usize = 4000;
 /// churn doesn't trip them.
 const REQUIRED_FILE_FLOORS: &[(&str, usize)] = &[
     ("magetypes/src/simd/impls/x86_v3.rs", 750), // measured 1260
-    // Measured 589 after delegating X64V4xToken's duplicate base W512 backends
-    // to X64V4Token in x86_v4_w512_delegated.rs (was 1056 with duplicated impls).
+    // Measured 590 after delegating X64V4xToken's duplicate base W512 backends
+    // via backends/sealed.rs + impls/delegated.rs (was 1056 with duplicated impls).
     ("magetypes/src/simd/impls/x86_v4.rs", 440),
     ("magetypes/src/simd/impls/arm_neon.rs", 1080), // measured 1705
     ("magetypes/src/simd/impls/wasm128.rs", 700),   // measured 1227
@@ -824,7 +824,7 @@ fn structural_rules(rel: &str, text: &str, errors: &mut Vec<String>) {
     // (The compile-fail tests in bypass_adversarial.rs prove a sample of
     // methods reject this; this rule covers all of them mechanically.)
     if rel.starts_with("magetypes/src/simd/backends/") {
-        let trait_re = Regex::new(r"\btrait\s+\w+Backend\b[^{]*").expect("trait regex");
+        let trait_re = Regex::new(r"\btrait\s+\w+(?:Backend|Ops)\b[^{]*").expect("trait regex");
         let fn_re = Regex::new(r"\bfn\s+(\w+)\s*\(([^)]*)").expect("trait fn regex");
         for m in trait_re.find_iter(text) {
             let Some(open) = find_char_from(text, m.end(), b'{') else {

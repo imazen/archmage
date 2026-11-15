@@ -11,7 +11,7 @@
     clippy::unnecessary_cast
 )]
 
-use crate::simd::backends::*;
+use crate::simd::backends::ops::*;
 
 // Helpers to avoid trait method name shadowing inside the impl block.
 // Inside `impl XxxBackend`, names like `sqrt`, `floor`, etc. resolve to
@@ -55,7 +55,7 @@ fn f64_round(x: f64) -> f64 {
     crate::nostd_math::roundeven(x)
 }
 
-impl F32x4Backend for archmage::ScalarToken {
+impl F32x4Ops for archmage::ScalarToken {
     type Repr = [f32; 4];
 
     // ====== Construction ======
@@ -465,7 +465,7 @@ impl F32x4Backend for archmage::ScalarToken {
     }
 }
 
-impl F32x8Backend for archmage::ScalarToken {
+impl F32x8Ops for archmage::ScalarToken {
     type Repr = [f32; 8];
 
     // ====== Construction ======
@@ -951,7 +951,7 @@ impl F32x8Backend for archmage::ScalarToken {
     }
 }
 
-impl F64x2Backend for archmage::ScalarToken {
+impl F64x2Ops for archmage::ScalarToken {
     type Repr = [f64; 2];
 
     // ====== Construction ======
@@ -1279,7 +1279,7 @@ impl F64x2Backend for archmage::ScalarToken {
     }
 }
 
-impl F64x4Backend for archmage::ScalarToken {
+impl F64x4Ops for archmage::ScalarToken {
     type Repr = [f64; 4];
 
     // ====== Construction ======
@@ -1637,7 +1637,7 @@ impl F64x4Backend for archmage::ScalarToken {
     }
 }
 
-impl I32x4Backend for archmage::ScalarToken {
+impl I32x4Ops for archmage::ScalarToken {
     type Repr = [i32; 4];
 
     // ====== Construction ======
@@ -1932,7 +1932,7 @@ impl I32x4Backend for archmage::ScalarToken {
     }
 }
 
-impl I32x8Backend for archmage::ScalarToken {
+impl I32x8Ops for archmage::ScalarToken {
     type Repr = [i32; 8];
 
     // ====== Construction ======
@@ -2324,7 +2324,7 @@ impl I32x8Backend for archmage::ScalarToken {
     }
 }
 
-impl U32x4Backend for archmage::ScalarToken {
+impl U32x4Ops for archmage::ScalarToken {
     type Repr = [u32; 4];
 
     // ====== Construction ======
@@ -2565,7 +2565,7 @@ impl U32x4Backend for archmage::ScalarToken {
     }
 }
 
-impl U32x8Backend for archmage::ScalarToken {
+impl U32x8Ops for archmage::ScalarToken {
     type Repr = [u32; 8];
 
     // ====== Construction ======
@@ -2894,7 +2894,7 @@ impl U32x8Backend for archmage::ScalarToken {
     }
 }
 
-impl I64x2Backend for archmage::ScalarToken {
+impl I64x2Ops for archmage::ScalarToken {
     type Repr = [i64; 2];
 
     // ====== Construction ======
@@ -3102,7 +3102,7 @@ impl I64x2Backend for archmage::ScalarToken {
     }
 }
 
-impl I64x4Backend for archmage::ScalarToken {
+impl I64x4Ops for archmage::ScalarToken {
     type Repr = [i64; 4];
 
     // ====== Construction ======
@@ -3342,7 +3342,7 @@ impl I64x4Backend for archmage::ScalarToken {
     }
 }
 
-impl I8x16Backend for archmage::ScalarToken {
+impl I8x16Ops for archmage::ScalarToken {
     type Repr = [i8; 16];
 
     #[inline(always)]
@@ -3956,7 +3956,7 @@ impl I8x16Backend for archmage::ScalarToken {
     }
 }
 
-impl I8x32Backend for archmage::ScalarToken {
+impl I8x32Ops for archmage::ScalarToken {
     type Repr = [i8; 32];
 
     #[inline(always)]
@@ -4990,7 +4990,7 @@ impl I8x32Backend for archmage::ScalarToken {
     }
 }
 
-impl U8x16Backend for archmage::ScalarToken {
+impl U8x16Ops for archmage::ScalarToken {
     type Repr = [u8; 16];
 
     #[inline(always)]
@@ -5560,7 +5560,7 @@ impl U8x16Backend for archmage::ScalarToken {
     }
 }
 
-impl U8x32Backend for archmage::ScalarToken {
+impl U8x32Ops for archmage::ScalarToken {
     type Repr = [u8; 32];
 
     #[inline(always)]
@@ -6502,7 +6502,7 @@ impl U8x32Backend for archmage::ScalarToken {
     }
 }
 
-impl I16x8Backend for archmage::ScalarToken {
+impl I16x8Ops for archmage::ScalarToken {
     type Repr = [i16; 8];
 
     #[inline(always)]
@@ -6979,7 +6979,7 @@ impl I16x8Backend for archmage::ScalarToken {
     }
 }
 
-impl I16x16Backend for archmage::ScalarToken {
+impl I16x16Ops for archmage::ScalarToken {
     type Repr = [i16; 16];
 
     #[inline(always)]
@@ -7675,7 +7675,7 @@ impl I16x16Backend for archmage::ScalarToken {
     }
 }
 
-impl U16x8Backend for archmage::ScalarToken {
+impl U16x8Ops for archmage::ScalarToken {
     type Repr = [u16; 8];
 
     #[inline(always)]
@@ -8076,7 +8076,7 @@ impl U16x8Backend for archmage::ScalarToken {
     }
 }
 
-impl U16x16Backend for archmage::ScalarToken {
+impl U16x16Ops for archmage::ScalarToken {
     type Repr = [u16; 16];
 
     #[inline(always)]
@@ -8672,7 +8672,7 @@ impl U16x16Backend for archmage::ScalarToken {
     }
 }
 
-impl U64x2Backend for archmage::ScalarToken {
+impl U64x2Ops for archmage::ScalarToken {
     type Repr = [u64; 2];
 
     #[inline(always)]
@@ -8846,7 +8846,7 @@ impl U64x2Backend for archmage::ScalarToken {
     }
 }
 
-impl U64x4Backend for archmage::ScalarToken {
+impl U64x4Ops for archmage::ScalarToken {
     type Repr = [u64; 4];
 
     #[inline(always)]
@@ -9069,7 +9069,7 @@ impl U64x4Backend for archmage::ScalarToken {
     }
 }
 
-impl F32x4Convert for archmage::ScalarToken {
+impl F32x4ConvertOps for archmage::ScalarToken {
     #[inline(always)]
     fn bitcast_f32_to_i32(self, a: [f32; 4]) -> [i32; 4] {
         [
@@ -9111,7 +9111,7 @@ impl F32x4Convert for archmage::ScalarToken {
     }
 }
 
-impl F32x8Convert for archmage::ScalarToken {
+impl F32x8ConvertOps for archmage::ScalarToken {
     #[inline(always)]
     fn bitcast_f32_to_i32(self, a: [f32; 8]) -> [i32; 8] {
         [
@@ -9184,7 +9184,7 @@ impl F32x8Convert for archmage::ScalarToken {
 }
 
 #[cfg(feature = "w512")]
-impl F32x16Convert for archmage::ScalarToken {
+impl F32x16ConvertOps for archmage::ScalarToken {
     #[inline(always)]
     fn bitcast_f32_to_i32(self, a: [f32; 16]) -> [i32; 16] {
         [
@@ -9296,7 +9296,7 @@ impl F32x16Convert for archmage::ScalarToken {
     }
 }
 
-impl U32x4Bitcast for archmage::ScalarToken {
+impl U32x4BitcastOps for archmage::ScalarToken {
     #[inline(always)]
     fn bitcast_u32_to_i32(self, a: [u32; 4]) -> [i32; 4] {
         [a[0] as i32, a[1] as i32, a[2] as i32, a[3] as i32]
@@ -9308,7 +9308,7 @@ impl U32x4Bitcast for archmage::ScalarToken {
     }
 }
 
-impl U32x8Bitcast for archmage::ScalarToken {
+impl U32x8BitcastOps for archmage::ScalarToken {
     #[inline(always)]
     fn bitcast_u32_to_i32(self, a: [u32; 8]) -> [i32; 8] {
         [
@@ -9338,7 +9338,7 @@ impl U32x8Bitcast for archmage::ScalarToken {
     }
 }
 
-impl I64x2Bitcast for archmage::ScalarToken {
+impl I64x2BitcastOps for archmage::ScalarToken {
     #[inline(always)]
     fn bitcast_i64_to_f64(self, a: [i64; 2]) -> [f64; 2] {
         [f64::from_bits(a[0] as u64), f64::from_bits(a[1] as u64)]
@@ -9350,7 +9350,7 @@ impl I64x2Bitcast for archmage::ScalarToken {
     }
 }
 
-impl I64x4Bitcast for archmage::ScalarToken {
+impl I64x4BitcastOps for archmage::ScalarToken {
     #[inline(always)]
     fn bitcast_i64_to_f64(self, a: [i64; 4]) -> [f64; 4] {
         [
@@ -9372,7 +9372,7 @@ impl I64x4Bitcast for archmage::ScalarToken {
     }
 }
 
-impl I8x16Bitcast for archmage::ScalarToken {
+impl I8x16BitcastOps for archmage::ScalarToken {
     #[inline(always)]
     fn bitcast_i8_to_u8(self, a: [i8; 16]) -> [u8; 16] {
         let mut out = [0u8; 16];
@@ -9395,7 +9395,7 @@ impl I8x16Bitcast for archmage::ScalarToken {
     }
 }
 
-impl I8x32Bitcast for archmage::ScalarToken {
+impl I8x32BitcastOps for archmage::ScalarToken {
     #[inline(always)]
     fn bitcast_i8_to_u8(self, a: [i8; 32]) -> [u8; 32] {
         let mut out = [0u8; 32];
@@ -9418,7 +9418,7 @@ impl I8x32Bitcast for archmage::ScalarToken {
     }
 }
 
-impl I16x8Bitcast for archmage::ScalarToken {
+impl I16x8BitcastOps for archmage::ScalarToken {
     #[inline(always)]
     fn bitcast_i16_to_u16(self, a: [i16; 8]) -> [u16; 8] {
         let mut out = [0u16; 8];
@@ -9441,7 +9441,7 @@ impl I16x8Bitcast for archmage::ScalarToken {
     }
 }
 
-impl I16x16Bitcast for archmage::ScalarToken {
+impl I16x16BitcastOps for archmage::ScalarToken {
     #[inline(always)]
     fn bitcast_i16_to_u16(self, a: [i16; 16]) -> [u16; 16] {
         let mut out = [0u16; 16];
@@ -9464,7 +9464,7 @@ impl I16x16Bitcast for archmage::ScalarToken {
     }
 }
 
-impl U64x2Bitcast for archmage::ScalarToken {
+impl U64x2BitcastOps for archmage::ScalarToken {
     #[inline(always)]
     fn bitcast_u64_to_i64(self, a: [u64; 2]) -> [i64; 2] {
         [a[0] as i64, a[1] as i64]
@@ -9475,7 +9475,7 @@ impl U64x2Bitcast for archmage::ScalarToken {
     }
 }
 
-impl U64x4Bitcast for archmage::ScalarToken {
+impl U64x4BitcastOps for archmage::ScalarToken {
     #[inline(always)]
     fn bitcast_u64_to_i64(self, a: [u64; 4]) -> [i64; 4] {
         [a[0] as i64, a[1] as i64, a[2] as i64, a[3] as i64]
@@ -9486,7 +9486,7 @@ impl U64x4Bitcast for archmage::ScalarToken {
     }
 }
 #[cfg(feature = "w512")]
-impl F32x16Backend for archmage::ScalarToken {
+impl F32x16Ops for archmage::ScalarToken {
     type Repr = [f32; 16];
 
     #[inline(always)]
@@ -9743,7 +9743,7 @@ impl F32x16Backend for archmage::ScalarToken {
 }
 
 #[cfg(feature = "w512")]
-impl F64x8Backend for archmage::ScalarToken {
+impl F64x8Ops for archmage::ScalarToken {
     type Repr = [f64; 8];
 
     #[inline(always)]
@@ -9991,7 +9991,7 @@ impl F64x8Backend for archmage::ScalarToken {
 }
 
 #[cfg(feature = "w512")]
-impl I8x64Backend for archmage::ScalarToken {
+impl I8x64Ops for archmage::ScalarToken {
     type Repr = [i8; 64];
 
     #[inline(always)]
@@ -10203,7 +10203,7 @@ impl I8x64Backend for archmage::ScalarToken {
 }
 
 #[cfg(feature = "w512")]
-impl U8x64Backend for archmage::ScalarToken {
+impl U8x64Ops for archmage::ScalarToken {
     type Repr = [u8; 64];
 
     #[inline(always)]
@@ -10430,7 +10430,7 @@ impl U8x64Backend for archmage::ScalarToken {
 }
 
 #[cfg(feature = "w512")]
-impl I16x32Backend for archmage::ScalarToken {
+impl I16x32Ops for archmage::ScalarToken {
     type Repr = [i16; 32];
 
     #[inline(always)]
@@ -10706,7 +10706,7 @@ impl I16x32Backend for archmage::ScalarToken {
 }
 
 #[cfg(feature = "w512")]
-impl U16x32Backend for archmage::ScalarToken {
+impl U16x32Ops for archmage::ScalarToken {
     type Repr = [u16; 32];
 
     #[inline(always)]
@@ -10953,7 +10953,7 @@ impl U16x32Backend for archmage::ScalarToken {
 }
 
 #[cfg(feature = "w512")]
-impl I32x16Backend for archmage::ScalarToken {
+impl I32x16Ops for archmage::ScalarToken {
     type Repr = [i32; 16];
 
     #[inline(always)]
@@ -11187,7 +11187,7 @@ impl I32x16Backend for archmage::ScalarToken {
 }
 
 #[cfg(feature = "w512")]
-impl U32x16Backend for archmage::ScalarToken {
+impl U32x16Ops for archmage::ScalarToken {
     type Repr = [u32; 16];
 
     #[inline(always)]
@@ -11405,7 +11405,7 @@ impl U32x16Backend for archmage::ScalarToken {
 }
 
 #[cfg(feature = "w512")]
-impl I64x8Backend for archmage::ScalarToken {
+impl I64x8Ops for archmage::ScalarToken {
     type Repr = [i64; 8];
 
     #[inline(always)]
@@ -11592,7 +11592,7 @@ impl I64x8Backend for archmage::ScalarToken {
 }
 
 #[cfg(feature = "w512")]
-impl U64x8Backend for archmage::ScalarToken {
+impl U64x8Ops for archmage::ScalarToken {
     type Repr = [u64; 8];
 
     #[inline(always)]

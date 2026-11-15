@@ -357,134 +357,33 @@ pub trait F16Convert: F32x4Convert {
     /// guaranteed equal by the public entry point
     /// ([`f16_to_f32_slice`](Self::f16_to_f32_slice)).
     ///
-    /// This is the overridable dispatch point: the default runs the branchless
-    /// software kernel; hardware tiers (x86-64 F16C, aarch64 NEON-f16) override
-    /// it with a native conversion.
+    /// This delegates through the token's sealed capability hooks: hardware
+    /// tiers (x86-64 F16C/AVX-512F, aarch64 NEON-f16) dispatch to native
+    /// conversions, while all other tokens run the branchless software kernel.
     #[inline]
     fn f16_to_f32_into(self, input: &[u16], output: &mut [f32]) {
-        f16_to_f32_slice_soft(self, input, output);
+        <Self as crate::simd::backends::sealed::Sealed>::f16_to_f32_into_ops(self, input, output);
     }
 
     /// Encode `input.len()` f32 values into f16 bit patterns in `output`.
     /// Lengths are guaranteed equal by the public entry point
     /// ([`f32_to_f16_slice`](Self::f32_to_f16_slice)).
     ///
-    /// This is the overridable dispatch point: the default runs the branchless
-    /// software kernel; hardware tiers (x86-64 F16C, aarch64 NEON-f16) override
-    /// it with a native conversion.
+    /// This delegates through the token's sealed capability hooks: hardware
+    /// tiers (x86-64 F16C/AVX-512F, aarch64 NEON-f16) dispatch to native
+    /// conversions, while all other tokens run the branchless software kernel.
     #[inline]
     fn f32_to_f16_into(self, input: &[f32], output: &mut [u16]) {
-        f32_to_f16_slice_soft(self, input, output);
+        <Self as crate::simd::backends::sealed::Sealed>::f32_to_f16_into_ops(self, input, output);
     }
 }
 
-// Blanket default for every token. Concrete x86 / aarch64 tiers below provide
-// their own `impl F16Convert` *items* (the override methods); this blanket
-// supplies the software-default methods for all other tokens. To avoid
-// coherence conflicts the blanket is the *only* impl on targets that have no
-// hardware path, and the hardware tiers opt in individually rather than relying
-// on specialization (which is unstable).
-//
-// Implementation note: Rust has no stable specialization, so we cannot write
-// one blanket impl and override it per type. Instead the blanket impl is
-// gated to exclude the arches that want a hardware path, and on those arches
-// each token gets an explicit impl. This keeps every `impl` block free of
-// `unsafe` — the hardware intrinsics live behind `#[arcane]` boundaries below.
-#[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
+// Single blanket impl covering every token with `F32x4Convert` (which implies
+// `sealed::Sealed`). Hardware dispatch (F16C / AVX-512F on x86-64, runtime
+// NEON-f16 on aarch64) and the software fallback live on `Sealed`'s per-token
+// hooks (`f16_to_f32_into_ops` / `f32_to_f16_into_ops`), keeping all 21 tokens
+// unified with one coherent impl and zero `unsafe`.
 impl<T: F32x4Convert> F16Convert for T {}
-
-// On x86-64, give the software default to every token *except* the F16C tiers,
-// then implement the F16C tiers with the hardware override. This split keeps
-// the blanket and the per-tier impls coherent without specialization.
-#[cfg(target_arch = "x86_64")]
-mod x86_dispatch {
-    use super::*;
-
-    // Software default for the always-available scalar token. The sub-F16C
-    // x86 tiers (`X64V1Token` / `X64V2Token`) do not implement `F32x4Convert`
-    // at all (no F32x4 backend below AVX), so they cannot — and need not —
-    // implement `F16Convert`; the public entry points require `F16Convert`
-    // and therefore never accept them. `X64V3Token` is the lowest x86 tier
-    // that carries both the F32x4 backend and `f16c`.
-    impl F16Convert for archmage::ScalarToken {}
-
-    // F16C tier: x86-64-v3 lists `f16c` in its feature set, so `vcvtph2ps` /
-    // `vcvtps2ph` are safe to execute under an `X64V3Token`. The conversions
-    // run inside `#[arcane]` boundaries (which emit the
-    // `#[target_feature(enable = ...)]` codegen region), so they are sound to
-    // call from cold, non-`target_feature` code — exactly how the public
-    // slice entry points call them.
-    //
-    // Slice methods summon-up to the best available tier, amortized over the
-    // whole slice: `f16c_decode_select` / `f16c_encode_select` summon a
-    // `X64V4Token` once per call and run the 16-wide kernel when the CPU has it,
-    // else the 8-wide F16C kernel. (Summoning for a *slice* is fine — the
-    // ~1.3 ns cached `summon()` is amortized over every lane; single-vector
-    // register ops never summon.) A V4-tier holder reaches the same 16-wide path
-    // via `token.v3()` (the summon-up runs 16-wide regardless).
-    impl F16Convert for archmage::X64V3Token {
-        #[inline]
-        fn f16_to_f32_into(self, input: &[u16], output: &mut [f32]) {
-            f16c_decode_select(self, input, output);
-        }
-        #[inline]
-        fn f32_to_f16_into(self, input: &[f32], output: &mut [u16]) {
-            f16c_encode_select(self, input, output);
-        }
-    }
-
-    // The AVX-512-tier tokens (`X64V4Token` / `X64V4xToken` / `Avx512Fp16Token`)
-    // deliberately do NOT implement `F16Convert` themselves. A V4 holder reaches
-    // the 16-wide path the usual way — `f16_to_f32_slice(token.v3(), ..)` — and
-    // the V3 entry's summon-up runs the 16-wide kernel anyway (the once-per-slice
-    // summon is measurably free). Implementing the trait directly would buy only
-    // the `.v3()` keystroke while forcing the full `F32x4Convert` (+ `I32x4Backend`)
-    // supertrait delegation for three tokens, which measurably slows the build —
-    // not worth it.
-}
-
-// On aarch64, give the software default to `ScalarToken`, then implement the
-// `NeonToken` tier. NEON's *baseline* `neon` feature does NOT include the
-// half-precision conversion instructions — `vcvt_f32_f16` / `vcvt_f16_f32`
-// require the `fp16` target feature (the archmage `Arm64V2Token` tier:
-// `neon,crc,rdm,dotprod,fp16,…`, present on Cortex-A55+, Apple M1+, Graviton 2+
-// and every post-2017 ARM core). A bare `NeonToken` only proves `neon`, so the
-// override probes for `fp16` at runtime (`Arm64V2Token::summon()`); when it is
-// present the hardware kernel runs, otherwise the branchless software kernel
-// does. Both `impl` blocks stay free of `unsafe` — the intrinsics live behind
-// the `#[arcane]` boundaries below.
-//
-// The hardware kernels are compiled only on a toolchain where the
-// `stdarch_neon_f16` intrinsics are stable (Rust ≥ 1.94), selected by
-// `#[rustversion::since(1.94)]` (paired with `#[rustversion::before(1.94)]` on
-// the software-only selector). On older toolchains (down to the crate MSRV) the
-// kernels are not compiled, and `NeonToken` falls through to the software path
-// with no MSRV bump and no compile error. This is the toolchain-version-gate
-// pattern: see the `neon_f16_decode_select` docs below and the "Newer-stable
-// intrinsics above the MSRV" section in `MSRV.md`.
-#[cfg(target_arch = "aarch64")]
-mod aarch64_dispatch {
-    use super::*;
-
-    // The always-available scalar token gets the software default.
-    impl F16Convert for archmage::ScalarToken {}
-
-    // `NeonToken` is the only aarch64 token that implements `F32x4Convert`, so
-    // it is the only aarch64 token that can satisfy this trait's supertrait
-    // bound and reach the public slice entry points. Its override uses the
-    // NEON-f16 hardware path when `fp16` is available at runtime, else the
-    // software kernel.
-    impl F16Convert for archmage::NeonToken {
-        #[inline]
-        fn f16_to_f32_into(self, input: &[u16], output: &mut [f32]) {
-            neon_f16_decode(self, input, output);
-        }
-        #[inline]
-        fn f32_to_f16_into(self, input: &[f32], output: &mut [u16]) {
-            neon_f16_encode(self, input, output);
-        }
-    }
-}
 
 /// `NeonToken` f16→f32 decode: hardware NEON-f16 (`vcvt_f32_f16`) when the CPU
 /// proves `fp16` at runtime, otherwise the branchless software kernel.
@@ -499,7 +398,7 @@ mod aarch64_dispatch {
 /// backend.
 #[cfg(target_arch = "aarch64")]
 #[inline]
-fn neon_f16_decode(token: archmage::NeonToken, input: &[u16], output: &mut [f32]) {
+pub(crate) fn neon_f16_decode(token: archmage::NeonToken, input: &[u16], output: &mut [f32]) {
     neon_f16_decode_select(token, input, output);
 }
 
@@ -508,7 +407,7 @@ fn neon_f16_decode(token: archmage::NeonToken, input: &[u16], output: &mut [f32]
 /// See [`neon_f16_decode`] for the dispatch rationale.
 #[cfg(target_arch = "aarch64")]
 #[inline]
-fn neon_f16_encode(token: archmage::NeonToken, input: &[f32], output: &mut [u16]) {
+pub(crate) fn neon_f16_encode(token: archmage::NeonToken, input: &[f32], output: &mut [u16]) {
     neon_f16_encode_select(token, input, output);
 }
 
@@ -695,11 +594,27 @@ fn neon_f16_encode_hw(token: archmage::Arm64V2Token, input: &[f32], output: &mut
 // AVX-512 intrinsics inside `#[arcane]` require it (archmage emits a
 // `compile_error!` for a V4 token without `avx512`).
 
+/// Direct AVX-512F decode entry point when the caller already holds an
+/// `X64V4Token` (or higher), skipping the `summon()` probe.
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[inline]
+pub(crate) fn v4_f16_to_f32_into(token: archmage::X64V4Token, input: &[u16], output: &mut [f32]) {
+    f16c_decode_v4(token, input, output);
+}
+
+/// Direct AVX-512F encode entry point when the caller already holds an
+/// `X64V4Token` (or higher), skipping the `summon()` probe.
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[inline]
+pub(crate) fn v4_f32_to_f16_into(token: archmage::X64V4Token, input: &[f32], output: &mut [u16]) {
+    f16c_encode_v4(token, input, output);
+}
+
 /// `avx512` build: summon the best tier (16-wide AVX-512F when the CPU proves a
 /// V4 token, else 8-wide F16C). The summon is once-per-slice (amortized).
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 #[inline]
-fn f16c_decode_select(token: archmage::X64V3Token, input: &[u16], output: &mut [f32]) {
+pub(crate) fn f16c_decode_select(token: archmage::X64V3Token, input: &[u16], output: &mut [f32]) {
     use archmage::SimdToken;
     if let Some(v4) = archmage::X64V4Token::summon() {
         f16c_decode_v4(v4, input, output);
@@ -711,7 +626,7 @@ fn f16c_decode_select(token: archmage::X64V3Token, input: &[u16], output: &mut [
 /// Non-`avx512` build: only the 8-wide F16C decode is compiled.
 #[cfg(all(target_arch = "x86_64", not(feature = "avx512")))]
 #[inline]
-fn f16c_decode_select(token: archmage::X64V3Token, input: &[u16], output: &mut [f32]) {
+pub(crate) fn f16c_decode_select(token: archmage::X64V3Token, input: &[u16], output: &mut [f32]) {
     f16c_decode_v3(token, input, output);
 }
 
@@ -719,7 +634,7 @@ fn f16c_decode_select(token: archmage::X64V3Token, input: &[u16], output: &mut [
 /// 8-wide F16C). Once-per-slice summon (amortized).
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 #[inline]
-fn f16c_encode_select(token: archmage::X64V3Token, input: &[f32], output: &mut [u16]) {
+pub(crate) fn f16c_encode_select(token: archmage::X64V3Token, input: &[f32], output: &mut [u16]) {
     use archmage::SimdToken;
     if let Some(v4) = archmage::X64V4Token::summon() {
         f16c_encode_v4(v4, input, output);
@@ -731,7 +646,7 @@ fn f16c_encode_select(token: archmage::X64V3Token, input: &[f32], output: &mut [
 /// Non-`avx512` build: only the 8-wide F16C encode is compiled.
 #[cfg(all(target_arch = "x86_64", not(feature = "avx512")))]
 #[inline]
-fn f16c_encode_select(token: archmage::X64V3Token, input: &[f32], output: &mut [u16]) {
+pub(crate) fn f16c_encode_select(token: archmage::X64V3Token, input: &[f32], output: &mut [u16]) {
     f16c_encode_v3(token, input, output);
 }
 
@@ -853,13 +768,15 @@ fn f16c_encode_v3(token: archmage::X64V3Token, input: &[f32], output: &mut [u16]
 /// Software (branchless, portable) f16→f32 slice kernel. Always correct on
 /// every backend; the fallback when no native f16 conversion is available.
 ///
-/// Bound is `T: F16Convert` (not just `F32x4Convert`) because it is only ever
-/// invoked from `F16Convert::f16_to_f32_into` and the hardware tail kernels —
-/// all contexts where the token already implements `F16Convert`. It builds an
-/// [`i32x4`] from the token and calls the [`i32x4::f16_to_f32`] register
-/// method (whose own bound, `F32x4Convert`, is implied by `F16Convert`).
+/// Software (branchless, portable) f16→f32 slice kernel. Always correct on
+/// every backend; the fallback when no native f16 conversion is available.
+///
+/// Bound is `T: F32x4Convert` (not `F16Convert`) so `Sealed::f16_to_f32_into_ops`
+/// on canonical fallback tokens (`ScalarToken`, `Wasm128Token`) calls this
+/// without inducing a coherence/solver cycle back through `F16Convert`. It builds
+/// an [`i32x4`] from the token and calls [`i32x4::f16_to_f32`].
 #[inline]
-fn f16_to_f32_slice_soft<T: F16Convert>(token: T, input: &[u16], output: &mut [f32]) {
+pub(crate) fn f16_to_f32_slice_soft<T: F32x4Convert>(token: T, input: &[u16], output: &mut [f32]) {
     let (in_chunks, in_tail) = input.as_chunks::<4>();
     let (out_chunks, out_tail) = output.as_chunks_mut::<4>();
     for (inp, out) in in_chunks.iter().zip(out_chunks.iter_mut()) {
@@ -880,12 +797,11 @@ fn f16_to_f32_slice_soft<T: F16Convert>(token: T, input: &[u16], output: &mut [f
 /// Software (branchless, portable) f32→f16 slice kernel. Always correct on
 /// every backend; the fallback when no native f16 conversion is available.
 ///
-/// Bound is `T: F16Convert` for the same reason as
-/// [`f16_to_f32_slice_soft`]: every caller already holds an `F16Convert`
-/// token. It builds an [`f32x4`] from the token and calls the
-/// [`f32x4::to_f16`] register method.
+/// Bound is `T: F32x4Convert` for the same reason as
+/// [`f16_to_f32_slice_soft`]. It builds an [`f32x4`] from the token and calls
+/// [`f32x4::to_f16`].
 #[inline]
-fn f32_to_f16_slice_soft<T: F16Convert>(token: T, input: &[f32], output: &mut [u16]) {
+pub(crate) fn f32_to_f16_slice_soft<T: F32x4Convert>(token: T, input: &[f32], output: &mut [u16]) {
     let (in_chunks, in_tail) = input.as_chunks::<4>();
     let (out_chunks, out_tail) = output.as_chunks_mut::<4>();
     for (inp, out) in in_chunks.iter().zip(out_chunks.iter_mut()) {

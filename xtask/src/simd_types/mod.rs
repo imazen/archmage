@@ -27,9 +27,9 @@ pub mod generic_gen;
 pub mod import_paths;
 pub mod parity_tests;
 pub mod scalar_parity_gen;
-mod structure;
+pub mod structure;
 pub mod types;
-pub mod v4_delegation_gen;
+pub mod unify_gen;
 pub mod width_dispatch;
 
 pub use types::{SimdType, SimdWidth, all_simd_types};

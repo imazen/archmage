@@ -52,27 +52,116 @@ pub trait SimdTypes: SimdToken {
     const I32_LANES: usize;
 }
 
+macro_rules! impl_simd_types_scalar {
+    ($($token:ty),* $(,)?) => {
+        $(
+            impl SimdTypes for $token {
+                type F32 = f32;
+                type F64 = f64;
+                type I8 = i8;
+                type I16 = i16;
+                type I32 = i32;
+                type I64 = i64;
+                type U8 = u8;
+                type U16 = u16;
+                type U32 = u32;
+                type U64 = u64;
+
+                const F32_LANES: usize = 1;
+                const F64_LANES: usize = 1;
+                const I32_LANES: usize = 1;
+            }
+        )*
+    };
+}
+
+#[cfg(any(target_arch = "aarch64", target_arch = "wasm32"))]
+macro_rules! impl_simd_types_w128 {
+    ($($token:ty),* $(,)?) => {
+        $(
+            impl SimdTypes for $token {
+                type F32 = crate::simd::generic::f32x4<$token>;
+                type F64 = crate::simd::generic::f64x2<$token>;
+                type I8 = crate::simd::generic::i8x16<$token>;
+                type I16 = crate::simd::generic::i16x8<$token>;
+                type I32 = crate::simd::generic::i32x4<$token>;
+                type I64 = crate::simd::generic::i64x2<$token>;
+                type U8 = crate::simd::generic::u8x16<$token>;
+                type U16 = crate::simd::generic::u16x8<$token>;
+                type U32 = crate::simd::generic::u32x4<$token>;
+                type U64 = crate::simd::generic::u64x2<$token>;
+
+                const F32_LANES: usize = 4;
+                const F64_LANES: usize = 2;
+                const I32_LANES: usize = 4;
+            }
+        )*
+    };
+}
+
+#[cfg(target_arch = "x86_64")]
+macro_rules! impl_simd_types_w256 {
+    ($($token:ty),* $(,)?) => {
+        $(
+            impl SimdTypes for $token {
+                type F32 = crate::simd::generic::f32x8<$token>;
+                type F64 = crate::simd::generic::f64x4<$token>;
+                type I8 = crate::simd::generic::i8x32<$token>;
+                type I16 = crate::simd::generic::i16x16<$token>;
+                type I32 = crate::simd::generic::i32x8<$token>;
+                type I64 = crate::simd::generic::i64x4<$token>;
+                type U8 = crate::simd::generic::u8x32<$token>;
+                type U16 = crate::simd::generic::u16x16<$token>;
+                type U32 = crate::simd::generic::u32x8<$token>;
+                type U64 = crate::simd::generic::u64x4<$token>;
+
+                const F32_LANES: usize = 8;
+                const F64_LANES: usize = 4;
+                const I32_LANES: usize = 8;
+            }
+        )*
+    };
+}
+
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+macro_rules! impl_simd_types_w512 {
+    ($($token:ty),* $(,)?) => {
+        $(
+            impl SimdTypes for $token {
+                type F32 = crate::simd::generic::f32x16<$token>;
+                type F64 = crate::simd::generic::f64x8<$token>;
+                type I8 = crate::simd::generic::i8x64<$token>;
+                type I16 = crate::simd::generic::i16x32<$token>;
+                type I32 = crate::simd::generic::i32x16<$token>;
+                type I64 = crate::simd::generic::i64x8<$token>;
+                type U8 = crate::simd::generic::u8x64<$token>;
+                type U16 = crate::simd::generic::u16x32<$token>;
+                type U32 = crate::simd::generic::u32x16<$token>;
+                type U64 = crate::simd::generic::u64x8<$token>;
+
+                const F32_LANES: usize = 16;
+                const F64_LANES: usize = 8;
+                const I32_LANES: usize = 16;
+            }
+        )*
+    };
+}
+
 // =============================================================================
 // x86_64 implementations
 // =============================================================================
 
 #[cfg(target_arch = "x86_64")]
-impl SimdTypes for archmage::X64V3Token {
-    type F32 = crate::simd::generic::f32x8<archmage::X64V3Token>;
-    type F64 = crate::simd::generic::f64x4<archmage::X64V3Token>;
-    type I8 = crate::simd::generic::i8x32<archmage::X64V3Token>;
-    type I16 = crate::simd::generic::i16x16<archmage::X64V3Token>;
-    type I32 = crate::simd::generic::i32x8<archmage::X64V3Token>;
-    type I64 = crate::simd::generic::i64x4<archmage::X64V3Token>;
-    type U8 = crate::simd::generic::u8x32<archmage::X64V3Token>;
-    type U16 = crate::simd::generic::u16x16<archmage::X64V3Token>;
-    type U32 = crate::simd::generic::u32x8<archmage::X64V3Token>;
-    type U64 = crate::simd::generic::u64x4<archmage::X64V3Token>;
+impl_simd_types_scalar!(archmage::X64V1Token, archmage::X64CryptoToken);
 
-    const F32_LANES: usize = 8;
-    const F64_LANES: usize = 4;
-    const I32_LANES: usize = 8;
-}
+#[cfg(target_arch = "x86_64")]
+impl_simd_types_w256!(
+    archmage::X64V3Token,
+    archmage::X64V3CryptoToken,
+    archmage::X64V3GfniCryptoToken,
+    archmage::X64V3VnniToken,
+    archmage::X64V3Vnni2Token,
+);
 
 #[cfg(target_arch = "x86_64")]
 impl SimdTypes for archmage::X64V2Token {
@@ -93,105 +182,49 @@ impl SimdTypes for archmage::X64V2Token {
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-impl SimdTypes for archmage::X64V4Token {
-    type F32 = crate::simd::generic::f32x16<archmage::X64V4Token>;
-    type F64 = crate::simd::generic::f64x8<archmage::X64V4Token>;
-    type I8 = crate::simd::generic::i8x64<archmage::X64V4Token>;
-    type I16 = crate::simd::generic::i16x32<archmage::X64V4Token>;
-    type I32 = crate::simd::generic::i32x16<archmage::X64V4Token>;
-    type I64 = crate::simd::generic::i64x8<archmage::X64V4Token>;
-    type U8 = crate::simd::generic::u8x64<archmage::X64V4Token>;
-    type U16 = crate::simd::generic::u16x32<archmage::X64V4Token>;
-    type U32 = crate::simd::generic::u32x16<archmage::X64V4Token>;
-    type U64 = crate::simd::generic::u64x8<archmage::X64V4Token>;
+impl_simd_types_w512!(
+    archmage::X64V4Token,
+    archmage::X64V4xToken,
+    archmage::Avx512Fp16Token,
+);
 
-    const F32_LANES: usize = 16;
-    const F64_LANES: usize = 8;
-    const I32_LANES: usize = 16;
-}
-
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-impl SimdTypes for archmage::X64V4xToken {
-    type F32 = crate::simd::generic::f32x16<archmage::X64V4xToken>;
-    type F64 = crate::simd::generic::f64x8<archmage::X64V4xToken>;
-    type I8 = crate::simd::generic::i8x64<archmage::X64V4xToken>;
-    type I16 = crate::simd::generic::i16x32<archmage::X64V4xToken>;
-    type I32 = crate::simd::generic::i32x16<archmage::X64V4xToken>;
-    type I64 = crate::simd::generic::i64x8<archmage::X64V4xToken>;
-    type U8 = crate::simd::generic::u8x64<archmage::X64V4xToken>;
-    type U16 = crate::simd::generic::u16x32<archmage::X64V4xToken>;
-    type U32 = crate::simd::generic::u32x16<archmage::X64V4xToken>;
-    type U64 = crate::simd::generic::u64x8<archmage::X64V4xToken>;
-
-    const F32_LANES: usize = 16;
-    const F64_LANES: usize = 8;
-    const I32_LANES: usize = 16;
-}
+#[cfg(all(target_arch = "x86_64", not(feature = "avx512")))]
+impl_simd_types_w256!(
+    archmage::X64V4Token,
+    archmage::X64V4xToken,
+    archmage::Avx512Fp16Token,
+);
 
 // =============================================================================
 // aarch64 implementations
 // =============================================================================
 
 #[cfg(target_arch = "aarch64")]
-impl SimdTypes for archmage::NeonToken {
-    type F32 = crate::simd::generic::f32x4<archmage::NeonToken>;
-    type F64 = crate::simd::generic::f64x2<archmage::NeonToken>;
-    type I8 = crate::simd::generic::i8x16<archmage::NeonToken>;
-    type I16 = crate::simd::generic::i16x8<archmage::NeonToken>;
-    type I32 = crate::simd::generic::i32x4<archmage::NeonToken>;
-    type I64 = crate::simd::generic::i64x2<archmage::NeonToken>;
-    type U8 = crate::simd::generic::u8x16<archmage::NeonToken>;
-    type U16 = crate::simd::generic::u16x8<archmage::NeonToken>;
-    type U32 = crate::simd::generic::u32x4<archmage::NeonToken>;
-    type U64 = crate::simd::generic::u64x2<archmage::NeonToken>;
-
-    const F32_LANES: usize = 4;
-    const F64_LANES: usize = 2;
-    const I32_LANES: usize = 4;
-}
+impl_simd_types_w128!(
+    archmage::NeonToken,
+    archmage::NeonAesToken,
+    archmage::NeonSha3Token,
+    archmage::NeonCrcToken,
+    archmage::Arm64V2Token,
+    archmage::Arm64V3Token,
+);
 
 // =============================================================================
 // wasm32 implementations
 // =============================================================================
 
 #[cfg(target_arch = "wasm32")]
-impl SimdTypes for archmage::Wasm128Token {
-    type F32 = crate::simd::generic::f32x4<archmage::Wasm128Token>;
-    type F64 = crate::simd::generic::f64x2<archmage::Wasm128Token>;
-    type I8 = crate::simd::generic::i8x16<archmage::Wasm128Token>;
-    type I16 = crate::simd::generic::i16x8<archmage::Wasm128Token>;
-    type I32 = crate::simd::generic::i32x4<archmage::Wasm128Token>;
-    type I64 = crate::simd::generic::i64x2<archmage::Wasm128Token>;
-    type U8 = crate::simd::generic::u8x16<archmage::Wasm128Token>;
-    type U16 = crate::simd::generic::u16x8<archmage::Wasm128Token>;
-    type U32 = crate::simd::generic::u32x4<archmage::Wasm128Token>;
-    type U64 = crate::simd::generic::u64x2<archmage::Wasm128Token>;
-
-    const F32_LANES: usize = 4;
-    const F64_LANES: usize = 2;
-    const I32_LANES: usize = 4;
-}
+impl_simd_types_w128!(
+    archmage::Wasm128Token,
+    archmage::Wasm128RelaxedToken,
+    archmage::Wasm128RelaxedFmaToken,
+);
 
 // =============================================================================
 // ScalarToken implementation (no SIMD - uses scalar types)
 // =============================================================================
 
-impl SimdTypes for archmage::ScalarToken {
-    type F32 = f32;
-    type F64 = f64;
-    type I8 = i8;
-    type I16 = i16;
-    type I32 = i32;
-    type I64 = i64;
-    type U8 = u8;
-    type U16 = u16;
-    type U32 = u32;
-    type U64 = u64;
-
-    const F32_LANES: usize = 1;
-    const F64_LANES: usize = 1;
-    const I32_LANES: usize = 1;
-}
+impl_simd_types_scalar!(archmage::ScalarToken);
 
 #[cfg(test)]
 mod tests {

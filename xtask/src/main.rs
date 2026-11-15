@@ -1292,13 +1292,19 @@ fn main() -> Result<()> {
 /// as well, and rejects unapproved `macro_rules!` inside generated backend
 /// files so delegation bloat cannot hide behind macro expansion.
 const COMPILE_BUDGETS: &[(&str, usize)] = &[
-    // Measured 39 572 (reduced from 40 063 by delegating X64V4xToken's base W512
-    // backends + F32x16Convert to X64V4Token in x86_v4_w512_delegated.rs).
-    ("x86_64", 41_000),
-    ("aarch64", 26_100), // measured 25 043
-    // Measured 30 056 (includes wasm128_fma_delegated.rs + wasm128_fma_overrides.rs
-    // for Wasm128RelaxedFmaToken, cfg-gated to target_arch = "wasm32" only).
-    ("wasm32", 31_200),
+    // Measured 38 562 (all 21 tokens unified via backends/{ops,sealed}.rs +
+    // impls/delegated.rs, replacing x86_v3_higher_delegated.rs,
+    // x86_v4_f32_delegated.rs, and x86_v4_w512_delegated.rs — net -1 010 vs
+    // pre-unification 39 572).
+    ("x86_64", 40_000),
+    // Measured 35 697 (+10 654 over pre-unification 25 043 because shared
+    // backends/{ops,sealed}.rs + impls/delegated.rs are target-common and give
+    // all 6 ARM tokens full unified backend coverage with zero per-token files).
+    ("aarch64", 37_000),
+    // Measured 35 552 (+5 496 over pre-unification 30 056: shared
+    // ops/sealed/delegated replaces wasm128_fma_delegated.rs while covering all
+    // 3 WASM tokens uniformly).
+    ("wasm32", 37_000),
 ];
 
 /// Budget for `magetypes/src/simd/generic/generated/*.rs` (target-common
@@ -3437,7 +3443,7 @@ mod compile_budget_tests {
     #[test]
     fn rejects_hidden_macro_rules_in_impls() {
         let err = check_no_hidden_impl_macros(
-            "magetypes/src/simd/impls/x86_v3_higher_delegated.rs",
+            "magetypes/src/simd/impls/delegated.rs",
             "macro_rules! delegate_all { () => {}; }\n",
         )
         .unwrap_err();

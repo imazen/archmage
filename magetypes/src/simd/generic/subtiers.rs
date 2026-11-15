@@ -53,8 +53,42 @@ impl MagetypesToken for archmage::ScalarToken {
 mod x86_magetypes_tokens {
     use super::{MagetypesToken, magetypes_token_sealed::Sealed};
     use archmage::{
-        X64V3CryptoToken, X64V3GfniCryptoToken, X64V3Token, X64V3Vnni2Token, X64V3VnniToken,
+        ScalarToken, X64CryptoToken, X64V1Token, X64V2Token, X64V3CryptoToken,
+        X64V3GfniCryptoToken, X64V3Token, X64V3Vnni2Token, X64V3VnniToken,
     };
+
+    impl Sealed for X64V1Token {}
+    impl MagetypesToken for X64V1Token {
+        type MagetypesBackend = ScalarToken;
+
+        #[inline(always)]
+        fn magetypes(self) -> Self::MagetypesBackend {
+            let _ = self;
+            ScalarToken
+        }
+    }
+
+    impl Sealed for X64V2Token {}
+    impl MagetypesToken for X64V2Token {
+        type MagetypesBackend = ScalarToken;
+
+        #[inline(always)]
+        fn magetypes(self) -> Self::MagetypesBackend {
+            let _ = self;
+            ScalarToken
+        }
+    }
+
+    impl Sealed for X64CryptoToken {}
+    impl MagetypesToken for X64CryptoToken {
+        type MagetypesBackend = ScalarToken;
+
+        #[inline(always)]
+        fn magetypes(self) -> Self::MagetypesBackend {
+            let _ = self;
+            ScalarToken
+        }
+    }
 
     impl Sealed for X64V3Token {}
     impl MagetypesToken for X64V3Token {
@@ -138,6 +172,42 @@ mod x86_magetypes_tokens {
             #[inline(always)]
             fn magetypes(self) -> Self::MagetypesBackend {
                 self.v4()
+            }
+        }
+    }
+
+    #[cfg(not(feature = "avx512"))]
+    mod avx512_fallback_tokens {
+        use super::{MagetypesToken, Sealed, X64V3Token};
+        use archmage::{Avx512Fp16Token, X64V4Token, X64V4xToken};
+
+        impl Sealed for X64V4Token {}
+        impl MagetypesToken for X64V4Token {
+            type MagetypesBackend = X64V3Token;
+
+            #[inline(always)]
+            fn magetypes(self) -> Self::MagetypesBackend {
+                self.v3()
+            }
+        }
+
+        impl Sealed for X64V4xToken {}
+        impl MagetypesToken for X64V4xToken {
+            type MagetypesBackend = X64V3Token;
+
+            #[inline(always)]
+            fn magetypes(self) -> Self::MagetypesBackend {
+                self.v3()
+            }
+        }
+
+        impl Sealed for Avx512Fp16Token {}
+        impl MagetypesToken for Avx512Fp16Token {
+            type MagetypesBackend = X64V3Token;
+
+            #[inline(always)]
+            fn magetypes(self) -> Self::MagetypesBackend {
+                self.v3()
             }
         }
     }
@@ -248,6 +318,22 @@ mod wasm_magetypes_tokens {
             #[inline(always)]
             fn magetypes(self) -> Self::MagetypesBackend {
                 self
+            }
+        }
+    }
+
+    #[cfg(not(all(target_feature = "simd128", target_feature = "relaxed-simd")))]
+    mod relaxed_fallback_tokens {
+        use super::{MagetypesToken, Sealed, Wasm128Token};
+        use archmage::Wasm128RelaxedFmaToken;
+
+        impl Sealed for Wasm128RelaxedFmaToken {}
+        impl MagetypesToken for Wasm128RelaxedFmaToken {
+            type MagetypesBackend = Wasm128Token;
+
+            #[inline(always)]
+            fn magetypes(self) -> Self::MagetypesBackend {
+                self.wasm128()
             }
         }
     }

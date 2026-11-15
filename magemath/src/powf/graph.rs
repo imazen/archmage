@@ -112,13 +112,12 @@ macro_rules! graph {
                     #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
                     if ARITHMETIC == WASM_SOFTWARE {
                         let any: &dyn core::any::Any = &token;
-                        let proof = any
-                            .downcast_ref::<archmage::Wasm128Token>()
-                            .expect("private WASM mode requires its matching proof");
-                        return V::from_array_t(
-                            token,
-                            super::wasm::software_lanes(*proof, a, b, c),
-                        );
+                        let crate::token_canon::CanonicalToken::Wasm { token: proof, .. } =
+                            crate::token_canon::canonicalize(any)
+                        else {
+                            unreachable!("private WASM mode requires its matching proof");
+                        };
+                        return V::from_array_t(token, super::wasm::software_lanes(proof, a, b, c));
                     }
                     #[cfg(all(feature = "std", not(miri)))]
                     if ARITHMETIC == STD {
@@ -171,9 +170,7 @@ macro_rules! graph {
                 let p = madd(p, xf, sp(1.0));
                 // floor made xi integral. All admitted lanes, including the
                 // Gamma zero sentinel, fit i32; truncation and RNE agree.
-                let integer = if core::any::TypeId::of::<T>()
-                    == core::any::TypeId::of::<archmage::ScalarToken>()
-                {
+                let integer = if crate::token_canon::is_scalar_backed::<T>() {
                     xi.to_i32()
                 } else {
                     // Native conversions already cost one instruction. Keep
@@ -231,9 +228,7 @@ macro_rules! graph {
                 let p = madd(p, xf, sp(core::f32::consts::LN_2));
                 let p = madd(p, xf, sp(1.0));
                 // round already made xi integral in the admitted range.
-                let integer = if core::any::TypeId::of::<T>()
-                    == core::any::TypeId::of::<archmage::ScalarToken>()
-                {
+                let integer = if crate::token_canon::is_scalar_backed::<T>() {
                     xi.to_i32()
                 } else {
                     // Native conversions already cost one instruction. Keep
