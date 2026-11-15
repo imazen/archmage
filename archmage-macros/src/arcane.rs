@@ -14,34 +14,43 @@ impl Parse for crate::engine::boundary::BoundaryOptions {
         while !input.is_empty() {
             let ident: Ident = input.parse()?;
             if !parse_shared_option(&ident, input, &mut args.shared)? {
-                match ident.to_string().as_str() {
-                    "suppress_const_test" => args.suppress_const_test = true,
-                    "inline_always" => args.inline_always = true,
-                    "nested" | "in_trait" => args.nested = true,
-                    "in_impl" => args.in_impl = true,
+                with_ident_str(&ident, |s| match s {
+                    "suppress_const_test" => {
+                        args.suppress_const_test = true;
+                        Ok(())
+                    }
+                    "inline_always" => {
+                        args.inline_always = true;
+                        Ok(())
+                    }
+                    "nested" | "in_trait" => {
+                        args.nested = true;
+                        Ok(())
+                    }
+                    "in_impl" => {
+                        args.in_impl = true;
+                        Ok(())
+                    }
                     "_self" => {
                         let _: Token![=] = input.parse()?;
                         args.self_type = Some(input.parse()?);
+                        Ok(())
                     }
-                    other => {
-                        return Err(syn::Error::new(
-                            ident.span(),
-                            format!(
-                                "unknown arcane argument: `{other}`. Supported: `in_impl`, \
-                                 `in_trait` (or `nested`), `_self = Type`, `import_intrinsics`, \
-                                 `import_magetypes`, `cfg(feature)`, `suppress_const_test`."
-                            ),
-                        ));
-                    }
-                }
+                    other => Err(syn::Error::new(
+                        ident.span(),
+                        format!(
+                            "unknown arcane argument: `{other}`. Supported: `in_impl`, \
+                             `in_trait` (or `nested`), `_self = Type`, `import_intrinsics`, \
+                             `import_magetypes`, `cfg(feature)`, `suppress_const_test`."
+                        ),
+                    )),
+                })?;
             }
-            // Consume optional comma
             if input.peek(Token![,]) {
                 let _: Token![,] = input.parse()?;
             }
         }
 
-        // _self = Type implies nested (inner fn needed for Self replacement)
         if args.self_type.is_some() {
             args.nested = true;
         }

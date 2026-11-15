@@ -9,7 +9,7 @@ mod parent;
 mod syntax;
 
 use proc_macro2::TokenStream;
-use quote::{ToTokens, format_ident, quote};
+use quote::{format_ident, quote};
 use syn::{FnArg, parse_quote};
 
 use crate::{
@@ -51,7 +51,6 @@ pub(crate) fn expand(attr: TokenStream, item: TokenStream) -> syn::Result<TokenS
                     crate::generated::token_requires_runtime_probe(canonical)
                         && proof
                             .token_type_name
-                            .as_deref()
                             .and_then(crate::generated::canonical_token_to_tier_suffix)
                             != Some(tier.suffix);
                 if proof.target_arch != tier.target_arch
@@ -68,9 +67,9 @@ pub(crate) fn expand(attr: TokenStream, item: TokenStream) -> syn::Result<TokenS
                 // Root-anchored `::archmage::...` paths synthesized here cannot
                 // be shadowed by a local alias, so skip the redundant name check.
                 args.options.suppress_const_test = true;
-                let token: syn::Path = syn::parse_str(&format!("::{}", tier.token_path))?;
+                let token = colon_path_tokens(tier.token_path, true);
                 if placeholder {
-                    specialize_syntax(&mut input.sig, &quote!(#token))?;
+                    specialize_syntax(&mut input.sig, &token)?;
                 } else {
                     let position =
                         usize::from(matches!(input.sig.inputs.first(), Some(FnArg::Receiver(_))));
@@ -82,8 +81,8 @@ pub(crate) fn expand(attr: TokenStream, item: TokenStream) -> syn::Result<TokenS
             }
             let output = wrap(input, args)?;
             return Ok(if placeholder {
-                let token: syn::Path = syn::parse_str(&format!("::{}", tier.token_path))?;
-                replace_ident_in_tokens(output, "Token", &quote!(#token))
+                let token = colon_path_tokens(tier.token_path, true);
+                replace_ident_in_tokens(output, "Token", &token)
             } else {
                 output
             });
@@ -109,20 +108,21 @@ pub(crate) fn expand(attr: TokenStream, item: TokenStream) -> syn::Result<TokenS
 }
 
 fn infer_suffix(name: &syn::Ident) -> Option<(&'static TierDescriptor, Form)> {
-    let name = name.to_string();
-    let (stem, form) = name
-        .strip_suffix("_t")
-        .map_or((name.as_str(), Form::Direct), |stem| (stem, Form::Proof));
-    crate::tiers::ALL_TIERS
-        .iter()
-        .filter(|tier| {
-            tier.name != "default"
-                && stem
-                    .strip_suffix(tier.suffix)
-                    .is_some_and(|prefix| prefix.is_empty() || prefix.ends_with('_'))
-        })
-        .max_by_key(|tier| tier.suffix.len())
-        .map(|tier| (tier, form))
+    with_ident_str(name, |name| {
+        let (stem, form) = name
+            .strip_suffix("_t")
+            .map_or((name, Form::Direct), |stem| (stem, Form::Proof));
+        crate::tiers::ALL_TIERS
+            .iter()
+            .filter(|tier| {
+                tier.name != "default"
+                    && stem
+                        .strip_suffix(tier.suffix)
+                        .is_some_and(|prefix| prefix.is_empty() || prefix.ends_with('_'))
+            })
+            .max_by_key(|tier| tier.suffix.len())
+            .map(|tier| (tier, form))
+    })
 }
 
 fn direct(
@@ -148,18 +148,16 @@ fn direct(
     // share the base vector representation at zero KLOC / `.rmeta` cost.
     let token_path = args
         .family
-        .then(|| tier.token_path.parse::<TokenStream>())
-        .transpose()?;
+        .then(|| colon_path_tokens(tier.token_path, true));
     let define_token_path = (!args.options.defines.is_empty())
-        .then(|| tier.define_backend_token_path().parse::<TokenStream>())
-        .transpose()?;
+        .then(|| colon_path_tokens(tier.define_backend_token_path(), true));
     let defines = args.options.defines.iter().map(|name| {
         let backend = define_token_path
             .as_ref()
             .expect("defines checked non-empty");
         quote! {
             #[allow(non_camel_case_types, dead_code)]
-            type #name = ::magetypes::simd::generic::#name<::#backend>;
+            type #name = ::magetypes::simd::generic::#name<#backend>;
         }
     });
     prepend_to_body(&mut input.body, quote!(#(#defines)*));
@@ -179,7 +177,7 @@ fn direct(
             .pairs()
             .any(|arg| placeholder_parameter(arg.value()))
     {
-        specialize_syntax(&mut input.sig, &quote!(::#token_path))?;
+        specialize_syntax(&mut input.sig, token_path)?;
     }
     if let Some(err) = crate::engine::feature::runtime_probe_direct_error(&input.sig, &context) {
         return Err(err);
@@ -192,7 +190,7 @@ fn direct(
         if let Some(token_path) = &token_path
             && tokens_contain_ident(&function, &["Token"])
         {
-            replace_ident_in_tokens(function, "Token", &quote!(::#token_path))
+            replace_ident_in_tokens(function, "Token", token_path)
         } else {
             function
         },
@@ -349,7 +347,7 @@ fn family(mut input: LightFn, args: Args) -> syn::Result<TokenStream> {
                 .is_some_and(crate::generated::token_requires_runtime_probe)
             && !input.sig.inputs.iter().any(placeholder_parameter);
         if hidden_probe_proof {
-            let token: syn::Path = syn::parse_str(&format!("::{}", tier.token_path))?;
+            let token = colon_path_tokens(tier.token_path, true);
             let position = usize::from(matches!(body.sig.inputs.first(), Some(FnArg::Receiver(_))));
             body.sig
                 .inputs
@@ -374,7 +372,7 @@ fn family(mut input: LightFn, args: Args) -> syn::Result<TokenStream> {
                 },
                 &args,
             )?);
-            let token: syn::Path = syn::parse_str(&format!("::{}", tier.token_path))?;
+            let token = colon_path_tokens(tier.token_path, true);
             let input_is_unsafe = matches!(input.sig.safety, syn::Safety::Unsafe(_));
             let invocation = forward(
                 &forward_sig,
@@ -401,7 +399,7 @@ fn family(mut input: LightFn, args: Args) -> syn::Result<TokenStream> {
     }
     if let Some((visibility, inline)) = &args.dispatcher {
         let mut dispatcher = input;
-        dispatcher.sig.inputs = forward_sig.inputs.clone();
+        dispatcher.sig.inputs = forward_sig.inputs;
         // Expectations belong to the user-written operation. Forwarding layers
         // do not repeat that operation and cannot fulfill its expectations.
         dispatcher
@@ -410,13 +408,15 @@ fn family(mut input: LightFn, args: Args) -> syn::Result<TokenStream> {
         if let Some(vis) = visibility {
             dispatcher.vis = vis.clone();
         }
-        if let Some(policy) = inline {
+        let dispatcher_inline = if let Some(policy) = inline {
             dispatcher
                 .attrs
                 .retain(|attr| !attr.path().is_ident("inline"));
-            dispatcher.attrs.extend(policy.attribute(&dispatcher.vis));
-        }
-        let proofs: Vec<_> = dispatcher
+            policy.tokens(&dispatcher.vis)
+        } else {
+            TokenStream::new()
+        };
+        let proofs = dispatcher
             .sig
             .inputs
             .iter()
@@ -427,12 +427,19 @@ fn family(mut input: LightFn, args: Args) -> syn::Result<TokenStream> {
                 } else {
                     None
                 }
-            })
-            .collect();
+            });
         dispatcher.body =
             quote! { #(let _ = #proofs;)* '__attune_dispatch: { #(#dispatch_arms)* } };
         specialize_syntax(&mut dispatcher.sig, &quote!(::archmage::ScalarToken))?;
-        output.extend(dispatcher.to_token_stream());
+        let attrs = &dispatcher.attrs;
+        let vis = &dispatcher.vis;
+        let sig = &dispatcher.sig;
+        let body = &dispatcher.body;
+        output.extend(quote! {
+            #(#attrs)*
+            #dispatcher_inline
+            #vis #sig { #body }
+        });
     }
     Ok(output)
 }
@@ -458,62 +465,52 @@ fn proof_entry(
         gate,
         hidden_probe_proof,
     } = spec;
-    let mut wrapper = input.clone();
     // Check the author's names before forwarding renames them; the renamed
     // `__archmage_*` names cannot collide with the `__attune_*` callee.
-    if let Some(error) = crate::engine::boundary::reserved_param_error(
-        &wrapper.sig,
-        &direct_name.to_string(),
-        "attune",
-    ) {
+    if let Some(error) =
+        crate::engine::boundary::reserved_param_error_ident(&input.sig, direct_name, "attune")
+    {
         return Ok(error);
     }
-    crate::common::rename_underscore_params(&mut wrapper.sig);
+    let mut sig = input.sig.clone();
+    crate::common::rename_underscore_params(&mut sig);
     let invocation = forward(
-        &wrapper.sig,
+        &sig,
         direct_name,
         args.options.in_impl,
         hidden_probe_proof.then(|| quote!(__attune_token)),
     );
-    let token: syn::Path = syn::parse_str(&format!("::{}", tier.token_path))?;
-    let position = usize::from(matches!(
-        wrapper.sig.inputs.first(),
-        Some(FnArg::Receiver(_))
-    ));
-    if !wrapper.sig.inputs.iter().any(placeholder_parameter) {
-        wrapper
-            .sig
-            .inputs
+    let token = colon_path_tokens(tier.token_path, true);
+    let position = usize::from(matches!(sig.inputs.first(), Some(FnArg::Receiver(_))));
+    if !sig.inputs.iter().any(placeholder_parameter) {
+        sig.inputs
             .insert(position, parse_quote!(__attune_token: #token));
     }
-    specialize_syntax(&mut wrapper.sig, &quote!(#token))?;
-    wrapper.sig.ident = name.clone();
-    wrapper.vis = selection
-        .map(|s| s.visibility.clone().unwrap_or_else(|| input.vis.clone()))
-        .unwrap_or(syn::Visibility::Inherited);
-    wrapper
+    specialize_syntax(&mut sig, &token)?;
+    sig.ident = name.clone();
+    let vis_ref = match selection {
+        Some(s) => s.visibility.as_ref().unwrap_or(&input.vis),
+        None => &syn::Visibility::Inherited,
+    };
+    let kept_attrs = input
         .attrs
-        .retain(|attr| !attr.path().is_ident("inline") && !attr.path().is_ident("expect"));
+        .iter()
+        .filter(|attr| !attr.path().is_ident("inline") && !attr.path().is_ident("expect"));
     let explicit_inline = selection.and_then(|s| s.inline);
-    wrapper.attrs.extend(
-        explicit_inline
-            .unwrap_or(Inline::Always)
-            .attribute(&wrapper.vis),
-    );
+    let inline_tokens = explicit_inline.unwrap_or(Inline::Always).tokens(vis_ref);
     // The wrapper only forwards parameters; its default `inline(always)` is
     // ours, not the author's, so only an explicit policy keeps that lint. An
     // unused wildcard output is not dead code the author wrote.
-    let mut allowed: Vec<syn::Path> = Vec::new();
-    if explicit_inline.is_none() {
-        allowed.push(parse_quote!(clippy::inline_always));
-    }
-    if selection.is_some_and(|s| s.wildcard) {
-        allowed.push(parse_quote!(dead_code));
-    }
-    if !allowed.is_empty() {
-        wrapper.attrs.push(parse_quote!(#[allow(#(#allowed),*)]));
-    }
-    wrapper.body = if !matches!(wrapper.sig.safety, syn::Safety::Unsafe(_))
+    let allow_tokens = match (
+        explicit_inline.is_none(),
+        selection.is_some_and(|s| s.wildcard),
+    ) {
+        (true, true) => quote!(#[allow(clippy::inline_always, dead_code)]),
+        (true, false) => quote!(#[allow(clippy::inline_always)]),
+        (false, true) => quote!(#[allow(dead_code)]),
+        (false, false) => TokenStream::new(),
+    };
+    let body = if !matches!(sig.safety, syn::Safety::Unsafe(_))
         && (tier.name == "scalar" || tier.target_arch == Some("wasm32"))
     {
         invocation
@@ -528,7 +525,15 @@ fn proof_entry(
         gate.or(args.options.imports.cfg_feature.as_deref()),
         tier_wasm_features(tier.name),
     );
-    Ok(quote!(#guard #wrapper))
+    Ok(quote! {
+        #guard
+        #(#kept_attrs)*
+        #inline_tokens
+        #allow_tokens
+        #vis_ref #sig {
+            #body
+        }
+    })
 }
 
 fn wrap(input: LightFn, args: Args) -> syn::Result<TokenStream> {
