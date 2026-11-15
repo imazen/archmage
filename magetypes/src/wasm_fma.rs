@@ -33,7 +33,19 @@ pub(crate) fn fused_f32x4(token: Wasm128Token, a: v128, b: v128, c: v128) -> v12
     token.fused_f32x4(a, b, c)
 }
 
-#[inline(always)]
+// Outside relaxed-SIMD, match baseline `#[rite]` codegen under `+simd128` so
+// `f64x4`/`f64x8::mul_add_portable` keep calling an in-module `fused_f64x2`
+// helper instead of inlining ~220 ops 4x or hiding `sret` aliasing across
+// crates. Keep plain `inline(always)` when `+simd128` is off (for safe calling
+// without `#[target_feature]`) or when `+relaxed-simd` enables the fast path.
+#[cfg_attr(
+    all(target_feature = "simd128", not(target_feature = "relaxed-simd")),
+    archmage::rite
+)]
+#[cfg_attr(
+    not(all(target_feature = "simd128", not(target_feature = "relaxed-simd"))),
+    inline(always)
+)]
 pub(crate) fn fused_f64x2(token: Wasm128Token, a: v128, b: v128, c: v128) -> v128 {
     token.fused_f64x2(a, b, c)
 }

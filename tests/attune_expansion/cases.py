@@ -423,13 +423,13 @@ pub fn ordinary(x: u32) -> u32 {{ archmage::{macro}!(Kernel::leaf::<u32>(x), [_s
 
 
 def corpus(arch, enabled):
-    cases = list(definitions(arch, enabled)) + list(calls(arch, enabled)) + list(extra_syntax(arch, enabled)) + list(registered_tiers()) + list(nesting_and_inference(arch, enabled))
+    cases = list(definitions(arch, enabled)) + list(calls(arch, enabled)) + list(extra_syntax(arch, enabled)) + list(registered_tiers(arch, enabled)) + list(nesting_and_inference(arch, enabled))
     names = [case.name for case in cases]
     assert len(names) == len(set(names)), "duplicate case IDs"
     return cases
 
 
-def registered_tiers():
+def registered_tiers(arch=None, enabled=False):
     registry = tomllib.loads((Path(__file__).resolve().parents[2] / "token-registry.toml").read_text())
     for token in registry["token"]:
         if "dispatch_priority" not in token:
@@ -438,6 +438,37 @@ def registered_tiers():
         gate = token.get("legacy_dispatch_gate")
         options = f"(cfg({gate}))" if gate else ""
         guard = f'#[cfg(feature = "{gate}")]' if gate else ""
+        if token.get("runtime_probe"):
+            source = f"""
+#[archmage::attune(_{tier}_t{options}, dispatch)]
+pub fn leaf(x: u32) -> u32 {{ x }}
+{guard}
+#[archmage::attune(wrap)]
+pub fn proof_caller(proof: archmage::{token['name']}, x: u32) -> u32 {{
+    archmage::attuned!(leaf(x), [_{tier}_t])
+}}
+pub fn runtime_caller(x: u32) -> u32 {{ leaf(x) }}
+"""
+            present = (token["name"],) if arch == "wasm32" and enabled else ()
+            yield Case(f"registered_{tier}", "registered-tier", source,
+                       absent=("from_context", f"fn leaf_{tier}("),
+                       present=present,
+                       tags=dict(tier=tier, architecture=token["arch"], gate=gate, runtime_probe=True))
+            yield Case(f"registered_{tier}_rejects_tokenless_caller", "registered-tier", f"""
+#[archmage::attune(_{tier}_t{options}, dispatch)]
+pub fn leaf(x: u32) -> u32 {{ x }}
+#[archmage::attune({tier})]
+pub fn caller(x: u32) -> u32 {{ archmage::attuned!(leaf(x), [_{tier}_t]) }}
+""",
+                       error="requires a runtime fusion probe",
+                       tags=dict(tier=tier, architecture=token["arch"], gate=gate, runtime_probe=True))
+            yield Case(f"registered_{tier}_rejects_tokenless_direct", "registered-tier", f"""
+#[archmage::attune(_{tier}{options})]
+pub fn leaf(x: u32) -> u32 {{ x }}
+""",
+                       error="requires a runtime fusion probe",
+                       tags=dict(tier=tier, architecture=token["arch"], gate=gate, runtime_probe=True))
+            continue
         source = f"""
 #[archmage::attune(_{tier}{options}, _{tier}_t{options}, dispatch)]
 pub fn leaf(x: u32) -> u32 {{ x }}
