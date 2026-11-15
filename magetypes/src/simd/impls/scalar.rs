@@ -9372,6 +9372,90 @@ impl I64x4BitcastOps for archmage::ScalarToken {
     }
 }
 
+impl F64x2ConvertOps for archmage::ScalarToken {
+    #[inline(always)]
+    fn convert_f64_to_i32_low(self, a: [f64; 2]) -> [i32; 4] {
+        [a[0] as i32, a[1] as i32, 0, 0]
+    }
+
+    #[inline(always)]
+    fn convert_f64_to_i32_low_round(self, a: [f64; 2]) -> [i32; 4] {
+        [f64_round(a[0]) as i32, f64_round(a[1]) as i32, 0, 0]
+    }
+
+    #[inline(always)]
+    fn convert_i32_low_to_f64(self, a: [i32; 4]) -> [f64; 2] {
+        [a[0] as f64, a[1] as f64]
+    }
+}
+
+impl F64x4ConvertOps for archmage::ScalarToken {
+    #[inline(always)]
+    fn convert_f64_to_i32(self, a: [f64; 4]) -> [i32; 4] {
+        [a[0] as i32, a[1] as i32, a[2] as i32, a[3] as i32]
+    }
+
+    #[inline(always)]
+    fn convert_f64_to_i32_round(self, a: [f64; 4]) -> [i32; 4] {
+        [
+            f64_round(a[0]) as i32,
+            f64_round(a[1]) as i32,
+            f64_round(a[2]) as i32,
+            f64_round(a[3]) as i32,
+        ]
+    }
+
+    #[inline(always)]
+    fn convert_i32_to_f64(self, a: [i32; 4]) -> [f64; 4] {
+        [a[0] as f64, a[1] as f64, a[2] as f64, a[3] as f64]
+    }
+}
+
+#[cfg(feature = "w512")]
+#[inline(always)]
+pub(crate) fn scalar_f64x8_to_i32(a: [f64; 8]) -> [i32; 8] {
+    [
+        a[0] as i32,
+        a[1] as i32,
+        a[2] as i32,
+        a[3] as i32,
+        a[4] as i32,
+        a[5] as i32,
+        a[6] as i32,
+        a[7] as i32,
+    ]
+}
+
+#[cfg(feature = "w512")]
+#[inline(always)]
+pub(crate) fn scalar_f64x8_to_i32_round(a: [f64; 8]) -> [i32; 8] {
+    [
+        f64_round(a[0]) as i32,
+        f64_round(a[1]) as i32,
+        f64_round(a[2]) as i32,
+        f64_round(a[3]) as i32,
+        f64_round(a[4]) as i32,
+        f64_round(a[5]) as i32,
+        f64_round(a[6]) as i32,
+        f64_round(a[7]) as i32,
+    ]
+}
+
+#[cfg(feature = "w512")]
+#[inline(always)]
+pub(crate) fn scalar_f64x8_from_i32(a: [i32; 8]) -> [f64; 8] {
+    [
+        a[0] as f64,
+        a[1] as f64,
+        a[2] as f64,
+        a[3] as f64,
+        a[4] as f64,
+        a[5] as f64,
+        a[6] as f64,
+        a[7] as f64,
+    ]
+}
+
 impl I8x16BitcastOps for archmage::ScalarToken {
     #[inline(always)]
     fn bitcast_i8_to_u8(self, a: [i8; 16]) -> [u8; 16] {

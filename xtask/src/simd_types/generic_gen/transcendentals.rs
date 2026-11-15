@@ -672,6 +672,7 @@ pub(super) fn gen_mod_rs(all_types: &[SimdType]) -> String {
         .iter()
         .map(|name| format!("{name}_impl"))
         .collect();
+    w512_mods.push("block_ops_f32x16".to_string());
     w512_mods.push("transcendentals_f32x16".to_string());
     w512_mods.sort();
     for mod_name in &w512_mods {

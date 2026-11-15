@@ -8,6 +8,8 @@ use super::F32x8Backend;
 use super::F32x16Backend;
 use super::F64x2Backend;
 use super::F64x4Backend;
+#[cfg(feature = "w512")]
+use super::F64x8Backend;
 use super::I32x4Backend;
 use super::I32x8Backend;
 #[cfg(feature = "w512")]
@@ -36,7 +38,7 @@ pub trait F32x4Convert: F32x4Backend + I32x4Backend + SimdToken + Sealed + Copy 
     /// lanes clamp to `i32::MIN`/`i32::MAX`, NaN lanes become 0 —
     /// identical on every backend (Rust `as` / NEON FCVTZS / WASM
     /// trunc_sat semantics). Default delegates to
-    /// [`convert_f32_to_i32`] (already conformant on NEON/WASM/
+    /// [`Self::convert_f32_to_i32`] (already conformant on NEON/WASM/
     /// scalar); x86 overrides with a cvttps + compare/blend fixup
     /// (the bare op yields the `i32::MIN` sentinel for overflow AND
     /// NaN there — issue #80).
@@ -87,7 +89,7 @@ pub trait F32x8Convert: F32x8Backend + I32x8Backend + SimdToken + Sealed + Copy 
     /// lanes clamp to `i32::MIN`/`i32::MAX`, NaN lanes become 0 —
     /// identical on every backend (Rust `as` / NEON FCVTZS / WASM
     /// trunc_sat semantics). Default delegates to
-    /// [`convert_f32_to_i32`] (already conformant on NEON/WASM/
+    /// [`Self::convert_f32_to_i32`] (already conformant on NEON/WASM/
     /// scalar); x86 overrides with a cvttps + compare/blend fixup
     /// (the bare op yields the `i32::MIN` sentinel for overflow AND
     /// NaN there — issue #80).
@@ -141,7 +143,7 @@ pub trait F32x16Convert:
     /// lanes clamp to `i32::MIN`/`i32::MAX`, NaN lanes become 0 —
     /// identical on every backend (Rust `as` / NEON FCVTZS / WASM
     /// trunc_sat semantics). Default delegates to
-    /// [`convert_f32_to_i32`] (already conformant on NEON/WASM/
+    /// [`Self::convert_f32_to_i32`] (already conformant on NEON/WASM/
     /// scalar); x86 overrides with a cvttps + compare/blend fixup
     /// (the bare op yields the `i32::MIN` sentinel for overflow AND
     /// NaN there — issue #80).
@@ -217,4 +219,104 @@ pub trait I64x4Bitcast: I64x4Backend + F64x4Backend + SimdToken + Sealed + Copy 
 
     /// Bitcast f64x4 to i64x4 (reinterpret bits, no conversion).
     fn bitcast_f64_to_i64(self, a: <Self as F64x4Backend>::Repr) -> <Self as I64x4Backend>::Repr;
+}
+
+/// Conversions between f64x2 and i32x4 representations (uses low 2 i32 lanes).
+///
+/// Requires both `F64x2Backend` and `I32x4Backend` to be implemented.
+pub trait F64x2Convert: F64x2Backend + I32x4Backend + SimdToken + Sealed + Copy + 'static {
+    /// Convert f64x2 to the low 2 lanes of i32x4 with truncation toward zero
+    /// (lanes 2 and 3 of the result are zero).
+    fn convert_f64_to_i32_low(
+        self,
+        a: <Self as F64x2Backend>::Repr,
+    ) -> <Self as I32x4Backend>::Repr;
+
+    /// Convert f64x2 to the low 2 lanes of i32x4 with truncation and UNIFORM
+    /// saturation (lanes 2 and 3 are zero): out-of-range lanes clamp to
+    /// `i32::MIN`/`i32::MAX` and NaN lanes become 0 — identical on every
+    /// backend (Rust `as` / NEON / WASM `trunc_sat_zero` semantics). Default
+    /// delegates to [`Self::convert_f64_to_i32_low`]; x86 overrides with a
+    /// cvttpd + compare/blend fixup (issue #80).
+    #[inline(always)]
+    fn convert_f64_to_i32_low_saturating(
+        self,
+        a: <Self as F64x2Backend>::Repr,
+    ) -> <Self as I32x4Backend>::Repr {
+        <Self as F64x2Convert>::convert_f64_to_i32_low(self, a)
+    }
+
+    /// Convert f64x2 to the low 2 lanes of i32x4 with rounding to nearest
+    /// (lanes 2 and 3 of the result are zero).
+    fn convert_f64_to_i32_low_round(
+        self,
+        a: <Self as F64x2Backend>::Repr,
+    ) -> <Self as I32x4Backend>::Repr;
+
+    /// Convert the low 2 lanes of i32x4 to f64x2.
+    fn convert_i32_low_to_f64(
+        self,
+        a: <Self as I32x4Backend>::Repr,
+    ) -> <Self as F64x2Backend>::Repr;
+}
+
+/// Conversions between f64x4 and i32x4 representations.
+///
+/// Requires both `F64x4Backend` and `I32x4Backend` to be implemented.
+pub trait F64x4Convert: F64x4Backend + I32x4Backend + SimdToken + Sealed + Copy + 'static {
+    /// Convert f64x4 to i32x4 with truncation toward zero.
+    fn convert_f64_to_i32(self, a: <Self as F64x4Backend>::Repr) -> <Self as I32x4Backend>::Repr;
+
+    /// Convert f64x4 to i32x4 with truncation and UNIFORM saturation:
+    /// out-of-range lanes clamp to `i32::MIN`/`i32::MAX` and NaN lanes
+    /// become 0 — identical on every backend (Rust `as` / NEON / WASM
+    /// semantics). Default delegates to [`Self::convert_f64_to_i32`]; x86
+    /// overrides with a cvttpd + compare/blend fixup (issue #80).
+    #[inline(always)]
+    fn convert_f64_to_i32_saturating(
+        self,
+        a: <Self as F64x4Backend>::Repr,
+    ) -> <Self as I32x4Backend>::Repr {
+        <Self as F64x4Convert>::convert_f64_to_i32(self, a)
+    }
+
+    /// Convert f64x4 to i32x4 with rounding to nearest.
+    fn convert_f64_to_i32_round(
+        self,
+        a: <Self as F64x4Backend>::Repr,
+    ) -> <Self as I32x4Backend>::Repr;
+
+    /// Convert i32x4 to f64x4.
+    fn convert_i32_to_f64(self, a: <Self as I32x4Backend>::Repr) -> <Self as F64x4Backend>::Repr;
+}
+
+/// Conversions between f64x8 and i32x8 representations.
+///
+/// Requires both `F64x8Backend` and `I32x8Backend` to be implemented.
+#[cfg(feature = "w512")]
+pub trait F64x8Convert: F64x8Backend + I32x8Backend + SimdToken + Sealed + Copy + 'static {
+    /// Convert f64x8 to i32x8 with truncation toward zero.
+    fn convert_f64_to_i32(self, a: <Self as F64x8Backend>::Repr) -> <Self as I32x8Backend>::Repr;
+
+    /// Convert f64x8 to i32x8 with truncation and UNIFORM saturation:
+    /// out-of-range lanes clamp to `i32::MIN`/`i32::MAX` and NaN lanes
+    /// become 0 — identical on every backend (Rust `as` / NEON / WASM
+    /// semantics). Default delegates to [`Self::convert_f64_to_i32`]; x86
+    /// overrides with a cvttpd + compare/blend fixup (issue #80).
+    #[inline(always)]
+    fn convert_f64_to_i32_saturating(
+        self,
+        a: <Self as F64x8Backend>::Repr,
+    ) -> <Self as I32x8Backend>::Repr {
+        <Self as F64x8Convert>::convert_f64_to_i32(self, a)
+    }
+
+    /// Convert f64x8 to i32x8 with rounding to nearest.
+    fn convert_f64_to_i32_round(
+        self,
+        a: <Self as F64x8Backend>::Repr,
+    ) -> <Self as I32x8Backend>::Repr;
+
+    /// Convert i32x8 to f64x8.
+    fn convert_i32_to_f64(self, a: <Self as I32x8Backend>::Repr) -> <Self as F64x8Backend>::Repr;
 }

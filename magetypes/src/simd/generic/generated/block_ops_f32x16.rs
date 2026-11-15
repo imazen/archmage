@@ -1,0 +1,425 @@
+//! Block, view, and image operations for `f32x16<T>`.
+//!
+//! Array/byte views, slice casting, interleave/deinterleave,
+//! matrix transpose, RGBA pixel operations, and cross-type bitcast references.
+
+use crate::simd::backends::F32x16Backend;
+use crate::simd::generic::f32x16;
+
+impl<T: F32x16Backend> f32x16<T> {
+    // ====== Array/Byte Views ======
+    //
+    // Views borrow only raw storage. Checked helpers enforce size and
+    // alignment without exposing or manufacturing the token.
+
+    /// Reference to underlying array (zero-copy).
+    #[inline(always)]
+    pub fn as_array(&self) -> &[f32; 16] {
+        crate::simd_storage::view(&self.0)
+    }
+
+    /// Mutable reference to underlying array (zero-copy).
+    #[inline(always)]
+    pub fn as_array_mut(&mut self) -> &mut [f32; 16] {
+        crate::simd_storage::view_mut(&mut self.0)
+    }
+
+    /// View as byte array.
+    #[inline(always)]
+    pub fn as_bytes(&self) -> &[u8; 64] {
+        crate::simd_storage::view(&self.0)
+    }
+
+    /// View as mutable byte array.
+    #[inline(always)]
+    pub fn as_bytes_mut(&mut self) -> &mut [u8; 64] {
+        crate::simd_storage::view_mut(&mut self.0)
+    }
+
+    /// Create from byte array reference (token-gated).
+    #[inline(always)]
+    pub fn from_bytes_t(token: T, bytes: &[u8; 64]) -> Self {
+        Self(crate::simd_storage::copy(bytes), token)
+    }
+
+    /// Create from owned byte array (token-gated).
+    #[inline(always)]
+    pub fn from_bytes_owned_t(token: T, bytes: [u8; 64]) -> Self {
+        Self(crate::simd_storage::cast(bytes), token)
+    }
+
+    // ====== Slice Casting ======
+
+    /// Reinterpret a scalar slice as a SIMD vector slice (token-gated).
+    ///
+    /// Returns `None` if length is not a multiple of 16 or alignment is wrong.
+    #[inline(always)]
+    pub fn cast_slice_t(token: T, slice: &[f32]) -> Option<&[Self]> {
+        crate::simd_storage::vector_slice::<_, Self, 16>(token, slice)
+    }
+
+    /// Reinterpret a mutable scalar slice as a SIMD vector slice (token-gated).
+    ///
+    /// Returns `None` if length is not a multiple of 16 or alignment is wrong.
+    #[inline(always)]
+    pub fn cast_slice_mut_t(token: T, slice: &mut [f32]) -> Option<&mut [Self]> {
+        crate::simd_storage::vector_slice_mut::<_, Self, 16>(token, slice)
+    }
+
+    // ====== u8 Conversions ======
+
+    /// Load 16 u8 values and convert to f32x16 (token-gated).
+    ///
+    /// Values are in `[0.0, 255.0]`. Useful for image processing.
+    #[inline(always)]
+    pub fn from_u8_t(token: T, bytes: &[u8; 16]) -> Self {
+        Self::from_repr_unchecked(
+            token,
+            T::from_array(token, core::array::from_fn(|i| bytes[i] as f32)),
+        )
+    }
+
+    /// Convert to 16 u8 values with saturation.
+    ///
+    /// Values are rounded and clamped to `[0, 255]`.
+    #[inline(always)]
+    pub fn to_u8(self) -> [u8; 16] {
+        T::to_u8_bytes(self.1, self.0)
+    }
+
+    // ====== Interleave Operations ======
+
+    /// Interleave low elements within 128-bit lanes.
+    ///
+    /// Picks `[a0,b0,a1,b1, a4,b4,a5,b5, a8,b8,a9,b9, a12,b12,a13,b13]`.
+    #[inline(always)]
+    pub fn interleave_lo(self, other: Self) -> Self {
+        let token = self.1;
+        let a = self.to_array();
+        let b = other.to_array();
+        Self::from_repr_unchecked(
+            token,
+            T::from_array(
+                token,
+                [
+                    a[0], b[0], a[1], b[1], a[4], b[4], a[5], b[5], a[8], b[8], a[9], b[9], a[12],
+                    b[12], a[13], b[13],
+                ],
+            ),
+        )
+    }
+
+    /// Interleave high elements within 128-bit lanes.
+    ///
+    /// Picks `[a2,b2,a3,b3, a6,b6,a7,b7, a10,b10,a11,b11, a14,b14,a15,b15]`.
+    #[inline(always)]
+    pub fn interleave_hi(self, other: Self) -> Self {
+        let token = self.1;
+        let a = self.to_array();
+        let b = other.to_array();
+        Self::from_repr_unchecked(
+            token,
+            T::from_array(
+                token,
+                [
+                    a[2], b[2], a[3], b[3], a[6], b[6], a[7], b[7], a[10], b[10], a[11], b[11],
+                    a[14], b[14], a[15], b[15],
+                ],
+            ),
+        )
+    }
+
+    /// Interleave two vectors within 128-bit lanes: returns `(interleave_lo, interleave_hi)`.
+    #[inline(always)]
+    pub fn interleave(self, other: Self) -> (Self, Self) {
+        let token = self.1;
+        let a = self.to_array();
+        let b = other.to_array();
+        (
+            Self::from_repr_unchecked(
+                token,
+                T::from_array(
+                    token,
+                    [
+                        a[0], b[0], a[1], b[1], a[4], b[4], a[5], b[5], a[8], b[8], a[9], b[9],
+                        a[12], b[12], a[13], b[13],
+                    ],
+                ),
+            ),
+            Self::from_repr_unchecked(
+                token,
+                T::from_array(
+                    token,
+                    [
+                        a[2], b[2], a[3], b[3], a[6], b[6], a[7], b[7], a[10], b[10], a[11], b[11],
+                        a[14], b[14], a[15], b[15],
+                    ],
+                ),
+            ),
+        )
+    }
+
+    // ====== 4-Channel Interleave/Deinterleave ======
+
+    /// Deinterleave 16 RGBA pixels from AoS to SoA format.
+    ///
+    /// Input: 4 `f32x16` vectors, each containing 4 RGBA pixels (`16` floats).
+    /// Output: `[R_all, G_all, B_all, A_all]` — one `f32x16` per channel.
+    #[inline(always)]
+    pub fn deinterleave_4ch(rgba: [Self; 4]) -> [Self; 4] {
+        let token = rgba[0].1;
+        let v: [[f32; 16]; 4] = core::array::from_fn(|i| rgba[i].to_array());
+        let r: [f32; 16] = core::array::from_fn(|i| v[i / 4][(i % 4) * 4]);
+        let g: [f32; 16] = core::array::from_fn(|i| v[i / 4][(i % 4) * 4 + 1]);
+        let b: [f32; 16] = core::array::from_fn(|i| v[i / 4][(i % 4) * 4 + 2]);
+        let a: [f32; 16] = core::array::from_fn(|i| v[i / 4][(i % 4) * 4 + 3]);
+        [
+            Self::from_repr_unchecked(token, T::from_array(token, r)),
+            Self::from_repr_unchecked(token, T::from_array(token, g)),
+            Self::from_repr_unchecked(token, T::from_array(token, b)),
+            Self::from_repr_unchecked(token, T::from_array(token, a)),
+        ]
+    }
+
+    /// Interleave 4 channels from SoA to AoS format.
+    ///
+    /// Input: `[R, G, B, A]` — one `f32x16` per channel (16 pixels).
+    /// Output: 4 `f32x16` vectors in interleaved AoS format.
+    ///
+    /// This is the inverse of `deinterleave_4ch`.
+    #[inline(always)]
+    pub fn interleave_4ch(channels: [Self; 4]) -> [Self; 4] {
+        let token = channels[0].1;
+        let r = channels[0].to_array();
+        let g = channels[1].to_array();
+        let b = channels[2].to_array();
+        let a = channels[3].to_array();
+        core::array::from_fn(|i| {
+            let base = i * 4;
+            Self::from_repr_unchecked(
+                token,
+                T::from_array(
+                    token,
+                    [
+                        r[base],
+                        g[base],
+                        b[base],
+                        a[base],
+                        r[base + 1],
+                        g[base + 1],
+                        b[base + 1],
+                        a[base + 1],
+                        r[base + 2],
+                        g[base + 2],
+                        b[base + 2],
+                        a[base + 2],
+                        r[base + 3],
+                        g[base + 3],
+                        b[base + 3],
+                        a[base + 3],
+                    ],
+                ),
+            )
+        })
+    }
+
+    // ====== RGBA Load/Store ======
+
+    /// Load 16 RGBA u8 pixels and deinterleave to 4 `f32x16` channel vectors (token-gated).
+    ///
+    /// Input: 64 bytes = 16 RGBA pixels in interleaved format.
+    /// Output: `(R, G, B, A)` where each is `f32x16` with values in `[0.0, 255.0]`.
+    #[inline(always)]
+    pub fn load_16_rgba_u8_t(token: T, rgba: &[u8; 64]) -> (Self, Self, Self, Self) {
+        let r: [f32; 16] = core::array::from_fn(|i| rgba[i * 4] as f32);
+        let g: [f32; 16] = core::array::from_fn(|i| rgba[i * 4 + 1] as f32);
+        let b: [f32; 16] = core::array::from_fn(|i| rgba[i * 4 + 2] as f32);
+        let a: [f32; 16] = core::array::from_fn(|i| rgba[i * 4 + 3] as f32);
+        (
+            Self::from_repr_unchecked(token, T::from_array(token, r)),
+            Self::from_repr_unchecked(token, T::from_array(token, g)),
+            Self::from_repr_unchecked(token, T::from_array(token, b)),
+            Self::from_repr_unchecked(token, T::from_array(token, a)),
+        )
+    }
+
+    /// Interleave 4 `f32x16` channels and store as 16 RGBA u8 pixels.
+    ///
+    /// Values are rounded and clamped to `[0, 255]`.
+    /// Output: 64 bytes = 16 RGBA pixels in interleaved format.
+    #[inline(always)]
+    pub fn store_16_rgba_u8(r: Self, g: Self, b: Self, a: Self) -> [u8; 64] {
+        T::store_rgba_bytes(r.1, r.0, g.0, b.0, a.0)
+    }
+
+    // ====== Full-Width Matrix Transposes ======
+
+    /// Transpose two independent 8x8 f32 blocks in-place (lanes `0..8`
+    /// and lanes `8..16` transposed independently).
+    #[inline(always)]
+    pub fn transpose_dual_8x8(rows: &mut [Self; 8]) {
+        let token = rows[0].1;
+        let reprs = T::transpose_dual_8x8_repr(token, core::array::from_fn(|i| rows[i].0));
+        for i in 0..8 {
+            rows[i] = Self::from_repr_unchecked(token, reprs[i]);
+        }
+    }
+
+    /// Transpose two independent 8x8 f32 blocks, returning the transposed rows.
+    #[inline(always)]
+    pub fn transpose_dual_8x8_copy(rows: [Self; 8]) -> [Self; 8] {
+        let mut result = rows;
+        Self::transpose_dual_8x8(&mut result);
+        result
+    }
+
+    /// Load an 8x16 contiguous block (two adjacent 8x8 blocks row-major)
+    /// into 8 row vectors.
+    #[inline(always)]
+    pub fn load_dual_8x8_t(token: T, block: &[f32; 128]) -> [Self; 8] {
+        core::array::from_fn(|i| {
+            let arr: [f32; 16] = block[i * 16..][..16].try_into().unwrap();
+            Self::from_repr_unchecked(token, T::from_array(token, arr))
+        })
+    }
+
+    /// Store 8 row vectors to a contiguous 8x16 f32 block.
+    #[inline(always)]
+    pub fn store_dual_8x8(rows: &[Self; 8], block: &mut [f32; 128]) {
+        for i in 0..8 {
+            let arr = rows[i].to_array();
+            block[i * 16..][..16].copy_from_slice(&arr);
+        }
+    }
+
+    /// Transpose a 16x16 matrix represented as 16 row vectors (in-place).
+    ///
+    /// After transpose, `rows[i][j]` becomes `rows[j][i]`.
+    #[inline(always)]
+    pub fn transpose_16x16(rows: &mut [Self; 16]) {
+        let token = rows[0].1;
+        let reprs = T::transpose_16x16_repr(token, core::array::from_fn(|i| rows[i].0));
+        for i in 0..16 {
+            rows[i] = Self::from_repr_unchecked(token, reprs[i]);
+        }
+    }
+
+    /// Transpose a 16x16 matrix, returning the transposed rows.
+    #[inline(always)]
+    pub fn transpose_16x16_copy(rows: [Self; 16]) -> [Self; 16] {
+        let mut result = rows;
+        Self::transpose_16x16(&mut result);
+        result
+    }
+
+    /// Load a 16x16 f32 block from a contiguous array into 16 row vectors.
+    #[inline(always)]
+    pub fn load_16x16_t(token: T, block: &[f32; 256]) -> [Self; 16] {
+        core::array::from_fn(|i| {
+            let arr: [f32; 16] = block[i * 16..][..16].try_into().unwrap();
+            Self::from_repr_unchecked(token, T::from_array(token, arr))
+        })
+    }
+
+    /// Store 16 row vectors to a contiguous 16x16 f32 block.
+    #[inline(always)]
+    pub fn store_16x16(rows: &[Self; 16], block: &mut [f32; 256]) {
+        for i in 0..16 {
+            let arr = rows[i].to_array();
+            block[i * 16..][..16].copy_from_slice(&arr);
+        }
+    }
+}
+
+// ============================================================================
+// Cross-type bitcast references (require F32x16Convert)
+// ============================================================================
+
+impl<T: crate::simd::backends::F32x16Convert> f32x16<T> {
+    /// Reinterpret bits as `&i32x16<T>` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_ref_i32(&self) -> &super::i32x16<T> {
+        crate::simd_storage::vector_view(self.1, &self.0)
+    }
+
+    /// Reinterpret bits as `&mut i32x16<T>` (zero-cost pointer cast).
+    #[inline(always)]
+    pub fn bitcast_mut_i32(&mut self) -> &mut super::i32x16<T> {
+        crate::simd_storage::vector_view_mut(self.1, &mut self.0)
+    }
+}
+// Generated deprecated token-constructor forwarders. Do not edit.
+impl<T: F32x16Backend> f32x16<T> {
+    #[inline(always)]
+    #[doc = "Deprecated token-taking spelling of [`Self::from_bytes_t`].\n\nUse `from_bytes_t` to keep explicit-token construction when `from_bytes` becomes tokenless in magetypes 0.10."]
+    #[deprecated(
+        note = "Use from_bytes_t(token, bytes); from_bytes becomes tokenless in magetypes 0.10."
+    )]
+    #[forbid(unsafe_code)]
+    pub fn from_bytes(token: T, bytes: &[u8; 64]) -> Self {
+        Self::from_bytes_t(token, bytes)
+    }
+    #[inline(always)]
+    #[doc = "Deprecated token-taking spelling of [`Self::from_bytes_owned_t`].\n\nUse `from_bytes_owned_t` to keep explicit-token construction when `from_bytes_owned` becomes tokenless in magetypes 0.10."]
+    #[deprecated(
+        note = "Use from_bytes_owned_t(token, bytes); from_bytes_owned becomes tokenless in magetypes 0.10."
+    )]
+    #[forbid(unsafe_code)]
+    pub fn from_bytes_owned(token: T, bytes: [u8; 64]) -> Self {
+        Self::from_bytes_owned_t(token, bytes)
+    }
+    #[inline(always)]
+    #[doc = "Deprecated token-taking spelling of [`Self::cast_slice_t`].\n\nUse `cast_slice_t` to keep explicit-token construction when `cast_slice` becomes tokenless in magetypes 0.10."]
+    #[deprecated(
+        note = "Use cast_slice_t(token, slice); cast_slice becomes tokenless in magetypes 0.10."
+    )]
+    #[forbid(unsafe_code)]
+    pub fn cast_slice(token: T, slice: &[f32]) -> Option<&[Self]> {
+        Self::cast_slice_t(token, slice)
+    }
+    #[inline(always)]
+    #[doc = "Deprecated token-taking spelling of [`Self::cast_slice_mut_t`].\n\nUse `cast_slice_mut_t` to keep explicit-token construction when `cast_slice_mut` becomes tokenless in magetypes 0.10."]
+    #[deprecated(
+        note = "Use cast_slice_mut_t(token, slice); cast_slice_mut becomes tokenless in magetypes 0.10."
+    )]
+    #[forbid(unsafe_code)]
+    pub fn cast_slice_mut(token: T, slice: &mut [f32]) -> Option<&mut [Self]> {
+        Self::cast_slice_mut_t(token, slice)
+    }
+    #[inline(always)]
+    #[doc = "Deprecated token-taking spelling of [`Self::from_u8_t`].\n\nUse `from_u8_t` to keep explicit-token construction when `from_u8` becomes tokenless in magetypes 0.10."]
+    #[deprecated(
+        note = "Use from_u8_t(token, bytes); from_u8 becomes tokenless in magetypes 0.10."
+    )]
+    #[forbid(unsafe_code)]
+    pub fn from_u8(token: T, bytes: &[u8; 16]) -> Self {
+        Self::from_u8_t(token, bytes)
+    }
+    #[inline(always)]
+    #[doc = "Deprecated token-taking spelling of [`Self::load_16_rgba_u8_t`].\n\nUse `load_16_rgba_u8_t` to keep explicit-token construction when `load_16_rgba_u8` becomes tokenless in magetypes 0.10."]
+    #[deprecated(
+        note = "Use load_16_rgba_u8_t(token, rgba); load_16_rgba_u8 becomes tokenless in magetypes 0.10."
+    )]
+    #[forbid(unsafe_code)]
+    pub fn load_16_rgba_u8(token: T, rgba: &[u8; 64]) -> (Self, Self, Self, Self) {
+        Self::load_16_rgba_u8_t(token, rgba)
+    }
+    #[inline(always)]
+    #[doc = "Deprecated token-taking spelling of [`Self::load_dual_8x8_t`].\n\nUse `load_dual_8x8_t` to keep explicit-token construction when `load_dual_8x8` becomes tokenless in magetypes 0.10."]
+    #[deprecated(
+        note = "Use load_dual_8x8_t(token, block); load_dual_8x8 becomes tokenless in magetypes 0.10."
+    )]
+    #[forbid(unsafe_code)]
+    pub fn load_dual_8x8(token: T, block: &[f32; 128]) -> [Self; 8] {
+        Self::load_dual_8x8_t(token, block)
+    }
+    #[inline(always)]
+    #[doc = "Deprecated token-taking spelling of [`Self::load_16x16_t`].\n\nUse `load_16x16_t` to keep explicit-token construction when `load_16x16` becomes tokenless in magetypes 0.10."]
+    #[deprecated(
+        note = "Use load_16x16_t(token, block); load_16x16 becomes tokenless in magetypes 0.10."
+    )]
+    #[forbid(unsafe_code)]
+    pub fn load_16x16(token: T, block: &[f32; 256]) -> [Self; 16] {
+        Self::load_16x16_t(token, block)
+    }
+}

@@ -18,7 +18,7 @@ pub(crate) fn gen_f32_i32_convert_on_float(src: &str, trait_bound: &str) -> Stri
     let int_type = format!("i32x{lanes}");
 
     // block_ops ref/mut aliases only exist for types with block_ops files
-    let has_block_ops = matches!(src, "f32x4" | "f32x8");
+    let has_block_ops = matches!(src, "f32x4" | "f32x8" | "f32x16");
     let ref_aliases = if has_block_ops {
         formatdoc! {r#"
 
@@ -494,4 +494,163 @@ pub(crate) fn gen_widen_narrow(type_name: &str) -> String {
         type_name,
     ));
     code
+}
+
+// ============================================================================
+// f64 <-> i32 conversions
+// ============================================================================
+
+/// Generate `f64x2 -> i32x4` (low 2 lanes) conversions on `f64x2`.
+pub(crate) fn gen_f64_i32_low_convert_on_float(src: &str, trait_bound: &str) -> String {
+    formatdoc! {r#"
+        // ============================================================================
+        // Cross-type conversions (f64x2 ↔ low 2 lanes of i32x4)
+        // ============================================================================
+
+        impl<T: crate::simd::backends::{trait_bound}> {src}<T> {{
+            /// Convert the 2 lanes of `self` to the low 2 lanes of `i32x4` with
+            /// truncation toward zero (lanes 2 and 3 of the result are zero).
+            ///
+            /// **Out-of-range and NaN lanes DIVERGE per backend** (issue #80):
+            /// x86's `cvttpd` yields `i32::MIN` for overflow in both directions
+            /// and for NaN, while NEON/WASM/scalar saturate with NaN→0. Keep
+            /// lanes in `i32` range, or use
+            /// [`to_i32_low_saturating`](Self::to_i32_low_saturating) for uniform
+            /// semantics.
+            #[inline(always)]
+            pub fn to_i32_low(self) -> super::i32x4<T> {{
+                super::i32x4::from_repr_unchecked(self.1, T::convert_f64_to_i32_low(self.1, self.0))
+            }}
+
+            /// Convert the 2 lanes of `self` to the low 2 lanes of `i32x4` with
+            /// truncation and UNIFORM saturation (lanes 2 and 3 are zero):
+            /// out-of-range lanes clamp to `i32::MIN`/`i32::MAX` and NaN lanes
+            /// become 0, identically on every backend — the semantics of Rust
+            /// scalar `as`. Native on NEON/WASM/scalar; on x86 a compare/blend
+            /// fixup over `cvttpd` (issue #80).
+            #[inline(always)]
+            pub fn to_i32_low_saturating(self) -> super::i32x4<T> {{
+                super::i32x4::from_repr_unchecked(self.1, T::convert_f64_to_i32_low_saturating(self.1, self.0))
+            }}
+
+            /// Convert the 2 lanes of `self` to the low 2 lanes of `i32x4` with
+            /// rounding to nearest (lanes 2 and 3 of the result are zero).
+            #[inline(always)]
+            pub fn to_i32_low_round(self) -> super::i32x4<T> {{
+                super::i32x4::from_repr_unchecked(self.1, T::convert_f64_to_i32_low_round(self.1, self.0))
+            }}
+
+            /// Create `f64x2` by converting the low 2 lanes of `i32x4`.
+            #[inline(always)]
+            pub fn from_i32_low_t(token: T, v: super::i32x4<T>) -> Self {{
+                Self(T::convert_i32_low_to_f64(token, v.into_repr()), token)
+            }}
+        }}
+    "#}
+}
+
+/// Generate `i32x4 (low 2 lanes) -> f64x2` conversion on `i32x4`.
+pub(crate) fn gen_f64_i32_low_convert_on_int(src: &str, trait_bound: &str) -> String {
+    formatdoc! {r#"
+        impl<T: crate::simd::backends::{trait_bound}> {src}<T> {{
+            /// Convert the low 2 lanes of `self` to `f64x2`.
+            #[inline(always)]
+            pub fn to_f64x2_low(self) -> super::f64x2<T> {{
+                super::f64x2::from_repr_unchecked(self.1, T::convert_i32_low_to_f64(self.1, self.0))
+            }}
+        }}
+    "#}
+}
+
+/// Generate `f64x4 -> i32x4` and `f64x8 -> i32x8` conversions on the float type.
+pub(crate) fn gen_f64_i32_convert_on_float(src: &str, trait_bound: &str) -> String {
+    let lanes = lane_count(src);
+    let int_type = format!("i32x{lanes}");
+
+    formatdoc! {r#"
+        // ============================================================================
+        // Cross-type conversions (f64 ↔ i32)
+        // ============================================================================
+
+        impl<T: crate::simd::backends::{trait_bound}> {src}<T> {{
+            /// Convert to `{int_type}` with truncation toward zero.
+            ///
+            /// **Out-of-range and NaN lanes DIVERGE per backend** (issue #80):
+            /// x86's `cvttpd` yields `i32::MIN` for overflow in both directions
+            /// and for NaN, while NEON/WASM/scalar saturate with NaN→0. Keep
+            /// lanes in `i32` range, or use
+            /// [`to_i32_saturating`](Self::to_i32_saturating) for uniform semantics.
+            #[inline(always)]
+            pub fn to_i32(self) -> super::{int_type}<T> {{
+                super::{int_type}::from_repr_unchecked(self.1, T::convert_f64_to_i32(self.1, self.0))
+            }}
+
+            /// Convert to `{int_type}` with truncation and UNIFORM saturation:
+            /// out-of-range lanes clamp to `i32::MIN`/`i32::MAX` and NaN lanes
+            /// become 0, identically on every backend — the semantics of Rust
+            /// scalar `as`. Native on NEON/WASM/scalar; on x86 a compare/blend
+            /// (or AVX-512 mask) fixup over `cvttpd` (issue #80).
+            #[inline(always)]
+            pub fn to_i32_saturating(self) -> super::{int_type}<T> {{
+                super::{int_type}::from_repr_unchecked(self.1, T::convert_f64_to_i32_saturating(self.1, self.0))
+            }}
+
+            /// Convert to `{int_type}` with rounding to nearest.
+            #[inline(always)]
+            pub fn to_i32_round(self) -> super::{int_type}<T> {{
+                super::{int_type}::from_repr_unchecked(self.1, T::convert_f64_to_i32_round(self.1, self.0))
+            }}
+
+            /// Create from `{int_type}` via numeric conversion.
+            #[inline(always)]
+            pub fn from_i32_t(token: T, v: super::{int_type}<T>) -> Self {{
+                Self(T::convert_i32_to_f64(token, v.into_repr()), token)
+            }}
+
+            /// Alias for [`to_i32`](Self::to_i32).
+            #[inline(always)]
+            pub fn to_{int_type}(self) -> super::{int_type}<T> {{
+                self.to_i32()
+            }}
+
+            /// Alias for [`to_i32_round`](Self::to_i32_round).
+            #[inline(always)]
+            pub fn to_{int_type}_round(self) -> super::{int_type}<T> {{
+                self.to_i32_round()
+            }}
+
+            /// Alias for [`from_i32_t`](Self::from_i32_t).
+            #[inline(always)]
+            pub fn from_{int_type}_t(token: T, v: super::{int_type}<T>) -> Self {{
+                Self::from_i32_t(token, v)
+            }}
+        }}
+    "#}
+}
+
+/// Generate `i32x4 -> f64x4` and `i32x8 -> f64x8` conversions on the int type.
+pub(crate) fn gen_f64_i32_convert_on_int(src: &str, trait_bound: &str) -> String {
+    let lanes = lane_count(src);
+    let float_type = format!("f64x{lanes}");
+    let w512_gate = if lanes == "8" {
+        "#[cfg(feature = \"w512\")]\n"
+    } else {
+        ""
+    };
+
+    formatdoc! {r#"
+        {w512_gate}impl<T: crate::simd::backends::{trait_bound}> {src}<T> {{
+            /// Convert to `{float_type}` (numeric conversion).
+            #[inline(always)]
+            pub fn to_f64(self) -> super::{float_type}<T> {{
+                super::{float_type}::from_repr_unchecked(self.1, T::convert_i32_to_f64(self.1, self.0))
+            }}
+
+            /// Alias for [`to_f64`](Self::to_f64).
+            #[inline(always)]
+            pub fn to_{float_type}(self) -> super::{float_type}<T> {{
+                self.to_f64()
+            }}
+        }}
+    "#}
 }

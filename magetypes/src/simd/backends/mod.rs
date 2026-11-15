@@ -123,11 +123,12 @@ mod popcnt;
 pub use popcnt::*;
 
 mod convert;
-#[cfg(feature = "w512")]
-pub use convert::F32x16Convert;
 pub use convert::{
-    F32x4Convert, F32x8Convert, I64x2Bitcast, I64x4Bitcast, U32x4Bitcast, U32x8Bitcast,
+    F32x4Convert, F32x8Convert, F64x2Convert, F64x4Convert, I64x2Bitcast, I64x4Bitcast,
+    U32x4Bitcast, U32x8Bitcast,
 };
+#[cfg(feature = "w512")]
+pub use convert::{F32x16Convert, F64x8Convert};
 
 mod convert_int;
 pub use convert_int::{

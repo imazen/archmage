@@ -602,10 +602,10 @@ pub fn generate_backend_files() -> BTreeMap<String, String> {
     );
 
     // 10c. Canonical `*Ops` traits (`backends/ops.rs`), 21-token `Sealed` map
-    // (`backends/sealed.rs`), and single blanket impls for all 43 unified
+    // (`backends/sealed.rs`), and single blanket impls for all 45 unified
     // `*Backend`/`*Convert`/`*Bitcast` traits (`impls/delegated.rs`).
     {
-        let mut specs: Vec<(String, String, bool)> = Vec::with_capacity(43);
+        let mut specs: Vec<(String, String, bool)> = Vec::with_capacity(45);
         for ty in &types {
             specs.push((
                 ty.trait_name(),
@@ -651,6 +651,8 @@ pub fn generate_backend_files() -> BTreeMap<String, String> {
         for name in [
             "F32x4Convert",
             "F32x8Convert",
+            "F64x2Convert",
+            "F64x4Convert",
             "U32x4Bitcast",
             "U32x8Bitcast",
             "I64x2Bitcast",
@@ -1117,9 +1119,9 @@ fn generate_float_backend_trait(ty: &FloatVecType) -> String {
             fn rcp_approx(self, a: Self::Repr) -> Self::Repr {{ a }}
 
             /// Fast reciprocal square root approximation: backend-dependent
-            /// (x86 ~12-bit, ARM ~8-bit, WASM full). [`rsqrt`] is full f32 everywhere.
+            /// (x86 ~12-bit, ARM ~8-bit, WASM full). [`Self::rsqrt`] is full f32 everywhere.
             ///
-            /// See [`rcp_approx`] for default-body rationale.
+            /// See [`Self::rcp_approx`] for default-body rationale.
             #[inline(always)]
             fn rsqrt_approx(self, a: Self::Repr) -> Self::Repr {{ a }}
 
@@ -1146,7 +1148,7 @@ fn generate_float_backend_trait(ty: &FloatVecType) -> String {
             }}
 
             /// Working-tier reciprocal — defaults to delegating to
-            /// [`rcp_approx`] (which itself defaults to identity), so every
+            /// [`Self::rcp_approx`] (which itself defaults to identity), so every
             /// backend MUST override. Contract: <= 4 ULP by the backend's
             /// fastest conforming path (estimate + Newton on x86/NEON f32,
             /// exact division elsewhere); rails are per-backend and may be
@@ -1155,7 +1157,7 @@ fn generate_float_backend_trait(ty: &FloatVecType) -> String {
             #[inline(always)]
             fn recip(self, a: Self::Repr) -> Self::Repr {{ Self::rcp_approx(self, a) }}
 
-            /// Working-tier reciprocal square root — see [`recip`] for the
+            /// Working-tier reciprocal square root — see [`Self::recip`] for the
             /// contract shape.
             #[inline(always)]
             fn rsqrt(self, a: Self::Repr) -> Self::Repr {{ Self::rsqrt_approx(self, a) }}
@@ -1244,10 +1246,12 @@ fn generate_backends_mod(
     code.push_str("#[cfg(feature = \"avx512\")]\n");
     code.push_str("pub use popcnt::*;\n\n");
 
-    // Conversion and bitcast traits (float/i32/u32/i64). F32x16Convert is gated on w512.
+    // Conversion and bitcast traits (float/i32/u32/i64). F32x16Convert and F64x8Convert are gated on w512.
     code.push_str("mod convert;\n");
-    code.push_str("pub use convert::{F32x4Convert, F32x8Convert, U32x4Bitcast, U32x8Bitcast, I64x2Bitcast, I64x4Bitcast};\n");
-    code.push_str("#[cfg(feature = \"w512\")]\npub use convert::F32x16Convert;\n\n");
+    code.push_str("pub use convert::{F32x4Convert, F32x8Convert, F64x2Convert, F64x4Convert, U32x4Bitcast, U32x8Bitcast, I64x2Bitcast, I64x4Bitcast};\n");
+    code.push_str(
+        "#[cfg(feature = \"w512\")]\npub use convert::{F32x16Convert, F64x8Convert};\n\n",
+    );
 
     // Additional conversion traits (i8↔u8, i16↔u16, u64↔i64 bitcasts)
     code.push_str("mod convert_int;\npub use convert_int::{I8x16Bitcast, I8x32Bitcast, I16x8Bitcast, I16x16Bitcast, U64x2Bitcast, U64x4Bitcast};\n\n");
@@ -1291,20 +1295,20 @@ fn generate_impls_mod() -> String {
         //! **Auto-generated** by `cargo xtask generate` - do not edit manually.
 
         #[cfg(target_arch = "x86_64")]
-        mod x86_v3;
+        pub(crate) mod x86_v3;
 
         #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-        mod x86_v4;
+        pub(crate) mod x86_v4;
 
         // Hand-written AVX-512VL pixel-packing overrides called by `Sealed` hooks.
         #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
         pub(crate) mod x86_v4_f32_overrides;
 
         #[cfg(target_arch = "aarch64")]
-        mod arm_neon;
+        pub(crate) mod arm_neon;
 
         #[cfg(target_arch = "wasm32")]
-        mod wasm128;
+        pub(crate) mod wasm128;
         #[cfg(all(
             target_arch = "wasm32",
             target_feature = "simd128",
@@ -1312,10 +1316,10 @@ fn generate_impls_mod() -> String {
         ))]
         pub(crate) mod wasm128_fma_overrides;
 
-        mod scalar;
+        pub(crate) mod scalar;
 
-        // Single blanket impls over `SimdToken + Sealed` for all 43 unified
-        // `*Backend` / `*Convert` / `*Bitcast` traits.
+        // Single blanket impls over `SimdToken + Sealed` for all 45 unified
+        // `*Backend` / `*Convert` / `*Bitcast` traits (plus `F64x8Convert`).
         mod delegated;
     "#}
 }
@@ -1414,7 +1418,52 @@ fn generate_x86_v4_impls_file(w512_types: &[super::backend_gen_w512::W512Type]) 
     );
     code.push_str(&generate_x86_v4_f32x16_convert("X64V4Token"));
 
+    // F64x8Convert helpers for V4 (delegated via backends/sealed.rs + impls/delegated.rs)
+    code.push_str(
+        "\n// ============================================================================\n",
+    );
+    code.push_str("// F64x8Convert — native AVX-512 conversions\n");
+    code.push_str(
+        "// ============================================================================\n\n",
+    );
+    code.push_str(&generate_x86_v4_f64x8_convert());
+
     code
+}
+
+fn generate_x86_v4_f64x8_convert() -> String {
+    indoc::indoc! {r#"
+        #[cfg(all(target_arch = "x86_64", feature = "w512"))]
+        #[arcane]
+        pub(crate) fn v4_f64x8_to_i32(_token: X64V4Token, a: __m512d) -> __m256i {
+            _mm512_cvttpd_epi32(a)
+        }
+
+        // Issue #80 fixup: mask-register form over cvttpd.
+        #[cfg(all(target_arch = "x86_64", feature = "w512"))]
+        #[arcane]
+        pub(crate) fn v4_f64x8_to_i32_saturating(_token: X64V4Token, a: __m512d) -> __m256i {
+            let t = _mm512_cvttpd_epi32(a);
+            let big = _mm512_cmp_pd_mask::<_CMP_GE_OQ>(a, _mm512_set1_pd(2_147_483_648.0));
+            let t = _mm256_mask_mov_epi32(t, big, _mm256_set1_epi32(i32::MAX));
+            let not_nan = _mm512_cmp_pd_mask::<_CMP_ORD_Q>(a, a);
+            _mm256_maskz_mov_epi32(not_nan, t)
+        }
+
+        #[cfg(all(target_arch = "x86_64", feature = "w512"))]
+        #[arcane]
+        pub(crate) fn v4_f64x8_to_i32_round(_token: X64V4Token, a: __m512d) -> __m256i {
+            _mm512_cvtpd_epi32(a)
+        }
+
+        #[cfg(all(target_arch = "x86_64", feature = "w512"))]
+        #[arcane]
+        pub(crate) fn v4_f64x8_from_i32(_token: X64V4Token, a: __m256i) -> __m512d {
+            _mm512_cvtepi32_pd(a)
+        }
+
+    "#}
+    .to_string()
 }
 
 fn generate_x86_v4_f32x16_convert(token: &str) -> String {
@@ -5336,6 +5385,8 @@ fn generate_convert_traits() -> String {
         use super::F32x16Backend;
         use super::F64x2Backend;
         use super::F64x4Backend;
+        #[cfg(feature = "w512")]
+        use super::F64x8Backend;
         use super::I32x4Backend;
         use super::I32x8Backend;
         #[cfg(feature = "w512")]
@@ -5363,7 +5414,7 @@ fn generate_convert_traits() -> String {
             /// lanes clamp to `i32::MIN`/`i32::MAX`, NaN lanes become 0 —
             /// identical on every backend (Rust `as` / NEON FCVTZS / WASM
             /// trunc_sat semantics). Default delegates to
-            /// [`convert_f32_to_i32`] (already conformant on NEON/WASM/
+            /// [`Self::convert_f32_to_i32`] (already conformant on NEON/WASM/
             /// scalar); x86 overrides with a cvttps + compare/blend fixup
             /// (the bare op yields the `i32::MIN` sentinel for overflow AND
             /// NaN there — issue #80).
@@ -5405,7 +5456,7 @@ fn generate_convert_traits() -> String {
             /// lanes clamp to `i32::MIN`/`i32::MAX`, NaN lanes become 0 —
             /// identical on every backend (Rust `as` / NEON FCVTZS / WASM
             /// trunc_sat semantics). Default delegates to
-            /// [`convert_f32_to_i32`] (already conformant on NEON/WASM/
+            /// [`Self::convert_f32_to_i32`] (already conformant on NEON/WASM/
             /// scalar); x86 overrides with a cvttps + compare/blend fixup
             /// (the bare op yields the `i32::MIN` sentinel for overflow AND
             /// NaN there — issue #80).
@@ -5448,7 +5499,7 @@ fn generate_convert_traits() -> String {
             /// lanes clamp to `i32::MIN`/`i32::MAX`, NaN lanes become 0 —
             /// identical on every backend (Rust `as` / NEON FCVTZS / WASM
             /// trunc_sat semantics). Default delegates to
-            /// [`convert_f32_to_i32`] (already conformant on NEON/WASM/
+            /// [`Self::convert_f32_to_i32`] (already conformant on NEON/WASM/
             /// scalar); x86 overrides with a cvttps + compare/blend fixup
             /// (the bare op yields the `i32::MIN` sentinel for overflow AND
             /// NaN there — issue #80).
@@ -5515,6 +5566,82 @@ fn generate_convert_traits() -> String {
 
             /// Bitcast f64x4 to i64x4 (reinterpret bits, no conversion).
             fn bitcast_f64_to_i64(self, a: <Self as F64x4Backend>::Repr) -> <Self as I64x4Backend>::Repr;
+        }}
+
+        /// Conversions between f64x2 and i32x4 representations (uses low 2 i32 lanes).
+        ///
+        /// Requires both `F64x2Backend` and `I32x4Backend` to be implemented.
+        pub trait F64x2Convert: F64x2Backend + I32x4Backend + SimdToken + Sealed + Copy + 'static {{
+            /// Convert f64x2 to the low 2 lanes of i32x4 with truncation toward zero
+            /// (lanes 2 and 3 of the result are zero).
+            fn convert_f64_to_i32_low(self, a: <Self as F64x2Backend>::Repr) -> <Self as I32x4Backend>::Repr;
+
+            /// Convert f64x2 to the low 2 lanes of i32x4 with truncation and UNIFORM
+            /// saturation (lanes 2 and 3 are zero): out-of-range lanes clamp to
+            /// `i32::MIN`/`i32::MAX` and NaN lanes become 0 — identical on every
+            /// backend (Rust `as` / NEON / WASM `trunc_sat_zero` semantics). Default
+            /// delegates to [`Self::convert_f64_to_i32_low`]; x86 overrides with a
+            /// cvttpd + compare/blend fixup (issue #80).
+            #[inline(always)]
+            fn convert_f64_to_i32_low_saturating(self, a: <Self as F64x2Backend>::Repr) -> <Self as I32x4Backend>::Repr {{
+                <Self as F64x2Convert>::convert_f64_to_i32_low(self, a)
+            }}
+
+            /// Convert f64x2 to the low 2 lanes of i32x4 with rounding to nearest
+            /// (lanes 2 and 3 of the result are zero).
+            fn convert_f64_to_i32_low_round(self, a: <Self as F64x2Backend>::Repr) -> <Self as I32x4Backend>::Repr;
+
+            /// Convert the low 2 lanes of i32x4 to f64x2.
+            fn convert_i32_low_to_f64(self, a: <Self as I32x4Backend>::Repr) -> <Self as F64x2Backend>::Repr;
+        }}
+
+        /// Conversions between f64x4 and i32x4 representations.
+        ///
+        /// Requires both `F64x4Backend` and `I32x4Backend` to be implemented.
+        pub trait F64x4Convert: F64x4Backend + I32x4Backend + SimdToken + Sealed + Copy + 'static {{
+            /// Convert f64x4 to i32x4 with truncation toward zero.
+            fn convert_f64_to_i32(self, a: <Self as F64x4Backend>::Repr) -> <Self as I32x4Backend>::Repr;
+
+            /// Convert f64x4 to i32x4 with truncation and UNIFORM saturation:
+            /// out-of-range lanes clamp to `i32::MIN`/`i32::MAX` and NaN lanes
+            /// become 0 — identical on every backend (Rust `as` / NEON / WASM
+            /// semantics). Default delegates to [`Self::convert_f64_to_i32`]; x86
+            /// overrides with a cvttpd + compare/blend fixup (issue #80).
+            #[inline(always)]
+            fn convert_f64_to_i32_saturating(self, a: <Self as F64x4Backend>::Repr) -> <Self as I32x4Backend>::Repr {{
+                <Self as F64x4Convert>::convert_f64_to_i32(self, a)
+            }}
+
+            /// Convert f64x4 to i32x4 with rounding to nearest.
+            fn convert_f64_to_i32_round(self, a: <Self as F64x4Backend>::Repr) -> <Self as I32x4Backend>::Repr;
+
+            /// Convert i32x4 to f64x4.
+            fn convert_i32_to_f64(self, a: <Self as I32x4Backend>::Repr) -> <Self as F64x4Backend>::Repr;
+        }}
+
+        /// Conversions between f64x8 and i32x8 representations.
+        ///
+        /// Requires both `F64x8Backend` and `I32x8Backend` to be implemented.
+        #[cfg(feature = "w512")]
+        pub trait F64x8Convert: F64x8Backend + I32x8Backend + SimdToken + Sealed + Copy + 'static {{
+            /// Convert f64x8 to i32x8 with truncation toward zero.
+            fn convert_f64_to_i32(self, a: <Self as F64x8Backend>::Repr) -> <Self as I32x8Backend>::Repr;
+
+            /// Convert f64x8 to i32x8 with truncation and UNIFORM saturation:
+            /// out-of-range lanes clamp to `i32::MIN`/`i32::MAX` and NaN lanes
+            /// become 0 — identical on every backend (Rust `as` / NEON / WASM
+            /// semantics). Default delegates to [`Self::convert_f64_to_i32`]; x86
+            /// overrides with a cvttpd + compare/blend fixup (issue #80).
+            #[inline(always)]
+            fn convert_f64_to_i32_saturating(self, a: <Self as F64x8Backend>::Repr) -> <Self as I32x8Backend>::Repr {{
+                <Self as F64x8Convert>::convert_f64_to_i32(self, a)
+            }}
+
+            /// Convert f64x8 to i32x8 with rounding to nearest.
+            fn convert_f64_to_i32_round(self, a: <Self as F64x8Backend>::Repr) -> <Self as I32x8Backend>::Repr;
+
+            /// Convert i32x8 to f64x8.
+            fn convert_i32_to_f64(self, a: <Self as I32x8Backend>::Repr) -> <Self as F64x8Backend>::Repr;
         }}
     "#}
 }
@@ -5964,6 +6091,111 @@ fn generate_x86_convert_impls(token: &str) -> String {
             fn bitcast_f64_to_i64(self, a: __m256d) -> __m256i {{
                 _mm256_castpd_si256(a)
             }}
+        }}
+
+        #[cfg(target_arch = "x86_64")]
+        impl F64x2Convert for archmage::{token} {{
+            {arcane}
+            fn convert_f64_to_i32_low(self, a: __m128d) -> __m128i {{
+                _mm_cvttpd_epi32(a)
+            }}
+
+            // Issue #80 fixup: cvttpd yields i32::MIN sentinel for +overflow and
+            // NaN in lanes 0..2 while zeroing lanes 2..4.
+            {arcane}
+            fn convert_f64_to_i32_low_saturating(self, a: __m128d) -> __m128i {{
+                let t = _mm_cvttpd_epi32(a);
+                let big = _mm_cmp_pd::<_CMP_GE_OQ>(a, _mm_set1_pd(2_147_483_648.0));
+                let big_i = _mm_castps_si128(_mm_shuffle_ps::<0x08>(_mm_castpd_ps(big), _mm_setzero_ps()));
+                let t = _mm_blendv_epi8(t, _mm_set1_epi32(i32::MAX), big_i);
+                let nan = _mm_cmp_pd::<_CMP_UNORD_Q>(a, a);
+                let nan_i = _mm_castps_si128(_mm_shuffle_ps::<0x08>(_mm_castpd_ps(nan), _mm_setzero_ps()));
+                _mm_andnot_si128(nan_i, t)
+            }}
+
+            {arcane}
+            fn convert_f64_to_i32_low_round(self, a: __m128d) -> __m128i {{
+                _mm_cvtpd_epi32(a)
+            }}
+
+            {arcane}
+            fn convert_i32_low_to_f64(self, a: __m128i) -> __m128d {{
+                _mm_cvtepi32_pd(a)
+            }}
+        }}
+
+        #[cfg(target_arch = "x86_64")]
+        impl F64x4Convert for archmage::{token} {{
+            {arcane}
+            fn convert_f64_to_i32(self, a: __m256d) -> __m128i {{
+                _mm256_cvttpd_epi32(a)
+            }}
+
+            // Issue #80 fixup — pack the four 64-bit compare masks into 4x32-bit
+            // lanes via shuffle::<0x88> before blending with _mm256_cvttpd_epi32.
+            {arcane}
+            fn convert_f64_to_i32_saturating(self, a: __m256d) -> __m128i {{
+                let t = _mm256_cvttpd_epi32(a);
+                let big = _mm256_cmp_pd::<_CMP_GE_OQ>(a, _mm256_set1_pd(2_147_483_648.0));
+                let big_ps = _mm256_castpd_ps(big);
+                let big_i = _mm_castps_si128(_mm_shuffle_ps::<0x88>(
+                    _mm256_castps256_ps128(big_ps),
+                    _mm256_extractf128_ps::<1>(big_ps),
+                ));
+                let t = _mm_blendv_epi8(t, _mm_set1_epi32(i32::MAX), big_i);
+                let nan = _mm256_cmp_pd::<_CMP_UNORD_Q>(a, a);
+                let nan_ps = _mm256_castpd_ps(nan);
+                let nan_i = _mm_castps_si128(_mm_shuffle_ps::<0x88>(
+                    _mm256_castps256_ps128(nan_ps),
+                    _mm256_extractf128_ps::<1>(nan_ps),
+                ));
+                _mm_andnot_si128(nan_i, t)
+            }}
+
+            {arcane}
+            fn convert_f64_to_i32_round(self, a: __m256d) -> __m128i {{
+                _mm256_cvtpd_epi32(a)
+            }}
+
+            {arcane}
+            fn convert_i32_to_f64(self, a: __m128i) -> __m256d {{
+                _mm256_cvtepi32_pd(a)
+            }}
+        }}
+
+        #[cfg(all(target_arch = "x86_64", feature = "w512"))]
+        #[arcane]
+        pub(crate) fn v3_f64x8_to_i32(token: archmage::{token}, a: [__m256d; 2]) -> __m256i {{
+            let lo = <archmage::{token} as F64x4Convert>::convert_f64_to_i32(token, a[0]);
+            let hi = <archmage::{token} as F64x4Convert>::convert_f64_to_i32(token, a[1]);
+            _mm256_set_m128i(hi, lo)
+        }}
+
+        #[cfg(all(target_arch = "x86_64", feature = "w512"))]
+        #[arcane]
+        pub(crate) fn v3_f64x8_to_i32_saturating(token: archmage::{token}, a: [__m256d; 2]) -> __m256i {{
+            let lo = <archmage::{token} as F64x4Convert>::convert_f64_to_i32_saturating(token, a[0]);
+            let hi = <archmage::{token} as F64x4Convert>::convert_f64_to_i32_saturating(token, a[1]);
+            _mm256_set_m128i(hi, lo)
+        }}
+
+        #[cfg(all(target_arch = "x86_64", feature = "w512"))]
+        #[arcane]
+        pub(crate) fn v3_f64x8_to_i32_round(token: archmage::{token}, a: [__m256d; 2]) -> __m256i {{
+            let lo = <archmage::{token} as F64x4Convert>::convert_f64_to_i32_round(token, a[0]);
+            let hi = <archmage::{token} as F64x4Convert>::convert_f64_to_i32_round(token, a[1]);
+            _mm256_set_m128i(hi, lo)
+        }}
+
+        #[cfg(all(target_arch = "x86_64", feature = "w512"))]
+        #[arcane]
+        pub(crate) fn v3_f64x8_from_i32(token: archmage::{token}, a: __m256i) -> [__m256d; 2] {{
+            let lo = _mm256_castsi256_si128(a);
+            let hi = _mm256_extracti128_si256::<1>(a);
+            [
+                <archmage::{token} as F64x4Convert>::convert_i32_to_f64(token, lo),
+                <archmage::{token} as F64x4Convert>::convert_i32_to_f64(token, hi),
+            ]
         }}
     "#}
 }
@@ -6458,6 +6690,82 @@ fn generate_scalar_convert_impls() -> String {
 
         "#});
     }
+
+    // F64 <-> I32 conversion impls
+    code.push_str(indoc! {r#"
+        impl F64x2Convert for archmage::ScalarToken {
+            #[inline(always)]
+            fn convert_f64_to_i32_low(self, a: [f64; 2]) -> [i32; 4] {
+                [a[0] as i32, a[1] as i32, 0, 0]
+            }
+
+            #[inline(always)]
+            fn convert_f64_to_i32_low_round(self, a: [f64; 2]) -> [i32; 4] {
+                [f64_round(a[0]) as i32, f64_round(a[1]) as i32, 0, 0]
+            }
+
+            #[inline(always)]
+            fn convert_i32_low_to_f64(self, a: [i32; 4]) -> [f64; 2] {
+                [a[0] as f64, a[1] as f64]
+            }
+        }
+
+        impl F64x4Convert for archmage::ScalarToken {
+            #[inline(always)]
+            fn convert_f64_to_i32(self, a: [f64; 4]) -> [i32; 4] {
+                [a[0] as i32, a[1] as i32, a[2] as i32, a[3] as i32]
+            }
+
+            #[inline(always)]
+            fn convert_f64_to_i32_round(self, a: [f64; 4]) -> [i32; 4] {
+                [
+                    f64_round(a[0]) as i32,
+                    f64_round(a[1]) as i32,
+                    f64_round(a[2]) as i32,
+                    f64_round(a[3]) as i32,
+                ]
+            }
+
+            #[inline(always)]
+            fn convert_i32_to_f64(self, a: [i32; 4]) -> [f64; 4] {
+                [a[0] as f64, a[1] as f64, a[2] as f64, a[3] as f64]
+            }
+        }
+
+        #[cfg(feature = "w512")]
+        #[inline(always)]
+        pub(crate) fn scalar_f64x8_to_i32(a: [f64; 8]) -> [i32; 8] {
+            [
+                a[0] as i32, a[1] as i32, a[2] as i32, a[3] as i32,
+                a[4] as i32, a[5] as i32, a[6] as i32, a[7] as i32,
+            ]
+        }
+
+        #[cfg(feature = "w512")]
+        #[inline(always)]
+        pub(crate) fn scalar_f64x8_to_i32_round(a: [f64; 8]) -> [i32; 8] {
+            [
+                f64_round(a[0]) as i32,
+                f64_round(a[1]) as i32,
+                f64_round(a[2]) as i32,
+                f64_round(a[3]) as i32,
+                f64_round(a[4]) as i32,
+                f64_round(a[5]) as i32,
+                f64_round(a[6]) as i32,
+                f64_round(a[7]) as i32,
+            ]
+        }
+
+        #[cfg(feature = "w512")]
+        #[inline(always)]
+        pub(crate) fn scalar_f64x8_from_i32(a: [i32; 8]) -> [f64; 8] {
+            [
+                a[0] as f64, a[1] as f64, a[2] as f64, a[3] as f64,
+                a[4] as f64, a[5] as f64, a[6] as f64, a[7] as f64,
+            ]
+        }
+
+    "#});
 
     code
 }
@@ -7077,6 +7385,71 @@ fn generate_neon_convert_impls() -> String {
                 [vreinterpretq_s64_f64(a[0]), vreinterpretq_s64_f64(a[1])]
             }}
         }}
+
+        #[cfg(target_arch = "aarch64")]
+        impl F64x2Convert for archmage::NeonToken {{
+            {arcane}
+            fn convert_f64_to_i32_low(self, a: float64x2_t) -> int32x4_t {{
+                vcombine_s32(vqmovn_s64(vcvtq_s64_f64(a)), vdup_n_s32(0))
+            }}
+
+            {arcane}
+            fn convert_f64_to_i32_low_round(self, a: float64x2_t) -> int32x4_t {{
+                vcombine_s32(vqmovn_s64(vcvtnq_s64_f64(a)), vdup_n_s32(0))
+            }}
+
+            {arcane}
+            fn convert_i32_low_to_f64(self, a: int32x4_t) -> float64x2_t {{
+                vcvtq_f64_s64(vmovl_s32(vget_low_s32(a)))
+            }}
+        }}
+
+        #[cfg(target_arch = "aarch64")]
+        impl F64x4Convert for archmage::NeonToken {{
+            {arcane}
+            fn convert_f64_to_i32(self, a: [float64x2_t; 2]) -> int32x4_t {{
+                vcombine_s32(vqmovn_s64(vcvtq_s64_f64(a[0])), vqmovn_s64(vcvtq_s64_f64(a[1])))
+            }}
+
+            {arcane}
+            fn convert_f64_to_i32_round(self, a: [float64x2_t; 2]) -> int32x4_t {{
+                vcombine_s32(vqmovn_s64(vcvtnq_s64_f64(a[0])), vqmovn_s64(vcvtnq_s64_f64(a[1])))
+            }}
+
+            {arcane}
+            fn convert_i32_to_f64(self, a: int32x4_t) -> [float64x2_t; 2] {{
+                [
+                    vcvtq_f64_s64(vmovl_s32(vget_low_s32(a))),
+                    vcvtq_f64_s64(vmovl_s32(vget_high_s32(a))),
+                ]
+            }}
+        }}
+
+        #[cfg(all(target_arch = "aarch64", feature = "w512"))]
+        #[inline(always)]
+        pub(crate) fn neon_f64x8_to_i32(token: archmage::NeonToken, a: [float64x2_t; 4]) -> [int32x4_t; 2] {{
+            [
+                <archmage::NeonToken as F64x4Convert>::convert_f64_to_i32(token, [a[0], a[1]]),
+                <archmage::NeonToken as F64x4Convert>::convert_f64_to_i32(token, [a[2], a[3]]),
+            ]
+        }}
+
+        #[cfg(all(target_arch = "aarch64", feature = "w512"))]
+        #[inline(always)]
+        pub(crate) fn neon_f64x8_to_i32_round(token: archmage::NeonToken, a: [float64x2_t; 4]) -> [int32x4_t; 2] {{
+            [
+                <archmage::NeonToken as F64x4Convert>::convert_f64_to_i32_round(token, [a[0], a[1]]),
+                <archmage::NeonToken as F64x4Convert>::convert_f64_to_i32_round(token, [a[2], a[3]]),
+            ]
+        }}
+
+        #[cfg(all(target_arch = "aarch64", feature = "w512"))]
+        #[inline(always)]
+        pub(crate) fn neon_f64x8_from_i32(token: archmage::NeonToken, a: [int32x4_t; 2]) -> [float64x2_t; 4] {{
+            let lo = <archmage::NeonToken as F64x4Convert>::convert_i32_to_f64(token, a[0]);
+            let hi = <archmage::NeonToken as F64x4Convert>::convert_i32_to_f64(token, a[1]);
+            [lo[0], lo[1], hi[0], hi[1]]
+        }}
     "#}
 }
 
@@ -7572,6 +7945,75 @@ fn generate_wasm_convert_impls() -> String {
 
             #[inline(always)]
             fn bitcast_f64_to_i64(self, a: [v128; 2]) -> [v128; 2] {{ a }}
+        }}
+
+        #[cfg(target_arch = "wasm32")]
+        impl F64x2Convert for archmage::Wasm128Token {{
+            #[inline(always)]
+            fn convert_f64_to_i32_low(self, a: v128) -> v128 {{
+                i32x4_trunc_sat_f64x2_zero(a)
+            }}
+
+            #[inline(always)]
+            fn convert_f64_to_i32_low_round(self, a: v128) -> v128 {{
+                i32x4_trunc_sat_f64x2_zero(f64x2_nearest(a))
+            }}
+
+            #[inline(always)]
+            fn convert_i32_low_to_f64(self, a: v128) -> v128 {{
+                f64x2_convert_low_i32x4(a)
+            }}
+        }}
+
+        #[cfg(target_arch = "wasm32")]
+        impl F64x4Convert for archmage::Wasm128Token {{
+            #[inline(always)]
+            fn convert_f64_to_i32(self, a: [v128; 2]) -> v128 {{
+                let lo = i32x4_trunc_sat_f64x2_zero(a[0]);
+                let hi = i32x4_trunc_sat_f64x2_zero(a[1]);
+                i64x2_shuffle::<0, 2>(lo, hi)
+            }}
+
+            #[inline(always)]
+            fn convert_f64_to_i32_round(self, a: [v128; 2]) -> v128 {{
+                let lo = i32x4_trunc_sat_f64x2_zero(f64x2_nearest(a[0]));
+                let hi = i32x4_trunc_sat_f64x2_zero(f64x2_nearest(a[1]));
+                i64x2_shuffle::<0, 2>(lo, hi)
+            }}
+
+            #[inline(always)]
+            fn convert_i32_to_f64(self, a: v128) -> [v128; 2] {{
+                [
+                    f64x2_convert_low_i32x4(a),
+                    f64x2_convert_low_i32x4(i64x2_shuffle::<1, 0>(a, a)),
+                ]
+            }}
+        }}
+
+        #[cfg(all(target_arch = "wasm32", feature = "w512"))]
+        #[inline(always)]
+        pub(crate) fn wasm_f64x8_to_i32(token: archmage::Wasm128Token, a: [v128; 4]) -> [v128; 2] {{
+            [
+                <archmage::Wasm128Token as F64x4Convert>::convert_f64_to_i32(token, [a[0], a[1]]),
+                <archmage::Wasm128Token as F64x4Convert>::convert_f64_to_i32(token, [a[2], a[3]]),
+            ]
+        }}
+
+        #[cfg(all(target_arch = "wasm32", feature = "w512"))]
+        #[inline(always)]
+        pub(crate) fn wasm_f64x8_to_i32_round(token: archmage::Wasm128Token, a: [v128; 4]) -> [v128; 2] {{
+            [
+                <archmage::Wasm128Token as F64x4Convert>::convert_f64_to_i32_round(token, [a[0], a[1]]),
+                <archmage::Wasm128Token as F64x4Convert>::convert_f64_to_i32_round(token, [a[2], a[3]]),
+            ]
+        }}
+
+        #[cfg(all(target_arch = "wasm32", feature = "w512"))]
+        #[inline(always)]
+        pub(crate) fn wasm_f64x8_from_i32(token: archmage::Wasm128Token, a: [v128; 2]) -> [v128; 4] {{
+            let lo = <archmage::Wasm128Token as F64x4Convert>::convert_i32_to_f64(token, a[0]);
+            let hi = <archmage::Wasm128Token as F64x4Convert>::convert_i32_to_f64(token, a[1]);
+            [lo[0], lo[1], hi[0], hi[1]]
         }}
     "#}
 }

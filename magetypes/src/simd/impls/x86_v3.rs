@@ -5015,6 +5015,111 @@ impl I64x4BitcastOps for X64V3Token {
 }
 
 #[cfg(target_arch = "x86_64")]
+impl F64x2ConvertOps for X64V3Token {
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn convert_f64_to_i32_low(self, a: __m128d) -> __m128i {
+        _mm_cvttpd_epi32(a)
+    }
+
+    // Issue #80 fixup: cvttpd yields i32::MIN sentinel for +overflow and
+    // NaN in lanes 0..2 while zeroing lanes 2..4.
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn convert_f64_to_i32_low_saturating(self, a: __m128d) -> __m128i {
+        let t = _mm_cvttpd_epi32(a);
+        let big = _mm_cmp_pd::<_CMP_GE_OQ>(a, _mm_set1_pd(2_147_483_648.0));
+        let big_i = _mm_castps_si128(_mm_shuffle_ps::<0x08>(_mm_castpd_ps(big), _mm_setzero_ps()));
+        let t = _mm_blendv_epi8(t, _mm_set1_epi32(i32::MAX), big_i);
+        let nan = _mm_cmp_pd::<_CMP_UNORD_Q>(a, a);
+        let nan_i = _mm_castps_si128(_mm_shuffle_ps::<0x08>(_mm_castpd_ps(nan), _mm_setzero_ps()));
+        _mm_andnot_si128(nan_i, t)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn convert_f64_to_i32_low_round(self, a: __m128d) -> __m128i {
+        _mm_cvtpd_epi32(a)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn convert_i32_low_to_f64(self, a: __m128i) -> __m128d {
+        _mm_cvtepi32_pd(a)
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl F64x4ConvertOps for X64V3Token {
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn convert_f64_to_i32(self, a: __m256d) -> __m128i {
+        _mm256_cvttpd_epi32(a)
+    }
+
+    // Issue #80 fixup — pack the four 64-bit compare masks into 4x32-bit
+    // lanes via shuffle::<0x88> before blending with _mm256_cvttpd_epi32.
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn convert_f64_to_i32_saturating(self, a: __m256d) -> __m128i {
+        let t = _mm256_cvttpd_epi32(a);
+        let big = _mm256_cmp_pd::<_CMP_GE_OQ>(a, _mm256_set1_pd(2_147_483_648.0));
+        let big_ps = _mm256_castpd_ps(big);
+        let big_i = _mm_castps_si128(_mm_shuffle_ps::<0x88>(
+            _mm256_castps256_ps128(big_ps),
+            _mm256_extractf128_ps::<1>(big_ps),
+        ));
+        let t = _mm_blendv_epi8(t, _mm_set1_epi32(i32::MAX), big_i);
+        let nan = _mm256_cmp_pd::<_CMP_UNORD_Q>(a, a);
+        let nan_ps = _mm256_castpd_ps(nan);
+        let nan_i = _mm_castps_si128(_mm_shuffle_ps::<0x88>(
+            _mm256_castps256_ps128(nan_ps),
+            _mm256_extractf128_ps::<1>(nan_ps),
+        ));
+        _mm_andnot_si128(nan_i, t)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn convert_f64_to_i32_round(self, a: __m256d) -> __m128i {
+        _mm256_cvtpd_epi32(a)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn convert_i32_to_f64(self, a: __m128i) -> __m256d {
+        _mm256_cvtepi32_pd(a)
+    }
+}
+
+#[cfg(all(target_arch = "x86_64", feature = "w512"))]
+#[arcane]
+pub(crate) fn v3_f64x8_to_i32(token: X64V3Token, a: [__m256d; 2]) -> __m256i {
+    let lo = <X64V3Token as F64x4ConvertOps>::convert_f64_to_i32(token, a[0]);
+    let hi = <X64V3Token as F64x4ConvertOps>::convert_f64_to_i32(token, a[1]);
+    _mm256_set_m128i(hi, lo)
+}
+
+#[cfg(all(target_arch = "x86_64", feature = "w512"))]
+#[arcane]
+pub(crate) fn v3_f64x8_to_i32_saturating(token: X64V3Token, a: [__m256d; 2]) -> __m256i {
+    let lo = <X64V3Token as F64x4ConvertOps>::convert_f64_to_i32_saturating(token, a[0]);
+    let hi = <X64V3Token as F64x4ConvertOps>::convert_f64_to_i32_saturating(token, a[1]);
+    _mm256_set_m128i(hi, lo)
+}
+
+#[cfg(all(target_arch = "x86_64", feature = "w512"))]
+#[arcane]
+pub(crate) fn v3_f64x8_to_i32_round(token: X64V3Token, a: [__m256d; 2]) -> __m256i {
+    let lo = <X64V3Token as F64x4ConvertOps>::convert_f64_to_i32_round(token, a[0]);
+    let hi = <X64V3Token as F64x4ConvertOps>::convert_f64_to_i32_round(token, a[1]);
+    _mm256_set_m128i(hi, lo)
+}
+
+#[cfg(all(target_arch = "x86_64", feature = "w512"))]
+#[arcane]
+pub(crate) fn v3_f64x8_from_i32(token: X64V3Token, a: __m256i) -> [__m256d; 2] {
+    let lo = _mm256_castsi256_si128(a);
+    let hi = _mm256_extracti128_si256::<1>(a);
+    [
+        <X64V3Token as F64x4ConvertOps>::convert_i32_to_f64(token, lo),
+        <X64V3Token as F64x4ConvertOps>::convert_i32_to_f64(token, hi),
+    ]
+}
+
+#[cfg(target_arch = "x86_64")]
 impl I8x16BitcastOps for X64V3Token {
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn bitcast_i8_to_u8(self, a: __m128i) -> __m128i {
@@ -5318,6 +5423,66 @@ impl F32x16Ops for X64V3Token {
             <X64V3Token as F32x8Ops>::rsqrt(self, a[0]),
             <X64V3Token as F32x8Ops>::rsqrt(self, a[1]),
         ]
+    }
+
+    #[inline(always)]
+    fn to_u8_bytes(self, a: [__m256; 2]) -> [u8; 16] {
+        let lo = <X64V3Token as F32x8Ops>::to_u8_bytes(self, a[0]);
+        let hi = <X64V3Token as F32x8Ops>::to_u8_bytes(self, a[1]);
+        crate::simd_storage::cast([lo, hi])
+    }
+
+    #[inline(always)]
+    fn store_rgba_bytes(
+        self,
+        r: [__m256; 2],
+        g: [__m256; 2],
+        b: [__m256; 2],
+        a: [__m256; 2],
+    ) -> [u8; 64] {
+        let lo = <X64V3Token as F32x8Ops>::store_rgba_bytes(self, r[0], g[0], b[0], a[0]);
+        let hi = <X64V3Token as F32x8Ops>::store_rgba_bytes(self, r[1], g[1], b[1], a[1]);
+        crate::simd_storage::cast([lo, hi])
+    }
+
+    #[inline(always)]
+    fn transpose_dual_8x8_repr(self, rows: [[__m256; 2]; 8]) -> [[__m256; 2]; 8] {
+        let lo = <X64V3Token as F32x8Ops>::transpose_8x8_repr(
+            self,
+            core::array::from_fn(|i| rows[i][0]),
+        );
+        let hi = <X64V3Token as F32x8Ops>::transpose_8x8_repr(
+            self,
+            core::array::from_fn(|i| rows[i][1]),
+        );
+        core::array::from_fn(|i| [lo[i], hi[i]])
+    }
+
+    #[inline(always)]
+    fn transpose_16x16_repr(self, rows: [[__m256; 2]; 16]) -> [[__m256; 2]; 16] {
+        let tl = <X64V3Token as F32x8Ops>::transpose_8x8_repr(
+            self,
+            core::array::from_fn(|i| rows[i][0]),
+        );
+        let tr = <X64V3Token as F32x8Ops>::transpose_8x8_repr(
+            self,
+            core::array::from_fn(|i| rows[i][1]),
+        );
+        let bl = <X64V3Token as F32x8Ops>::transpose_8x8_repr(
+            self,
+            core::array::from_fn(|i| rows[i + 8][0]),
+        );
+        let br = <X64V3Token as F32x8Ops>::transpose_8x8_repr(
+            self,
+            core::array::from_fn(|i| rows[i + 8][1]),
+        );
+        core::array::from_fn(|i| {
+            if i < 8 {
+                [tl[i], bl[i]]
+            } else {
+                [tr[i - 8], br[i - 8]]
+            }
+        })
     }
 
     #[inline(always)]

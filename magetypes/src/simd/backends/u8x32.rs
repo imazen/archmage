@@ -153,14 +153,14 @@ pub trait U8x32Backend: SimdToken + Sealed + Copy + 'static {
         <Self as U8x32Backend>::min(self, <Self as U8x32Backend>::max(self, a, lo), hi)
     }
 
-    /// Widen in natural lane order: result[i] = a[i + 0] as u16.
+    /// Widen in natural lane order: `result[i] = a[i + 0] as u16`.
     fn widen_low_u8_to_u16(
         self,
         a: <Self as U8x32Backend>::Repr,
     ) -> <Self as super::U16x16Backend>::Repr
     where
         Self: super::U16x16Backend;
-    /// Widen in natural lane order: result[i] = a[i + 16] as u16.
+    /// Widen in natural lane order: `result[i] = a[i + 16] as u16`.
     fn widen_high_u8_to_u16(
         self,
         a: <Self as U8x32Backend>::Repr,
@@ -177,7 +177,7 @@ pub trait U8x32Backend: SimdToken + Sealed + Copy + 'static {
     fn reduce_add_u32(self, a: <Self as U8x32Backend>::Repr) -> u32;
     /// Terminal sum of absolute byte differences. Reduce once after long accumulation loops where possible.
     fn sum_abs_diff(self, a: <Self as U8x32Backend>::Repr, b: <Self as U8x32Backend>::Repr) -> u32;
-    /// Exact unsigned adjacent sums: output[k] = widened a[2*k] + widened a[2*k+1].
+    /// Exact unsigned adjacent sums: `output[k] = widened a[2*k] + widened a[2*k+1]`.
     fn pairwise_widen_add(
         self,
         a: <Self as U8x32Backend>::Repr,

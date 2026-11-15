@@ -1,5 +1,5 @@
-//! Blanket implementations of all 43 public backend, conversion, and bitcast
-//! traits over every sealed archmage token.
+//! Blanket implementations of all 45 public backend, conversion, and bitcast
+//! traits (plus `F64x8Convert`) over every sealed archmage token.
 //!
 //! Routes through `T::Narrow` / `T::W512` (`backends/ops.rs`) and optional
 //! hardware overrides on `Sealed`.
@@ -3372,6 +3372,28 @@ impl<T: archmage::SimdToken + Sealed + Copy + 'static> F32x16Backend for T {
     fn rsqrt(self, a: Self::Repr) -> Self::Repr {
         <T::W512 as ops::F32x16Ops>::rsqrt(self.w512(), a)
     }
+    #[inline(always)]
+    fn to_u8_bytes(self, a: Self::Repr) -> [u8; 16] {
+        <T::W512 as ops::F32x16Ops>::to_u8_bytes(self.w512(), a)
+    }
+    #[inline(always)]
+    fn store_rgba_bytes(
+        self,
+        r: Self::Repr,
+        g: Self::Repr,
+        b: Self::Repr,
+        a: Self::Repr,
+    ) -> [u8; 64] {
+        <T::W512 as ops::F32x16Ops>::store_rgba_bytes(self.w512(), r, g, b, a)
+    }
+    #[inline(always)]
+    fn transpose_dual_8x8_repr(self, rows: [Self::Repr; 8]) -> [Self::Repr; 8] {
+        <T::W512 as ops::F32x16Ops>::transpose_dual_8x8_repr(self.w512(), rows)
+    }
+    #[inline(always)]
+    fn transpose_16x16_repr(self, rows: [Self::Repr; 16]) -> [Self::Repr; 16] {
+        <T::W512 as ops::F32x16Ops>::transpose_16x16_repr(self.w512(), rows)
+    }
 }
 
 #[cfg(feature = "w512")]
@@ -4869,6 +4891,62 @@ impl<T: archmage::SimdToken + Sealed + Copy + 'static> F32x8Convert for T {
     }
 }
 
+impl<T: archmage::SimdToken + Sealed + Copy + 'static> F64x2Convert for T {
+    #[inline(always)]
+    fn convert_f64_to_i32_low(
+        self,
+        a: <Self as F64x2Backend>::Repr,
+    ) -> <Self as I32x4Backend>::Repr {
+        <T::Narrow as ops::F64x2ConvertOps>::convert_f64_to_i32_low(self.narrow(), a)
+    }
+    #[inline(always)]
+    fn convert_f64_to_i32_low_saturating(
+        self,
+        a: <Self as F64x2Backend>::Repr,
+    ) -> <Self as I32x4Backend>::Repr {
+        < T :: Narrow as crate :: simd :: backends :: ops :: F64x2ConvertOps > :: convert_f64_to_i32_low_saturating (self . narrow () , a)
+    }
+    #[inline(always)]
+    fn convert_f64_to_i32_low_round(
+        self,
+        a: <Self as F64x2Backend>::Repr,
+    ) -> <Self as I32x4Backend>::Repr {
+        <T::Narrow as ops::F64x2ConvertOps>::convert_f64_to_i32_low_round(self.narrow(), a)
+    }
+    #[inline(always)]
+    fn convert_i32_low_to_f64(
+        self,
+        a: <Self as I32x4Backend>::Repr,
+    ) -> <Self as F64x2Backend>::Repr {
+        <T::Narrow as ops::F64x2ConvertOps>::convert_i32_low_to_f64(self.narrow(), a)
+    }
+}
+
+impl<T: archmage::SimdToken + Sealed + Copy + 'static> F64x4Convert for T {
+    #[inline(always)]
+    fn convert_f64_to_i32(self, a: <Self as F64x4Backend>::Repr) -> <Self as I32x4Backend>::Repr {
+        <T::Narrow as ops::F64x4ConvertOps>::convert_f64_to_i32(self.narrow(), a)
+    }
+    #[inline(always)]
+    fn convert_f64_to_i32_saturating(
+        self,
+        a: <Self as F64x4Backend>::Repr,
+    ) -> <Self as I32x4Backend>::Repr {
+        <T::Narrow as ops::F64x4ConvertOps>::convert_f64_to_i32_saturating(self.narrow(), a)
+    }
+    #[inline(always)]
+    fn convert_f64_to_i32_round(
+        self,
+        a: <Self as F64x4Backend>::Repr,
+    ) -> <Self as I32x4Backend>::Repr {
+        <T::Narrow as ops::F64x4ConvertOps>::convert_f64_to_i32_round(self.narrow(), a)
+    }
+    #[inline(always)]
+    fn convert_i32_to_f64(self, a: <Self as I32x4Backend>::Repr) -> <Self as F64x4Backend>::Repr {
+        <T::Narrow as ops::F64x4ConvertOps>::convert_i32_to_f64(self.narrow(), a)
+    }
+}
+
 impl<T: archmage::SimdToken + Sealed + Copy + 'static> U32x4Bitcast for T {
     #[inline(always)]
     fn bitcast_u32_to_i32(self, a: <Self as U32x4Backend>::Repr) -> <Self as I32x4Backend>::Repr {
@@ -5017,5 +5095,31 @@ impl<T: archmage::SimdToken + Sealed + Copy + 'static> U64x4Bitcast for T {
     #[inline(always)]
     fn bitcast_i64_to_u64(self, a: <Self as I64x4Backend>::Repr) -> <Self as U64x4Backend>::Repr {
         <T::Narrow as ops::U64x4BitcastOps>::bitcast_i64_to_u64(self.narrow(), a)
+    }
+}
+
+#[cfg(feature = "w512")]
+impl<T: archmage::SimdToken + Sealed + Copy + 'static> F64x8Convert for T {
+    #[inline(always)]
+    fn convert_f64_to_i32(self, a: <Self as F64x8Backend>::Repr) -> <Self as I32x8Backend>::Repr {
+        self.f64x8_convert_to_i32(a)
+    }
+    #[inline(always)]
+    fn convert_f64_to_i32_saturating(
+        self,
+        a: <Self as F64x8Backend>::Repr,
+    ) -> <Self as I32x8Backend>::Repr {
+        self.f64x8_convert_to_i32_saturating(a)
+    }
+    #[inline(always)]
+    fn convert_f64_to_i32_round(
+        self,
+        a: <Self as F64x8Backend>::Repr,
+    ) -> <Self as I32x8Backend>::Repr {
+        self.f64x8_convert_to_i32_round(a)
+    }
+    #[inline(always)]
+    fn convert_i32_to_f64(self, a: <Self as I32x8Backend>::Repr) -> <Self as F64x8Backend>::Repr {
+        self.f64x8_convert_from_i32(a)
     }
 }

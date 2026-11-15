@@ -656,6 +656,64 @@ impl<T: F64x4Backend> core::fmt::Debug for f64x4<T> {
 }
 
 // ============================================================================
+// Cross-type conversions (f64 ↔ i32)
+// ============================================================================
+
+impl<T: crate::simd::backends::F64x4Convert> f64x4<T> {
+    /// Convert to `i32x4` with truncation toward zero.
+    ///
+    /// **Out-of-range and NaN lanes DIVERGE per backend** (issue #80):
+    /// x86's `cvttpd` yields `i32::MIN` for overflow in both directions
+    /// and for NaN, while NEON/WASM/scalar saturate with NaN→0. Keep
+    /// lanes in `i32` range, or use
+    /// [`to_i32_saturating`](Self::to_i32_saturating) for uniform semantics.
+    #[inline(always)]
+    pub fn to_i32(self) -> super::i32x4<T> {
+        super::i32x4::from_repr_unchecked(self.1, T::convert_f64_to_i32(self.1, self.0))
+    }
+
+    /// Convert to `i32x4` with truncation and UNIFORM saturation:
+    /// out-of-range lanes clamp to `i32::MIN`/`i32::MAX` and NaN lanes
+    /// become 0, identically on every backend — the semantics of Rust
+    /// scalar `as`. Native on NEON/WASM/scalar; on x86 a compare/blend
+    /// (or AVX-512 mask) fixup over `cvttpd` (issue #80).
+    #[inline(always)]
+    pub fn to_i32_saturating(self) -> super::i32x4<T> {
+        super::i32x4::from_repr_unchecked(self.1, T::convert_f64_to_i32_saturating(self.1, self.0))
+    }
+
+    /// Convert to `i32x4` with rounding to nearest.
+    #[inline(always)]
+    pub fn to_i32_round(self) -> super::i32x4<T> {
+        super::i32x4::from_repr_unchecked(self.1, T::convert_f64_to_i32_round(self.1, self.0))
+    }
+
+    /// Create from `i32x4` via numeric conversion.
+    #[inline(always)]
+    pub fn from_i32_t(token: T, v: super::i32x4<T>) -> Self {
+        Self(T::convert_i32_to_f64(token, v.into_repr()), token)
+    }
+
+    /// Alias for [`to_i32`](Self::to_i32).
+    #[inline(always)]
+    pub fn to_i32x4(self) -> super::i32x4<T> {
+        self.to_i32()
+    }
+
+    /// Alias for [`to_i32_round`](Self::to_i32_round).
+    #[inline(always)]
+    pub fn to_i32x4_round(self) -> super::i32x4<T> {
+        self.to_i32_round()
+    }
+
+    /// Alias for [`from_i32_t`](Self::from_i32_t).
+    #[inline(always)]
+    pub fn from_i32x4_t(token: T, v: super::i32x4<T>) -> Self {
+        Self::from_i32_t(token, v)
+    }
+}
+
+// ============================================================================
 // Platform-specific concrete impls
 // ============================================================================
 
@@ -798,5 +856,23 @@ impl<T: F64x4Backend> f64x4<T> {
     #[forbid(unsafe_code)]
     pub fn from_repr(token: T, repr: T::Repr) -> Self {
         Self::from_repr_t(token, repr)
+    }
+}
+impl<T: crate::simd::backends::F64x4Convert> f64x4<T> {
+    #[inline(always)]
+    #[doc = "Deprecated token-taking spelling of [`Self::from_i32_t`].\n\nUse `from_i32_t` to keep explicit-token construction when `from_i32` becomes tokenless in magetypes 0.10."]
+    #[deprecated(note = "Use from_i32_t(token, v); from_i32 becomes tokenless in magetypes 0.10.")]
+    #[forbid(unsafe_code)]
+    pub fn from_i32(token: T, v: super::i32x4<T>) -> Self {
+        Self::from_i32_t(token, v)
+    }
+    #[inline(always)]
+    #[doc = "Deprecated token-taking spelling of [`Self::from_i32x4_t`].\n\nUse `from_i32x4_t` to keep explicit-token construction when `from_i32x4` becomes tokenless in magetypes 0.10."]
+    #[deprecated(
+        note = "Use from_i32x4_t(token, v); from_i32x4 becomes tokenless in magetypes 0.10."
+    )]
+    #[forbid(unsafe_code)]
+    pub fn from_i32x4(token: T, v: super::i32x4<T>) -> Self {
+        Self::from_i32x4_t(token, v)
     }
 }

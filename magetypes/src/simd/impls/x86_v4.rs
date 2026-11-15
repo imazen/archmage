@@ -265,6 +265,106 @@ impl F32x16Ops for X64V4Token {
     fn bitxor(self, a: __m512, b: __m512) -> __m512 {
         _mm512_xor_ps(a, b)
     }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn to_u8_bytes(self, a: __m512) -> [u8; 16] {
+        // Clamp negatives and NaNs to 0 before cvtps so signed
+        // inputs never produce bit-31 negatives that vpmovusdb
+        // would treat as >= 2^31 and saturate to 255; +overflow
+        // and +Inf produce 0x8000_0000 which vpmovusdb saturates
+        // cleanly to 255.
+        let non_neg = _mm512_max_ps(a, _mm512_setzero_ps());
+        let i32s = _mm512_cvtps_epi32(non_neg);
+        crate::simd_storage::cast(_mm512_cvtusepi32_epi8(i32s))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn store_rgba_bytes(self, r: __m512, g: __m512, b: __m512, a: __m512) -> [u8; 64] {
+        let zero = _mm512_setzero_ps();
+        let rb = _mm512_cvtusepi32_epi8(_mm512_cvtps_epi32(_mm512_max_ps(r, zero)));
+        let gb = _mm512_cvtusepi32_epi8(_mm512_cvtps_epi32(_mm512_max_ps(g, zero)));
+        let bb = _mm512_cvtusepi32_epi8(_mm512_cvtps_epi32(_mm512_max_ps(b, zero)));
+        let ab = _mm512_cvtusepi32_epi8(_mm512_cvtps_epi32(_mm512_max_ps(a, zero)));
+        let rg_lo = _mm_unpacklo_epi8(rb, gb);
+        let rg_hi = _mm_unpackhi_epi8(rb, gb);
+        let ba_lo = _mm_unpacklo_epi8(bb, ab);
+        let ba_hi = _mm_unpackhi_epi8(bb, ab);
+        let p0: [u8; 16] = crate::simd_storage::cast(_mm_unpacklo_epi16(rg_lo, ba_lo));
+        let p1: [u8; 16] = crate::simd_storage::cast(_mm_unpackhi_epi16(rg_lo, ba_lo));
+        let p2: [u8; 16] = crate::simd_storage::cast(_mm_unpacklo_epi16(rg_hi, ba_hi));
+        let p3: [u8; 16] = crate::simd_storage::cast(_mm_unpackhi_epi16(rg_hi, ba_hi));
+        crate::simd_storage::cast([p0, p1, p2, p3])
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn transpose_dual_8x8_repr(self, rows: [__m512; 8]) -> [__m512; 8] {
+        let t0 = _mm512_unpacklo_ps(rows[0], rows[1]);
+        let t1 = _mm512_unpackhi_ps(rows[0], rows[1]);
+        let t2 = _mm512_unpacklo_ps(rows[2], rows[3]);
+        let t3 = _mm512_unpackhi_ps(rows[2], rows[3]);
+        let t4 = _mm512_unpacklo_ps(rows[4], rows[5]);
+        let t5 = _mm512_unpackhi_ps(rows[4], rows[5]);
+        let t6 = _mm512_unpacklo_ps(rows[6], rows[7]);
+        let t7 = _mm512_unpackhi_ps(rows[6], rows[7]);
+        let s0 = _mm512_shuffle_ps::<0x44>(t0, t2);
+        let s1 = _mm512_shuffle_ps::<0xEE>(t0, t2);
+        let s2 = _mm512_shuffle_ps::<0x44>(t1, t3);
+        let s3 = _mm512_shuffle_ps::<0xEE>(t1, t3);
+        let s4 = _mm512_shuffle_ps::<0x44>(t4, t6);
+        let s5 = _mm512_shuffle_ps::<0xEE>(t4, t6);
+        let s6 = _mm512_shuffle_ps::<0x44>(t5, t7);
+        let s7 = _mm512_shuffle_ps::<0xEE>(t5, t7);
+        let lo_idx: __m512i = crate::simd_storage::cast([
+            0i32, 1, 2, 3, 16, 17, 18, 19, 8, 9, 10, 11, 24, 25, 26, 27,
+        ]);
+        let hi_idx: __m512i = crate::simd_storage::cast([
+            4i32, 5, 6, 7, 20, 21, 22, 23, 12, 13, 14, 15, 28, 29, 30, 31,
+        ]);
+        [
+            _mm512_permutex2var_ps(s0, lo_idx, s4),
+            _mm512_permutex2var_ps(s1, lo_idx, s5),
+            _mm512_permutex2var_ps(s2, lo_idx, s6),
+            _mm512_permutex2var_ps(s3, lo_idx, s7),
+            _mm512_permutex2var_ps(s0, hi_idx, s4),
+            _mm512_permutex2var_ps(s1, hi_idx, s5),
+            _mm512_permutex2var_ps(s2, hi_idx, s6),
+            _mm512_permutex2var_ps(s3, hi_idx, s7),
+        ]
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn transpose_16x16_repr(self, rows: [__m512; 16]) -> [__m512; 16] {
+        let top = <X64V4Token as F32x16Ops>::transpose_dual_8x8_repr(
+            self,
+            [
+                rows[0], rows[1], rows[2], rows[3], rows[4], rows[5], rows[6], rows[7],
+            ],
+        );
+        let bot = <X64V4Token as F32x16Ops>::transpose_dual_8x8_repr(
+            self,
+            [
+                rows[8], rows[9], rows[10], rows[11], rows[12], rows[13], rows[14], rows[15],
+            ],
+        );
+        [
+            _mm512_shuffle_f32x4::<0x44>(top[0], bot[0]),
+            _mm512_shuffle_f32x4::<0x44>(top[1], bot[1]),
+            _mm512_shuffle_f32x4::<0x44>(top[2], bot[2]),
+            _mm512_shuffle_f32x4::<0x44>(top[3], bot[3]),
+            _mm512_shuffle_f32x4::<0x44>(top[4], bot[4]),
+            _mm512_shuffle_f32x4::<0x44>(top[5], bot[5]),
+            _mm512_shuffle_f32x4::<0x44>(top[6], bot[6]),
+            _mm512_shuffle_f32x4::<0x44>(top[7], bot[7]),
+            _mm512_shuffle_f32x4::<0xEE>(top[0], bot[0]),
+            _mm512_shuffle_f32x4::<0xEE>(top[1], bot[1]),
+            _mm512_shuffle_f32x4::<0xEE>(top[2], bot[2]),
+            _mm512_shuffle_f32x4::<0xEE>(top[3], bot[3]),
+            _mm512_shuffle_f32x4::<0xEE>(top[4], bot[4]),
+            _mm512_shuffle_f32x4::<0xEE>(top[5], bot[5]),
+            _mm512_shuffle_f32x4::<0xEE>(top[6], bot[6]),
+            _mm512_shuffle_f32x4::<0xEE>(top[7], bot[7]),
+        ]
+    }
 }
 
 #[cfg(feature = "w512")]
@@ -2259,4 +2359,37 @@ impl F32x16ConvertOps for X64V4Token {
     fn convert_i32_to_f32(self, a: __m512i) -> __m512 {
         _mm512_cvtepi32_ps(a)
     }
+}
+
+// ============================================================================
+// F64x8Convert — native AVX-512 conversions
+// ============================================================================
+
+#[cfg(all(target_arch = "x86_64", feature = "w512"))]
+#[arcane]
+pub(crate) fn v4_f64x8_to_i32(_token: X64V4Token, a: __m512d) -> __m256i {
+    _mm512_cvttpd_epi32(a)
+}
+
+// Issue #80 fixup: mask-register form over cvttpd.
+#[cfg(all(target_arch = "x86_64", feature = "w512"))]
+#[arcane]
+pub(crate) fn v4_f64x8_to_i32_saturating(_token: X64V4Token, a: __m512d) -> __m256i {
+    let t = _mm512_cvttpd_epi32(a);
+    let big = _mm512_cmp_pd_mask::<_CMP_GE_OQ>(a, _mm512_set1_pd(2_147_483_648.0));
+    let t = _mm256_mask_mov_epi32(t, big, _mm256_set1_epi32(i32::MAX));
+    let not_nan = _mm512_cmp_pd_mask::<_CMP_ORD_Q>(a, a);
+    _mm256_maskz_mov_epi32(not_nan, t)
+}
+
+#[cfg(all(target_arch = "x86_64", feature = "w512"))]
+#[arcane]
+pub(crate) fn v4_f64x8_to_i32_round(_token: X64V4Token, a: __m512d) -> __m256i {
+    _mm512_cvtpd_epi32(a)
+}
+
+#[cfg(all(target_arch = "x86_64", feature = "w512"))]
+#[arcane]
+pub(crate) fn v4_f64x8_from_i32(_token: X64V4Token, a: __m256i) -> __m512d {
+    _mm512_cvtepi32_pd(a)
 }

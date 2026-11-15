@@ -74,6 +74,7 @@ mod x86_v4x_w512_delegation_tests {
         }
     }
 
+    #[allow(deprecated)]
     #[attune(
         _v4x_t,
         define(
@@ -255,6 +256,7 @@ mod x86_vnni_tests {
         }
     }
 
+    #[allow(deprecated)]
     #[attune(_v3_vnni_t, define(i32x4, u8x16, i8x16, i16x8))]
     fn check_vnni_128(token: Token) {
         let acc4 = [i32::MAX - 20, i32::MIN + 20, 0, -42];
@@ -309,6 +311,7 @@ mod x86_vnni_tests {
         }
     }
 
+    #[allow(deprecated)]
     #[attune(_v3_vnni_t, define(i32x8, u8x32, i8x32, i16x16))]
     fn check_vnni_256(token: Token) {
         let acc8 = [
@@ -447,6 +450,7 @@ mod arm_v2_tests {
         rounded.clamp(i16::MIN as i64, i16::MAX as i64) as i16
     }
 
+    #[allow(deprecated)]
     #[attune(_arm_v2_t, define(i32x4, u32x4, i8x16, u8x16, i16x8))]
     fn check_arm_v2(token: Token) {
         let base = token.neon();
@@ -513,6 +517,7 @@ mod arm_v2_tests {
         }
     }
 
+    #[allow(deprecated)]
     #[attune(_arm_v2_t, define(i32x8, u32x8, i8x32, u8x32, i16x16))]
     fn check_arm_v2_256(token: Token) {
         use magetypes::simd::MagetypesToken;
@@ -565,6 +570,7 @@ mod arm_v2_tests {
         }
     }
 
+    #[allow(deprecated)]
     #[attune(_arm_v3_t, define(f32x4, f32x8, i32x4, u16x8))]
     fn check_arm_v3_fhm(token: Token) {
         use magetypes::simd::MagetypesToken;
@@ -667,6 +673,7 @@ mod wasm_relaxed_tests {
         axpy_wasm_relaxed_body(x, a, b)
     }
 
+    #[allow(deprecated)]
     #[attune(
         _wasm128_relaxed_t,
         define(
@@ -825,6 +832,702 @@ mod wasm_relaxed_tests {
                 Wasm128RelaxedToken::summon().is_none(),
                 "WASM without +simd128,+relaxed-simd must not summon Wasm128RelaxedToken"
             );
+        }
+    }
+}
+
+/// Tests for the composable sealed capability traits (`DotU8I8`, `Int52Ifma`,
+/// `DotI8Signed`, `DotU8`, `ArmRdma`, `ArmF16Fma`, `RelaxedSimd`) introduced in
+/// issue #175. All generic kernels below compile cleanly on every target.
+mod capability_ops_tests {
+    use magetypes::simd::generic::{
+        ArmF16Fma, ArmRdma, DotI8Signed, DotU8, DotU8I8, Int52Ifma, RelaxedSimd, f32x4, f32x8,
+        f64x2, f64x4, i8x16, i8x32, i16x8, i16x16, i32x4, i32x8, u8x16, u8x32, u16x8, u32x4, u32x8,
+        u64x2, u64x4,
+    };
+    #[cfg(feature = "w512")]
+    use magetypes::simd::generic::{i8x64, i16x32, i32x16, u8x64, u32x16, u64x8};
+
+    #[allow(dead_code)]
+    fn ref_dpbusd(acc: i32, u: [u8; 4], s: [i8; 4], sat: bool) -> i32 {
+        let dot: i32 = u
+            .iter()
+            .zip(s.iter())
+            .map(|(&a, &b)| (a as i32) * (b as i32))
+            .sum();
+        if sat {
+            acc.saturating_add(dot)
+        } else {
+            acc.wrapping_add(dot)
+        }
+    }
+
+    #[allow(dead_code)]
+    fn ref_dpwssd(acc: i32, a: [i16; 2], b: [i16; 2], sat: bool) -> i32 {
+        let dot: i64 = (a[0] as i64) * (b[0] as i64) + (a[1] as i64) * (b[1] as i64);
+        let sum = (acc as i64) + dot;
+        if sat {
+            sum.clamp(i32::MIN as i64, i32::MAX as i64) as i32
+        } else {
+            sum as i32
+        }
+    }
+
+    #[allow(dead_code)]
+    fn ref_qrdml(acc: i16, a: i16, b: i16, sub: bool) -> i16 {
+        let prod = 2i64 * (a as i64) * (b as i64);
+        let base = (acc as i64) << 16;
+        let combined = if sub { base - prod } else { base + prod };
+        let rounded = (combined + (1i64 << 15)) >> 16;
+        rounded.clamp(i16::MIN as i64, i16::MAX as i64) as i16
+    }
+
+    #[allow(dead_code)]
+    fn ref_madd52(acc: u64, a: u64, b: u64, hi: bool) -> u64 {
+        let mask52 = (1u128 << 52) - 1;
+        let prod = ((a as u128) & mask52) * ((b as u128) & mask52);
+        let slice = if hi {
+            (prod >> 52) & mask52
+        } else {
+            prod & mask52
+        };
+        acc.wrapping_add(slice as u64)
+    }
+
+    #[allow(dead_code)]
+    fn generic_dot_u8_i8<T: DotU8I8>(token: T) {
+        let acc4 = [i32::MAX - 20, i32::MIN + 20, 0, -42];
+        let u16_in: [u8; 16] = core::array::from_fn(|i| (i as u8).wrapping_mul(17).wrapping_add(5));
+        let s16_in: [i8; 16] = core::array::from_fn(|i| if i % 2 == 0 { 40 } else { -35 });
+        let w8_a: [i16; 8] = [
+            30000,
+            20000,
+            -30000,
+            -20000,
+            1234,
+            -5678,
+            i16::MIN,
+            i16::MAX,
+        ];
+        let w8_b: [i16; 8] = [2, 3, 2, 3, -7, 11, -1, 1];
+
+        let v_acc4 = i32x4::from_array_t(token, acc4);
+        let v_u16 = u8x16::from_array_t(token, u16_in);
+        let v_s16 = i8x16::from_array_t(token, s16_in);
+        let v_w8a = i16x8::from_array_t(token, w8_a);
+        let v_w8b = i16x8::from_array_t(token, w8_b);
+
+        let dp4 = v_acc4.dot_u8_i8(v_u16, v_s16).to_array();
+        let dps4 = v_acc4.dot_u8_i8_sat(v_u16, v_s16).to_array();
+        let dw4 = v_acc4.dot_i16(v_w8a, v_w8b).to_array();
+        let dws4 = v_acc4.dot_i16_sat(v_w8a, v_w8b).to_array();
+
+        for k in 0..4 {
+            let u = core::array::from_fn(|j| u16_in[4 * k + j]);
+            let s = core::array::from_fn(|j| s16_in[4 * k + j]);
+            assert_eq!(dp4[k], ref_dpbusd(acc4[k], u, s, false));
+            assert_eq!(dps4[k], ref_dpbusd(acc4[k], u, s, true));
+            let wa = [w8_a[2 * k], w8_a[2 * k + 1]];
+            let wb = [w8_b[2 * k], w8_b[2 * k + 1]];
+            assert_eq!(dw4[k], ref_dpwssd(acc4[k], wa, wb, false));
+            assert_eq!(dws4[k], ref_dpwssd(acc4[k], wa, wb, true));
+        }
+
+        let acc8 = [
+            i32::MAX - 10,
+            i32::MIN + 10,
+            100,
+            -100,
+            0,
+            777,
+            -888,
+            123456,
+        ];
+        let u32_in: [u8; 32] = core::array::from_fn(|i| (i as u8).wrapping_mul(13).wrapping_add(9));
+        let s32_in: [i8; 32] = core::array::from_fn(|i| ((i as i8) * 3).wrapping_sub(40));
+        let w16_a: [i16; 16] = core::array::from_fn(|i| {
+            if i % 4 < 2 {
+                25000
+            } else {
+                ((i as i16) - 8) * 500
+            }
+        });
+        let w16_b: [i16; 16] = core::array::from_fn(|i| if i % 4 < 2 { 2 } else { -3 });
+
+        let v_acc8 = i32x8::from_array_t(token, acc8);
+        let v_u32 = u8x32::from_array_t(token, u32_in);
+        let v_s32 = i8x32::from_array_t(token, s32_in);
+        let v_w16a = i16x16::from_array_t(token, w16_a);
+        let v_w16b = i16x16::from_array_t(token, w16_b);
+
+        let dp8 = v_acc8.dot_u8_i8(v_u32, v_s32).to_array();
+        let dps8 = v_acc8.dot_u8_i8_sat(v_u32, v_s32).to_array();
+        let dw8 = v_acc8.dot_i16(v_w16a, v_w16b).to_array();
+        let dws8 = v_acc8.dot_i16_sat(v_w16a, v_w16b).to_array();
+
+        for k in 0..8 {
+            let u = core::array::from_fn(|j| u32_in[4 * k + j]);
+            let s = core::array::from_fn(|j| s32_in[4 * k + j]);
+            assert_eq!(dp8[k], ref_dpbusd(acc8[k], u, s, false));
+            assert_eq!(dps8[k], ref_dpbusd(acc8[k], u, s, true));
+            let wa = [w16_a[2 * k], w16_a[2 * k + 1]];
+            let wb = [w16_b[2 * k], w16_b[2 * k + 1]];
+            assert_eq!(dw8[k], ref_dpwssd(acc8[k], wa, wb, false));
+            assert_eq!(dws8[k], ref_dpwssd(acc8[k], wa, wb, true));
+        }
+
+        #[cfg(feature = "w512")]
+        {
+            let acc16: [i32; 16] = core::array::from_fn(|i| {
+                if i == 0 {
+                    i32::MAX - 5
+                } else {
+                    (i as i32) * 11 - 50
+                }
+            });
+            let u64_in: [u8; 64] =
+                core::array::from_fn(|i| (i as u8).wrapping_mul(11).wrapping_add(1));
+            let s64_in: [i8; 64] = core::array::from_fn(|i| ((i as i8) * 2).wrapping_sub(64));
+            let w32_a: [i16; 32] = core::array::from_fn(|i| ((i as i16) - 16) * 2000);
+            let w32_b: [i16; 32] = core::array::from_fn(|i| if i % 2 == 0 { 2 } else { -1 });
+
+            let v_acc16 = i32x16::from_array_t(token, acc16);
+            let v_u64 = u8x64::from_array_t(token, u64_in);
+            let v_s64 = i8x64::from_array_t(token, s64_in);
+            let v_w32a = i16x32::from_array_t(token, w32_a);
+            let v_w32b = i16x32::from_array_t(token, w32_b);
+
+            let dp16 = v_acc16.dot_u8_i8(v_u64, v_s64).to_array();
+            let dps16 = v_acc16.dot_u8_i8_sat(v_u64, v_s64).to_array();
+            let dw16 = v_acc16.dot_i16(v_w32a, v_w32b).to_array();
+            let dws16 = v_acc16.dot_i16_sat(v_w32a, v_w32b).to_array();
+
+            for k in 0..16 {
+                let u = core::array::from_fn(|j| u64_in[4 * k + j]);
+                let s = core::array::from_fn(|j| s64_in[4 * k + j]);
+                assert_eq!(dp16[k], ref_dpbusd(acc16[k], u, s, false));
+                assert_eq!(dps16[k], ref_dpbusd(acc16[k], u, s, true));
+                let wa = [w32_a[2 * k], w32_a[2 * k + 1]];
+                let wb = [w32_b[2 * k], w32_b[2 * k + 1]];
+                assert_eq!(dw16[k], ref_dpwssd(acc16[k], wa, wb, false));
+                assert_eq!(dws16[k], ref_dpwssd(acc16[k], wa, wb, true));
+            }
+        }
+    }
+
+    #[allow(dead_code)]
+    fn generic_int52_ifma<T: Int52Ifma>(token: T) {
+        let max52 = (1u64 << 52) - 1;
+        // Include high bits (>51) set to verify top 12 bits of multiplicands are ignored
+        // and accumulator carries across bit 52 wrap in 64-bit arithmetic.
+        let acc_pool = [
+            0u64,
+            u64::MAX - 10,
+            1u64 << 52,
+            0xfeed_face_cafe_beef,
+            max52,
+            123456789,
+            1u64 << 63,
+            42,
+        ];
+        let a_pool = [
+            max52,
+            u64::MAX,
+            (1u64 << 51) + 7,
+            0xfff0_1234_5678_9abc,
+            0,
+            (1u64 << 52),
+            0xdead_beef_0000_0001,
+            0x000f_ffff_ffff_ffff,
+        ];
+        let b_pool = [
+            max52,
+            u64::MAX,
+            (1u64 << 51) + 19,
+            0x1234_5678_9abc_def0,
+            999,
+            (1u64 << 52) + 5,
+            0x000a_bcde_f012_3456,
+            3,
+        ];
+
+        // 128-bit (u64x2)
+        let acc2 = [acc_pool[0], acc_pool[1]];
+        let a2 = [a_pool[0], a_pool[1]];
+        let b2 = [b_pool[0], b_pool[1]];
+        let lo2 = u64x2::from_array_t(token, acc2)
+            .madd52_lo(
+                u64x2::from_array_t(token, a2),
+                u64x2::from_array_t(token, b2),
+            )
+            .to_array();
+        let hi2 = u64x2::from_array_t(token, acc2)
+            .madd52_hi(
+                u64x2::from_array_t(token, a2),
+                u64x2::from_array_t(token, b2),
+            )
+            .to_array();
+        for k in 0..2 {
+            assert_eq!(lo2[k], ref_madd52(acc2[k], a2[k], b2[k], false));
+            assert_eq!(hi2[k], ref_madd52(acc2[k], a2[k], b2[k], true));
+        }
+
+        // 256-bit (u64x4)
+        let acc4 = [acc_pool[2], acc_pool[3], acc_pool[4], acc_pool[5]];
+        let a4 = [a_pool[2], a_pool[3], a_pool[4], a_pool[5]];
+        let b4 = [b_pool[2], b_pool[3], b_pool[4], b_pool[5]];
+        let lo4 = u64x4::from_array_t(token, acc4)
+            .madd52_lo(
+                u64x4::from_array_t(token, a4),
+                u64x4::from_array_t(token, b4),
+            )
+            .to_array();
+        let hi4 = u64x4::from_array_t(token, acc4)
+            .madd52_hi(
+                u64x4::from_array_t(token, a4),
+                u64x4::from_array_t(token, b4),
+            )
+            .to_array();
+        for k in 0..4 {
+            assert_eq!(lo4[k], ref_madd52(acc4[k], a4[k], b4[k], false));
+            assert_eq!(hi4[k], ref_madd52(acc4[k], a4[k], b4[k], true));
+        }
+
+        // 512-bit (u64x8)
+        #[cfg(feature = "w512")]
+        {
+            let lo8 = u64x8::from_array_t(token, acc_pool)
+                .madd52_lo(
+                    u64x8::from_array_t(token, a_pool),
+                    u64x8::from_array_t(token, b_pool),
+                )
+                .to_array();
+            let hi8 = u64x8::from_array_t(token, acc_pool)
+                .madd52_hi(
+                    u64x8::from_array_t(token, a_pool),
+                    u64x8::from_array_t(token, b_pool),
+                )
+                .to_array();
+            for k in 0..8 {
+                assert_eq!(lo8[k], ref_madd52(acc_pool[k], a_pool[k], b_pool[k], false));
+                assert_eq!(hi8[k], ref_madd52(acc_pool[k], a_pool[k], b_pool[k], true));
+            }
+        }
+    }
+
+    #[allow(dead_code)]
+    fn generic_arm_v2_caps<T: DotI8Signed + DotU8 + ArmRdma>(token: T) {
+        let sa: [i8; 16] = core::array::from_fn(|i| (i as i8) * 5 - 30);
+        let sb: [i8; 16] = core::array::from_fn(|i| if i % 2 == 0 { 7 } else { -9 });
+        let s_acc4 = [10, -20, 30, -40];
+        let s_got4 = i32x4::from_array_t(token, s_acc4)
+            .dot_i8_acc(
+                i8x16::from_array_t(token, sa),
+                i8x16::from_array_t(token, sb),
+            )
+            .to_array();
+        for k in 0..4 {
+            let dot: i32 = (0..4)
+                .map(|j| (sa[4 * k + j] as i32) * (sb[4 * k + j] as i32))
+                .sum();
+            assert_eq!(s_got4[k], s_acc4[k] + dot);
+        }
+
+        let ua: [u8; 16] = core::array::from_fn(|i| (i as u8) * 15 + 3);
+        let ub: [u8; 16] = core::array::from_fn(|i| 255 - (i as u8) * 11);
+        let u_acc4 = [100, 200, 300, 400];
+        let u_got4 = u32x4::from_array_t(token, u_acc4)
+            .dot_u8_acc(
+                u8x16::from_array_t(token, ua),
+                u8x16::from_array_t(token, ub),
+            )
+            .to_array();
+        for k in 0..4 {
+            let dot: u32 = (0..4)
+                .map(|j| (ua[4 * k + j] as u32) * (ub[4 * k + j] as u32))
+                .sum();
+            assert_eq!(u_got4[k], u_acc4[k] + dot);
+        }
+
+        let q_acc8 = [
+            0i16,
+            1000,
+            -1000,
+            i16::MAX - 5,
+            i16::MIN + 5,
+            16384,
+            -16384,
+            42,
+        ];
+        let qa8 = [
+            16384i16,
+            -16384,
+            8192,
+            30000,
+            30000,
+            i16::MIN,
+            i16::MIN,
+            12345,
+        ];
+        let qb8 = [
+            16384i16,
+            8192,
+            -8192,
+            30000,
+            -30000,
+            i16::MIN,
+            i16::MAX,
+            -6789,
+        ];
+        let add8 = i16x8::from_array_t(token, q_acc8)
+            .qrdmlah_acc(
+                i16x8::from_array_t(token, qa8),
+                i16x8::from_array_t(token, qb8),
+            )
+            .to_array();
+        let sub8 = i16x8::from_array_t(token, q_acc8)
+            .qrdmlsh_acc(
+                i16x8::from_array_t(token, qa8),
+                i16x8::from_array_t(token, qb8),
+            )
+            .to_array();
+        for k in 0..8 {
+            assert_eq!(add8[k], ref_qrdml(q_acc8[k], qa8[k], qb8[k], false));
+            assert_eq!(sub8[k], ref_qrdml(q_acc8[k], qa8[k], qb8[k], true));
+        }
+
+        // 256-bit two-register variants
+        let s_acc8 = [10, -20, 30, -40, 50, -60, 70, -80];
+        let sa32: [i8; 32] = core::array::from_fn(|i| (i as i8) * 3 - 45);
+        let sb32: [i8; 32] = core::array::from_fn(|i| if i % 2 == 0 { 11 } else { -7 });
+        let s_got8 = i32x8::from_array_t(token, s_acc8)
+            .dot_i8_acc(
+                i8x32::from_array_t(token, sa32),
+                i8x32::from_array_t(token, sb32),
+            )
+            .to_array();
+        for k in 0..8 {
+            let dot: i32 = (0..4)
+                .map(|j| (sa32[4 * k + j] as i32) * (sb32[4 * k + j] as i32))
+                .sum();
+            assert_eq!(s_got8[k], s_acc8[k] + dot);
+        }
+
+        let u_acc8 = [1u32, 2, 3, 4, 5, 6, 7, 8];
+        let ua32: [u8; 32] = core::array::from_fn(|i| (i as u8) * 7 + 5);
+        let ub32: [u8; 32] = core::array::from_fn(|i| 240 - (i as u8) * 5);
+        let u_got8 = u32x8::from_array_t(token, u_acc8)
+            .dot_u8_acc(
+                u8x32::from_array_t(token, ua32),
+                u8x32::from_array_t(token, ub32),
+            )
+            .to_array();
+        for k in 0..8 {
+            let dot: u32 = (0..4)
+                .map(|j| (ua32[4 * k + j] as u32) * (ub32[4 * k + j] as u32))
+                .sum();
+            assert_eq!(u_got8[k], u_acc8[k] + dot);
+        }
+
+        let q_acc16: [i16; 16] = core::array::from_fn(|i| ((i as i16) - 8) * 1000);
+        let qa16: [i16; 16] = core::array::from_fn(|i| ((i as i16) - 7) * 4000);
+        let qb16: [i16; 16] = core::array::from_fn(|i| if i % 2 == 0 { 8192 } else { -8192 });
+        let add16 = i16x16::from_array_t(token, q_acc16)
+            .qrdmlah_acc(
+                i16x16::from_array_t(token, qa16),
+                i16x16::from_array_t(token, qb16),
+            )
+            .to_array();
+        let sub16 = i16x16::from_array_t(token, q_acc16)
+            .qrdmlsh_acc(
+                i16x16::from_array_t(token, qa16),
+                i16x16::from_array_t(token, qb16),
+            )
+            .to_array();
+        for k in 0..16 {
+            assert_eq!(add16[k], ref_qrdml(q_acc16[k], qa16[k], qb16[k], false));
+            assert_eq!(sub16[k], ref_qrdml(q_acc16[k], qa16[k], qb16[k], true));
+        }
+
+        #[cfg(feature = "w512")]
+        {
+            let s_acc16: [i32; 16] = core::array::from_fn(|i| (i as i32) * 10 - 80);
+            let sa64: [i8; 64] = core::array::from_fn(|i| (i as i8) * 2 - 60);
+            let sb64: [i8; 64] = core::array::from_fn(|i| if i % 2 == 0 { 5 } else { -3 });
+            let s_got16 = i32x16::from_array_t(token, s_acc16)
+                .dot_i8_acc(
+                    i8x64::from_array_t(token, sa64),
+                    i8x64::from_array_t(token, sb64),
+                )
+                .to_array();
+            for k in 0..16 {
+                let dot: i32 = (0..4)
+                    .map(|j| (sa64[4 * k + j] as i32) * (sb64[4 * k + j] as i32))
+                    .sum();
+                assert_eq!(s_got16[k], s_acc16[k] + dot);
+            }
+
+            let u_acc16: [u32; 16] = core::array::from_fn(|i| (i as u32) + 1);
+            let ua64: [u8; 64] = core::array::from_fn(|i| (i as u8) * 3 + 1);
+            let ub64: [u8; 64] = core::array::from_fn(|i| 250 - (i as u8) * 2);
+            let u_got16 = u32x16::from_array_t(token, u_acc16)
+                .dot_u8_acc(
+                    u8x64::from_array_t(token, ua64),
+                    u8x64::from_array_t(token, ub64),
+                )
+                .to_array();
+            for k in 0..16 {
+                let dot: u32 = (0..4)
+                    .map(|j| (ua64[4 * k + j] as u32) * (ub64[4 * k + j] as u32))
+                    .sum();
+                assert_eq!(u_got16[k], u_acc16[k] + dot);
+            }
+
+            let q_acc32: [i16; 32] = core::array::from_fn(|i| ((i as i16) - 16) * 500);
+            let qa32: [i16; 32] = core::array::from_fn(|i| ((i as i16) - 15) * 1800);
+            let qb32: [i16; 32] = core::array::from_fn(|i| if i % 2 == 0 { 8192 } else { -8192 });
+            let add32 = i16x32::from_array_t(token, q_acc32)
+                .qrdmlah_acc(
+                    i16x32::from_array_t(token, qa32),
+                    i16x32::from_array_t(token, qb32),
+                )
+                .to_array();
+            let sub32 = i16x32::from_array_t(token, q_acc32)
+                .qrdmlsh_acc(
+                    i16x32::from_array_t(token, qa32),
+                    i16x32::from_array_t(token, qb32),
+                )
+                .to_array();
+            for k in 0..32 {
+                assert_eq!(add32[k], ref_qrdml(q_acc32[k], qa32[k], qb32[k], false));
+                assert_eq!(sub32[k], ref_qrdml(q_acc32[k], qa32[k], qb32[k], true));
+            }
+        }
+    }
+
+    #[allow(dead_code)]
+    fn generic_arm_f16_fma<T: ArmF16Fma>(token: T) {
+        // Exact binary16 encodings for [1.5, -2.25, 0.5, 3.75, -0.125, 4.0, -1.0, 2.5]
+        // and [2.0, 0.5, -4.0, 1.25, 8.0, -0.75, 3.5, -2.0].
+        let af32: [f32; 8] = [1.5, -2.25, 0.5, 3.75, -0.125, 4.0, -1.0, 2.5];
+        let bf32: [f32; 8] = [2.0, 0.5, -4.0, 1.25, 8.0, -0.75, 3.5, -2.0];
+        let a_bits: [u16; 8] = [
+            0x3E00, 0xC080, 0x3800, 0x4380, 0xB000, 0x4400, 0xBC00, 0x4100,
+        ];
+        let b_bits: [u16; 8] = [
+            0x4000, 0x3800, 0xC400, 0x3D00, 0x4800, 0xBA00, 0x4300, 0xC000,
+        ];
+        let ah = u16x8::from_array_t(token, a_bits);
+        let bh = u16x8::from_array_t(token, b_bits);
+
+        let acc_lo = [10.0f32, -5.0, 1.25, 0.0];
+        let acc_hi = [-3.0f32, 7.5, 2.0, -1.5];
+        let v_lo = f32x4::from_array_t(token, acc_lo);
+        let v_hi = f32x4::from_array_t(token, acc_hi);
+
+        let add_lo = v_lo.fmlal_low_f16_acc(ah, bh).to_array();
+        let add_hi = v_hi.fmlal_high_f16_acc(ah, bh).to_array();
+        let sub_lo = v_lo.fmlsl_low_f16_acc(ah, bh).to_array();
+        let sub_hi = v_hi.fmlsl_high_f16_acc(ah, bh).to_array();
+        for i in 0..4 {
+            assert_eq!(add_lo[i], acc_lo[i] + af32[i] * bf32[i]);
+            assert_eq!(add_hi[i], acc_hi[i] + af32[i + 4] * bf32[i + 4]);
+            assert_eq!(sub_lo[i], acc_lo[i] - af32[i] * bf32[i]);
+            assert_eq!(sub_hi[i], acc_hi[i] - af32[i + 4] * bf32[i + 4]);
+        }
+
+        let acc8 = [
+            acc_lo[0], acc_lo[1], acc_lo[2], acc_lo[3], acc_hi[0], acc_hi[1], acc_hi[2], acc_hi[3],
+        ];
+        let v_acc8 = f32x8::from_array_t(token, acc8);
+        let add8 = v_acc8.fmlal_f16_acc(ah, bh).to_array();
+        let sub8 = v_acc8.fmlsl_f16_acc(ah, bh).to_array();
+        for i in 0..8 {
+            assert_eq!(add8[i], acc8[i] + af32[i] * bf32[i]);
+            assert_eq!(sub8[i], acc8[i] - af32[i] * bf32[i]);
+        }
+    }
+
+    #[allow(dead_code)]
+    fn generic_wasm_relaxed<T: RelaxedSimd>(token: T) {
+        let a = f32x4::from_array_t(token, [1.5, -2.5, 3.0, 10.0]);
+        let b = f32x4::from_array_t(token, [-1.0, -3.0, 4.0, 10.0]);
+        assert_eq!(a.relaxed_min(b).to_array(), [-1.0, -3.0, 3.0, 10.0]);
+        assert_eq!(a.relaxed_max(b).to_array(), [1.5, -2.5, 4.0, 10.0]);
+        assert_eq!(
+            f32x4::from_array_t(token, [1.9, -2.9, 100.25, 0.0])
+                .relaxed_to_i32()
+                .to_array(),
+            [1, -2, 100, 0]
+        );
+        assert_eq!(
+            f32x4::from_array_t(token, [0.0, 3.75, 2_500_000_000.0, 4_294_967_040.0])
+                .relaxed_to_u32()
+                .to_array(),
+            [0, 3, 2_500_000_000, 4_294_967_040]
+        );
+
+        let a8 = f32x8::from_array_t(token, [1.5, -2.5, 3.0, 10.0, -5.0, 6.0, 0.25, -0.5]);
+        let b8 = f32x8::from_array_t(token, [-1.0, -3.0, 4.0, 10.0, -4.0, 2.0, 0.5, -1.5]);
+        assert_eq!(
+            a8.relaxed_min(b8).to_array(),
+            [-1.0, -3.0, 3.0, 10.0, -5.0, 2.0, 0.25, -1.5]
+        );
+        assert_eq!(
+            a8.relaxed_max(b8).to_array(),
+            [1.5, -2.5, 4.0, 10.0, -4.0, 6.0, 0.5, -0.5]
+        );
+        assert_eq!(a8.relaxed_to_i32().to_array(), [1, -2, 3, 10, -5, 6, 0, 0]);
+        assert_eq!(
+            f32x8::from_array_t(
+                token,
+                [
+                    0.0,
+                    1.5,
+                    2.5,
+                    3.5,
+                    100.0,
+                    2_147_483_648.0,
+                    3_000_000_000.0,
+                    4_294_967_040.0
+                ]
+            )
+            .relaxed_to_u32()
+            .to_array(),
+            [0, 1, 2, 3, 100, 2_147_483_648, 3_000_000_000, 4_294_967_040]
+        );
+
+        let da = f64x2::from_array_t(token, [2.25, -9.5]);
+        let db = f64x2::from_array_t(token, [-4.0, -3.5]);
+        assert_eq!(da.relaxed_min(db).to_array(), [-4.0, -9.5]);
+        assert_eq!(da.relaxed_max(db).to_array(), [2.25, -3.5]);
+
+        let da4 = f64x4::from_array_t(token, [2.25, -9.5, 1.0, -2.0]);
+        let db4 = f64x4::from_array_t(token, [-4.0, -3.5, 5.0, -8.0]);
+        assert_eq!(da4.relaxed_min(db4).to_array(), [-4.0, -9.5, 1.0, -8.0]);
+        assert_eq!(da4.relaxed_max(db4).to_array(), [2.25, -3.5, 5.0, -2.0]);
+
+        let qa = i16x8::from_array_t(token, [16384, -16384, 8192, -8192, 0, 32767, -32767, 4096]);
+        let qb = i16x8::from_array_t(
+            token,
+            [16384, 16384, -8192, -8192, 12345, 16384, 16384, 8192],
+        );
+        assert_eq!(
+            qa.relaxed_mul_hrs_q15(qb).to_array(),
+            [8192, -8192, -2048, 2048, 0, 16384, -16383, 1024]
+        );
+
+        let qa16 = i16x16::from_array_t(token, core::array::from_fn(|i| ((i as i16) - 8) * 2048));
+        let qb16 = i16x16::splat_t(token, 16384);
+        for (i, &got) in qa16.relaxed_mul_hrs_q15(qb16).to_array().iter().enumerate() {
+            let a_i = ((i as i32) - 8) * 2048;
+            assert_eq!(got, ((a_i * 16384 + 0x4000) >> 15) as i16);
+        }
+
+        let ia: [i8; 16] = core::array::from_fn(|i| (i as i8) * 3 - 20);
+        let ib: [i8; 16] = core::array::from_fn(|i| ((i as i8) * 7) & 0x7f);
+        let got16 = i16x8::relaxed_dot_i8_i7_t(
+            token,
+            i8x16::from_array_t(token, ia),
+            i8x16::from_array_t(token, ib),
+        )
+        .to_array();
+        for k in 0..8 {
+            let pair = (ia[2 * k] as i16) * (ib[2 * k] as i16)
+                + (ia[2 * k + 1] as i16) * (ib[2 * k + 1] as i16);
+            assert_eq!(got16[k], pair);
+        }
+
+        let acc = i32x4::from_array_t(token, [10, 20, 30, 40]);
+        let got = acc
+            .relaxed_dot_i8_i7_add(
+                i8x16::from_array_t(token, ia),
+                i8x16::from_array_t(token, ib),
+            )
+            .to_array();
+        for k in 0..4 {
+            let dot: i32 = (0..4)
+                .map(|j| (ia[4 * k + j] as i32) * (ib[4 * k + j] as i32))
+                .sum();
+            assert_eq!(got[k], [10, 20, 30, 40][k] + dot);
+        }
+
+        let ia32: [i8; 32] = core::array::from_fn(|i| (i as i8).wrapping_mul(2).wrapping_sub(30));
+        let ib32: [i8; 32] = core::array::from_fn(|i| ((i as i8).wrapping_mul(5)) & 0x7f);
+        let got16_2 = i16x16::relaxed_dot_i8_i7_t(
+            token,
+            i8x32::from_array_t(token, ia32),
+            i8x32::from_array_t(token, ib32),
+        )
+        .to_array();
+        for k in 0..16 {
+            let pair = (ia32[2 * k] as i16) * (ib32[2 * k] as i16)
+                + (ia32[2 * k + 1] as i16) * (ib32[2 * k + 1] as i16);
+            assert_eq!(got16_2[k], pair);
+        }
+
+        let acc8 = i32x8::from_array_t(token, [1, 2, 3, 4, 5, 6, 7, 8]);
+        let got8 = acc8
+            .relaxed_dot_i8_i7_add(
+                i8x32::from_array_t(token, ia32),
+                i8x32::from_array_t(token, ib32),
+            )
+            .to_array();
+        for k in 0..8 {
+            let dot: i32 = (0..4)
+                .map(|j| (ia32[4 * k + j] as i32) * (ib32[4 * k + j] as i32))
+                .sum();
+            assert_eq!(got8[k], (k as i32 + 1) + dot);
+        }
+
+        // Prevent dead-code warnings if only u32x4/u32x8 types appear in return types
+        let _ = (u32x4::splat_t(token, 0), u32x8::splat_t(token, 0));
+    }
+
+    #[cfg(target_arch = "x86_64")]
+    #[test]
+    fn x86_capability_traits_dispatch() {
+        use archmage::{SimdToken, X64V3Vnni2Token, X64V3VnniToken};
+        if let Some(t) = X64V3VnniToken::summon() {
+            generic_dot_u8_i8(t);
+        }
+        if let Some(t) = X64V3Vnni2Token::summon() {
+            generic_dot_u8_i8(t);
+            generic_int52_ifma(t);
+        }
+        #[cfg(feature = "avx512")]
+        if let Some(t) = archmage::X64V4xToken::summon() {
+            generic_dot_u8_i8(t);
+            generic_int52_ifma(t);
+        }
+    }
+
+    #[cfg(target_arch = "aarch64")]
+    #[test]
+    fn arm_capability_traits_dispatch() {
+        use archmage::{Arm64V2Token, Arm64V3Token, SimdToken};
+        if let Some(t) = Arm64V2Token::summon() {
+            generic_arm_v2_caps(t);
+        }
+        if let Some(t) = Arm64V3Token::summon() {
+            generic_arm_v2_caps(t);
+            generic_arm_f16_fma(t);
+        }
+    }
+
+    #[cfg(all(
+        target_arch = "wasm32",
+        target_feature = "simd128",
+        target_feature = "relaxed-simd"
+    ))]
+    #[test]
+    fn wasm_capability_traits_dispatch() {
+        use archmage::{SimdToken, Wasm128RelaxedFmaToken, Wasm128RelaxedToken};
+        if let Some(t) = Wasm128RelaxedToken::summon() {
+            generic_wasm_relaxed(t);
+        }
+        if let Some(t) = Wasm128RelaxedFmaToken::summon() {
+            generic_wasm_relaxed(t);
         }
     }
 }

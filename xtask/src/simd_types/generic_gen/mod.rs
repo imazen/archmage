@@ -357,6 +357,45 @@ pub(crate) fn all_conversions() -> Vec<Conversion> {
             _in_backends: true,
             gen_fn: |src, _| gen_i64_f64_bitcast(src, "f64x4", "i64_to_f64", false),
         },
+        // f64x2 <-> i32x4 (low 2 lanes)
+        Conversion {
+            src: "f64x2",
+            trait_bound: "F64x2Convert",
+            _in_backends: true,
+            gen_fn: gen_f64_i32_low_convert_on_float,
+        },
+        Conversion {
+            src: "i32x4",
+            trait_bound: "F64x2Convert",
+            _in_backends: true,
+            gen_fn: gen_f64_i32_low_convert_on_int,
+        },
+        // f64x4 <-> i32x4
+        Conversion {
+            src: "f64x4",
+            trait_bound: "F64x4Convert",
+            _in_backends: true,
+            gen_fn: gen_f64_i32_convert_on_float,
+        },
+        Conversion {
+            src: "i32x4",
+            trait_bound: "F64x4Convert",
+            _in_backends: true,
+            gen_fn: gen_f64_i32_convert_on_int,
+        },
+        // f64x8 <-> i32x8 (w512)
+        Conversion {
+            src: "f64x8",
+            trait_bound: "F64x8Convert",
+            _in_backends: true,
+            gen_fn: gen_f64_i32_convert_on_float,
+        },
+        Conversion {
+            src: "i32x8",
+            trait_bound: "F64x8Convert",
+            _in_backends: true,
+            gen_fn: gen_f64_i32_convert_on_int,
+        },
     ]
 }
 
@@ -379,7 +418,7 @@ pub fn generate_generic_files(registry: &crate::registry::Registry) -> BTreeMap<
         files.insert(path, content);
     }
 
-    // Generate 8 block_ops files
+    // Generate 9 block_ops files
     for (type_name, elem, width) in block_ops_types() {
         let ty = SimdType::new(elem, width);
         let path = format!("generic/generated/block_ops_{type_name}.rs");
@@ -454,6 +493,7 @@ fn block_ops_types() -> Vec<(&'static str, ElementType, SimdWidth)> {
     vec![
         ("f32x4", ElementType::F32, SimdWidth::W128),
         ("f32x8", ElementType::F32, SimdWidth::W256),
+        ("f32x16", ElementType::F32, SimdWidth::W512),
         ("f64x2", ElementType::F64, SimdWidth::W128),
         ("f64x4", ElementType::F64, SimdWidth::W256),
         ("i32x4", ElementType::I32, SimdWidth::W128),

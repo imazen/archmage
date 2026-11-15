@@ -4837,6 +4837,77 @@ impl I64x4BitcastOps for NeonToken {
 }
 
 #[cfg(target_arch = "aarch64")]
+impl F64x2ConvertOps for NeonToken {
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn convert_f64_to_i32_low(self, a: float64x2_t) -> int32x4_t {
+        vcombine_s32(vqmovn_s64(vcvtq_s64_f64(a)), vdup_n_s32(0))
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn convert_f64_to_i32_low_round(self, a: float64x2_t) -> int32x4_t {
+        vcombine_s32(vqmovn_s64(vcvtnq_s64_f64(a)), vdup_n_s32(0))
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn convert_i32_low_to_f64(self, a: int32x4_t) -> float64x2_t {
+        vcvtq_f64_s64(vmovl_s32(vget_low_s32(a)))
+    }
+}
+
+#[cfg(target_arch = "aarch64")]
+impl F64x4ConvertOps for NeonToken {
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn convert_f64_to_i32(self, a: [float64x2_t; 2]) -> int32x4_t {
+        vcombine_s32(
+            vqmovn_s64(vcvtq_s64_f64(a[0])),
+            vqmovn_s64(vcvtq_s64_f64(a[1])),
+        )
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn convert_f64_to_i32_round(self, a: [float64x2_t; 2]) -> int32x4_t {
+        vcombine_s32(
+            vqmovn_s64(vcvtnq_s64_f64(a[0])),
+            vqmovn_s64(vcvtnq_s64_f64(a[1])),
+        )
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn convert_i32_to_f64(self, a: int32x4_t) -> [float64x2_t; 2] {
+        [
+            vcvtq_f64_s64(vmovl_s32(vget_low_s32(a))),
+            vcvtq_f64_s64(vmovl_s32(vget_high_s32(a))),
+        ]
+    }
+}
+
+#[cfg(all(target_arch = "aarch64", feature = "w512"))]
+#[inline(always)]
+pub(crate) fn neon_f64x8_to_i32(token: NeonToken, a: [float64x2_t; 4]) -> [int32x4_t; 2] {
+    [
+        <NeonToken as F64x4ConvertOps>::convert_f64_to_i32(token, [a[0], a[1]]),
+        <NeonToken as F64x4ConvertOps>::convert_f64_to_i32(token, [a[2], a[3]]),
+    ]
+}
+
+#[cfg(all(target_arch = "aarch64", feature = "w512"))]
+#[inline(always)]
+pub(crate) fn neon_f64x8_to_i32_round(token: NeonToken, a: [float64x2_t; 4]) -> [int32x4_t; 2] {
+    [
+        <NeonToken as F64x4ConvertOps>::convert_f64_to_i32_round(token, [a[0], a[1]]),
+        <NeonToken as F64x4ConvertOps>::convert_f64_to_i32_round(token, [a[2], a[3]]),
+    ]
+}
+
+#[cfg(all(target_arch = "aarch64", feature = "w512"))]
+#[inline(always)]
+pub(crate) fn neon_f64x8_from_i32(token: NeonToken, a: [int32x4_t; 2]) -> [float64x2_t; 4] {
+    let lo = <NeonToken as F64x4ConvertOps>::convert_i32_to_f64(token, a[0]);
+    let hi = <NeonToken as F64x4ConvertOps>::convert_i32_to_f64(token, a[1]);
+    [lo[0], lo[1], hi[0], hi[1]]
+}
+
+#[cfg(target_arch = "aarch64")]
 impl I8x16BitcastOps for NeonToken {
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitcast_i8_to_u8(self, a: int8x16_t) -> uint8x16_t {
@@ -5136,6 +5207,30 @@ impl F32x16Ops for NeonToken {
             if l > r { l } else { r }
         };
         if m01 > m23 { m01 } else { m23 }
+    }
+
+    #[inline(always)]
+    fn to_u8_bytes(self, a: [float32x4_t; 4]) -> [u8; 16] {
+        let b0 = <NeonToken as F32x4Ops>::to_u8_bytes(self, a[0]);
+        let b1 = <NeonToken as F32x4Ops>::to_u8_bytes(self, a[1]);
+        let b2 = <NeonToken as F32x4Ops>::to_u8_bytes(self, a[2]);
+        let b3 = <NeonToken as F32x4Ops>::to_u8_bytes(self, a[3]);
+        crate::simd_storage::cast([b0, b1, b2, b3])
+    }
+
+    #[inline(always)]
+    fn store_rgba_bytes(
+        self,
+        r: [float32x4_t; 4],
+        g: [float32x4_t; 4],
+        b: [float32x4_t; 4],
+        a: [float32x4_t; 4],
+    ) -> [u8; 64] {
+        let p0 = <NeonToken as F32x4Ops>::store_rgba_bytes(self, r[0], g[0], b[0], a[0]);
+        let p1 = <NeonToken as F32x4Ops>::store_rgba_bytes(self, r[1], g[1], b[1], a[1]);
+        let p2 = <NeonToken as F32x4Ops>::store_rgba_bytes(self, r[2], g[2], b[2], a[2]);
+        let p3 = <NeonToken as F32x4Ops>::store_rgba_bytes(self, r[3], g[3], b[3], a[3]);
+        crate::simd_storage::cast([p0, p1, p2, p3])
     }
 
     #[inline(always)]

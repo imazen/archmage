@@ -32,6 +32,8 @@ pub trait NarrowOps:
     + U64x4Ops
     + F32x4ConvertOps
     + F32x8ConvertOps
+    + F64x2ConvertOps
+    + F64x4ConvertOps
     + U32x4BitcastOps
     + U32x8BitcastOps
     + I64x2BitcastOps
@@ -73,6 +75,8 @@ impl<T> NarrowOps for T where
         + U64x4Ops
         + F32x4ConvertOps
         + F32x8ConvertOps
+        + F64x2ConvertOps
+        + F64x4ConvertOps
         + U32x4BitcastOps
         + U32x8BitcastOps
         + I64x2BitcastOps
@@ -1550,6 +1554,52 @@ pub trait F32x16Ops: 'static + archmage::SimdToken + Copy {
     fn rsqrt(self, a: Self::Repr) -> Self::Repr {
         Self::rsqrt_approx(self, a)
     }
+    #[inline(always)]
+    fn to_u8_bytes(self, a: Self::Repr) -> [u8; 16] {
+        let arr = <Self as F32x16Ops>::to_array(self, a);
+        core::array::from_fn(|i| crate::nostd_math::roundevenf(arr[i]).clamp(0.0, 255.0) as u8)
+    }
+    #[inline(always)]
+    fn store_rgba_bytes(
+        self,
+        r: Self::Repr,
+        g: Self::Repr,
+        b: Self::Repr,
+        a: Self::Repr,
+    ) -> [u8; 64] {
+        let rb = <Self as F32x16Ops>::to_u8_bytes(self, r);
+        let gb = <Self as F32x16Ops>::to_u8_bytes(self, g);
+        let bb = <Self as F32x16Ops>::to_u8_bytes(self, b);
+        let ab = <Self as F32x16Ops>::to_u8_bytes(self, a);
+        let mut out = [0u8; 64];
+        let mut i = 0;
+        while i < 16 {
+            out[i * 4] = rb[i];
+            out[i * 4 + 1] = gb[i];
+            out[i * 4 + 2] = bb[i];
+            out[i * 4 + 3] = ab[i];
+            i += 1;
+        }
+        out
+    }
+    #[inline(always)]
+    fn transpose_dual_8x8_repr(self, rows: [Self::Repr; 8]) -> [Self::Repr; 8] {
+        let r: [[f32; 16]; 8] =
+            core::array::from_fn(|i| <Self as F32x16Ops>::to_array(self, rows[i]));
+        core::array::from_fn(|i| {
+            let out: [f32; 16] =
+                core::array::from_fn(|k| if k < 8 { r[k][i] } else { r[k - 8][i + 8] });
+            <Self as F32x16Ops>::from_array(self, out)
+        })
+    }
+    #[inline(always)]
+    fn transpose_16x16_repr(self, rows: [Self::Repr; 16]) -> [Self::Repr; 16] {
+        let r: [[f32; 16]; 16] =
+            core::array::from_fn(|i| <Self as F32x16Ops>::to_array(self, rows[i]));
+        core::array::from_fn(|i| {
+            <Self as F32x16Ops>::from_array(self, core::array::from_fn(|j| r[j][i]))
+        })
+    }
 }
 
 #[cfg(feature = "w512")]
@@ -2086,6 +2136,32 @@ pub trait F32x8ConvertOps: F32x8Ops + I32x8Ops + 'static + archmage::SimdToken +
     }
     fn convert_f32_to_i32_round(self, a: <Self as F32x8Ops>::Repr) -> <Self as I32x8Ops>::Repr;
     fn convert_i32_to_f32(self, a: <Self as I32x8Ops>::Repr) -> <Self as F32x8Ops>::Repr;
+}
+
+pub trait F64x2ConvertOps: F64x2Ops + I32x4Ops + 'static + archmage::SimdToken + Copy {
+    fn convert_f64_to_i32_low(self, a: <Self as F64x2Ops>::Repr) -> <Self as I32x4Ops>::Repr;
+    #[inline(always)]
+    fn convert_f64_to_i32_low_saturating(
+        self,
+        a: <Self as F64x2Ops>::Repr,
+    ) -> <Self as I32x4Ops>::Repr {
+        <Self as F64x2ConvertOps>::convert_f64_to_i32_low(self, a)
+    }
+    fn convert_f64_to_i32_low_round(self, a: <Self as F64x2Ops>::Repr) -> <Self as I32x4Ops>::Repr;
+    fn convert_i32_low_to_f64(self, a: <Self as I32x4Ops>::Repr) -> <Self as F64x2Ops>::Repr;
+}
+
+pub trait F64x4ConvertOps: F64x4Ops + I32x4Ops + 'static + archmage::SimdToken + Copy {
+    fn convert_f64_to_i32(self, a: <Self as F64x4Ops>::Repr) -> <Self as I32x4Ops>::Repr;
+    #[inline(always)]
+    fn convert_f64_to_i32_saturating(
+        self,
+        a: <Self as F64x4Ops>::Repr,
+    ) -> <Self as I32x4Ops>::Repr {
+        <Self as F64x4ConvertOps>::convert_f64_to_i32(self, a)
+    }
+    fn convert_f64_to_i32_round(self, a: <Self as F64x4Ops>::Repr) -> <Self as I32x4Ops>::Repr;
+    fn convert_i32_to_f64(self, a: <Self as I32x4Ops>::Repr) -> <Self as F64x4Ops>::Repr;
 }
 
 pub trait U32x4BitcastOps: U32x4Ops + I32x4Ops + 'static + archmage::SimdToken + Copy {

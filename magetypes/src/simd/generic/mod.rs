@@ -8,6 +8,7 @@
 //! by `cargo xtask generate`. This file is handwritten and should not be
 //! purged during regeneration.
 
+pub(crate) mod capabilities;
 pub(crate) mod convert_f16;
 pub(crate) mod cross_width;
 pub(crate) mod fast_ops;
@@ -18,6 +19,7 @@ mod lane_ops;
 pub(crate) mod quant_ops;
 mod rgb_block_ops;
 mod subtiers;
+pub use capabilities::{ArmF16Fma, ArmRdma, DotI8Signed, DotU8, DotU8I8, Int52Ifma, RelaxedSimd};
 pub use convert_f16::F16Convert;
 pub use cross_width::F32x8FromHalves;
 #[cfg(feature = "w512")]

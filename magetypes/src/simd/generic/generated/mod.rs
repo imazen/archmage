@@ -73,6 +73,8 @@ pub use u64x4_impl::u64x4;
 
 // 512-bit generic wrapper types (gated behind `w512` feature)
 #[cfg(feature = "w512")]
+mod block_ops_f32x16;
+#[cfg(feature = "w512")]
 mod f32x16_impl;
 #[cfg(feature = "w512")]
 mod f64x8_impl;
