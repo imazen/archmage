@@ -41,6 +41,10 @@ pub(super) static X64_V4_CACHE: AtomicU8 = AtomicU8::new(0);
 #[allow(dead_code)]
 pub(super) static X64_V4_DISABLED: AtomicBool = AtomicBool::new(false);
 #[allow(dead_code)]
+pub(super) static X64_V3_VNNI2_CACHE: AtomicU8 = AtomicU8::new(0);
+#[allow(dead_code)]
+pub(super) static X64_V3_VNNI2_DISABLED: AtomicBool = AtomicBool::new(false);
+#[allow(dead_code)]
 pub(super) static X64_V4X_CACHE: AtomicU8 = AtomicU8::new(0);
 #[allow(dead_code)]
 pub(super) static X64_V4X_DISABLED: AtomicBool = AtomicBool::new(false);
@@ -176,6 +180,7 @@ impl X64V1Token {
     /// - `X64V3GfniCryptoToken`
     /// - `X64V3VnniToken`
     /// - `X64V4Token`
+    /// - `X64V3Vnni2Token`
     /// - `X64V4xToken`
     /// - `Avx512Fp16Token`
     #[allow(clippy::needless_return)]
@@ -218,6 +223,8 @@ impl X64V1Token {
             X64_V3_VNNI_CACHE.store(v, Ordering::Relaxed);
             X64_V4_DISABLED.store(disabled, Ordering::Relaxed);
             X64_V4_CACHE.store(v, Ordering::Relaxed);
+            X64_V3_VNNI2_DISABLED.store(disabled, Ordering::Relaxed);
+            X64_V3_VNNI2_CACHE.store(v, Ordering::Relaxed);
             X64_V4X_DISABLED.store(disabled, Ordering::Relaxed);
             X64_V4X_CACHE.store(v, Ordering::Relaxed);
             AVX512_FP16_DISABLED.store(disabled, Ordering::Relaxed);
@@ -428,6 +435,7 @@ impl X64V2Token {
     /// - `X64V3GfniCryptoToken`
     /// - `X64V3VnniToken`
     /// - `X64V4Token`
+    /// - `X64V3Vnni2Token`
     /// - `X64V4xToken`
     /// - `Avx512Fp16Token`
     #[allow(clippy::needless_return)]
@@ -480,6 +488,8 @@ impl X64V2Token {
             X64_V3_VNNI_CACHE.store(v, Ordering::Relaxed);
             X64_V4_DISABLED.store(disabled, Ordering::Relaxed);
             X64_V4_CACHE.store(v, Ordering::Relaxed);
+            X64_V3_VNNI2_DISABLED.store(disabled, Ordering::Relaxed);
+            X64_V3_VNNI2_CACHE.store(v, Ordering::Relaxed);
             X64_V4X_DISABLED.store(disabled, Ordering::Relaxed);
             X64_V4X_CACHE.store(v, Ordering::Relaxed);
             AVX512_FP16_DISABLED.store(disabled, Ordering::Relaxed);
@@ -760,6 +770,7 @@ impl X64CryptoToken {
     /// - `X64V3GfniCryptoToken`
     /// - `X64V3VnniToken`
     /// - `X64V4Token`
+    /// - `X64V3Vnni2Token`
     /// - `X64V4xToken`
     /// - `Avx512Fp16Token`
     #[allow(clippy::needless_return)]
@@ -812,6 +823,8 @@ impl X64CryptoToken {
             X64_V3_VNNI_CACHE.store(v, Ordering::Relaxed);
             X64_V4_DISABLED.store(disabled, Ordering::Relaxed);
             X64_V4_CACHE.store(v, Ordering::Relaxed);
+            X64_V3_VNNI2_DISABLED.store(disabled, Ordering::Relaxed);
+            X64_V3_VNNI2_CACHE.store(v, Ordering::Relaxed);
             X64_V4X_DISABLED.store(disabled, Ordering::Relaxed);
             X64_V4X_CACHE.store(v, Ordering::Relaxed);
             AVX512_FP16_DISABLED.store(disabled, Ordering::Relaxed);
@@ -1125,6 +1138,7 @@ impl X64V3Token {
     /// - `X64V3GfniCryptoToken`
     /// - `X64V3VnniToken`
     /// - `X64V4Token`
+    /// - `X64V3Vnni2Token`
     /// - `X64V4xToken`
     /// - `Avx512Fp16Token`
     #[allow(clippy::needless_return)]
@@ -1189,6 +1203,8 @@ impl X64V3Token {
             X64_V3_VNNI_CACHE.store(v, Ordering::Relaxed);
             X64_V4_DISABLED.store(disabled, Ordering::Relaxed);
             X64_V4_CACHE.store(v, Ordering::Relaxed);
+            X64_V3_VNNI2_DISABLED.store(disabled, Ordering::Relaxed);
+            X64_V3_VNNI2_CACHE.store(v, Ordering::Relaxed);
             X64_V4X_DISABLED.store(disabled, Ordering::Relaxed);
             X64_V4X_CACHE.store(v, Ordering::Relaxed);
             AVX512_FP16_DISABLED.store(disabled, Ordering::Relaxed);
@@ -1560,6 +1576,7 @@ impl X64V3CryptoToken {
     /// **Cascading:** Also affects descendants:
     /// - `X64V3GfniCryptoToken`
     /// - `X64V3VnniToken`
+    /// - `X64V3Vnni2Token`
     /// - `X64V4xToken`
     #[allow(clippy::needless_return)]
     pub fn dangerously_disable_token_process_wide(
@@ -1627,6 +1644,8 @@ impl X64V3CryptoToken {
             X64_V3_GFNI_CRYPTO_CACHE.store(v, Ordering::Relaxed);
             X64_V3_VNNI_DISABLED.store(disabled, Ordering::Relaxed);
             X64_V3_VNNI_CACHE.store(v, Ordering::Relaxed);
+            X64_V3_VNNI2_DISABLED.store(disabled, Ordering::Relaxed);
+            X64_V3_VNNI2_CACHE.store(v, Ordering::Relaxed);
             X64_V4X_DISABLED.store(disabled, Ordering::Relaxed);
             X64_V4X_CACHE.store(v, Ordering::Relaxed);
             Ok(())
@@ -2030,6 +2049,7 @@ impl X64V3GfniCryptoToken {
     ///
     /// **Cascading:** Also affects descendants:
     /// - `X64V3VnniToken`
+    /// - `X64V3Vnni2Token`
     /// - `X64V4xToken`
     #[allow(clippy::needless_return)]
     pub fn dangerously_disable_token_process_wide(
@@ -2097,6 +2117,8 @@ impl X64V3GfniCryptoToken {
             X64_V3_GFNI_CRYPTO_CACHE.store(v, Ordering::Relaxed);
             X64_V3_VNNI_DISABLED.store(disabled, Ordering::Relaxed);
             X64_V3_VNNI_CACHE.store(v, Ordering::Relaxed);
+            X64_V3_VNNI2_DISABLED.store(disabled, Ordering::Relaxed);
+            X64_V3_VNNI2_CACHE.store(v, Ordering::Relaxed);
             X64_V4X_DISABLED.store(disabled, Ordering::Relaxed);
             X64_V4X_CACHE.store(v, Ordering::Relaxed);
             Ok(())
@@ -2236,18 +2258,19 @@ fn x64_v3_gfni_crypto_detect() -> Option<X64V3GfniCryptoToken> {
     }
 }
 
-/// Proof that VEX-encoded AVX-VNNI (`avxvnni`) is available on top of `X64V3GfniCryptoToken`.
+/// Proof that VEX-encoded AVX-VNNI (`avxvnni`), `adx`, and `sha` are available on top of `X64V3GfniCryptoToken`.
 ///
 /// `avxvnni` provides VEX-encoded 128/256-bit `VPDPBUSD`, `VPDPBUSDS`, `VPDPWSSD`,
 /// and `VPDPWSSDS` (`_mm256_dpbusd_avx_epi32`, `_mm256_dpwssd_avx_epi32`, etc.) for
 /// INT8 (`u8 × i8 -> i32`) and INT16 (`i16 × i16 -> i32`) dot-product accumulation
-/// without requiring AVX-512.
+/// without requiring AVX-512, alongside `adx` (multi-precision add-carry) and `sha`
+/// (SHA-1/SHA-256 hardware acceleration).
 ///
 /// Available without AVX-512 on Intel Alder Lake, Raptor Lake, Meteor Lake, Arrow
 /// Lake, Lunar Lake, Sierra Forest, and later client/hybrid/E-core x86-64 CPUs.
 /// Note that AVX-512 server/desktop parts (`X64V4Token` / `X64V4xToken` on Ice Lake
-/// and Zen 4) provide EVEX `avx512vnni` rather than VEX `avxvnni`, so this token is
-/// a leaf under `X64V3GfniCryptoToken` and is not implied by `X64V4xToken`.
+/// and Zen 4) provide EVEX `avx512vnni` rather than VEX `avxvnni`, so this token
+/// branches under `X64V3GfniCryptoToken` and is not implied by `X64V4xToken`.
 #[derive(Clone, Copy, Debug)]
 pub struct X64V3VnniToken {
     _private: (),
@@ -2257,9 +2280,9 @@ impl crate::tokens::Sealed for X64V3VnniToken {}
 
 impl SimdToken for X64V3VnniToken {
     const NAME: &'static str = "x86-64-v3 VNNI";
-    const TARGET_FEATURES: &'static str = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,vpclmulqdq,vaes,gfni,avxvnni";
-    const ENABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=+sse,+sse2,+sse3,+ssse3,+sse4.1,+sse4.2,+popcnt,+cmpxchg16b,+avx,+avx2,+fma,+bmi1,+bmi2,+f16c,+lzcnt,+movbe,+pclmulqdq,+aes,+vpclmulqdq,+vaes,+gfni,+avxvnni";
-    const DISABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=-sse,-sse2,-sse3,-ssse3,-sse4.1,-sse4.2,-popcnt,-cmpxchg16b,-avx,-avx2,-fma,-bmi1,-bmi2,-f16c,-lzcnt,-movbe,-pclmulqdq,-aes,-vpclmulqdq,-vaes,-gfni,-avxvnni";
+    const TARGET_FEATURES: &'static str = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,vpclmulqdq,vaes,gfni,avxvnni,adx,sha";
+    const ENABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=+sse,+sse2,+sse3,+ssse3,+sse4.1,+sse4.2,+popcnt,+cmpxchg16b,+avx,+avx2,+fma,+bmi1,+bmi2,+f16c,+lzcnt,+movbe,+pclmulqdq,+aes,+vpclmulqdq,+vaes,+gfni,+avxvnni,+adx,+sha";
+    const DISABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=-sse,-sse2,-sse3,-ssse3,-sse4.1,-sse4.2,-popcnt,-cmpxchg16b,-avx,-avx2,-fma,-bmi1,-bmi2,-f16c,-lzcnt,-movbe,-pclmulqdq,-aes,-vpclmulqdq,-vaes,-gfni,-avxvnni,-adx,-sha";
 
     #[inline]
     fn compiled_with() -> Option<bool> {
@@ -2284,6 +2307,8 @@ impl SimdToken for X64V3VnniToken {
             target_feature = "vaes",
             target_feature = "gfni",
             target_feature = "avxvnni",
+            target_feature = "adx",
+            target_feature = "sha",
             not(feature = "testable_dispatch")
         ))]
         {
@@ -2310,6 +2335,8 @@ impl SimdToken for X64V3VnniToken {
             target_feature = "vaes",
             target_feature = "gfni",
             target_feature = "avxvnni",
+            target_feature = "adx",
+            target_feature = "sha",
             not(feature = "testable_dispatch")
         )))]
         {
@@ -2341,6 +2368,8 @@ impl SimdToken for X64V3VnniToken {
             target_feature = "vaes",
             target_feature = "gfni",
             target_feature = "avxvnni",
+            target_feature = "adx",
+            target_feature = "sha",
             not(feature = "testable_dispatch")
         ))]
         {
@@ -2372,6 +2401,8 @@ impl SimdToken for X64V3VnniToken {
             target_feature = "vaes",
             target_feature = "gfni",
             target_feature = "avxvnni",
+            target_feature = "adx",
+            target_feature = "sha",
             not(feature = "testable_dispatch")
         )))]
         {
@@ -2414,7 +2445,7 @@ impl X64V3VnniToken {
     /// Safe calls have that obligation discharged by the compiler.
     #[inline]
     #[target_feature(
-        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,vpclmulqdq,vaes,gfni,avxvnni"
+        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,vpclmulqdq,vaes,gfni,avxvnni,adx,sha"
     )]
     pub fn from_context() -> Self {
         Self { _private: () }
@@ -2438,7 +2469,7 @@ impl X64V3VnniToken {
     )]
     #[inline]
     #[target_feature(
-        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,vpclmulqdq,vaes,gfni,avxvnni"
+        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,vpclmulqdq,vaes,gfni,avxvnni,adx,sha"
     )]
     pub fn forge_token_dangerously() -> Self {
         // Matching features: a safe call inside the same region.
@@ -2512,6 +2543,9 @@ impl X64V3VnniToken {
     /// Returns `Err` when all required features are compile-time enabled
     /// (e.g., via `-Ctarget-cpu=native`), since the compiler has already
     /// elided the runtime checks.
+    ///
+    /// **Cascading:** Also affects descendants:
+    /// - `X64V3Vnni2Token`
     #[allow(clippy::needless_return)]
     pub fn dangerously_disable_token_process_wide(
         disabled: bool,
@@ -2539,6 +2573,8 @@ impl X64V3VnniToken {
             target_feature = "vaes",
             target_feature = "gfni",
             target_feature = "avxvnni",
+            target_feature = "adx",
+            target_feature = "sha",
             not(feature = "testable_dispatch")
         ))]
         {
@@ -2572,12 +2608,16 @@ impl X64V3VnniToken {
             target_feature = "vaes",
             target_feature = "gfni",
             target_feature = "avxvnni",
+            target_feature = "adx",
+            target_feature = "sha",
             not(feature = "testable_dispatch")
         )))]
         {
             X64_V3_VNNI_DISABLED.store(disabled, Ordering::Relaxed);
             let v = if disabled { 1 } else { 0 };
             X64_V3_VNNI_CACHE.store(v, Ordering::Relaxed);
+            X64_V3_VNNI2_DISABLED.store(disabled, Ordering::Relaxed);
+            X64_V3_VNNI2_CACHE.store(v, Ordering::Relaxed);
             Ok(())
         }
     }
@@ -2611,6 +2651,8 @@ impl X64V3VnniToken {
             target_feature = "vaes",
             target_feature = "gfni",
             target_feature = "avxvnni",
+            target_feature = "adx",
+            target_feature = "sha",
             not(feature = "testable_dispatch")
         ))]
         {
@@ -2643,6 +2685,8 @@ impl X64V3VnniToken {
             target_feature = "vaes",
             target_feature = "gfni",
             target_feature = "avxvnni",
+            target_feature = "adx",
+            target_feature = "sha",
             not(feature = "testable_dispatch")
         )))]
         {
@@ -2671,6 +2715,8 @@ impl X64V3VnniToken {
     target_feature = "vaes",
     target_feature = "gfni",
     target_feature = "avxvnni",
+    target_feature = "adx",
+    target_feature = "sha",
     not(feature = "testable_dispatch")
 )))]
 #[cold]
@@ -2695,7 +2741,9 @@ fn x64_v3_vnni_detect() -> Option<X64V3VnniToken> {
         && crate::is_x86_feature_available!("vpclmulqdq")
         && crate::is_x86_feature_available!("vaes")
         && crate::is_x86_feature_available!("gfni")
-        && crate::is_x86_feature_available!("avxvnni");
+        && crate::is_x86_feature_available!("avxvnni")
+        && crate::is_x86_feature_available!("adx")
+        && crate::is_x86_feature_available!("sha");
     // Publish only while the cache is still undetected (0): a
     // concurrent disable/enable writes the cache itself, and an
     // unconditional store here could overwrite it — resurrecting a
@@ -3192,6 +3240,546 @@ fn x64_v4_detect() -> Option<X64V4Token> {
         // SAFETY: `available` — runtime detection just confirmed every
         // feature this token asserts is present on this CPU.
         Some(unsafe { X64V4Token::from_context() })
+    } else {
+        None
+    }
+}
+
+/// Proof that x86-64-v3 VNNI plus cross-vendor AVX-VNNI-2 extensions are available.
+///
+/// Extends [`X64V3VnniToken`] with `avxvnniint8`, `avxneconvert`, and `avxifma`
+/// (pure VEX encoding — does not require AVX-512).
+///
+/// Note on `avxneconvert`: BF16/broadcast-free conversions (`_mm*_cvtneebf16_ps`,
+/// `_mm*_cvtneobf16_ps`, `_mm*_cvtneps_avx_pbh`) are stable since Rust 1.89, while
+/// the FP16 variants (`_mm*_cvtneeph_ps`, `_mm*_cvtneoph_ps`) stabilized in Rust 1.94.0.
+///
+/// Available on: Intel Arrow Lake / Panther Lake / Sierra Forest / Clearwater Forest, AMD Zen 6.
+#[derive(Clone, Copy, Debug)]
+pub struct X64V3Vnni2Token {
+    _private: (),
+}
+
+impl crate::tokens::Sealed for X64V3Vnni2Token {}
+
+impl SimdToken for X64V3Vnni2Token {
+    const NAME: &'static str = "x86-64-v3 VNNI-2";
+    const TARGET_FEATURES: &'static str = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,vpclmulqdq,vaes,gfni,avxvnni,adx,sha,avxvnniint8,avxneconvert,avxifma";
+    const ENABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=+sse,+sse2,+sse3,+ssse3,+sse4.1,+sse4.2,+popcnt,+cmpxchg16b,+avx,+avx2,+fma,+bmi1,+bmi2,+f16c,+lzcnt,+movbe,+pclmulqdq,+aes,+vpclmulqdq,+vaes,+gfni,+avxvnni,+adx,+sha,+avxvnniint8,+avxneconvert,+avxifma";
+    const DISABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=-sse,-sse2,-sse3,-ssse3,-sse4.1,-sse4.2,-popcnt,-cmpxchg16b,-avx,-avx2,-fma,-bmi1,-bmi2,-f16c,-lzcnt,-movbe,-pclmulqdq,-aes,-vpclmulqdq,-vaes,-gfni,-avxvnni,-adx,-sha,-avxvnniint8,-avxneconvert,-avxifma";
+
+    #[inline]
+    fn compiled_with() -> Option<bool> {
+        #[cfg(all(
+            target_feature = "sse3",
+            target_feature = "ssse3",
+            target_feature = "sse4.1",
+            target_feature = "sse4.2",
+            target_feature = "popcnt",
+            target_feature = "cmpxchg16b",
+            target_feature = "avx",
+            target_feature = "avx2",
+            target_feature = "fma",
+            target_feature = "bmi1",
+            target_feature = "bmi2",
+            target_feature = "f16c",
+            target_feature = "lzcnt",
+            target_feature = "movbe",
+            target_feature = "pclmulqdq",
+            target_feature = "aes",
+            target_feature = "vpclmulqdq",
+            target_feature = "vaes",
+            target_feature = "gfni",
+            target_feature = "avxvnni",
+            target_feature = "adx",
+            target_feature = "sha",
+            target_feature = "avxvnniint8",
+            target_feature = "avxneconvert",
+            target_feature = "avxifma",
+            not(feature = "testable_dispatch")
+        ))]
+        {
+            Some(true)
+        }
+        #[cfg(not(all(
+            target_feature = "sse3",
+            target_feature = "ssse3",
+            target_feature = "sse4.1",
+            target_feature = "sse4.2",
+            target_feature = "popcnt",
+            target_feature = "cmpxchg16b",
+            target_feature = "avx",
+            target_feature = "avx2",
+            target_feature = "fma",
+            target_feature = "bmi1",
+            target_feature = "bmi2",
+            target_feature = "f16c",
+            target_feature = "lzcnt",
+            target_feature = "movbe",
+            target_feature = "pclmulqdq",
+            target_feature = "aes",
+            target_feature = "vpclmulqdq",
+            target_feature = "vaes",
+            target_feature = "gfni",
+            target_feature = "avxvnni",
+            target_feature = "adx",
+            target_feature = "sha",
+            target_feature = "avxvnniint8",
+            target_feature = "avxneconvert",
+            target_feature = "avxifma",
+            not(feature = "testable_dispatch")
+        )))]
+        {
+            None
+        }
+    }
+
+    #[inline(always)]
+    fn summon() -> Option<Self> {
+        // Compile-time fast path (suppressed by testable_dispatch)
+        #[cfg(all(
+            target_feature = "sse3",
+            target_feature = "ssse3",
+            target_feature = "sse4.1",
+            target_feature = "sse4.2",
+            target_feature = "popcnt",
+            target_feature = "cmpxchg16b",
+            target_feature = "avx",
+            target_feature = "avx2",
+            target_feature = "fma",
+            target_feature = "bmi1",
+            target_feature = "bmi2",
+            target_feature = "f16c",
+            target_feature = "lzcnt",
+            target_feature = "movbe",
+            target_feature = "pclmulqdq",
+            target_feature = "aes",
+            target_feature = "vpclmulqdq",
+            target_feature = "vaes",
+            target_feature = "gfni",
+            target_feature = "avxvnni",
+            target_feature = "adx",
+            target_feature = "sha",
+            target_feature = "avxvnniint8",
+            target_feature = "avxneconvert",
+            target_feature = "avxifma",
+            not(feature = "testable_dispatch")
+        ))]
+        {
+            // SAFETY: every feature this token asserts is enabled at
+            // compile time (cfg(target_feature)), so the binary only
+            // runs on CPUs that have them.
+            Some(unsafe { Self::from_context() })
+        }
+
+        // Runtime path with caching
+        #[cfg(not(all(
+            target_feature = "sse3",
+            target_feature = "ssse3",
+            target_feature = "sse4.1",
+            target_feature = "sse4.2",
+            target_feature = "popcnt",
+            target_feature = "cmpxchg16b",
+            target_feature = "avx",
+            target_feature = "avx2",
+            target_feature = "fma",
+            target_feature = "bmi1",
+            target_feature = "bmi2",
+            target_feature = "f16c",
+            target_feature = "lzcnt",
+            target_feature = "movbe",
+            target_feature = "pclmulqdq",
+            target_feature = "aes",
+            target_feature = "vpclmulqdq",
+            target_feature = "vaes",
+            target_feature = "gfni",
+            target_feature = "avxvnni",
+            target_feature = "adx",
+            target_feature = "sha",
+            target_feature = "avxvnniint8",
+            target_feature = "avxneconvert",
+            target_feature = "avxifma",
+            not(feature = "testable_dispatch")
+        )))]
+        {
+            match X64_V3_VNNI2_CACHE.load(Ordering::Relaxed) {
+                // SAFETY: 2 is only ever stored by x64_v3_vnni2_detect()
+                // after a positive runtime check of every feature.
+                2 => Some(unsafe { Self::from_context() }),
+                1 => None,
+                _ => x64_v3_vnni2_detect(),
+            }
+        }
+    }
+}
+
+impl X64V3Vnni2Token {
+    /// Construct a x86-64-v3 VNNI-2 proof from the caller's statically proven
+    /// feature context.
+    ///
+    /// A safe call requires a caller whose `#[target_feature]` attribute
+    /// enables every feature of this tier; a superset is sufficient. Outside
+    /// such a context rustc requires an `unsafe` block at the call site.
+    ///
+    /// Features enabled globally (`-C target-feature`, `-C target-cpu`) do
+    /// not satisfy this — rustc requires them on the caller's own attribute.
+    ///
+    /// No runtime detection happens here, so this also bypasses
+    /// process-wide token disabling (including `testable_dispatch`):
+    /// the caller's feature context is already the proof. Use
+    /// [`SimdToken::summon`](crate::SimdToken::summon) when the
+    /// features have to be detected at runtime.
+    ///
+    /// Being a `#[target_feature]` function, this cannot be coerced to
+    /// a safe function pointer — there would be no call site left for
+    /// rustc to check.
+    ///
+    /// # Safety
+    ///
+    /// When called through an `unsafe` block, the caller must ensure
+    /// every feature in this tier is available on the executing CPU.
+    /// Safe calls have that obligation discharged by the compiler.
+    #[inline]
+    #[target_feature(
+        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,vpclmulqdq,vaes,gfni,avxvnni,adx,sha,avxvnniint8,avxneconvert,avxifma"
+    )]
+    pub fn from_context() -> Self {
+        Self { _private: () }
+    }
+
+    /// Deprecated alias for [`X64V3Vnni2Token::from_context`].
+    ///
+    /// Identical in every respect — same `#[target_feature]` gate, same
+    /// safe-call rules. The name predates the compiler-checked design
+    /// and describes only the `unsafe` half of it.
+    ///
+    /// # Safety
+    ///
+    /// Identical to [`X64V3Vnni2Token::from_context`]: when called through an
+    /// `unsafe` block, the caller must ensure every feature in this
+    /// tier is available on the executing CPU. Safe calls have that
+    /// obligation discharged by the compiler.
+    #[deprecated(
+        since = "0.9.29",
+        note = "Renamed to from_context() — the constructor is checked against the caller's target-feature context"
+    )]
+    #[inline]
+    #[target_feature(
+        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,vpclmulqdq,vaes,gfni,avxvnni,adx,sha,avxvnniint8,avxneconvert,avxifma"
+    )]
+    pub fn forge_token_dangerously() -> Self {
+        // Matching features: a safe call inside the same region.
+        Self::from_context()
+    }
+}
+
+impl X64V3Vnni2Token {
+    /// Extract a X64CryptoToken — guaranteed because x86-64-v3 VNNI-2 implies x86-64 Crypto.
+    ///
+    /// Zero-cost: compiles away entirely.
+    #[inline(always)]
+    pub fn x64_crypto(self) -> X64CryptoToken {
+        // SAFETY: holding `self` proves this environment satisfies
+        // x86-64-v3 VNNI-2's full contract, a superset of x86-64 Crypto's.
+        unsafe { X64CryptoToken::from_context() }
+    }
+    /// Extract a X64V1Token — guaranteed because x86-64-v3 VNNI-2 implies x86-64-v1.
+    ///
+    /// Zero-cost: compiles away entirely.
+    #[inline(always)]
+    pub fn v1(self) -> X64V1Token {
+        // SAFETY: holding `self` proves this environment satisfies
+        // x86-64-v3 VNNI-2's full contract, a superset of x86-64-v1's.
+        unsafe { X64V1Token::from_context() }
+    }
+    /// Extract a X64V2Token — guaranteed because x86-64-v3 VNNI-2 implies x86-64-v2.
+    ///
+    /// Zero-cost: compiles away entirely.
+    #[inline(always)]
+    pub fn v2(self) -> X64V2Token {
+        // SAFETY: holding `self` proves this environment satisfies
+        // x86-64-v3 VNNI-2's full contract, a superset of x86-64-v2's.
+        unsafe { X64V2Token::from_context() }
+    }
+    /// Extract a X64V3CryptoToken — guaranteed because x86-64-v3 VNNI-2 implies x86-64-v3 Crypto.
+    ///
+    /// Zero-cost: compiles away entirely.
+    #[inline(always)]
+    pub fn v3_crypto(self) -> X64V3CryptoToken {
+        // SAFETY: holding `self` proves this environment satisfies
+        // x86-64-v3 VNNI-2's full contract, a superset of x86-64-v3 Crypto's.
+        unsafe { X64V3CryptoToken::from_context() }
+    }
+    /// Extract a X64V3GfniCryptoToken — guaranteed because x86-64-v3 VNNI-2 implies x86-64-v3 GFNI Crypto.
+    ///
+    /// Zero-cost: compiles away entirely.
+    #[inline(always)]
+    pub fn v3_gfni_crypto(self) -> X64V3GfniCryptoToken {
+        // SAFETY: holding `self` proves this environment satisfies
+        // x86-64-v3 VNNI-2's full contract, a superset of x86-64-v3 GFNI Crypto's.
+        unsafe { X64V3GfniCryptoToken::from_context() }
+    }
+    /// Extract a X64V3Token — guaranteed because x86-64-v3 VNNI-2 implies x86-64-v3.
+    ///
+    /// Zero-cost: compiles away entirely.
+    #[inline(always)]
+    pub fn v3(self) -> X64V3Token {
+        // SAFETY: holding `self` proves this environment satisfies
+        // x86-64-v3 VNNI-2's full contract, a superset of x86-64-v3's.
+        unsafe { X64V3Token::from_context() }
+    }
+    /// Extract a X64V3VnniToken — guaranteed because x86-64-v3 VNNI-2 implies x86-64-v3 VNNI.
+    ///
+    /// Zero-cost: compiles away entirely.
+    #[inline(always)]
+    pub fn v3_vnni(self) -> X64V3VnniToken {
+        // SAFETY: holding `self` proves this environment satisfies
+        // x86-64-v3 VNNI-2's full contract, a superset of x86-64-v3 VNNI's.
+        unsafe { X64V3VnniToken::from_context() }
+    }
+}
+
+impl X64V3Vnni2Token {
+    /// Disable this token process-wide for testing and benchmarking.
+    ///
+    /// When disabled, `summon()` will return `None` even if the CPU supports
+    /// the required features.
+    ///
+    /// Returns `Err` when all required features are compile-time enabled
+    /// (e.g., via `-Ctarget-cpu=native`), since the compiler has already
+    /// elided the runtime checks.
+    #[allow(clippy::needless_return)]
+    pub fn dangerously_disable_token_process_wide(
+        disabled: bool,
+    ) -> Result<(), crate::tokens::CompileTimeGuaranteedError> {
+        #[cfg(all(
+            target_feature = "sse",
+            target_feature = "sse2",
+            target_feature = "sse3",
+            target_feature = "ssse3",
+            target_feature = "sse4.1",
+            target_feature = "sse4.2",
+            target_feature = "popcnt",
+            target_feature = "cmpxchg16b",
+            target_feature = "avx",
+            target_feature = "avx2",
+            target_feature = "fma",
+            target_feature = "bmi1",
+            target_feature = "bmi2",
+            target_feature = "f16c",
+            target_feature = "lzcnt",
+            target_feature = "movbe",
+            target_feature = "pclmulqdq",
+            target_feature = "aes",
+            target_feature = "vpclmulqdq",
+            target_feature = "vaes",
+            target_feature = "gfni",
+            target_feature = "avxvnni",
+            target_feature = "adx",
+            target_feature = "sha",
+            target_feature = "avxvnniint8",
+            target_feature = "avxneconvert",
+            target_feature = "avxifma",
+            not(feature = "testable_dispatch")
+        ))]
+        {
+            let _ = disabled;
+            return Err(crate::tokens::CompileTimeGuaranteedError {
+                token_name: Self::NAME,
+                target_features: Self::TARGET_FEATURES,
+                disable_flags: Self::DISABLE_TARGET_FEATURES,
+            });
+        }
+        #[cfg(not(all(
+            target_feature = "sse",
+            target_feature = "sse2",
+            target_feature = "sse3",
+            target_feature = "ssse3",
+            target_feature = "sse4.1",
+            target_feature = "sse4.2",
+            target_feature = "popcnt",
+            target_feature = "cmpxchg16b",
+            target_feature = "avx",
+            target_feature = "avx2",
+            target_feature = "fma",
+            target_feature = "bmi1",
+            target_feature = "bmi2",
+            target_feature = "f16c",
+            target_feature = "lzcnt",
+            target_feature = "movbe",
+            target_feature = "pclmulqdq",
+            target_feature = "aes",
+            target_feature = "vpclmulqdq",
+            target_feature = "vaes",
+            target_feature = "gfni",
+            target_feature = "avxvnni",
+            target_feature = "adx",
+            target_feature = "sha",
+            target_feature = "avxvnniint8",
+            target_feature = "avxneconvert",
+            target_feature = "avxifma",
+            not(feature = "testable_dispatch")
+        )))]
+        {
+            X64_V3_VNNI2_DISABLED.store(disabled, Ordering::Relaxed);
+            let v = if disabled { 1 } else { 0 };
+            X64_V3_VNNI2_CACHE.store(v, Ordering::Relaxed);
+            Ok(())
+        }
+    }
+
+    /// Check if this token has been manually disabled process-wide.
+    ///
+    /// Returns `Err` when all required features are compile-time enabled.
+    #[inline(always)]
+    #[allow(clippy::needless_return)]
+    pub fn manually_disabled() -> Result<bool, crate::tokens::CompileTimeGuaranteedError> {
+        #[cfg(all(
+            target_feature = "sse",
+            target_feature = "sse2",
+            target_feature = "sse3",
+            target_feature = "ssse3",
+            target_feature = "sse4.1",
+            target_feature = "sse4.2",
+            target_feature = "popcnt",
+            target_feature = "cmpxchg16b",
+            target_feature = "avx",
+            target_feature = "avx2",
+            target_feature = "fma",
+            target_feature = "bmi1",
+            target_feature = "bmi2",
+            target_feature = "f16c",
+            target_feature = "lzcnt",
+            target_feature = "movbe",
+            target_feature = "pclmulqdq",
+            target_feature = "aes",
+            target_feature = "vpclmulqdq",
+            target_feature = "vaes",
+            target_feature = "gfni",
+            target_feature = "avxvnni",
+            target_feature = "adx",
+            target_feature = "sha",
+            target_feature = "avxvnniint8",
+            target_feature = "avxneconvert",
+            target_feature = "avxifma",
+            not(feature = "testable_dispatch")
+        ))]
+        {
+            return Err(crate::tokens::CompileTimeGuaranteedError {
+                token_name: Self::NAME,
+                target_features: Self::TARGET_FEATURES,
+                disable_flags: Self::DISABLE_TARGET_FEATURES,
+            });
+        }
+        #[cfg(not(all(
+            target_feature = "sse",
+            target_feature = "sse2",
+            target_feature = "sse3",
+            target_feature = "ssse3",
+            target_feature = "sse4.1",
+            target_feature = "sse4.2",
+            target_feature = "popcnt",
+            target_feature = "cmpxchg16b",
+            target_feature = "avx",
+            target_feature = "avx2",
+            target_feature = "fma",
+            target_feature = "bmi1",
+            target_feature = "bmi2",
+            target_feature = "f16c",
+            target_feature = "lzcnt",
+            target_feature = "movbe",
+            target_feature = "pclmulqdq",
+            target_feature = "aes",
+            target_feature = "vpclmulqdq",
+            target_feature = "vaes",
+            target_feature = "gfni",
+            target_feature = "avxvnni",
+            target_feature = "adx",
+            target_feature = "sha",
+            target_feature = "avxvnniint8",
+            target_feature = "avxneconvert",
+            target_feature = "avxifma",
+            not(feature = "testable_dispatch")
+        )))]
+        {
+            Ok(X64_V3_VNNI2_DISABLED.load(Ordering::Relaxed))
+        }
+    }
+}
+#[cfg(not(all(
+    target_feature = "sse3",
+    target_feature = "ssse3",
+    target_feature = "sse4.1",
+    target_feature = "sse4.2",
+    target_feature = "popcnt",
+    target_feature = "cmpxchg16b",
+    target_feature = "avx",
+    target_feature = "avx2",
+    target_feature = "fma",
+    target_feature = "bmi1",
+    target_feature = "bmi2",
+    target_feature = "f16c",
+    target_feature = "lzcnt",
+    target_feature = "movbe",
+    target_feature = "pclmulqdq",
+    target_feature = "aes",
+    target_feature = "vpclmulqdq",
+    target_feature = "vaes",
+    target_feature = "gfni",
+    target_feature = "avxvnni",
+    target_feature = "adx",
+    target_feature = "sha",
+    target_feature = "avxvnniint8",
+    target_feature = "avxneconvert",
+    target_feature = "avxifma",
+    not(feature = "testable_dispatch")
+)))]
+#[cold]
+#[inline(never)]
+fn x64_v3_vnni2_detect() -> Option<X64V3Vnni2Token> {
+    let available = crate::is_x86_feature_available!("sse3")
+        && crate::is_x86_feature_available!("ssse3")
+        && crate::is_x86_feature_available!("sse4.1")
+        && crate::is_x86_feature_available!("sse4.2")
+        && crate::is_x86_feature_available!("popcnt")
+        && crate::is_x86_feature_available!("cmpxchg16b")
+        && crate::is_x86_feature_available!("avx")
+        && crate::is_x86_feature_available!("avx2")
+        && crate::is_x86_feature_available!("fma")
+        && crate::is_x86_feature_available!("bmi1")
+        && crate::is_x86_feature_available!("bmi2")
+        && crate::is_x86_feature_available!("f16c")
+        && crate::is_x86_feature_available!("lzcnt")
+        && crate::is_x86_feature_available!("movbe")
+        && crate::is_x86_feature_available!("pclmulqdq")
+        && crate::is_x86_feature_available!("aes")
+        && crate::is_x86_feature_available!("vpclmulqdq")
+        && crate::is_x86_feature_available!("vaes")
+        && crate::is_x86_feature_available!("gfni")
+        && crate::is_x86_feature_available!("avxvnni")
+        && crate::is_x86_feature_available!("adx")
+        && crate::is_x86_feature_available!("sha")
+        && crate::is_x86_feature_available!("avxvnniint8")
+        && crate::is_x86_feature_available!("avxneconvert")
+        && crate::is_x86_feature_available!("avxifma");
+    // Publish only while the cache is still undetected (0): a
+    // concurrent disable/enable writes the cache itself, and an
+    // unconditional store here could overwrite it — resurrecting a
+    // token that was disabled mid-detect (lost update: summon()
+    // returning Some for a disabled token).
+    let _ = X64_V3_VNNI2_CACHE.compare_exchange(
+        0,
+        if available { 2 } else { 1 },
+        Ordering::Relaxed,
+        Ordering::Relaxed,
+    );
+    // disable() stores the flag before the cache, so loading the
+    // flag after the CAS observes every disable that could have
+    // raced this probe.
+    if available && !X64_V3_VNNI2_DISABLED.load(Ordering::Relaxed) {
+        // SAFETY: `available` — runtime detection just confirmed every
+        // feature this token asserts is present on this CPU.
+        Some(unsafe { X64V3Vnni2Token::from_context() })
     } else {
         None
     }
@@ -4388,6 +4976,15 @@ impl X64V4Token {
         [()][!(Self::__ARCHMAGE_TIER_TAG == 0xFE1B900C) as usize];
 }
 
+impl X64V3Vnni2Token {
+    #[doc(hidden)]
+    pub const __ARCHMAGE_TIER_TAG: u32 = 0x82D823D4;
+
+    #[doc(hidden)]
+    pub const __ARCHMAGE_ASSERT_TIER_82D823D4: () =
+        [()][!(Self::__ARCHMAGE_TIER_TAG == 0x82D823D4) as usize];
+}
+
 impl X64V4xToken {
     #[doc(hidden)]
     pub const __ARCHMAGE_TIER_TAG: u32 = 0x8F63232A;
@@ -4423,6 +5020,8 @@ impl Has128BitSimd for X64V3VnniToken {}
 #[allow(deprecated)]
 impl Has128BitSimd for X64V4Token {}
 #[allow(deprecated)]
+impl Has128BitSimd for X64V3Vnni2Token {}
+#[allow(deprecated)]
 impl Has128BitSimd for X64V4xToken {}
 #[allow(deprecated)]
 impl Has128BitSimd for Avx512Fp16Token {}
@@ -4436,6 +5035,8 @@ impl Has256BitSimd for X64V3GfniCryptoToken {}
 impl Has256BitSimd for X64V3VnniToken {}
 #[allow(deprecated)]
 impl Has256BitSimd for X64V4Token {}
+#[allow(deprecated)]
+impl Has256BitSimd for X64V3Vnni2Token {}
 #[allow(deprecated)]
 impl Has256BitSimd for X64V4xToken {}
 #[allow(deprecated)]
@@ -4453,6 +5054,7 @@ impl HasX64V2 for X64V3CryptoToken {}
 impl HasX64V2 for X64V3GfniCryptoToken {}
 impl HasX64V2 for X64V3VnniToken {}
 impl HasX64V2 for X64V4Token {}
+impl HasX64V2 for X64V3Vnni2Token {}
 impl HasX64V2 for X64V4xToken {}
 impl HasX64V2 for Avx512Fp16Token {}
 impl HasX64V4 for X64V4Token {}

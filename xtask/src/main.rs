@@ -594,9 +594,15 @@ fn generate_x86_reference(db: &HashMap<String, IntrinsicEntry>) -> String {
             intrinsics: BTreeMap::new(),
         },
         TierInfo {
-            name: "X64V3VnniToken (AVX-VNNI)",
+            name: "X64V3VnniToken (AVX-VNNI + ADX/SHA)",
             token: "X64V3VnniToken",
-            features: &["avxvnni"],
+            features: &["avxvnni", "adx", "sha"],
+            intrinsics: BTreeMap::new(),
+        },
+        TierInfo {
+            name: "X64V3Vnni2Token (AVX-VNNI-2)",
+            token: "X64V3Vnni2Token",
+            features: &["avxvnniint8", "avxneconvert", "avxifma"],
             intrinsics: BTreeMap::new(),
         },
         TierInfo {

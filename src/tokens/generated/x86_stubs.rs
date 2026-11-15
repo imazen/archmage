@@ -469,9 +469,9 @@ impl crate::tokens::Sealed for X64V3VnniToken {}
 
 impl SimdToken for X64V3VnniToken {
     const NAME: &'static str = "x86-64-v3 VNNI";
-    const TARGET_FEATURES: &'static str = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,vpclmulqdq,vaes,gfni,avxvnni";
-    const ENABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=+sse,+sse2,+sse3,+ssse3,+sse4.1,+sse4.2,+popcnt,+cmpxchg16b,+avx,+avx2,+fma,+bmi1,+bmi2,+f16c,+lzcnt,+movbe,+pclmulqdq,+aes,+vpclmulqdq,+vaes,+gfni,+avxvnni";
-    const DISABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=-sse,-sse2,-sse3,-ssse3,-sse4.1,-sse4.2,-popcnt,-cmpxchg16b,-avx,-avx2,-fma,-bmi1,-bmi2,-f16c,-lzcnt,-movbe,-pclmulqdq,-aes,-vpclmulqdq,-vaes,-gfni,-avxvnni";
+    const TARGET_FEATURES: &'static str = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,vpclmulqdq,vaes,gfni,avxvnni,adx,sha";
+    const ENABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=+sse,+sse2,+sse3,+ssse3,+sse4.1,+sse4.2,+popcnt,+cmpxchg16b,+avx,+avx2,+fma,+bmi1,+bmi2,+f16c,+lzcnt,+movbe,+pclmulqdq,+aes,+vpclmulqdq,+vaes,+gfni,+avxvnni,+adx,+sha";
+    const DISABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=-sse,-sse2,-sse3,-ssse3,-sse4.1,-sse4.2,-popcnt,-cmpxchg16b,-avx,-avx2,-fma,-bmi1,-bmi2,-f16c,-lzcnt,-movbe,-pclmulqdq,-aes,-vpclmulqdq,-vaes,-gfni,-avxvnni,-adx,-sha";
 
     #[inline]
     fn compiled_with() -> Option<bool> {
@@ -588,6 +588,81 @@ impl X64V4Token {
 }
 
 impl X64V4Token {
+    /// This token is not available on this architecture.
+    pub fn dangerously_disable_token_process_wide(
+        _disabled: bool,
+    ) -> Result<(), crate::tokens::CompileTimeGuaranteedError> {
+        Err(crate::tokens::CompileTimeGuaranteedError {
+            token_name: Self::NAME,
+            target_features: Self::TARGET_FEATURES,
+            disable_flags: Self::DISABLE_TARGET_FEATURES,
+        })
+    }
+
+    /// This token is not available on this architecture.
+    pub fn manually_disabled() -> Result<bool, crate::tokens::CompileTimeGuaranteedError> {
+        Err(crate::tokens::CompileTimeGuaranteedError {
+            token_name: Self::NAME,
+            target_features: Self::TARGET_FEATURES,
+            disable_flags: Self::DISABLE_TARGET_FEATURES,
+        })
+    }
+}
+
+/// Stub for x86-64-v3 VNNI-2 token (not available on this architecture).
+#[derive(Clone, Copy, Debug)]
+pub struct X64V3Vnni2Token {
+    _private: (),
+}
+
+impl crate::tokens::Sealed for X64V3Vnni2Token {}
+
+impl SimdToken for X64V3Vnni2Token {
+    const NAME: &'static str = "x86-64-v3 VNNI-2";
+    const TARGET_FEATURES: &'static str = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,vpclmulqdq,vaes,gfni,avxvnni,adx,sha,avxvnniint8,avxneconvert,avxifma";
+    const ENABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=+sse,+sse2,+sse3,+ssse3,+sse4.1,+sse4.2,+popcnt,+cmpxchg16b,+avx,+avx2,+fma,+bmi1,+bmi2,+f16c,+lzcnt,+movbe,+pclmulqdq,+aes,+vpclmulqdq,+vaes,+gfni,+avxvnni,+adx,+sha,+avxvnniint8,+avxneconvert,+avxifma";
+    const DISABLE_TARGET_FEATURES: &'static str = "-Ctarget-feature=-sse,-sse2,-sse3,-ssse3,-sse4.1,-sse4.2,-popcnt,-cmpxchg16b,-avx,-avx2,-fma,-bmi1,-bmi2,-f16c,-lzcnt,-movbe,-pclmulqdq,-aes,-vpclmulqdq,-vaes,-gfni,-avxvnni,-adx,-sha,-avxvnniint8,-avxneconvert,-avxifma";
+
+    #[inline]
+    fn compiled_with() -> Option<bool> {
+        Some(false) // Wrong architecture
+    }
+
+    // Note: guaranteed() has a default impl in the trait that calls compiled_with()
+
+    #[inline]
+    fn summon() -> Option<Self> {
+        None // Not available on this architecture
+    }
+}
+
+impl X64V3Vnni2Token {
+    /// Construct a proof for a foreign architecture. Always `unsafe`.
+    ///
+    /// On this token's native architecture the constructor is
+    /// `from_context()`, a **safe** `#[target_feature]` function that
+    /// rustc checks against the caller's feature context. The current
+    /// compilation target is a different architecture, so no such
+    /// context can exist, there is nothing for rustc to check, and no
+    /// `from_context()` is generated — only this `unsafe fn`.
+    ///
+    /// # Safety
+    ///
+    /// Unsatisfiable: this token asserts CPU features that the target
+    /// architecture does not have. Any token produced here is a lie,
+    /// and using it to enter a SIMD region is undefined behavior. It
+    /// exists so cross-architecture code compiles, not to be called.
+    #[deprecated(
+        since = "0.9.29",
+        note = "Renamed to from_context() on native architectures; on a foreign architecture the features cannot exist at all"
+    )]
+    #[inline(always)]
+    pub unsafe fn forge_token_dangerously() -> Self {
+        Self { _private: () }
+    }
+}
+
+impl X64V3Vnni2Token {
     /// This token is not available on this architecture.
     pub fn dangerously_disable_token_process_wide(
         _disabled: bool,
@@ -857,6 +932,15 @@ impl X64V4Token {
         [()][!(Self::__ARCHMAGE_TIER_TAG == 0xFE1B900C) as usize];
 }
 
+impl X64V3Vnni2Token {
+    #[doc(hidden)]
+    pub const __ARCHMAGE_TIER_TAG: u32 = 0x82D823D4;
+
+    #[doc(hidden)]
+    pub const __ARCHMAGE_ASSERT_TIER_82D823D4: () =
+        [()][!(Self::__ARCHMAGE_TIER_TAG == 0x82D823D4) as usize];
+}
+
 impl X64V4xToken {
     #[doc(hidden)]
     pub const __ARCHMAGE_TIER_TAG: u32 = 0x8F63232A;
@@ -892,6 +976,8 @@ impl Has128BitSimd for X64V3VnniToken {}
 #[allow(deprecated)]
 impl Has128BitSimd for X64V4Token {}
 #[allow(deprecated)]
+impl Has128BitSimd for X64V3Vnni2Token {}
+#[allow(deprecated)]
 impl Has128BitSimd for X64V4xToken {}
 #[allow(deprecated)]
 impl Has128BitSimd for Avx512Fp16Token {}
@@ -905,6 +991,8 @@ impl Has256BitSimd for X64V3GfniCryptoToken {}
 impl Has256BitSimd for X64V3VnniToken {}
 #[allow(deprecated)]
 impl Has256BitSimd for X64V4Token {}
+#[allow(deprecated)]
+impl Has256BitSimd for X64V3Vnni2Token {}
 #[allow(deprecated)]
 impl Has256BitSimd for X64V4xToken {}
 #[allow(deprecated)]
@@ -922,6 +1010,7 @@ impl HasX64V2 for X64V3CryptoToken {}
 impl HasX64V2 for X64V3GfniCryptoToken {}
 impl HasX64V2 for X64V3VnniToken {}
 impl HasX64V2 for X64V4Token {}
+impl HasX64V2 for X64V3Vnni2Token {}
 impl HasX64V2 for X64V4xToken {}
 impl HasX64V2 for Avx512Fp16Token {}
 impl HasX64V4 for X64V4Token {}

@@ -45,6 +45,8 @@ mod x86_tests {
             "vpclmulqdq",
             "gfni",
             "avxvnni",
+            "adx",
+            "sha",
         ] {
             assert!(
                 features.split(',').any(|f| f == required),
@@ -151,37 +153,50 @@ mod x86_tests {
         let _lock = archmage::testing::lock_token_testing();
         if X64V3VnniToken::compiled_with() == Some(true)
             || X64V3GfniCryptoToken::compiled_with() == Some(true)
+            || archmage::X64V3Vnni2Token::compiled_with() == Some(true)
         {
             return;
         }
 
         let had_gfni = X64V3GfniCryptoToken::summon().is_some();
         let had_vnni = X64V3VnniToken::summon().is_some();
+        let had_vnni2 = archmage::X64V3Vnni2Token::summon().is_some();
         #[cfg(feature = "avx512")]
         let had_v4x = archmage::X64V4xToken::summon().is_some();
 
-        // 1. Disabling leaf X64V3VnniToken must NOT disable X64V3GfniCryptoToken or X64V4xToken.
+        // 1. Disabling X64V3VnniToken must cascade to child X64V3Vnni2Token,
+        //    and must NOT disable X64V3GfniCryptoToken or X64V4xToken.
         X64V3VnniToken::dangerously_disable_token_process_wide(true).unwrap();
         assert!(X64V3VnniToken::manually_disabled().unwrap());
         assert!(X64V3VnniToken::summon().is_none());
+        assert!(
+            archmage::X64V3Vnni2Token::summon().is_none(),
+            "disabling X64V3VnniToken must cascade to X64V3Vnni2Token"
+        );
         assert_eq!(X64V3GfniCryptoToken::summon().is_some(), had_gfni);
         #[cfg(feature = "avx512")]
         assert_eq!(archmage::X64V4xToken::summon().is_some(), had_v4x);
 
         X64V3VnniToken::dangerously_disable_token_process_wide(false).unwrap();
         assert_eq!(X64V3VnniToken::summon().is_some(), had_vnni);
+        assert_eq!(archmage::X64V3Vnni2Token::summon().is_some(), had_vnni2);
 
-        // 2. Disabling parent X64V3GfniCryptoToken MUST cascade to X64V3VnniToken.
+        // 2. Disabling parent X64V3GfniCryptoToken MUST cascade to X64V3VnniToken and X64V3Vnni2Token.
         X64V3GfniCryptoToken::dangerously_disable_token_process_wide(true).unwrap();
         assert!(X64V3GfniCryptoToken::summon().is_none());
         assert!(
             X64V3VnniToken::summon().is_none(),
             "disabling X64V3GfniCryptoToken must cascade to X64V3VnniToken"
         );
+        assert!(
+            archmage::X64V3Vnni2Token::summon().is_none(),
+            "disabling X64V3GfniCryptoToken must cascade to X64V3Vnni2Token"
+        );
 
         X64V3GfniCryptoToken::dangerously_disable_token_process_wide(false).unwrap();
         assert_eq!(X64V3GfniCryptoToken::summon().is_some(), had_gfni);
         assert_eq!(X64V3VnniToken::summon().is_some(), had_vnni);
+        assert_eq!(archmage::X64V3Vnni2Token::summon().is_some(), had_vnni2);
     }
 
     fn extract_i32x8(v: __m256i) -> [i32; 8] {
@@ -298,6 +313,30 @@ mod x86_tests {
             assert_eq!(dpwssd, [210, 220, 230, 240, 250, 260, 270, 280]);
             assert_eq!(dpwssds, [i32::MIN; 8]);
             assert_eq!(dp128_0, 110);
+        }
+    }
+
+    #[attune(wrap)]
+    fn run_sha_intrinsics(_token: X64V3VnniToken) -> [i32; 4] {
+        let a = _mm_set_epi32(4, 3, 2, 1);
+        let b = _mm_set_epi32(8, 7, 6, 5);
+        let msg = _mm_sha256msg1_epu32(a, b);
+        [
+            _mm_extract_epi32::<0>(msg),
+            _mm_extract_epi32::<1>(msg),
+            _mm_extract_epi32::<2>(msg),
+            _mm_extract_epi32::<3>(msg),
+        ]
+    }
+
+    #[test]
+    fn hardware_sha_execution() {
+        #[cfg(feature = "std")]
+        let _lock = archmage::testing::lock_token_testing();
+
+        if let Some(token) = X64V3VnniToken::summon() {
+            let sha_msg = run_sha_intrinsics(token);
+            assert_ne!(sha_msg, [0; 4]);
         }
     }
 }

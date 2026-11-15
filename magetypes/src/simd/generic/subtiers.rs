@@ -52,7 +52,9 @@ impl MagetypesToken for archmage::ScalarToken {
 #[cfg(target_arch = "x86_64")]
 mod x86_magetypes_tokens {
     use super::{MagetypesToken, magetypes_token_sealed::Sealed};
-    use archmage::{X64V3CryptoToken, X64V3GfniCryptoToken, X64V3Token, X64V3VnniToken};
+    use archmage::{
+        X64V3CryptoToken, X64V3GfniCryptoToken, X64V3Token, X64V3Vnni2Token, X64V3VnniToken,
+    };
 
     impl Sealed for X64V3Token {}
     impl MagetypesToken for X64V3Token {
@@ -86,6 +88,16 @@ mod x86_magetypes_tokens {
 
     impl Sealed for X64V3VnniToken {}
     impl MagetypesToken for X64V3VnniToken {
+        type MagetypesBackend = X64V3Token;
+
+        #[inline(always)]
+        fn magetypes(self) -> Self::MagetypesBackend {
+            self.v3()
+        }
+    }
+
+    impl Sealed for X64V3Vnni2Token {}
+    impl MagetypesToken for X64V3Vnni2Token {
         type MagetypesBackend = X64V3Token;
 
         #[inline(always)]

@@ -208,7 +208,7 @@ fn build_token_slots() -> Vec<TokenSlot> {
     let mut slots = Vec::new();
 
     // x86/x86_64 hierarchy:
-    //   V1(0) → V2(1) → Crypto(2) → V3Crypto(4) → V3GfniCrypto(5) → V3Vnni(6)
+    //   V1(0) → V2(1) → Crypto(2) → V3Crypto(4) → V3GfniCrypto(5) → V3Vnni(6) → V3Vnni2(10)
     //                                                             → V4x(8)
     //                  → V3(3)     → V3Crypto(4)
     //                              → V4(7) → V4x(8)
@@ -216,16 +216,23 @@ fn build_token_slots() -> Vec<TokenSlot> {
     //           Crypto(2)          → V4(7)
     #[cfg(target_arch = "x86_64")]
     {
-        slots.push(token_slot!(crate::X64V1Token, &[1, 2, 3, 4, 5, 6, 7, 8, 9]));
-        slots.push(token_slot!(crate::X64V2Token, &[2, 3, 4, 5, 6, 7, 8, 9]));
-        slots.push(token_slot!(crate::X64CryptoToken, &[4, 5, 6, 7, 8, 9]));
-        slots.push(token_slot!(crate::X64V3Token, &[4, 5, 6, 7, 8, 9]));
-        slots.push(token_slot!(crate::X64V3CryptoToken, &[5, 6, 8]));
-        slots.push(token_slot!(crate::X64V3GfniCryptoToken, &[6, 8]));
-        slots.push(token_slot!(crate::X64V3VnniToken, &[]));
+        slots.push(token_slot!(
+            crate::X64V1Token,
+            &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        ));
+        slots.push(token_slot!(
+            crate::X64V2Token,
+            &[2, 3, 4, 5, 6, 7, 8, 9, 10]
+        ));
+        slots.push(token_slot!(crate::X64CryptoToken, &[4, 5, 6, 7, 8, 9, 10]));
+        slots.push(token_slot!(crate::X64V3Token, &[4, 5, 6, 7, 8, 9, 10]));
+        slots.push(token_slot!(crate::X64V3CryptoToken, &[5, 6, 8, 10]));
+        slots.push(token_slot!(crate::X64V3GfniCryptoToken, &[6, 8, 10]));
+        slots.push(token_slot!(crate::X64V3VnniToken, &[10]));
         slots.push(token_slot!(crate::X64V4Token, &[8, 9]));
         slots.push(token_slot!(crate::X64V4xToken, &[]));
         slots.push(token_slot!(crate::Avx512Fp16Token, &[]));
+        slots.push(token_slot!(crate::X64V3Vnni2Token, &[]));
     }
 
     // AArch64 hierarchy:

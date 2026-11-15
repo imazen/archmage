@@ -65,7 +65,7 @@
 /// All features supported by `is_x86_feature_detected!` are supported:
 /// - SSE family: `"sse"`, `"sse2"`, `"sse3"`, `"ssse3"`, `"sse4.1"`, `"sse4.2"`
 /// - AVX family: `"avx"`, `"avx2"`, `"avx512f"`, `"avx512bw"`, etc.
-/// - Other: `"fma"`, `"bmi1"`, `"bmi2"`, `"popcnt"`, `"lzcnt"`, etc.
+/// - Other: `"fma"`, `"bmi1"`, `"bmi2"`, `"popcnt"`, `"lzcnt"`, `"adx"`, `"sha"`, etc.
 #[macro_export]
 macro_rules! is_x86_feature_available {
     ("sse") => {
@@ -140,8 +140,32 @@ macro_rules! is_x86_feature_available {
     ("avxvnni") => {
         $crate::__impl_feature_check!("avxvnni")
     };
+    ("avxvnniint8") => {
+        $crate::__impl_feature_check!("avxvnniint8")
+    };
+    ("avxvnniint16") => {
+        $crate::__impl_feature_check!("avxvnniint16")
+    };
+    ("avxneconvert") => {
+        $crate::__impl_feature_check!("avxneconvert")
+    };
+    ("avxifma") => {
+        $crate::__impl_feature_check!("avxifma")
+    };
+    ("adx") => {
+        $crate::__impl_feature_check!("adx")
+    };
     ("sha") => {
         $crate::__impl_feature_check!("sha")
+    };
+    ("sha512") => {
+        $crate::__impl_feature_check!("sha512")
+    };
+    ("sm3") => {
+        $crate::__impl_feature_check!("sm3")
+    };
+    ("sm4") => {
+        $crate::__impl_feature_check!("sm4")
     };
     // Fallback for unknown features - runtime only
     ($feature:tt) => {
@@ -394,6 +418,56 @@ macro_rules! __impl_feature_check {
             $crate::__impl_runtime_only_check!("avxvnni")
         }
     }};
+    ("avxvnniint8") => {{
+        #[cfg(target_feature = "avxvnniint8")]
+        {
+            true
+        }
+        #[cfg(not(target_feature = "avxvnniint8"))]
+        {
+            $crate::__impl_runtime_only_check!("avxvnniint8")
+        }
+    }};
+    ("avxvnniint16") => {{
+        #[cfg(target_feature = "avxvnniint16")]
+        {
+            true
+        }
+        #[cfg(not(target_feature = "avxvnniint16"))]
+        {
+            $crate::__impl_runtime_only_check!("avxvnniint16")
+        }
+    }};
+    ("avxneconvert") => {{
+        #[cfg(target_feature = "avxneconvert")]
+        {
+            true
+        }
+        #[cfg(not(target_feature = "avxneconvert"))]
+        {
+            $crate::__impl_runtime_only_check!("avxneconvert")
+        }
+    }};
+    ("avxifma") => {{
+        #[cfg(target_feature = "avxifma")]
+        {
+            true
+        }
+        #[cfg(not(target_feature = "avxifma"))]
+        {
+            $crate::__impl_runtime_only_check!("avxifma")
+        }
+    }};
+    ("adx") => {{
+        #[cfg(target_feature = "adx")]
+        {
+            true
+        }
+        #[cfg(not(target_feature = "adx"))]
+        {
+            $crate::__impl_runtime_only_check!("adx")
+        }
+    }};
     ("sha") => {{
         #[cfg(target_feature = "sha")]
         {
@@ -402,6 +476,36 @@ macro_rules! __impl_feature_check {
         #[cfg(not(target_feature = "sha"))]
         {
             $crate::__impl_runtime_only_check!("sha")
+        }
+    }};
+    ("sha512") => {{
+        #[cfg(target_feature = "sha512")]
+        {
+            true
+        }
+        #[cfg(not(target_feature = "sha512"))]
+        {
+            $crate::__impl_runtime_only_check!("sha512")
+        }
+    }};
+    ("sm3") => {{
+        #[cfg(target_feature = "sm3")]
+        {
+            true
+        }
+        #[cfg(not(target_feature = "sm3"))]
+        {
+            $crate::__impl_runtime_only_check!("sm3")
+        }
+    }};
+    ("sm4") => {{
+        #[cfg(target_feature = "sm4")]
+        {
+            true
+        }
+        #[cfg(not(target_feature = "sm4"))]
+        {
+            $crate::__impl_runtime_only_check!("sm4")
         }
     }};
 }

@@ -51,7 +51,19 @@ fn autoversion_v4_suffix() {
 mod x86_tiers {
     use super::*;
 
-    #[autoversion(v1, v2, x64_crypto, v3, v3_crypto, v3_gfni_crypto, v4, v4x, scalar)]
+    #[autoversion(
+        v1,
+        v2,
+        x64_crypto,
+        v3,
+        v3_crypto,
+        v3_gfni_crypto,
+        v3_vnni,
+        v3_vnni2,
+        v4,
+        v4x,
+        scalar
+    )]
     fn av_all_x86(_token: SimdToken, x: f32) -> f32 {
         x + 1.0
     }
@@ -95,6 +107,20 @@ mod x86_tiers {
     fn v3_gfni_crypto_suffix() {
         if let Some(t) = archmage::X64V3GfniCryptoToken::summon() {
             assert_eq!(av_all_x86_v3_gfni_crypto(t, 1.0), 2.0);
+        }
+    }
+
+    #[test]
+    fn v3_vnni_suffix() {
+        if let Some(t) = archmage::X64V3VnniToken::summon() {
+            assert_eq!(av_all_x86_v3_vnni(t, 1.0), 2.0);
+        }
+    }
+
+    #[test]
+    fn v3_vnni2_suffix() {
+        if let Some(t) = archmage::X64V3Vnni2Token::summon() {
+            assert_eq!(av_all_x86_v3_vnni2(t, 1.0), 2.0);
         }
     }
 

@@ -33,7 +33,12 @@ more archmage tokens via `#[target_feature]`.
 | `f16c` | 1.68 | V3+ | FP16 conversion |
 | `lzcnt` | 1.27 | V3+ | Leading zero count |
 | `movbe` | 1.70 | V3+ | Byte-swap load/store |
-| `avxvnni` | 1.89 | X64V3VnniToken | VEX-encoded VNNI (Alder Lake+, Arrow Lake+, Zen 5) |
+| `sha` | 1.27 | X64V3VnniToken+ | SHA-1/SHA-256 hardware acceleration (adding to `X64V4xToken` deferred to `0.10.0` for `0.9.x` semver; pre-VNNI CPUs not yet covered) |
+| `adx` | 1.33 | X64V3VnniToken+ | Multi-precision add-carry (`ADCX`/`ADOX`; adding to `X64V4xToken` deferred to `0.10.0` for `0.9.x` semver) |
+| `avxvnni` | 1.89 | X64V3VnniToken, X64V3Vnni2Token | VEX-encoded VNNI (Alder Lake+, Arrow Lake+, Zen 5) |
+| `avxvnniint8` | 1.89 | X64V3Vnni2Token | VEX 8-bit VNNI (Arrow Lake / Panther Lake / Sierra Forest, Zen 6) |
+| `avxneconvert` | 1.89 / 1.94 | X64V3Vnni2Token | VEX BF16/PBH conversions stable in 1.89 (`cvtneebf16`/`cvtneobf16`/`cvtneps_avx_pbh`); FP16 (`cvtneeph`/`cvtneoph`) stable in 1.94.0; pointer broadcast (`bcstne*`) still nightly |
+| `avxifma` | 1.89 | X64V3Vnni2Token | VEX 52-bit integer FMA (Arrow Lake / Panther Lake / Sierra Forest, Zen 5 / Zen 6) |
 | `pclmulqdq` | 1.27 | X64CryptoToken, V3Crypto, V3GfniCrypto, V4, V4x, Fp16 | 128-bit carry-less multiply |
 | `aes` | 1.27 | X64CryptoToken, V3Crypto, V3GfniCrypto, V4, V4x, Fp16 | AES-NI |
 | `vpclmulqdq` | 1.89 | X64V3CryptoToken, X64V3GfniCryptoToken, V4x | 256/512-bit carry-less multiply |
@@ -107,21 +112,17 @@ These have stable intrinsics and real use cases for SIMD compute or ML workloads
 | Feature | Stable since | Intrinsics | Hardware | Candidate token | Notes |
 |---------|-------------|-----------|----------|----------------|-------|
 | `avx512bf16` | 1.89 | ~24 stable | Cooper Lake, Sapphire Rapids+, Zen 4+ | Avx512Bf16Token (V4 + bf16) | BFloat16 dot product + conversion. NOT on Ice Lake/Tiger Lake/Rocket Lake, so doesn't belong in V4x. |
-| `avxifma` | 1.89 | stable | Sierra Forest+, Zen 5 | — | Integer FMA without AVX-512. |
-| `avxneconvert` | 1.89 | stable | Sierra Forest+ | — | FP conversion without AVX-512. |
-| `avxvnniint8` | 1.89 | stable | Sierra Forest+ | — | VNNI 8-bit without AVX-512. |
-| `avxvnniint16` | 1.89 | stable | Arrow Lake+ | — | VNNI 16-bit without AVX-512. |
+| `avxvnniint16` | 1.89 | stable | Arrow Lake+ | — | VNNI 16-bit without AVX-512 (Intel-only so far). |
 
 ### x86_64 — crypto / specialized
 
-Stable, have intrinsics, but specialized. Should be behind a cargo feature flag.
+Stable, have intrinsics, but specialized. May belong behind a cargo feature flag or capability trait.
 
 | Feature | Stable since | Intrinsics | Hardware | Notes |
 |---------|-------------|-----------|----------|-------|
-| `sha` | 1.27 | ~10 stable | Zen 1+, Goldmont+, Ice Lake+ | SHA-1/SHA-256. Not in any psABI level. |
-| `sha512` | 1.89 | stable | Lunar Lake, Arrow Lake, Zen 5 | SHA-512. Implies AVX2. |
-| `sm3` | 1.89 | stable | Niche (Chinese market CPUs) | ShangMi 3 hash. |
-| `sm4` | 1.89 | stable | Niche (Chinese market CPUs) | ShangMi 4 cipher. |
+| `sha512` | 1.89 | stable | Lunar Lake, Arrow Lake | SHA-512. Implies AVX2. |
+| `sm3` | 1.89 | stable | Niche (Chinese market CPUs), Arrow Lake | ShangMi 3 hash. |
+| `sm4` | 1.89 | stable | Niche (Chinese market CPUs), Arrow Lake | ShangMi 4 cipher. |
 | `kl` | 1.89 | ~11 stable | Alder Lake (S-SKU), Sapphire Rapids | Intel Key Locker — hardware-bound AES key wrapping. |
 | `widekl` | 1.89 | stable | Same as `kl` | Wide Key Locker — 384-bit key variants. |
 
@@ -133,7 +134,6 @@ Stable but outside archmage's domain. No plans to add tokens.
 |---------|-------------|-------|
 | `rdrand` | 1.27 | Hardware RNG. |
 | `rdseed` | 1.27 | Hardware RNG seed. |
-| `adx` | 1.61 | Multi-precision add-carry. Scalar arithmetic. |
 | `fxsr` | 1.27 | FPU state save/restore. OS-level. |
 | `xsave` | 1.27 | Extended state save. OS-level. |
 | `xsavec` | 1.27 | Extended state save (compacted). OS-level. |
@@ -243,8 +243,10 @@ Features that exist but we have no plans for.
 
 - **VEX-encoded ML extensions** (`avxvnni`, `avxifma`, `avxneconvert`, `avxvnniint8`,
   `avxvnniint16`) exist for CPUs that dropped AVX-512 (Alder Lake, Arrow Lake, Sierra Forest)
-  and Zen 5. `X64V3VnniToken` covers `avxvnni` (`VPDPBUSD`, `VPDPBUSDS`, `VPDPWSSD`, `VPDPWSSDS`)
-  on V3-class CPUs; the remaining VEX ML extensions are not yet allocated to tokens.
+  and Zen 5 / Zen 6. `X64V3VnniToken` covers `avxvnni` (`VPDPBUSD`, `VPDPBUSDS`, `VPDPWSSD`,
+  `VPDPWSSDS`) plus `adx` and `sha` on V3-class CPUs; `X64V3Vnni2Token` extends it with the
+  cross-vendor VEX ML set (`avxvnniint8`, `avxneconvert`, `avxifma`); `avxvnniint16` remains
+  unallocated (Intel-only so far).
 
 - **`avx512vp2intersect`** was implemented in Tiger Lake, then removed from all subsequent
   Intel CPUs. Do not add a token for it.

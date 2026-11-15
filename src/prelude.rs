@@ -34,7 +34,8 @@
 //! [`X64CryptoToken`] (V2 + PCLMULQDQ + AES-NI),
 //! [`X64V3CryptoToken`] (V3 + VPCLMULQDQ + VAES, Zen 3+/Alder Lake+),
 //! [`X64V3GfniCryptoToken`] (V3 Crypto + GFNI, including AVX2 without AVX-512),
-//! [`X64V3VnniToken`] (V3 GFNI Crypto + VEX AVX-VNNI on non-AVX-512 client/hybrid CPUs),
+//! [`X64V3VnniToken`] (V3 GFNI Crypto + ADX + SHA + VEX AVX-VNNI on non-AVX-512 client/hybrid CPUs),
+//! [`X64V3Vnni2Token`] (V3 VNNI + AVX-VNNI-INT8 + AVX-NE-CONVERT + AVX-IFMA, Arrow Lake+/Zen 6),
 //! [`Wasm128Token`], [`Wasm128RelaxedToken`], [`Wasm128RelaxedFmaToken`],
 //! [`NeonAesToken`], [`NeonSha3Token`], [`NeonCrcToken`],
 //! and the AVX-512 tokens ([`Avx512Token`], [`X64V4xToken`],
@@ -108,7 +109,7 @@
 //! ```
 //!
 //! Known tiers: `v1`, `v2`, `x64_crypto`, `v3`, `v3_crypto`, `v3_gfni_crypto`, `v3_vnni`,
-//! `v4`, `v4x`, `neon`, `neon_aes`, `neon_sha3`, `neon_crc`, `arm_v2`, `arm_v3`,
+//! `v3_vnni2`, `v4`, `v4x`, `neon`, `neon_aes`, `neon_sha3`, `neon_crc`, `arm_v2`, `arm_v3`,
 //! `wasm128`, `wasm128_relaxed`, `wasm128_relaxed_fma`, `scalar`.
 //!
 //! **Required variants per platform (default tiers):**
@@ -145,7 +146,7 @@ pub use crate::tokens::{
 #[allow(deprecated)]
 pub use crate::tokens::{
     Avx2FmaToken, Desktop64, Sse2Token, X64CryptoToken, X64V1Token, X64V2Token, X64V3CryptoToken,
-    X64V3GfniCryptoToken, X64V3Token, X64V3VnniToken,
+    X64V3GfniCryptoToken, X64V3Token, X64V3Vnni2Token, X64V3VnniToken,
 };
 pub use crate::tokens::{Avx512Fp16Token, Avx512Token, Server64, X64V4Token, X64V4xToken};
 pub use crate::tokens::{Wasm128RelaxedFmaToken, Wasm128RelaxedToken, Wasm128Token};

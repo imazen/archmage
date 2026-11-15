@@ -82,6 +82,12 @@ fn disabled_tokens_fail_summon() {
                     "V3 VNNI should be None when disabled"
                 );
             }
+            if name == archmage::X64V3Vnni2Token::NAME {
+                assert!(
+                    archmage::X64V3Vnni2Token::summon().is_none(),
+                    "V3 VNNI-2 should be None when disabled"
+                );
+            }
         }
     });
     assert!(report.permutations_run >= 1);
@@ -150,6 +156,10 @@ fn cascade_disabling_works() {
                 archmage::X64V3VnniToken::summon().is_none(),
                 "V3 VNNI should be None when V3 Crypto is disabled (cascade)"
             );
+            assert!(
+                archmage::X64V3Vnni2Token::summon().is_none(),
+                "V3 VNNI-2 should be None when V3 Crypto is disabled (cascade)"
+            );
         }
         if perm
             .disabled
@@ -160,8 +170,18 @@ fn cascade_disabling_works() {
                 "V3 VNNI should be None when V3 GFNI Crypto is disabled (cascade)"
             );
             assert!(
+                archmage::X64V3Vnni2Token::summon().is_none(),
+                "V3 VNNI-2 should be None when V3 GFNI Crypto is disabled (cascade)"
+            );
+            assert!(
                 archmage::X64V4xToken::summon().is_none(),
                 "V4x should be None when V3 GFNI Crypto is disabled (cascade)"
+            );
+        }
+        if perm.disabled.contains(&archmage::X64V3VnniToken::NAME) {
+            assert!(
+                archmage::X64V3Vnni2Token::summon().is_none(),
+                "V3 VNNI-2 should be None when V3 VNNI is disabled (cascade)"
             );
         }
     });
@@ -172,7 +192,19 @@ fn cascade_disabling_works() {
 #[cfg(target_arch = "x86_64")]
 #[test]
 fn no_duplicate_effective_states() {
-    type State = (bool, bool, bool, bool, bool, bool, bool, bool, bool, bool);
+    type State = (
+        bool,
+        bool,
+        bool,
+        bool,
+        bool,
+        bool,
+        bool,
+        bool,
+        bool,
+        bool,
+        bool,
+    );
     let mut states: Vec<State> = Vec::new();
 
     let _ = for_each_token_permutation(CompileTimePolicy::Warn, |_perm| {
@@ -184,6 +216,7 @@ fn no_duplicate_effective_states() {
             archmage::X64V3CryptoToken::summon().is_some(),
             archmage::X64V3GfniCryptoToken::summon().is_some(),
             archmage::X64V3VnniToken::summon().is_some(),
+            archmage::X64V3Vnni2Token::summon().is_some(),
             archmage::X64V4Token::summon().is_some(),
             archmage::X64V4xToken::summon().is_some(),
             archmage::Avx512Fp16Token::summon().is_some(),
