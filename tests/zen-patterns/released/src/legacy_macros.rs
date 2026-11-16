@@ -188,6 +188,7 @@ mod tests {
     #[test]
     fn rite_helpers_and_raw_constructors() {
         use archmage::SimdToken;
+        let _lock = archmage::testing::lock_token_testing();
         let token = archmage::X64V3Token::summon().expect("x86-64 test host without AVX2+FMA");
         let a: [u8; 16] = core::array::from_fn(|i| i as u8 * 10);
         let b: [u8; 16] = core::array::from_fn(|i| 255 - i as u8);

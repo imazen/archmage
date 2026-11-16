@@ -43,6 +43,7 @@ pub mod attune_suppress_const {
         #[test]
         fn suppress_const_test_wrappers_execute_and_preserve_results() {
             use archmage::SimdToken;
+            let _lock = archmage::testing::lock_token_testing();
             let token = archmage::X64V3Token::summon().expect("x86-64 test host without AVX2+FMA");
             let mut x = [1.0, -2.0, 3.0, 4.0];
             super::scale4_v3_t(token, &mut x, 0.5);
