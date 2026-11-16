@@ -89,6 +89,22 @@ impl F64x2Backend for archmage::X64V4Token {
         <archmage::X64V3Token as F64x2Backend>::max(self.v3(), a, b)
     }
     #[inline(always)]
+    fn minimum(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F64x2Backend>::minimum(self.v3(), a, b)
+    }
+    #[inline(always)]
+    fn maximum(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F64x2Backend>::maximum(self.v3(), a, b)
+    }
+    #[inline(always)]
+    fn min_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F64x2Backend>::min_fast(self.v3(), a, b)
+    }
+    #[inline(always)]
+    fn max_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F64x2Backend>::max_fast(self.v3(), a, b)
+    }
+    #[inline(always)]
     fn sqrt(self, a: Self::Repr) -> Self::Repr {
         <archmage::X64V3Token as F64x2Backend>::sqrt(self.v3(), a)
     }
@@ -255,6 +271,22 @@ impl F64x2Backend for archmage::X64V4xToken {
     #[inline(always)]
     fn max(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
         <archmage::X64V3Token as F64x2Backend>::max(self.v3(), a, b)
+    }
+    #[inline(always)]
+    fn minimum(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F64x2Backend>::minimum(self.v3(), a, b)
+    }
+    #[inline(always)]
+    fn maximum(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F64x2Backend>::maximum(self.v3(), a, b)
+    }
+    #[inline(always)]
+    fn min_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F64x2Backend>::min_fast(self.v3(), a, b)
+    }
+    #[inline(always)]
+    fn max_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F64x2Backend>::max_fast(self.v3(), a, b)
     }
     #[inline(always)]
     fn sqrt(self, a: Self::Repr) -> Self::Repr {
@@ -425,6 +457,22 @@ impl F64x2Backend for archmage::Avx512Fp16Token {
         <archmage::X64V3Token as F64x2Backend>::max(self.v3(), a, b)
     }
     #[inline(always)]
+    fn minimum(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F64x2Backend>::minimum(self.v3(), a, b)
+    }
+    #[inline(always)]
+    fn maximum(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F64x2Backend>::maximum(self.v3(), a, b)
+    }
+    #[inline(always)]
+    fn min_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F64x2Backend>::min_fast(self.v3(), a, b)
+    }
+    #[inline(always)]
+    fn max_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F64x2Backend>::max_fast(self.v3(), a, b)
+    }
+    #[inline(always)]
     fn sqrt(self, a: Self::Repr) -> Self::Repr {
         <archmage::X64V3Token as F64x2Backend>::sqrt(self.v3(), a)
     }
@@ -591,6 +639,22 @@ impl F64x4Backend for archmage::X64V4Token {
     #[inline(always)]
     fn max(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
         <archmage::X64V3Token as F64x4Backend>::max(self.v3(), a, b)
+    }
+    #[inline(always)]
+    fn minimum(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F64x4Backend>::minimum(self.v3(), a, b)
+    }
+    #[inline(always)]
+    fn maximum(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F64x4Backend>::maximum(self.v3(), a, b)
+    }
+    #[inline(always)]
+    fn min_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F64x4Backend>::min_fast(self.v3(), a, b)
+    }
+    #[inline(always)]
+    fn max_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F64x4Backend>::max_fast(self.v3(), a, b)
     }
     #[inline(always)]
     fn sqrt(self, a: Self::Repr) -> Self::Repr {
@@ -761,6 +825,22 @@ impl F64x4Backend for archmage::X64V4xToken {
         <archmage::X64V3Token as F64x4Backend>::max(self.v3(), a, b)
     }
     #[inline(always)]
+    fn minimum(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F64x4Backend>::minimum(self.v3(), a, b)
+    }
+    #[inline(always)]
+    fn maximum(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F64x4Backend>::maximum(self.v3(), a, b)
+    }
+    #[inline(always)]
+    fn min_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F64x4Backend>::min_fast(self.v3(), a, b)
+    }
+    #[inline(always)]
+    fn max_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F64x4Backend>::max_fast(self.v3(), a, b)
+    }
+    #[inline(always)]
     fn sqrt(self, a: Self::Repr) -> Self::Repr {
         <archmage::X64V3Token as F64x4Backend>::sqrt(self.v3(), a)
     }
@@ -927,6 +1007,22 @@ impl F64x4Backend for archmage::Avx512Fp16Token {
     #[inline(always)]
     fn max(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
         <archmage::X64V3Token as F64x4Backend>::max(self.v3(), a, b)
+    }
+    #[inline(always)]
+    fn minimum(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F64x4Backend>::minimum(self.v3(), a, b)
+    }
+    #[inline(always)]
+    fn maximum(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F64x4Backend>::maximum(self.v3(), a, b)
+    }
+    #[inline(always)]
+    fn min_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F64x4Backend>::min_fast(self.v3(), a, b)
+    }
+    #[inline(always)]
+    fn max_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F64x4Backend>::max_fast(self.v3(), a, b)
     }
     #[inline(always)]
     fn sqrt(self, a: Self::Repr) -> Self::Repr {

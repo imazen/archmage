@@ -6,15 +6,15 @@
 # impls omitted; re-export duplicates annotated `[also: path]`.
 # DO NOT EDIT BY HAND — commit regenerated changes with the code.
 #
-# files: magetypes.txt 2673 lines (supported surface) | magetypes.features.txt 12 added (features: avx512,std,w512) | magetypes.internal.txt 36 lines (48 hidden + 0 excluded-feature)
+# files: magetypes.txt 2732 lines (supported surface) | magetypes.features.txt 12 added (features: avx512,std,w512) | magetypes.internal.txt 42 lines (52 hidden + 0 excluded-feature)
 
 ## summary
 #
 #   pub modules                                12
 #   pub types (struct/enum/trait/alias)       287
-#   pub consts/statics                        228
-#   free functions                           3820
-#   inherent methods                         1268
+#   pub consts/statics                        240
+#   free functions                           3988
+#   inherent methods                         1286
 #   enum variants                               1
 #   re-exports                                  2
 #   trait roster entries (type × trait)       740
@@ -23,12 +23,12 @@
 #   auto-trait exceptions                      30
 #
 # per-module pub lines:
-#   (root)                          321
+#   (root)                          333
 #   cast                              3
-#   prelude                        3656
-#   simd                           1638
+#   prelude                        3770
+#   simd                           1710
 
-## items (2449 lines)
+## items (2508 lines)
 
 pub mod magetypes
 pub use archmage
@@ -149,8 +149,12 @@ pub fn prelude::f32x4<T>::partition_slice(T, &[f32]) -> (&[[f32; 4]], &[f32]) [a
 pub fn prelude::f32x4<T>::partition_slice_mut(T, &mut [f32]) -> (&mut [[f32; 4]], &mut [f32]) [also: prelude::f32x4<T>]
 pub fn prelude::f32x4<T>::splat(T, f32) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
 pub fn prelude::f32x4<T>::zero(T) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>, prelude::f64x2<T>, prelude::f64x4<T>, prelude::f64x8<T>, prelude::i16x16<T>, prelude::i16x32<T>, prelude::i16x8<T>, prelude::i32x16<T>, prelude::i32x4<T>, prelude::i32x8<T>, prelude::i64x2<T>, prelude::i64x4<T>, prelude::i64x8<T>, prelude::i8x16<T>, prelude::i8x32<T>, prelude::i8x64<T>, prelude::u16x16<T>, prelude::u16x32<T>, prelude::u16x8<T>, prelude::u32x16<T>, prelude::u32x4<T>, prelude::u32x8<T>, prelude::u64x2<T>, prelude::u64x4<T>, prelude::u64x8<T>, prelude::u8x16<T>, prelude::u8x32<T>, prelude::u8x64<T>]
-pub fn prelude::f32x4<T>::max_fast(self, Self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
-pub fn prelude::f32x4<T>::min_fast(self, Self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
+pub fn prelude::f32x4<T>::max_fast_scalar(T, f32, f32) -> f32 [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
+pub fn prelude::f32x4<T>::max_scalar(T, f32, f32) -> f32 [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
+pub fn prelude::f32x4<T>::maximum_scalar(T, f32, f32) -> f32 [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
+pub fn prelude::f32x4<T>::min_fast_scalar(T, f32, f32) -> f32 [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
+pub fn prelude::f32x4<T>::min_scalar(T, f32, f32) -> f32 [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
+pub fn prelude::f32x4<T>::minimum_scalar(T, f32, f32) -> f32 [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
 pub fn prelude::f32x4<T>::bitcast_i32x4(self) -> prelude::i32x4<T> [also: prelude::f32x4<T>, prelude::u32x4<T>]
 pub fn prelude::f32x4<T>::bitcast_mut_i32x4(&mut self) -> &mut prelude::i32x4<T> [also: prelude::f32x4<T>, prelude::u32x4<T>]
 pub fn prelude::f32x4<T>::bitcast_ref_i32x4(&self) -> &prelude::i32x4<T> [also: prelude::f32x4<T>, prelude::u32x4<T>]
@@ -205,6 +209,7 @@ pub fn prelude::f32x4<T>::from_i32_bitcast(T, prelude::i32x4<T>) -> Self [also: 
 pub fn prelude::f32x4<T>::from_i32x4(T, prelude::i32x4<T>) -> Self [also: prelude::f32x4<T>]
 pub fn prelude::f32x4<T>::to_f16(self) -> prelude::i32x4<T> [also: prelude::f32x4<T>]
 pub fn prelude::f32x4<T>::to_i32_fast(self) -> prelude::i32x4<T> [also: prelude::f32x4<T>]
+pub fn prelude::f32x4<T>::to_i32_fast_scalar(T, f32) -> i32 [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
 pub fn [f32; 4]::from(prelude::f32x4<T>) -> [f32; 4] [also: (root)]
 #[repr(C)] pub struct prelude::f32x8<T: simd::backends::F32x8Backend>(_, _) [also: simd::generic]
 pub const fn prelude::f32x8<archmage::tokens::ScalarToken>::implementation_name() -> &'static str [also: (root)]
@@ -279,8 +284,6 @@ pub fn prelude::f64x2<T>::into_repr(self) -> <T as simd::backends::F64x2Backend>
 pub fn prelude::f64x2<T>::load_t(T, &[f64; 2]) -> Self [also: prelude::f64x2<T>]
 pub fn prelude::f64x2<T>::partition_slice_mut_t(T, &mut [f64]) -> (&mut [[f64; 2]], &mut [f64]) [also: prelude::f64x2<T>]
 pub fn prelude::f64x2<T>::partition_slice_t(T, &[f64]) -> (&[[f64; 2]], &[f64]) [also: prelude::f64x2<T>]
-pub fn prelude::f64x2<T>::reduce_max(self) -> f64 [also: prelude::f64x2<T>, prelude::f64x4<T>, prelude::f64x8<T>]
-pub fn prelude::f64x2<T>::reduce_min(self) -> f64 [also: prelude::f64x2<T>, prelude::f64x4<T>, prelude::f64x8<T>]
 pub fn prelude::f64x2<T>::splat_t(T, f64) -> Self [also: prelude::f64x2<T>, prelude::f64x4<T>, prelude::f64x8<T>]
 pub fn prelude::f64x2<T>::store(self, &mut [f64; 2]) [also: prelude::f64x2<T>]
 pub fn prelude::f64x2<T>::to_array(self) -> [f64; 2] [also: prelude::f64x2<T>]
@@ -297,6 +300,12 @@ pub fn prelude::f64x2<T>::load(T, &[f64; 2]) -> Self [also: prelude::f64x2<T>]
 pub fn prelude::f64x2<T>::partition_slice(T, &[f64]) -> (&[[f64; 2]], &[f64]) [also: prelude::f64x2<T>]
 pub fn prelude::f64x2<T>::partition_slice_mut(T, &mut [f64]) -> (&mut [[f64; 2]], &mut [f64]) [also: prelude::f64x2<T>]
 pub fn prelude::f64x2<T>::splat(T, f64) -> Self [also: prelude::f64x2<T>, prelude::f64x4<T>, prelude::f64x8<T>]
+pub fn prelude::f64x2<T>::max_fast_scalar(T, f64, f64) -> f64 [also: prelude::f64x2<T>, prelude::f64x4<T>, prelude::f64x8<T>]
+pub fn prelude::f64x2<T>::max_scalar(T, f64, f64) -> f64 [also: prelude::f64x2<T>, prelude::f64x4<T>, prelude::f64x8<T>]
+pub fn prelude::f64x2<T>::maximum_scalar(T, f64, f64) -> f64 [also: prelude::f64x2<T>, prelude::f64x4<T>, prelude::f64x8<T>]
+pub fn prelude::f64x2<T>::min_fast_scalar(T, f64, f64) -> f64 [also: prelude::f64x2<T>, prelude::f64x4<T>, prelude::f64x8<T>]
+pub fn prelude::f64x2<T>::min_scalar(T, f64, f64) -> f64 [also: prelude::f64x2<T>, prelude::f64x4<T>, prelude::f64x8<T>]
+pub fn prelude::f64x2<T>::minimum_scalar(T, f64, f64) -> f64 [also: prelude::f64x2<T>, prelude::f64x4<T>, prelude::f64x8<T>]
 pub fn [f64; 2]::from(prelude::f64x2<T>) -> [f64; 2] [also: (root)]
 #[repr(C)] pub struct prelude::f64x4<T: simd::backends::F64x4Backend>(_, _) [also: simd::generic]
 pub const fn prelude::f64x4<archmage::tokens::ScalarToken>::implementation_name() -> &'static str [also: (root)]
@@ -935,6 +944,10 @@ pub trait prelude::F32x8FromHalves: simd::backends::F32x8Backend + simd::backend
 pub fn prelude::F32x8FromHalves::from_halves(self, <Self as simd::backends::F32x4Backend>::Repr, <Self as simd::backends::F32x4Backend>::Repr) -> <Self as simd::backends::F32x8Backend>::Repr
 pub fn prelude::F32x8FromHalves::high(self, <Self as simd::backends::F32x8Backend>::Repr) -> <Self as simd::backends::F32x4Backend>::Repr
 pub fn prelude::F32x8FromHalves::low(self, <Self as simd::backends::F32x8Backend>::Repr) -> <Self as simd::backends::F32x4Backend>::Repr
+pub const fn prelude::maximum_f32(f32, f32) -> f32
+pub const fn prelude::maximum_f64(f64, f64) -> f64
+pub const fn prelude::minimum_f32(f32, f32) -> f32
+pub const fn prelude::minimum_f64(f64, f64) -> f64
 pub mod simd
 pub mod simd::backends
 pub trait simd::backends::F32x16Backend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
@@ -953,8 +966,10 @@ pub fn simd::backends::F32x16Backend::from_array(self, [f32; 16]) -> Self::Repr
 pub fn simd::backends::F32x16Backend::load(self, &[f32; 16]) -> Self::Repr
 pub fn simd::backends::F32x16Backend::max(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x16Backend::max_fast(self, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::F32x16Backend::maximum(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x16Backend::min(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x16Backend::min_fast(self, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::F32x16Backend::minimum(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x16Backend::mul(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x16Backend::mul_add(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x16Backend::mul_add_portable(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
@@ -1009,8 +1024,10 @@ pub fn simd::backends::F32x4Backend::load(self, &[f32; 4]) -> Self::Repr
 pub fn simd::backends::F32x4Backend::load_rgb_bytes(self, &[u8; 12]) -> (Self::Repr, Self::Repr, Self::Repr)
 pub fn simd::backends::F32x4Backend::max(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x4Backend::max_fast(self, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::F32x4Backend::maximum(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x4Backend::min(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x4Backend::min_fast(self, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::F32x4Backend::minimum(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x4Backend::mul(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x4Backend::mul_add(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x4Backend::mul_add_portable(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
@@ -1068,8 +1085,10 @@ pub fn simd::backends::F32x8Backend::load(self, &[f32; 8]) -> Self::Repr
 pub fn simd::backends::F32x8Backend::load_rgb_bytes(self, &[u8; 24]) -> (Self::Repr, Self::Repr, Self::Repr)
 pub fn simd::backends::F32x8Backend::max(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x8Backend::max_fast(self, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::F32x8Backend::maximum(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x8Backend::min(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x8Backend::min_fast(self, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::F32x8Backend::minimum(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x8Backend::mul(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x8Backend::mul_add(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x8Backend::mul_add_portable(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
@@ -1124,7 +1143,11 @@ pub fn simd::backends::F64x2Backend::floor(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::F64x2Backend::from_array(self, [f64; 2]) -> Self::Repr
 pub fn simd::backends::F64x2Backend::load(self, &[f64; 2]) -> Self::Repr
 pub fn simd::backends::F64x2Backend::max(self, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::F64x2Backend::max_fast(self, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::F64x2Backend::maximum(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F64x2Backend::min(self, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::F64x2Backend::min_fast(self, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::F64x2Backend::minimum(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F64x2Backend::mul(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F64x2Backend::mul_add(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F64x2Backend::mul_add_portable(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
@@ -1167,7 +1190,11 @@ pub fn simd::backends::F64x4Backend::floor(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::F64x4Backend::from_array(self, [f64; 4]) -> Self::Repr
 pub fn simd::backends::F64x4Backend::load(self, &[f64; 4]) -> Self::Repr
 pub fn simd::backends::F64x4Backend::max(self, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::F64x4Backend::max_fast(self, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::F64x4Backend::maximum(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F64x4Backend::min(self, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::F64x4Backend::min_fast(self, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::F64x4Backend::minimum(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F64x4Backend::mul(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F64x4Backend::mul_add(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F64x4Backend::mul_add_portable(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
@@ -1210,7 +1237,11 @@ pub fn simd::backends::F64x8Backend::floor(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::F64x8Backend::from_array(self, [f64; 8]) -> Self::Repr
 pub fn simd::backends::F64x8Backend::load(self, &[f64; 8]) -> Self::Repr
 pub fn simd::backends::F64x8Backend::max(self, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::F64x8Backend::max_fast(self, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::F64x8Backend::maximum(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F64x8Backend::min(self, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::F64x8Backend::min_fast(self, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::F64x8Backend::minimum(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F64x8Backend::mul(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F64x8Backend::mul_add(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F64x8Backend::mul_add_portable(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
@@ -2176,17 +2207,25 @@ pub fn simd::generic::F32x16FromHalves::low(self, <Self as simd::backends::F32x1
 pub fn simd::generic::F32x8FromHalves::from_halves(self, <Self as simd::backends::F32x4Backend>::Repr, <Self as simd::backends::F32x4Backend>::Repr) -> <Self as simd::backends::F32x8Backend>::Repr
 pub fn simd::generic::F32x8FromHalves::high(self, <Self as simd::backends::F32x8Backend>::Repr) -> <Self as simd::backends::F32x4Backend>::Repr
 pub fn simd::generic::F32x8FromHalves::low(self, <Self as simd::backends::F32x8Backend>::Repr) -> <Self as simd::backends::F32x4Backend>::Repr
+pub const fn simd::generic::maximum_f32(f32, f32) -> f32
+pub const fn simd::generic::maximum_f64(f64, f64) -> f64
+pub const fn simd::generic::minimum_f32(f32, f32) -> f32
+pub const fn simd::generic::minimum_f64(f64, f64) -> f64
 pub mod simd::neon
 pub type simd::neon::Token = archmage::tokens::generated::arm_stubs::NeonToken
 pub mod simd::scalar
 pub fn simd::f32x1::abs(self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>, prelude::f64x2<T>, prelude::f64x4<T>, prelude::f64x8<T>, prelude::i16x16<T>, prelude::i16x32<T>, prelude::i16x8<T>, prelude::i32x16<T>, prelude::i32x4<T>, prelude::i32x8<T>, prelude::i64x2<T>, prelude::i64x4<T>, prelude::i64x8<T>, prelude::i8x16<T>, prelude::i8x32<T>, prelude::i8x64<T>, simd::f32x1, simd::f64x1]
 pub fn simd::f32x1::ceil(self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>, prelude::f64x2<T>, prelude::f64x4<T>, prelude::f64x8<T>, simd::f32x1]
-pub fn simd::f32x1::clamp(self, Self, Self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>, prelude::f64x2<T>, prelude::f64x4<T>, prelude::f64x8<T>, prelude::i16x16<T>, prelude::i16x32<T>, prelude::i16x8<T>, prelude::i32x16<T>, prelude::i32x4<T>, prelude::i32x8<T>, prelude::i64x2<T>, prelude::i64x4<T>, prelude::i64x8<T>, prelude::i8x16<T>, prelude::i8x32<T>, prelude::i8x64<T>, prelude::u16x16<T>, prelude::u16x32<T>, prelude::u16x8<T>, prelude::u32x16<T>, prelude::u32x4<T>, prelude::u32x8<T>, prelude::u64x2<T>, prelude::u64x4<T>, prelude::u64x8<T>, prelude::u8x16<T>, prelude::u8x32<T>, prelude::u8x64<T>, simd::f32x1]
+pub fn simd::f32x1::clamp(self, Self, Self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>, prelude::f64x2<T>, prelude::f64x4<T>, prelude::f64x8<T>, prelude::i16x16<T>, prelude::i16x32<T>, prelude::i16x8<T>, prelude::i32x16<T>, prelude::i32x4<T>, prelude::i32x8<T>, prelude::i64x2<T>, prelude::i64x4<T>, prelude::i64x8<T>, prelude::i8x16<T>, prelude::i8x32<T>, prelude::i8x64<T>, prelude::u16x16<T>, prelude::u16x32<T>, prelude::u16x8<T>, prelude::u32x16<T>, prelude::u32x4<T>, prelude::u32x8<T>, prelude::u64x2<T>, prelude::u64x4<T>, prelude::u64x8<T>, prelude::u8x16<T>, prelude::u8x32<T>, prelude::u8x64<T>, simd::f32x1, simd::f64x1]
 pub fn simd::f32x1::floor(self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>, prelude::f64x2<T>, prelude::f64x4<T>, prelude::f64x8<T>, simd::f32x1]
 pub fn simd::f32x1::from_array_t(archmage::tokens::ScalarToken, [f32; 1]) -> Self [also: simd::f32x1]
 pub fn simd::f32x1::load_t(archmage::tokens::ScalarToken, &[f32; 1]) -> Self [also: simd::f32x1]
-pub fn simd::f32x1::max(self, Self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>, prelude::f64x2<T>, prelude::f64x4<T>, prelude::f64x8<T>, prelude::i16x16<T>, prelude::i16x32<T>, prelude::i16x8<T>, prelude::i32x16<T>, prelude::i32x4<T>, prelude::i32x8<T>, prelude::i64x2<T>, prelude::i64x4<T>, prelude::i64x8<T>, prelude::i8x16<T>, prelude::i8x32<T>, prelude::i8x64<T>, prelude::u16x16<T>, prelude::u16x32<T>, prelude::u16x8<T>, prelude::u32x16<T>, prelude::u32x4<T>, prelude::u32x8<T>, prelude::u64x2<T>, prelude::u64x4<T>, prelude::u64x8<T>, prelude::u8x16<T>, prelude::u8x32<T>, prelude::u8x64<T>, simd::f32x1]
-pub fn simd::f32x1::min(self, Self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>, prelude::f64x2<T>, prelude::f64x4<T>, prelude::f64x8<T>, prelude::i16x16<T>, prelude::i16x32<T>, prelude::i16x8<T>, prelude::i32x16<T>, prelude::i32x4<T>, prelude::i32x8<T>, prelude::i64x2<T>, prelude::i64x4<T>, prelude::i64x8<T>, prelude::i8x16<T>, prelude::i8x32<T>, prelude::i8x64<T>, prelude::u16x16<T>, prelude::u16x32<T>, prelude::u16x8<T>, prelude::u32x16<T>, prelude::u32x4<T>, prelude::u32x8<T>, prelude::u64x2<T>, prelude::u64x4<T>, prelude::u64x8<T>, prelude::u8x16<T>, prelude::u8x32<T>, prelude::u8x64<T>, simd::f32x1]
+pub fn simd::f32x1::max(self, Self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>, prelude::f64x2<T>, prelude::f64x4<T>, prelude::f64x8<T>, prelude::i16x16<T>, prelude::i16x32<T>, prelude::i16x8<T>, prelude::i32x16<T>, prelude::i32x4<T>, prelude::i32x8<T>, prelude::i64x2<T>, prelude::i64x4<T>, prelude::i64x8<T>, prelude::i8x16<T>, prelude::i8x32<T>, prelude::i8x64<T>, prelude::u16x16<T>, prelude::u16x32<T>, prelude::u16x8<T>, prelude::u32x16<T>, prelude::u32x4<T>, prelude::u32x8<T>, prelude::u64x2<T>, prelude::u64x4<T>, prelude::u64x8<T>, prelude::u8x16<T>, prelude::u8x32<T>, prelude::u8x64<T>, simd::f32x1, simd::f64x1]
+pub fn simd::f32x1::max_fast(self, Self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>, prelude::f64x2<T>, prelude::f64x4<T>, prelude::f64x8<T>, simd::f32x1, simd::f64x1]
+pub fn simd::f32x1::maximum(self, Self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>, prelude::f64x2<T>, prelude::f64x4<T>, prelude::f64x8<T>, simd::f32x1, simd::f64x1]
+pub fn simd::f32x1::min(self, Self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>, prelude::f64x2<T>, prelude::f64x4<T>, prelude::f64x8<T>, prelude::i16x16<T>, prelude::i16x32<T>, prelude::i16x8<T>, prelude::i32x16<T>, prelude::i32x4<T>, prelude::i32x8<T>, prelude::i64x2<T>, prelude::i64x4<T>, prelude::i64x8<T>, prelude::i8x16<T>, prelude::i8x32<T>, prelude::i8x64<T>, prelude::u16x16<T>, prelude::u16x32<T>, prelude::u16x8<T>, prelude::u32x16<T>, prelude::u32x4<T>, prelude::u32x8<T>, prelude::u64x2<T>, prelude::u64x4<T>, prelude::u64x8<T>, prelude::u8x16<T>, prelude::u8x32<T>, prelude::u8x64<T>, simd::f32x1, simd::f64x1]
+pub fn simd::f32x1::min_fast(self, Self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>, prelude::f64x2<T>, prelude::f64x4<T>, prelude::f64x8<T>, simd::f32x1, simd::f64x1]
+pub fn simd::f32x1::minimum(self, Self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>, prelude::f64x2<T>, prelude::f64x4<T>, prelude::f64x8<T>, simd::f32x1, simd::f64x1]
 pub fn simd::f32x1::mul_add(self, Self, Self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>, prelude::f64x2<T>, prelude::f64x4<T>, prelude::f64x8<T>, simd::f32x1, simd::f64x1]
 pub fn simd::f32x1::mul_add_fused(self, Self, Self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>, prelude::f64x2<T>, prelude::f64x4<T>, prelude::f64x8<T>, simd::f32x1, simd::f64x1]
 pub fn simd::f32x1::mul_add_portable(self, Self, Self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>, prelude::f64x2<T>, prelude::f64x4<T>, prelude::f64x8<T>, simd::f32x1, simd::f64x1]
@@ -2203,18 +2242,34 @@ pub fn simd::f32x1::splat_t(archmage::tokens::ScalarToken, f32) -> Self [also: s
 pub fn simd::f32x1::sqrt(self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>, prelude::f64x2<T>, prelude::f64x4<T>, prelude::f64x8<T>, simd::f32x1, simd::f64x1]
 pub fn simd::f32x1::store(self, &mut [f32; 1]) [also: simd::f32x1]
 pub fn simd::f32x1::to_array(self) -> [f32; 1] [also: simd::f32x1]
+pub fn simd::f32x1::to_i32_fast(self) -> simd::i32x1 [also: simd::f32x1]
 pub fn simd::f32x1::from_array(archmage::tokens::ScalarToken, [f32; 1]) -> Self [also: simd::f32x1]
 pub fn simd::f32x1::load(archmage::tokens::ScalarToken, &[f32; 1]) -> Self [also: simd::f32x1]
 pub fn simd::f32x1::splat(archmage::tokens::ScalarToken, f32) -> Self [also: simd::f32x1]
+pub fn simd::f32x1::max_fast_scalar(archmage::tokens::ScalarToken, f32, f32) -> f32 [also: simd::f32x1]
+pub fn simd::f32x1::max_scalar(archmage::tokens::ScalarToken, f32, f32) -> f32 [also: simd::f32x1]
+pub fn simd::f32x1::maximum_scalar(archmage::tokens::ScalarToken, f32, f32) -> f32 [also: simd::f32x1]
+pub fn simd::f32x1::min_fast_scalar(archmage::tokens::ScalarToken, f32, f32) -> f32 [also: simd::f32x1]
+pub fn simd::f32x1::min_scalar(archmage::tokens::ScalarToken, f32, f32) -> f32 [also: simd::f32x1]
+pub fn simd::f32x1::minimum_scalar(archmage::tokens::ScalarToken, f32, f32) -> f32 [also: simd::f32x1]
+pub fn simd::f32x1::to_i32_fast_scalar(archmage::tokens::ScalarToken, f32) -> i32 [also: simd::f32x1]
 pub fn simd::f64x1::from_array_t(archmage::tokens::ScalarToken, [f64; 1]) -> Self [also: simd::f64x1]
 pub fn simd::f64x1::load_t(archmage::tokens::ScalarToken, &[f64; 1]) -> Self [also: simd::f64x1]
 pub fn simd::f64x1::reduce_add(self) -> f64 [also: prelude::f64x2<T>, prelude::f64x4<T>, prelude::f64x8<T>, simd::f64x1]
+pub fn simd::f64x1::reduce_max(self) -> f64 [also: prelude::f64x2<T>, prelude::f64x4<T>, prelude::f64x8<T>, simd::f64x1]
+pub fn simd::f64x1::reduce_min(self) -> f64 [also: prelude::f64x2<T>, prelude::f64x4<T>, prelude::f64x8<T>, simd::f64x1]
 pub fn simd::f64x1::splat_t(archmage::tokens::ScalarToken, f64) -> Self [also: simd::f64x1]
 pub fn simd::f64x1::store(self, &mut [f64; 1]) [also: simd::f64x1]
 pub fn simd::f64x1::to_array(self) -> [f64; 1] [also: simd::f64x1]
 pub fn simd::f64x1::from_array(archmage::tokens::ScalarToken, [f64; 1]) -> Self [also: simd::f64x1]
 pub fn simd::f64x1::load(archmage::tokens::ScalarToken, &[f64; 1]) -> Self [also: simd::f64x1]
 pub fn simd::f64x1::splat(archmage::tokens::ScalarToken, f64) -> Self [also: simd::f64x1]
+pub fn simd::f64x1::max_fast_scalar(archmage::tokens::ScalarToken, f64, f64) -> f64 [also: simd::f64x1]
+pub fn simd::f64x1::max_scalar(archmage::tokens::ScalarToken, f64, f64) -> f64 [also: simd::f64x1]
+pub fn simd::f64x1::maximum_scalar(archmage::tokens::ScalarToken, f64, f64) -> f64 [also: simd::f64x1]
+pub fn simd::f64x1::min_fast_scalar(archmage::tokens::ScalarToken, f64, f64) -> f64 [also: simd::f64x1]
+pub fn simd::f64x1::min_scalar(archmage::tokens::ScalarToken, f64, f64) -> f64 [also: simd::f64x1]
+pub fn simd::f64x1::minimum_scalar(archmage::tokens::ScalarToken, f64, f64) -> f64 [also: simd::f64x1]
 pub fn simd::i16x1::from_array_t(archmage::tokens::ScalarToken, [i16; 1]) -> Self [also: simd::i16x1]
 pub fn simd::i16x1::splat_t(archmage::tokens::ScalarToken, i16) -> Self [also: simd::i16x1]
 pub fn simd::i16x1::to_array(self) -> [i16; 1] [also: simd::i16x1]
@@ -2314,6 +2369,10 @@ pub fn simd::SimdLt::simd_lt(self, Rhs) -> Self::Output
 pub trait simd::SimdNe<Rhs>
 pub type simd::SimdNe::Output
 pub fn simd::SimdNe::simd_ne(self, Rhs) -> Self::Output
+pub const fn simd::maximum_f32(f32, f32) -> f32
+pub const fn simd::maximum_f64(f64, f64) -> f64
+pub const fn simd::minimum_f32(f32, f32) -> f32
+pub const fn simd::minimum_f64(f64, f64) -> f64
 pub type simd::f32x16 = prelude::f32x16<archmage::tokens::generated::wasm::Wasm128Token>
 pub type simd::f32x4 = prelude::f32x4<archmage::tokens::generated::wasm::Wasm128Token> [also: simd::wasm128]
 pub type simd::f32x8 = prelude::f32x8<archmage::tokens::generated::wasm::Wasm128Token> [also: simd::wasm128]

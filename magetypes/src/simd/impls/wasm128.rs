@@ -67,20 +67,28 @@ impl F32x4Backend for archmage::Wasm128Token {
     }
     #[inline(always)]
     fn min(self, a: v128, b: v128) -> v128 {
-        f32x4_min(a, b)
+        v128_bitselect(a, f32x4_pmin(b, a), f32x4_ne(b, b))
     }
     #[inline(always)]
     fn max(self, a: v128, b: v128) -> v128 {
+        v128_bitselect(a, f32x4_pmax(b, a), f32x4_ne(b, b))
+    }
+    #[inline(always)]
+    fn minimum(self, a: v128, b: v128) -> v128 {
+        f32x4_min(a, b)
+    }
+    #[inline(always)]
+    fn maximum(self, a: v128, b: v128) -> v128 {
         f32x4_max(a, b)
     }
 
     #[inline(always)]
     fn min_fast(self, a: v128, b: v128) -> v128 {
-        f32x4_pmin(b, a)
+        crate::wasm_fma::min_f32x4_fast(self, a, b)
     }
     #[inline(always)]
     fn max_fast(self, a: v128, b: v128) -> v128 {
-        f32x4_pmax(b, a)
+        crate::wasm_fma::max_f32x4_fast(self, a, b)
     }
 
     #[inline(always)]
@@ -354,20 +362,40 @@ impl F32x8Backend for archmage::Wasm128Token {
     }
     #[inline(always)]
     fn min(self, a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
-        [f32x4_min(a[0], b[0]), f32x4_min(a[1], b[1])]
+        [
+            v128_bitselect(a[0], f32x4_pmin(b[0], a[0]), f32x4_ne(b[0], b[0])),
+            v128_bitselect(a[1], f32x4_pmin(b[1], a[1]), f32x4_ne(b[1], b[1])),
+        ]
     }
     #[inline(always)]
     fn max(self, a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
+        [
+            v128_bitselect(a[0], f32x4_pmax(b[0], a[0]), f32x4_ne(b[0], b[0])),
+            v128_bitselect(a[1], f32x4_pmax(b[1], a[1]), f32x4_ne(b[1], b[1])),
+        ]
+    }
+    #[inline(always)]
+    fn minimum(self, a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
+        [f32x4_min(a[0], b[0]), f32x4_min(a[1], b[1])]
+    }
+    #[inline(always)]
+    fn maximum(self, a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
         [f32x4_max(a[0], b[0]), f32x4_max(a[1], b[1])]
     }
 
     #[inline(always)]
     fn min_fast(self, a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
-        [f32x4_pmin(b[0], a[0]), f32x4_pmin(b[1], a[1])]
+        [
+            crate::wasm_fma::min_f32x4_fast(self, a[0], b[0]),
+            crate::wasm_fma::min_f32x4_fast(self, a[1], b[1]),
+        ]
     }
     #[inline(always)]
     fn max_fast(self, a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
-        [f32x4_pmax(b[0], a[0]), f32x4_pmax(b[1], a[1])]
+        [
+            crate::wasm_fma::max_f32x4_fast(self, a[0], b[0]),
+            crate::wasm_fma::max_f32x4_fast(self, a[1], b[1]),
+        ]
     }
 
     #[inline(always)]
@@ -670,11 +698,28 @@ impl F64x2Backend for archmage::Wasm128Token {
     }
     #[inline(always)]
     fn min(self, a: v128, b: v128) -> v128 {
-        f64x2_min(a, b)
+        v128_bitselect(a, f64x2_pmin(b, a), f64x2_ne(b, b))
     }
     #[inline(always)]
     fn max(self, a: v128, b: v128) -> v128 {
+        v128_bitselect(a, f64x2_pmax(b, a), f64x2_ne(b, b))
+    }
+    #[inline(always)]
+    fn minimum(self, a: v128, b: v128) -> v128 {
+        f64x2_min(a, b)
+    }
+    #[inline(always)]
+    fn maximum(self, a: v128, b: v128) -> v128 {
         f64x2_max(a, b)
+    }
+
+    #[inline(always)]
+    fn min_fast(self, a: v128, b: v128) -> v128 {
+        crate::wasm_fma::min_f64x2_fast(self, a, b)
+    }
+    #[inline(always)]
+    fn max_fast(self, a: v128, b: v128) -> v128 {
+        crate::wasm_fma::max_f64x2_fast(self, a, b)
     }
 
     #[inline(always)]
@@ -858,11 +903,40 @@ impl F64x4Backend for archmage::Wasm128Token {
     }
     #[inline(always)]
     fn min(self, a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
-        [f64x2_min(a[0], b[0]), f64x2_min(a[1], b[1])]
+        [
+            v128_bitselect(a[0], f64x2_pmin(b[0], a[0]), f64x2_ne(b[0], b[0])),
+            v128_bitselect(a[1], f64x2_pmin(b[1], a[1]), f64x2_ne(b[1], b[1])),
+        ]
     }
     #[inline(always)]
     fn max(self, a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
+        [
+            v128_bitselect(a[0], f64x2_pmax(b[0], a[0]), f64x2_ne(b[0], b[0])),
+            v128_bitselect(a[1], f64x2_pmax(b[1], a[1]), f64x2_ne(b[1], b[1])),
+        ]
+    }
+    #[inline(always)]
+    fn minimum(self, a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
+        [f64x2_min(a[0], b[0]), f64x2_min(a[1], b[1])]
+    }
+    #[inline(always)]
+    fn maximum(self, a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
         [f64x2_max(a[0], b[0]), f64x2_max(a[1], b[1])]
+    }
+
+    #[inline(always)]
+    fn min_fast(self, a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
+        [
+            crate::wasm_fma::min_f64x2_fast(self, a[0], b[0]),
+            crate::wasm_fma::min_f64x2_fast(self, a[1], b[1]),
+        ]
+    }
+    #[inline(always)]
+    fn max_fast(self, a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
+        [
+            crate::wasm_fma::max_f64x2_fast(self, a[0], b[0]),
+            crate::wasm_fma::max_f64x2_fast(self, a[1], b[1]),
+        ]
     }
 
     #[inline(always)]
@@ -4254,6 +4328,20 @@ impl F32x16Backend for archmage::Wasm128Token {
     }
 
     #[inline(always)]
+    fn minimum(self, a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| {
+            <archmage::Wasm128Token as F32x4Backend>::minimum(self, a[i], b[i])
+        })
+    }
+
+    #[inline(always)]
+    fn maximum(self, a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| {
+            <archmage::Wasm128Token as F32x4Backend>::maximum(self, a[i], b[i])
+        })
+    }
+
+    #[inline(always)]
     fn sqrt(self, a: [v128; 4]) -> [v128; 4] {
         core::array::from_fn(|i| <archmage::Wasm128Token as F32x4Backend>::sqrt(self, a[i]))
     }
@@ -4540,6 +4628,34 @@ impl F64x8Backend for archmage::Wasm128Token {
     #[inline(always)]
     fn max(self, a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
         core::array::from_fn(|i| <archmage::Wasm128Token as F64x2Backend>::max(self, a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn min_fast(self, a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| {
+            <archmage::Wasm128Token as F64x2Backend>::min_fast(self, a[i], b[i])
+        })
+    }
+
+    #[inline(always)]
+    fn max_fast(self, a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| {
+            <archmage::Wasm128Token as F64x2Backend>::max_fast(self, a[i], b[i])
+        })
+    }
+
+    #[inline(always)]
+    fn minimum(self, a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| {
+            <archmage::Wasm128Token as F64x2Backend>::minimum(self, a[i], b[i])
+        })
+    }
+
+    #[inline(always)]
+    fn maximum(self, a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| {
+            <archmage::Wasm128Token as F64x2Backend>::maximum(self, a[i], b[i])
+        })
     }
 
     #[inline(always)]

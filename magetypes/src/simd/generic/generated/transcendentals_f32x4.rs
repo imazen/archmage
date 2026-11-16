@@ -91,8 +91,8 @@ impl<T: F32x4Convert> f32x4<T> {
         // floor(x) <= 127 keeps the bit trick (n+127)<<23 in range; at 127.99
         // the result stays below f32::MAX despite the polynomial's error.
         let x = self
-            .max(splat_f32::<T>(self.1, -126.0))
-            .min(splat_f32::<T>(self.1, 127.99));
+            .max_fast(splat_f32::<T>(self.1, -126.0))
+            .min_fast(splat_f32::<T>(self.1, 127.99));
         let xi = x.floor();
         let xf = x - xi;
 
@@ -252,7 +252,7 @@ impl<T: F32x4Convert> f32x4<T> {
         // polynomial's range: up to 134.1 ULP there. Folding in the missing
         // factor of two measured 7-12% slower for exp2/exp/pow with AVX2 and
         // 4-8% slower on the scalar backend.
-        let xi = self.round().min(splat_f32::<T>(self.1, 127.0));
+        let xi = self.round().min_fast(splat_f32::<T>(self.1, 127.0));
         let xf = self - xi;
 
         let poly = splat_f32::<T>(self.1, C6).mul_add_relaxed(xf, splat_f32::<T>(self.1, C5));
@@ -278,7 +278,7 @@ impl<T: F32x4Convert> f32x4<T> {
         let overflow_limit = splat_f32::<T>(self.1, 128.0);
 
         // Clamp to prevent overflow in intermediate calculations
-        let clamped = self.max(underflow_limit).min(overflow_limit);
+        let clamped = self.max_fast(underflow_limit).min_fast(overflow_limit);
         let result = clamped.exp2_midp_unchecked();
 
         // Handle edge cases: large negative → 0, large positive → inf

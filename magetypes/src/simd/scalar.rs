@@ -71,16 +71,46 @@ impl f32x1 {
         self.0
     }
 
-    /// Element-wise minimum.
+    /// Element-wise minimum (matches [`f32::min`]).
     #[inline(always)]
     pub fn min(self, other: Self) -> Self {
         Self(self.0.min(other.0))
     }
 
-    /// Element-wise maximum.
+    /// Element-wise maximum (matches [`f32::max`]).
     #[inline(always)]
     pub fn max(self, other: Self) -> Self {
         Self(self.0.max(other.0))
+    }
+
+    /// IEEE 754-2019 lane-wise minimum (propagates `NaN` and orders `-0.0 < +0.0`).
+    #[inline(always)]
+    pub fn minimum(self, other: Self) -> Self {
+        Self(crate::nostd_math::minimumf(self.0, other.0))
+    }
+
+    /// IEEE 754-2019 lane-wise maximum (propagates `NaN` and orders `-0.0 < +0.0`).
+    #[inline(always)]
+    pub fn maximum(self, other: Self) -> Self {
+        Self(crate::nostd_math::maximumf(self.0, other.0))
+    }
+
+    /// Fast lane-wise minimum ignoring `NaN` and signed-zero ordering.
+    #[inline(always)]
+    pub fn min_fast(self, other: Self) -> Self {
+        Self(if self.0 < other.0 { self.0 } else { other.0 })
+    }
+
+    /// Fast lane-wise maximum ignoring `NaN` and signed-zero ordering.
+    #[inline(always)]
+    pub fn max_fast(self, other: Self) -> Self {
+        Self(if self.0 > other.0 { self.0 } else { other.0 })
+    }
+
+    /// Fast truncation toward zero to `i32x1`.
+    #[inline(always)]
+    pub fn to_i32_fast(self) -> i32x1 {
+        i32x1(self.0 as i32)
     }
 
     /// Element-wise clamp.
@@ -277,6 +307,60 @@ impl f64x1 {
     #[inline(always)]
     pub fn reduce_add(self) -> f64 {
         self.0
+    }
+
+    /// Minimum across all lanes.
+    #[inline(always)]
+    pub fn reduce_min(self) -> f64 {
+        self.0
+    }
+
+    /// Maximum across all lanes.
+    #[inline(always)]
+    pub fn reduce_max(self) -> f64 {
+        self.0
+    }
+
+    /// Element-wise minimum (matches [`f64::min`]).
+    #[inline(always)]
+    pub fn min(self, other: Self) -> Self {
+        Self(self.0.min(other.0))
+    }
+
+    /// Element-wise maximum (matches [`f64::max`]).
+    #[inline(always)]
+    pub fn max(self, other: Self) -> Self {
+        Self(self.0.max(other.0))
+    }
+
+    /// IEEE 754-2019 lane-wise minimum (propagates `NaN` and orders `-0.0 < +0.0`).
+    #[inline(always)]
+    pub fn minimum(self, other: Self) -> Self {
+        Self(crate::nostd_math::minimum(self.0, other.0))
+    }
+
+    /// IEEE 754-2019 lane-wise maximum (propagates `NaN` and orders `-0.0 < +0.0`).
+    #[inline(always)]
+    pub fn maximum(self, other: Self) -> Self {
+        Self(crate::nostd_math::maximum(self.0, other.0))
+    }
+
+    /// Fast lane-wise minimum ignoring `NaN` and signed-zero ordering.
+    #[inline(always)]
+    pub fn min_fast(self, other: Self) -> Self {
+        Self(if self.0 < other.0 { self.0 } else { other.0 })
+    }
+
+    /// Fast lane-wise maximum ignoring `NaN` and signed-zero ordering.
+    #[inline(always)]
+    pub fn max_fast(self, other: Self) -> Self {
+        Self(if self.0 > other.0 { self.0 } else { other.0 })
+    }
+
+    /// Element-wise clamp.
+    #[inline(always)]
+    pub fn clamp(self, lo: Self, hi: Self) -> Self {
+        Self(self.0.clamp(lo.0, hi.0))
     }
 
     /// Element-wise square root.

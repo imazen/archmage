@@ -11,17 +11,25 @@
 #
 #   pub modules                                 2
 #   pub types (struct/enum/trait/alias)         1
+#   pub consts/statics                          4
 #   free functions                             29
+#   inherent methods                            2
 #   trait roster entries (type × trait)        14
 #
 # per-module pub lines:
-#   (root)                            2
-#   bypass_adversarial                1
+#   (root)                            6
+#   bypass_adversarial                3
 #   nostd_math                       21
 #   simd                              8
 
-## items (25 lines)
+## items (31 lines)
 
+pub const fn nostd_math::maximum(f64, f64) -> f64
+pub const fn nostd_math::maximumf(f32, f32) -> f32
+pub const fn nostd_math::minimum(f64, f64) -> f64
+pub const fn nostd_math::minimumf(f32, f32) -> f32
+pub fn bypass_adversarial::BypassAdversarialProofs::clone(&self) -> bypass_adversarial::BypassAdversarialProofs
+pub fn bypass_adversarial::BypassAdversarialProofs::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn nostd_math::cbrt_lowp_f32(f32) -> f32
 pub fn nostd_math::cbrt_midp_f32(f32) -> f32
 pub fn nostd_math::ceil(f64) -> f64

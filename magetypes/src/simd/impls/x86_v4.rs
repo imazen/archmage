@@ -94,11 +94,47 @@ impl F32x16Backend for X64V4Token {
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn min(self, a: __m512, b: __m512) -> __m512 {
-        _mm512_min_ps(a, b)
+        _mm512_mask_blend_ps(
+            _mm512_cmp_ps_mask::<_CMP_UNORD_Q>(b, b),
+            _mm512_min_ps(a, b),
+            a,
+        )
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn max(self, a: __m512, b: __m512) -> __m512 {
+        _mm512_mask_blend_ps(
+            _mm512_cmp_ps_mask::<_CMP_UNORD_Q>(b, b),
+            _mm512_max_ps(a, b),
+            a,
+        )
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn minimum(self, a: __m512, b: __m512) -> __m512 {
+        _mm512_mask_blend_ps(
+            _mm512_cmp_ps_mask::<_CMP_UNORD_Q>(a, b),
+            _mm512_or_ps(_mm512_min_ps(a, b), _mm512_min_ps(b, a)),
+            _mm512_set1_ps(f32::NAN),
+        )
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn maximum(self, a: __m512, b: __m512) -> __m512 {
+        _mm512_mask_blend_ps(
+            _mm512_cmp_ps_mask::<_CMP_UNORD_Q>(a, b),
+            _mm512_and_ps(_mm512_max_ps(a, b), _mm512_max_ps(b, a)),
+            _mm512_set1_ps(f32::NAN),
+        )
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn min_fast(self, a: __m512, b: __m512) -> __m512 {
+        _mm512_min_ps(a, b)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn max_fast(self, a: __m512, b: __m512) -> __m512 {
         _mm512_max_ps(a, b)
     }
 
@@ -328,11 +364,47 @@ impl F64x8Backend for X64V4Token {
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn min(self, a: __m512d, b: __m512d) -> __m512d {
-        _mm512_min_pd(a, b)
+        _mm512_mask_blend_pd(
+            _mm512_cmp_pd_mask::<_CMP_UNORD_Q>(b, b),
+            _mm512_min_pd(a, b),
+            a,
+        )
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn max(self, a: __m512d, b: __m512d) -> __m512d {
+        _mm512_mask_blend_pd(
+            _mm512_cmp_pd_mask::<_CMP_UNORD_Q>(b, b),
+            _mm512_max_pd(a, b),
+            a,
+        )
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn minimum(self, a: __m512d, b: __m512d) -> __m512d {
+        _mm512_mask_blend_pd(
+            _mm512_cmp_pd_mask::<_CMP_UNORD_Q>(a, b),
+            _mm512_or_pd(_mm512_min_pd(a, b), _mm512_min_pd(b, a)),
+            _mm512_set1_pd(f64::NAN),
+        )
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn maximum(self, a: __m512d, b: __m512d) -> __m512d {
+        _mm512_mask_blend_pd(
+            _mm512_cmp_pd_mask::<_CMP_UNORD_Q>(a, b),
+            _mm512_and_pd(_mm512_max_pd(a, b), _mm512_max_pd(b, a)),
+            _mm512_set1_pd(f64::NAN),
+        )
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn min_fast(self, a: __m512d, b: __m512d) -> __m512d {
+        _mm512_min_pd(a, b)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn max_fast(self, a: __m512d, b: __m512d) -> __m512d {
         _mm512_max_pd(a, b)
     }
 
@@ -2202,11 +2274,47 @@ impl F32x16Backend for X64V4xToken {
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn min(self, a: __m512, b: __m512) -> __m512 {
-        _mm512_min_ps(a, b)
+        _mm512_mask_blend_ps(
+            _mm512_cmp_ps_mask::<_CMP_UNORD_Q>(b, b),
+            _mm512_min_ps(a, b),
+            a,
+        )
     }
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn max(self, a: __m512, b: __m512) -> __m512 {
+        _mm512_mask_blend_ps(
+            _mm512_cmp_ps_mask::<_CMP_UNORD_Q>(b, b),
+            _mm512_max_ps(a, b),
+            a,
+        )
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn minimum(self, a: __m512, b: __m512) -> __m512 {
+        _mm512_mask_blend_ps(
+            _mm512_cmp_ps_mask::<_CMP_UNORD_Q>(a, b),
+            _mm512_or_ps(_mm512_min_ps(a, b), _mm512_min_ps(b, a)),
+            _mm512_set1_ps(f32::NAN),
+        )
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn maximum(self, a: __m512, b: __m512) -> __m512 {
+        _mm512_mask_blend_ps(
+            _mm512_cmp_ps_mask::<_CMP_UNORD_Q>(a, b),
+            _mm512_and_ps(_mm512_max_ps(a, b), _mm512_max_ps(b, a)),
+            _mm512_set1_ps(f32::NAN),
+        )
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn min_fast(self, a: __m512, b: __m512) -> __m512 {
+        _mm512_min_ps(a, b)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn max_fast(self, a: __m512, b: __m512) -> __m512 {
         _mm512_max_ps(a, b)
     }
 
@@ -2436,11 +2544,47 @@ impl F64x8Backend for X64V4xToken {
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn min(self, a: __m512d, b: __m512d) -> __m512d {
-        _mm512_min_pd(a, b)
+        _mm512_mask_blend_pd(
+            _mm512_cmp_pd_mask::<_CMP_UNORD_Q>(b, b),
+            _mm512_min_pd(a, b),
+            a,
+        )
     }
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn max(self, a: __m512d, b: __m512d) -> __m512d {
+        _mm512_mask_blend_pd(
+            _mm512_cmp_pd_mask::<_CMP_UNORD_Q>(b, b),
+            _mm512_max_pd(a, b),
+            a,
+        )
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn minimum(self, a: __m512d, b: __m512d) -> __m512d {
+        _mm512_mask_blend_pd(
+            _mm512_cmp_pd_mask::<_CMP_UNORD_Q>(a, b),
+            _mm512_or_pd(_mm512_min_pd(a, b), _mm512_min_pd(b, a)),
+            _mm512_set1_pd(f64::NAN),
+        )
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn maximum(self, a: __m512d, b: __m512d) -> __m512d {
+        _mm512_mask_blend_pd(
+            _mm512_cmp_pd_mask::<_CMP_UNORD_Q>(a, b),
+            _mm512_and_pd(_mm512_max_pd(a, b), _mm512_max_pd(b, a)),
+            _mm512_set1_pd(f64::NAN),
+        )
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn min_fast(self, a: __m512d, b: __m512d) -> __m512d {
+        _mm512_min_pd(a, b)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn max_fast(self, a: __m512d, b: __m512d) -> __m512d {
         _mm512_max_pd(a, b)
     }
 

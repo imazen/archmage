@@ -283,7 +283,8 @@ pub mod magemath_tails {
 pub mod fast_rgb_ops {
     //! Generic `F32x8Backend + F32x8Convert` RGB kernel combining native
     //! `load_8_rgb_u8_t`, `interleave_3ch` / `deinterleave_3ch`, `max_fast` /
-    //! `min_fast`, `to_i32_fast`, and `store_8_rgb_u8` inside `#[archmage::attune]`.
+    //! `min_fast`, `to_i32_fast`, and `store_8_rgb_u8` (plus `*_scalar` tail
+    //! helpers) inside `#[archmage::attune]`.
 
     use magetypes::simd::backends::{F32x8Backend, F32x8Convert};
     use magetypes::simd::generic::f32x8;
@@ -342,10 +343,19 @@ pub mod fast_rgb_ops {
             .zip(dst_tail.chunks_exact_mut(3))
             .zip(q_tail.iter_mut())
         {
-            let r = (s_px[0] as f32 * scale + bias).clamp(0.0, 255.0);
-            let g = (s_px[1] as f32 * scale + bias).clamp(0.0, 255.0);
-            let b = (s_px[2] as f32 * scale + bias).clamp(0.0, 255.0);
-            *q_slot = r as i32;
+            let r_raw = f32x8::splat_t(token, s_px[0] as f32)
+                .mul_add_portable(f32x8::splat_t(token, scale), f32x8::splat_t(token, bias))
+                .to_array()[0];
+            let g_raw = f32x8::splat_t(token, s_px[1] as f32)
+                .mul_add_portable(f32x8::splat_t(token, scale), f32x8::splat_t(token, bias))
+                .to_array()[0];
+            let b_raw = f32x8::splat_t(token, s_px[2] as f32)
+                .mul_add_portable(f32x8::splat_t(token, scale), f32x8::splat_t(token, bias))
+                .to_array()[0];
+            let r = f32x8::min_fast_scalar(token, f32x8::max_fast_scalar(token, r_raw, 0.0), 255.0);
+            let g = f32x8::min_fast_scalar(token, f32x8::max_fast_scalar(token, g_raw, 0.0), 255.0);
+            let b = f32x8::min_fast_scalar(token, f32x8::max_fast_scalar(token, b_raw, 0.0), 255.0);
+            *q_slot = f32x8::to_i32_fast_scalar(token, r);
             d_px[0] = r.round_ties_even() as u8;
             d_px[1] = g.round_ties_even() as u8;
             d_px[2] = b.round_ties_even() as u8;
@@ -374,6 +384,7 @@ pub mod fast_rgb_ops {
 
         #[test]
         fn fast_rgb_kernel_matches_scalar_across_tiers() {
+            let _lock = archmage::testing::lock_token_testing();
             let pixels = 11;
             let src: Vec<u8> = (0..(pixels * 3))
                 .map(|i| ((i * 29 + 7) & 0xff) as u8)
@@ -395,6 +406,105 @@ pub mod fast_rgb_ops {
                 transform_rgb_slice(&src, &mut dst, &mut q, 1.25, -10.0);
                 assert_eq!(dst, ref_dst);
                 assert_eq!(q, ref_q);
+            });
+        }
+
+        #[archmage::attune(_*_t, +v4x(cfg(avx512)), define(f32x8, f64x4))]
+        fn verify_three_tier_minmax_inner(token: Token, a: &[f32; 8], b: &[f32; 8]) {
+            let va = f32x8::load_t(token, a);
+            let vb = f32x8::load_t(token, b);
+
+            let r_min = va.min(vb).to_array();
+            let r_max = va.max(vb).to_array();
+            let r_minimum = va.minimum(vb).to_array();
+            let r_maximum = va.maximum(vb).to_array();
+            let r_min_fast = va.min_fast(vb).to_array();
+            let r_max_fast = va.max_fast(vb).to_array();
+
+            for i in 0..8 {
+                let (x, y) = (a[i], b[i]);
+                if x.is_nan() && y.is_nan() {
+                    assert!(r_min[i].is_nan());
+                    assert!(r_max[i].is_nan());
+                } else {
+                    assert_eq!(r_min[i], x.min(y));
+                    assert_eq!(r_max[i], x.max(y));
+                }
+                let exp_min = magetypes::simd::minimum_f32(x, y);
+                let exp_max = magetypes::simd::maximum_f32(x, y);
+                if exp_min.is_nan() {
+                    assert!(r_minimum[i].is_nan());
+                } else {
+                    assert_eq!(r_minimum[i].to_bits(), exp_min.to_bits());
+                }
+                if exp_max.is_nan() {
+                    assert!(r_maximum[i].is_nan());
+                } else {
+                    assert_eq!(r_maximum[i].to_bits(), exp_max.to_bits());
+                }
+                assert_eq!(
+                    r_minimum[i].is_nan(),
+                    f32x8::minimum_scalar(token, x, y).is_nan()
+                );
+                assert_eq!(
+                    r_maximum[i].is_nan(),
+                    f32x8::maximum_scalar(token, x, y).is_nan()
+                );
+
+                let s_min_fast = f32x8::min_fast_scalar(token, x, y);
+                let s_max_fast = f32x8::max_fast_scalar(token, x, y);
+                if r_min_fast[i].is_nan() {
+                    assert!(s_min_fast.is_nan());
+                } else {
+                    assert_eq!(r_min_fast[i].to_bits(), s_min_fast.to_bits());
+                }
+                if r_max_fast[i].is_nan() {
+                    assert!(s_max_fast.is_nan());
+                } else {
+                    assert_eq!(r_max_fast[i].to_bits(), s_max_fast.to_bits());
+                }
+            }
+
+            let d0 = f64x4::from_array_t(token, [f64::NAN, 5.0, -0.0, 0.0]);
+            let d1 = f64x4::from_array_t(token, [5.0, f64::NAN, 0.0, -0.0]);
+            assert_eq!(d0.min(d1).to_array()[..2], [5.0, 5.0]);
+            assert_eq!(d0.max(d1).to_array()[..2], [5.0, 5.0]);
+            let dmn = d0.minimum(d1).to_array();
+            let dmx = d0.maximum(d1).to_array();
+            assert!(dmn[0].is_nan() && dmn[1].is_nan());
+            assert_eq!(
+                dmn[2].to_bits(),
+                magetypes::simd::minimum_f64(-0.0, 0.0).to_bits()
+            );
+            assert_eq!(
+                dmx[3].to_bits(),
+                magetypes::simd::maximum_f64(0.0, -0.0).to_bits()
+            );
+            assert_eq!(
+                d0.min_fast(d1).to_array()[2].to_bits(),
+                f64x4::min_fast_scalar(token, -0.0, 0.0).to_bits()
+            );
+        }
+
+        #[test]
+        fn three_tier_minmax_and_scalar_tails_across_tiers() {
+            let _lock = archmage::testing::lock_token_testing();
+            let a = [
+                f32::NAN,
+                5.0,
+                -0.0,
+                0.0,
+                f32::NEG_INFINITY,
+                f32::INFINITY,
+                -3.5,
+                7.0,
+            ];
+            let b = [5.0, f32::NAN, 0.0, -0.0, f32::NAN, 12.0, 2.0, f32::NAN];
+            let _ = for_each_token_permutation(CompileTimePolicy::Warn, |_| {
+                archmage::attuned!(
+                    verify_three_tier_minmax_inner(&a, &b),
+                    [_v4x(cfg(avx512)), _v3, _neon, _wasm128, _scalar]
+                );
             });
         }
     }

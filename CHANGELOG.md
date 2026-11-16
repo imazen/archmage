@@ -168,12 +168,16 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 
 #### Added
 
-- Add relaxed single-instruction `min_fast` and `max_fast` on `f32x4`, `f32x8`, and `f32x16` (plus `F32x4Backend`, `F32x8Backend`, and `F32x16Backend`), emitting `vminps`/`vmaxps` on x86, `vminnmq_f32`/`vmaxnmq_f32` on NEON, `f32x4.pmin`/`f32x4.pmax` on WASM SIMD128, and branchless compares on `ScalarToken` (#156).
-- Add unchecked in-range truncation `to_i32_fast` on `f32x4`, `f32x8`, and `f32x16` (plus `convert_f32_to_i32_fast` on `F32x4Convert`, `F32x8Convert`, and `F32x16Convert`), omitting x86 saturation fixups and using `i32x4.relaxed_trunc_f32x4_s` on `Wasm128Token` when compiled with `relaxed-simd` (#158).
+- Add 3-tier float `min` / `minimum` / `min_fast` and `max` / `maximum` / `max_fast` across `f32x4`, `f32x8`, `f32x16`, `f64x2`, `f64x4`, `f64x8` (and `f32x1` / `f64x1`), plus backend traits and scalar tail equivalents (#156):
+  - `min` / `max`: match `f32::min` / `f32::max` (`f64::min` / `f64::max`) NaN-suppressing semantics across all backends, with `min_scalar` / `max_scalar` tail helpers.
+  - `minimum` / `maximum`: IEEE 754-2019 conformant (`NaN`-propagating to quiet `NaN`, strictly ordering `-0.0 < +0.0`), with `minimum_f32` / `maximum_f32` / `minimum_f64` / `maximum_f64` (`nostd_math::{minimumf,maximumf,minimum,maximum}`) and `minimum_scalar` / `maximum_scalar` tail helpers.
+  - `min_fast` / `max_fast`: fastest single-instruction lane-wise operation per platform ignoring `NaN` and signed-zero ordering (`vminps`/`vminpd` on x86, `vminnmq` on NEON, `f32x4.pmin`/`f64x2.pmin` or `relaxed_min` with `relaxed-simd` on WASM, compare+select on `ScalarToken`), with token-matched `min_fast_scalar` / `max_fast_scalar` tail helpers.
+- Add unchecked in-range truncation `to_i32_fast` on `f32x4`, `f32x8`, and `f32x16` (plus `to_i32_fast_scalar`, `f32x1::to_i32_fast`, and `convert_f32_to_i32_fast` on `F32x4Convert`, `F32x8Convert`, and `F32x16Convert`), omitting x86 saturation fixups and using `i32x4.relaxed_trunc_f32x4_s` on `Wasm128Token` when compiled with `relaxed-simd` (#158).
 - Add native 3-channel RGB helpers on `f32x4` and `f32x8` (`deinterleave_3ch`, `interleave_3ch`, `load_4_rgb_u8_t`, `store_4_rgb_u8`, `load_8_rgb_u8_t`, `store_8_rgb_u8`, and corresponding backend trait methods on `F32x4Backend` / `F32x8Backend`) across x86 (`X64V3Token` and AVX-512 tokens, with a V4 override for `f32x4::store_4_rgb_u8`), AArch64 `NeonToken`, `Wasm128Token`, and `ScalarToken` (#169).
 
 #### Fixed
 
+- `min` and `max` on float vectors (`f32x{4,8,16}`, `f64x{2,4,8}`) now match Rust `f32::min`/`f64::min` NaN suppression uniformly on every backend (including x86, NEON signaling-`NaN` quieting, WASM, and `ScalarToken`'s W512 float `min`/`max`, which previously used `<`/`>` compares).
 - `log2_midp`, `ln_midp`, `log10_midp`, and `log2_midp_precise` now preserve `NaN` inputs instead of falling through to finite negative outputs, while still mapping `±0.0` to `-inf` and negative inputs to `NaN`.
 - `silu_midp(-inf)` now returns `-0.0` (matching large finite negative inputs) instead of `NaN` from `(-inf) * 0.0`.
 

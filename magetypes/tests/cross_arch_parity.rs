@@ -114,6 +114,28 @@ macro_rules! w128_parity_suite {
                 let b = f32x4::from_array_t(token, [2.0, 4.0, 6.0, 8.0]);
                 assert_eq!(a.min(b).to_array(), [1.0, 4.0, 3.0, 7.0]);
                 assert_eq!(a.max(b).to_array(), [2.0, 5.0, 6.0, 8.0]);
+                assert_eq!(a.min_fast(b).to_array(), [1.0, 4.0, 3.0, 7.0]);
+                assert_eq!(a.max_fast(b).to_array(), [2.0, 5.0, 6.0, 8.0]);
+
+                let x = f32x4::from_array_t(token, [f32::NAN, 5.0, -0.0, 0.0]);
+                let y = f32x4::from_array_t(token, [5.0, f32::NAN, 0.0, -0.0]);
+                let mn = x.min(y).to_array();
+                let mx = x.max(y).to_array();
+                assert_eq!(mn[0], 5.0);
+                assert_eq!(mn[1], 5.0);
+                assert_eq!(mx[0], 5.0);
+                assert_eq!(mx[1], 5.0);
+
+                let mmn = x.minimum(y).to_array();
+                let mmx = x.maximum(y).to_array();
+                assert!(mmn[0].is_nan());
+                assert!(mmn[1].is_nan());
+                assert_eq!(mmn[2].to_bits(), (-0.0f32).to_bits());
+                assert_eq!(mmn[3].to_bits(), (-0.0f32).to_bits());
+                assert!(mmx[0].is_nan());
+                assert!(mmx[1].is_nan());
+                assert_eq!(mmx[2].to_bits(), 0.0f32.to_bits());
+                assert_eq!(mmx[3].to_bits(), 0.0f32.to_bits());
             }
         }
 
@@ -223,6 +245,36 @@ macro_rules! w128_parity_suite {
             if let Some(token) = <$token_ty>::summon() {
                 let v = f64x2::from_array_t(token, [4.0, 9.0]);
                 assert_eq!(v.sqrt().to_array(), [2.0, 3.0]);
+            }
+        }
+
+        #[test]
+        fn test_f64x2_min_max() {
+            if let Some(token) = <$token_ty>::summon() {
+                let a = f64x2::from_array_t(token, [1.0, 5.0]);
+                let b = f64x2::from_array_t(token, [2.0, 4.0]);
+                assert_eq!(a.min(b).to_array(), [1.0, 4.0]);
+                assert_eq!(a.max(b).to_array(), [2.0, 5.0]);
+                assert_eq!(a.min_fast(b).to_array(), [1.0, 4.0]);
+                assert_eq!(a.max_fast(b).to_array(), [2.0, 5.0]);
+
+                let nx = f64x2::from_array_t(token, [f64::NAN, 5.0]);
+                let ny = f64x2::from_array_t(token, [5.0, f64::NAN]);
+                assert_eq!(nx.min(ny).to_array(), [5.0, 5.0]);
+                assert_eq!(nx.max(ny).to_array(), [5.0, 5.0]);
+                let mmn = nx.minimum(ny).to_array();
+                let mmx = nx.maximum(ny).to_array();
+                assert!(mmn[0].is_nan() && mmn[1].is_nan());
+                assert!(mmx[0].is_nan() && mmx[1].is_nan());
+
+                let z0 = f64x2::from_array_t(token, [-0.0, 0.0]);
+                let z1 = f64x2::from_array_t(token, [0.0, -0.0]);
+                let zmn = z0.minimum(z1).to_array();
+                let zmx = z0.maximum(z1).to_array();
+                assert_eq!(zmn[0].to_bits(), (-0.0f64).to_bits());
+                assert_eq!(zmn[1].to_bits(), (-0.0f64).to_bits());
+                assert_eq!(zmx[0].to_bits(), 0.0f64.to_bits());
+                assert_eq!(zmx[1].to_bits(), 0.0f64.to_bits());
             }
         }
 

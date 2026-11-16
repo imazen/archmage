@@ -75,13 +75,20 @@ impl F32x4Backend for NeonToken {
     }
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn min(self, a: float32x4_t, b: float32x4_t) -> float32x4_t {
-        vminq_f32(a, b)
+        vminnmq_f32(vminnmq_f32(a, a), vminnmq_f32(b, b))
     }
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn max(self, a: float32x4_t, b: float32x4_t) -> float32x4_t {
+        vmaxnmq_f32(vmaxnmq_f32(a, a), vmaxnmq_f32(b, b))
+    }
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn minimum(self, a: float32x4_t, b: float32x4_t) -> float32x4_t {
+        vminq_f32(a, b)
+    }
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn maximum(self, a: float32x4_t, b: float32x4_t) -> float32x4_t {
         vmaxq_f32(a, b)
     }
-
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn min_fast(self, a: float32x4_t, b: float32x4_t) -> float32x4_t {
         vminnmq_f32(a, b)
@@ -90,7 +97,6 @@ impl F32x4Backend for NeonToken {
     fn max_fast(self, a: float32x4_t, b: float32x4_t) -> float32x4_t {
         vmaxnmq_f32(a, b)
     }
-
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn sqrt(self, a: float32x4_t) -> float32x4_t {
         vsqrtq_f32(a)
@@ -456,11 +462,27 @@ impl F32x8Backend for NeonToken {
 
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn min(self, a: [float32x4_t; 2], b: [float32x4_t; 2]) -> [float32x4_t; 2] {
-        [vminq_f32(a[0], b[0]), vminq_f32(a[1], b[1])]
+        [
+            vminnmq_f32(vminnmq_f32(a[0], a[0]), vminnmq_f32(b[0], b[0])),
+            vminnmq_f32(vminnmq_f32(a[1], a[1]), vminnmq_f32(b[1], b[1])),
+        ]
     }
 
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn max(self, a: [float32x4_t; 2], b: [float32x4_t; 2]) -> [float32x4_t; 2] {
+        [
+            vmaxnmq_f32(vmaxnmq_f32(a[0], a[0]), vmaxnmq_f32(b[0], b[0])),
+            vmaxnmq_f32(vmaxnmq_f32(a[1], a[1]), vmaxnmq_f32(b[1], b[1])),
+        ]
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn minimum(self, a: [float32x4_t; 2], b: [float32x4_t; 2]) -> [float32x4_t; 2] {
+        [vminq_f32(a[0], b[0]), vminq_f32(a[1], b[1])]
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn maximum(self, a: [float32x4_t; 2], b: [float32x4_t; 2]) -> [float32x4_t; 2] {
         [vmaxq_f32(a[0], b[0]), vmaxq_f32(a[1], b[1])]
     }
 
@@ -954,13 +976,28 @@ impl F64x2Backend for NeonToken {
     }
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn min(self, a: float64x2_t, b: float64x2_t) -> float64x2_t {
-        vminq_f64(a, b)
+        vminnmq_f64(vminnmq_f64(a, a), vminnmq_f64(b, b))
     }
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn max(self, a: float64x2_t, b: float64x2_t) -> float64x2_t {
+        vmaxnmq_f64(vmaxnmq_f64(a, a), vmaxnmq_f64(b, b))
+    }
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn minimum(self, a: float64x2_t, b: float64x2_t) -> float64x2_t {
+        vminq_f64(a, b)
+    }
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn maximum(self, a: float64x2_t, b: float64x2_t) -> float64x2_t {
         vmaxq_f64(a, b)
     }
-
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn min_fast(self, a: float64x2_t, b: float64x2_t) -> float64x2_t {
+        vminnmq_f64(a, b)
+    }
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn max_fast(self, a: float64x2_t, b: float64x2_t) -> float64x2_t {
+        vmaxnmq_f64(a, b)
+    }
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn sqrt(self, a: float64x2_t) -> float64x2_t {
         vsqrtq_f64(a)
@@ -1207,12 +1244,38 @@ impl F64x4Backend for NeonToken {
 
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn min(self, a: [float64x2_t; 2], b: [float64x2_t; 2]) -> [float64x2_t; 2] {
-        [vminq_f64(a[0], b[0]), vminq_f64(a[1], b[1])]
+        [
+            vminnmq_f64(vminnmq_f64(a[0], a[0]), vminnmq_f64(b[0], b[0])),
+            vminnmq_f64(vminnmq_f64(a[1], a[1]), vminnmq_f64(b[1], b[1])),
+        ]
     }
 
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn max(self, a: [float64x2_t; 2], b: [float64x2_t; 2]) -> [float64x2_t; 2] {
+        [
+            vmaxnmq_f64(vmaxnmq_f64(a[0], a[0]), vmaxnmq_f64(b[0], b[0])),
+            vmaxnmq_f64(vmaxnmq_f64(a[1], a[1]), vmaxnmq_f64(b[1], b[1])),
+        ]
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn minimum(self, a: [float64x2_t; 2], b: [float64x2_t; 2]) -> [float64x2_t; 2] {
+        [vminq_f64(a[0], b[0]), vminq_f64(a[1], b[1])]
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn maximum(self, a: [float64x2_t; 2], b: [float64x2_t; 2]) -> [float64x2_t; 2] {
         [vmaxq_f64(a[0], b[0]), vmaxq_f64(a[1], b[1])]
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn min_fast(self, a: [float64x2_t; 2], b: [float64x2_t; 2]) -> [float64x2_t; 2] {
+        [vminnmq_f64(a[0], b[0]), vminnmq_f64(a[1], b[1])]
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn max_fast(self, a: [float64x2_t; 2], b: [float64x2_t; 2]) -> [float64x2_t; 2] {
+        [vmaxnmq_f64(a[0], b[0]), vmaxnmq_f64(a[1], b[1])]
     }
 
     #[arcane(suppress_const_test, _self = NeonToken)]
@@ -4881,6 +4944,16 @@ impl F32x16Backend for NeonToken {
     }
 
     #[inline(always)]
+    fn minimum(self, a: [float32x4_t; 4], b: [float32x4_t; 4]) -> [float32x4_t; 4] {
+        core::array::from_fn(|i| <NeonToken as F32x4Backend>::minimum(self, a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn maximum(self, a: [float32x4_t; 4], b: [float32x4_t; 4]) -> [float32x4_t; 4] {
+        core::array::from_fn(|i| <NeonToken as F32x4Backend>::maximum(self, a[i], b[i]))
+    }
+
+    #[inline(always)]
     fn sqrt(self, a: [float32x4_t; 4]) -> [float32x4_t; 4] {
         core::array::from_fn(|i| <NeonToken as F32x4Backend>::sqrt(self, a[i]))
     }
@@ -5176,6 +5249,26 @@ impl F64x8Backend for NeonToken {
     #[inline(always)]
     fn max(self, a: [float64x2_t; 4], b: [float64x2_t; 4]) -> [float64x2_t; 4] {
         core::array::from_fn(|i| <NeonToken as F64x2Backend>::max(self, a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn min_fast(self, a: [float64x2_t; 4], b: [float64x2_t; 4]) -> [float64x2_t; 4] {
+        core::array::from_fn(|i| <NeonToken as F64x2Backend>::min_fast(self, a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn max_fast(self, a: [float64x2_t; 4], b: [float64x2_t; 4]) -> [float64x2_t; 4] {
+        core::array::from_fn(|i| <NeonToken as F64x2Backend>::max_fast(self, a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn minimum(self, a: [float64x2_t; 4], b: [float64x2_t; 4]) -> [float64x2_t; 4] {
+        core::array::from_fn(|i| <NeonToken as F64x2Backend>::minimum(self, a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn maximum(self, a: [float64x2_t; 4], b: [float64x2_t; 4]) -> [float64x2_t; 4] {
+        core::array::from_fn(|i| <NeonToken as F64x2Backend>::maximum(self, a[i], b[i]))
     }
 
     #[inline(always)]

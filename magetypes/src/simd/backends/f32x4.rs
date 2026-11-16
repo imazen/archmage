@@ -65,19 +65,25 @@ pub trait F32x4Backend: SimdToken + Sealed + Copy + 'static {
 
     // ====== Math ======
 
-    /// Lane-wise minimum.
+    /// Lane-wise minimum matching `f32::min` (returns the numeric operand on single-`NaN`; `±0.0` unspecified).
     fn min(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
-    /// Lane-wise maximum.
+    /// Lane-wise maximum matching `f32::max` (returns the numeric operand on single-`NaN`; `±0.0` unspecified).
     fn max(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
-    /// Fast single-instruction lane-wise minimum (NaN and `-0.0`/`+0.0` unspecified).
+    /// IEEE 754-2019 minimum (`NaN`-propagating, `-0.0 < +0.0`).
+    fn minimum(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
+
+    /// IEEE 754-2019 maximum (`NaN`-propagating, `-0.0 < +0.0`).
+    fn maximum(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
+
+    /// Fast lane-wise minimum (`NaN` and `±0.0` unspecified).
     #[inline(always)]
     fn min_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
         Self::min(self, a, b)
     }
 
-    /// Fast single-instruction lane-wise maximum (NaN and `-0.0`/`+0.0` unspecified).
+    /// Fast lane-wise maximum (`NaN` and `±0.0` unspecified).
     #[inline(always)]
     fn max_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
         Self::max(self, a, b)

@@ -140,6 +140,16 @@ impl F32x4Backend for archmage::ScalarToken {
     }
 
     #[inline(always)]
+    fn minimum(self, a: [f32; 4], b: [f32; 4]) -> [f32; 4] {
+        core::array::from_fn(|i| crate::nostd_math::minimumf(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn maximum(self, a: [f32; 4], b: [f32; 4]) -> [f32; 4] {
+        core::array::from_fn(|i| crate::nostd_math::maximumf(a[i], b[i]))
+    }
+
+    #[inline(always)]
     fn min_fast(self, a: [f32; 4], b: [f32; 4]) -> [f32; 4] {
         core::array::from_fn(|i| if a[i] < b[i] { a[i] } else { b[i] })
     }
@@ -540,6 +550,16 @@ impl F32x8Backend for archmage::ScalarToken {
     }
 
     #[inline(always)]
+    fn minimum(self, a: [f32; 8], b: [f32; 8]) -> [f32; 8] {
+        core::array::from_fn(|i| crate::nostd_math::minimumf(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn maximum(self, a: [f32; 8], b: [f32; 8]) -> [f32; 8] {
+        core::array::from_fn(|i| crate::nostd_math::maximumf(a[i], b[i]))
+    }
+
+    #[inline(always)]
     fn min_fast(self, a: [f32; 8], b: [f32; 8]) -> [f32; 8] {
         core::array::from_fn(|i| if a[i] < b[i] { a[i] } else { b[i] })
     }
@@ -918,6 +938,26 @@ impl F64x2Backend for archmage::ScalarToken {
     }
 
     #[inline(always)]
+    fn minimum(self, a: [f64; 2], b: [f64; 2]) -> [f64; 2] {
+        core::array::from_fn(|i| crate::nostd_math::minimum(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn maximum(self, a: [f64; 2], b: [f64; 2]) -> [f64; 2] {
+        core::array::from_fn(|i| crate::nostd_math::maximum(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn min_fast(self, a: [f64; 2], b: [f64; 2]) -> [f64; 2] {
+        core::array::from_fn(|i| if a[i] < b[i] { a[i] } else { b[i] })
+    }
+
+    #[inline(always)]
+    fn max_fast(self, a: [f64; 2], b: [f64; 2]) -> [f64; 2] {
+        core::array::from_fn(|i| if a[i] > b[i] { a[i] } else { b[i] })
+    }
+
+    #[inline(always)]
     fn sqrt(self, a: [f64; 2]) -> [f64; 2] {
         let mut r = [0.0f64; 2];
         for i in 0..2 {
@@ -1235,6 +1275,26 @@ impl F64x4Backend for archmage::ScalarToken {
             a[2].max(b[2]),
             a[3].max(b[3]),
         ]
+    }
+
+    #[inline(always)]
+    fn minimum(self, a: [f64; 4], b: [f64; 4]) -> [f64; 4] {
+        core::array::from_fn(|i| crate::nostd_math::minimum(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn maximum(self, a: [f64; 4], b: [f64; 4]) -> [f64; 4] {
+        core::array::from_fn(|i| crate::nostd_math::maximum(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn min_fast(self, a: [f64; 4], b: [f64; 4]) -> [f64; 4] {
+        core::array::from_fn(|i| if a[i] < b[i] { a[i] } else { b[i] })
+    }
+
+    #[inline(always)]
+    fn max_fast(self, a: [f64; 4], b: [f64; 4]) -> [f64; 4] {
+        core::array::from_fn(|i| if a[i] > b[i] { a[i] } else { b[i] })
     }
 
     #[inline(always)]
@@ -9392,11 +9452,31 @@ impl F32x16Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn min(self, a: [f32; 16], b: [f32; 16]) -> [f32; 16] {
-        core::array::from_fn(|i| if a[i] < b[i] { a[i] } else { b[i] })
+        core::array::from_fn(|i| a[i].min(b[i]))
     }
 
     #[inline(always)]
     fn max(self, a: [f32; 16], b: [f32; 16]) -> [f32; 16] {
+        core::array::from_fn(|i| a[i].max(b[i]))
+    }
+
+    #[inline(always)]
+    fn minimum(self, a: [f32; 16], b: [f32; 16]) -> [f32; 16] {
+        core::array::from_fn(|i| crate::nostd_math::minimumf(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn maximum(self, a: [f32; 16], b: [f32; 16]) -> [f32; 16] {
+        core::array::from_fn(|i| crate::nostd_math::maximumf(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn min_fast(self, a: [f32; 16], b: [f32; 16]) -> [f32; 16] {
+        core::array::from_fn(|i| if a[i] < b[i] { a[i] } else { b[i] })
+    }
+
+    #[inline(always)]
+    fn max_fast(self, a: [f32; 16], b: [f32; 16]) -> [f32; 16] {
         core::array::from_fn(|i| if a[i] > b[i] { a[i] } else { b[i] })
     }
 
@@ -9649,11 +9729,31 @@ impl F64x8Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn min(self, a: [f64; 8], b: [f64; 8]) -> [f64; 8] {
-        core::array::from_fn(|i| if a[i] < b[i] { a[i] } else { b[i] })
+        core::array::from_fn(|i| a[i].min(b[i]))
     }
 
     #[inline(always)]
     fn max(self, a: [f64; 8], b: [f64; 8]) -> [f64; 8] {
+        core::array::from_fn(|i| a[i].max(b[i]))
+    }
+
+    #[inline(always)]
+    fn minimum(self, a: [f64; 8], b: [f64; 8]) -> [f64; 8] {
+        core::array::from_fn(|i| crate::nostd_math::minimum(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn maximum(self, a: [f64; 8], b: [f64; 8]) -> [f64; 8] {
+        core::array::from_fn(|i| crate::nostd_math::maximum(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn min_fast(self, a: [f64; 8], b: [f64; 8]) -> [f64; 8] {
+        core::array::from_fn(|i| if a[i] < b[i] { a[i] } else { b[i] })
+    }
+
+    #[inline(always)]
+    fn max_fast(self, a: [f64; 8], b: [f64; 8]) -> [f64; 8] {
         core::array::from_fn(|i| if a[i] > b[i] { a[i] } else { b[i] })
     }
 

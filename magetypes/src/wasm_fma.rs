@@ -68,6 +68,54 @@ pub(crate) fn trunc_f32x4_fast(_token: Wasm128Token, a: v128) -> v128 {
     w::i32x4_relaxed_trunc_f32x4(a)
 }
 
+#[cfg(not(target_feature = "relaxed-simd"))]
+#[archmage::rite]
+pub(crate) fn min_f32x4_fast(_token: Wasm128Token, a: v128, b: v128) -> v128 {
+    w::f32x4_pmin(b, a)
+}
+
+#[cfg(not(target_feature = "relaxed-simd"))]
+#[archmage::rite]
+pub(crate) fn max_f32x4_fast(_token: Wasm128Token, a: v128, b: v128) -> v128 {
+    w::f32x4_pmax(b, a)
+}
+
+#[cfg(not(target_feature = "relaxed-simd"))]
+#[archmage::rite]
+pub(crate) fn min_f64x2_fast(_token: Wasm128Token, a: v128, b: v128) -> v128 {
+    w::f64x2_pmin(b, a)
+}
+
+#[cfg(not(target_feature = "relaxed-simd"))]
+#[archmage::rite]
+pub(crate) fn max_f64x2_fast(_token: Wasm128Token, a: v128, b: v128) -> v128 {
+    w::f64x2_pmax(b, a)
+}
+
+#[cfg(target_feature = "relaxed-simd")]
+#[archmage::rite]
+pub(crate) fn min_f32x4_fast(_token: Wasm128Token, a: v128, b: v128) -> v128 {
+    w::f32x4_relaxed_min(a, b)
+}
+
+#[cfg(target_feature = "relaxed-simd")]
+#[archmage::rite]
+pub(crate) fn max_f32x4_fast(_token: Wasm128Token, a: v128, b: v128) -> v128 {
+    w::f32x4_relaxed_max(a, b)
+}
+
+#[cfg(target_feature = "relaxed-simd")]
+#[archmage::rite]
+pub(crate) fn min_f64x2_fast(_token: Wasm128Token, a: v128, b: v128) -> v128 {
+    w::f64x2_relaxed_min(a, b)
+}
+
+#[cfg(target_feature = "relaxed-simd")]
+#[archmage::rite]
+pub(crate) fn max_f64x2_fast(_token: Wasm128Token, a: v128, b: v128) -> v128 {
+    w::f64x2_relaxed_max(a, b)
+}
+
 /// Whether this engine's relaxed madd rounds once. The relaxed-SIMD proposal
 /// lets each environment choose fused or unfused per operator but requires a
 /// fixed choice, so one cached probe per type decides: fusing engines get the

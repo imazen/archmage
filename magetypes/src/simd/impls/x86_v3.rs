@@ -99,11 +99,37 @@ impl F32x4Backend for X64V3Token {
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn min(self, a: __m128, b: __m128) -> __m128 {
-        _mm_min_ps(a, b)
+        _mm_blendv_ps(_mm_min_ps(a, b), a, _mm_cmp_ps::<_CMP_UNORD_Q>(b, b))
     }
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn max(self, a: __m128, b: __m128) -> __m128 {
+        _mm_blendv_ps(_mm_max_ps(a, b), a, _mm_cmp_ps::<_CMP_UNORD_Q>(b, b))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn minimum(self, a: __m128, b: __m128) -> __m128 {
+        _mm_or_ps(
+            _mm_or_ps(_mm_min_ps(a, b), _mm_min_ps(b, a)),
+            _mm_cmp_ps::<_CMP_UNORD_Q>(a, b),
+        )
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn maximum(self, a: __m128, b: __m128) -> __m128 {
+        _mm_or_ps(
+            _mm_and_ps(_mm_max_ps(a, b), _mm_max_ps(b, a)),
+            _mm_cmp_ps::<_CMP_UNORD_Q>(a, b),
+        )
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn min_fast(self, a: __m128, b: __m128) -> __m128 {
+        _mm_min_ps(a, b)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn max_fast(self, a: __m128, b: __m128) -> __m128 {
         _mm_max_ps(a, b)
     }
 
@@ -474,11 +500,37 @@ impl F32x8Backend for X64V3Token {
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn min(self, a: __m256, b: __m256) -> __m256 {
-        _mm256_min_ps(a, b)
+        _mm256_blendv_ps(_mm256_min_ps(a, b), a, _mm256_cmp_ps::<_CMP_UNORD_Q>(b, b))
     }
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn max(self, a: __m256, b: __m256) -> __m256 {
+        _mm256_blendv_ps(_mm256_max_ps(a, b), a, _mm256_cmp_ps::<_CMP_UNORD_Q>(b, b))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn minimum(self, a: __m256, b: __m256) -> __m256 {
+        _mm256_or_ps(
+            _mm256_or_ps(_mm256_min_ps(a, b), _mm256_min_ps(b, a)),
+            _mm256_cmp_ps::<_CMP_UNORD_Q>(a, b),
+        )
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn maximum(self, a: __m256, b: __m256) -> __m256 {
+        _mm256_or_ps(
+            _mm256_and_ps(_mm256_max_ps(a, b), _mm256_max_ps(b, a)),
+            _mm256_cmp_ps::<_CMP_UNORD_Q>(a, b),
+        )
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn min_fast(self, a: __m256, b: __m256) -> __m256 {
+        _mm256_min_ps(a, b)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn max_fast(self, a: __m256, b: __m256) -> __m256 {
         _mm256_max_ps(a, b)
     }
 
@@ -901,11 +953,37 @@ impl F64x2Backend for X64V3Token {
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn min(self, a: __m128d, b: __m128d) -> __m128d {
-        _mm_min_pd(a, b)
+        _mm_blendv_pd(_mm_min_pd(a, b), a, _mm_cmp_pd::<_CMP_UNORD_Q>(b, b))
     }
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn max(self, a: __m128d, b: __m128d) -> __m128d {
+        _mm_blendv_pd(_mm_max_pd(a, b), a, _mm_cmp_pd::<_CMP_UNORD_Q>(b, b))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn minimum(self, a: __m128d, b: __m128d) -> __m128d {
+        _mm_or_pd(
+            _mm_or_pd(_mm_min_pd(a, b), _mm_min_pd(b, a)),
+            _mm_cmp_pd::<_CMP_UNORD_Q>(a, b),
+        )
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn maximum(self, a: __m128d, b: __m128d) -> __m128d {
+        _mm_or_pd(
+            _mm_and_pd(_mm_max_pd(a, b), _mm_max_pd(b, a)),
+            _mm_cmp_pd::<_CMP_UNORD_Q>(a, b),
+        )
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn min_fast(self, a: __m128d, b: __m128d) -> __m128d {
+        _mm_min_pd(a, b)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn max_fast(self, a: __m128d, b: __m128d) -> __m128d {
         _mm_max_pd(a, b)
     }
 
@@ -1143,11 +1221,37 @@ impl F64x4Backend for X64V3Token {
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn min(self, a: __m256d, b: __m256d) -> __m256d {
-        _mm256_min_pd(a, b)
+        _mm256_blendv_pd(_mm256_min_pd(a, b), a, _mm256_cmp_pd::<_CMP_UNORD_Q>(b, b))
     }
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn max(self, a: __m256d, b: __m256d) -> __m256d {
+        _mm256_blendv_pd(_mm256_max_pd(a, b), a, _mm256_cmp_pd::<_CMP_UNORD_Q>(b, b))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn minimum(self, a: __m256d, b: __m256d) -> __m256d {
+        _mm256_or_pd(
+            _mm256_or_pd(_mm256_min_pd(a, b), _mm256_min_pd(b, a)),
+            _mm256_cmp_pd::<_CMP_UNORD_Q>(a, b),
+        )
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn maximum(self, a: __m256d, b: __m256d) -> __m256d {
+        _mm256_or_pd(
+            _mm256_and_pd(_mm256_max_pd(a, b), _mm256_max_pd(b, a)),
+            _mm256_cmp_pd::<_CMP_UNORD_Q>(a, b),
+        )
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn min_fast(self, a: __m256d, b: __m256d) -> __m256d {
+        _mm256_min_pd(a, b)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn max_fast(self, a: __m256d, b: __m256d) -> __m256d {
         _mm256_max_pd(a, b)
     }
 
@@ -5031,6 +5135,38 @@ impl F32x16Backend for X64V3Token {
     }
 
     #[inline(always)]
+    fn minimum(self, a: [__m256; 2], b: [__m256; 2]) -> [__m256; 2] {
+        [
+            <X64V3Token as F32x8Backend>::minimum(self, a[0], b[0]),
+            <X64V3Token as F32x8Backend>::minimum(self, a[1], b[1]),
+        ]
+    }
+
+    #[inline(always)]
+    fn maximum(self, a: [__m256; 2], b: [__m256; 2]) -> [__m256; 2] {
+        [
+            <X64V3Token as F32x8Backend>::maximum(self, a[0], b[0]),
+            <X64V3Token as F32x8Backend>::maximum(self, a[1], b[1]),
+        ]
+    }
+
+    #[inline(always)]
+    fn min_fast(self, a: [__m256; 2], b: [__m256; 2]) -> [__m256; 2] {
+        [
+            <X64V3Token as F32x8Backend>::min_fast(self, a[0], b[0]),
+            <X64V3Token as F32x8Backend>::min_fast(self, a[1], b[1]),
+        ]
+    }
+
+    #[inline(always)]
+    fn max_fast(self, a: [__m256; 2], b: [__m256; 2]) -> [__m256; 2] {
+        [
+            <X64V3Token as F32x8Backend>::max_fast(self, a[0], b[0]),
+            <X64V3Token as F32x8Backend>::max_fast(self, a[1], b[1]),
+        ]
+    }
+
+    #[inline(always)]
     fn sqrt(self, a: [__m256; 2]) -> [__m256; 2] {
         [
             <X64V3Token as F32x8Backend>::sqrt(self, a[0]),
@@ -5351,6 +5487,38 @@ impl F64x8Backend for X64V3Token {
         [
             <X64V3Token as F64x4Backend>::max(self, a[0], b[0]),
             <X64V3Token as F64x4Backend>::max(self, a[1], b[1]),
+        ]
+    }
+
+    #[inline(always)]
+    fn minimum(self, a: [__m256d; 2], b: [__m256d; 2]) -> [__m256d; 2] {
+        [
+            <X64V3Token as F64x4Backend>::minimum(self, a[0], b[0]),
+            <X64V3Token as F64x4Backend>::minimum(self, a[1], b[1]),
+        ]
+    }
+
+    #[inline(always)]
+    fn maximum(self, a: [__m256d; 2], b: [__m256d; 2]) -> [__m256d; 2] {
+        [
+            <X64V3Token as F64x4Backend>::maximum(self, a[0], b[0]),
+            <X64V3Token as F64x4Backend>::maximum(self, a[1], b[1]),
+        ]
+    }
+
+    #[inline(always)]
+    fn min_fast(self, a: [__m256d; 2], b: [__m256d; 2]) -> [__m256d; 2] {
+        [
+            <X64V3Token as F64x4Backend>::min_fast(self, a[0], b[0]),
+            <X64V3Token as F64x4Backend>::min_fast(self, a[1], b[1]),
+        ]
+    }
+
+    #[inline(always)]
+    fn max_fast(self, a: [__m256d; 2], b: [__m256d; 2]) -> [__m256d; 2] {
+        [
+            <X64V3Token as F64x4Backend>::max_fast(self, a[0], b[0]),
+            <X64V3Token as F64x4Backend>::max_fast(self, a[1], b[1]),
         ]
     }
 

@@ -812,24 +812,26 @@ fn generate_float_backend_trait(ty: &FloatVecType) -> String {
         String::new()
     };
 
-    let min_max_fast_trait = if elem == "f32" {
-        formatdoc! {r#"
+    let min_max_fast_trait = formatdoc! {r#"
 
-            /// Fast single-instruction lane-wise minimum (NaN and `-0.0`/`+0.0` unspecified).
-            #[inline(always)]
-            fn min_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {{
-                Self::min(self, a, b)
-            }}
+        /// IEEE 754-2019 minimum (`NaN`-propagating, `-0.0 < +0.0`).
+        fn minimum(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
-            /// Fast single-instruction lane-wise maximum (NaN and `-0.0`/`+0.0` unspecified).
-            #[inline(always)]
-            fn max_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {{
-                Self::max(self, a, b)
-            }}
-        "#}
-    } else {
-        String::new()
-    };
+        /// IEEE 754-2019 maximum (`NaN`-propagating, `-0.0 < +0.0`).
+        fn maximum(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
+
+        /// Fast lane-wise minimum (`NaN` and `±0.0` unspecified).
+        #[inline(always)]
+        fn min_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {{
+            Self::min(self, a, b)
+        }}
+
+        /// Fast lane-wise maximum (`NaN` and `±0.0` unspecified).
+        #[inline(always)]
+        fn max_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {{
+            Self::max(self, a, b)
+        }}
+    "#};
 
     // 8x8 transpose lives only on f32x8 (8 rows of 8). Default is a scalar
     // gather (LLVM recovers it to native shuffles on ARM/WASM); x86 overrides
@@ -922,10 +924,10 @@ fn generate_float_backend_trait(ty: &FloatVecType) -> String {
 
             // ====== Math ======
 
-            /// Lane-wise minimum.
+            /// Lane-wise minimum matching `{elem}::min` (returns the numeric operand on single-`NaN`; `±0.0` unspecified).
             fn min(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
-            /// Lane-wise maximum.
+            /// Lane-wise maximum matching `{elem}::max` (returns the numeric operand on single-`NaN`; `±0.0` unspecified).
             fn max(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
             {min_max_fast_trait}
 
@@ -1947,11 +1949,31 @@ fn generate_x86_float_impl(ty: &FloatVecType, token: &str) -> String {
 
             {arcane}
             fn min(self, a: {inner}, b: {inner}) -> {inner} {{
-                {p}_min_{s}(a, b)
+                {p}_blendv_{s}({p}_min_{s}(a, b), a, {cmp}::<_CMP_UNORD_Q>(b, b))
             }}
 
             {arcane}
             fn max(self, a: {inner}, b: {inner}) -> {inner} {{
+                {p}_blendv_{s}({p}_max_{s}(a, b), a, {cmp}::<_CMP_UNORD_Q>(b, b))
+            }}
+
+            {arcane}
+            fn minimum(self, a: {inner}, b: {inner}) -> {inner} {{
+                {p}_or_{s}({p}_or_{s}({p}_min_{s}(a, b), {p}_min_{s}(b, a)), {cmp}::<_CMP_UNORD_Q>(a, b))
+            }}
+
+            {arcane}
+            fn maximum(self, a: {inner}, b: {inner}) -> {inner} {{
+                {p}_or_{s}({p}_and_{s}({p}_max_{s}(a, b), {p}_max_{s}(b, a)), {cmp}::<_CMP_UNORD_Q>(a, b))
+            }}
+
+            {arcane}
+            fn min_fast(self, a: {inner}, b: {inner}) -> {inner} {{
+                {p}_min_{s}(a, b)
+            }}
+
+            {arcane}
+            fn max_fast(self, a: {inner}, b: {inner}) -> {inner} {{
                 {p}_max_{s}(a, b)
             }}
 
@@ -2487,22 +2509,33 @@ fn generate_scalar_float_impl(ty: &FloatVecType) -> String {
             }}
         "#}
     };
-    let min_max_fast_scalar = if elem == "f32" {
-        formatdoc! {r#"
-
-            #[inline(always)]
-            fn min_fast(self, a: {array}, b: {array}) -> {array} {{
-                core::array::from_fn(|i| if a[i] < b[i] {{ a[i] }} else {{ b[i] }})
-            }}
-
-            #[inline(always)]
-            fn max_fast(self, a: {array}, b: {array}) -> {array} {{
-                core::array::from_fn(|i| if a[i] > b[i] {{ a[i] }} else {{ b[i] }})
-            }}
-        "#}
+    let (min_ieee, max_ieee) = if elem == "f32" {
+        ("minimumf", "maximumf")
     } else {
-        String::new()
+        ("minimum", "maximum")
     };
+    let min_max_fast_scalar = formatdoc! {r#"
+
+        #[inline(always)]
+        fn minimum(self, a: {array}, b: {array}) -> {array} {{
+            core::array::from_fn(|i| crate::nostd_math::{min_ieee}(a[i], b[i]))
+        }}
+
+        #[inline(always)]
+        fn maximum(self, a: {array}, b: {array}) -> {array} {{
+            core::array::from_fn(|i| crate::nostd_math::{max_ieee}(a[i], b[i]))
+        }}
+
+        #[inline(always)]
+        fn min_fast(self, a: {array}, b: {array}) -> {array} {{
+            core::array::from_fn(|i| if a[i] < b[i] {{ a[i] }} else {{ b[i] }})
+        }}
+
+        #[inline(always)]
+        fn max_fast(self, a: {array}, b: {array}) -> {array} {{
+            core::array::from_fn(|i| if a[i] > b[i] {{ a[i] }} else {{ b[i] }})
+        }}
+    "#};
 
     formatdoc! {r#"
         impl {trait_name} for archmage::ScalarToken {{
@@ -3138,25 +3171,6 @@ fn generate_neon_float_impl(ty: &FloatVecType) -> String {
         String::new()
     };
 
-    let min_max_fast_arm_poly = if elem == "f32" {
-        let min_fast_body = binary_op("vminnmq_f32");
-        let max_fast_body = binary_op("vmaxnmq_f32");
-        formatdoc! {r#"
-
-            {arcane}
-            fn min_fast(self, a: {repr}, b: {repr}) -> {repr} {{
-                {min_fast_body}
-            }}
-
-            {arcane}
-            fn max_fast(self, a: {repr}, b: {repr}) -> {repr} {{
-                {max_fast_body}
-            }}
-        "#}
-    } else {
-        String::new()
-    };
-
     formatdoc! {r#"
         impl {trait_name} for archmage::NeonToken {{
             type Repr = {repr};
@@ -3233,7 +3247,26 @@ fn generate_neon_float_impl(ty: &FloatVecType) -> String {
             fn max(self, a: {repr}, b: {repr}) -> {repr} {{
                 {max_body}
             }}
-            {min_max_fast_arm_poly}
+
+            {arcane}
+            fn minimum(self, a: {repr}, b: {repr}) -> {repr} {{
+                {minimum_body}
+            }}
+
+            {arcane}
+            fn maximum(self, a: {repr}, b: {repr}) -> {repr} {{
+                {maximum_body}
+            }}
+
+            {arcane}
+            fn min_fast(self, a: {repr}, b: {repr}) -> {repr} {{
+                {min_fast_body}
+            }}
+
+            {arcane}
+            fn max_fast(self, a: {repr}, b: {repr}) -> {repr} {{
+                {max_fast_body}
+            }}
 
             {arcane}
             fn sqrt(self, a: {repr}) -> {repr} {{
@@ -3394,8 +3427,30 @@ fn generate_neon_float_impl(ty: &FloatVecType) -> String {
         mul_body = binary_op(&format!("vmulq_{ns}")),
         div_body = binary_op(&format!("vdivq_{ns}")),
         neg_body = unary_op(&format!("vnegq_{ns}")),
-        min_body = binary_op(&format!("vminq_{ns}")),
-        max_body = binary_op(&format!("vmaxq_{ns}")),
+        min_body = {
+            let items: Vec<String> = (0..sub_count)
+                .map(|i| {
+                    format!(
+                        "vminnmq_{ns}(vminnmq_{ns}(a[{i}], a[{i}]), vminnmq_{ns}(b[{i}], b[{i}]))"
+                    )
+                })
+                .collect();
+            format!("[{}]", items.join(", "))
+        },
+        max_body = {
+            let items: Vec<String> = (0..sub_count)
+                .map(|i| {
+                    format!(
+                        "vmaxnmq_{ns}(vmaxnmq_{ns}(a[{i}], a[{i}]), vmaxnmq_{ns}(b[{i}], b[{i}]))"
+                    )
+                })
+                .collect();
+            format!("[{}]", items.join(", "))
+        },
+        minimum_body = binary_op(&format!("vminq_{ns}")),
+        maximum_body = binary_op(&format!("vmaxq_{ns}")),
+        min_fast_body = binary_op(&format!("vminnmq_{ns}")),
+        max_fast_body = binary_op(&format!("vmaxnmq_{ns}")),
         sqrt_body = unary_op(&format!("vsqrtq_{ns}")),
         abs_body = unary_op(&format!("vabsq_{ns}")),
         floor_body = unary_op(&format!("vrndmq_{ns}")),
@@ -3661,18 +3716,6 @@ fn generate_neon_native_impl(ty: &FloatVecType) -> String {
         String::new()
     };
 
-    let min_max_fast_arm = if elem == "f32" {
-        formatdoc! {r#"
-
-            {arcane}
-            fn min_fast(self, a: {repr}, b: {repr}) -> {repr} {{ vminnmq_f32(a, b) }}
-            {arcane}
-            fn max_fast(self, a: {repr}, b: {repr}) -> {repr} {{ vmaxnmq_f32(a, b) }}
-        "#}
-    } else {
-        String::new()
-    };
-
     formatdoc! {r#"
         impl {trait_name} for archmage::NeonToken {{
             type Repr = {repr};
@@ -3718,10 +3761,17 @@ fn generate_neon_native_impl(ty: &FloatVecType) -> String {
             {arcane}
             fn neg(self, a: {repr}) -> {repr} {{ vnegq_{ns}(a) }}
             {arcane}
-            fn min(self, a: {repr}, b: {repr}) -> {repr} {{ vminq_{ns}(a, b) }}
+            fn min(self, a: {repr}, b: {repr}) -> {repr} {{ vminnmq_{ns}(vminnmq_{ns}(a, a), vminnmq_{ns}(b, b)) }}
             {arcane}
-            fn max(self, a: {repr}, b: {repr}) -> {repr} {{ vmaxq_{ns}(a, b) }}
-            {min_max_fast_arm}
+            fn max(self, a: {repr}, b: {repr}) -> {repr} {{ vmaxnmq_{ns}(vmaxnmq_{ns}(a, a), vmaxnmq_{ns}(b, b)) }}
+            {arcane}
+            fn minimum(self, a: {repr}, b: {repr}) -> {repr} {{ vminq_{ns}(a, b) }}
+            {arcane}
+            fn maximum(self, a: {repr}, b: {repr}) -> {repr} {{ vmaxq_{ns}(a, b) }}
+            {arcane}
+            fn min_fast(self, a: {repr}, b: {repr}) -> {repr} {{ vminnmq_{ns}(a, b) }}
+            {arcane}
+            fn max_fast(self, a: {repr}, b: {repr}) -> {repr} {{ vmaxnmq_{ns}(a, b) }}
             {arcane}
             fn sqrt(self, a: {repr}) -> {repr} {{ vsqrtq_{ns}(a) }}
             {arcane}
@@ -4086,25 +4136,21 @@ fn generate_wasm_float_impl(ty: &FloatVecType) -> String {
         String::new()
     };
 
-    let min_max_fast_wasm_poly = if elem == "f32" {
-        let pmin_lanes = (0..sub_count)
-            .map(|i| format!("{wp}_pmin(b[{i}], a[{i}])"))
-            .collect::<Vec<_>>()
-            .join(", ");
-        let pmax_lanes = (0..sub_count)
-            .map(|i| format!("{wp}_pmax(b[{i}], a[{i}])"))
-            .collect::<Vec<_>>()
-            .join(", ");
-        formatdoc! {r#"
+    let min_fast_lanes = (0..sub_count)
+        .map(|i| format!("crate::wasm_fma::min_{wp}_fast(self, a[{i}], b[{i}])"))
+        .collect::<Vec<_>>()
+        .join(", ");
+    let max_fast_lanes = (0..sub_count)
+        .map(|i| format!("crate::wasm_fma::max_{wp}_fast(self, a[{i}], b[{i}])"))
+        .collect::<Vec<_>>()
+        .join(", ");
+    let min_max_fast_wasm_poly = formatdoc! {r#"
 
-            #[inline(always)]
-            fn min_fast(self, a: {repr}, b: {repr}) -> {repr} {{ [{pmin_lanes}] }}
-            #[inline(always)]
-            fn max_fast(self, a: {repr}, b: {repr}) -> {repr} {{ [{pmax_lanes}] }}
-        "#}
-    } else {
-        String::new()
-    };
+        #[inline(always)]
+        fn min_fast(self, a: {repr}, b: {repr}) -> {repr} {{ [{min_fast_lanes}] }}
+        #[inline(always)]
+        fn max_fast(self, a: {repr}, b: {repr}) -> {repr} {{ [{max_fast_lanes}] }}
+    "#};
     formatdoc! {r#"
         impl {trait_name} for archmage::Wasm128Token {{
             type Repr = {repr};
@@ -4157,6 +4203,10 @@ fn generate_wasm_float_impl(ty: &FloatVecType) -> String {
             fn min(self, a: {repr}, b: {repr}) -> {repr} {{ {min} }}
             #[inline(always)]
             fn max(self, a: {repr}, b: {repr}) -> {repr} {{ {max} }}
+            #[inline(always)]
+            fn minimum(self, a: {repr}, b: {repr}) -> {repr} {{ {minimum} }}
+            #[inline(always)]
+            fn maximum(self, a: {repr}, b: {repr}) -> {repr} {{ {maximum} }}
             {min_max_fast}
             #[inline(always)]
             fn sqrt(self, a: {repr}) -> {repr} {{ {sqrt} }}
@@ -4267,8 +4317,14 @@ fn generate_wasm_float_impl(ty: &FloatVecType) -> String {
         mul = binary_op(&format!("{wp}_mul")),
         div = binary_op(&format!("{wp}_div")),
         neg = unary_op(&format!("{wp}_neg")),
-        min = binary_op(&format!("{wp}_min")),
-        max = binary_op(&format!("{wp}_max")),
+        min = format!("[{}]", (0..sub_count)
+            .map(|i| format!("v128_bitselect(a[{i}], {wp}_pmin(b[{i}], a[{i}]), {wp}_ne(b[{i}], b[{i}]))"))
+            .collect::<Vec<_>>().join(", ")),
+        max = format!("[{}]", (0..sub_count)
+            .map(|i| format!("v128_bitselect(a[{i}], {wp}_pmax(b[{i}], a[{i}]), {wp}_ne(b[{i}], b[{i}]))"))
+            .collect::<Vec<_>>().join(", ")),
+        minimum = binary_op(&format!("{wp}_min")),
+        maximum = binary_op(&format!("{wp}_max")),
         sqrt = unary_op(&format!("{wp}_sqrt")),
         abs = unary_op(&format!("{wp}_abs")),
         floor = unary_op(&format!("{wp}_floor")),
@@ -4407,17 +4463,13 @@ fn generate_wasm_native_impl(ty: &FloatVecType) -> String {
         String::new()
     };
 
-    let min_max_fast_wasm_native = if elem == "f32" {
-        formatdoc! {r#"
+    let min_max_fast_wasm_native = formatdoc! {r#"
 
-            #[inline(always)]
-            fn min_fast(self, a: v128, b: v128) -> v128 {{ {wp}_pmin(b, a) }}
-            #[inline(always)]
-            fn max_fast(self, a: v128, b: v128) -> v128 {{ {wp}_pmax(b, a) }}
-        "#}
-    } else {
-        String::new()
-    };
+        #[inline(always)]
+        fn min_fast(self, a: v128, b: v128) -> v128 {{ crate::wasm_fma::min_{wp}_fast(self, a, b) }}
+        #[inline(always)]
+        fn max_fast(self, a: v128, b: v128) -> v128 {{ crate::wasm_fma::max_{wp}_fast(self, a, b) }}
+    "#};
 
     // Adjacent-pair tree for f32x4 to match x86/NEON shape (#50).
     let reduce_add_body = || -> String {
@@ -4521,9 +4573,13 @@ fn generate_wasm_native_impl(ty: &FloatVecType) -> String {
             #[inline(always)]
             fn neg(self, a: v128) -> v128 {{ {wp}_neg(a) }}
             #[inline(always)]
-            fn min(self, a: v128, b: v128) -> v128 {{ {wp}_min(a, b) }}
+            fn min(self, a: v128, b: v128) -> v128 {{ v128_bitselect(a, {wp}_pmin(b, a), {wp}_ne(b, b)) }}
             #[inline(always)]
-            fn max(self, a: v128, b: v128) -> v128 {{ {wp}_max(a, b) }}
+            fn max(self, a: v128, b: v128) -> v128 {{ v128_bitselect(a, {wp}_pmax(b, a), {wp}_ne(b, b)) }}
+            #[inline(always)]
+            fn minimum(self, a: v128, b: v128) -> v128 {{ {wp}_min(a, b) }}
+            #[inline(always)]
+            fn maximum(self, a: v128, b: v128) -> v128 {{ {wp}_max(a, b) }}
             {min_max_fast}
             #[inline(always)]
             fn sqrt(self, a: v128) -> v128 {{ {wp}_sqrt(a) }}

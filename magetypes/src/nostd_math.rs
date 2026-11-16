@@ -422,6 +422,62 @@ pub fn fmaf_soft(a: f32, b: f32, c: f32) -> f32 {
 }
 
 // ============================================================================
+// IEEE 754-2019 minimum / maximum
+// ============================================================================
+
+/// IEEE 754-2019 `minimum` for `f32`: propagates `NaN` (returning quiet `NaN`)
+/// and orders `-0.0 < +0.0`.
+#[inline(always)]
+pub const fn minimumf(a: f32, b: f32) -> f32 {
+    if a.is_nan() || b.is_nan() {
+        f32::NAN
+    } else if a < b || (a == 0.0 && b == 0.0 && a.is_sign_negative()) {
+        a
+    } else {
+        b
+    }
+}
+
+/// IEEE 754-2019 `maximum` for `f32`: propagates `NaN` (returning quiet `NaN`)
+/// and orders `-0.0 < +0.0`.
+#[inline(always)]
+pub const fn maximumf(a: f32, b: f32) -> f32 {
+    if a.is_nan() || b.is_nan() {
+        f32::NAN
+    } else if a > b || (a == 0.0 && b == 0.0 && a.is_sign_positive()) {
+        a
+    } else {
+        b
+    }
+}
+
+/// IEEE 754-2019 `minimum` for `f64`: propagates `NaN` (returning quiet `NaN`)
+/// and orders `-0.0 < +0.0`.
+#[inline(always)]
+pub const fn minimum(a: f64, b: f64) -> f64 {
+    if a.is_nan() || b.is_nan() {
+        f64::NAN
+    } else if a < b || (a == 0.0 && b == 0.0 && a.is_sign_negative()) {
+        a
+    } else {
+        b
+    }
+}
+
+/// IEEE 754-2019 `maximum` for `f64`: propagates `NaN` (returning quiet `NaN`)
+/// and orders `-0.0 < +0.0`.
+#[inline(always)]
+pub const fn maximum(a: f64, b: f64) -> f64 {
+    if a.is_nan() || b.is_nan() {
+        f64::NAN
+    } else if a > b || (a == 0.0 && b == 0.0 && a.is_sign_positive()) {
+        a
+    } else {
+        b
+    }
+}
+
+// ============================================================================
 // Transcendental approximations for no_std f64 scalar fallbacks
 // ============================================================================
 
@@ -897,5 +953,76 @@ mod tests {
                 std_result.to_bits()
             );
         }
+    }
+
+    #[test]
+    fn ieee754_2019_minimum_maximum() {
+        let snan32 = f32::from_bits(0x7f80_0001);
+        let snan64 = f64::from_bits(0x7ff0_0000_0000_0001);
+
+        // Signed zeros: -0.0 < +0.0
+        assert_eq!(minimumf(-0.0, 0.0).to_bits(), (-0.0f32).to_bits());
+        assert_eq!(minimumf(0.0, -0.0).to_bits(), (-0.0f32).to_bits());
+        assert_eq!(minimumf(-0.0, -0.0).to_bits(), (-0.0f32).to_bits());
+        assert_eq!(minimumf(0.0, 0.0).to_bits(), 0.0f32.to_bits());
+
+        assert_eq!(maximumf(-0.0, 0.0).to_bits(), 0.0f32.to_bits());
+        assert_eq!(maximumf(0.0, -0.0).to_bits(), 0.0f32.to_bits());
+        assert_eq!(maximumf(-0.0, -0.0).to_bits(), (-0.0f32).to_bits());
+        assert_eq!(maximumf(0.0, 0.0).to_bits(), 0.0f32.to_bits());
+
+        assert_eq!(minimum(-0.0, 0.0).to_bits(), (-0.0f64).to_bits());
+        assert_eq!(minimum(0.0, -0.0).to_bits(), (-0.0f64).to_bits());
+        assert_eq!(maximum(-0.0, 0.0).to_bits(), 0.0f64.to_bits());
+        assert_eq!(maximum(0.0, -0.0).to_bits(), 0.0f64.to_bits());
+
+        // NaN propagation (quiet NaN output, including for signaling NaNs)
+        for &(a, b) in &[
+            (f32::NAN, 5.0),
+            (5.0, f32::NAN),
+            (snan32, 5.0),
+            (5.0, snan32),
+            (f32::NAN, f32::NEG_INFINITY),
+            (f32::INFINITY, f32::NAN),
+        ] {
+            let mn = minimumf(a, b);
+            let mx = maximumf(a, b);
+            assert!(mn.is_nan());
+            assert_ne!(mn.to_bits() & 0x0040_0000, 0, "expected quiet NaN");
+            assert!(mx.is_nan());
+            assert_ne!(mx.to_bits() & 0x0040_0000, 0, "expected quiet NaN");
+        }
+        for &(a, b) in &[
+            (f64::NAN, 5.0),
+            (5.0, f64::NAN),
+            (snan64, 5.0),
+            (5.0, snan64),
+            (f64::NAN, f64::NEG_INFINITY),
+            (f64::INFINITY, f64::NAN),
+        ] {
+            let mn = minimum(a, b);
+            let mx = maximum(a, b);
+            assert!(mn.is_nan());
+            assert_ne!(
+                mn.to_bits() & 0x0008_0000_0000_0000,
+                0,
+                "expected quiet NaN"
+            );
+            assert!(mx.is_nan());
+            assert_ne!(
+                mx.to_bits() & 0x0008_0000_0000_0000,
+                0,
+                "expected quiet NaN"
+            );
+        }
+
+        // Finite, subnormals, and ±inf
+        assert_eq!(minimumf(f32::NEG_INFINITY, -1.0), f32::NEG_INFINITY);
+        assert_eq!(maximumf(f32::INFINITY, 1.0), f32::INFINITY);
+        let sub = f32::from_bits(1);
+        assert_eq!(minimumf(sub, 0.0).to_bits(), 0);
+        assert_eq!(minimumf(-sub, -0.0).to_bits(), (-sub).to_bits());
+        assert_eq!(minimum(f64::NEG_INFINITY, -1.0), f64::NEG_INFINITY);
+        assert_eq!(maximum(f64::INFINITY, 1.0), f64::INFINITY);
     }
 }

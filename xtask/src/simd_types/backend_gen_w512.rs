@@ -386,24 +386,26 @@ fn generate_float_backend_trait(ty: &W512Type) -> String {
     let elem = ty.elem;
     let lanes = ty.lanes;
     let array = ty.array_type();
-    let min_max_fast_trait = if elem == "f32" {
-        formatdoc! {r#"
+    let min_max_fast_trait = formatdoc! {r#"
 
-            /// Fast single-instruction lane-wise minimum (NaN and `-0.0`/`+0.0` unspecified).
-            #[inline(always)]
-            fn min_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {{
-                Self::min(self, a, b)
-            }}
+        /// IEEE 754-2019 minimum (`NaN`-propagating, `-0.0 < +0.0`).
+        fn minimum(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
-            /// Fast single-instruction lane-wise maximum (NaN and `-0.0`/`+0.0` unspecified).
-            #[inline(always)]
-            fn max_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {{
-                Self::max(self, a, b)
-            }}
-        "#}
-    } else {
-        String::new()
-    };
+        /// IEEE 754-2019 maximum (`NaN`-propagating, `-0.0 < +0.0`).
+        fn maximum(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
+
+        /// Fast lane-wise minimum (`NaN` and `±0.0` unspecified).
+        #[inline(always)]
+        fn min_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {{
+            Self::min(self, a, b)
+        }}
+
+        /// Fast lane-wise maximum (`NaN` and `±0.0` unspecified).
+        #[inline(always)]
+        fn max_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {{
+            Self::max(self, a, b)
+        }}
+    "#};
 
     formatdoc! {r#"
         //! Backend trait for `{name}<T>` — {lanes}-lane {elem} SIMD vector.
@@ -473,10 +475,10 @@ fn generate_float_backend_trait(ty: &W512Type) -> String {
 
             // ====== Math ======
 
-            /// Lane-wise minimum.
+            /// Lane-wise minimum matching `{elem}::min` (returns the numeric operand on single-`NaN`; `±0.0` unspecified).
             fn min(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
-            /// Lane-wise maximum.
+            /// Lane-wise maximum matching `{elem}::max` (returns the numeric operand on single-`NaN`; `±0.0` unspecified).
             fn max(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
             {min_max_fast_trait}
 
@@ -1110,10 +1112,26 @@ fn generate_scalar_float_impl(ty: &W512Type) -> String {
             fn neg(self, a: {array}) -> {array} {{ core::array::from_fn(|i| -a[i]) }}
 
             #[inline(always)]
-            fn min(self, a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| if a[i] < b[i] {{ a[i] }} else {{ b[i] }}) }}
+            fn min(self, a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| a[i].min(b[i])) }}
 
             #[inline(always)]
-            fn max(self, a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| if a[i] > b[i] {{ a[i] }} else {{ b[i] }}) }}
+            fn max(self, a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| a[i].max(b[i])) }}
+
+            #[inline(always)]
+            fn minimum(self, a: {array}, b: {array}) -> {array} {{
+                core::array::from_fn(|i| crate::nostd_math::{min_ieee}(a[i], b[i]))
+            }}
+
+            #[inline(always)]
+            fn maximum(self, a: {array}, b: {array}) -> {array} {{
+                core::array::from_fn(|i| crate::nostd_math::{max_ieee}(a[i], b[i]))
+            }}
+
+            #[inline(always)]
+            fn min_fast(self, a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| if a[i] < b[i] {{ a[i] }} else {{ b[i] }}) }}
+
+            #[inline(always)]
+            fn max_fast(self, a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| if a[i] > b[i] {{ a[i] }} else {{ b[i] }}) }}
 
             #[inline(always)]
             fn sqrt(self, a: {array}) -> {array} {{
@@ -1200,6 +1218,8 @@ fn generate_scalar_float_impl(ty: &W512Type) -> String {
     "#,
         elem_name = zero_lit.to_string(),
         uint = if elem == "f32" { "u32" } else { "u64" },
+        min_ieee = if elem == "f32" { "minimumf" } else { "minimum" },
+        max_ieee = if elem == "f32" { "maximumf" } else { "maximum" },
         floor_fn = if elem == "f32" { "floorf" } else { "floor" },
         ceil_fn = if elem == "f32" { "ceilf" } else { "ceil" },
         round_fn = if elem == "f32" { "roundevenf" } else { "roundeven" },
@@ -1617,6 +1637,38 @@ fn generate_v3_polyfill_impl(ty: &W512Type) -> String {
     // Float math ops
     if ty.is_float() {
         code.push_str(&formatdoc! {r#"
+
+            #[inline(always)]
+            fn minimum(self, a: {v3_repr}, b: {v3_repr}) -> {v3_repr} {{
+                [
+                    <archmage::X64V3Token as {half_trait}>::minimum(self, a[0], b[0]),
+                    <archmage::X64V3Token as {half_trait}>::minimum(self, a[1], b[1]),
+                ]
+            }}
+
+            #[inline(always)]
+            fn maximum(self, a: {v3_repr}, b: {v3_repr}) -> {v3_repr} {{
+                [
+                    <archmage::X64V3Token as {half_trait}>::maximum(self, a[0], b[0]),
+                    <archmage::X64V3Token as {half_trait}>::maximum(self, a[1], b[1]),
+                ]
+            }}
+
+            #[inline(always)]
+            fn min_fast(self, a: {v3_repr}, b: {v3_repr}) -> {v3_repr} {{
+                [
+                    <archmage::X64V3Token as {half_trait}>::min_fast(self, a[0], b[0]),
+                    <archmage::X64V3Token as {half_trait}>::min_fast(self, a[1], b[1]),
+                ]
+            }}
+
+            #[inline(always)]
+            fn max_fast(self, a: {v3_repr}, b: {v3_repr}) -> {v3_repr} {{
+                [
+                    <archmage::X64V3Token as {half_trait}>::max_fast(self, a[0], b[0]),
+                    <archmage::X64V3Token as {half_trait}>::max_fast(self, a[1], b[1]),
+                ]
+            }}
 
             #[inline(always)]
             fn sqrt(self, a: {v3_repr}) -> {v3_repr} {{
@@ -2121,7 +2173,7 @@ fn generate_4way_polyfill_impl(
             }}
     "#});
 
-    if ty.elem == "f32" && (token == "Wasm128Token" || token == "NeonToken") {
+    if ty.is_float() {
         code.push_str(&formatdoc! {r#"
 
             #[inline(always)]
@@ -2138,6 +2190,16 @@ fn generate_4way_polyfill_impl(
 
     if ty.is_float() {
         code.push_str(&formatdoc! {r#"
+
+            #[inline(always)]
+            fn minimum(self, a: {repr}, b: {repr}) -> {repr} {{
+                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::minimum(self, a[i], b[i]))
+            }}
+
+            #[inline(always)]
+            fn maximum(self, a: {repr}, b: {repr}) -> {repr} {{
+                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::maximum(self, a[i], b[i]))
+            }}
 
             #[inline(always)]
             fn sqrt(self, a: {repr}) -> {repr} {{
@@ -2548,11 +2610,39 @@ fn generate_x86_v4_float_impl_for_token(ty: &W512Type, token: &str) -> String {
 
             {arcane}
             fn min(self, a: {inner}, b: {inner}) -> {inner} {{
-                _mm512_min_{s}(a, b)
+                _mm512_mask_blend_{s}(_mm512_cmp_{s}_mask::<_CMP_UNORD_Q>(b, b), _mm512_min_{s}(a, b), a)
             }}
 
             {arcane}
             fn max(self, a: {inner}, b: {inner}) -> {inner} {{
+                _mm512_mask_blend_{s}(_mm512_cmp_{s}_mask::<_CMP_UNORD_Q>(b, b), _mm512_max_{s}(a, b), a)
+            }}
+
+            {arcane}
+            fn minimum(self, a: {inner}, b: {inner}) -> {inner} {{
+                _mm512_mask_blend_{s}(
+                    _mm512_cmp_{s}_mask::<_CMP_UNORD_Q>(a, b),
+                    _mm512_or_{s}(_mm512_min_{s}(a, b), _mm512_min_{s}(b, a)),
+                    _mm512_set1_{s}({elem}::NAN),
+                )
+            }}
+
+            {arcane}
+            fn maximum(self, a: {inner}, b: {inner}) -> {inner} {{
+                _mm512_mask_blend_{s}(
+                    _mm512_cmp_{s}_mask::<_CMP_UNORD_Q>(a, b),
+                    _mm512_and_{s}(_mm512_max_{s}(a, b), _mm512_max_{s}(b, a)),
+                    _mm512_set1_{s}({elem}::NAN),
+                )
+            }}
+
+            {arcane}
+            fn min_fast(self, a: {inner}, b: {inner}) -> {inner} {{
+                _mm512_min_{s}(a, b)
+            }}
+
+            {arcane}
+            fn max_fast(self, a: {inner}, b: {inner}) -> {inner} {{
                 _mm512_max_{s}(a, b)
             }}
 

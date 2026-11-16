@@ -75,6 +75,7 @@ pub mod generic;
 // Branchless, vectorized f16 ↔ f32 converters (token-keyed `F16Convert`
 // trait methods).
 pub use generic::F16Convert;
+pub use generic::{maximum_f32, maximum_f64, minimum_f32, minimum_f64};
 
 // ============================================================================
 // Type aliases: map the 10 migrated type names to their generic versions.

@@ -1,61 +1,346 @@
-//! Integration tests for `f32` `min_fast`/`max_fast`/`to_i32_fast` and
-//! 3-channel RGB block helpers (`deinterleave_3ch`, `interleave_3ch`,
+//! Integration tests for 3-tier float `min` / `minimum` / `min_fast` (and
+//! `max` / `maximum` / `max_fast`), matching scalar equivalents, `to_i32_fast`,
+//! and 3-channel RGB block helpers (`deinterleave_3ch`, `interleave_3ch`,
 //! `load_{4,8}_rgb_u8_t`, `store_{4,8}_rgb_u8`).
 
 #![forbid(unsafe_code)]
 
 use archmage::{ScalarToken, SimdToken};
-use magetypes::simd::backends::{F32x4Backend, F32x4Convert, F32x8Backend, F32x8Convert};
-use magetypes::simd::generic::{f32x4, f32x8};
+use magetypes::simd::backends::{
+    F32x4Backend, F32x4Convert, F32x8Backend, F32x8Convert, F64x2Backend, F64x4Backend,
+};
+#[cfg(feature = "w512")]
+use magetypes::simd::backends::{F32x16Backend, F32x16Convert, F64x8Backend};
+use magetypes::simd::generic::{f32x4, f32x8, f64x2, f64x4};
+#[cfg(feature = "w512")]
+use magetypes::simd::generic::{f32x16, f64x8};
+use magetypes::simd::scalar::{f32x1, f64x1};
+use magetypes::simd::{maximum_f32, maximum_f64, minimum_f32, minimum_f64};
 
-#[cfg(feature = "w512")]
-use magetypes::simd::backends::{F32x16Backend, F32x16Convert};
-#[cfg(feature = "w512")]
-use magetypes::simd::generic::f32x16;
+fn assert_f32_bits_or_nan(got: f32, exp: f32, ctx: &str) {
+    if got.is_nan() && exp.is_nan() {
+        return;
+    }
+    assert_eq!(
+        got.to_bits(),
+        exp.to_bits(),
+        "{ctx}: got {got} ({:#010x}) != expected {exp} ({:#010x})",
+        got.to_bits(),
+        exp.to_bits()
+    );
+}
+
+fn assert_f64_bits_or_nan(got: f64, exp: f64, ctx: &str) {
+    if got.is_nan() && exp.is_nan() {
+        return;
+    }
+    assert_eq!(
+        got.to_bits(),
+        exp.to_bits(),
+        "{ctx}: got {got} ({:#018x}) != expected {exp} ({:#018x})",
+        got.to_bits(),
+        exp.to_bits()
+    );
+}
+
+fn f32_edge_pairs() -> [(f32, f32); 16] {
+    let qnan = f32::NAN;
+    let snan = f32::from_bits(0x7f80_0001);
+    let nnan = f32::from_bits(0xffc0_1234);
+    [
+        (-3.5, -1.0),
+        (2.25, -4.5),
+        (7.0, snan),
+        (100.0, 100.0),
+        (qnan, 5.0),
+        (5.0, qnan),
+        (snan, -7.0),
+        (-7.0, nnan),
+        (qnan, f32::NEG_INFINITY),
+        (f32::INFINITY, qnan),
+        (qnan, snan),
+        (-0.0, 0.0),
+        (0.0, -0.0),
+        (-0.0, -0.0),
+        (0.0, 0.0),
+        (f32::NEG_INFINITY, f32::INFINITY),
+    ]
+}
+
+fn f64_edge_pairs() -> [(f64, f64); 16] {
+    let qnan = f64::NAN;
+    let snan = f64::from_bits(0x7ff0_0000_0000_0001);
+    let nnan = f64::from_bits(0xfff8_0000_0000_1234);
+    [
+        (-3.5, -1.0),
+        (2.25, -4.5),
+        (7.0, snan),
+        (100.0, 100.0),
+        (qnan, 5.0),
+        (5.0, qnan),
+        (snan, -7.0),
+        (-7.0, nnan),
+        (qnan, f64::NEG_INFINITY),
+        (f64::INFINITY, qnan),
+        (qnan, snan),
+        (-0.0, 0.0),
+        (0.0, -0.0),
+        (-0.0, -0.0),
+        (0.0, 0.0),
+        (f64::NEG_INFINITY, f64::INFINITY),
+    ]
+}
+
+fn check_f32_edge_pair_results(
+    tier: &str,
+    a: f32,
+    b: f32,
+    v_min: f32,
+    v_max: f32,
+    v_minimum: f32,
+    v_maximum: f32,
+) {
+    // Tier 1: min / max (matches f32::min / f32::max; signed zero tie unspecified).
+    if a == 0.0 && b == 0.0 {
+        assert_eq!(v_min, 0.0, "{tier} min signed zero");
+        assert_eq!(v_max, 0.0, "{tier} max signed zero");
+    } else if a.is_nan() && b.is_nan() {
+        assert!(v_min.is_nan(), "{tier} min(NaN, NaN)");
+        assert!(v_max.is_nan(), "{tier} max(NaN, NaN)");
+    } else {
+        assert_eq!(v_min.to_bits(), a.min(b).to_bits(), "{tier} min({a}, {b})");
+        assert_eq!(v_max.to_bits(), a.max(b).to_bits(), "{tier} max({a}, {b})");
+    }
+
+    // Tier 2: minimum / maximum (IEEE 754-2019: quiet NaN propagation, -0.0 < +0.0).
+    let exp_minimum = minimum_f32(a, b);
+    let exp_maximum = maximum_f32(a, b);
+    assert_eq!(
+        magetypes::prelude::minimum_f32(a, b).to_bits(),
+        exp_minimum.to_bits(),
+        "prelude re-export minimum_f32"
+    );
+    assert_eq!(
+        magetypes::prelude::maximum_f32(a, b).to_bits(),
+        exp_maximum.to_bits(),
+        "prelude re-export maximum_f32"
+    );
+    if exp_minimum.is_nan() {
+        assert!(v_minimum.is_nan(), "{tier} minimum({a}, {b})");
+        assert_ne!(
+            v_minimum.to_bits() & 0x0040_0000,
+            0,
+            "{tier} minimum must produce quiet NaN"
+        );
+    } else {
+        assert_eq!(
+            v_minimum.to_bits(),
+            exp_minimum.to_bits(),
+            "{tier} minimum({a}, {b})"
+        );
+    }
+    if exp_maximum.is_nan() {
+        assert!(v_maximum.is_nan(), "{tier} maximum({a}, {b})");
+        assert_ne!(
+            v_maximum.to_bits() & 0x0040_0000,
+            0,
+            "{tier} maximum must produce quiet NaN"
+        );
+    } else {
+        assert_eq!(
+            v_maximum.to_bits(),
+            exp_maximum.to_bits(),
+            "{tier} maximum({a}, {b})"
+        );
+    }
+}
+
+fn check_f64_edge_pair_results(
+    tier: &str,
+    a: f64,
+    b: f64,
+    v_min: f64,
+    v_max: f64,
+    v_minimum: f64,
+    v_maximum: f64,
+) {
+    if a == 0.0 && b == 0.0 {
+        assert_eq!(v_min, 0.0, "{tier} min signed zero");
+        assert_eq!(v_max, 0.0, "{tier} max signed zero");
+    } else if a.is_nan() && b.is_nan() {
+        assert!(v_min.is_nan(), "{tier} min(NaN, NaN)");
+        assert!(v_max.is_nan(), "{tier} max(NaN, NaN)");
+    } else {
+        assert_eq!(v_min.to_bits(), a.min(b).to_bits(), "{tier} min({a}, {b})");
+        assert_eq!(v_max.to_bits(), a.max(b).to_bits(), "{tier} max({a}, {b})");
+    }
+
+    let exp_minimum = minimum_f64(a, b);
+    let exp_maximum = maximum_f64(a, b);
+    assert_eq!(
+        magetypes::prelude::minimum_f64(a, b).to_bits(),
+        exp_minimum.to_bits(),
+        "prelude re-export minimum_f64"
+    );
+    assert_eq!(
+        magetypes::prelude::maximum_f64(a, b).to_bits(),
+        exp_maximum.to_bits(),
+        "prelude re-export maximum_f64"
+    );
+    if exp_minimum.is_nan() {
+        assert!(v_minimum.is_nan(), "{tier} minimum({a}, {b})");
+        assert_ne!(
+            v_minimum.to_bits() & 0x0008_0000_0000_0000,
+            0,
+            "{tier} minimum must produce quiet NaN"
+        );
+    } else {
+        assert_eq!(
+            v_minimum.to_bits(),
+            exp_minimum.to_bits(),
+            "{tier} minimum({a}, {b})"
+        );
+    }
+    if exp_maximum.is_nan() {
+        assert!(v_maximum.is_nan(), "{tier} maximum({a}, {b})");
+        assert_ne!(
+            v_maximum.to_bits() & 0x0008_0000_0000_0000,
+            0,
+            "{tier} maximum must produce quiet NaN"
+        );
+    } else {
+        assert_eq!(
+            v_maximum.to_bits(),
+            exp_maximum.to_bits(),
+            "{tier} maximum({a}, {b})"
+        );
+    }
+}
 
 fn check_narrow_backend<T>(token: T, tier: &str)
 where
     T: SimdToken + F32x4Backend + F32x4Convert + F32x8Backend + F32x8Convert,
 {
-    // --- min_fast / max_fast: finite inputs ---
-    let a4 = f32x4::from_array_t(token, [-3.5, 2.25, 0.0, 100.0]);
-    let b4 = f32x4::from_array_t(token, [-1.0, -4.5, 5.0, 100.0]);
-    assert_eq!(
-        a4.min_fast(b4).to_array(),
-        [-3.5, -4.5, 0.0, 100.0],
-        "{tier}"
-    );
-    assert_eq!(
-        a4.max_fast(b4).to_array(),
-        [-1.0, 2.25, 5.0, 100.0],
-        "{tier}"
-    );
+    let pairs = f32_edge_pairs();
 
-    let a8 = f32x8::from_array_t(token, [-3.5, 2.25, 0.5, 100.0, 7.0, -8.0, 1.25, -0.25]);
-    let b8 = f32x8::from_array_t(token, [-1.0, -4.5, 5.0, 99.0, 7.5, -9.0, 1.25, 0.25]);
-    assert_eq!(
-        a8.min_fast(b8).to_array(),
-        [-3.5, -4.5, 0.5, 99.0, 7.0, -9.0, 1.25, -0.25],
-        "{tier}"
-    );
-    assert_eq!(
-        a8.max_fast(b8).to_array(),
-        [-1.0, 2.25, 5.0, 100.0, 7.5, -8.0, 1.25, 0.25],
-        "{tier}"
-    );
+    // --- f32x4: 3-tier min/max + scalar matching ---
+    for chunk in pairs.as_chunks::<4>().0 {
+        let a = [chunk[0].0, chunk[1].0, chunk[2].0, chunk[3].0];
+        let b = [chunk[0].1, chunk[1].1, chunk[2].1, chunk[3].1];
+        let va = f32x4::from_array_t(token, a);
+        let vb = f32x4::from_array_t(token, b);
 
-    // --- min_fast / max_fast: NaN & infinity sanitization when bounds are second operand ---
+        let r_min = va.min(vb).to_array();
+        let r_max = va.max(vb).to_array();
+        let r_minimum = va.minimum(vb).to_array();
+        let r_maximum = va.maximum(vb).to_array();
+        let r_min_fast = va.min_fast(vb).to_array();
+        let r_max_fast = va.max_fast(vb).to_array();
+
+        for i in 0..4 {
+            check_f32_edge_pair_results(
+                tier,
+                a[i],
+                b[i],
+                r_min[i],
+                r_max[i],
+                r_minimum[i],
+                r_maximum[i],
+            );
+            assert_f32_bits_or_nan(
+                r_min[i],
+                f32x4::min_scalar(token, a[i], b[i]),
+                &format!("{tier} f32x4 min_scalar"),
+            );
+            assert_f32_bits_or_nan(
+                r_max[i],
+                f32x4::max_scalar(token, a[i], b[i]),
+                &format!("{tier} f32x4 max_scalar"),
+            );
+            assert_f32_bits_or_nan(
+                r_minimum[i],
+                f32x4::minimum_scalar(token, a[i], b[i]),
+                &format!("{tier} f32x4 minimum_scalar"),
+            );
+            assert_f32_bits_or_nan(
+                r_maximum[i],
+                f32x4::maximum_scalar(token, a[i], b[i]),
+                &format!("{tier} f32x4 maximum_scalar"),
+            );
+            assert_f32_bits_or_nan(
+                r_min_fast[i],
+                f32x4::min_fast_scalar(token, a[i], b[i]),
+                &format!("{tier} f32x4 min_fast_scalar"),
+            );
+            assert_f32_bits_or_nan(
+                r_max_fast[i],
+                f32x4::max_fast_scalar(token, a[i], b[i]),
+                &format!("{tier} f32x4 max_fast_scalar"),
+            );
+        }
+    }
+
+    // --- f32x8: 3-tier min/max + scalar matching ---
+    for chunk in pairs.as_chunks::<8>().0 {
+        let a: [f32; 8] = core::array::from_fn(|i| chunk[i].0);
+        let b: [f32; 8] = core::array::from_fn(|i| chunk[i].1);
+        let va = f32x8::from_array_t(token, a);
+        let vb = f32x8::from_array_t(token, b);
+
+        let r_min = va.min(vb).to_array();
+        let r_max = va.max(vb).to_array();
+        let r_minimum = va.minimum(vb).to_array();
+        let r_maximum = va.maximum(vb).to_array();
+        let r_min_fast = va.min_fast(vb).to_array();
+        let r_max_fast = va.max_fast(vb).to_array();
+
+        for i in 0..8 {
+            check_f32_edge_pair_results(
+                tier,
+                a[i],
+                b[i],
+                r_min[i],
+                r_max[i],
+                r_minimum[i],
+                r_maximum[i],
+            );
+            assert_f32_bits_or_nan(
+                r_min[i],
+                f32x8::min_scalar(token, a[i], b[i]),
+                &format!("{tier} f32x8 min_scalar"),
+            );
+            assert_f32_bits_or_nan(
+                r_max[i],
+                f32x8::max_scalar(token, a[i], b[i]),
+                &format!("{tier} f32x8 max_scalar"),
+            );
+            assert_f32_bits_or_nan(
+                r_minimum[i],
+                f32x8::minimum_scalar(token, a[i], b[i]),
+                &format!("{tier} f32x8 minimum_scalar"),
+            );
+            assert_f32_bits_or_nan(
+                r_maximum[i],
+                f32x8::maximum_scalar(token, a[i], b[i]),
+                &format!("{tier} f32x8 maximum_scalar"),
+            );
+            assert_f32_bits_or_nan(
+                r_min_fast[i],
+                f32x8::min_fast_scalar(token, a[i], b[i]),
+                &format!("{tier} f32x8 min_fast_scalar"),
+            );
+            assert_f32_bits_or_nan(
+                r_max_fast[i],
+                f32x8::max_fast_scalar(token, a[i], b[i]),
+                &format!("{tier} f32x8 max_fast_scalar"),
+            );
+        }
+    }
+
+    // --- min_fast / max_fast finite & ±inf clamping ---
     let lo4 = f32x4::zero_t(token);
     let hi4 = f32x4::splat_t(token, 255.0);
-    assert_eq!(
-        f32x4::splat_t(token, f32::NAN)
-            .max_fast(lo4)
-            .min_fast(hi4)
-            .to_array(),
-        [0.0; 4],
-        "{tier} f32x4 NaN clamp"
-    );
-    let clamp4_in = f32x4::from_array_t(token, [f32::NAN, f32::NEG_INFINITY, f32::INFINITY, 42.5]);
+    let clamp4_in = f32x4::from_array_t(token, [-0.5, f32::NEG_INFINITY, f32::INFINITY, 42.5]);
     assert_eq!(
         clamp4_in.max_fast(lo4).min_fast(hi4).to_array(),
         [0.0, 0.0, 255.0, 42.5],
@@ -64,19 +349,11 @@ where
 
     let lo8 = f32x8::zero_t(token);
     let hi8 = f32x8::splat_t(token, 255.0);
-    assert_eq!(
-        f32x8::splat_t(token, f32::NAN)
-            .max_fast(lo8)
-            .min_fast(hi8)
-            .to_array(),
-        [0.0; 8],
-        "{tier} f32x8 NaN clamp"
-    );
     let clamp8_in = f32x8::from_array_t(
         token,
         [
-            f32::NAN,
-            f32::from_bits(0xffc0_0001),
+            -1e20,
+            1e20,
             f32::NEG_INFINITY,
             f32::INFINITY,
             -0.5,
@@ -87,35 +364,49 @@ where
     );
     assert_eq!(
         clamp8_in.max_fast(lo8).min_fast(hi8).to_array(),
-        [0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 128.25, 255.0],
+        [0.0, 255.0, 0.0, 255.0, 0.0, 0.0, 128.25, 255.0],
         "{tier} f32x8 edge clamp"
     );
 
-    // --- to_i32_fast ---
-    let fi4 = f32x4::from_array_t(token, [0.0, -1.875, 12345.75, -2_147_483_520.0]);
+    // --- to_i32_fast + to_i32_fast_scalar ---
+    let fi4_src = [0.0, -1.875, 12345.75, -2_147_483_520.0];
+    let fi4 = f32x4::from_array_t(token, fi4_src);
     assert_eq!(
         fi4.to_i32_fast().to_array(),
         [0, -1, 12345, -2_147_483_520],
         "{tier} f32x4 to_i32_fast"
     );
-    let fi8 = f32x8::from_array_t(
-        token,
-        [
-            0.0,
-            1.99,
-            -1.99,
-            255.5,
-            -255.5,
-            2_147_483_520.0,
-            -2_147_483_520.0,
-            -2_147_483_648.0,
-        ],
-    );
+    for (got, &src) in fi4.to_i32_fast().to_array().iter().zip(&fi4_src) {
+        assert_eq!(
+            *got,
+            f32x4::to_i32_fast_scalar(token, src),
+            "{tier} f32x4 to_i32_fast_scalar"
+        );
+    }
+
+    let fi8_src = [
+        0.0,
+        1.99,
+        -1.99,
+        255.5,
+        -255.5,
+        2_147_483_520.0,
+        -2_147_483_520.0,
+        -2_147_483_648.0,
+    ];
+    let fi8 = f32x8::from_array_t(token, fi8_src);
     assert_eq!(
         fi8.to_i32_fast().to_array(),
         [0, 1, -1, 255, -255, 2_147_483_520, -2_147_483_520, i32::MIN],
         "{tier} f32x8 to_i32_fast"
     );
+    for (got, &src) in fi8.to_i32_fast().to_array().iter().zip(&fi8_src) {
+        assert_eq!(
+            *got,
+            f32x8::to_i32_fast_scalar(token, src),
+            "{tier} f32x8 to_i32_fast_scalar"
+        );
+    }
 
     // --- 3-channel deinterleave_3ch / interleave_3ch (numeric + bit-exact) ---
     let rgb4_aos = [
@@ -319,31 +610,211 @@ where
     }
 }
 
+fn check_f64_narrow<T>(token: T, tier: &str)
+where
+    T: SimdToken + F64x2Backend + F64x4Backend,
+{
+    let pairs = f64_edge_pairs();
+
+    for chunk in pairs.as_chunks::<2>().0 {
+        let a = [chunk[0].0, chunk[1].0];
+        let b = [chunk[0].1, chunk[1].1];
+        let va = f64x2::from_array_t(token, a);
+        let vb = f64x2::from_array_t(token, b);
+
+        let r_min = va.min(vb).to_array();
+        let r_max = va.max(vb).to_array();
+        let r_minimum = va.minimum(vb).to_array();
+        let r_maximum = va.maximum(vb).to_array();
+        let r_min_fast = va.min_fast(vb).to_array();
+        let r_max_fast = va.max_fast(vb).to_array();
+
+        for i in 0..2 {
+            check_f64_edge_pair_results(
+                tier,
+                a[i],
+                b[i],
+                r_min[i],
+                r_max[i],
+                r_minimum[i],
+                r_maximum[i],
+            );
+            assert_f64_bits_or_nan(
+                r_min[i],
+                f64x2::min_scalar(token, a[i], b[i]),
+                &format!("{tier} f64x2 min_scalar"),
+            );
+            assert_f64_bits_or_nan(
+                r_max[i],
+                f64x2::max_scalar(token, a[i], b[i]),
+                &format!("{tier} f64x2 max_scalar"),
+            );
+            assert_f64_bits_or_nan(
+                r_minimum[i],
+                f64x2::minimum_scalar(token, a[i], b[i]),
+                &format!("{tier} f64x2 minimum_scalar"),
+            );
+            assert_f64_bits_or_nan(
+                r_maximum[i],
+                f64x2::maximum_scalar(token, a[i], b[i]),
+                &format!("{tier} f64x2 maximum_scalar"),
+            );
+            assert_f64_bits_or_nan(
+                r_min_fast[i],
+                f64x2::min_fast_scalar(token, a[i], b[i]),
+                &format!("{tier} f64x2 min_fast_scalar"),
+            );
+            assert_f64_bits_or_nan(
+                r_max_fast[i],
+                f64x2::max_fast_scalar(token, a[i], b[i]),
+                &format!("{tier} f64x2 max_fast_scalar"),
+            );
+        }
+    }
+
+    for chunk in pairs.as_chunks::<4>().0 {
+        let a: [f64; 4] = core::array::from_fn(|i| chunk[i].0);
+        let b: [f64; 4] = core::array::from_fn(|i| chunk[i].1);
+        let va = f64x4::from_array_t(token, a);
+        let vb = f64x4::from_array_t(token, b);
+
+        let r_min = va.min(vb).to_array();
+        let r_max = va.max(vb).to_array();
+        let r_minimum = va.minimum(vb).to_array();
+        let r_maximum = va.maximum(vb).to_array();
+        let r_min_fast = va.min_fast(vb).to_array();
+        let r_max_fast = va.max_fast(vb).to_array();
+
+        for i in 0..4 {
+            check_f64_edge_pair_results(
+                tier,
+                a[i],
+                b[i],
+                r_min[i],
+                r_max[i],
+                r_minimum[i],
+                r_maximum[i],
+            );
+            assert_f64_bits_or_nan(
+                r_min[i],
+                f64x4::min_scalar(token, a[i], b[i]),
+                &format!("{tier} f64x4 min_scalar"),
+            );
+            assert_f64_bits_or_nan(
+                r_max[i],
+                f64x4::max_scalar(token, a[i], b[i]),
+                &format!("{tier} f64x4 max_scalar"),
+            );
+            assert_f64_bits_or_nan(
+                r_minimum[i],
+                f64x4::minimum_scalar(token, a[i], b[i]),
+                &format!("{tier} f64x4 minimum_scalar"),
+            );
+            assert_f64_bits_or_nan(
+                r_maximum[i],
+                f64x4::maximum_scalar(token, a[i], b[i]),
+                &format!("{tier} f64x4 maximum_scalar"),
+            );
+            assert_f64_bits_or_nan(
+                r_min_fast[i],
+                f64x4::min_fast_scalar(token, a[i], b[i]),
+                &format!("{tier} f64x4 min_fast_scalar"),
+            );
+            assert_f64_bits_or_nan(
+                r_max_fast[i],
+                f64x4::max_fast_scalar(token, a[i], b[i]),
+                &format!("{tier} f64x4 max_fast_scalar"),
+            );
+        }
+    }
+
+    let lo4 = f64x4::zero_t(token);
+    let hi4 = f64x4::splat_t(token, 255.0);
+    let clamp4 = f64x4::from_array_t(token, [-0.5, f64::NEG_INFINITY, f64::INFINITY, 42.5]);
+    assert_eq!(
+        clamp4.max_fast(lo4).min_fast(hi4).to_array(),
+        [0.0, 0.0, 255.0, 42.5],
+        "{tier} f64x4 edge clamp"
+    );
+}
+
 #[cfg(feature = "w512")]
 fn check_w512_backend<T>(token: T, tier: &str)
 where
-    T: SimdToken + F32x16Backend + F32x16Convert,
+    T: SimdToken + F32x16Backend + F32x16Convert + F64x8Backend,
 {
-    let a16 = f32x16::from_array_t(token, core::array::from_fn(|i| (i as f32) * 2.0 - 15.0));
-    let b16 = f32x16::from_array_t(token, core::array::from_fn(|i| 15.0 - (i as f32) * 2.0));
-    let min16 = a16.min_fast(b16).to_array();
-    let max16 = a16.max_fast(b16).to_array();
-    for (i, (&mn, &mx)) in min16.iter().zip(&max16).enumerate() {
-        let av = (i as f32) * 2.0 - 15.0;
-        let bv = 15.0 - (i as f32) * 2.0;
-        assert_eq!(mn, av.min(bv), "{tier} min16 lane {i}");
-        assert_eq!(mx, av.max(bv), "{tier} max16 lane {i}");
+    let pairs32 = f32_edge_pairs();
+    let a16: [f32; 16] = core::array::from_fn(|i| pairs32[i].0);
+    let b16: [f32; 16] = core::array::from_fn(|i| pairs32[i].1);
+    let va16 = f32x16::from_array_t(token, a16);
+    let vb16 = f32x16::from_array_t(token, b16);
+
+    let r_min = va16.min(vb16).to_array();
+    let r_max = va16.max(vb16).to_array();
+    let r_minimum = va16.minimum(vb16).to_array();
+    let r_maximum = va16.maximum(vb16).to_array();
+    let r_min_fast = va16.min_fast(vb16).to_array();
+    let r_max_fast = va16.max_fast(vb16).to_array();
+
+    for i in 0..16 {
+        check_f32_edge_pair_results(
+            tier,
+            a16[i],
+            b16[i],
+            r_min[i],
+            r_max[i],
+            r_minimum[i],
+            r_maximum[i],
+        );
+        assert_f32_bits_or_nan(
+            r_min[i],
+            f32x16::min_scalar(token, a16[i], b16[i]),
+            &format!("{tier} f32x16 min_scalar"),
+        );
+        assert_f32_bits_or_nan(
+            r_max[i],
+            f32x16::max_scalar(token, a16[i], b16[i]),
+            &format!("{tier} f32x16 max_scalar"),
+        );
+        assert_f32_bits_or_nan(
+            r_minimum[i],
+            f32x16::minimum_scalar(token, a16[i], b16[i]),
+            &format!("{tier} f32x16 minimum_scalar"),
+        );
+        assert_f32_bits_or_nan(
+            r_maximum[i],
+            f32x16::maximum_scalar(token, a16[i], b16[i]),
+            &format!("{tier} f32x16 maximum_scalar"),
+        );
+        assert_f32_bits_or_nan(
+            r_min_fast[i],
+            f32x16::min_fast_scalar(token, a16[i], b16[i]),
+            &format!("{tier} f32x16 min_fast_scalar"),
+        );
+        assert_f32_bits_or_nan(
+            r_max_fast[i],
+            f32x16::max_fast_scalar(token, a16[i], b16[i]),
+            &format!("{tier} f32x16 max_fast_scalar"),
+        );
     }
 
     let lo16 = f32x16::zero_t(token);
     let hi16 = f32x16::splat_t(token, 255.0);
     assert_eq!(
-        f32x16::splat_t(token, f32::NAN)
+        f32x16::from_array_t(token, [f32::NEG_INFINITY; 16])
             .max_fast(lo16)
             .min_fast(hi16)
             .to_array(),
         [0.0; 16],
-        "{tier} f32x16 NaN clamp"
+        "{tier} f32x16 -inf clamp"
+    );
+    assert_eq!(
+        f32x16::from_array_t(token, [f32::INFINITY; 16])
+            .max_fast(lo16)
+            .min_fast(hi16)
+            .to_array(),
+        [255.0; 16],
+        "{tier} f32x16 +inf clamp"
     );
 
     let fi16 = f32x16::from_array_t(
@@ -358,12 +829,169 @@ where
     let fi16_src = fi16.to_array();
     for (i, (&got, &src)) in fi16_got.iter().zip(&fi16_src).enumerate() {
         assert_eq!(got, src as i32, "{tier} to_i32_fast lane {i}");
+        assert_eq!(
+            got,
+            f32x16::to_i32_fast_scalar(token, src),
+            "{tier} to_i32_fast_scalar lane {i}"
+        );
+    }
+
+    // f64x8 across both halves of f64_edge_pairs
+    let pairs64 = f64_edge_pairs();
+    for chunk in pairs64.as_chunks::<8>().0 {
+        let a8: [f64; 8] = core::array::from_fn(|i| chunk[i].0);
+        let b8: [f64; 8] = core::array::from_fn(|i| chunk[i].1);
+        let va8 = f64x8::from_array_t(token, a8);
+        let vb8 = f64x8::from_array_t(token, b8);
+
+        let r_min = va8.min(vb8).to_array();
+        let r_max = va8.max(vb8).to_array();
+        let r_minimum = va8.minimum(vb8).to_array();
+        let r_maximum = va8.maximum(vb8).to_array();
+        let r_min_fast = va8.min_fast(vb8).to_array();
+        let r_max_fast = va8.max_fast(vb8).to_array();
+
+        for i in 0..8 {
+            check_f64_edge_pair_results(
+                tier,
+                a8[i],
+                b8[i],
+                r_min[i],
+                r_max[i],
+                r_minimum[i],
+                r_maximum[i],
+            );
+            assert_f64_bits_or_nan(
+                r_min[i],
+                f64x8::min_scalar(token, a8[i], b8[i]),
+                &format!("{tier} f64x8 min_scalar"),
+            );
+            assert_f64_bits_or_nan(
+                r_max[i],
+                f64x8::max_scalar(token, a8[i], b8[i]),
+                &format!("{tier} f64x8 max_scalar"),
+            );
+            assert_f64_bits_or_nan(
+                r_minimum[i],
+                f64x8::minimum_scalar(token, a8[i], b8[i]),
+                &format!("{tier} f64x8 minimum_scalar"),
+            );
+            assert_f64_bits_or_nan(
+                r_maximum[i],
+                f64x8::maximum_scalar(token, a8[i], b8[i]),
+                &format!("{tier} f64x8 maximum_scalar"),
+            );
+            assert_f64_bits_or_nan(
+                r_min_fast[i],
+                f64x8::min_fast_scalar(token, a8[i], b8[i]),
+                &format!("{tier} f64x8 min_fast_scalar"),
+            );
+            assert_f64_bits_or_nan(
+                r_max_fast[i],
+                f64x8::max_fast_scalar(token, a8[i], b8[i]),
+                &format!("{tier} f64x8 max_fast_scalar"),
+            );
+        }
+    }
+}
+
+fn check_scalar1() {
+    for &(a, b) in &f32_edge_pairs() {
+        let va = f32x1(a);
+        let vb = f32x1(b);
+        check_f32_edge_pair_results(
+            "f32x1",
+            a,
+            b,
+            va.min(vb).0,
+            va.max(vb).0,
+            va.minimum(vb).0,
+            va.maximum(vb).0,
+        );
+        assert_f32_bits_or_nan(
+            va.min(vb).0,
+            f32x1::min_scalar(ScalarToken, a, b),
+            "f32x1 min_scalar",
+        );
+        assert_f32_bits_or_nan(
+            va.max(vb).0,
+            f32x1::max_scalar(ScalarToken, a, b),
+            "f32x1 max_scalar",
+        );
+        assert_f32_bits_or_nan(
+            va.minimum(vb).0,
+            f32x1::minimum_scalar(ScalarToken, a, b),
+            "f32x1 minimum_scalar",
+        );
+        assert_f32_bits_or_nan(
+            va.maximum(vb).0,
+            f32x1::maximum_scalar(ScalarToken, a, b),
+            "f32x1 maximum_scalar",
+        );
+        assert_f32_bits_or_nan(
+            va.min_fast(vb).0,
+            f32x1::min_fast_scalar(ScalarToken, a, b),
+            "f32x1 min_fast_scalar",
+        );
+        assert_f32_bits_or_nan(
+            va.max_fast(vb).0,
+            f32x1::max_fast_scalar(ScalarToken, a, b),
+            "f32x1 max_fast_scalar",
+        );
+    }
+    assert_eq!(f32x1(-12.75).to_i32_fast().0, -12);
+    assert_eq!(f32x1::to_i32_fast_scalar(ScalarToken, -12.75), -12);
+
+    for &(a, b) in &f64_edge_pairs() {
+        let va = f64x1(a);
+        let vb = f64x1(b);
+        check_f64_edge_pair_results(
+            "f64x1",
+            a,
+            b,
+            va.min(vb).0,
+            va.max(vb).0,
+            va.minimum(vb).0,
+            va.maximum(vb).0,
+        );
+        assert_f64_bits_or_nan(
+            va.min(vb).0,
+            f64x1::min_scalar(ScalarToken, a, b),
+            "f64x1 min_scalar",
+        );
+        assert_f64_bits_or_nan(
+            va.max(vb).0,
+            f64x1::max_scalar(ScalarToken, a, b),
+            "f64x1 max_scalar",
+        );
+        assert_f64_bits_or_nan(
+            va.minimum(vb).0,
+            f64x1::minimum_scalar(ScalarToken, a, b),
+            "f64x1 minimum_scalar",
+        );
+        assert_f64_bits_or_nan(
+            va.maximum(vb).0,
+            f64x1::maximum_scalar(ScalarToken, a, b),
+            "f64x1 maximum_scalar",
+        );
+        assert_f64_bits_or_nan(
+            va.min_fast(vb).0,
+            f64x1::min_fast_scalar(ScalarToken, a, b),
+            "f64x1 min_fast_scalar",
+        );
+        assert_f64_bits_or_nan(
+            va.max_fast(vb).0,
+            f64x1::max_fast_scalar(ScalarToken, a, b),
+            "f64x1 max_fast_scalar",
+        );
     }
 }
 
 #[test]
 fn fast_and_rgb_ops_all_backends() {
+    check_scalar1();
     check_narrow_backend(ScalarToken, "scalar");
+    check_f64_narrow(ScalarToken, "scalar");
     #[cfg(feature = "w512")]
     check_w512_backend(ScalarToken, "scalar");
 
@@ -371,6 +999,7 @@ fn fast_and_rgb_ops_all_backends() {
     {
         if let Some(t) = archmage::X64V3Token::summon() {
             check_narrow_backend(t, "x86-v3");
+            check_f64_narrow(t, "x86-v3");
             #[cfg(feature = "w512")]
             check_w512_backend(t, "x86-v3");
         }
@@ -378,16 +1007,19 @@ fn fast_and_rgb_ops_all_backends() {
         {
             if let Some(t) = archmage::X64V4Token::summon() {
                 check_narrow_backend(t, "x86-v4");
+                check_f64_narrow(t, "x86-v4");
                 #[cfg(feature = "w512")]
                 check_w512_backend(t, "x86-v4");
             }
             if let Some(t) = archmage::X64V4xToken::summon() {
                 check_narrow_backend(t, "x86-v4x");
+                check_f64_narrow(t, "x86-v4x");
                 #[cfg(feature = "w512")]
                 check_w512_backend(t, "x86-v4x");
             }
             if let Some(t) = archmage::Avx512Fp16Token::summon() {
                 check_narrow_backend(t, "x86-fp16");
+                check_f64_narrow(t, "x86-fp16");
                 #[cfg(feature = "w512")]
                 check_w512_backend(t.v4(), "x86-fp16-v4");
             }
@@ -398,6 +1030,7 @@ fn fast_and_rgb_ops_all_backends() {
     {
         if let Some(t) = archmage::NeonToken::summon() {
             check_narrow_backend(t, "neon");
+            check_f64_narrow(t, "neon");
             #[cfg(feature = "w512")]
             check_w512_backend(t, "neon");
         }
@@ -407,6 +1040,7 @@ fn fast_and_rgb_ops_all_backends() {
     {
         if let Some(t) = archmage::Wasm128Token::summon() {
             check_narrow_backend(t, "wasm128");
+            check_f64_narrow(t, "wasm128");
             #[cfg(feature = "w512")]
             check_w512_backend(t, "wasm128");
         }

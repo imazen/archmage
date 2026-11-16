@@ -217,16 +217,62 @@ impl<T: F64x8Backend> f64x8<T> {
 
     // ====== Math ======
 
-    /// Lane-wise minimum.
+    /// Lane-wise minimum matching [`f64::min`].
+    ///
+    /// If one lane is `NaN` and the other is numeric (including `±inf`), returns
+    /// the numeric lane; `(-0.0, +0.0)` tie-breaking is unspecified. Scalar tail
+    /// equivalent: `f64::min` (or [`Self::min_scalar`]).
     #[inline(always)]
     pub fn min(self, other: Self) -> Self {
         Self(T::min(self.1, self.0, other.0), self.1)
     }
 
-    /// Lane-wise maximum.
+    /// Lane-wise maximum matching [`f64::max`].
+    ///
+    /// If one lane is `NaN` and the other is numeric (including `±inf`), returns
+    /// the numeric lane; `(-0.0, +0.0)` tie-breaking is unspecified. Scalar tail
+    /// equivalent: `f64::max` (or [`Self::max_scalar`]).
     #[inline(always)]
     pub fn max(self, other: Self) -> Self {
         Self(T::max(self.1, self.0, other.0), self.1)
+    }
+
+    /// IEEE 754-2019 lane-wise minimum (propagates `NaN` and orders `-0.0 < +0.0`).
+    ///
+    /// Scalar tail equivalent: [`minimum_f64`](super::minimum_f64) or
+    /// [`Self::minimum_scalar`].
+    #[inline(always)]
+    pub fn minimum(self, other: Self) -> Self {
+        Self(T::minimum(self.1, self.0, other.0), self.1)
+    }
+
+    /// IEEE 754-2019 lane-wise maximum (propagates `NaN` and orders `-0.0 < +0.0`).
+    ///
+    /// Scalar tail equivalent: [`maximum_f64`](super::maximum_f64) or
+    /// [`Self::maximum_scalar`].
+    #[inline(always)]
+    pub fn maximum(self, other: Self) -> Self {
+        Self(T::maximum(self.1, self.0, other.0), self.1)
+    }
+
+    /// Fast single-instruction lane-wise minimum ignoring `NaN` and `±0.0`.
+    ///
+    /// Emits `vminps`/`vminpd` on x86, `fminnm` on NEON, `pmin(other, self)`
+    /// (or `relaxed_min` with `relaxed-simd`) on WASM, and `a < b ? a : b` on
+    /// `ScalarToken`. Scalar tail equivalent: [`Self::min_fast_scalar`].
+    #[inline(always)]
+    pub fn min_fast(self, other: Self) -> Self {
+        Self(T::min_fast(self.1, self.0, other.0), self.1)
+    }
+
+    /// Fast single-instruction lane-wise maximum ignoring `NaN` and `±0.0`.
+    ///
+    /// Emits `vmaxps`/`vmaxpd` on x86, `fmaxnm` on NEON, `pmax(other, self)`
+    /// (or `relaxed_max` with `relaxed-simd`) on WASM, and `a > b ? a : b` on
+    /// `ScalarToken`. Scalar tail equivalent: [`Self::max_fast_scalar`].
+    #[inline(always)]
+    pub fn max_fast(self, other: Self) -> Self {
+        Self(T::max_fast(self.1, self.0, other.0), self.1)
     }
 
     /// Clamp between lo and hi.
