@@ -8,30 +8,6 @@
 use archmage::Wasm128Token;
 use core::arch::wasm32::{self as w, v128};
 
-// Pow chooses one complete graph after this check; no probe in its Horner loop.
-pub(crate) fn powf_f32_fuses() -> bool {
-    #[cfg(target_feature = "relaxed-simd")]
-    {
-        relaxed_probe::fuses_f32()
-    }
-    #[cfg(not(target_feature = "relaxed-simd"))]
-    {
-        false
-    }
-}
-
-// Canonical HIGHP uses binary64 intermediates; screen that operator separately.
-pub(crate) fn powf_f64_fuses() -> bool {
-    #[cfg(target_feature = "relaxed-simd")]
-    {
-        relaxed_probe::fuses_f64()
-    }
-    #[cfg(not(target_feature = "relaxed-simd"))]
-    {
-        false
-    }
-}
-
 #[cfg(not(target_feature = "relaxed-simd"))]
 #[archmage::rite]
 pub(crate) fn madd_f32x4(_token: Wasm128Token, a: v128, b: v128, c: v128) -> v128 {
@@ -176,20 +152,6 @@ fn wide_sum(_token: Wasm128Token, a: v128, b: v128, c: v128) -> v128 {
     let step = w::v128_bitselect(one, w::i64x2_splat(-1), same_sign);
     let odd = w::i64x2_add(sum, step);
     w::f32x4_demote_f64x2_zero(w::v128_bitselect(odd, sum, adjust))
-}
-
-// Same packed software algorithm as fused_f32x4, with no cached probe. Pow
-// has already selected software once for its complete expression graph.
-#[archmage::rite]
-pub(crate) fn powf_soft_f32x4(token: Wasm128Token, a: v128, b: v128, c: v128) -> v128 {
-    let lo = wide_sum(token, a, b, c);
-    let hi = wide_sum(
-        token,
-        w::i32x4_shuffle::<2, 3, 2, 3>(a, a),
-        w::i32x4_shuffle::<2, 3, 2, 3>(b, b),
-        w::i32x4_shuffle::<2, 3, 2, 3>(c, c),
-    );
-    w::i32x4_shuffle::<0, 1, 4, 5>(lo, hi)
 }
 
 #[archmage::rite]

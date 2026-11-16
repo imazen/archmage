@@ -28,9 +28,6 @@ include = [
 safe_inherent_method_requires_more_target_features = "allow"
 
 [features]
-# Opt in to the full numerical fixture and policy/tail sweeps.
-# Default tests retain directed boundary cases and representative policies.
-_exhaustive-tests = []
 default = ["std", "w512"]
 std = ["archmage/std"]
 # 512-bit SIMD type support (polyfill via 2×W256 on all platforms).
