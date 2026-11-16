@@ -152,29 +152,30 @@ pub(crate) fn gen_cfg_guard(
 /// `#[cfg(target_arch = ...)]` already on it), so the wrapper, which copies
 /// the input's attributes, is not gated twice.
 pub(crate) fn drop_attrs_equal_to(attrs: &mut Vec<Attribute>, guard: &proc_macro2::TokenStream) {
-    let wanted = guard.to_string();
-    if wanted.is_empty() {
+    // The guard is always empty or a single `#[cfg(...)]` (gen_cfg_guard), so
+    // only `cfg` attributes can match; skip stringifying doc comments and the rest.
+    if guard.is_empty() || !attrs.iter().any(|a| a.path().is_ident("cfg")) {
         return;
     }
-    attrs.retain(|a| a.to_token_stream().to_string() != wanted);
+    let wanted = guard.to_string();
+    attrs.retain(|a| !a.path().is_ident("cfg") || a.to_token_stream().to_string() != wanted);
 }
 
 /// Build a turbofish token stream from a function's generics.
 pub(crate) fn build_turbofish(generics: &syn::Generics) -> proc_macro2::TokenStream {
-    let params: Vec<_> = generics
+    if !generics
         .params
         .iter()
-        .filter_map(|param| match param {
-            GenericParam::Type(tp) => Some(&tp.ident),
-            GenericParam::Const(cp) => Some(&cp.ident),
-            GenericParam::Lifetime(_) => None,
-        })
-        .collect();
-    if params.is_empty() {
-        quote! {}
-    } else {
-        quote! { ::<#(#params),*> }
+        .any(|p| matches!(p, GenericParam::Type(_) | GenericParam::Const(_)))
+    {
+        return quote! {};
     }
+    let params = generics.params.iter().filter_map(|param| match param {
+        GenericParam::Type(tp) => Some(&tp.ident),
+        GenericParam::Const(cp) => Some(&cp.ident),
+        GenericParam::Lifetime(_) => None,
+    });
+    quote! { ::<#(#params),*> }
 }
 
 /// Conservative token-level presence check. Literals and partial identifier
@@ -804,7 +805,13 @@ pub(crate) fn replace_self_value_in_tokens(
                 result.extend([proc_macro2::TokenTree::Group(group)]);
             }
             proc_macro2::TokenTree::Group(group) => {
-                let inner = replace_self_value_in_tokens(group.stream(), replacement);
+                let stream = group.stream();
+                // A subtree without `self` is unchanged; keep it as written.
+                if !tokens_contain_ident(&stream, &["self"]) {
+                    result.extend([proc_macro2::TokenTree::Group(group)]);
+                    continue;
+                }
+                let inner = replace_self_value_in_tokens(stream, replacement);
                 let mut new_group = proc_macro2::Group::new(group.delimiter(), inner);
                 new_group.set_span(group.span());
                 result.extend([proc_macro2::TokenTree::Group(new_group)]);

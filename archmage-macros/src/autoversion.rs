@@ -318,14 +318,16 @@ pub(crate) fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> 
                 }
                 let self_ident = format_ident!("_self");
                 variant_fn.body = replace_self_value_in_tokens(
-                    replace_self_in_tokens(variant_fn.body.clone(), self_ty),
+                    replace_self_in_tokens(std::mem::take(&mut variant_fn.body), self_ty),
                     &self_ident,
                 );
-                variant_fn.sig = syn::parse2(replace_self_in_tokens(
-                    variant_fn.sig.to_token_stream(),
-                    self_ty,
-                ))
-                .expect("replacing Self keeps the signature parseable");
+                // Reparse the signature only when it names `Self`; otherwise the
+                // replacement is the identity.
+                let sig_tokens = variant_fn.sig.to_token_stream();
+                if tokens_contain_ident(&sig_tokens, &["Self"]) {
+                    variant_fn.sig = syn::parse2(replace_self_in_tokens(sig_tokens, self_ty))
+                        .expect("replacing Self keeps the signature parseable");
+                }
             }
         } else if (tier.name == "scalar" || tier.name == "default")
             && has_self
