@@ -113,7 +113,8 @@ mod tests {
 
     #[test]
     fn known_tier_wrappers_and_intrinsics() {
-        // Every x86-64 CI host has AVX2+FMA; a missing tier is a failure, not a skip.
+        // Every x86-64 CI host has AVX2+FMA; serialize against parallel token-permutation tests.
+        let _lock = archmage::testing::lock_token_testing();
         let token = X64V3Token::summon().expect("x86-64 test host without AVX2+FMA");
         let inp = ramp(29, 0.01, 2.0);
         let mut out = vec![0.0; 29];
