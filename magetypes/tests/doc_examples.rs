@@ -6,7 +6,6 @@
 //!
 //! Run: `cargo test -p magetypes --test doc_examples`
 
-#![allow(deprecated)] // Intentional coverage of retained Magetypes compatibility APIs.
 #![allow(dead_code, unused_variables)]
 
 use archmage::ScalarToken;

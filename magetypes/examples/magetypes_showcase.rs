@@ -5,7 +5,6 @@
 //!
 //! Run with: cargo run --example magetypes_showcase
 
-#![allow(deprecated)] // Exercises the published flat approximation APIs.
 #![allow(dead_code)]
 
 // This example is x86_64-only (uses AVX2 intrinsics + magetypes).

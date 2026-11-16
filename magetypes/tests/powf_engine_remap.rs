@@ -1,5 +1,4 @@
 //! Independent composition oracle from the pre-remap power methods (main 6bfd83d7).
-#![allow(deprecated)] // Intentional coverage of retained Magetypes compatibility APIs.
 #![forbid(unsafe_code)]
 #[cfg(any(
     target_arch = "x86_64",
@@ -40,22 +39,18 @@ fn check(token: Token) {
                     let low = V::blend(v.simd_eq(sp(0.)), sp(0.), low);
                     let mid = (v.log2_midp() * sp(n)).exp2_midp();
                     let unchecked = (v.log2_midp_unchecked() * sp(n)).exp2_midp_unchecked();
-                    for (name, actual, expected) in [
-                        ("pow_lowp", v.pow_lowp(n), low),
-                        ("pow_lowp_unchecked", v.pow_lowp_unchecked(n), low),
-                        ("pow_midp", v.pow_midp(n), mid),
-                        ("pow_midp_precise", v.pow_midp_precise(n), mid),
-                        ("pow_midp_unchecked", v.pow_midp_unchecked(n), unchecked),
+                    for (actual, expected) in [
+                        (v.pow_lowp(n), low),
+                        (v.pow_lowp_unchecked(n), low),
+                        (v.pow_midp(n), mid),
+                        (v.pow_midp_precise(n), mid),
+                        (v.pow_midp_unchecked(n), unchecked),
                     ] {
                         for (a, b) in actual.to_array().into_iter().zip(expected.to_array()) {
                             if b.is_nan() {
                                 assert!(a.is_nan());
                             } else {
-                                assert_eq!(
-                                    a.to_bits(),
-                                    b.to_bits(),
-                                    "{name}, n={n}, input={values:?}"
-                                );
+                                assert_eq!(a.to_bits(), b.to_bits());
                             }
                         }
                     }
@@ -69,7 +64,7 @@ fn check(token: Token) {
     width!(f32x16, 16);
 }
 #[test]
-fn published_power_matches_frozen_composition() {
+fn configured_engine_matches_frozen_composition() {
     check_scalar(archmage::ScalarToken);
     #[cfg(target_arch = "x86_64")]
     {

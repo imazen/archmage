@@ -1,6 +1,5 @@
 //! Canonical HIGHP values come from an independent exact-rational graph oracle.
-#![allow(deprecated)] // Intentional coverage of retained Magetypes compatibility APIs.
-use magemath::powf::{self, PowfErrorKind, PowfExecution, PowfOptions};
+use magetypes::powf::{self, PowfErrorKind, PowfExecution, PowfOptions};
 mod fixtures {
     include!("common/highp_vectors.rs");
 }
@@ -76,13 +75,10 @@ fn canonical_checked_masks_and_const_assumptions() {
 // cannot catch lane ordering, gather or packing mistakes.
 #[archmage::magetypes(v3, neon, wasm128, scalar)]
 fn vector4(token: Token, x: [f32; 4], n: f32) -> [f32; 4] {
-    magemath::powf::try_powf_f32x4_with::<CALLER, _>(
-        token,
-        magetypes::simd::generic::f32x4::from_array_t(token, x),
-        n,
-    )
-    .unwrap()
-    .to_array()
+    magetypes::simd::generic::f32x4::from_array_t(token, x)
+        .try_powf_with::<CALLER>(n)
+        .unwrap()
+        .to_array()
 }
 fn mixed<const N: usize>() {
     let mut cases = fixtures::CASES.to_vec();

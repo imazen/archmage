@@ -1,6 +1,6 @@
 use super::*;
 extern crate std;
-#[path = "../../tests/data/powf.rs"]
+#[path = "test_vectors.rs"]
 mod fixtures;
 
 // Keep full frozen fixtures available without making every ordinary test/Miri
@@ -80,8 +80,8 @@ macro_rules! check {
         for domain in [1, 2] {
             let input = [0.0, 1.0, 4.0, 16.0];
             assert_eq!(
-                magetypes::simd::generic::f32x4::from_array_t(token, input)
-                    .configured_powf_runtime(token, 0.5, options(domain))
+                crate::simd::generic::f32x4::from_array_t(token, input)
+                    .try_powf_runtime(0.5, options(domain))
                     .unwrap()
                     .to_array()
                     .map(f32::to_bits),
@@ -134,8 +134,8 @@ macro_rules! check {
                             });
                             assert_eq!(
                                 const_options!(opts, |FLAGS| {
-                                    magetypes::simd::generic::$ty::from_array_t(token, input)
-                                        .configured_powf_with::<FLAGS>(token, exponent)
+                                    crate::simd::generic::$ty::from_array_t(token, input)
+                                        .try_powf_with::<FLAGS>(exponent)
                                 })
                                 .unwrap()
                                 .to_array()
@@ -143,8 +143,8 @@ macro_rules! check {
                                 expected
                             );
                             assert_eq!(
-                                magetypes::simd::generic::$ty::from_array_t(token, input)
-                                    .configured_powf_runtime(token, exponent, opts)
+                                crate::simd::generic::$ty::from_array_t(token, input)
+                                    .try_powf_runtime(exponent, opts)
                                     .unwrap()
                                     .to_array()
                                     .map(f32::to_bits),
@@ -165,17 +165,19 @@ macro_rules! check {
             let options = options(allow_zero);
             macro_rules! width {
                 ($ty:ident, $width:literal) => {{
-                    let result = magetypes::simd::generic::$ty::from_array_t(token, [b; $width])
-                        .configured_powf_runtime(token, n, options);
+                    let result = crate::simd::generic::$ty::from_array_t(token, [b; $width])
+                        .try_powf_runtime(n, options);
                     for execution in [PowfExecution::Caller, PowfExecution::Automatic] {
                         let opts = PowfOptions {
                             execution,
                             ..options
                         };
-                        let constant = const_options!(opts, |FLAGS| {
-                            magetypes::simd::generic::$ty::from_array_t(token, [b; $width])
-                                .configured_powf_with::<FLAGS>(token, n)
-                        });
+                        let constant =
+                            const_options!(opts, |FLAGS| crate::simd::generic::$ty::from_array_t(
+                                token,
+                                [b; $width]
+                            )
+                            .try_powf_with::<FLAGS>(n));
                         assert_eq!(
                             constant.map(|v| v.to_array().map(f32::to_bits)),
                             result.map(|v| v.to_array().map(f32::to_bits)),
@@ -221,8 +223,8 @@ fn scalar_array_and_auto_have_identical_graph() {
             let constant = const_options!(options, |FLAGS| try_powf_with::<FLAGS>(b, n));
             assert_eq!(constant.map(f32::to_bits), result.map(f32::to_bits));
             assert_eq!(
-                const_options!(options, |FLAGS| magetypes::simd::scalar::f32x1(b)
-                    .configured_powf_with::<FLAGS>(archmage::ScalarToken, n))
+                const_options!(options, |FLAGS| crate::simd::scalar::f32x1(b)
+                    .try_powf_with::<FLAGS>(n))
                 .map(|v| v.0.to_bits()),
                 result.map(f32::to_bits)
             );
@@ -232,8 +234,8 @@ fn scalar_array_and_auto_have_identical_graph() {
                 result.map(|v| [v.to_bits()])
             );
             assert_eq!(
-                magetypes::simd::scalar::f32x1(b)
-                    .configured_powf_runtime(archmage::ScalarToken, n, options)
+                crate::simd::scalar::f32x1(b)
+                    .try_powf_runtime(n, options)
                     .map(|v| v.0.to_bits()),
                 result.map(f32::to_bits),
             );
@@ -351,8 +353,8 @@ macro_rules! payloads {
                             input[lane] = nan;
                             let opts = options($domain);
                             let constant = const_options!(opts, |FLAGS| {
-                                magetypes::simd::generic::$ty::from_array_t(token, input)
-                                    .configured_powf_with::<FLAGS>(token, 2.4)
+                                crate::simd::generic::$ty::from_array_t(token, input)
+                                    .try_powf_with::<FLAGS>(2.4)
                             });
                             assert_eq!(
                                 constant.unwrap_err(),
@@ -362,8 +364,8 @@ macro_rules! payloads {
                                 }
                             );
                             let constant = const_options!(opts, |FLAGS| {
-                                magetypes::simd::generic::$ty::from_array_t(token, [1.0; $n])
-                                    .configured_powf_with::<FLAGS>(token, nan)
+                                crate::simd::generic::$ty::from_array_t(token, [1.0; $n])
+                                    .try_powf_with::<FLAGS>(nan)
                             });
                             assert_eq!(
                                 constant.unwrap_err(),
@@ -373,8 +375,8 @@ macro_rules! payloads {
                                 }
                             );
                             assert_eq!(
-                                magetypes::simd::generic::$ty::from_array_t(token, input)
-                                    .configured_powf_runtime(token, 2.4, options($domain))
+                                crate::simd::generic::$ty::from_array_t(token, input)
+                                    .try_powf_runtime(2.4, options($domain))
                                     .unwrap_err(),
                                 PowfError {
                                     kind: PowfErrorKind::InvalidBase,
@@ -385,8 +387,8 @@ macro_rules! payloads {
                                 $domain
                             );
                             assert_eq!(
-                                magetypes::simd::generic::$ty::from_array_t(token, [1.0; $n])
-                                    .configured_powf_runtime(token, nan, options($domain))
+                                crate::simd::generic::$ty::from_array_t(token, [1.0; $n])
+                                    .try_powf_runtime(nan, options($domain))
                                     .unwrap_err(),
                                 PowfError {
                                     kind: PowfErrorKind::InvalidExponent,
@@ -756,76 +758,5 @@ fn positive_gamma_preserves_nonzero_graph_and_rejects_zero() {
     }
     for bits in [128, 129, 131, 255, 256] {
         assert!(!PowfOptions::valid(bits));
-    }
-}
-
-// Test-only migration glue: exercise the owner's public vector entries while
-// preserving every original numerical assertion and the caller proof.
-trait ConfiguredPowf<T>: Sized {
-    fn configured_powf_with<const F: u32>(self, token: T, n: f32) -> Result<Self, PowfError>;
-    fn configured_powf_runtime(
-        self,
-        token: T,
-        n: f32,
-        options: PowfOptions,
-    ) -> Result<Self, PowfError>;
-}
-macro_rules! configured_vector {
-    ($v:ident,$bound:ident,$constant:ident,$runtime:ident) => {
-        impl<T: magetypes::simd::backends::$bound> ConfiguredPowf<T>
-            for magetypes::simd::generic::$v<T>
-        {
-            fn configured_powf_with<const F: u32>(
-                self,
-                token: T,
-                n: f32,
-            ) -> Result<Self, PowfError> {
-                super::$constant::<F, _>(token, self, n)
-            }
-            fn configured_powf_runtime(
-                self,
-                token: T,
-                n: f32,
-                options: PowfOptions,
-            ) -> Result<Self, PowfError> {
-                super::$runtime(token, self, n, options)
-            }
-        }
-    };
-}
-configured_vector!(
-    f32x4,
-    F32x4Convert,
-    try_powf_f32x4_with,
-    try_powf_f32x4_runtime
-);
-configured_vector!(
-    f32x8,
-    F32x8Convert,
-    try_powf_f32x8_with,
-    try_powf_f32x8_runtime
-);
-#[cfg(feature = "w512")]
-configured_vector!(
-    f32x16,
-    F32x16Convert,
-    try_powf_f32x16_with,
-    try_powf_f32x16_runtime
-);
-impl ConfiguredPowf<archmage::ScalarToken> for magetypes::simd::scalar::f32x1 {
-    fn configured_powf_with<const F: u32>(
-        self,
-        _: archmage::ScalarToken,
-        n: f32,
-    ) -> Result<Self, PowfError> {
-        try_powf_with::<F>(self.0, n).map(Self)
-    }
-    fn configured_powf_runtime(
-        self,
-        _: archmage::ScalarToken,
-        n: f32,
-        options: PowfOptions,
-    ) -> Result<Self, PowfError> {
-        try_powf_runtime(self.0, n, options).map(Self)
     }
 }

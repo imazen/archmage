@@ -1,5 +1,4 @@
 //! Directed legacy exceptional-value observations; output bits are not accuracy claims.
-#![allow(deprecated)] // Deliberately validates the retained Magetypes compatibility implementation.
 #![forbid(unsafe_code)]
 use archmage::SimdToken;
 #[archmage::magetypes(v3, neon, wasm128, scalar)]

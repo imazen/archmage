@@ -68,7 +68,7 @@ fn run<const IN_CONTEXT: bool, const OPTIONS: u32, const N: usize>(
 }
 #[inline(always)]
 fn scalar<
-    T: magetypes::simd::backends::F64x2Backend,
+    T: crate::simd::backends::F64x2Backend,
     const MODE: usize,
     const OPTIONS: u32,
     const N: usize,
