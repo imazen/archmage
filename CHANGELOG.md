@@ -175,6 +175,7 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 - Add a flat `magetypes::scalar` module with `#![no_std]` portable helpers (`minimum_f{32,64}`, `maximum_f{32,64}`, ties-to-even `round_f{32,64}`, `floor_f{32,64}`, `ceil_f{32,64}`, `sqrt_f{32,64}`, `mul_add_fused_f{32,64}`, `mul_sub_fused_f{32,64}`) and token-matched 1-instruction helpers (`F32ScalarBackend` / `F64ScalarBackend` supertraits: `min_fast_f{32,64}`, `max_fast_f{32,64}`, `mul_add_relaxed_f{32,64}`, `mul_sub_relaxed_f{32,64}`, `to_i32`, `to_i32_fast`).
 - Add unchecked in-range truncation `to_i32_fast` on `f32x4`, `f32x8`, and `f32x16` (plus `f32x1::to_i32_fast`, `magetypes::scalar::to_i32_fast`, and `convert_f32_to_i32_fast` on `F32x4Convert`, `F32x8Convert`, and `F32x16Convert`), omitting x86 saturation fixups and using `i32x4.relaxed_trunc_f32x4_s` on `Wasm128Token` when compiled with `relaxed-simd` (#158).
 - Add native 3-channel RGB helpers on `f32x4` and `f32x8` (`deinterleave_3ch`, `interleave_3ch`, `load_4_rgb_u8_t`, `store_4_rgb_u8`, `load_8_rgb_u8_t`, `store_8_rgb_u8`, and corresponding backend trait methods on `F32x4Backend` / `F32x8Backend`) across x86 (`X64V3Token` and AVX-512 tokens, with a V4 override for `f32x4::store_4_rgb_u8`), AArch64 `NeonToken`, `Wasm128Token`, and `ScalarToken` (#169).
+- Add `load_padded_t(token, slice, pad)` and `store_prefix(out)` across all 30 generic vector types (`f32x4`..`u64x8`) for branchless single-vector remainder handling paired with `partition_slice_t` / `partition_slice_mut_t`.
 
 #### Fixed
 

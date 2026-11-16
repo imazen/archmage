@@ -162,6 +162,26 @@ impl<T: F32x16Backend> f32x16<T> {
         Self(T::from_array(token, arr), token)
     }
 
+    /// Load up to `16` elements from `slice`, filling remaining high lanes with `pad`.
+    ///
+    /// Designed for single-vector slice tails after [`partition_slice_t`](Self::partition_slice_t)
+    /// (typically paired with [`store_prefix`](Self::store_prefix)).
+    ///
+    /// # Panics
+    ///
+    /// Panics if `slice.len() > 16`.
+    #[inline(always)]
+    pub fn load_padded_t(token: T, slice: &[f32], pad: f32) -> Self {
+        assert!(
+            slice.len() <= 16,
+            "f32x16::load_padded_t requires slice.len() <= 16, got {}",
+            slice.len(),
+        );
+        let mut arr = [pad; 16];
+        arr[..slice.len()].copy_from_slice(slice);
+        Self(T::from_array(token, arr), token)
+    }
+
     /// Split a slice into SIMD-width chunks and a scalar remainder.
     ///
     /// Returns `(&[[f32; 16]], &[f32])` — fixed-size arrays suitable
@@ -186,6 +206,25 @@ impl<T: F32x16Backend> f32x16<T> {
     #[inline(always)]
     pub fn store(self, out: &mut [f32; 16]) {
         T::store(self.1, self.0, out);
+    }
+
+    /// Store the low `out.len()` lanes into `out`.
+    ///
+    /// Designed for single-vector slice tails after [`partition_slice_mut_t`](Self::partition_slice_mut_t)
+    /// (typically paired with [`load_padded_t`](Self::load_padded_t)).
+    ///
+    /// # Panics
+    ///
+    /// Panics if `out.len() > 16`.
+    #[inline(always)]
+    pub fn store_prefix(self, out: &mut [f32]) {
+        assert!(
+            out.len() <= 16,
+            "f32x16::store_prefix requires out.len() <= 16, got {}",
+            out.len(),
+        );
+        let arr = T::to_array(self.1, self.0);
+        out.copy_from_slice(&arr[..out.len()]);
     }
 
     /// Convert to array.
@@ -1064,6 +1103,15 @@ impl<T: F32x16Backend> f32x16<T> {
     #[forbid(unsafe_code)]
     pub fn from_slice(token: T, slice: &[f32]) -> Self {
         Self::from_slice_t(token, slice)
+    }
+    #[inline(always)]
+    #[doc = "Deprecated token-taking spelling of [`Self::load_padded_t`].\n\nUse `load_padded_t` to keep explicit-token construction when `load_padded` becomes tokenless in magetypes 0.10."]
+    #[deprecated(
+        note = "Use load_padded_t(token, slice, pad); load_padded becomes tokenless in magetypes 0.10."
+    )]
+    #[forbid(unsafe_code)]
+    pub fn load_padded(token: T, slice: &[f32], pad: f32) -> Self {
+        Self::load_padded_t(token, slice, pad)
     }
     #[inline(always)]
     #[doc = "Deprecated token-taking spelling of [`Self::partition_slice_t`].\n\nUse `partition_slice_t` to keep explicit-token construction when `partition_slice` becomes tokenless in magetypes 0.10."]

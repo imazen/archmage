@@ -128,6 +128,34 @@ assert_eq!(buf[0], 1.0);
 assert_eq!(buf[8], 255.0);
 ```
 
+For pure lane-wise kernels where executing one padded vector costs less code size than duplicating the tail loop in scalar code, use [`load_padded_t`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.f32x8.html#method.load_padded_t) and [`store_prefix`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.f32x8.html#method.store_prefix) with a benign `pad` value instead. Keep explicit scalar tails (`core` + `magetypes::scalar` or `magemath`) for expensive transcendentals (where extra padded lanes cost more runtime than scalar), reductions whose identity isn't convenient, or domain-checked operations where dummy lanes could distort outputs or trigger traps:
+
+```rust
+use archmage::prelude::*;
+
+#[attune(_*_t, define(f32x8))]
+fn affine_padded(token: Token, src: &[f32], dst: &mut [f32], scale: f32, bias: f32) {
+    assert_eq!(src.len(), dst.len());
+    let s = f32x8::splat_t(token, scale);
+    let b = f32x8::splat_t(token, bias);
+    let (src_chunks, src_tail) = f32x8::partition_slice_t(token, src);
+    let (dst_chunks, dst_tail) = f32x8::partition_slice_mut_t(token, dst);
+    for (sc, dc) in src_chunks.iter().zip(dst_chunks) {
+        f32x8::load_t(token, sc).mul_add_relaxed(s, b).store(dc);
+    }
+    if !src_tail.is_empty() {
+        f32x8::load_padded_t(token, src_tail, 0.0)
+            .mul_add_relaxed(s, b)
+            .store_prefix(dst_tail);
+    }
+}
+
+let src = [1.0f32, 2.0, 3.0];
+let mut dst = [0.0f32; 3];
+attuned!(affine_padded(&src, &mut dst, 2.0, 1.0));
+assert_eq!(dst, [3.0, 5.0, 7.0]);
+```
+
 ## What's included
 
 - 30 vector types: `f32`, `f64`, and signed and unsigned 8- to 64-bit integers,

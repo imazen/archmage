@@ -490,3 +490,71 @@ pub mod fast_rgb_ops {
         }
     }
 }
+
+pub mod padded_tails {
+    //! Single-vector padded tail handling using `partition_slice_t`,
+    //! `partition_slice_mut_t`, `load_padded_t`, and `store_prefix`.
+
+    #[archmage::attune(_*_t, +v4x(cfg(avx512)), define(f32x8))]
+    fn affine_clamp_padded_inner(
+        token: Token,
+        src: &[f32],
+        dst: &mut [f32],
+        scale: f32,
+        bias: f32,
+    ) {
+        assert_eq!(src.len(), dst.len());
+        let s = f32x8::splat_t(token, scale);
+        let b = f32x8::splat_t(token, bias);
+        let lo = f32x8::zero_t(token);
+        let hi = f32x8::splat_t(token, 255.0);
+
+        let (src_chunks, src_tail) = f32x8::partition_slice_t(token, src);
+        let (dst_chunks, dst_tail) = f32x8::partition_slice_mut_t(token, dst);
+        for (sc, dc) in src_chunks.iter().zip(dst_chunks) {
+            f32x8::load_t(token, sc)
+                .mul_add_relaxed(s, b)
+                .max_fast(lo)
+                .min_fast(hi)
+                .store(dc);
+        }
+        if !src_tail.is_empty() {
+            f32x8::load_padded_t(token, src_tail, 0.0)
+                .mul_add_relaxed(s, b)
+                .max_fast(lo)
+                .min_fast(hi)
+                .store_prefix(dst_tail);
+        }
+    }
+
+    pub fn affine_clamp_padded(src: &[f32], dst: &mut [f32], scale: f32, bias: f32) {
+        archmage::attuned!(
+            affine_clamp_padded_inner(src, dst, scale, bias),
+            [_v4x(cfg(avx512)), _v3, _neon, _wasm128, _scalar]
+        );
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use archmage::ScalarToken;
+        use archmage::testing::{CompileTimePolicy, for_each_token_permutation};
+
+        use super::*;
+
+        #[test]
+        fn padded_tails_match_scalar_across_lengths_and_tiers() {
+            let _lock = archmage::testing::lock_token_testing();
+            for len in [0usize, 1, 7, 8, 13, 24] {
+                let src: Vec<f32> = (0..len).map(|i| (i as f32) * 19.5 - 25.0).collect();
+                let mut ref_dst = vec![0.0f32; len];
+                affine_clamp_padded_inner_scalar_t(ScalarToken, &src, &mut ref_dst, 1.5, 10.0);
+
+                let _ = for_each_token_permutation(CompileTimePolicy::Warn, |_| {
+                    let mut dst = vec![-123.0f32; len];
+                    affine_clamp_padded(&src, &mut dst, 1.5, 10.0);
+                    assert_eq!(dst, ref_dst, "len={len}");
+                });
+            }
+        }
+    }
+}

@@ -395,13 +395,13 @@ fn gen_methods(ty: &SimdType) -> String {
 
     // ====== Construction ======
     code.push_str("    // ====== Construction (token-gated) ======\n\n");
-    code.push_str(&gen_construction(elem, lanes));
+    code.push_str(&gen_construction(&name, elem, lanes));
     code.push_str(&gen_partition_slice(ty));
     code.push_str(&gen_partition_slice_mut(ty));
 
     // ====== Accessors ======
     code.push_str("    // ====== Accessors ======\n\n");
-    code.push_str(&gen_accessors(elem, lanes));
+    code.push_str(&gen_accessors(&name, elem, lanes));
 
     // ====== Math ======
     code.push_str("    // ====== Math ======\n\n");
@@ -509,7 +509,7 @@ fn gen_methods(ty: &SimdType) -> String {
     code
 }
 
-fn gen_construction(elem: &str, lanes: usize) -> String {
+fn gen_construction(ty_name: &str, elem: &str, lanes: usize) -> String {
     // Token threading: backend trait construction methods now take `self`,
     // and the generic struct stores `T` (ZST), so we pass the user's token
     // through to the backend AND store it for later operator/method use.
@@ -545,15 +545,54 @@ fn gen_construction(elem: &str, lanes: usize) -> String {
                 Self(T::from_array(token, arr), token)
             }}
 
+            /// Load up to `{lanes}` elements from `slice`, filling remaining high lanes with `pad`.
+            ///
+            /// Designed for single-vector slice tails after [`partition_slice_t`](Self::partition_slice_t)
+            /// (typically paired with [`store_prefix`](Self::store_prefix)).
+            ///
+            /// # Panics
+            ///
+            /// Panics if `slice.len() > {lanes}`.
+            #[inline(always)]
+            pub fn load_padded_t(token: T, slice: &[{elem}], pad: {elem}) -> Self {{
+                assert!(
+                    slice.len() <= {lanes},
+                    \"{ty_name}::load_padded_t requires slice.len() <= {lanes}, got {{}}\",
+                    slice.len(),
+                );
+                let mut arr = [pad; {lanes}];
+                arr[..slice.len()].copy_from_slice(slice);
+                Self(T::from_array(token, arr), token)
+            }}
+
     "}
 }
 
-fn gen_accessors(elem: &str, lanes: usize) -> String {
+fn gen_accessors(ty_name: &str, elem: &str, lanes: usize) -> String {
     formatdoc! {"
         \x20   /// Store to array.
             #[inline(always)]
             pub fn store(self, out: &mut [{elem}; {lanes}]) {{
                 T::store(self.1, self.0, out);
+            }}
+
+            /// Store the low `out.len()` lanes into `out`.
+            ///
+            /// Designed for single-vector slice tails after [`partition_slice_mut_t`](Self::partition_slice_mut_t)
+            /// (typically paired with [`load_padded_t`](Self::load_padded_t)).
+            ///
+            /// # Panics
+            ///
+            /// Panics if `out.len() > {lanes}`.
+            #[inline(always)]
+            pub fn store_prefix(self, out: &mut [{elem}]) {{
+                assert!(
+                    out.len() <= {lanes},
+                    \"{ty_name}::store_prefix requires out.len() <= {lanes}, got {{}}\",
+                    out.len(),
+                );
+                let arr = T::to_array(self.1, self.0);
+                out.copy_from_slice(&arr[..out.len()]);
             }}
 
             /// Convert to array.
