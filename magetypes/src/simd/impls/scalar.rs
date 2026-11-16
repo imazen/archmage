@@ -140,6 +140,16 @@ impl F32x4Backend for archmage::ScalarToken {
     }
 
     #[inline(always)]
+    fn min_fast(self, a: [f32; 4], b: [f32; 4]) -> [f32; 4] {
+        core::array::from_fn(|i| if a[i] < b[i] { a[i] } else { b[i] })
+    }
+
+    #[inline(always)]
+    fn max_fast(self, a: [f32; 4], b: [f32; 4]) -> [f32; 4] {
+        core::array::from_fn(|i| if a[i] > b[i] { a[i] } else { b[i] })
+    }
+
+    #[inline(always)]
     fn sqrt(self, a: [f32; 4]) -> [f32; 4] {
         let mut r = [0.0f32; 4];
         for i in 0..4 {
@@ -527,6 +537,16 @@ impl F32x8Backend for archmage::ScalarToken {
             a[6].max(b[6]),
             a[7].max(b[7]),
         ]
+    }
+
+    #[inline(always)]
+    fn min_fast(self, a: [f32; 8], b: [f32; 8]) -> [f32; 8] {
+        core::array::from_fn(|i| if a[i] < b[i] { a[i] } else { b[i] })
+    }
+
+    #[inline(always)]
+    fn max_fast(self, a: [f32; 8], b: [f32; 8]) -> [f32; 8] {
+        core::array::from_fn(|i| if a[i] > b[i] { a[i] } else { b[i] })
     }
 
     #[inline(always)]

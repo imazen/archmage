@@ -71,6 +71,18 @@ pub trait F32x16Backend: SimdToken + Sealed + Copy + 'static {
     /// Lane-wise maximum.
     fn max(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
+    /// Fast single-instruction lane-wise minimum (NaN and `-0.0`/`+0.0` unspecified).
+    #[inline(always)]
+    fn min_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        Self::min(self, a, b)
+    }
+
+    /// Fast single-instruction lane-wise maximum (NaN and `-0.0`/`+0.0` unspecified).
+    #[inline(always)]
+    fn max_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        Self::max(self, a, b)
+    }
+
     /// Square root.
     fn sqrt(self, a: Self::Repr) -> Self::Repr;
 

@@ -71,6 +71,18 @@ pub trait F32x4Backend: SimdToken + Sealed + Copy + 'static {
     /// Lane-wise maximum.
     fn max(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
+    /// Fast single-instruction lane-wise minimum (NaN and `-0.0`/`+0.0` unspecified).
+    #[inline(always)]
+    fn min_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        Self::min(self, a, b)
+    }
+
+    /// Fast single-instruction lane-wise maximum (NaN and `-0.0`/`+0.0` unspecified).
+    #[inline(always)]
+    fn max_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        Self::max(self, a, b)
+    }
+
     /// Square root.
     fn sqrt(self, a: Self::Repr) -> Self::Repr;
 
@@ -250,5 +262,41 @@ pub trait F32x4Backend: SimdToken + Sealed + Copy + 'static {
             i += 1;
         }
         out
+    }
+
+    /// Deinterleave 4 packed RGB pixels (12 floats) from AoS into planar `[R, G, B]`.
+    #[inline(always)]
+    fn deinterleave_3ch_repr(self, rgb: [Self::Repr; 3]) -> [Self::Repr; 3] {
+        let [v0, v1, v2] = rgb.map(|v| Self::to_array(self, v));
+        [
+            Self::from_array(self, [v0[0], v0[3], v1[2], v2[1]]),
+            Self::from_array(self, [v0[1], v1[0], v1[3], v2[2]]),
+            Self::from_array(self, [v0[2], v1[1], v2[0], v2[3]]),
+        ]
+    }
+
+    /// Interleave 3 planar `[R, G, B]` vectors (4 pixels) into 3 AoS RGB vectors.
+    #[inline(always)]
+    fn interleave_3ch_repr(self, channels: [Self::Repr; 3]) -> [Self::Repr; 3] {
+        let [r, g, b] = channels.map(|c| Self::to_array(self, c));
+        [
+            Self::from_array(self, [r[0], g[0], b[0], r[1]]),
+            Self::from_array(self, [g[1], b[1], r[2], g[2]]),
+            Self::from_array(self, [b[2], r[3], g[3], b[3]]),
+        ]
+    }
+
+    /// Load 4 packed RGB `u8` pixels (12 bytes) into planar `f32` `(R, G, B)`.
+    #[inline(always)]
+    fn load_rgb_bytes(self, rgb: &[u8; 12]) -> (Self::Repr, Self::Repr, Self::Repr) {
+        let ch = |c| Self::from_array(self, core::array::from_fn(|i| rgb[i * 3 + c] as f32));
+        (ch(0), ch(1), ch(2))
+    }
+
+    /// Round-to-nearest-even, clamp to `0..=255`, and interleave into 4 RGB pixels.
+    #[inline(always)]
+    fn store_rgb_bytes(self, r: Self::Repr, g: Self::Repr, b: Self::Repr) -> [u8; 12] {
+        let [rb, gb, bb] = [r, g, b].map(|v| Self::to_u8_bytes(self, v));
+        core::array::from_fn(|i| [rb[i / 3], gb[i / 3], bb[i / 3]][i % 3])
     }
 }

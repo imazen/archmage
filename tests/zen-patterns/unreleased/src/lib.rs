@@ -1,5 +1,6 @@
 //! Integration patterns that depend on features introduced in 0.9.32
-//! (`magemath` with caller-proof SIMD tails and `#[attune(..., suppress_const_test)]`).
+//! (`magemath` with caller-proof SIMD tails, `#[attune(..., suppress_const_test)]`,
+//! `f32` `min_fast`/`max_fast`/`to_i32_fast`, and 3-channel RGB block helpers).
 //!
 //! Patterns that already compile on published 0.9.31 live in `../released`.
 
@@ -274,6 +275,126 @@ pub mod magemath_tails {
                     lane_mask: 1 << 2,
                 })
             );
+        }
+    }
+}
+
+pub mod fast_rgb_ops {
+    //! Generic `F32x8Backend + F32x8Convert` RGB kernel combining native
+    //! `load_8_rgb_u8_t`, `interleave_3ch` / `deinterleave_3ch`, `max_fast` /
+    //! `min_fast`, `to_i32_fast`, and `store_8_rgb_u8` inside `#[archmage::attune]`.
+
+    use magetypes::simd::backends::{F32x8Backend, F32x8Convert};
+    use magetypes::simd::generic::f32x8;
+
+    #[inline(always)]
+    pub fn process_rgb8_block<T: F32x8Backend + F32x8Convert>(
+        token: T,
+        rgb: &[u8; 24],
+        scale: f32,
+        bias: f32,
+    ) -> ([u8; 24], [i32; 8]) {
+        let (r, g, b) = f32x8::load_8_rgb_u8_t(token, rgb);
+        // Round-trip planar -> AoS -> planar inside the generic kernel.
+        let [r, g, b] = f32x8::deinterleave_3ch(f32x8::interleave_3ch([r, g, b]));
+        let s = f32x8::splat_t(token, scale);
+        let o = f32x8::splat_t(token, bias);
+        let lo = f32x8::zero_t(token);
+        let hi = f32x8::splat_t(token, 255.0);
+
+        let r = r.mul_add_portable(s, o).max_fast(lo).min_fast(hi);
+        let g = g.mul_add_portable(s, o).max_fast(lo).min_fast(hi);
+        let b = b.mul_add_portable(s, o).max_fast(lo).min_fast(hi);
+
+        let quant_r = r.to_i32_fast().to_array();
+        (f32x8::store_8_rgb_u8(r, g, b), quant_r)
+    }
+
+    #[archmage::attune(_*_t, +v4x(cfg(avx512)), define(f32x8))]
+    fn transform_rgb_slice_inner(
+        token: Token,
+        src: &[u8],
+        dst: &mut [u8],
+        quant_r_out: &mut [i32],
+        scale: f32,
+        bias: f32,
+    ) {
+        assert_eq!(src.len(), dst.len());
+        assert_eq!(src.len() % 3, 0);
+        assert_eq!(quant_r_out.len(), src.len() / 3);
+
+        let (src_chunks, src_tail) = src.as_chunks::<24>();
+        let (dst_chunks, dst_tail) = dst.as_chunks_mut::<24>();
+        let (q_chunks, q_tail) = quant_r_out.as_chunks_mut::<8>();
+        for ((s, d), q) in src_chunks
+            .iter()
+            .zip(dst_chunks.iter_mut())
+            .zip(q_chunks.iter_mut())
+        {
+            let (packed, qr) = process_rgb8_block(token, s, scale, bias);
+            *d = packed;
+            *q = qr;
+        }
+
+        for ((s_px, d_px), q_slot) in src_tail
+            .chunks_exact(3)
+            .zip(dst_tail.chunks_exact_mut(3))
+            .zip(q_tail.iter_mut())
+        {
+            let r = (s_px[0] as f32 * scale + bias).clamp(0.0, 255.0);
+            let g = (s_px[1] as f32 * scale + bias).clamp(0.0, 255.0);
+            let b = (s_px[2] as f32 * scale + bias).clamp(0.0, 255.0);
+            *q_slot = r as i32;
+            d_px[0] = r.round_ties_even() as u8;
+            d_px[1] = g.round_ties_even() as u8;
+            d_px[2] = b.round_ties_even() as u8;
+        }
+    }
+
+    pub fn transform_rgb_slice(
+        src: &[u8],
+        dst: &mut [u8],
+        quant_r_out: &mut [i32],
+        scale: f32,
+        bias: f32,
+    ) {
+        archmage::attuned!(
+            transform_rgb_slice_inner(src, dst, quant_r_out, scale, bias),
+            [_v4x(cfg(avx512)), _v3, _neon, _wasm128, _scalar]
+        );
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use archmage::ScalarToken;
+        use archmage::testing::{CompileTimePolicy, for_each_token_permutation};
+
+        use super::*;
+
+        #[test]
+        fn fast_rgb_kernel_matches_scalar_across_tiers() {
+            let pixels = 11;
+            let src: Vec<u8> = (0..(pixels * 3))
+                .map(|i| ((i * 29 + 7) & 0xff) as u8)
+                .collect();
+            let mut ref_dst = vec![0u8; pixels * 3];
+            let mut ref_q = vec![0i32; pixels];
+            transform_rgb_slice_inner_scalar_t(
+                ScalarToken,
+                &src,
+                &mut ref_dst,
+                &mut ref_q,
+                1.25,
+                -10.0,
+            );
+
+            let _ = for_each_token_permutation(CompileTimePolicy::Warn, |_| {
+                let mut dst = vec![0u8; pixels * 3];
+                let mut q = vec![0i32; pixels];
+                transform_rgb_slice(&src, &mut dst, &mut q, 1.25, -10.0);
+                assert_eq!(dst, ref_dst);
+                assert_eq!(q, ref_q);
+            });
         }
     }
 }

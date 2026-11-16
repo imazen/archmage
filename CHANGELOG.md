@@ -166,6 +166,12 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 
 ### [0.9.32] - 2026-11-16
 
+#### Added
+
+- Add relaxed single-instruction `min_fast` and `max_fast` on `f32x4`, `f32x8`, and `f32x16` (plus `F32x4Backend`, `F32x8Backend`, and `F32x16Backend`), emitting `vminps`/`vmaxps` on x86, `vminnmq_f32`/`vmaxnmq_f32` on NEON, `f32x4.pmin`/`f32x4.pmax` on WASM SIMD128, and branchless compares on `ScalarToken` (#156).
+- Add unchecked in-range truncation `to_i32_fast` on `f32x4`, `f32x8`, and `f32x16` (plus `convert_f32_to_i32_fast` on `F32x4Convert`, `F32x8Convert`, and `F32x16Convert`), omitting x86 saturation fixups and using `i32x4.relaxed_trunc_f32x4_s` on `Wasm128Token` when compiled with `relaxed-simd` (#158).
+- Add native 3-channel RGB helpers on `f32x4` and `f32x8` (`deinterleave_3ch`, `interleave_3ch`, `load_4_rgb_u8_t`, `store_4_rgb_u8`, `load_8_rgb_u8_t`, `store_8_rgb_u8`, and corresponding backend trait methods on `F32x4Backend` / `F32x8Backend`) across x86 (`X64V3Token` and AVX-512 tokens, with a V4 override for `f32x4::store_4_rgb_u8`), AArch64 `NeonToken`, `Wasm128Token`, and `ScalarToken` (#169).
+
 #### Fixed
 
 - `log2_midp`, `ln_midp`, `log10_midp`, and `log2_midp_precise` now preserve `NaN` inputs instead of falling through to finite negative outputs, while still mapping `±0.0` to `-inf` and negative inputs to `NaN`.

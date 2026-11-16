@@ -56,6 +56,18 @@ pub(crate) fn msub_f64x2(_token: Wasm128Token, a: v128, b: v128, c: v128) -> v12
     w::f64x2_relaxed_madd(a, b, w::f64x2_neg(c))
 }
 
+#[cfg(not(target_feature = "relaxed-simd"))]
+#[archmage::rite]
+pub(crate) fn trunc_f32x4_fast(_token: Wasm128Token, a: v128) -> v128 {
+    w::i32x4_trunc_sat_f32x4(a)
+}
+
+#[cfg(target_feature = "relaxed-simd")]
+#[archmage::rite]
+pub(crate) fn trunc_f32x4_fast(_token: Wasm128Token, a: v128) -> v128 {
+    w::i32x4_relaxed_trunc_f32x4(a)
+}
+
 /// Whether this engine's relaxed madd rounds once. The relaxed-SIMD proposal
 /// lets each environment choose fused or unfused per operator but requires a
 /// fixed choice, so one cached probe per type decides: fusing engines get the

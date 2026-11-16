@@ -8359,6 +8359,13 @@ impl F32x4Convert for archmage::X64V4Token {
         <archmage::X64V3Token as F32x4Convert>::convert_f32_to_i32_saturating(self.v3(), a)
     }
     #[inline(always)]
+    fn convert_f32_to_i32_fast(
+        self,
+        a: <Self as F32x4Backend>::Repr,
+    ) -> <Self as I32x4Backend>::Repr {
+        <archmage::X64V3Token as F32x4Convert>::convert_f32_to_i32_fast(self.v3(), a)
+    }
+    #[inline(always)]
     fn convert_f32_to_i32_round(
         self,
         a: <Self as F32x4Backend>::Repr,
@@ -8390,6 +8397,13 @@ impl F32x4Convert for archmage::X64V4xToken {
         a: <Self as F32x4Backend>::Repr,
     ) -> <Self as I32x4Backend>::Repr {
         <archmage::X64V3Token as F32x4Convert>::convert_f32_to_i32_saturating(self.v3(), a)
+    }
+    #[inline(always)]
+    fn convert_f32_to_i32_fast(
+        self,
+        a: <Self as F32x4Backend>::Repr,
+    ) -> <Self as I32x4Backend>::Repr {
+        <archmage::X64V3Token as F32x4Convert>::convert_f32_to_i32_fast(self.v3(), a)
     }
     #[inline(always)]
     fn convert_f32_to_i32_round(
@@ -8425,6 +8439,13 @@ impl F32x4Convert for archmage::Avx512Fp16Token {
         <archmage::X64V3Token as F32x4Convert>::convert_f32_to_i32_saturating(self.v3(), a)
     }
     #[inline(always)]
+    fn convert_f32_to_i32_fast(
+        self,
+        a: <Self as F32x4Backend>::Repr,
+    ) -> <Self as I32x4Backend>::Repr {
+        <archmage::X64V3Token as F32x4Convert>::convert_f32_to_i32_fast(self.v3(), a)
+    }
+    #[inline(always)]
     fn convert_f32_to_i32_round(
         self,
         a: <Self as F32x4Backend>::Repr,
@@ -8456,6 +8477,13 @@ impl F32x8Convert for archmage::X64V4Token {
         a: <Self as F32x8Backend>::Repr,
     ) -> <Self as I32x8Backend>::Repr {
         <archmage::X64V3Token as F32x8Convert>::convert_f32_to_i32_saturating(self.v3(), a)
+    }
+    #[inline(always)]
+    fn convert_f32_to_i32_fast(
+        self,
+        a: <Self as F32x8Backend>::Repr,
+    ) -> <Self as I32x8Backend>::Repr {
+        <archmage::X64V3Token as F32x8Convert>::convert_f32_to_i32_fast(self.v3(), a)
     }
     #[inline(always)]
     fn convert_f32_to_i32_round(
@@ -8491,6 +8519,13 @@ impl F32x8Convert for archmage::X64V4xToken {
         <archmage::X64V3Token as F32x8Convert>::convert_f32_to_i32_saturating(self.v3(), a)
     }
     #[inline(always)]
+    fn convert_f32_to_i32_fast(
+        self,
+        a: <Self as F32x8Backend>::Repr,
+    ) -> <Self as I32x8Backend>::Repr {
+        <archmage::X64V3Token as F32x8Convert>::convert_f32_to_i32_fast(self.v3(), a)
+    }
+    #[inline(always)]
     fn convert_f32_to_i32_round(
         self,
         a: <Self as F32x8Backend>::Repr,
@@ -8522,6 +8557,13 @@ impl F32x8Convert for archmage::Avx512Fp16Token {
         a: <Self as F32x8Backend>::Repr,
     ) -> <Self as I32x8Backend>::Repr {
         <archmage::X64V3Token as F32x8Convert>::convert_f32_to_i32_saturating(self.v3(), a)
+    }
+    #[inline(always)]
+    fn convert_f32_to_i32_fast(
+        self,
+        a: <Self as F32x8Backend>::Repr,
+    ) -> <Self as I32x8Backend>::Repr {
+        <archmage::X64V3Token as F32x8Convert>::convert_f32_to_i32_fast(self.v3(), a)
     }
     #[inline(always)]
     fn convert_f32_to_i32_round(

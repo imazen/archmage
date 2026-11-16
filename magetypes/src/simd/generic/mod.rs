@@ -10,9 +10,11 @@
 
 mod convert_f16;
 mod cross_width;
+mod fast_ops;
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 mod gather;
 mod generated;
+mod rgb_block_ops;
 pub use convert_f16::F16Convert;
 pub use cross_width::F32x8FromHalves;
 #[cfg(feature = "w512")]

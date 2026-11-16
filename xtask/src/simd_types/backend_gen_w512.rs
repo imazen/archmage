@@ -386,6 +386,24 @@ fn generate_float_backend_trait(ty: &W512Type) -> String {
     let elem = ty.elem;
     let lanes = ty.lanes;
     let array = ty.array_type();
+    let min_max_fast_trait = if elem == "f32" {
+        formatdoc! {r#"
+
+            /// Fast single-instruction lane-wise minimum (NaN and `-0.0`/`+0.0` unspecified).
+            #[inline(always)]
+            fn min_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {{
+                Self::min(self, a, b)
+            }}
+
+            /// Fast single-instruction lane-wise maximum (NaN and `-0.0`/`+0.0` unspecified).
+            #[inline(always)]
+            fn max_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {{
+                Self::max(self, a, b)
+            }}
+        "#}
+    } else {
+        String::new()
+    };
 
     formatdoc! {r#"
         //! Backend trait for `{name}<T>` — {lanes}-lane {elem} SIMD vector.
@@ -460,6 +478,7 @@ fn generate_float_backend_trait(ty: &W512Type) -> String {
 
             /// Lane-wise maximum.
             fn max(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
+            {min_max_fast_trait}
 
             /// Square root.
             fn sqrt(self, a: Self::Repr) -> Self::Repr;
@@ -2101,6 +2120,21 @@ fn generate_4way_polyfill_impl(
                 core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::max(self, a[i], b[i]))
             }}
     "#});
+
+    if ty.elem == "f32" && (token == "Wasm128Token" || token == "NeonToken") {
+        code.push_str(&formatdoc! {r#"
+
+            #[inline(always)]
+            fn min_fast(self, a: {repr}, b: {repr}) -> {repr} {{
+                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::min_fast(self, a[i], b[i]))
+            }}
+
+            #[inline(always)]
+            fn max_fast(self, a: {repr}, b: {repr}) -> {repr} {{
+                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::max_fast(self, a[i], b[i]))
+            }}
+        "#});
+    }
 
     if ty.is_float() {
         code.push_str(&formatdoc! {r#"

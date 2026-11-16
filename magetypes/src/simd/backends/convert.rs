@@ -48,6 +48,15 @@ pub trait F32x4Convert: F32x4Backend + I32x4Backend + SimdToken + Sealed + Copy 
         <Self as F32x4Convert>::convert_f32_to_i32(self, a)
     }
 
+    /// Fast in-range truncation toward zero (overflow/NaN unspecified; relaxed trunc on WASM `relaxed-simd`).
+    #[inline(always)]
+    fn convert_f32_to_i32_fast(
+        self,
+        a: <Self as F32x4Backend>::Repr,
+    ) -> <Self as I32x4Backend>::Repr {
+        <Self as F32x4Convert>::convert_f32_to_i32(self, a)
+    }
+
     /// Convert f32x4 to i32x4 with rounding to nearest.
     fn convert_f32_to_i32_round(
         self,
@@ -81,6 +90,15 @@ pub trait F32x8Convert: F32x8Backend + I32x8Backend + SimdToken + Sealed + Copy 
     /// NaN there — issue #80).
     #[inline(always)]
     fn convert_f32_to_i32_saturating(
+        self,
+        a: <Self as F32x8Backend>::Repr,
+    ) -> <Self as I32x8Backend>::Repr {
+        <Self as F32x8Convert>::convert_f32_to_i32(self, a)
+    }
+
+    /// Fast in-range truncation toward zero (overflow/NaN unspecified; relaxed trunc on WASM `relaxed-simd`).
+    #[inline(always)]
+    fn convert_f32_to_i32_fast(
         self,
         a: <Self as F32x8Backend>::Repr,
     ) -> <Self as I32x8Backend>::Repr {
@@ -123,6 +141,15 @@ pub trait F32x16Convert:
     /// NaN there — issue #80).
     #[inline(always)]
     fn convert_f32_to_i32_saturating(
+        self,
+        a: <Self as F32x16Backend>::Repr,
+    ) -> <Self as I32x16Backend>::Repr {
+        <Self as F32x16Convert>::convert_f32_to_i32(self, a)
+    }
+
+    /// Fast in-range truncation toward zero (overflow/NaN unspecified; relaxed trunc on WASM `relaxed-simd`).
+    #[inline(always)]
+    fn convert_f32_to_i32_fast(
         self,
         a: <Self as F32x16Backend>::Repr,
     ) -> <Self as I32x16Backend>::Repr {
