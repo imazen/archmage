@@ -739,6 +739,35 @@ pub(crate) fn braced_body(brace: &token::Brace, body: impl ToTokens) -> proc_mac
     tokens
 }
 
+/// Give the leading keyword token of an emitted function item `Span::call_site()`
+/// so `item.span` (`lo.to(hi)`) stays macro-expanded (`from_expansion() == true`)
+/// when `braced_body` keeps the author's body brace span (#154).
+pub(crate) fn mark_emitted_fn_header(vis: &mut syn::Visibility, sig: &mut Signature) {
+    let span = proc_macro2::Span::call_site();
+    match vis {
+        syn::Visibility::Public(pub_tok) => {
+            pub_tok.span = span;
+            return;
+        }
+        syn::Visibility::Restricted(restr) => {
+            restr.pub_token.span = span;
+            return;
+        }
+        syn::Visibility::Inherited => {}
+    }
+    if let Some(tok) = &mut sig.constness {
+        tok.span = span;
+    } else if let Some(tok) = &mut sig.asyncness {
+        tok.span = span;
+    } else if let syn::Safety::Unsafe(tok) = &mut sig.safety {
+        tok.span = span;
+    } else if let Some(abi) = &mut sig.abi {
+        abi.extern_token.span = span;
+    } else {
+        sig.fn_token.span = span;
+    }
+}
+
 /// Prepend statements to a function body.
 pub(crate) fn prepend_to_body(
     body: &mut proc_macro2::TokenStream,

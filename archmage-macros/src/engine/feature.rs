@@ -176,6 +176,7 @@ pub(crate) fn emit(
     // default tier, which have no architecture).
     let cfg_guard = gen_cfg_guard(tier.target_arch, options.cfg_feature.as_deref());
     drop_attrs_equal_to(&mut variant_fn.attrs, &cfg_guard);
+    mark_emitted_fn_header(&mut variant_fn.vis, &mut variant_fn.sig);
     let vis = &variant_fn.vis;
     let sig = &variant_fn.sig;
     let attrs = &variant_fn.attrs;

@@ -224,6 +224,7 @@ pub(crate) fn expand(
     // Scalar has no instruction-set boundary. Preserve its signature and body
     // without emitting the invalid #[target_feature(enable = "")].
     if features_csv.is_empty() {
+        mark_emitted_fn_header(&mut input_fn.vis, &mut input_fn.sig);
         let vis = &input_fn.vis;
         let sig = &input_fn.sig;
         let attrs = filter_inline_attrs(&input_fn.attrs);
@@ -327,6 +328,7 @@ pub(crate) fn arcane_impl_wasm_safe(
         &mut input_fn.attrs,
         &gen_cfg_guard(Some("wasm32"), args.shared.cfg_feature.as_deref()),
     );
+    mark_emitted_fn_header(&mut input_fn.vis, &mut input_fn.sig);
     let vis = &input_fn.vis;
     let sig = &input_fn.sig;
     let attrs = &input_fn.attrs;
@@ -381,7 +383,10 @@ fn emit_boundary(input: LightFn, options: &BoundaryOptions, parts: BoundaryParts
     } else {
         format_ident!("__arcane_{}", sig.ident)
     };
-    let unsafety = &sig.safety;
+    let mut unsafety = sig.safety.clone();
+    if let syn::Safety::Unsafe(tok) = &mut unsafety {
+        tok.span = proc_macro2::Span::call_site();
+    }
     let attrs = if options.nested {
         filter_inline_attrs(&input.attrs)
             .into_iter()

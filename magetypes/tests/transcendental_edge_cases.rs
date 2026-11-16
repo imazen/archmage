@@ -758,8 +758,8 @@ mod log_exp_edge_cases {
                 v_scalar.log2_midp_precise().to_array(),
             ),
         ] {
-            for i in 0..4 {
-                assert!(res[i].is_nan(), "{name} NaN lane [{i}]: got {}", res[i]);
+            for (i, &val) in res[..4].iter().enumerate() {
+                assert!(val.is_nan(), "{name} NaN lane [{i}]: got {val}");
             }
             assert!(res[4].is_nan(), "{name}(-1): got {}", res[4]);
             assert_eq!(res[5], f32::NEG_INFINITY, "{name}(-0): got {}", res[5]);
@@ -775,8 +775,8 @@ mod log_exp_edge_cases {
             let log2 = direct_log2_midp(t, &inputs);
             let ln = direct_ln_midp(t, &inputs);
             for (name, res) in [("v3.direct_log2_midp", log2), ("v3.direct_ln_midp", ln)] {
-                for i in 0..4 {
-                    assert!(res[i].is_nan(), "{name} NaN lane [{i}]: got {}", res[i]);
+                for (i, &val) in res[..4].iter().enumerate() {
+                    assert!(val.is_nan(), "{name} NaN lane [{i}]: got {val}");
                 }
                 assert!(res[4].is_nan(), "{name}(-1): got {}", res[4]);
                 assert_eq!(res[5], f32::NEG_INFINITY, "{name}(-0): got {}", res[5]);
