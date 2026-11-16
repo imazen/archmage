@@ -19,8 +19,8 @@ avx512 = ["w512", "archmage/avx512", "magetypes/avx512"]
 _exhaustive-tests = []
 
 [dependencies]
-archmage = { version = "0.9.31", path = "..", default-features = false }
-magetypes = { version = "0.9.31", path = "../magetypes", default-features = false }
+archmage = { version = "0.9.32", path = "..", default-features = false }
+magetypes = { version = "0.9.32", path = "../magetypes", default-features = false }
 
 [package.metadata.docs.rs]
 features = ["std", "avx512"]

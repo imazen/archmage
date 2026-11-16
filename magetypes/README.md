@@ -14,8 +14,8 @@ token proving its CPU features, so using it takes no `unsafe` in your code.
 
 ```toml
 [dependencies]
-magetypes = "=0.9.31"
-archmage  = "=0.9.31"   # the macros and tokens
+magetypes = "=0.9.32"
+archmage  = "=0.9.32"   # the macros and tokens
 ```
 
 Multiply a buffer by a factor, using AVX2, NEON or WASM SIMD where available:
@@ -54,14 +54,15 @@ assert_eq!(plane, [1.0; 11]);
   loop, as here, not inside it.
 - Constructors ending in `_t` take the token as their first argument.
 
-`0.9.31` is the matching release for the archmage unified macros:
-existing vector and constructor signatures are preserved, and `_t(token, ...)`
-remains token-first. This release adds narrow-vector trait implementations for
-AVX-512 tokens, correct portable FMA software rounding, add
-`mul_add_relaxed`/`mul_add_fused` (deprecating `mul_add`/`mul_sub`), and make
-portable FMA faster where the hardware cannot fuse. The
-[unified macro guide](https://github.com/imazen/archmage/blob/main/docs/ATTUNE.md)
-documents `#[attune]`, `attuned!`, and `reattune!`.
+`0.9.32` is the matching release for `archmage = "=0.9.32"`:
+existing vector and constructor signatures are preserved, `_t(token, ...)`
+remains token-first, and the flat transcendental methods keep their behavior
+(fixing `NaN` propagation in `log2_midp`/`ln_midp`/`log10_midp` and `-0.0` at
+`silu_midp(-inf)`). Configurable domain-checked `powf`/`expf`/`logf`/`cbrtf`
+with matching scalar tail helpers live in [Magemath](../magemath). Earlier
+`0.9.31` notes: unified macros (`#[attune]`, `attuned!`, `reattune!`) are
+documented in the [unified macro guide](https://github.com/imazen/archmage/blob/main/docs/ATTUNE.md),
+and narrow-vector AVX-512 impls plus `mul_add_relaxed`/`mul_add_fused` shipped in `0.9.31`.
 
 Don't write per-tier `#[arcane]` wrappers around a `#[magetypes]` kernel: the
 macro already generates them.

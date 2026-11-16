@@ -31,8 +31,8 @@ OUT = ROOT / "target/warning-sweep"
 WS = ["--workspace", "--all-targets"]
 # Benches use zenbench, which does not build for wasm32; CI never builds them there.
 WS_WASM = ["--workspace", "--lib", "--bins", "--tests", "--examples"]
-LIBS = ["-p", "archmage", "-p", "magetypes", "--lib"]
-AVX512 = ["--features", "archmage/avx512,magetypes/avx512"]
+LIBS = ["-p", "archmage", "-p", "magetypes", "-p", "magemath", "--lib"]
+AVX512 = ["--features", "archmage/avx512,magetypes/avx512,magemath/avx512"]
 SIMD128 = "-Ctarget-feature=+simd128"
 # Allow-by-default rustc lints a downstream crate may pass through RUSTFLAGS,
 # which reach path dependencies. Left out on purpose: unsafe_code (the token
@@ -51,7 +51,7 @@ OPT_IN = " ".join("-W " + lint for lint in (
     "meta_variable_misuse", "unit_bindings", "rust_2018_idioms",
     "rust_2024_compatibility", "missing_debug_implementations",
 ))
-CRATES = ["-p", "archmage", "-p", "magetypes", "-p", "archmage-macros", "--lib"]
+CRATES = ["-p", "archmage", "-p", "magetypes", "-p", "archmage-macros", "-p", "magemath", "--lib"]
 
 # (name, target or None for host, cargo args, extra RUSTFLAGS)
 CONFIGS = [
@@ -63,7 +63,7 @@ CONFIGS = [
     ("x86_64-v3-cpu", "x86_64-unknown-linux-gnu", WS + AVX512, "-Ctarget-cpu=x86-64-v3"),
     ("x86_64-v4-cpu", "x86_64-unknown-linux-gnu", WS + AVX512, "-Ctarget-cpu=x86-64-v4"),
     ("x86_64-nostd", None, LIBS + ["--no-default-features"], ""),
-    ("x86_64-nostd-avx512", None, LIBS + ["--no-default-features", "--features", "archmage/avx512,magetypes/avx512"], ""),
+    ("x86_64-nostd-avx512", None, LIBS + ["--no-default-features", "--features", "archmage/avx512,magetypes/avx512,magemath/avx512"], ""),
     ("i686", "i686-unknown-linux-gnu", WS + AVX512, ""),
     ("aarch64-linux", "aarch64-unknown-linux-gnu", WS + AVX512, ""),
     ("aarch64-linux-nostd", "aarch64-unknown-linux-gnu", LIBS + ["--no-default-features"], ""),

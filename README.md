@@ -8,11 +8,14 @@ You pick a CPU tier, prove it's present once with `summon()`, and the type syste
 
 It runs on x86-64, AArch64 and WASM, is `no_std + alloc`, and needs Rust 1.89 or later.
 
-## 0.9.31: unified macros
+## 0.9.32: Cargo 1.100, attune proof opt-out, #154 coverage spans, and magemath
 
-This release adds `#[attune]`, `attuned!`, and `reattune!`. Existing attributes
-and `incant!` remain supported. Use matching versions of archmage and
-magetypes so their tokens come from the same archmage package.
+This release follows `0.9.31` with Cargo 1.100 build-dir compatibility,
+`#[attune(..., suppress_const_test)]`, preserved author body brace spans for
+line coverage (#154), and the new [Magemath crate](magemath) alongside
+bug fixes in `magetypes` midp logs and `silu_midp(-inf)`. Existing macro names
+and constructor signatures remain supported; use matching versions of archmage
+and magetypes so their tokens come from the same archmage package.
 
 ```rust
 use archmage::prelude::*;
@@ -46,8 +49,8 @@ with explicit domains and scalar entry points for SIMD tails, live in the
 
 ```toml
 [dependencies]
-archmage = "=0.9.31"
-magetypes = "=0.9.31"   # vector types such as f32x8
+archmage = "=0.9.32"
+magetypes = "=0.9.32"   # vector types such as f32x8
 ```
 
 Multiply a buffer by a gain, using AVX2, NEON or WASM SIMD where available:

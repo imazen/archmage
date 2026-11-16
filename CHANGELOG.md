@@ -14,6 +14,13 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 - Remove `guaranteed()` from `SimdToken` trait — use `compiled_with()` instead (deprecated since 0.6.0, zero callers)
 - Remove width traits `Has128BitSimd`, `Has256BitSimd`, `Has512BitSimd` — use concrete tokens or tier traits (`HasX64V2`, `HasX64V4`) instead (deprecated since 0.9.9; `Has256BitSimd` only enables AVX, not AVX2/FMA)
 
+### [0.9.32] - 2026-11-16
+
+#### Changed
+
+- Support Rust `1.100.0` (Cargo 1.100 build-dir layout compatibility in SDE, codegen, and UI tests).
+- Pin matching `archmage-macros = "=0.9.32"`.
+
 ### [0.9.31] - 2026-11-07
 
 #### Changed
@@ -63,6 +70,20 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 - Deprecate `incant!` passthrough mode (`with token`) — zero downstream uses; `#[rite]` multi-tier or direct `IntoConcreteToken` dispatch are better alternatives
 - Require `scalar` or `default` in explicit `incant!` tier lists (currently auto-appended with a deprecation warning)
 - Require explicit `tier(cfg(feature))` syntax — remove implicit `cfg_feature` auto-gating on v4/v4x
+
+### [0.9.32] - 2026-11-16
+
+#### Added
+
+- Support `#[attune(..., suppress_const_test)]` on proof boundaries (`docs/ATTUNE.md`).
+
+#### Fixed
+
+- Preserve author body brace spans across macro expansion (`#[arcane]`, `#[rite]`) so `cargo llvm-cov` counts annotated function bodies (#154).
+
+#### Changed
+
+- Skip provably no-op attribute, `Self`-value, and turbofish rewrites during macro expansion.
 
 ### [0.9.31] - 2026-11-07
 
@@ -142,6 +163,18 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 - Remove the six no-op `*_midp_precise` aliases (`exp2`/`exp`/`ln`/`log2`/`log10`/`pow` — each is literally `self.*_midp()`); `cbrt_midp_precise` stays, it does real denormal/zero handling. With the reciprocal tiers settling on `_portable` as the precise tier, a `_precise` suffix that does nothing is a naming lie.
 - Planned: make `w512` non-default in magetypes; users who need 512-bit types would add `features = ["w512"]`. This patch keeps the existing default features.
 - Remove `cast::Upcast` and `cast::Downcast`, and with them the `cast` module, which holds nothing else. Both are deprecated in 0.9.30 and were never implemented (b1b2ff67).
+
+### [0.9.32] - 2026-11-16
+
+#### Fixed
+
+- `log2_midp`, `ln_midp`, `log10_midp`, and `log2_midp_precise` now preserve `NaN` inputs instead of falling through to finite negative outputs, while still mapping `±0.0` to `-inf` and negative inputs to `NaN`.
+- `silu_midp(-inf)` now returns `-0.0` (matching large finite negative inputs) instead of `NaN` from `(-inf) * 0.0`.
+
+#### Changed
+
+- Depend on `archmage = "0.9.32"`.
+- Clarify positive-normal domain documentation on `rcp_approx_portable` and `rsqrt_approx_portable` and unconditional zero masking in `pow_lowp`. Flat `magetypes` transcendental approximations keep their arithmetic and are not deprecated.
 
 ### [0.9.31] - 2026-11-07
 
@@ -225,6 +258,14 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 - The package includes the MIT and Apache-2.0 license texts (683bef73).
 - The docs of `log2_midp_precise`, `ln_midp_precise`, `log10_midp_precise` and `pow_midp_precise` promised subnormal handling that they do not have: each is its plain `_midp` form, so `log2_midp_precise(1e-42)` returns about -127 (true -139.5). The docs now say so; only `cbrt_midp_precise` handles subnormal inputs. Behavior is unchanged (780e205c).
 
+## magemath
+
+### [0.1.0] - 2026-11-16
+
+#### Added
+
+- Add the `magemath` (`0.1.0`) crate (`no_std` by default, optional `std`, `w512`, `avx512`) providing configurable `f32` `powf`, `expf` (`exp2`, `exp`), `logf` (`log2`, `ln`, `log10`, `log1p`), and `cbrtf` approximations with explicit domain, precision, portability, and execution profiles plus matching scalar and `*_with_token` entry points for SIMD tails (`docs/MAGEMATH-MIGRATION.md`, `magemath/VALIDATION.md`).
+
 ## Workspace
 
 ### [Unreleased]
@@ -232,6 +273,17 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 #### QUEUED BREAKING CHANGES
 
 (none)
+
+### [0.9.32] - 2026-11-16
+
+#### Added
+
+- Add `tests/zen-patterns/` consumer pattern suites split into `released` (`published` 0.9.31 vs workspace `candidate`) and `unreleased` (`just zen-patterns-check`).
+- Wire `magemath` (`0.1.0`) into `apidoc` public API snapshots, `xtask` Miri contract runs, warning sweep, package license/packaging checks, and CI.
+
+#### Changed
+
+- Update package and documentation install examples to `0.9.32` and add Cargo `1.100.0` build-dir support across CI and verification harnesses.
 
 ### [0.9.31] - 2026-11-07
 

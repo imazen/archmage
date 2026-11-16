@@ -1043,24 +1043,47 @@ fn run_miri() -> Result<()> {
         }
         println!("  miri: {bin} {:.0} s", started.elapsed().as_secs_f64());
     }
-    let started = std::time::Instant::now();
-    // Cargo cannot mix --doc with explicit targets, so the doctests that the
-    // former all-targets invocation covered get their own run.
-    let doc = Command::new("cargo")
+    // Cover the configurable math contracts and high-precision powf path under Miri.
+    let migrated = Command::new("cargo")
         .args([
             &toolchain,
             "miri",
             "test",
             "-p",
-            "magetypes",
+            "magemath",
             "--features",
-            "avx512",
-            "--doc",
+            "std avx512",
+            "--lib",
+            "--test",
+            "powf_highp",
+            "--test",
+            "expf_logf_contracts",
         ])
         .status()
-        .context("Failed to run Miri doctests")?;
-    if !doc.success() {
-        bail!("Miri doctests failed; see diagnostics above");
+        .context("Failed to run Magemath Miri contracts")?;
+    if !migrated.success() {
+        bail!("Magemath Miri contracts failed");
+    }
+    let started = std::time::Instant::now();
+    // Cargo cannot mix --doc with explicit targets, so the doctests that the
+    // former all-targets invocation covered get their own run.
+    for (package, features) in [("magetypes", "avx512"), ("magemath", "std avx512")] {
+        let doc = Command::new("cargo")
+            .args([
+                &toolchain,
+                "miri",
+                "test",
+                "-p",
+                package,
+                "--features",
+                features,
+                "--doc",
+            ])
+            .status()
+            .with_context(|| format!("Failed to run {package} Miri doctests"))?;
+        if !doc.success() {
+            bail!("{package} Miri doctests failed; see diagnostics above");
+        }
     }
     println!("  miri: doctests {:.0} s", started.elapsed().as_secs_f64());
     println!("Miri tests passed for native raw interop, the baseline suite, and the doctests");
@@ -1296,7 +1319,7 @@ fn validate_after_soundness(reg: &registry::Registry) -> Result<()> {
 /// archmage-macros and magetypes keep copies; the root crate includes `/LICENSE*`.
 fn check_package_licenses() -> Result<()> {
     println!("\n=== License texts in the published sub-crates ===");
-    for crate_dir in ["archmage-macros", "magetypes"] {
+    for crate_dir in ["archmage-macros", "magetypes", "magemath"] {
         for name in ["LICENSE-MIT", "LICENSE-APACHE"] {
             let root = std::fs::read(name).with_context(|| format!("reading {name}"))?;
             let copy = PathBuf::from(crate_dir).join(name);
@@ -1326,7 +1349,7 @@ fn check_package_licenses() -> Result<()> {
 /// sources as one workspace, once per `--target` (host when none is given).
 fn check_packages(targets: &[String]) -> Result<()> {
     use std::process::Command;
-    const CRATES: [&str; 3] = ["archmage", "archmage-macros", "magetypes"];
+    const CRATES: [&str; 4] = ["archmage", "archmage-macros", "magetypes", "magemath"];
 
     let metadata: serde_json::Value = serde_json::from_slice(
         &Command::new("cargo")
@@ -1388,6 +1411,7 @@ fn check_packages(targets: &[String]) -> Result<()> {
     };
     let archmage = manifest(&members[0])?;
     let magetypes = manifest(&members[2])?;
+    let magemath = manifest(&members[3])?;
     anyhow::ensure!(
         archmage["dependencies"]["archmage-macros"]["version"].as_str()
             == Some(&format!("={}", version("archmage-macros")?)),
@@ -1396,6 +1420,12 @@ fn check_packages(targets: &[String]) -> Result<()> {
     anyhow::ensure!(
         magetypes["dependencies"]["archmage"]["version"].as_str() == Some(&version("archmage")?),
         "packaged magetypes must require the workspace archmage version"
+    );
+    anyhow::ensure!(
+        magemath["dependencies"]["archmage"]["version"].as_str() == Some(&version("archmage")?)
+            && magemath["dependencies"]["magetypes"]["version"].as_str()
+                == Some(&version("magetypes")?),
+        "packaged magemath must require the workspace archmage and magetypes versions"
     );
 
     let mut workspace = format!(
