@@ -1,0 +1,28 @@
+[package]
+name = "magemath"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Configurable scalar and SIMD transcendental approximations with explicit numerical contracts."
+readme = "README.md"
+keywords = ["simd", "math", "no-std", "powf", "portable"]
+categories = ["mathematics", "no-std"]
+include = ["src/**", "Cargo.toml", "README.md", "LICENSE*"]
+
+[features]
+default = []
+std = ["archmage/std", "magetypes/std"]
+w512 = ["magetypes/w512"]
+avx512 = ["w512", "archmage/avx512", "magetypes/avx512"]
+_exhaustive-tests = []
+
+[dependencies]
+archmage = { version = "0.9.31", path = "..", default-features = false }
+magetypes = { version = "0.9.31", path = "../magetypes", default-features = false }
+
+[package.metadata.docs.rs]
+features = ["std", "avx512"]
+rustdoc-args = ["--cfg", "docsrs"]
+targets = ["x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu", "wasm32-unknown-unknown"]

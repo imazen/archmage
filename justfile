@@ -544,3 +544,16 @@ release-compat-recheck source output inventory:
 
 release-compat-audit directory source *options:
     python3 xtask/release_compat/audit.py {{directory}} --source {{source}} {{options}}
+
+# Magemath: std/no_std tests, release contracts and strict clippy.
+magemath-check:
+    cargo test -p magemath --features "std avx512"
+    cargo test -p magemath --no-default-features --features w512
+    cargo test -p magemath --release --features "std avx512" --test contracts
+    cargo clippy -p magemath --all-targets --features "std avx512" -- -D warnings
+    cargo fmt -p magemath -- --check
+
+# Magemath on strict SIMD WASM (needs wasmtime).
+magemath-check-wasm:
+    RUSTFLAGS="-C target-feature=+simd128" CARGO_TARGET_WASM32_WASIP1_RUNNER=wasmtime cargo test -p magemath --features "std w512" --target wasm32-wasip1
+    RUSTFLAGS="-C target-feature=+simd128" CARGO_TARGET_WASM32_WASIP1_RUNNER=wasmtime cargo test -p magemath --no-default-features --features w512 --target wasm32-wasip1

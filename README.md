@@ -37,6 +37,11 @@ The [unified macro guide](https://github.com/imazen/archmage/blob/main/docs/ATTU
 covers the selector grammar, call and proof rules, inline policies, a legacy-attribute
 mapping, and current restrictions.
 
+Configurable f32 power, exponential, logarithm and cube-root approximations,
+with explicit domains and scalar entry points for SIMD tails, live in the
+[Magemath crate](magemath). The flat Magetypes methods are unchanged; the
+[Magemath guide](docs/MAGEMATH-MIGRATION.md) says when to switch.
+
 ## Quick start
 
 ```toml
