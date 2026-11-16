@@ -19,5 +19,4 @@ pub use convert_f16::F16Convert;
 pub use cross_width::F32x8FromHalves;
 #[cfg(feature = "w512")]
 pub use cross_width::F32x16FromHalves;
-pub use fast_ops::{maximum_f32, maximum_f64, minimum_f32, minimum_f64};
 pub use generated::*;

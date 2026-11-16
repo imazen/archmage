@@ -116,6 +116,80 @@ pub(crate) fn max_f64x2_fast(_token: Wasm128Token, a: v128, b: v128) -> v128 {
     w::f64x2_relaxed_max(a, b)
 }
 
+#[cfg(target_feature = "relaxed-simd")]
+#[archmage::rite]
+pub(crate) fn min_f32_fast_scalar(token: Wasm128Token, a: f32, b: f32) -> f32 {
+    w::f32x4_extract_lane::<0>(min_f32x4_fast(token, w::f32x4_splat(a), w::f32x4_splat(b)))
+}
+
+#[cfg(target_feature = "relaxed-simd")]
+#[archmage::rite]
+pub(crate) fn max_f32_fast_scalar(token: Wasm128Token, a: f32, b: f32) -> f32 {
+    w::f32x4_extract_lane::<0>(max_f32x4_fast(token, w::f32x4_splat(a), w::f32x4_splat(b)))
+}
+
+#[cfg(target_feature = "relaxed-simd")]
+#[archmage::rite]
+pub(crate) fn madd_f32_scalar(token: Wasm128Token, a: f32, b: f32, c: f32) -> f32 {
+    w::f32x4_extract_lane::<0>(madd_f32x4(
+        token,
+        w::f32x4_splat(a),
+        w::f32x4_splat(b),
+        w::f32x4_splat(c),
+    ))
+}
+
+#[cfg(target_feature = "relaxed-simd")]
+#[archmage::rite]
+pub(crate) fn msub_f32_scalar(token: Wasm128Token, a: f32, b: f32, c: f32) -> f32 {
+    w::f32x4_extract_lane::<0>(msub_f32x4(
+        token,
+        w::f32x4_splat(a),
+        w::f32x4_splat(b),
+        w::f32x4_splat(c),
+    ))
+}
+
+#[cfg(target_feature = "relaxed-simd")]
+#[archmage::rite]
+pub(crate) fn trunc_f32_fast_scalar(token: Wasm128Token, a: f32) -> i32 {
+    w::i32x4_extract_lane::<0>(trunc_f32x4_fast(token, w::f32x4_splat(a)))
+}
+
+#[cfg(target_feature = "relaxed-simd")]
+#[archmage::rite]
+pub(crate) fn min_f64_fast_scalar(token: Wasm128Token, a: f64, b: f64) -> f64 {
+    w::f64x2_extract_lane::<0>(min_f64x2_fast(token, w::f64x2_splat(a), w::f64x2_splat(b)))
+}
+
+#[cfg(target_feature = "relaxed-simd")]
+#[archmage::rite]
+pub(crate) fn max_f64_fast_scalar(token: Wasm128Token, a: f64, b: f64) -> f64 {
+    w::f64x2_extract_lane::<0>(max_f64x2_fast(token, w::f64x2_splat(a), w::f64x2_splat(b)))
+}
+
+#[cfg(target_feature = "relaxed-simd")]
+#[archmage::rite]
+pub(crate) fn madd_f64_scalar(token: Wasm128Token, a: f64, b: f64, c: f64) -> f64 {
+    w::f64x2_extract_lane::<0>(madd_f64x2(
+        token,
+        w::f64x2_splat(a),
+        w::f64x2_splat(b),
+        w::f64x2_splat(c),
+    ))
+}
+
+#[cfg(target_feature = "relaxed-simd")]
+#[archmage::rite]
+pub(crate) fn msub_f64_scalar(token: Wasm128Token, a: f64, b: f64, c: f64) -> f64 {
+    w::f64x2_extract_lane::<0>(msub_f64x2(
+        token,
+        w::f64x2_splat(a),
+        w::f64x2_splat(b),
+        w::f64x2_splat(c),
+    ))
+}
+
 /// Whether this engine's relaxed madd rounds once. The relaxed-SIMD proposal
 /// lets each environment choose fused or unfused per operator but requires a
 /// fixed choice, so one cached probe per type decides: fusing engines get the

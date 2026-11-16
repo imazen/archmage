@@ -856,6 +856,12 @@ fn generate_float_backend_trait(ty: &FloatVecType) -> String {
         String::new()
     };
 
+    let scalar_bound = if elem == "f32" {
+        " + crate::scalar::F32ScalarBackend"
+    } else {
+        " + crate::scalar::F64ScalarBackend"
+    };
+
     formatdoc! {r#"
         //! Backend trait for `{name}<T>` — {lanes}-lane {elem} SIMD vector.
         //!
@@ -880,7 +886,7 @@ fn generate_float_backend_trait(ty: &FloatVecType) -> String {
         ///
         /// This trait is sealed — only archmage token types can implement it.
         /// The token proves CPU support was verified via `summon()`.
-        pub trait {trait_name}: SimdToken + Sealed + Copy + 'static {{
+        pub trait {trait_name}: SimdToken + Sealed{scalar_bound} + Copy + 'static {{
             /// Platform-native SIMD representation.
             #[allow(private_bounds)]
             type Repr: Copy + Clone + Send + Sync + crate::simd_storage::Pod;
@@ -1090,6 +1096,7 @@ fn generate_backends_mod(
         #![allow(non_camel_case_types)]
 
         pub(crate) mod sealed;
+        pub use crate::scalar::{{F32ScalarBackend, F64ScalarBackend}};
 
     "#};
 

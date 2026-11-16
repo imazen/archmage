@@ -206,7 +206,7 @@ impl<T: F32x8Backend> f32x8<T> {
     ///
     /// If one lane is `NaN` and the other is numeric (including `±inf`), returns
     /// the numeric lane; `(-0.0, +0.0)` tie-breaking is unspecified. Scalar tail
-    /// equivalent: `f32::min` (or [`Self::min_scalar`]).
+    /// equivalent: `f32::min`.
     #[inline(always)]
     pub fn min(self, other: Self) -> Self {
         Self(T::min(self.1, self.0, other.0), self.1)
@@ -216,7 +216,7 @@ impl<T: F32x8Backend> f32x8<T> {
     ///
     /// If one lane is `NaN` and the other is numeric (including `±inf`), returns
     /// the numeric lane; `(-0.0, +0.0)` tie-breaking is unspecified. Scalar tail
-    /// equivalent: `f32::max` (or [`Self::max_scalar`]).
+    /// equivalent: `f32::max`.
     #[inline(always)]
     pub fn max(self, other: Self) -> Self {
         Self(T::max(self.1, self.0, other.0), self.1)
@@ -224,8 +224,7 @@ impl<T: F32x8Backend> f32x8<T> {
 
     /// IEEE 754-2019 lane-wise minimum (propagates `NaN` and orders `-0.0 < +0.0`).
     ///
-    /// Scalar tail equivalent: [`minimum_f32`](super::minimum_f32) or
-    /// [`Self::minimum_scalar`].
+    /// Scalar tail equivalent: [`minimum_f32`](crate::scalar::minimum_f32).
     #[inline(always)]
     pub fn minimum(self, other: Self) -> Self {
         Self(T::minimum(self.1, self.0, other.0), self.1)
@@ -233,8 +232,7 @@ impl<T: F32x8Backend> f32x8<T> {
 
     /// IEEE 754-2019 lane-wise maximum (propagates `NaN` and orders `-0.0 < +0.0`).
     ///
-    /// Scalar tail equivalent: [`maximum_f32`](super::maximum_f32) or
-    /// [`Self::maximum_scalar`].
+    /// Scalar tail equivalent: [`maximum_f32`](crate::scalar::maximum_f32).
     #[inline(always)]
     pub fn maximum(self, other: Self) -> Self {
         Self(T::maximum(self.1, self.0, other.0), self.1)
@@ -244,7 +242,7 @@ impl<T: F32x8Backend> f32x8<T> {
     ///
     /// Emits `vminps`/`vminpd` on x86, `fminnm` on NEON, `pmin(other, self)`
     /// (or `relaxed_min` with `relaxed-simd`) on WASM, and `a < b ? a : b` on
-    /// `ScalarToken`. Scalar tail equivalent: [`Self::min_fast_scalar`].
+    /// `ScalarToken`. Scalar tail equivalent: [`min_fast_f32`](crate::scalar::min_fast_f32).
     #[inline(always)]
     pub fn min_fast(self, other: Self) -> Self {
         Self(T::min_fast(self.1, self.0, other.0), self.1)
@@ -254,7 +252,7 @@ impl<T: F32x8Backend> f32x8<T> {
     ///
     /// Emits `vmaxps`/`vmaxpd` on x86, `fmaxnm` on NEON, `pmax(other, self)`
     /// (or `relaxed_max` with `relaxed-simd`) on WASM, and `a > b ? a : b` on
-    /// `ScalarToken`. Scalar tail equivalent: [`Self::max_fast_scalar`].
+    /// `ScalarToken`. Scalar tail equivalent: [`max_fast_f32`](crate::scalar::max_fast_f32).
     #[inline(always)]
     pub fn max_fast(self, other: Self) -> Self {
         Self(T::max_fast(self.1, self.0, other.0), self.1)

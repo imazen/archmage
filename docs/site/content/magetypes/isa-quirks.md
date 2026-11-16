@@ -110,6 +110,8 @@ ISA results from a table or report emulator timings as hardware performance.
 | `pairwise_widen_add` on unsigned pairs `(255u8, 255)` / `(65535u16, 65535)` | `510u16` / `131070u32` per pair | Both inputs widen before addition. NEON/WASM have unsigned pairwise widening instructions; x86 masks and shifts each wider lane before adding. |
 | Sum 64 bytes all equal to 255 | `16320u32` | `reduce_add_u32` widens rather than using wrapping byte addition. `sum_abs_diff` has the same maximum for 64 lanes. |
 | `round()` on `[2.5, 3.5, -2.5, -3.5]` | `[2, 4, -2, -4]` | Ties-to-even, including the scalar fallback. This differs from Rust's ties-away-from-zero `f32::round()`. |
+| `min(NaN, 1)` / `min(1, NaN)` and `max(NaN, 1)` / `max(1, NaN)` | `1` (the numeric operand) | Matches `f32::min`/`f64::min`. x86 blends on `b` unordered; WASM uses `pmin(b, a)` + `bitselect`; NEON quiets `sNaN` before `fminnm`/`fmaxnm`; W512 scalar matches narrower widths. Signed-zero tie-breaking (`-0.0` vs `+0.0`) remains unspecified. |
+| `minimum` / `maximum` with `NaN` or `(-0.0, +0.0)` | Quiet `NaN` if either lane is `NaN`; `-0.0 < +0.0` | IEEE 754-2019 semantics everywhere. Native 1-instruction `vminq`/`vmaxq` (NEON) and `f32x4.min`/`max` (WASM); ordered compare/select on x86 and scalar. |
 
 Runtime byte shifts are deferred; constant byte shifts remain available. x86
 implements constant byte shifts with wider shifts and masks because it has no
@@ -119,9 +121,11 @@ consolidation.
 ## Float-to-integer conversion: choose the contract
 
 `to_i32` truncates finite, in-range values. Its name does **not** promise Rust's
-saturating `as i32` behavior for exceptional inputs. `to_i32_saturating` does.
+saturating `as i32` behavior for exceptional inputs; `to_i32_saturating` does.
+`to_i32_fast` omits x86 saturation fixups and uses relaxed truncation under
+WASM `relaxed-simd`.
 
-| f32 input | `to_i32`: x86 | `to_i32`: NEON / WASM / scalar | `to_i32_saturating`: all |
+| f32 input | `to_i32`: x86 (`to_i32_fast` same here) | `to_i32`: NEON / strict WASM / scalar | `to_i32_saturating`: all |
 |---|---|---|---|
 | `1.9` / `-1.9` | `1` / `-1` | `1` / `-1` | `1` / `-1` |
 | `3_000_000_000.0` | `i32::MIN` | `i32::MAX` | `i32::MAX` |
@@ -129,28 +133,27 @@ saturating `as i32` behavior for exceptional inputs. `to_i32_saturating` does.
 | `-inf` | `i32::MIN` | `i32::MIN` | `i32::MIN` |
 | `NaN` | `i32::MIN` | `0` | `0` |
 
-The saturating variant adds compare/select fixups on x86; NEON/WASM/scalar already
+The saturating variant adds compare/select fixups on x86; NEON/strict WASM/scalar already
 have the requested conversion behavior. A caller that has proved the input range
-may prefer `to_i32`. This table does not describe `to_i32_round`, f64 conversions,
+may prefer `to_i32_fast` or `to_i32`. This table does not describe `to_i32_round`, f64 conversions,
 or pixel-packing helpers.
 
 ## Current floating-point differences we do not fix up
 
-These are observable implementation differences, including differences between
-widths on the same backend. They are compatibility constraints to review, not
-recommendations to depend on unusual NaN behavior.
+These are observable implementation differences when choosing the single-instruction
+`_fast` tier (or equal-zero tie-breaking on `min`/`max`). They are compatibility
+constraints to review, not recommendations to depend on unusual `NaN` behavior.
 
-| Expression | x86 V3, all supported widths | Native V4/V4x f32x16 | NEON / WASM | Scalar f32x4/f32x8 | Scalar f32x16 |
-|---|---|---|---|---|---|
-| `min(NaN, 1)` and `max(NaN, 1)` | `1` | `1` | `NaN` | `1` | `1` |
-| `min(1, NaN)` and `max(1, NaN)` | `NaN` | `NaN` | `NaN` | `1` | `NaN` |
+| Expression | x86 V3 / V4 / strict WASM / Scalar (all widths) | NEON (quiet `NaN`) | WASM `relaxed-simd` |
+|---|---|---|---|
+| `min_fast(NaN, 1)` and `max_fast(NaN, 1)` | `1` | `1` | engine-defined (`1` or `NaN`) |
+| `min_fast(1, NaN)` and `max_fast(1, NaN)` | `NaN` | `1` (`NaN` for `sNaN`) | engine-defined (`1` or `NaN`) |
 
-x86 min/max select the second operand when a NaN is involved. NEON uses
-`vminq`/`vmaxq`, and WASM uses `min`/`max`, which propagate NaNs. Smaller scalar
-vectors use Rust's numeric min/max; scalar f32x16 currently uses comparisons and
-selects the second operand when the comparison is false. Rust's numeric min/max
-ignore a single NaN and do not promise which equal signed zero is returned.
-[The scalar contract is documented by Rust](https://doc.rust-lang.org/std/primitive.f32.html#method.min).
+For the portable contracts, use [`min`/`max`](https://doc.rust-lang.org/std/primitive.f32.html#method.min)
+(suppresses single `NaN`, equal `±0.0` unspecified) or `minimum`/`maximum` (IEEE
+754-2019: propagates `NaN` to quiet `NaN` and strictly orders `-0.0 < +0.0`). On
+Scalar tails, `magetypes::scalar::min_fast_f32` / `max_fast_f32` match the active
+token's `min_fast` / `max_fast` single-instruction behavior across every target.
 
 Float `simd_ne` is unordered on every backend, matching Rust's `!=`:
 a lane is true when either operand is NaN. Its mask is the bitwise inverse

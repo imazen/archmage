@@ -894,7 +894,7 @@ mod isa_quirks {
     use magetypes::simd::generic::*;
 
     macro_rules! check_float {
-        ($token:expr, $ty:ident, $lanes:expr, $min_kind:expr) => {{
+        ($token:expr, $ty:ident, $lanes:expr, $min_fast_kind:expr) => {{
             let token = $token;
             let a = $ty::from_array_t(
                 token,
@@ -904,16 +904,37 @@ mod isa_quirks {
                 token,
                 core::array::from_fn(|i| [1.0, f32::NAN, -0.0, 0.0][i % 4]),
             );
+            // Tier 1: min/max match f32::min / f32::max uniformly across all backends and widths.
             for values in [a.min(b).to_array(), a.max(b).to_array()] {
                 for i in (0..$lanes).step_by(4) {
-                    match $min_kind {
+                    assert_eq!(values[i], 1.0);
+                    assert_eq!(values[i + 1], 1.0);
+                }
+            }
+            // Tier 2: minimum/maximum follow IEEE 754-2019 (NaN-propagating, -0.0 < +0.0).
+            let mn = a.minimum(b).to_array();
+            let mx = a.maximum(b).to_array();
+            for i in (0..$lanes).step_by(4) {
+                assert!(mn[i].is_nan());
+                assert!(mn[i + 1].is_nan());
+                assert_eq!(mn[i + 2].to_bits(), (-0.0f32).to_bits());
+                assert_eq!(mn[i + 3].to_bits(), (-0.0f32).to_bits());
+                assert!(mx[i].is_nan());
+                assert!(mx[i + 1].is_nan());
+                assert_eq!(mx[i + 2].to_bits(), 0);
+                assert_eq!(mx[i + 3].to_bits(), 0);
+            }
+            // Tier 3: min_fast/max_fast reflect the target's single instruction.
+            for values in [a.min_fast(b).to_array(), a.max_fast(b).to_array()] {
+                for i in (0..$lanes).step_by(4) {
+                    match $min_fast_kind {
                         0 => {
                             assert_eq!(values[i], 1.0);
                             assert!(values[i + 1].is_nan());
                         }
                         1 => {
-                            assert!(values[i].is_nan());
-                            assert!(values[i + 1].is_nan());
+                            assert!(values[i] == 1.0 || values[i].is_nan());
+                            assert!(values[i + 1] == 1.0 || values[i + 1].is_nan());
                         }
                         2 => {
                             assert_eq!(values[i], 1.0);
@@ -954,8 +975,8 @@ mod isa_quirks {
 
     #[test]
     fn scalar_tables() {
-        check_float!(ScalarToken, f32x4, 4, 2);
-        check_float!(ScalarToken, f32x8, 8, 2);
+        check_float!(ScalarToken, f32x4, 4, 0);
+        check_float!(ScalarToken, f32x8, 8, 0);
         #[cfg(feature = "w512")]
         check_float!(ScalarToken, f32x16, 16, 0);
     }
@@ -984,20 +1005,25 @@ mod isa_quirks {
     #[test]
     fn neon_tables() {
         let t = archmage::NeonToken::summon().expect("NEON test runner");
-        check_float!(t, f32x4, 4, 1);
-        check_float!(t, f32x8, 8, 1);
+        check_float!(t, f32x4, 4, 2);
+        check_float!(t, f32x8, 8, 2);
         #[cfg(feature = "w512")]
-        check_float!(t, f32x16, 16, 1);
+        check_float!(t, f32x16, 16, 2);
     }
 
     #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
     #[test]
     fn wasm_tables() {
         let t = archmage::Wasm128Token::summon().expect("SIMD128 test runner");
-        check_float!(t, f32x4, 4, 1);
-        check_float!(t, f32x8, 8, 1);
+        let fast_kind = if cfg!(target_feature = "relaxed-simd") {
+            1
+        } else {
+            0
+        };
+        check_float!(t, f32x4, 4, fast_kind);
+        check_float!(t, f32x8, 8, fast_kind);
         #[cfg(feature = "w512")]
-        check_float!(t, f32x16, 16, 1);
+        check_float!(t, f32x16, 16, fast_kind);
     }
 }
 

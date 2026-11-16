@@ -602,7 +602,7 @@ fn gen_float_math(ty: &SimdType) -> String {
             ///
             /// If one lane is `NaN` and the other is numeric (including `±inf`), returns
             /// the numeric lane; `(-0.0, +0.0)` tie-breaking is unspecified. Scalar tail
-            /// equivalent: `{elem}::min` (or [`Self::min_scalar`]).
+            /// equivalent: `{elem}::min`.
             #[inline(always)]
             pub fn min(self, other: Self) -> Self {{
                 Self(T::min(self.1, self.0, other.0), self.1)
@@ -612,7 +612,7 @@ fn gen_float_math(ty: &SimdType) -> String {
             ///
             /// If one lane is `NaN` and the other is numeric (including `±inf`), returns
             /// the numeric lane; `(-0.0, +0.0)` tie-breaking is unspecified. Scalar tail
-            /// equivalent: `{elem}::max` (or [`Self::max_scalar`]).
+            /// equivalent: `{elem}::max`.
             #[inline(always)]
             pub fn max(self, other: Self) -> Self {{
                 Self(T::max(self.1, self.0, other.0), self.1)
@@ -620,8 +620,7 @@ fn gen_float_math(ty: &SimdType) -> String {
 
             /// IEEE 754-2019 lane-wise minimum (propagates `NaN` and orders `-0.0 < +0.0`).
             ///
-            /// Scalar tail equivalent: [`minimum_{elem}`](super::minimum_{elem}) or
-            /// [`Self::minimum_scalar`].
+            /// Scalar tail equivalent: [`minimum_{elem}`](crate::scalar::minimum_{elem}).
             #[inline(always)]
             pub fn minimum(self, other: Self) -> Self {{
                 Self(T::minimum(self.1, self.0, other.0), self.1)
@@ -629,8 +628,7 @@ fn gen_float_math(ty: &SimdType) -> String {
 
             /// IEEE 754-2019 lane-wise maximum (propagates `NaN` and orders `-0.0 < +0.0`).
             ///
-            /// Scalar tail equivalent: [`maximum_{elem}`](super::maximum_{elem}) or
-            /// [`Self::maximum_scalar`].
+            /// Scalar tail equivalent: [`maximum_{elem}`](crate::scalar::maximum_{elem}).
             #[inline(always)]
             pub fn maximum(self, other: Self) -> Self {{
                 Self(T::maximum(self.1, self.0, other.0), self.1)
@@ -640,7 +638,7 @@ fn gen_float_math(ty: &SimdType) -> String {
             ///
             /// Emits `vminps`/`vminpd` on x86, `fminnm` on NEON, `pmin(other, self)`
             /// (or `relaxed_min` with `relaxed-simd`) on WASM, and `a < b ? a : b` on
-            /// `ScalarToken`. Scalar tail equivalent: [`Self::min_fast_scalar`].
+            /// `ScalarToken`. Scalar tail equivalent: [`min_fast_{elem}`](crate::scalar::min_fast_{elem}).
             #[inline(always)]
             pub fn min_fast(self, other: Self) -> Self {{
                 Self(T::min_fast(self.1, self.0, other.0), self.1)
@@ -650,7 +648,7 @@ fn gen_float_math(ty: &SimdType) -> String {
             ///
             /// Emits `vmaxps`/`vmaxpd` on x86, `fmaxnm` on NEON, `pmax(other, self)`
             /// (or `relaxed_max` with `relaxed-simd`) on WASM, and `a > b ? a : b` on
-            /// `ScalarToken`. Scalar tail equivalent: [`Self::max_fast_scalar`].
+            /// `ScalarToken`. Scalar tail equivalent: [`max_fast_{elem}`](crate::scalar::max_fast_{elem}).
             #[inline(always)]
             pub fn max_fast(self, other: Self) -> Self {{
                 Self(T::max_fast(self.1, self.0, other.0), self.1)

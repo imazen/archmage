@@ -283,9 +283,10 @@ pub mod magemath_tails {
 pub mod fast_rgb_ops {
     //! Generic `F32x8Backend + F32x8Convert` RGB kernel combining native
     //! `load_8_rgb_u8_t`, `interleave_3ch` / `deinterleave_3ch`, `max_fast` /
-    //! `min_fast`, `to_i32_fast`, and `store_8_rgb_u8` (plus `*_scalar` tail
-    //! helpers) inside `#[archmage::attune]`.
+    //! `min_fast`, `to_i32_fast`, and `store_8_rgb_u8`, paired with
+    //! `magetypes::scalar` tail helpers inside `#[archmage::attune]`.
 
+    use magetypes::scalar;
     use magetypes::simd::backends::{F32x8Backend, F32x8Convert};
     use magetypes::simd::generic::f32x8;
 
@@ -343,22 +344,16 @@ pub mod fast_rgb_ops {
             .zip(dst_tail.chunks_exact_mut(3))
             .zip(q_tail.iter_mut())
         {
-            let r_raw = f32x8::splat_t(token, s_px[0] as f32)
-                .mul_add_portable(f32x8::splat_t(token, scale), f32x8::splat_t(token, bias))
-                .to_array()[0];
-            let g_raw = f32x8::splat_t(token, s_px[1] as f32)
-                .mul_add_portable(f32x8::splat_t(token, scale), f32x8::splat_t(token, bias))
-                .to_array()[0];
-            let b_raw = f32x8::splat_t(token, s_px[2] as f32)
-                .mul_add_portable(f32x8::splat_t(token, scale), f32x8::splat_t(token, bias))
-                .to_array()[0];
-            let r = f32x8::min_fast_scalar(token, f32x8::max_fast_scalar(token, r_raw, 0.0), 255.0);
-            let g = f32x8::min_fast_scalar(token, f32x8::max_fast_scalar(token, g_raw, 0.0), 255.0);
-            let b = f32x8::min_fast_scalar(token, f32x8::max_fast_scalar(token, b_raw, 0.0), 255.0);
-            *q_slot = f32x8::to_i32_fast_scalar(token, r);
-            d_px[0] = r.round_ties_even() as u8;
-            d_px[1] = g.round_ties_even() as u8;
-            d_px[2] = b.round_ties_even() as u8;
+            let r_raw = scalar::mul_add_fused_f32(s_px[0] as f32, scale, bias);
+            let g_raw = scalar::mul_add_fused_f32(s_px[1] as f32, scale, bias);
+            let b_raw = scalar::mul_add_fused_f32(s_px[2] as f32, scale, bias);
+            let r = scalar::min_fast_f32(token, scalar::max_fast_f32(token, r_raw, 0.0), 255.0);
+            let g = scalar::min_fast_f32(token, scalar::max_fast_f32(token, g_raw, 0.0), 255.0);
+            let b = scalar::min_fast_f32(token, scalar::max_fast_f32(token, b_raw, 0.0), 255.0);
+            *q_slot = scalar::to_i32_fast(token, r);
+            d_px[0] = scalar::round_f32(r) as u8;
+            d_px[1] = scalar::round_f32(g) as u8;
+            d_px[2] = scalar::round_f32(b) as u8;
         }
     }
 
@@ -430,8 +425,8 @@ pub mod fast_rgb_ops {
                     assert_eq!(r_min[i], x.min(y));
                     assert_eq!(r_max[i], x.max(y));
                 }
-                let exp_min = magetypes::simd::minimum_f32(x, y);
-                let exp_max = magetypes::simd::maximum_f32(x, y);
+                let exp_min = scalar::minimum_f32(x, y);
+                let exp_max = scalar::maximum_f32(x, y);
                 if exp_min.is_nan() {
                     assert!(r_minimum[i].is_nan());
                 } else {
@@ -442,17 +437,9 @@ pub mod fast_rgb_ops {
                 } else {
                     assert_eq!(r_maximum[i].to_bits(), exp_max.to_bits());
                 }
-                assert_eq!(
-                    r_minimum[i].is_nan(),
-                    f32x8::minimum_scalar(token, x, y).is_nan()
-                );
-                assert_eq!(
-                    r_maximum[i].is_nan(),
-                    f32x8::maximum_scalar(token, x, y).is_nan()
-                );
 
-                let s_min_fast = f32x8::min_fast_scalar(token, x, y);
-                let s_max_fast = f32x8::max_fast_scalar(token, x, y);
+                let s_min_fast = scalar::min_fast_f32(token, x, y);
+                let s_max_fast = scalar::max_fast_f32(token, x, y);
                 if r_min_fast[i].is_nan() {
                     assert!(s_min_fast.is_nan());
                 } else {
@@ -472,17 +459,11 @@ pub mod fast_rgb_ops {
             let dmn = d0.minimum(d1).to_array();
             let dmx = d0.maximum(d1).to_array();
             assert!(dmn[0].is_nan() && dmn[1].is_nan());
-            assert_eq!(
-                dmn[2].to_bits(),
-                magetypes::simd::minimum_f64(-0.0, 0.0).to_bits()
-            );
-            assert_eq!(
-                dmx[3].to_bits(),
-                magetypes::simd::maximum_f64(0.0, -0.0).to_bits()
-            );
+            assert_eq!(dmn[2].to_bits(), scalar::minimum_f64(-0.0, 0.0).to_bits());
+            assert_eq!(dmx[3].to_bits(), scalar::maximum_f64(0.0, -0.0).to_bits());
             assert_eq!(
                 d0.min_fast(d1).to_array()[2].to_bits(),
-                f64x4::min_fast_scalar(token, -0.0, 0.0).to_bits()
+                scalar::min_fast_f64(token, -0.0, 0.0).to_bits()
             );
         }
 
