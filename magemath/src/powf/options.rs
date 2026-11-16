@@ -2,6 +2,7 @@
 
 /// Input and output range. Restricted domains reject negative zero and subnormals.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[non_exhaustive]
 pub enum PowfDomain {
     /// Positive finite normal bases; computed exp2 argument in [-126,127.5].
     #[default]
@@ -21,6 +22,7 @@ pub enum PowfDomain {
 
 /// Whole-operation feature selection, independent of numerical policy.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[non_exhaustive]
 pub enum PowfExecution {
     /// Reuse a capable caller or select a native tier once per power operation.
     #[default]
@@ -32,6 +34,7 @@ pub enum PowfExecution {
 
 /// Whether accepted results must agree bit for bit across backends.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[non_exhaustive]
 pub enum PowfPortability {
     /// One fused graph, with exact software FMA when necessary. Not std power.
     /// Full HIGHP preserves NaN classification; NaN payload/sign are unspecified.
@@ -44,6 +47,7 @@ pub enum PowfPortability {
 
 /// Approximation family, not a global mathematical error bound.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[non_exhaustive]
 pub enum PowfPrecision {
     /// Existing MIDP coefficients and graph; no whole-domain ULP guarantee.
     #[default]
@@ -57,6 +61,7 @@ pub enum PowfPrecision {
 
 /// Whether to enforce the selected numerical domain at runtime.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[non_exhaustive]
 pub enum PowfValidation {
     /// Reject the whole vector, returning the exact mask for the first failing stage.
     #[default]
@@ -69,6 +74,7 @@ pub enum PowfValidation {
 
 /// Const builder ending in `.bits()`, also accepted by the runtime adapter.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[non_exhaustive]
 pub struct PowfOptions {
     /// Input and output range.
     pub domain: PowfDomain,

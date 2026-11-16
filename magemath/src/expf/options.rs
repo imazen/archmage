@@ -2,6 +2,7 @@
 
 /// Accepted input range and non-finite handling.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[non_exhaustive]
 pub enum ExpfDomain {
     /// Finite inputs; the approximation's documented range applies
     /// (`[-126,127.99]` lowp, `[-126,128)` midp, clamped as before).
@@ -16,6 +17,7 @@ pub enum ExpfDomain {
 
 /// Whole-operation feature selection, independent of numerical policy.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[non_exhaustive]
 pub enum ExpfExecution {
     /// Reuse a capable caller or select a native tier once per operation.
     #[default]
@@ -26,6 +28,7 @@ pub enum ExpfExecution {
 
 /// Whether accepted results must agree bit for bit across backends.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[non_exhaustive]
 pub enum ExpfPortability {
     /// One fused graph, with exact software FMA when necessary.
     #[default]
@@ -36,6 +39,7 @@ pub enum ExpfPortability {
 
 /// Approximation family, not a global mathematical error bound.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[non_exhaustive]
 pub enum ExpfPrecision {
     /// Existing MIDP coefficients and graph; ≤1.9 ULP below x = 127.5.
     #[default]
@@ -46,6 +50,7 @@ pub enum ExpfPrecision {
 
 /// Whether to enforce the selected numerical domain at runtime.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[non_exhaustive]
 pub enum ExpfValidation {
     /// Reject the whole vector, returning the exact mask for failing lanes.
     #[default]
@@ -58,6 +63,7 @@ pub enum ExpfValidation {
 
 /// Const builder ending in `.bits()`, also accepted by the runtime adapter.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[non_exhaustive]
 pub struct ExpfOptions {
     /// Input range and non-finite handling.
     pub domain: ExpfDomain,

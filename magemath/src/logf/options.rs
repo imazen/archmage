@@ -2,6 +2,7 @@
 
 /// Accepted input range and edge handling.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[non_exhaustive]
 pub enum LogfDomain {
     /// Positive finite normal inputs only. `x <= 0`, subnormals, NaN and
     /// infinities are invalid inputs.
@@ -15,6 +16,7 @@ pub enum LogfDomain {
 
 /// Whole-operation feature selection, independent of numerical policy.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[non_exhaustive]
 pub enum LogfExecution {
     /// Reuse a capable caller or select a native tier once per operation.
     #[default]
@@ -25,6 +27,7 @@ pub enum LogfExecution {
 
 /// Whether accepted results must agree bit for bit across backends.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[non_exhaustive]
 pub enum LogfPortability {
     /// One fused graph, with exact software FMA when necessary.
     #[default]
@@ -35,6 +38,7 @@ pub enum LogfPortability {
 
 /// Approximation family, not a global mathematical error bound.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[non_exhaustive]
 pub enum LogfPrecision {
     /// Existing MIDP coefficients and graph; at most 4.5 ULP.
     #[default]
@@ -45,6 +49,7 @@ pub enum LogfPrecision {
 
 /// Whether to enforce the selected numerical domain at runtime.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[non_exhaustive]
 pub enum LogfValidation {
     /// Reject the whole vector, returning the exact mask for failing lanes.
     #[default]
@@ -56,6 +61,7 @@ pub enum LogfValidation {
 
 /// Const builder ending in `.bits()`, also accepted by the runtime adapter.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[non_exhaustive]
 pub struct LogfOptions {
     /// Input range and edge handling.
     pub domain: LogfDomain,
