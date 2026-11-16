@@ -2,6 +2,7 @@
 
 /// Accepted input range and non-finite / subnormal handling.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[non_exhaustive]
 pub enum CbrtfDomain {
     /// Zero (`±0.0`) and normal finite magnitudes strictly below `f32::MAX / 3`
     /// (`1.175_494_4e-38 <= |x| < 1.134_274_5e38`).
@@ -20,6 +21,7 @@ pub enum CbrtfDomain {
 
 /// Whole-operation feature selection, independent of numerical policy.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[non_exhaustive]
 pub enum CbrtfExecution {
     /// Reuse a capable caller or select a native tier once per operation.
     #[default]
@@ -30,6 +32,7 @@ pub enum CbrtfExecution {
 
 /// Whether accepted results must agree bit for bit across backends.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[non_exhaustive]
 pub enum CbrtfPortability {
     /// Identical IEEE-754 rounding graph across all backends.
     #[default]
@@ -40,6 +43,7 @@ pub enum CbrtfPortability {
 
 /// Approximation family (1 vs 2 Halley iterations from the vectorized Kahan seed).
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[non_exhaustive]
 pub enum CbrtfPrecision {
     /// Vectorized Kahan seed + 2 Halley iterations; <= 3.2 ULP across accepted domain.
     #[default]
@@ -50,6 +54,7 @@ pub enum CbrtfPrecision {
 
 /// Whether to enforce the selected numerical domain at runtime.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[non_exhaustive]
 pub enum CbrtfValidation {
     /// Reject the whole vector, returning the exact mask for failing lanes.
     #[default]
@@ -61,6 +66,7 @@ pub enum CbrtfValidation {
 
 /// Const builder ending in `.bits()`, also accepted by the runtime adapter.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[non_exhaustive]
 pub struct CbrtfOptions {
     /// Input range and non-finite / subnormal handling.
     pub domain: CbrtfDomain,

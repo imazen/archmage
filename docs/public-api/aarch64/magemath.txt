@@ -30,29 +30,29 @@
 
 pub mod magemath
 pub mod cbrtf
-pub enum cbrtf::CbrtfDomain
+#[non_exhaustive] pub enum cbrtf::CbrtfDomain
 pub cbrtf::CbrtfDomain::Bounded
 pub cbrtf::CbrtfDomain::Full
 #[non_exhaustive] pub enum cbrtf::CbrtfErrorKind
 pub cbrtf::CbrtfErrorKind::InvalidInput
 pub cbrtf::CbrtfErrorKind::UnsupportedOptions
 pub cbrtf::CbrtfErrorKind::UnsupportedWidth
-pub enum cbrtf::CbrtfExecution
+#[non_exhaustive] pub enum cbrtf::CbrtfExecution
 pub cbrtf::CbrtfExecution::Automatic
 pub cbrtf::CbrtfExecution::Caller
-pub enum cbrtf::CbrtfPortability
+#[non_exhaustive] pub enum cbrtf::CbrtfPortability
 pub cbrtf::CbrtfPortability::BackendDependent
 pub cbrtf::CbrtfPortability::BitExact
-pub enum cbrtf::CbrtfPrecision
+#[non_exhaustive] pub enum cbrtf::CbrtfPrecision
 pub cbrtf::CbrtfPrecision::Lowp
 pub cbrtf::CbrtfPrecision::Midp
-pub enum cbrtf::CbrtfValidation
+#[non_exhaustive] pub enum cbrtf::CbrtfValidation
 pub cbrtf::CbrtfValidation::AssumeValid
 pub cbrtf::CbrtfValidation::Checked
 pub struct cbrtf::CbrtfError
 pub cbrtf::CbrtfError::kind: cbrtf::CbrtfErrorKind
 pub cbrtf::CbrtfError::lane_mask: u16
-pub struct cbrtf::CbrtfOptions
+#[non_exhaustive] pub struct cbrtf::CbrtfOptions
 pub cbrtf::CbrtfOptions::domain: cbrtf::CbrtfDomain
 pub cbrtf::CbrtfOptions::execution: cbrtf::CbrtfExecution
 pub cbrtf::CbrtfOptions::portability: cbrtf::CbrtfPortability
@@ -81,29 +81,29 @@ pub fn cbrtf::try_cbrt_runtime(f32, cbrtf::CbrtfOptions) -> core::result::Result
 pub fn cbrtf::try_cbrt_with<const OPTIONS: u32>(f32) -> core::result::Result<f32, cbrtf::CbrtfError>
 pub fn cbrtf::try_cbrt_with_token<const OPTIONS: u32, T: magetypes::simd::backends::convert::F32x4Convert>(T, f32) -> core::result::Result<f32, cbrtf::CbrtfError>
 pub mod expf
-pub enum expf::ExpfDomain
+#[non_exhaustive] pub enum expf::ExpfDomain
 pub expf::ExpfDomain::Bounded
 pub expf::ExpfDomain::Full
 #[non_exhaustive] pub enum expf::ExpfErrorKind
 pub expf::ExpfErrorKind::InvalidInput
 pub expf::ExpfErrorKind::UnsupportedOptions
 pub expf::ExpfErrorKind::UnsupportedWidth
-pub enum expf::ExpfExecution
+#[non_exhaustive] pub enum expf::ExpfExecution
 pub expf::ExpfExecution::Automatic
 pub expf::ExpfExecution::Caller
-pub enum expf::ExpfPortability
+#[non_exhaustive] pub enum expf::ExpfPortability
 pub expf::ExpfPortability::BackendDependent
 pub expf::ExpfPortability::BitExact
-pub enum expf::ExpfPrecision
+#[non_exhaustive] pub enum expf::ExpfPrecision
 pub expf::ExpfPrecision::Lowp
 pub expf::ExpfPrecision::Midp
-pub enum expf::ExpfValidation
+#[non_exhaustive] pub enum expf::ExpfValidation
 pub expf::ExpfValidation::AssumeValid
 pub expf::ExpfValidation::Checked
 pub struct expf::ExpfError
 pub expf::ExpfError::kind: expf::ExpfErrorKind
 pub expf::ExpfError::lane_mask: u16
-pub struct expf::ExpfOptions
+#[non_exhaustive] pub struct expf::ExpfOptions
 pub expf::ExpfOptions::domain: expf::ExpfDomain
 pub expf::ExpfOptions::execution: expf::ExpfExecution
 pub expf::ExpfOptions::portability: expf::ExpfPortability
@@ -139,29 +139,29 @@ pub fn expf::try_exp_runtime(f32, expf::ExpfOptions) -> core::result::Result<f32
 pub fn expf::try_exp_with<const OPTIONS: u32>(f32) -> core::result::Result<f32, expf::ExpfError>
 pub fn expf::try_exp_with_token<const OPTIONS: u32, T: magetypes::simd::backends::convert::F32x4Convert>(T, f32) -> core::result::Result<f32, expf::ExpfError>
 pub mod logf
-pub enum logf::LogfDomain
+#[non_exhaustive] pub enum logf::LogfDomain
 pub logf::LogfDomain::Positive
 pub logf::LogfDomain::Specials
 #[non_exhaustive] pub enum logf::LogfErrorKind
 pub logf::LogfErrorKind::InvalidInput
 pub logf::LogfErrorKind::UnsupportedOptions
 pub logf::LogfErrorKind::UnsupportedWidth
-pub enum logf::LogfExecution
+#[non_exhaustive] pub enum logf::LogfExecution
 pub logf::LogfExecution::Automatic
 pub logf::LogfExecution::Caller
-pub enum logf::LogfPortability
+#[non_exhaustive] pub enum logf::LogfPortability
 pub logf::LogfPortability::BackendDependent
 pub logf::LogfPortability::BitExact
-pub enum logf::LogfPrecision
+#[non_exhaustive] pub enum logf::LogfPrecision
 pub logf::LogfPrecision::Lowp
 pub logf::LogfPrecision::Midp
-pub enum logf::LogfValidation
+#[non_exhaustive] pub enum logf::LogfValidation
 pub logf::LogfValidation::AssumeValid
 pub logf::LogfValidation::Checked
 pub struct logf::LogfError
 pub logf::LogfError::kind: logf::LogfErrorKind
 pub logf::LogfError::lane_mask: u16
-pub struct logf::LogfOptions
+#[non_exhaustive] pub struct logf::LogfOptions
 pub logf::LogfOptions::domain: logf::LogfDomain
 pub logf::LogfOptions::execution: logf::LogfExecution
 pub logf::LogfOptions::portability: logf::LogfPortability
@@ -213,7 +213,7 @@ pub fn logf::try_log2_runtime(f32, logf::LogfOptions) -> core::result::Result<f3
 pub fn logf::try_log2_with<const OPTIONS: u32>(f32) -> core::result::Result<f32, logf::LogfError>
 pub fn logf::try_log2_with_token<const OPTIONS: u32, T: magetypes::simd::backends::convert::F32x4Convert>(T, f32) -> core::result::Result<f32, logf::LogfError>
 pub mod powf
-pub enum powf::PowfDomain
+#[non_exhaustive] pub enum powf::PowfDomain
 pub powf::PowfDomain::Full
 pub powf::PowfDomain::Gamma
 pub powf::PowfDomain::NonNegativeNormal
@@ -225,23 +225,23 @@ pub powf::PowfErrorKind::InvalidExponent
 pub powf::PowfErrorKind::OutsideApproximationRange
 pub powf::PowfErrorKind::UnsupportedOptions
 pub powf::PowfErrorKind::UnsupportedWidth
-pub enum powf::PowfExecution
+#[non_exhaustive] pub enum powf::PowfExecution
 pub powf::PowfExecution::Automatic
 pub powf::PowfExecution::Caller
-pub enum powf::PowfPortability
+#[non_exhaustive] pub enum powf::PowfPortability
 pub powf::PowfPortability::BackendDependent
 pub powf::PowfPortability::BitExact
-pub enum powf::PowfPrecision
+#[non_exhaustive] pub enum powf::PowfPrecision
 pub powf::PowfPrecision::Highp
 pub powf::PowfPrecision::Lowp
 pub powf::PowfPrecision::Midp
-pub enum powf::PowfValidation
+#[non_exhaustive] pub enum powf::PowfValidation
 pub powf::PowfValidation::AssumeValid
 pub powf::PowfValidation::Checked
 pub struct powf::PowfError
 pub powf::PowfError::kind: powf::PowfErrorKind
 pub powf::PowfError::lane_mask: u16
-pub struct powf::PowfOptions
+#[non_exhaustive] pub struct powf::PowfOptions
 pub powf::PowfOptions::domain: powf::PowfDomain
 pub powf::PowfOptions::execution: powf::PowfExecution
 pub powf::PowfOptions::portability: powf::PowfPortability

@@ -265,6 +265,7 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 #### Added
 
 - Add the `magemath` (`0.1.0`) crate (`no_std` by default, optional `std`, `w512`, `avx512`) providing configurable `f32` `powf`, `expf` (`exp2`, `exp`), `logf` (`log2`, `ln`, `log10`, `log1p`), and `cbrtf` approximations with explicit domain, precision, portability, and execution profiles plus matching scalar and `*_with_token` entry points for SIMD tails (`docs/MAGEMATH-MIGRATION.md`, `magemath/VALIDATION.md`).
+- Mark all `*Options` structs, policy-axis enums (`*Domain`, `*Execution`, `*Portability`, `*Precision`, `*Validation`), and `*ErrorKind` enums `#[non_exhaustive]` so future approximation families, domains, and option axes remain minor-compatible.
 
 ## Workspace
 
