@@ -725,6 +725,19 @@ pub(crate) fn rename_wildcard_token(sig: &mut Signature) -> Option<Ident> {
     None
 }
 
+/// Wrap `body` in braces that carry the author's original body span.
+///
+/// Coverage instrumentation keys a function's records to its body block span.
+/// A brace group built by `quote! { ... }` gets the macro call-site span, and
+/// rustc then emits no coverage records for the author's statements (issue
+/// #154). Every emitter that places author code in a function body must use
+/// this instead of writing literal braces.
+pub(crate) fn braced_body(brace: &token::Brace, body: impl ToTokens) -> proc_macro2::TokenStream {
+    let mut tokens = proc_macro2::TokenStream::new();
+    brace.surround(&mut tokens, |tokens| body.to_tokens(tokens));
+    tokens
+}
+
 /// Prepend statements to a function body.
 pub(crate) fn prepend_to_body(
     body: &mut proc_macro2::TokenStream,

@@ -179,12 +179,10 @@ pub(crate) fn emit(
     let vis = &variant_fn.vis;
     let sig = &variant_fn.sig;
     let attrs = &variant_fn.attrs;
-    let body = &variant_fn.body;
+    let body = braced_body(&variant_fn.brace_token, &variant_fn.body);
     Ok(quote! {
         #cfg_guard
         #(#attrs)*
-        #vis #sig {
-            #body
-        }
+        #vis #sig #body
     })
 }

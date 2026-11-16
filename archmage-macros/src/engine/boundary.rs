@@ -233,7 +233,8 @@ pub(crate) fn expand(
             .as_ref()
             .map(|_| quote! { let _self = self; });
         let cfg = gen_cfg_guard(None, args.shared.cfg_feature.as_deref());
-        return quote! { #cfg #(#attrs)* #inline_attr #vis #sig { #self_binding #body } };
+        let body = braced_body(&input_fn.brace_token, quote! { #self_binding #body });
+        return quote! { #cfg #(#attrs)* #inline_attr #vis #sig #body };
     }
     let target_feature_attrs: Vec<Attribute> =
         vec![parse_quote!(#[target_feature(enable = #features_csv)])];
@@ -353,12 +354,11 @@ pub(crate) fn arcane_impl_wasm_safe(
     }
 
     let cfg_guard = gen_cfg_guard(Some("wasm32"), args.shared.cfg_feature.as_deref());
+    let body = braced_body(&input_fn.brace_token, body);
     quote! {
         #cfg_guard
         #(#new_attrs)*
-        #vis #sig {
-            #body
-        }
+        #vis #sig #body
     }
 }
 
@@ -462,9 +462,10 @@ fn emit_boundary(input: LightFn, options: &BoundaryOptions, parts: BoundaryParts
     } else {
         quote!()
     };
+    let body = braced_body(&input.brace_token, body);
     let inner = quote! {
         #before #(#target_feature_attrs)* #inline_attr #after
-        #unsafety fn #name #generics (#params) #output #where_clause { #body }
+        #unsafety fn #name #generics (#params) #output #where_clause #body
     };
     let proof_call = proof_call(call);
     let sibling = (!options.nested).then_some(&inner);
