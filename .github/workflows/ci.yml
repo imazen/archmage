@@ -172,6 +172,11 @@ jobs:
       - name: Run token infrastructure tests (serialized)
         run: cargo test --features "${{ env.FEATURES }}" --test token_infrastructure -- --test-threads=1
 
+      - name: Zen consumer pattern suites (released vs unreleased)
+        run: |
+          cargo test --manifest-path tests/zen-patterns/released/candidate/Cargo.toml
+          cargo test --manifest-path tests/zen-patterns/unreleased/Cargo.toml
+
       # Standalone test crates verify avx512 feature gating behavior.
       # NOT workspace members (to avoid feature unification).
       - name: Test avx512 cfg (with feature)
@@ -196,6 +201,13 @@ jobs:
         run: cargo check --manifest-path tests/downstream-compat/zensim/Cargo.toml
       - name: Downstream compat (zenpixels-convert)
         run: cargo check --manifest-path tests/downstream-compat/zenpixels-convert/Cargo.toml
+      - name: Zen consumer pattern suites (released vs unreleased)
+        run: |
+          cargo test --manifest-path tests/zen-patterns/released/published/Cargo.toml
+          cargo test --manifest-path tests/zen-patterns/released/candidate/Cargo.toml
+          cargo test --manifest-path tests/zen-patterns/released/candidate/Cargo.toml --features avx512
+          cargo test --manifest-path tests/zen-patterns/unreleased/Cargo.toml
+          cargo test --manifest-path tests/zen-patterns/unreleased/Cargo.toml --features avx512
 
       - name: CPU survey
         if: always()
@@ -272,6 +284,11 @@ jobs:
       # process-wide state that races when tests run in parallel.
       - name: Run token infrastructure tests (serialized)
         run: cargo test --features "${{ env.FEATURES }}" --test token_infrastructure -- --test-threads=1
+
+      - name: Zen consumer pattern suites (released vs unreleased)
+        run: |
+          cargo test --manifest-path tests/zen-patterns/released/candidate/Cargo.toml
+          cargo test --manifest-path tests/zen-patterns/unreleased/Cargo.toml
 
       # Cobalt 100 / Neoverse N2 hardware assertions. GH `windows-11-arm`
       # and `ubuntu-24.04-arm` are both this CPU, so we know V2 + V3 must

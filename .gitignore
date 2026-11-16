@@ -13,6 +13,8 @@ docs/book/mermaid-init.js
 docs/site/public/
 tests/avx512-cfg-tests/*/target/
 tests/downstream-compat/*/target/
+tests/zen-patterns/*/*/target/
+tests/zen-patterns/*/target/
 copter-report/
 
 # apidoc/ snapshot-runner package: build dir stays out

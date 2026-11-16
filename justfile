@@ -557,3 +557,12 @@ magemath-check:
 magemath-check-wasm:
     RUSTFLAGS="-C target-feature=+simd128" CARGO_TARGET_WASM32_WASIP1_RUNNER=wasmtime cargo test -p magemath --features "std w512" --target wasm32-wasip1
     RUSTFLAGS="-C target-feature=+simd128" CARGO_TARGET_WASM32_WASIP1_RUNNER=wasmtime cargo test -p magemath --no-default-features --features w512 --target wasm32-wasip1
+
+# Consumer patterns from zen* crates split by published 0.9.31 vs workspace additions.
+zen-patterns-check:
+    cargo test --manifest-path tests/zen-patterns/released/published/Cargo.toml
+    cargo test --manifest-path tests/zen-patterns/released/published/Cargo.toml --features avx512
+    cargo test --manifest-path tests/zen-patterns/released/candidate/Cargo.toml
+    cargo test --manifest-path tests/zen-patterns/released/candidate/Cargo.toml --features avx512
+    cargo test --manifest-path tests/zen-patterns/unreleased/Cargo.toml
+    cargo test --manifest-path tests/zen-patterns/unreleased/Cargo.toml --features avx512

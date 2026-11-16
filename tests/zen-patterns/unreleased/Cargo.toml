@@ -1,0 +1,18 @@
+[package]
+name = "archmage-zen-patterns-unreleased"
+version = "0.0.0"
+edition = "2024"
+publish = false
+description = "Archmage, Magetypes and Magemath patterns from zen* crates that depend on features introduced after 0.9.31."
+
+[features]
+default = []
+# The consumer-side `avx512` feature that `cfg(avx512)` tier gates refer to.
+avx512 = ["archmage/avx512", "magetypes/avx512", "magemath/avx512"]
+
+[dependencies]
+archmage = { path = "../../..", features = ["testable_dispatch"] }
+magetypes = { path = "../../../magetypes" }
+magemath = { path = "../../../magemath", features = ["std"] }
+
+[workspace]
