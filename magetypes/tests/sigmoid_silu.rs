@@ -104,6 +104,62 @@ fn check_backend<T: F32x8Convert>(token: T, tier: &str) {
     assert_eq!(sil[0], 0.0, "{tier}: silu_midp(-100) must be exactly ±0");
     assert_eq!(sil[1], 100.0, "{tier}: silu_midp(100) must be exactly x");
 
+    let edge = f32x8::<T>::from_array_t(
+        token,
+        [
+            f32::NEG_INFINITY,
+            f32::INFINITY,
+            -0.0,
+            0.0,
+            -100.0,
+            100.0,
+            -88.73,
+            88.73,
+        ],
+    );
+    let sig_edge = edge.sigmoid_midp().to_array();
+    assert_eq!(sig_edge[0], 0.0, "{tier}: sigmoid_midp(-inf) must be 0");
+    assert_eq!(sig_edge[1], 1.0, "{tier}: sigmoid_midp(+inf) must be 1");
+    assert!(
+        (sig_edge[2] - 0.5).abs() < 1e-6,
+        "{tier}: sigmoid_midp(-0.0) expected 0.5, got {}",
+        sig_edge[2]
+    );
+    assert!(
+        (sig_edge[3] - 0.5).abs() < 1e-6,
+        "{tier}: sigmoid_midp(0.0) expected 0.5, got {}",
+        sig_edge[3]
+    );
+    let sil_edge = edge.silu_midp().to_array();
+    assert_eq!(
+        sil_edge[0].to_bits(),
+        (-0.0f32).to_bits(),
+        "{tier}: silu_midp(-inf) must be exact -0.0, got {:?} ({:#010x})",
+        sil_edge[0],
+        sil_edge[0].to_bits()
+    );
+    assert_eq!(
+        sil_edge[1],
+        f32::INFINITY,
+        "{tier}: silu_midp(+inf) must be +inf"
+    );
+    assert_eq!(
+        sil_edge[2].to_bits(),
+        (-0.0f32).to_bits(),
+        "{tier}: silu_midp(-0.0) must preserve -0.0"
+    );
+    assert_eq!(
+        sil_edge[3].to_bits(),
+        0.0f32.to_bits(),
+        "{tier}: silu_midp(+0.0) must be +0.0"
+    );
+    let sil_nan = f32x8::<T>::from_array_t(token, [f32::NAN; 8])
+        .silu_midp()
+        .to_array();
+    for (i, &lane) in sil_nan.iter().enumerate() {
+        assert!(lane.is_nan(), "{tier}: silu_midp(NaN)[{i}] got {lane}");
+    }
+
     // Monotonicity of sigmoid over the dense sweep (non-strict: saturated and
     // adjacent lanes may tie).
     let sweep: Vec<f32> = (0..512).map(|i| (i as f32 - 256.0) / 2.0).collect();

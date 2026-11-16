@@ -731,6 +731,63 @@ mod log_exp_edge_cases {
             );
         }
     }
+
+    #[test]
+    fn log2_midp_nan_is_nan() {
+        use archmage::ScalarToken;
+        use magetypes::simd::generic::f32x8;
+
+        let inputs = [
+            f32::NAN,
+            -f32::NAN,
+            f32::from_bits(0x7fc0_0001),
+            f32::from_bits(0x7f80_0001),
+            -1.0,
+            -0.0,
+            0.0,
+            1.0,
+        ];
+
+        let v_scalar = f32x8::<ScalarToken>::from_array_t(ScalarToken, inputs);
+        for (name, res) in [
+            ("scalar.log2_midp", v_scalar.log2_midp().to_array()),
+            ("scalar.ln_midp", v_scalar.ln_midp().to_array()),
+            ("scalar.log10_midp", v_scalar.log10_midp().to_array()),
+            (
+                "scalar.log2_midp_precise",
+                v_scalar.log2_midp_precise().to_array(),
+            ),
+        ] {
+            for i in 0..4 {
+                assert!(res[i].is_nan(), "{name} NaN lane [{i}]: got {}", res[i]);
+            }
+            assert!(res[4].is_nan(), "{name}(-1): got {}", res[4]);
+            assert_eq!(res[5], f32::NEG_INFINITY, "{name}(-0): got {}", res[5]);
+            assert_eq!(res[6], f32::NEG_INFINITY, "{name}(+0): got {}", res[6]);
+            assert!(res[7].abs() < 1e-6, "{name}(1): got {}", res[7]);
+        }
+        let all_nan = f32x8::<ScalarToken>::from_array_t(ScalarToken, [f32::NAN; 8]);
+        for (i, &v) in all_nan.log2_midp().to_array().iter().enumerate() {
+            assert!(v.is_nan(), "scalar all-NaN log2_midp[{i}]: got {v}");
+        }
+
+        if let Some(t) = X64V3Token::summon() {
+            let log2 = direct_log2_midp(t, &inputs);
+            let ln = direct_ln_midp(t, &inputs);
+            for (name, res) in [("v3.direct_log2_midp", log2), ("v3.direct_ln_midp", ln)] {
+                for i in 0..4 {
+                    assert!(res[i].is_nan(), "{name} NaN lane [{i}]: got {}", res[i]);
+                }
+                assert!(res[4].is_nan(), "{name}(-1): got {}", res[4]);
+                assert_eq!(res[5], f32::NEG_INFINITY, "{name}(-0): got {}", res[5]);
+                assert_eq!(res[6], f32::NEG_INFINITY, "{name}(+0): got {}", res[6]);
+                assert!(res[7].abs() < 1e-6, "{name}(1): got {}", res[7]);
+            }
+            for (i, &v) in direct_log2_midp(t, &[f32::NAN; 8]).iter().enumerate() {
+                assert!(v.is_nan(), "v3 all-NaN log2_midp[{i}]: got {v}");
+            }
+        }
+    }
 }
 
 #[cfg(feature = "avx512")]

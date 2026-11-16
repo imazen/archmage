@@ -1025,7 +1025,10 @@ fn gen_deterministic_reciprocals(ty: &SimdType) -> String {
             /// Deterministic reciprocal-sqrt estimate (~8-bit), bit-identical on
             /// every platform.
             ///
-            /// Seed (integer bit-trick) plus one non-FMA Newton step. Opt into more
+            /// Seed (integer bit-trick) plus one non-FMA Newton step. Intended for
+            /// positive normal inputs (`f32::MIN_POSITIVE..2.0f32.powi(126)`); `0.0`,
+            /// subnormals, `f32::MAX`, and negative inputs follow raw bit-trick
+            /// arithmetic rather than producing infinities or `NaN`. Opt into more
             /// accuracy with [`rsqrt_newton_portable`](Self::rsqrt_newton_portable)
             /// (one more step ≈ 16-bit), or use
             /// [`rsqrt_portable`](Self::rsqrt_portable) for full precision.
@@ -1067,9 +1070,13 @@ fn gen_deterministic_reciprocals(ty: &SimdType) -> String {
             /// Deterministic reciprocal estimate (~8-bit), bit-identical on every
             /// platform.
             ///
-            /// Seed (integer bit-trick) plus one non-FMA Newton step. Opt into more
-            /// accuracy with [`recip_newton_portable`](Self::recip_newton_portable),
-            /// or use [`recip_portable`](Self::recip_portable) for full precision.
+            /// Seed (integer bit-trick) plus one non-FMA Newton step. Intended for
+            /// positive normal inputs (`f32::MIN_POSITIVE..2.0f32.powi(126)`); `0.0`
+            /// and subnormals produce finite values near `f32::MAX`, and inputs above
+            /// `2^126` or negative follow raw bit-trick arithmetic rather than producing
+            /// infinities or `NaN`. Opt into more accuracy with
+            /// [`recip_newton_portable`](Self::recip_newton_portable), or use
+            /// [`recip_portable`](Self::recip_portable) for full precision.
             #[inline(always)]
             pub fn rcp_approx_portable(self) -> Self
             where

@@ -164,7 +164,7 @@ pub(super) fn gen_transcendentals(
             #[inline(always)]
             pub fn pow_lowp(self, n: f32) -> Self {{
                 let result = (self.log2_lowp() * splat_f32::<T>(self.1,n)).exp2_lowp();
-                // Zero masking: pow(0, n) = 0 for n > 0
+                // Unconditional zero masking: pow(0, n) returns 0.0 for all n (including n <= 0)
                 let is_zero = self.simd_eq(splat_f32::<T>(self.1,0.0));
                 Self::blend(is_zero, splat_f32::<T>(self.1,0.0), result)
             }}
@@ -226,8 +226,10 @@ pub(super) fn gen_transcendentals(
                     splat_f32::<T>(self.1,f32::NEG_INFINITY),
                     result,
                 );
+                // Ordered >= is true only for non-negative non-NaN lanes, mapping
+                // both negative inputs and NaN to NaN while preserving ±0 -> -inf.
                 let result =
-                    Self::blend(self.simd_lt(zero), splat_f32::<T>(self.1,f32::NAN), result);
+                    Self::blend(self.simd_ge(zero), result, splat_f32::<T>(self.1,f32::NAN));
                 // +inf -> +inf; the polynomial otherwise returns inf's raw
                 // unbiased exponent (128) for an infinite input.
                 let inf = splat_f32::<T>(self.1,f32::INFINITY);
@@ -380,7 +382,11 @@ pub(super) fn gen_transcendentals(
             /// exactly `x`.
             #[inline(always)]
             pub fn silu_midp(self) -> Self {{
-                self * self.sigmoid_midp()
+                let neg_inf = splat_f32::<T>(self.1,f32::NEG_INFINITY);
+                let result = self * self.sigmoid_midp();
+                // (-inf) * 0.0 evaluates to NaN, whereas large negative finite inputs
+                // follow x * (+0.0) = -0.0; clamp -inf to the -0.0 limit.
+                Self::blend(self.simd_eq(neg_inf), splat_f32::<T>(self.1,-0.0f32), result)
             }}
 
             /// Mid-precision base-10 logarithm (at most 4.5 ULP).
