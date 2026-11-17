@@ -5,7 +5,7 @@
     target_arch = "wasm32"
 ))]
 use super::highp_simd;
-use super::{PowfError, PowfProfile, dispatch::Plan, graph, highp, highp_scalar};
+use super::{PowfError, PowfOptions, dispatch::Plan, graph, highp, highp_scalar};
 use crate::Execution;
 use archmage::ScalarToken;
 
@@ -278,29 +278,29 @@ fn run_slice<const IN_CONTEXT: bool, const ELIDE: bool, const ZERO: bool>(
     }
 }
 
-// The direct form inlines into an already capable vector caller. Automatic
-// upgrades enter one arcane boundary for the complete graph instead.
+// The direct form inlines into an already capable vector caller. Upgrades
+// enter one arcane boundary for the complete graph instead.
 #[cfg_attr(debug_assertions, inline(never))]
 #[cfg_attr(not(debug_assertions), inline(always))]
 pub(super) fn for_token_cfg<T: archmage::IntoConcreteToken, const N: usize>(
     t: T,
-    spec: super::PowfSpec,
+    opts: PowfOptions,
     bases: [f32; N],
     n: f32,
 ) -> Result<[f32; N], PowfError> {
-    let cfg = highp::HighpCfg::from_spec(spec);
+    let cfg = highp::HighpCfg::from_options(opts);
     #[cfg(feature = "std")]
-    if spec.is_backend() {
+    if opts.is_backend() {
         return highp::run_cfg::<N>(cfg, bases, n);
     }
-    let caller = super::dispatch::select_highp(t, Execution::Caller);
-    let in_context = !matches!(caller, Plan::Software);
-    let plan = if !in_context && !spec.is_caller() {
-        super::dispatch::select_highp(t, Execution::Automatic)
-    } else {
+    let caller = super::dispatch::select_highp(t, Execution::Caller, false);
+    let plan = if opts.is_caller() {
         caller
+    } else {
+        super::dispatch::select_highp(t, Execution::Upgrade, N >= 8)
     };
-    match (in_context, spec.elides_range_check(), spec.admits_zero()) {
+    let in_context = !matches!(caller, Plan::Software) && plan.same_tier(caller);
+    match (in_context, opts.elides_range_check(), opts.admits_zero()) {
         (true, true, true) => run::<true, true, true, N>(plan, cfg, bases, n),
         (true, true, false) => run::<true, true, false, N>(plan, cfg, bases, n),
         (true, false, _) => run::<true, false, false, N>(plan, cfg, bases, n),
@@ -310,27 +310,18 @@ pub(super) fn for_token_cfg<T: archmage::IntoConcreteToken, const N: usize>(
     }
 }
 
-#[inline(always)]
-pub(super) fn for_token<P: PowfProfile, T: archmage::IntoConcreteToken, const N: usize>(
-    t: T,
-    bases: [f32; N],
-    n: f32,
-) -> Result<[f32; N], PowfError> {
-    for_token_cfg::<T, N>(t, P::SPEC, bases, n)
-}
-
 #[cfg_attr(debug_assertions, inline(never))]
 #[cfg_attr(not(debug_assertions), inline(always))]
 pub(super) fn for_token_slice_cfg<T: archmage::IntoConcreteToken>(
     t: T,
-    spec: super::PowfSpec,
+    opts: PowfOptions,
     src: &[f32],
     dst: &mut [f32],
     n: f32,
 ) -> Result<(), (usize, PowfError)> {
-    let cfg = highp::HighpCfg::from_spec(spec);
+    let cfg = highp::HighpCfg::from_options(opts);
     #[cfg(feature = "std")]
-    if spec.is_backend() {
+    if opts.is_backend() {
         let (chunks, tail) = src.as_chunks::<8>();
         let (out_chunks, out_tail) = dst.as_chunks_mut::<8>();
         for (i, (s, d)) in chunks.iter().zip(out_chunks.iter_mut()).enumerate() {
@@ -343,14 +334,14 @@ pub(super) fn for_token_slice_cfg<T: archmage::IntoConcreteToken>(
         }
         return Ok(());
     }
-    let caller = super::dispatch::select_highp(t, Execution::Caller);
-    let in_context = !matches!(caller, Plan::Software);
-    let plan = if !in_context && !spec.is_caller() {
-        super::dispatch::select_highp(t, Execution::Automatic)
-    } else {
+    let caller = super::dispatch::select_highp(t, Execution::Caller, false);
+    let plan = if opts.is_caller() {
         caller
+    } else {
+        super::dispatch::select_highp(t, Execution::Upgrade, true)
     };
-    match (in_context, spec.elides_range_check(), spec.admits_zero()) {
+    let in_context = !matches!(caller, Plan::Software) && plan.same_tier(caller);
+    match (in_context, opts.elides_range_check(), opts.admits_zero()) {
         (true, true, true) => run_slice::<true, true, true>(plan, cfg, src, dst, n),
         (true, true, false) => run_slice::<true, true, false>(plan, cfg, src, dst, n),
         (true, false, _) => run_slice::<true, false, false>(plan, cfg, src, dst, n),
@@ -358,16 +349,4 @@ pub(super) fn for_token_slice_cfg<T: archmage::IntoConcreteToken>(
         (false, true, false) => run_slice::<false, true, false>(plan, cfg, src, dst, n),
         (false, false, _) => run_slice::<false, false, false>(plan, cfg, src, dst, n),
     }
-}
-
-/// Whole-slice HIGHP dispatcher: enters the selected target-feature region
-/// once around all 8-element chunks and the scalar remainder.
-#[inline(always)]
-pub(super) fn for_token_slice<P: PowfProfile, T: archmage::IntoConcreteToken>(
-    t: T,
-    src: &[f32],
-    dst: &mut [f32],
-    n: f32,
-) -> Result<(), (usize, PowfError)> {
-    for_token_slice_cfg::<T>(t, P::SPEC, src, dst, n)
 }

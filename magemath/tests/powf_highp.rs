@@ -1,14 +1,16 @@
 //! Canonical HIGHP values come from an independent exact-rational graph oracle.
-#![allow(deprecated)] // Intentional coverage of retained Magetypes compatibility APIs.
+#![forbid(unsafe_code)]
 use magemath::{
-    Caller, Unchecked,
-    powf::{self, Options, PowfErrorKind, PowfExecution, PowfOptions, presets},
+    Execution, SimdMath, Validation,
+    powf::{Powf, PowfErrorKind, PowfOptions},
 };
 mod fixtures {
     include!("common/highp_vectors.rs");
 }
-type Full = presets::FullHighp;
-type CallerFull = Caller<presets::FullHighp>;
+
+const FULL: u128 = PowfOptions::new().full_domain().highp().bits();
+const CALLER_FULL: u128 = PowfOptions::new().full_domain().highp().caller().bits();
+
 fn equal(actual: f32, expected: u32) {
     if expected & 0x7fffffff > 0x7f800000 {
         assert!(actual.is_nan());
@@ -16,73 +18,74 @@ fn equal(actual: f32, expected: u32) {
         assert_eq!(actual.to_bits(), expected);
     }
 }
-fn verify<P: powf::PowfProfile, const N: usize>() {
+
+fn verify<const CFG: u128, const N: usize>() {
     for &[x, n, y] in fixtures::CASES {
-        let result =
-            powf::try_powf_array_with::<P, N>([f32::from_bits(x); N], f32::from_bits(n)).unwrap();
+        let result = Powf::<CFG>::array::<N>([f32::from_bits(x); N], f32::from_bits(n)).unwrap();
         for v in result {
             equal(v, y);
         }
     }
 }
+
 #[test]
 fn canonical_scalar_and_all_array_widths() {
-    verify::<Full, 1>();
-    verify::<CallerFull, 1>();
-    verify::<Full, 4>();
-    verify::<CallerFull, 4>();
-    verify::<Full, 8>();
-    verify::<CallerFull, 8>();
+    verify::<FULL, 1>();
+    verify::<CALLER_FULL, 1>();
+    verify::<FULL, 4>();
+    verify::<CALLER_FULL, 4>();
+    verify::<FULL, 8>();
+    verify::<CALLER_FULL, 8>();
     #[cfg(feature = "w512")]
     {
-        verify::<Full, 16>();
-        verify::<CallerFull, 16>();
+        verify::<FULL, 16>();
+        verify::<CALLER_FULL, 16>();
     }
 }
+
 #[test]
 fn canonical_checked_masks_and_const_assumptions() {
-    type G = presets::GammaHighp;
+    const G: u128 = PowfOptions::new().gamma().highp().bits();
+    const A: u128 = PowfOptions::new().gamma().highp().unchecked().bits();
     assert_eq!(
-        powf::try_powf_array_with::<G, 4>([0., 1., 4., 16.], 0.).unwrap(),
+        Powf::<G>::array::<4>([0., 1., 4., 16.], 0.).unwrap(),
         [1.; 4]
     );
-    let err =
-        powf::try_powf_array_with::<G, 4>([0., -0., f32::from_bits(1), f32::NAN], 2.4).unwrap_err();
+    let err = Powf::<G>::array::<4>([0., -0., f32::from_bits(1), f32::NAN], 2.4).unwrap_err();
     assert_eq!(err.kind, PowfErrorKind::InvalidBase);
     assert_eq!(err.lane_mask, 14);
     assert_eq!(
-        powf::try_powf_array_with::<G, 4>([1.; 4], f32::from_bits(1))
+        Powf::<G>::array::<4>([1.; 4], f32::from_bits(1))
             .unwrap_err()
             .lane_mask,
         15
     );
-    type A = Unchecked<presets::GammaHighp>;
     for n in [0., 0.5, 2.4, 4.] {
         let xs = [0., 1. / 65536., 1., 65536.];
         assert_eq!(
-            powf::try_powf_array_with::<G, 4>(xs, n)
-                .unwrap()
-                .map(f32::to_bits),
-            powf::try_powf_array_with::<A, 4>(xs, n)
-                .unwrap()
-                .map(f32::to_bits)
+            Powf::<G>::array::<4>(xs, n).unwrap().map(f32::to_bits),
+            Powf::<A>::array::<4>(xs, n).unwrap().map(f32::to_bits)
         );
     }
-    assert!(powf::try_powf_array_runtime([2.; 4], 2.4, PowfOptions::PORTABLE_GAMMA_HIGHP).is_ok());
+    assert!(
+        PowfOptions::new()
+            .gamma()
+            .highp()
+            .runtime()
+            .array([2.; 4], 2.4)
+            .is_ok()
+    );
 }
 
 // Different table indices must occupy the same pack. Broadcast-only fixtures
 // cannot catch lane ordering, gather or packing mistakes.
 #[archmage::magetypes(v3, neon, wasm128, scalar)]
 fn vector4(token: Token, x: [f32; 4], n: f32) -> [f32; 4] {
-    magemath::powf::try_powf_f32x4_with::<CallerFull, _>(
-        token,
-        magetypes::simd::generic::f32x4::from_array_t(token, x),
-        n,
-    )
-    .unwrap()
-    .to_array()
+    magetypes::simd::generic::f32x4::from_array_t(token, x)
+        .powf::<CALLER_FULL>(n)
+        .to_array()
 }
+
 fn mixed<const N: usize>() {
     let mut cases = fixtures::CASES.to_vec();
     cases.sort_by_key(|r| r[1]);
@@ -90,12 +93,13 @@ fn mixed<const N: usize>() {
         let x = core::array::from_fn(|i| f32::from_bits(chunk[i % chunk.len()][0]));
         for (i, &[_, n, expected]) in chunk.iter().enumerate() {
             equal(
-                powf::try_powf_array_with::<Full, N>(x, f32::from_bits(n)).unwrap()[i],
+                Powf::<FULL>::array::<N>(x, f32::from_bits(n)).unwrap()[i],
                 expected,
             );
         }
     }
 }
+
 #[test]
 fn canonical_mixed_lanes() {
     mixed::<4>();
@@ -131,8 +135,8 @@ fn canonical_mixed_lanes() {
 }
 
 fn gamma_mixed<const N: usize>() {
-    type G = presets::GammaHighp;
-    type A = Unchecked<presets::GammaHighp>;
+    const G: u128 = PowfOptions::new().gamma().highp().bits();
+    const A: u128 = PowfOptions::new().gamma().highp().unchecked().bits();
     let mut cases: Vec<_> = fixtures::CASES
         .iter()
         .copied()
@@ -150,16 +154,17 @@ fn gamma_mixed<const N: usize>() {
         let x = core::array::from_fn(|i| f32::from_bits(chunk[i % chunk.len()][0]));
         for (i, &[_, n, expected]) in chunk.iter().enumerate() {
             equal(
-                powf::try_powf_array_with::<G, N>(x, f32::from_bits(n)).unwrap()[i],
+                Powf::<G>::array::<N>(x, f32::from_bits(n)).unwrap()[i],
                 expected,
             );
             equal(
-                powf::try_powf_array_with::<A, N>(x, f32::from_bits(n)).unwrap()[i],
+                Powf::<A>::array::<N>(x, f32::from_bits(n)).unwrap()[i],
                 expected,
             );
         }
     }
 }
+
 #[test]
 fn canonical_gamma_mixed_lanes() {
     gamma_mixed::<1>();
@@ -171,31 +176,70 @@ fn canonical_gamma_mixed_lanes() {
 
 #[test]
 fn every_canonical_highp_encoding_reaches_the_same_graph() {
+    const fn opts_for(domain: u32, caller: bool, unchecked: bool) -> PowfOptions {
+        let b = match domain {
+            0 => PowfOptions::new().highp(),
+            1 => PowfOptions::new().admit_zero().highp(),
+            2 => PowfOptions::new().gamma().highp(),
+            _ => PowfOptions::new().full_domain().highp(),
+        };
+        b.execution(if caller {
+            Execution::Caller
+        } else {
+            Execution::Upgrade
+        })
+        .validation(if unchecked {
+            Validation::AssumeValid
+        } else {
+            Validation::Checked
+        })
+    }
+
+    fn verify_one<const CFG: u128>(opts: PowfOptions) {
+        let expected = Powf::<CFG>::array::<4>([2., 4., 8., 16.], 0.5).unwrap();
+        let runtime = opts.runtime().array([2., 4., 8., 16.], 0.5).unwrap();
+        assert_eq!(expected.map(f32::to_bits), runtime.map(f32::to_bits));
+        for (x, value) in [2f32, 4., 8., 16.].into_iter().zip(expected) {
+            let row = fixtures::CASES
+                .iter()
+                .find(|r| r[0] == x.to_bits() && r[1] == 0.5f32.to_bits());
+            if x == 4. {
+                assert_eq!(value.to_bits(), 2f32.to_bits());
+            }
+            if x == 16. {
+                assert_eq!(value.to_bits(), 4f32.to_bits());
+            }
+            if let Some(r) = row {
+                equal(value, r[2]);
+            }
+        }
+    }
+
     macro_rules! check {
-        ($($flags:literal),+ $(,)?) => {$(
-            let expected = powf::try_powf_array_with::<Options<$flags>, 4>([2., 4., 8., 16.], 0.5).unwrap();
-            let runtime = powf::try_powf_array_runtime([2., 4., 8., 16.], 0.5,
-                PowfOptions::PORTABLE_HIGHP
-                    .with_domain(match $flags & 3 {
-                        0 => powf::PowfDomain::PositiveNormal,
-                        1 => powf::PowfDomain::NonNegativeNormal,
-                        2 => powf::PowfDomain::Gamma,
-                        _ => powf::PowfDomain::Full,
-                    })
-                    .with_execution(if $flags & 4 == 0 { PowfExecution::Automatic } else { PowfExecution::Caller })
-                    .with_validation(if $flags & 32 == 0 { powf::PowfValidation::Checked } else { powf::PowfValidation::AssumeValid })).unwrap();
-            assert_eq!(expected.map(f32::to_bits), runtime.map(f32::to_bits));
-            for (x, value) in [2f32, 4., 8., 16.].into_iter().zip(expected) {
-                let row = fixtures::CASES.iter().find(|r| r[0] == x.to_bits() && r[1] == 0.5f32.to_bits());
-                // Independent fixtures are also checked by the all-width tests;
-                // powers with known exact square roots anchor runtime plumbing.
-                if x == 4. { assert_eq!(value.to_bits(), 2f32.to_bits()); }
-                if x == 16. { assert_eq!(value.to_bits(), 4f32.to_bits()); }
-                if let Some(r) = row { equal(value, r[2]); }
+        ($(($d:literal, $c:literal, $u:literal)),+ $(,)?) => {$(
+            {
+                const O: PowfOptions = opts_for($d, $c, $u);
+                verify_one::<{ O.bits() }>(O);
             }
         )+};
     }
+
     check!(
-        64, 65, 66, 67, 68, 69, 70, 71, 96, 97, 98, 99, 100, 101, 102, 103
+        (0, false, false),
+        (1, false, false),
+        (2, false, false),
+        (3, false, false),
+        (0, true, false),
+        (1, true, false),
+        (2, true, false),
+        (3, true, false),
+        (0, false, true),
+        (1, false, true),
+        (2, false, true),
+        (3, false, true),
+        (0, true, true),
+        (1, true, true),
+        (2, true, true),
+        (3, true, true),
     );
 }

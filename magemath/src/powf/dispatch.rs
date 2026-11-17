@@ -1,4 +1,5 @@
-use super::{PowfError, PowfExecution, graph};
+use super::{PowfError, graph};
+use crate::Execution;
 use archmage::{IntoConcreteToken, ScalarToken};
 
 #[derive(Clone, Copy, Debug)]
@@ -18,30 +19,70 @@ pub(super) enum Plan {
     Std,
 }
 
+impl Plan {
+    #[inline(always)]
+    pub(super) fn same_tier(self, other: Self) -> bool {
+        core::mem::discriminant(&self) == core::mem::discriminant(&other)
+    }
+}
+
+#[inline(always)]
+fn reattune_plan<const EXACT: bool, const DOUBLE: bool>() -> Plan {
+    if DOUBLE {
+        archmage::reattune!(
+            upgrade_highp(),
+            [
+                _v4x_t(cfg(avx512)),
+                _v4_t(cfg(avx512)),
+                _v3_t,
+                _neon_t,
+                _wasm128_t,
+                _scalar_t
+            ]
+        )
+    } else if EXACT {
+        archmage::reattune!(
+            upgrade(),
+            [
+                _v4x_t(cfg(avx512)),
+                _v4_t(cfg(avx512)),
+                _v3_t,
+                _neon_t,
+                _wasm128_t,
+                _scalar_t
+            ]
+        )
+    } else {
+        archmage::reattune!(
+            upgrade_relaxed(),
+            [
+                _v4x_t(cfg(avx512)),
+                _v4_t(cfg(avx512)),
+                _v3_t,
+                _neon_t,
+                _wasm128_t,
+                _scalar_t
+            ]
+        )
+    }
+}
+
 #[inline(always)]
 fn select_impl<T: IntoConcreteToken, const EXACT: bool, const DOUBLE: bool>(
     token: T,
-    execution: PowfExecution,
+    execution: Execution,
+    widen_v3: bool,
 ) -> Plan {
-    let _ = token;
+    let _ = (token, widen_v3);
     #[cfg(target_arch = "x86_64")]
     {
-        if let Some(t) = token.as_x64v3() {
-            return Plan::V3(t);
-        }
-        if let Some(t) = token.as_x64v3_crypto() {
-            return Plan::V3(t.v3());
-        }
-        if let Some(t) = token.as_x64v3_gfni_crypto() {
-            return Plan::V3(t.v3());
-        }
         #[cfg(feature = "avx512")]
         {
-            if let Some(t) = token.as_x64v4() {
-                return Plan::V4(t);
-            }
             if let Some(t) = token.as_x64v4x() {
                 return Plan::V4x(t);
+            }
+            if let Some(t) = token.as_x64v4() {
+                return Plan::V4(t);
             }
             if let Some(t) = token.as_avx512_fp16() {
                 return Plan::V4(t.v4());
@@ -49,15 +90,29 @@ fn select_impl<T: IntoConcreteToken, const EXACT: bool, const DOUBLE: bool>(
         }
         #[cfg(not(feature = "avx512"))]
         {
-            if let Some(t) = token.as_x64v4() {
+            if let Some(t) = token.as_x64v4x() {
                 return Plan::V3(t.v3());
             }
-            if let Some(t) = token.as_x64v4x() {
+            if let Some(t) = token.as_x64v4() {
                 return Plan::V3(t.v3());
             }
             if let Some(t) = token.as_avx512_fp16() {
                 return Plan::V3(t.v3());
             }
+        }
+        if let Some(v3) = token
+            .as_x64v3()
+            .or_else(|| token.as_x64v3_crypto().map(|t| t.v3()))
+            .or_else(|| token.as_x64v3_gfni_crypto().map(|t| t.v3()))
+        {
+            #[cfg(feature = "avx512")]
+            if widen_v3 && execution == Execution::Upgrade {
+                let upgraded = reattune_plan::<EXACT, DOUBLE>();
+                if matches!(upgraded, Plan::V4(_) | Plan::V4x(_)) {
+                    return upgraded;
+                }
+            }
+            return Plan::V3(v3);
         }
     }
     #[cfg(target_arch = "aarch64")]
@@ -98,16 +153,10 @@ fn select_impl<T: IntoConcreteToken, const EXACT: bool, const DOUBLE: bool>(
             );
         }
     }
-    if execution == PowfExecution::Caller {
+    if execution == Execution::Caller {
         return Plan::Software;
     }
-    let plan = if DOUBLE {
-        archmage::reattune!(upgrade_highp(), [_v3_t, _neon_t, _wasm128_t, _scalar_t])
-    } else if EXACT {
-        archmage::reattune!(upgrade(), [_v3_t, _neon_t, _wasm128_t, _scalar_t])
-    } else {
-        archmage::reattune!(upgrade_relaxed(), [_v3_t, _neon_t, _wasm128_t, _scalar_t])
-    };
+    let plan = reattune_plan::<EXACT, DOUBLE>();
     if !matches!(plan, Plan::Software) {
         return plan;
     }
@@ -120,24 +169,28 @@ fn select_impl<T: IntoConcreteToken, const EXACT: bool, const DOUBLE: bool>(
 
 // Use the supported attunement boundary for autonomous operation selection.
 // The selected proof is reused by the complete polynomial, never per FMA.
-#[archmage::attune(_*_t)]
+#[archmage::attune(_*_t, +v4(cfg(avx512)), +v4x(cfg(avx512)))]
 fn upgrade(token: Token) -> Plan {
-    select(token, PowfExecution::Caller)
+    select(token, Execution::Caller, false)
 }
 
 #[inline(always)]
-pub(super) fn select<T: IntoConcreteToken>(token: T, execution: PowfExecution) -> Plan {
-    select_impl::<T, true, false>(token, execution)
+pub(super) fn select<T: IntoConcreteToken>(token: T, execution: Execution, widen_v3: bool) -> Plan {
+    select_impl::<T, true, false>(token, execution, widen_v3)
 }
 
 #[inline(always)]
-pub(super) fn select_relaxed<T: IntoConcreteToken>(token: T, execution: PowfExecution) -> Plan {
-    select_impl::<T, false, false>(token, execution)
+pub(super) fn select_relaxed<T: IntoConcreteToken>(
+    token: T,
+    execution: Execution,
+    widen_v3: bool,
+) -> Plan {
+    select_impl::<T, false, false>(token, execution, widen_v3)
 }
 
-#[archmage::attune(_*_t)]
+#[archmage::attune(_*_t, +v4(cfg(avx512)), +v4x(cfg(avx512)))]
 fn upgrade_relaxed(token: Token) -> Plan {
-    select_impl::<_, false, false>(token, PowfExecution::Caller)
+    select_impl::<_, false, false>(token, Execution::Caller, false)
 }
 
 macro_rules! run_cfg {
@@ -287,14 +340,65 @@ run_const!(
     16
 );
 
-#[archmage::attune(_*_t)]
+#[archmage::attune(_*_t, +v4(cfg(avx512)), +v4x(cfg(avx512)))]
 fn upgrade_highp(token: Token) -> Plan {
-    select_impl::<_, true, true>(token, PowfExecution::Caller)
+    select_impl::<_, true, true>(token, Execution::Caller, false)
 }
 
 #[inline(always)]
-pub(super) fn select_highp<T: IntoConcreteToken>(token: T, execution: PowfExecution) -> Plan {
-    select_impl::<T, true, true>(token, execution)
+pub(super) fn select_highp<T: IntoConcreteToken>(
+    token: T,
+    execution: Execution,
+    widen_v3: bool,
+) -> Plan {
+    select_impl::<T, true, true>(token, execution, widen_v3)
+}
+
+#[cfg_attr(debug_assertions, inline(never))]
+#[cfg_attr(not(debug_assertions), inline(always))]
+pub(super) fn run_slice_cfg(
+    plan: Plan,
+    backend: bool,
+    src: &[f32],
+    dst: &mut [f32],
+    exponent: f32,
+    cfg: graph::KernelCfg,
+) -> Result<(), (usize, PowfError)> {
+    match plan {
+        #[cfg(target_arch = "x86_64")]
+        Plan::V3(t) => graph::slice8_cfg_v3::<{ graph::NATIVE }>(t, src, dst, exponent, cfg),
+        #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+        Plan::V4(t) => graph::slice16_cfg_v4::<{ graph::NATIVE }>(t, src, dst, exponent, cfg),
+        #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+        Plan::V4x(t) => graph::slice16_cfg_v4x::<{ graph::NATIVE }>(t, src, dst, exponent, cfg),
+        #[cfg(target_arch = "aarch64")]
+        Plan::Neon(t) => graph::slice8_cfg_neon::<{ graph::NATIVE }>(t, src, dst, exponent, cfg),
+        #[cfg(target_arch = "wasm32")]
+        Plan::Wasm(t, true) => {
+            graph::slice8_cfg_wasm128::<{ graph::NATIVE }>(t, src, dst, exponent, cfg)
+        }
+        #[cfg(target_arch = "wasm32")]
+        Plan::Wasm(t, false) => {
+            graph::slice8_cfg_wasm128::<{ graph::WASM_SOFTWARE }>(t, src, dst, exponent, cfg)
+        }
+        Plan::Software => {
+            if backend {
+                graph::slice8_cfg_scalar::<{ graph::RELAXED }>(ScalarToken, src, dst, exponent, cfg)
+            } else {
+                graph::slice8_cfg_scalar::<{ graph::SOFTWARE }>(
+                    ScalarToken,
+                    src,
+                    dst,
+                    exponent,
+                    cfg,
+                )
+            }
+        }
+        #[cfg(all(feature = "std", not(miri)))]
+        Plan::Std => {
+            graph::slice8_cfg_scalar::<{ graph::STD }>(ScalarToken, src, dst, exponent, cfg)
+        }
+    }
 }
 
 #[inline(always)]
@@ -306,59 +410,16 @@ pub(super) fn run_slice<K: graph::Kernel, const BACKEND: bool>(
 ) -> Result<(), (usize, PowfError)> {
     #[cfg(debug_assertions)]
     {
-        let cfg = graph::cfg_of::<K>();
-        match plan {
-            #[cfg(target_arch = "x86_64")]
-            Plan::V3(t) => graph::slice8_cfg_v3::<{ graph::NATIVE }>(t, src, dst, exponent, cfg),
-            #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-            Plan::V4(t) => graph::slice8_cfg_v4::<{ graph::NATIVE }>(t, src, dst, exponent, cfg),
-            #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-            Plan::V4x(t) => graph::slice8_cfg_v4x::<{ graph::NATIVE }>(t, src, dst, exponent, cfg),
-            #[cfg(target_arch = "aarch64")]
-            Plan::Neon(t) => {
-                graph::slice8_cfg_neon::<{ graph::NATIVE }>(t, src, dst, exponent, cfg)
-            }
-            #[cfg(target_arch = "wasm32")]
-            Plan::Wasm(t, true) => {
-                graph::slice8_cfg_wasm128::<{ graph::NATIVE }>(t, src, dst, exponent, cfg)
-            }
-            #[cfg(target_arch = "wasm32")]
-            Plan::Wasm(t, false) => {
-                graph::slice8_cfg_wasm128::<{ graph::WASM_SOFTWARE }>(t, src, dst, exponent, cfg)
-            }
-            Plan::Software => {
-                if BACKEND {
-                    graph::slice8_cfg_scalar::<{ graph::RELAXED }>(
-                        ScalarToken,
-                        src,
-                        dst,
-                        exponent,
-                        cfg,
-                    )
-                } else {
-                    graph::slice8_cfg_scalar::<{ graph::SOFTWARE }>(
-                        ScalarToken,
-                        src,
-                        dst,
-                        exponent,
-                        cfg,
-                    )
-                }
-            }
-            #[cfg(all(feature = "std", not(miri)))]
-            Plan::Std => {
-                graph::slice8_cfg_scalar::<{ graph::STD }>(ScalarToken, src, dst, exponent, cfg)
-            }
-        }
+        run_slice_cfg(plan, BACKEND, src, dst, exponent, graph::cfg_of::<K>())
     }
     #[cfg(not(debug_assertions))]
     match plan {
         #[cfg(target_arch = "x86_64")]
         Plan::V3(t) => graph::slice8_with_v3::<K, { graph::NATIVE }>(t, src, dst, exponent),
         #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-        Plan::V4(t) => graph::slice8_with_v4::<K, { graph::NATIVE }>(t, src, dst, exponent),
+        Plan::V4(t) => graph::slice16_with_v4::<K, { graph::NATIVE }>(t, src, dst, exponent),
         #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-        Plan::V4x(t) => graph::slice8_with_v4x::<K, { graph::NATIVE }>(t, src, dst, exponent),
+        Plan::V4x(t) => graph::slice16_with_v4x::<K, { graph::NATIVE }>(t, src, dst, exponent),
         #[cfg(target_arch = "aarch64")]
         Plan::Neon(t) => graph::slice8_with_neon::<K, { graph::NATIVE }>(t, src, dst, exponent),
         #[cfg(target_arch = "wasm32")]

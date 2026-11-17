@@ -1,32 +1,34 @@
-//! Configurable f32 exponentials with explicit portability, precision and
-//! validation, mirroring [`crate::powf`].
+//! Configurable `f32` exponentials (`exp2`, `exp`) with explicit portability,
+//! precision, and validation, mirroring [`crate::powf`].
 //!
-//! MIDP and LOWP evaluate the existing `exp2_midp`/`exp2_lowp` approximations
-//! on `exp2(x)` and `exp2(x * log2(e))`; BitExact selects one fused rounding
-//! sequence on every backend, BackendDependent keeps the caller's relaxed
-//! arithmetic. `Bounded` rejects NaN and infinities under Checked; `Full`
-//! propagates them to their natural results (NaN -> NaN, `+inf` -> `+inf`,
-//! `-inf` -> `+0`). Declaring a tight [`ExpfSpec::input_range`] elides output
-//! clamping. `AssumeValid` omits checks while retaining memory safety.
-//! The flat Magetypes exponential methods are unchanged and remain supported.
+//! `Midp` and `Lowp` evaluate the refitted `exp2_midp`/`exp2_lowp`
+//! approximations on `exp2(x)` and `exp2(x * log2(e))`; `BitExact` selects one
+//! fused rounding sequence on every backend, while `BackendDependent` keeps the
+//! caller's relaxed arithmetic. Declaring a tight [`ExpfOptions::input_range`]
+//! elides output clamping at compile time.
+//!
+//! ```
+//! use magemath::expf::{Expf, ExpfOptions, try_exp2};
+//!
+//! const TIGHT: u128 = ExpfOptions::new().input_range(-10.0, 10.0).lowp().bits();
+//! assert!(ExpfOptions::from_bits(TIGHT).unwrap().elides_clamp());
+//! assert_eq!(try_exp2(3.0).unwrap(), 8.0);
+//!
+//! let src = [-1.0, 0.0, 1.0, 2.0];
+//! let mut dst = [0.0; 4];
+//! Expf::<TIGHT>::exp2_slice(&src, &mut dst).unwrap();
+//! assert_eq!(dst[1], 1.0);
+//! ```
 
 pub(crate) mod const_api;
 mod dispatch;
 mod graph;
 mod options;
-mod profile;
 #[cfg(test)]
 mod tests;
-pub use const_api::{
-    try_exp_array_runtime, try_exp_array_with, try_exp_runtime, try_exp_slice_with,
-    try_exp_slice_with_token, try_exp_with, try_exp_with_token, try_exp2_array_runtime,
-    try_exp2_array_with, try_exp2_runtime, try_exp2_slice_with, try_exp2_slice_with_token,
-    try_exp2_with, try_exp2_with_token,
-};
-pub use options::{
-    ExpfDomain, ExpfExecution, ExpfOptions, ExpfPortability, ExpfPrecision, ExpfValidation,
-};
-pub use profile::{ExpfProfile, ExpfSpec, Options, presets};
+
+pub use const_api::{Expf, ExpfRuntime};
+pub use options::{ExpfOptions, ExpfPrecision};
 
 /// Reason a complete vector was rejected.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -34,9 +36,9 @@ pub use profile::{ExpfProfile, ExpfSpec, Options, presets};
 pub enum ExpfErrorKind {
     /// An input is NaN, infinite, or outside the declared input range.
     InvalidInput,
-    /// The array width is not 1, 4, 8, or enabled width 16.
+    /// The array width is not `1`, `4`, `8`, or enabled width `16`.
     UnsupportedWidth,
-    /// An unsupported combination of precision, portability, domain or features.
+    /// An unsupported combination of precision, portability, domain, or features.
     UnsupportedOptions,
 }
 
@@ -58,76 +60,37 @@ impl core::fmt::Display for ExpfError {
 #[cfg(feature = "std")]
 impl std::error::Error for ExpfError {}
 
-/// Bounded scalar exp2 using the default checked MIDP domain.
+/// Bounded scalar `2^x` using [`ExpfOptions::new()`].
 #[inline(always)]
 pub fn try_exp2(x: f32) -> Result<f32, ExpfError> {
-    try_exp2_with::<presets::Midp>(x)
+    <Expf>::exp2(x)
 }
 
-/// Bounded scalar exp using the default checked MIDP domain.
+/// Whole-slice `2^src[i] -> dst[i]` using [`ExpfOptions::new()`].
+///
+/// # Panics
+///
+/// Panics if `src.len() != dst.len()`.
+#[inline(always)]
+pub fn try_exp2_slice(
+    src: &[f32],
+    dst: &mut [f32],
+) -> Result<(), crate::SliceError<ExpfErrorKind>> {
+    <Expf>::exp2_slice(src, dst)
+}
+
+/// Bounded scalar `e^x` using [`ExpfOptions::new()`].
 #[inline(always)]
 pub fn try_exp(x: f32) -> Result<f32, ExpfError> {
-    try_exp_with::<presets::Midp>(x)
+    <Expf>::exp(x)
 }
 
-/// Configured exp2 on a 4-lane vector, preserving the caller's feature proof.
-/// Use the same profile and token with [`try_exp2_with_token`] for scalar tails.
+/// Whole-slice `e^src[i] -> dst[i]` using [`ExpfOptions::new()`].
+///
+/// # Panics
+///
+/// Panics if `src.len() != dst.len()`.
 #[inline(always)]
-pub fn try_exp2_f32x4_with<P: ExpfProfile, T: magetypes::simd::backends::F32x4Convert>(
-    token: T,
-    input: magetypes::simd::generic::f32x4<T>,
-) -> Result<magetypes::simd::generic::f32x4<T>, ExpfError> {
-    const_api::run4::<P, 0, T>(token, input)
-}
-
-/// Configured exp on a 4-lane vector, preserving the caller's feature proof.
-/// Use the same profile and token with [`try_exp_with_token`] for scalar tails.
-#[inline(always)]
-pub fn try_exp_f32x4_with<P: ExpfProfile, T: magetypes::simd::backends::F32x4Convert>(
-    token: T,
-    input: magetypes::simd::generic::f32x4<T>,
-) -> Result<magetypes::simd::generic::f32x4<T>, ExpfError> {
-    const_api::run4::<P, 1, T>(token, input)
-}
-
-/// Configured exp2 on an 8-lane vector, preserving the caller's feature proof.
-/// Use the same profile and token with [`try_exp2_with_token`] for scalar tails.
-#[inline(always)]
-pub fn try_exp2_f32x8_with<P: ExpfProfile, T: magetypes::simd::backends::F32x8Convert>(
-    token: T,
-    input: magetypes::simd::generic::f32x8<T>,
-) -> Result<magetypes::simd::generic::f32x8<T>, ExpfError> {
-    const_api::run8::<P, 0, T>(token, input)
-}
-
-/// Configured exp on an 8-lane vector, preserving the caller's feature proof.
-/// Use the same profile and token with [`try_exp_with_token`] for scalar tails.
-#[inline(always)]
-pub fn try_exp_f32x8_with<P: ExpfProfile, T: magetypes::simd::backends::F32x8Convert>(
-    token: T,
-    input: magetypes::simd::generic::f32x8<T>,
-) -> Result<magetypes::simd::generic::f32x8<T>, ExpfError> {
-    const_api::run8::<P, 1, T>(token, input)
-}
-
-/// Configured exp2 on a 16-lane vector, preserving the caller's feature proof.
-/// Use the same profile and token with [`try_exp2_with_token`] for scalar tails.
-#[cfg(feature = "w512")]
-#[inline(always)]
-pub fn try_exp2_f32x16_with<P: ExpfProfile, T: magetypes::simd::backends::F32x16Convert>(
-    token: T,
-    input: magetypes::simd::generic::f32x16<T>,
-) -> Result<magetypes::simd::generic::f32x16<T>, ExpfError> {
-    const_api::run16::<P, 0, T>(token, input)
-}
-
-/// Configured exp on a 16-lane vector, preserving the caller's feature proof.
-/// Use the same profile and token with [`try_exp_with_token`] for scalar tails.
-#[cfg(feature = "w512")]
-#[inline(always)]
-pub fn try_exp_f32x16_with<P: ExpfProfile, T: magetypes::simd::backends::F32x16Convert>(
-    token: T,
-    input: magetypes::simd::generic::f32x16<T>,
-) -> Result<magetypes::simd::generic::f32x16<T>, ExpfError> {
-    const_api::run16::<P, 1, T>(token, input)
+pub fn try_exp_slice(src: &[f32], dst: &mut [f32]) -> Result<(), crate::SliceError<ExpfErrorKind>> {
+    <Expf>::exp_slice(src, dst)
 }

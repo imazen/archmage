@@ -1,31 +1,35 @@
-//! Configurable f32 power with explicit portability, precision and validation.
+//! Configurable `f32` power with explicit portability, precision, and validation.
 //!
-//! MIDP and LOWP evaluate fixed approximations to `exp2(n * log2(x))`;
-//! BitExact HIGHP evaluates a canonical binary64 graph. BackendDependent HIGHP
-//! delegates to std when the `std` feature is enabled.
-//! The default promises bit identity on accepted inputs; this is not
-//! correctly rounded `powf`, and no whole-domain ULP bound is advertised.
-//! Round-to-nearest and gradual underflow are required. NaN/infinite inputs,
-//! negative bases, subnormal inputs and unsupported output ranges are rejected
-//! by restricted Checked presets. Full HIGHP permits all f32 inputs/results; NaN payloads are unspecified.
-//! PositiveGamma excludes zero from Gamma and removes its result masks.
-//! AssumeValid omits numerical checks while retaining memory safety.
-//! The flat Magetypes power methods are unchanged and remain supported.
+//! `Midp` and `Lowp` evaluate fixed approximations to `exp2(n * log2(x))`;
+//! `BitExact` `Highp` evaluates a canonical binary64 graph; `BackendDependent`
+//! `Highp` delegates to `std` when the `std` feature is enabled.
+//! The default promises bit identity on accepted inputs; this is not correctly
+//! rounded `powf`, and no whole-domain ULP bound is advertised.
 //!
 //! ```
-//! use magemath::powf::{presets::{GammaMidp, NonNegativeNormalMidp}, try_powf, try_powf_with};
+//! use magemath::powf::{Powf, PowfOptions, try_powf};
+//!
+//! const ZERO_OK: u128 = PowfOptions::new().admit_zero().bits();
+//! const GAMMA: u128 = PowfOptions::new().gamma().midp().bits();
+//!
 //! assert_eq!(try_powf(4.0, 0.5).unwrap(), 2.0);
 //! assert!(try_powf(f32::NAN, 2.4).is_err());
-//! assert_eq!(try_powf_with::<NonNegativeNormalMidp>(0.0, 2.4).unwrap(), 0.0);
-//! let _ = try_powf_with::<GammaMidp>(0.25, 2.2).unwrap();
+//! assert_eq!(Powf::<ZERO_OK>::scalar(0.0, 2.4).unwrap(), 0.0);
+//! let _ = Powf::<GAMMA>::scalar(0.25, 2.2).unwrap();
+//! ```
+//!
+//! Invalid option words or inconsistent combinations fail at compile time:
+//! ```compile_fail
+//! let _ = magemath::powf::Powf::<3>::scalar(1.0, 2.4);
+//! ```
+//! ```compile_fail
+//! use magemath::powf::{Powf, PowfOptions};
+//! const BAD: u128 = PowfOptions::new().full_domain().bits();
+//! let _ = Powf::<BAD>::scalar(1.0, 2.4);
 //! ```
 
 pub(crate) mod const_api;
 mod dispatch;
-pub use const_api::{
-    try_powf_array_with, try_powf_slice_with, try_powf_slice_with_token, try_powf_with,
-    try_powf_with_token,
-};
 mod graph;
 mod highp;
 mod highp_data;
@@ -37,18 +41,15 @@ mod highp_scalar;
     target_arch = "wasm32"
 ))]
 mod highp_simd;
-mod profile;
+mod options;
 mod std_probe;
 #[cfg(test)]
 mod tests;
 #[cfg(target_arch = "wasm32")]
 mod wasm;
 
-mod options;
-pub use options::{
-    PowfDomain, PowfExecution, PowfOptions, PowfPortability, PowfPrecision, PowfValidation,
-};
-pub use profile::{Options, PowfProfile, PowfSpec, presets};
+pub use const_api::{Powf, PowfRuntime};
+pub use options::{PowfOptions, PowfPrecision};
 
 /// Reason a complete vector was rejected.
 ///
@@ -69,16 +70,16 @@ pub use profile::{Options, PowfProfile, PowfSpec, presets};
 #[non_exhaustive]
 pub enum PowfErrorKind {
     /// An exponent is NaN, infinite, a nonzero subnormal, or outside the
-    /// selected domain's exponent bounds.
+    /// configured exponent bounds.
     InvalidExponent,
-    /// A base is outside the selected input domain.
+    /// A base is outside the configured input domain.
     InvalidBase,
     /// The approximation's computed `n * log2(x)` is outside `[-126, 127.5]`,
-    /// or a restricted HIGHP result is outside its normal-output domain.
+    /// or a restricted `Highp` result is outside its normal-output domain.
     OutsideApproximationRange,
-    /// The array width is not 1, 4, 8, or enabled width 16.
+    /// The array width is not `1`, `4`, `8`, or enabled width `16`.
     UnsupportedWidth,
-    /// An unsupported combination of precision, portability, domain or features.
+    /// An unsupported combination of precision, portability, domain, or features.
     UnsupportedOptions,
 }
 
@@ -102,119 +103,22 @@ impl core::fmt::Display for PowfError {
 #[cfg(feature = "std")]
 impl std::error::Error for PowfError {}
 
-/// Bounded scalar power using the default positive-normal domain.
+/// Bounded scalar `base^exponent` using [`PowfOptions::new()`].
 #[inline(always)]
 pub fn try_powf(base: f32, exponent: f32) -> Result<f32, PowfError> {
-    try_powf_with::<presets::NormalMidp>(base, exponent)
+    <Powf>::scalar(base, exponent)
 }
 
-/// Scalar power with explicit runtime policy options.
+/// Whole-slice `src[i]^exponent -> dst[i]` using [`PowfOptions::new()`].
 ///
-/// MIDP/LOWP scalar entries share their graph with every vector width, including
-/// range reduction, division, nearest-even splitting and fused Horner steps.
-#[inline(always)]
-pub fn try_powf_runtime(base: f32, exponent: f32, options: PowfOptions) -> Result<f32, PowfError> {
-    try_powf_array_runtime([base], exponent, options).map(|result| result[0])
-}
-
-/// Version-independent array boundary for widths 1/4/8 and, with `w512`, 16.
+/// # Panics
 ///
-/// Checked restricted presets require every lane to be accepted. Full HIGHP
-/// permits all f32 inputs/results. AssumeValid removes numerical checks.
-/// The exponent is uniform across the array; in restricted presets,
-/// it must be finite and either normal or zero. The computed exp2 argument
-/// must lie in [-126, 127.5], excluding overflow/subnormal-result regions.
-/// This bound refers to the approximation's computed argument, not an exact
-/// mathematical power or an independent accuracy guarantee.
+/// Panics if `src.len() != dst.len()`.
 #[inline(always)]
-pub fn try_powf_array_runtime<const N: usize>(
-    bases: [f32; N],
+pub fn try_powf_slice(
+    src: &[f32],
+    dst: &mut [f32],
     exponent: f32,
-    options: PowfOptions,
-) -> Result<[f32; N], PowfError> {
-    try_powf_token_runtime(archmage::ScalarToken, bases, exponent, options)
-}
-
-#[inline(always)]
-pub(crate) fn try_powf_token_runtime<T: archmage::IntoConcreteToken, const N: usize>(
-    token: T,
-    bases: [f32; N],
-    exponent: f32,
-    options: PowfOptions,
-) -> Result<[f32; N], PowfError> {
-    const_api::runtime(token, bases, exponent, options)
-}
-
-/// Configured powf on a 4-lane vector, preserving the caller's feature proof.
-/// Use the same profile and token with [`try_powf_with_token`] for scalar tails.
-#[inline(always)]
-pub fn try_powf_f32x4_with<P: PowfProfile, T: magetypes::simd::backends::F32x4Convert>(
-    token: T,
-    input: magetypes::simd::generic::f32x4<T>,
-    exponent: f32,
-) -> Result<magetypes::simd::generic::f32x4<T>, PowfError> {
-    const_api::run4::<P, T>(token, input, exponent)
-}
-
-/// Configured powf on a 8-lane vector, preserving the caller's feature proof.
-/// Use the same profile and token with [`try_powf_with_token`] for scalar tails.
-#[inline(always)]
-pub fn try_powf_f32x8_with<P: PowfProfile, T: magetypes::simd::backends::F32x8Convert>(
-    token: T,
-    input: magetypes::simd::generic::f32x8<T>,
-    exponent: f32,
-) -> Result<magetypes::simd::generic::f32x8<T>, PowfError> {
-    const_api::run8::<P, T>(token, input, exponent)
-}
-
-/// Configured powf on a 16-lane vector, preserving the caller's feature proof.
-/// Use the same profile and token with [`try_powf_with_token`] for scalar tails.
-#[cfg(feature = "w512")]
-#[inline(always)]
-pub fn try_powf_f32x16_with<P: PowfProfile, T: magetypes::simd::backends::F32x16Convert>(
-    token: T,
-    input: magetypes::simd::generic::f32x16<T>,
-    exponent: f32,
-) -> Result<magetypes::simd::generic::f32x16<T>, PowfError> {
-    const_api::run16::<P, T>(token, input, exponent)
-}
-
-/// Power on a 4-lane vector with runtime options, retaining the caller proof.
-/// Prefer the const-options entry when the profile is known at compile time.
-#[inline(always)]
-pub fn try_powf_f32x4_runtime<T: magetypes::simd::backends::F32x4Convert>(
-    token: T,
-    input: magetypes::simd::generic::f32x4<T>,
-    exponent: f32,
-    options: PowfOptions,
-) -> Result<magetypes::simd::generic::f32x4<T>, PowfError> {
-    try_powf_token_runtime(token, input.to_array(), exponent, options)
-        .map(|v| magetypes::simd::generic::f32x4::from_array_t(token, v))
-}
-
-/// Power on a 8-lane vector with runtime options, retaining the caller proof.
-/// Prefer the const-options entry when the profile is known at compile time.
-#[inline(always)]
-pub fn try_powf_f32x8_runtime<T: magetypes::simd::backends::F32x8Convert>(
-    token: T,
-    input: magetypes::simd::generic::f32x8<T>,
-    exponent: f32,
-    options: PowfOptions,
-) -> Result<magetypes::simd::generic::f32x8<T>, PowfError> {
-    try_powf_token_runtime(token, input.to_array(), exponent, options)
-        .map(|v| magetypes::simd::generic::f32x8::from_array_t(token, v))
-}
-
-/// Power on a 16-lane vector with runtime options, retaining the caller proof.
-/// Prefer the const-options entry when the profile is known at compile time.
-#[cfg(feature = "w512")]
-#[inline(always)]
-pub fn try_powf_f32x16_runtime<T: magetypes::simd::backends::F32x16Convert>(
-    token: T,
-    input: magetypes::simd::generic::f32x16<T>,
-    exponent: f32,
-    options: PowfOptions,
-) -> Result<magetypes::simd::generic::f32x16<T>, PowfError> {
-    try_powf_token_runtime(token, input.to_array(), exponent, options)
-        .map(|v| magetypes::simd::generic::f32x16::from_array_t(token, v))
+) -> Result<(), crate::SliceError<PowfErrorKind>> {
+    <Powf>::slice(src, dst, exponent)
 }

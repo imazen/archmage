@@ -1,33 +1,26 @@
-//! Typed profile entry points and runtime adapter for `powf`.
-use super::{PowfError, PowfErrorKind, PowfExecution, PowfOptions, PowfProfile, dispatch, graph};
+//! Const-specialized `Powf<CFG>` and runtime `PowfRuntime` entry points.
+use super::{PowfError, PowfErrorKind, PowfOptions, dispatch, graph};
+use crate::{Execution, SimdVector, SliceError};
 
-struct Of<P>(core::marker::PhantomData<P>);
-impl<P: PowfProfile> graph::Kernel for Of<P> {
-    const ZERO: bool = P::SPEC.admits_zero();
-    const RANGED: bool = P::SPEC.base_bounds().is_some();
-    const BASE_LO: f32 = match P::SPEC.base_bounds() {
-        Some((lo, _)) => lo,
-        None => f32::MIN_POSITIVE,
-    };
-    const BASE_HI: f32 = match P::SPEC.base_bounds() {
-        Some((_, hi)) => hi,
-        None => f32::MAX,
-    };
-    const ELIDE: bool = P::SPEC.elides_range_check();
-    const CLAMP: bool = P::SPEC.should_clamp();
-    const LOWP: bool = P::SPEC.is_lowp();
-    const ASSUME: bool = P::SPEC.assume_valid();
+pub(crate) struct Cfg<const CFG: u128>;
+
+impl<const CFG: u128> graph::Kernel for Cfg<CFG> {
+    const ZERO: bool = graph::KernelCfg::from_options(PowfOptions::decode_const(CFG)).zero;
+    const RANGED: bool = graph::KernelCfg::from_options(PowfOptions::decode_const(CFG)).ranged;
+    const ELIDE: bool = graph::KernelCfg::from_options(PowfOptions::decode_const(CFG)).elide;
+    const CLAMP: bool = graph::KernelCfg::from_options(PowfOptions::decode_const(CFG)).clamp;
+    const LOWP: bool = graph::KernelCfg::from_options(PowfOptions::decode_const(CFG)).lowp;
+    const ASSUME: bool = graph::KernelCfg::from_options(PowfOptions::decode_const(CFG)).assume;
+    const BASE_LO: f32 = graph::KernelCfg::from_options(PowfOptions::decode_const(CFG)).base_lo;
+    const BASE_HI: f32 = graph::KernelCfg::from_options(PowfOptions::decode_const(CFG)).base_hi;
 }
 
-pub(super) fn exponent_spec<const N: usize>(
-    spec: super::PowfSpec,
-    n: f32,
-) -> Result<(), PowfError> {
-    if spec.assume_valid() || spec.is_full() {
+pub(super) fn check_exponent<const N: usize>(opts: PowfOptions, n: f32) -> Result<(), PowfError> {
+    if opts.assume_valid() || opts.is_full() {
         return Ok(());
     }
     let bits = n.to_bits() & 0x7fff_ffff;
-    let in_range = match spec.exponent_bounds() {
+    let in_range = match opts.exponent_bounds() {
         Some((lo, hi)) => n >= lo && n <= hi,
         None => true,
     };
@@ -41,201 +34,103 @@ pub(super) fn exponent_spec<const N: usize>(
 }
 
 #[inline(always)]
-pub(super) fn exponent<P: PowfProfile, const N: usize>(n: f32) -> Result<(), PowfError> {
-    const {
-        P::SPEC.validate();
-    }
-    exponent_spec::<N>(P::SPEC, n)
-}
-
-#[inline(always)]
-fn select<P: PowfProfile, T: archmage::IntoConcreteToken>(
+fn select_plan<T: archmage::IntoConcreteToken>(
+    opts: PowfOptions,
     token: T,
-    execution: PowfExecution,
+    execution: Execution,
+    widen_v3: bool,
 ) -> dispatch::Plan {
-    if P::SPEC.is_highp() {
-        if P::SPEC.is_backend() {
+    if opts.is_highp() {
+        if opts.is_backend() {
             dispatch::Plan::Software
         } else {
-            dispatch::select_highp(token, execution)
+            dispatch::select_highp(token, execution, widen_v3)
         }
-    } else if P::SPEC.is_backend() {
-        dispatch::select_relaxed(token, execution)
+    } else if opts.is_backend() {
+        dispatch::select_relaxed(token, execution, widen_v3)
     } else {
-        dispatch::select(token, execution)
+        dispatch::select(token, execution, widen_v3)
     }
 }
 
-/// Configurable scalar power under profile `P`.
-///
-/// ```
-/// use magemath::{Caller, powf::{PowfOptions, PowfSpec, PowfProfile, presets::GammaMidp, try_powf_with}};
-/// assert_eq!(try_powf_with::<Caller<GammaMidp>>(4.0, 0.5).unwrap(), 2.0);
-/// ```
-/// Invalid option encodings or inconsistent specs are compile errors:
-/// ```compile_fail
-/// let _ = magemath::powf::try_powf_with::<magemath::powf::Options<3>>(1.0, 2.4);
-/// ```
-/// ```compile_fail
-/// let _ = magemath::powf::try_powf_with::<magemath::powf::Options<128>>(1.0, 2.4);
-/// ```
-/// ```compile_fail
-/// struct Bad;
-/// impl magemath::powf::PowfProfile for Bad {
-///     const SPEC: magemath::powf::PowfSpec = magemath::powf::PowfSpec::new().full_domain();
-/// }
-/// let _ = magemath::powf::try_powf_with::<Bad>(1.0, 2.4);
-/// ```
-#[inline(always)]
-pub fn try_powf_with<P: PowfProfile>(base: f32, n: f32) -> Result<f32, PowfError> {
-    try_powf_array_with::<P, 1>([base], n).map(|result| result[0])
-}
-
-/// Scalar power retaining the vector caller's feature proof under profile `P`.
-///
-/// Use this for single values and slice tails inside a Magetypes kernel. Even
-/// `Backend<Caller<P>>` evaluates the same graph as a vector with this token.
-/// An error's lane mask is always one.
-///
-/// ```
-/// use magemath::{Backend, Caller, powf::{presets::PositiveGammaMidp, try_powf_with_token}};
-/// assert_eq!(
-///     try_powf_with_token::<Backend<Caller<PositiveGammaMidp>>, _>(archmage::ScalarToken, 4.0, 0.5).unwrap(),
-///     2.0
-/// );
-/// ```
-#[inline(always)]
-pub fn try_powf_with_token<P: PowfProfile, T: magetypes::simd::backends::F32x4Convert>(
-    token: T,
-    base: f32,
+#[cold]
+#[inline(never)]
+fn refine_slice_error(
+    plan: dispatch::Plan,
+    backend: bool,
+    cfg: graph::KernelCfg,
+    src: &[f32],
+    base: usize,
+    fallback: PowfError,
     n: f32,
-) -> Result<f32, PowfError> {
-    const {
-        P::SPEC.validate();
-    }
-    if P::SPEC.is_highp() {
-        exponent::<P, 1>(n)?;
-        return super::highp_dispatch::for_token::<P, _, 1>(token, [base], n).map(|v| v[0]);
-    }
-    run4::<P, T>(
-        token,
-        magetypes::simd::generic::f32x4::splat_t(token, base),
-        n,
-    )
-    .map(|v| v.to_array()[0])
-    .map_err(|error| PowfError {
-        lane_mask: 1,
-        ..error
-    })
-}
-
-/// Version-independent array boundary under profile `P`.
-///
-/// Supported widths are 1, 4, 8 and, with `w512`, 16. Every lane must pass;
-/// unsupported widths return `UnsupportedWidth` with mask zero. This shares
-/// the numerical contract with [`super::try_powf_array_runtime`].
-#[inline(always)]
-pub fn try_powf_array_with<P: PowfProfile, const N: usize>(
-    bases: [f32; N],
-    n: f32,
-) -> Result<[f32; N], PowfError> {
-    use archmage::ScalarToken;
-    use magetypes::simd::generic::{f32x4, f32x8};
-    const {
-        P::SPEC.validate();
-    }
-    if !matches!(N, 1 | 4 | 8) && !(cfg!(feature = "w512") && N == 16) {
-        return Err(PowfError {
-            kind: PowfErrorKind::UnsupportedWidth,
-            lane_mask: 0,
-        });
-    }
-    if P::SPEC.is_highp() {
-        exponent::<P, N>(n)?;
-        return super::highp_dispatch::for_token::<P, _, N>(ScalarToken, bases, n);
-    }
-    let mut output = [0.0; N];
-    if N == 1 {
-        let value = run4::<P, _>(ScalarToken, f32x4::splat_t(ScalarToken, bases[0]), n).map_err(
-            |error| PowfError {
-                lane_mask: 1,
-                ..error
-            },
-        )?;
-        output[0] = value.to_array()[0];
-    } else if N == 4 {
-        let mut input = [0.0; 4];
-        input.copy_from_slice(&bases);
-        output.copy_from_slice(
-            &run4::<P, _>(ScalarToken, f32x4::from_array_t(ScalarToken, input), n)?.to_array(),
-        );
-    } else if N == 8 {
-        let mut input = [0.0; 8];
-        input.copy_from_slice(&bases);
-        output.copy_from_slice(
-            &run8::<P, _>(ScalarToken, f32x8::from_array_t(ScalarToken, input), n)?.to_array(),
-        );
-    } else {
-        #[cfg(feature = "w512")]
-        if N == 16 {
-            use magetypes::simd::generic::f32x16;
-            let mut input = [0.0; 16];
-            input.copy_from_slice(&bases);
-            output.copy_from_slice(
-                &run16::<P, _>(ScalarToken, f32x16::from_array_t(ScalarToken, input), n)?
-                    .to_array(),
-            );
-            return Ok(output);
+) -> SliceError<PowfErrorKind> {
+    let end = (base + 16).min(src.len());
+    for (offset, &x) in src[base..end].iter().enumerate() {
+        if let Err(err) = dispatch::run4_cfg(plan, backend, [x; 4], n, cfg) {
+            return SliceError {
+                kind: err.kind,
+                index: base + offset,
+            };
         }
-        #[allow(unreachable_code)]
-        return Err(PowfError {
-            kind: PowfErrorKind::UnsupportedWidth,
-            lane_mask: 0,
-        });
     }
-    Ok(output)
+    SliceError {
+        kind: fallback.kind,
+        index: base + fallback.lane_mask.trailing_zeros().min(15) as usize,
+    }
 }
 
 macro_rules! vector {
     ($run:ident, $profile:ident, $dispatch:ident, $float:ident, $bound:ident, $n:literal) => {
         #[inline(always)]
-        pub(crate) fn $run<P: PowfProfile, T: magetypes::simd::backends::$bound>(
+        pub(crate) fn $run<const CFG: u128, T: magetypes::simd::backends::$bound>(
             token: T,
             input: magetypes::simd::generic::$float<T>,
             n: f32,
         ) -> Result<magetypes::simd::generic::$float<T>, PowfError> {
-            exponent::<P, $n>(n)?;
-            if P::SPEC.is_highp() {
-                let result =
-                    super::highp_dispatch::for_token::<P, _, $n>(token, input.to_array(), n)?;
+            let opts = const {
+                let o = PowfOptions::decode_const(CFG);
+                o.validate();
+                o
+            };
+            check_exponent::<$n>(opts, n)?;
+            if opts.is_highp() {
+                let result = super::highp_dispatch::for_token_cfg::<T, $n>(
+                    token,
+                    opts,
+                    input.to_array(),
+                    n,
+                )?;
                 return Ok(magetypes::simd::generic::$float::from_array_t(
                     token, result,
                 ));
             }
-            let caller = select::<P, _>(token, PowfExecution::Caller);
-            if matches!(caller, dispatch::Plan::Software) {
-                if P::SPEC.is_caller() {
-                    if P::SPEC.is_backend() {
-                        return graph::$profile::<T, Of<P>, { graph::RELAXED }>(token, input, n);
+            let caller = select_plan(opts, token, Execution::Caller, false);
+            let widen_v3 = $n == 16;
+            if matches!(caller, dispatch::Plan::Software) || (widen_v3 && !opts.is_caller()) {
+                if opts.is_caller() {
+                    if opts.is_backend() {
+                        return graph::$profile::<T, Cfg<CFG>, { graph::RELAXED }>(token, input, n);
                     }
-                    return graph::$profile::<T, Of<P>, { graph::SOFTWARE }>(token, input, n);
+                    return graph::$profile::<T, Cfg<CFG>, { graph::SOFTWARE }>(token, input, n);
                 }
-                let auto = select::<P, _>(token, PowfExecution::Automatic);
-                let arr = input.to_array();
-                let result = if P::SPEC.is_backend() {
-                    dispatch::$dispatch::<Of<P>, true>(auto, arr, n)
-                } else {
-                    dispatch::$dispatch::<Of<P>, false>(auto, arr, n)
-                }?;
-                return Ok(magetypes::simd::generic::$float::from_array_t(
-                    token, result,
-                ));
+                let plan = select_plan(opts, token, Execution::Upgrade, widen_v3);
+                if !plan.same_tier(caller) || matches!(caller, dispatch::Plan::Software) {
+                    let arr = input.to_array();
+                    let result = if opts.is_backend() {
+                        dispatch::$dispatch::<Cfg<CFG>, true>(plan, arr, n)
+                    } else {
+                        dispatch::$dispatch::<Cfg<CFG>, false>(plan, arr, n)
+                    }?;
+                    return Ok(magetypes::simd::generic::$float::from_array_t(
+                        token, result,
+                    ));
+                }
             }
             #[cfg(target_arch = "wasm32")]
             if matches!(caller, dispatch::Plan::Wasm(_, false)) {
-                return graph::$profile::<T, Of<P>, { graph::WASM_SOFTWARE }>(token, input, n);
+                return graph::$profile::<T, Cfg<CFG>, { graph::WASM_SOFTWARE }>(token, input, n);
             }
-            graph::$profile::<T, Of<P>, { graph::NATIVE }>(token, input, n)
+            graph::$profile::<T, Cfg<CFG>, { graph::NATIVE }>(token, input, n)
         }
     };
 }
@@ -246,41 +141,41 @@ vector!(run16, profile16, run16_const, f32x16, F32x16Convert, 16);
 
 #[cfg_attr(debug_assertions, inline(never))]
 #[cfg_attr(not(debug_assertions), inline(always))]
-pub(super) fn runtime<T: archmage::IntoConcreteToken, const N: usize>(
+pub(crate) fn runtime<T: archmage::IntoConcreteToken, const N: usize>(
     token: T,
     bases: [f32; N],
     n: f32,
     options: PowfOptions,
 ) -> Result<[f32; N], PowfError> {
-    let Some(options) = PowfOptions::from_bits(options.bits()) else {
+    if !options.is_valid() {
         return Err(PowfError {
             kind: PowfErrorKind::UnsupportedOptions,
             lane_mask: 0,
         });
-    };
+    }
     if !matches!(N, 1 | 4 | 8) && !(cfg!(feature = "w512") && N == 16) {
         return Err(PowfError {
             kind: PowfErrorKind::UnsupportedWidth,
             lane_mask: 0,
         });
     }
-    let spec = super::PowfSpec::from_options(options);
-    exponent_spec::<N>(spec, n)?;
-    if spec.is_highp() {
-        return super::highp_dispatch::for_token_cfg::<T, N>(token, spec, bases, n);
+    check_exponent::<N>(options, n)?;
+    if options.is_highp() {
+        return super::highp_dispatch::for_token_cfg::<T, N>(token, options, bases, n);
     }
-    let exec = if spec.is_caller() {
-        PowfExecution::Caller
+    let exec = if options.is_caller() {
+        Execution::Caller
     } else {
-        PowfExecution::Automatic
+        Execution::Upgrade
     };
-    let backend = spec.is_backend();
+    let backend = options.is_backend();
+    let widen_v3 = N == 16;
     let plan = if backend {
-        dispatch::select_relaxed(token, exec)
+        dispatch::select_relaxed(token, exec, widen_v3)
     } else {
-        dispatch::select(token, exec)
+        dispatch::select(token, exec, widen_v3)
     };
-    let cfg = graph::KernelCfg::from_spec(spec);
+    let cfg = graph::KernelCfg::from_options(options);
     let mut output = [0.; N];
     if N == 1 {
         let arr = dispatch::run4_cfg(plan, backend, [bases[0]; 4], n, cfg).map_err(|error| {
@@ -312,76 +207,332 @@ pub(super) fn runtime<T: archmage::IntoConcreteToken, const N: usize>(
     Ok(output)
 }
 
-/// Power of every element of `src` into `dst` under profile `P`, selecting a
-/// backend once.
-///
-/// Results are the same bits the array and vector entries produce for each
-/// element. Checked profiles stop at the first rejected vector and report the
-/// index of its first rejected element; `dst` is then unspecified. An invalid
-/// exponent reports index 0.
-///
-/// ```
-/// use magemath::powf::{presets::GammaMidp, try_powf_slice_with};
-/// let src = [0.0, 0.25, 0.5, 1.0, 2.0];
-/// let mut dst = [0.0; 5];
-/// try_powf_slice_with::<GammaMidp>(&src, &mut dst, 2.0).unwrap();
-/// assert_eq!(dst[0], 0.0);
-/// assert_eq!(dst[3], 1.0);
-/// ```
-///
-/// # Panics
-///
-/// Panics if `src.len() != dst.len()`.
-#[inline]
-pub fn try_powf_slice_with<P: PowfProfile>(
-    src: &[f32],
-    dst: &mut [f32],
-    n: f32,
-) -> Result<(), crate::SliceError<PowfErrorKind>> {
-    try_powf_slice_with_token::<P, _>(archmage::ScalarToken, src, dst, n)
-}
-
-/// [`try_powf_slice_with`] retaining the caller's feature proof: with
-/// `Execution::Caller` the loop runs on `token`'s tier.
-///
-/// # Panics
-///
-/// Panics if `src.len() != dst.len()`.
-#[inline(always)]
-pub fn try_powf_slice_with_token<P: PowfProfile, T: archmage::IntoConcreteToken>(
+#[cfg_attr(debug_assertions, inline(never))]
+#[cfg_attr(not(debug_assertions), inline(always))]
+fn slice_runtime<T: archmage::IntoConcreteToken>(
     token: T,
     src: &[f32],
     dst: &mut [f32],
     n: f32,
-) -> Result<(), crate::SliceError<PowfErrorKind>> {
-    const {
-        P::SPEC.validate();
-    }
+    options: PowfOptions,
+) -> Result<(), SliceError<PowfErrorKind>> {
     assert_eq!(src.len(), dst.len(), "powf slice lengths differ");
-    let first = |base: usize, e: PowfError| crate::SliceError {
-        kind: e.kind,
-        index: base + e.lane_mask.trailing_zeros().min(7) as usize,
-    };
-    exponent::<P, 1>(n).map_err(|e| crate::SliceError {
+    if !options.is_valid() {
+        return Err(SliceError {
+            kind: PowfErrorKind::UnsupportedOptions,
+            index: 0,
+        });
+    }
+    check_exponent::<1>(options, n).map_err(|e| SliceError {
         kind: e.kind,
         index: 0,
     })?;
-    if P::SPEC.is_highp() {
-        return super::highp_dispatch::for_token_slice::<P, T>(token, src, dst, n)
-            .map_err(|(base, e)| first(base, e));
+    if options.is_highp() {
+        return super::highp_dispatch::for_token_slice_cfg::<T>(token, options, src, dst, n)
+            .map_err(|(base, e)| SliceError {
+                kind: e.kind,
+                index: base + e.lane_mask.trailing_zeros().min(7) as usize,
+            });
     }
-    let plan = select::<P, _>(
-        token,
-        if P::SPEC.is_caller() {
-            PowfExecution::Caller
-        } else {
-            PowfExecution::Automatic
-        },
-    );
-    let res = if P::SPEC.is_backend() {
-        dispatch::run_slice::<Of<P>, true>(plan, src, dst, n)
+    let exec = if options.is_caller() {
+        Execution::Caller
     } else {
-        dispatch::run_slice::<Of<P>, false>(plan, src, dst, n)
+        Execution::Upgrade
     };
-    res.map_err(|(base, e)| first(base, e))
+    let backend = options.is_backend();
+    let plan = select_plan(options, token, exec, true);
+    let cfg = graph::KernelCfg::from_options(options);
+    dispatch::run_slice_cfg(plan, backend, src, dst, n, cfg)
+        .map_err(|(base, e)| refine_slice_error(plan, backend, cfg, src, base, e, n))
+}
+
+/// Compile-time specialized `powf` operator configured by `const CFG: u128`
+/// (produced via [`PowfOptions::bits()`]).
+///
+/// ```
+/// use magemath::powf::{Powf, PowfOptions};
+/// const GAMMA: u128 = PowfOptions::new().gamma().caller().bits();
+/// assert_eq!(Powf::<GAMMA>::scalar(4.0, 0.5).unwrap(), 2.0);
+/// ```
+///
+/// Unencoded integers, another family's `bits()`, or invalid option combinations
+/// fail at compile time:
+///
+/// ```compile_fail
+/// let _ = magemath::powf::Powf::<0>::scalar(1.0, 2.4);
+/// ```
+/// ```compile_fail
+/// const EXP: u128 = magemath::expf::ExpfOptions::new().bits();
+/// let _ = magemath::powf::Powf::<EXP>::scalar(1.0, 2.4);
+/// ```
+/// ```compile_fail
+/// const BAD: u128 = magemath::powf::PowfOptions::new().full_domain().bits();
+/// let _ = magemath::powf::Powf::<BAD>::scalar(1.0, 2.4);
+/// ```
+#[derive(Clone, Copy, Debug, Default)]
+pub struct Powf<const CFG: u128 = { PowfOptions::new().bits() }>;
+
+impl<const CFG: u128> Powf<CFG> {
+    /// Checked scalar `base^n`.
+    #[inline(always)]
+    pub fn scalar(base: f32, n: f32) -> Result<f32, PowfError> {
+        Self::array::<1>([base], n).map(|result| result[0])
+    }
+
+    /// Infallible scalar `base^n`.
+    ///
+    /// Fails to compile unless `CFG` sets `.unchecked()` or `.full_domain().highp()`.
+    #[inline(always)]
+    pub fn scalar_infallible(base: f32, n: f32) -> f32 {
+        const {
+            let opts = PowfOptions::decode_const(CFG);
+            opts.validate();
+            assert!(
+                opts.is_infallible(),
+                "Powf::<CFG>::scalar_infallible requires `.unchecked()` or `.full_domain().highp()`; use `Powf::<CFG>::scalar` for checked options"
+            );
+        }
+        match Self::scalar(base, n) {
+            Ok(v) => v,
+            Err(_) => base,
+        }
+    }
+
+    /// Scalar `base^n` retaining a vector caller's capability token (for scalar tails).
+    #[inline(always)]
+    pub fn scalar_with_token<T: magetypes::simd::backends::F32x4Convert>(
+        token: T,
+        base: f32,
+        n: f32,
+    ) -> Result<f32, PowfError> {
+        let opts = const {
+            let o = PowfOptions::decode_const(CFG);
+            o.validate();
+            o
+        };
+        if opts.is_highp() {
+            check_exponent::<1>(opts, n)?;
+            return super::highp_dispatch::for_token_cfg::<T, 1>(token, opts, [base], n)
+                .map(|v| v[0]);
+        }
+        run4::<CFG, T>(
+            token,
+            magetypes::simd::generic::f32x4::splat_t(token, base),
+            n,
+        )
+        .map(|v| v.to_array()[0])
+        .map_err(|error| PowfError {
+            lane_mask: 1,
+            ..error
+        })
+    }
+
+    /// Version-independent array boundary for widths `1`, `4`, `8` and (with `w512`) `16`.
+    #[inline(always)]
+    pub fn array<const N: usize>(bases: [f32; N], n: f32) -> Result<[f32; N], PowfError> {
+        use archmage::ScalarToken;
+        use magetypes::simd::generic::{f32x4, f32x8};
+        let opts = const {
+            let o = PowfOptions::decode_const(CFG);
+            o.validate();
+            o
+        };
+        if !matches!(N, 1 | 4 | 8) && !(cfg!(feature = "w512") && N == 16) {
+            return Err(PowfError {
+                kind: PowfErrorKind::UnsupportedWidth,
+                lane_mask: 0,
+            });
+        }
+        if opts.is_highp() {
+            check_exponent::<N>(opts, n)?;
+            return super::highp_dispatch::for_token_cfg::<_, N>(ScalarToken, opts, bases, n);
+        }
+        let mut output = [0.0; N];
+        if N == 1 {
+            let value = run4::<CFG, _>(ScalarToken, f32x4::splat_t(ScalarToken, bases[0]), n)
+                .map_err(|error| PowfError {
+                    lane_mask: 1,
+                    ..error
+                })?;
+            output[0] = value.to_array()[0];
+        } else if N == 4 {
+            let mut input = [0.0; 4];
+            input.copy_from_slice(&bases);
+            output.copy_from_slice(
+                &run4::<CFG, _>(ScalarToken, f32x4::from_array_t(ScalarToken, input), n)?
+                    .to_array(),
+            );
+        } else if N == 8 {
+            let mut input = [0.0; 8];
+            input.copy_from_slice(&bases);
+            output.copy_from_slice(
+                &run8::<CFG, _>(ScalarToken, f32x8::from_array_t(ScalarToken, input), n)?
+                    .to_array(),
+            );
+        } else {
+            #[cfg(feature = "w512")]
+            if N == 16 {
+                use magetypes::simd::generic::f32x16;
+                let mut input = [0.0; 16];
+                input.copy_from_slice(&bases);
+                output.copy_from_slice(
+                    &run16::<CFG, _>(ScalarToken, f32x16::from_array_t(ScalarToken, input), n)?
+                        .to_array(),
+                );
+                return Ok(output);
+            }
+            #[allow(unreachable_code)]
+            return Err(PowfError {
+                kind: PowfErrorKind::UnsupportedWidth,
+                lane_mask: 0,
+            });
+        }
+        Ok(output)
+    }
+
+    /// Whole-slice `src[i]^n -> dst[i]`, selecting the best SIMD backend once.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `src.len() != dst.len()`.
+    #[inline]
+    pub fn slice(src: &[f32], dst: &mut [f32], n: f32) -> Result<(), SliceError<PowfErrorKind>> {
+        Self::slice_with_token(archmage::ScalarToken, src, dst, n)
+    }
+
+    /// Whole-slice `src[i]^n -> dst[i]` starting from `token` (reuses `token`
+    /// under `Execution::Caller`, or upgrades to `V4`/`V4x` when beneficial
+    /// under `Execution::Upgrade`).
+    ///
+    /// # Panics
+    ///
+    /// Panics if `src.len() != dst.len()`.
+    #[inline(always)]
+    pub fn slice_with_token(
+        token: impl archmage::IntoConcreteToken,
+        src: &[f32],
+        dst: &mut [f32],
+        n: f32,
+    ) -> Result<(), SliceError<PowfErrorKind>> {
+        let opts = const {
+            let o = PowfOptions::decode_const(CFG);
+            o.validate();
+            o
+        };
+        assert_eq!(src.len(), dst.len(), "powf slice lengths differ");
+        check_exponent::<1>(opts, n).map_err(|e| SliceError {
+            kind: e.kind,
+            index: 0,
+        })?;
+        if opts.is_highp() {
+            return super::highp_dispatch::for_token_slice_cfg(token, opts, src, dst, n).map_err(
+                |(base, e)| SliceError {
+                    kind: e.kind,
+                    index: base + e.lane_mask.trailing_zeros().min(7) as usize,
+                },
+            );
+        }
+        let exec = if opts.is_caller() {
+            Execution::Caller
+        } else {
+            Execution::Upgrade
+        };
+        let backend = opts.is_backend();
+        let plan = select_plan(opts, token, exec, true);
+        let res = if backend {
+            dispatch::run_slice::<Cfg<CFG>, true>(plan, src, dst, n)
+        } else {
+            dispatch::run_slice::<Cfg<CFG>, false>(plan, src, dst, n)
+        };
+        res.map_err(|(base, e)| {
+            let cfg = graph::KernelCfg::from_options(opts);
+            refine_slice_error(plan, backend, cfg, src, base, e, n)
+        })
+    }
+
+    /// Evaluate `input^n` on any Magetypes `f32` vector (`f32x4`, `f32x8`, or
+    /// `f32x16`), reusing `input.token()`.
+    #[inline(always)]
+    pub fn simd<V: SimdVector>(input: V, n: f32) -> Result<V, PowfError> {
+        input.eval_powf_const::<CFG>(n)
+    }
+}
+
+/// Dynamic runtime `powf` evaluator created via [`PowfOptions::runtime()`].
+#[derive(Clone, Copy, Debug)]
+pub struct PowfRuntime {
+    options: PowfOptions,
+}
+
+impl PowfRuntime {
+    #[inline(always)]
+    pub(crate) const fn new(options: PowfOptions) -> Self {
+        Self { options }
+    }
+
+    /// Return the underlying [`PowfOptions`].
+    #[inline(always)]
+    pub const fn options(self) -> PowfOptions {
+        self.options
+    }
+
+    /// Checked scalar `base^n` with runtime options.
+    #[inline(always)]
+    pub fn scalar(self, base: f32, n: f32) -> Result<f32, PowfError> {
+        self.array::<1>([base], n).map(|r| r[0])
+    }
+
+    /// Scalar `base^n` retaining a vector caller's token with runtime options.
+    #[inline(always)]
+    pub fn scalar_with_token<T: magetypes::simd::backends::F32x4Convert>(
+        self,
+        token: T,
+        base: f32,
+        n: f32,
+    ) -> Result<f32, PowfError> {
+        runtime::<T, 1>(token, [base], n, self.options).map(|r| r[0])
+    }
+
+    /// Array `bases^n` for widths `1`, `4`, `8` and (with `w512`) `16`.
+    #[inline(always)]
+    pub fn array<const N: usize>(self, bases: [f32; N], n: f32) -> Result<[f32; N], PowfError> {
+        runtime::<_, N>(archmage::ScalarToken, bases, n, self.options)
+    }
+
+    /// Whole-slice `src[i]^n -> dst[i]` with runtime options.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `src.len() != dst.len()`.
+    #[inline]
+    pub fn slice(
+        self,
+        src: &[f32],
+        dst: &mut [f32],
+        n: f32,
+    ) -> Result<(), SliceError<PowfErrorKind>> {
+        slice_runtime(archmage::ScalarToken, src, dst, n, self.options)
+    }
+
+    /// Whole-slice `src[i]^n -> dst[i]` retaining or upgrading from `token`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `src.len() != dst.len()`.
+    #[inline]
+    pub fn slice_with_token(
+        self,
+        token: impl archmage::IntoConcreteToken,
+        src: &[f32],
+        dst: &mut [f32],
+        n: f32,
+    ) -> Result<(), SliceError<PowfErrorKind>> {
+        slice_runtime(token, src, dst, n, self.options)
+    }
+
+    /// Evaluate `input^n` on any Magetypes `f32` vector (`f32x4`, `f32x8`, or `f32x16`).
+    #[inline(always)]
+    pub fn simd<V: SimdVector>(self, input: V, n: f32) -> Result<V, PowfError> {
+        input.eval_powf_runtime(n, self.options)
+    }
 }

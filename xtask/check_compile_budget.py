@@ -35,7 +35,7 @@ RELEASE_LIB_MAX_RSS_MIB = 1536.0
 DEBUG_LIB_MAX_SYMBOLS = 4000
 RELEASE_LIB_MAX_SYMBOLS = 200
 
-FORBIDDEN_STEM_FRAGMENTS = ("Options<", "const_api::Of<")
+FORBIDDEN_STEM_FRAGMENTS = ("Options<", "const_api::Of<", "const_api::Cfg<")
 
 
 def find_nm() -> str | None:
@@ -119,14 +119,23 @@ def stem_of(sym: str) -> str:
 def inspect_rlib_symbols(
     profile_dir: Path, nm_bin: str | None
 ) -> tuple[int, list[tuple[str, int]], list[str]]:
+    candidates = [
+        p
+        for p in (
+            profile_dir / "libmagemath.rlib",
+            profile_dir / "magemath.rlib",
+            *(profile_dir / "deps").glob("libmagemath*.rlib"),
+            *(profile_dir / "deps").glob("magemath*.rlib"),
+        )
+        if p.exists()
+    ]
     rlibs = sorted(
-        list((profile_dir / "deps").glob("libmagemath-*.rlib"))
-        + list((profile_dir / "deps").glob("magemath-*.rlib")),
+        candidates,
         key=lambda p: p.stat().st_mtime,
         reverse=True,
     )
     if not rlibs:
-        raise RuntimeError(f"missing libmagemath-*.rlib under {profile_dir / 'deps'}")
+        raise RuntimeError(f"missing libmagemath.rlib under {profile_dir}")
     if not nm_bin:
         return 0, [], []
     proc = subprocess.run(

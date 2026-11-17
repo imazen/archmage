@@ -23,18 +23,18 @@ pub(super) struct KernelCfg {
 }
 
 impl KernelCfg {
-    pub(super) const fn from_spec(spec: super::LogfSpec) -> Self {
-        let (in_lo, in_hi) = match spec.input_bounds() {
+    pub(super) const fn from_options(opts: super::LogfOptions) -> Self {
+        let (in_lo, in_hi) = match opts.input_bounds() {
             Some(bounds) => bounds,
             None => (0.0, 0.0),
         };
         Self {
-            ranged: spec.input_bounds().is_some(),
+            ranged: opts.input_bounds().is_some(),
             in_lo,
             in_hi,
-            specials: spec.is_specials(),
-            lowp: spec.is_lowp(),
-            assume: spec.assume_valid(),
+            specials: opts.is_specials(),
+            lowp: opts.is_lowp(),
+            assume: opts.assume_valid(),
         }
     }
 }
@@ -418,10 +418,9 @@ graph!(
     16
 );
 
-/// Whole-slice kernel (`op`: `0=log2`, `1=ln`, `2=log10`, `3=log1p`): debug
-/// path parameterized on `KernelCfg`.
-#[cfg(debug_assertions)]
-#[archmage::magetypes(v4x(cfg(avx512)), v4(cfg(avx512)), v3, neon, wasm128, scalar)]
+/// Whole-slice kernel (`op`: `0=log2`, `1=ln`, `2=log10`, `3=log1p`)
+/// parameterized on `KernelCfg`.
+#[archmage::magetypes(v3, neon, wasm128, scalar)]
 pub(super) fn slice8_cfg(
     token: Token,
     src: &[f32],
@@ -452,11 +451,71 @@ pub(super) fn slice8_cfg(
     Ok(())
 }
 
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[inline(always)]
+fn slice16_cfg_impl<T: magetypes::simd::backends::F32x16Convert>(
+    token: T,
+    src: &[f32],
+    dst: &mut [f32],
+    op: u8,
+    backend: bool,
+    cfg: KernelCfg,
+) -> Result<(), (usize, LogfError)> {
+    use magetypes::simd::generic::f32x16 as V;
+    let (chunks, tail) = V::partition_slice_t(token, src);
+    let (out_chunks, out_tail) = V::partition_slice_mut_t(token, dst);
+    for (i, (s, d)) in chunks.iter().zip(out_chunks.iter_mut()).enumerate() {
+        eval_op16_dbg::<T>(token, V::load_t(token, s), op, backend, cfg)
+            .map_err(|e| (i * 16, e))?
+            .store(d);
+    }
+    if !tail.is_empty() {
+        eval_op16_dbg::<T>(
+            token,
+            V::load_padded_t(token, tail, tail[0]),
+            op,
+            backend,
+            cfg,
+        )
+        .map_err(|e| (chunks.len() * 16, e))?
+        .store_prefix(out_tail);
+    }
+    Ok(())
+}
+
+/// 16-lane AVX-512 (`V4`) whole-slice kernel parameterized on `KernelCfg`.
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[archmage::arcane]
+pub(super) fn slice16_cfg_v4(
+    token: archmage::X64V4Token,
+    src: &[f32],
+    dst: &mut [f32],
+    op: u8,
+    backend: bool,
+    cfg: KernelCfg,
+) -> Result<(), (usize, LogfError)> {
+    slice16_cfg_impl(token, src, dst, op, backend, cfg)
+}
+
+/// 16-lane AVX-512 (`V4x`) whole-slice kernel parameterized on `KernelCfg`.
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[archmage::arcane]
+pub(super) fn slice16_cfg_v4x(
+    token: archmage::X64V4xToken,
+    src: &[f32],
+    dst: &mut [f32],
+    op: u8,
+    backend: bool,
+    cfg: KernelCfg,
+) -> Result<(), (usize, LogfError)> {
+    slice16_cfg_impl(token, src, dst, op, backend, cfg)
+}
+
 /// Whole-slice kernel (`OP`: `0=log2`, `1=ln`, `2=log10`, `3=log1p`): one
 /// feature region around the loop, the 8-lane graph per chunk, and `tail[0]`
 /// padding so ranges excluding `1.0` never false-reject.
 #[cfg(not(debug_assertions))]
-#[archmage::magetypes(v4x(cfg(avx512)), v4(cfg(avx512)), v3, neon, wasm128, scalar)]
+#[archmage::magetypes(v3, neon, wasm128, scalar)]
 pub(super) fn slice8_with<K: Kernel, const OP: u8, const BACKEND: bool>(
     token: Token,
     src: &[f32],
@@ -476,4 +535,54 @@ pub(super) fn slice8_with<K: Kernel, const OP: u8, const BACKEND: bool>(
             .store_prefix(out_tail);
     }
     Ok(())
+}
+
+#[cfg(all(not(debug_assertions), target_arch = "x86_64", feature = "avx512"))]
+#[inline(always)]
+fn slice16_with_impl<
+    T: magetypes::simd::backends::F32x16Convert,
+    K: Kernel,
+    const OP: u8,
+    const BACKEND: bool,
+>(
+    token: T,
+    src: &[f32],
+    dst: &mut [f32],
+) -> Result<(), (usize, LogfError)> {
+    use magetypes::simd::generic::f32x16 as V;
+    let (chunks, tail) = V::partition_slice_t(token, src);
+    let (out_chunks, out_tail) = V::partition_slice_mut_t(token, dst);
+    for (i, (s, d)) in chunks.iter().zip(out_chunks.iter_mut()).enumerate() {
+        profile16::<T, K, OP, BACKEND>(token, V::load_t(token, s))
+            .map_err(|e| (i * 16, e))?
+            .store(d);
+    }
+    if !tail.is_empty() {
+        profile16::<T, K, OP, BACKEND>(token, V::load_padded_t(token, tail, tail[0]))
+            .map_err(|e| (chunks.len() * 16, e))?
+            .store_prefix(out_tail);
+    }
+    Ok(())
+}
+
+/// 16-lane AVX-512 (`V4`) whole-slice kernel (`zmm`).
+#[cfg(all(not(debug_assertions), target_arch = "x86_64", feature = "avx512"))]
+#[archmage::arcane]
+pub(super) fn slice16_with_v4<K: Kernel, const OP: u8, const BACKEND: bool>(
+    token: archmage::X64V4Token,
+    src: &[f32],
+    dst: &mut [f32],
+) -> Result<(), (usize, LogfError)> {
+    slice16_with_impl::<_, K, OP, BACKEND>(token, src, dst)
+}
+
+/// 16-lane AVX-512 (`V4x`) whole-slice kernel (`zmm`).
+#[cfg(all(not(debug_assertions), target_arch = "x86_64", feature = "avx512"))]
+#[archmage::arcane]
+pub(super) fn slice16_with_v4x<K: Kernel, const OP: u8, const BACKEND: bool>(
+    token: archmage::X64V4xToken,
+    src: &[f32],
+    dst: &mut [f32],
+) -> Result<(), (usize, LogfError)> {
+    slice16_with_impl::<_, K, OP, BACKEND>(token, src, dst)
 }

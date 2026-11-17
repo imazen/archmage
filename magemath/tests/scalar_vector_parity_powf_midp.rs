@@ -7,38 +7,43 @@ mod powf_parity;
 
 macro_rules! midp_flags {
     ($m:ident $(, $arg:expr)*) => {
-        $m::<0>($($arg),*);
-        $m::<1>($($arg),*);
-        $m::<2>($($arg),*);
-        $m::<4>($($arg),*);
-        $m::<5>($($arg),*);
-        $m::<6>($($arg),*);
-        $m::<16>($($arg),*);
-        $m::<17>($($arg),*);
-        $m::<18>($($arg),*);
-        $m::<20>($($arg),*);
-        $m::<21>($($arg),*);
-        $m::<22>($($arg),*);
-        $m::<32>($($arg),*);
-        $m::<33>($($arg),*);
-        $m::<34>($($arg),*);
-        $m::<36>($($arg),*);
-        $m::<37>($($arg),*);
-        $m::<38>($($arg),*);
-        $m::<48>($($arg),*);
-        $m::<49>($($arg),*);
-        $m::<50>($($arg),*);
-        $m::<52>($($arg),*);
-        $m::<53>($($arg),*);
-        $m::<54>($($arg),*);
-        $m::<130>($($arg),*);
-        $m::<134>($($arg),*);
-        $m::<146>($($arg),*);
-        $m::<150>($($arg),*);
-        $m::<162>($($arg),*);
-        $m::<166>($($arg),*);
-        $m::<178>($($arg),*);
-        $m::<182>($($arg),*);
+        macro_rules! call_one {
+            ($f:literal) => {
+                $m::<$f, { powf_parity::powf_options_from_bits($f).bits() }>($($arg),*);
+            };
+        }
+        call_one!(0);
+        call_one!(1);
+        call_one!(2);
+        call_one!(4);
+        call_one!(5);
+        call_one!(6);
+        call_one!(16);
+        call_one!(17);
+        call_one!(18);
+        call_one!(20);
+        call_one!(21);
+        call_one!(22);
+        call_one!(32);
+        call_one!(33);
+        call_one!(34);
+        call_one!(36);
+        call_one!(37);
+        call_one!(38);
+        call_one!(48);
+        call_one!(49);
+        call_one!(50);
+        call_one!(52);
+        call_one!(53);
+        call_one!(54);
+        call_one!(130);
+        call_one!(134);
+        call_one!(146);
+        call_one!(150);
+        call_one!(162);
+        call_one!(166);
+        call_one!(178);
+        call_one!(182);
     };
 }
 

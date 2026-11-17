@@ -9,95 +9,65 @@
 
 ## summary
 #
-#   inherent methods                           24
-#   trait roster entries (type × trait)        53
+#   inherent methods                           20
+#   trait roster entries (type × trait)        27
 #
 # per-module pub lines:
 #   (root)                            4
-#   cbrtf                             5
-#   expf                              5
-#   logf                              5
-#   powf                              5
+#   cbrtf                             4
+#   expf                              4
+#   logf                              4
+#   powf                              4
 
-## items (24 lines)
+## items (20 lines)
 
 pub fn Execution::assert_fields_are_eq(&self)
 pub fn Portability::assert_fields_are_eq(&self)
 pub fn SliceError<K>::assert_fields_are_eq(&self)
 pub fn Validation::assert_fields_are_eq(&self)
-pub fn cbrtf::CbrtfDomain::assert_fields_are_eq(&self)
 pub fn cbrtf::CbrtfError::assert_fields_are_eq(&self)
 pub fn cbrtf::CbrtfErrorKind::assert_fields_are_eq(&self)
 pub fn cbrtf::CbrtfOptions::assert_fields_are_eq(&self)
 pub fn cbrtf::CbrtfPrecision::assert_fields_are_eq(&self)
-pub fn expf::ExpfDomain::assert_fields_are_eq(&self)
 pub fn expf::ExpfError::assert_fields_are_eq(&self)
 pub fn expf::ExpfErrorKind::assert_fields_are_eq(&self)
 pub fn expf::ExpfOptions::assert_fields_are_eq(&self)
 pub fn expf::ExpfPrecision::assert_fields_are_eq(&self)
-pub fn logf::LogfDomain::assert_fields_are_eq(&self)
 pub fn logf::LogfError::assert_fields_are_eq(&self)
 pub fn logf::LogfErrorKind::assert_fields_are_eq(&self)
 pub fn logf::LogfOptions::assert_fields_are_eq(&self)
 pub fn logf::LogfPrecision::assert_fields_are_eq(&self)
-pub fn powf::PowfDomain::assert_fields_are_eq(&self)
 pub fn powf::PowfError::assert_fields_are_eq(&self)
 pub fn powf::PowfErrorKind::assert_fields_are_eq(&self)
 pub fn powf::PowfOptions::assert_fields_are_eq(&self)
 pub fn powf::PowfPrecision::assert_fields_are_eq(&self)
 
-## trait impls (53 types)
+## trait impls (27 types)
 
 Execution: TrivialClone
 Portability: TrivialClone
 Validation: TrivialClone
-cbrtf::CbrtfDomain: TrivialClone
+cbrtf::Cbrtf<CFG>: TrivialClone
 cbrtf::CbrtfError: TrivialClone
 cbrtf::CbrtfErrorKind: TrivialClone
 cbrtf::CbrtfOptions: TrivialClone
 cbrtf::CbrtfPrecision: TrivialClone
-cbrtf::CbrtfSpec: TrivialClone
-cbrtf::Options<BITS>: TrivialClone
-cbrtf::presets::Lowp: TrivialClone
-cbrtf::presets::LowpFull: TrivialClone
-cbrtf::presets::Midp: TrivialClone
-cbrtf::presets::MidpFull: TrivialClone
-expf::ExpfDomain: TrivialClone
+cbrtf::CbrtfRuntime: TrivialClone
+expf::Expf<CFG>: TrivialClone
 expf::ExpfError: TrivialClone
 expf::ExpfErrorKind: TrivialClone
 expf::ExpfOptions: TrivialClone
 expf::ExpfPrecision: TrivialClone
-expf::ExpfSpec: TrivialClone
-expf::Options<BITS>: TrivialClone
-expf::presets::Lowp: TrivialClone
-expf::presets::LowpFull: TrivialClone
-expf::presets::Midp: TrivialClone
-expf::presets::MidpFull: TrivialClone
-logf::LogfDomain: TrivialClone
+expf::ExpfRuntime: TrivialClone
+logf::Logf<CFG>: TrivialClone
 logf::LogfError: TrivialClone
 logf::LogfErrorKind: TrivialClone
 logf::LogfOptions: TrivialClone
 logf::LogfPrecision: TrivialClone
-logf::LogfSpec: TrivialClone
-logf::Options<BITS>: TrivialClone
-logf::presets::Lowp: TrivialClone
-logf::presets::LowpSpecials: TrivialClone
-logf::presets::Midp: TrivialClone
-logf::presets::MidpSpecials: TrivialClone
-powf::Options<BITS>: TrivialClone
-powf::PowfDomain: TrivialClone
+logf::LogfRuntime: TrivialClone
+powf::Powf<CFG>: TrivialClone
 powf::PowfError: TrivialClone
 powf::PowfErrorKind: TrivialClone
 powf::PowfOptions: TrivialClone
 powf::PowfPrecision: TrivialClone
-powf::PowfSpec: TrivialClone
-powf::presets::FullHighp: TrivialClone
-powf::presets::GammaHighp: TrivialClone
-powf::presets::GammaLowp: TrivialClone
-powf::presets::GammaMidp: TrivialClone
-powf::presets::NonNegativeNormalMidp: TrivialClone
-powf::presets::NormalLowp: TrivialClone
-powf::presets::NormalMidp: TrivialClone
-powf::presets::PositiveGammaLowp: TrivialClone
-powf::presets::PositiveGammaMidp: TrivialClone
-powf::presets::StdHighp: TrivialClone
+powf::PowfRuntime: TrivialClone

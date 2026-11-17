@@ -8,48 +8,53 @@ mod powf_parity;
 
 macro_rules! highp_flags {
     ($m:ident $(, $arg:expr)*) => {
-        $m::<64>($($arg),*);
-        $m::<65>($($arg),*);
-        $m::<66>($($arg),*);
-        $m::<67>($($arg),*);
-        $m::<68>($($arg),*);
-        $m::<69>($($arg),*);
-        $m::<70>($($arg),*);
-        $m::<71>($($arg),*);
-        $m::<96>($($arg),*);
-        $m::<97>($($arg),*);
-        $m::<98>($($arg),*);
-        $m::<99>($($arg),*);
-        $m::<100>($($arg),*);
-        $m::<101>($($arg),*);
-        $m::<102>($($arg),*);
-        $m::<103>($($arg),*);
-        $m::<194>($($arg),*);
-        $m::<198>($($arg),*);
-        $m::<226>($($arg),*);
-        $m::<230>($($arg),*);
+        macro_rules! call_one {
+            ($f:literal) => {
+                $m::<$f, { powf_parity::powf_options_from_bits($f).bits() }>($($arg),*);
+            };
+        }
+        call_one!(64);
+        call_one!(65);
+        call_one!(66);
+        call_one!(67);
+        call_one!(68);
+        call_one!(69);
+        call_one!(70);
+        call_one!(71);
+        call_one!(96);
+        call_one!(97);
+        call_one!(98);
+        call_one!(99);
+        call_one!(100);
+        call_one!(101);
+        call_one!(102);
+        call_one!(103);
+        call_one!(194);
+        call_one!(198);
+        call_one!(226);
+        call_one!(230);
         #[cfg(feature = "std")]
         {
-            $m::<80>($($arg),*);
-            $m::<81>($($arg),*);
-            $m::<82>($($arg),*);
-            $m::<83>($($arg),*);
-            $m::<84>($($arg),*);
-            $m::<85>($($arg),*);
-            $m::<86>($($arg),*);
-            $m::<87>($($arg),*);
-            $m::<112>($($arg),*);
-            $m::<113>($($arg),*);
-            $m::<114>($($arg),*);
-            $m::<115>($($arg),*);
-            $m::<116>($($arg),*);
-            $m::<117>($($arg),*);
-            $m::<118>($($arg),*);
-            $m::<119>($($arg),*);
-            $m::<210>($($arg),*);
-            $m::<214>($($arg),*);
-            $m::<242>($($arg),*);
-            $m::<246>($($arg),*);
+            call_one!(80);
+            call_one!(81);
+            call_one!(82);
+            call_one!(83);
+            call_one!(84);
+            call_one!(85);
+            call_one!(86);
+            call_one!(87);
+            call_one!(112);
+            call_one!(113);
+            call_one!(114);
+            call_one!(115);
+            call_one!(116);
+            call_one!(117);
+            call_one!(118);
+            call_one!(119);
+            call_one!(210);
+            call_one!(214);
+            call_one!(242);
+            call_one!(246);
         }
     };
 }
@@ -78,9 +83,9 @@ fn powf_highp_scalar_and_vector_parity_across_all_configs() {
 
 #[test]
 fn tested_powf_encodings_cover_every_supported_option_combination() {
-    use magemath::powf::{
-        PowfDomain, PowfErrorKind, PowfExecution, PowfOptions, PowfPortability, PowfPrecision,
-        PowfValidation, try_powf_runtime,
+    use magemath::{
+        Execution, Portability, Validation,
+        powf::{PowfErrorKind, PowfOptions, PowfPrecision},
     };
 
     const MIDP: &[u32] = &[
@@ -101,47 +106,43 @@ fn tested_powf_encodings_cover_every_supported_option_combination() {
     #[cfg(not(feature = "std"))]
     const HIGHP_STD: &[u32] = &[];
 
+    let suite: Vec<u128> = MIDP
+        .iter()
+        .chain(LOWP)
+        .chain(HIGHP_PORTABLE)
+        .chain(HIGHP_STD)
+        .map(|&f| powf_parity::powf_options_from_bits(f).bits())
+        .collect();
+
     let mut valid_count = 0usize;
-    for d in [
-        PowfDomain::PositiveNormal,
-        PowfDomain::NonNegativeNormal,
-        PowfDomain::Gamma,
-        PowfDomain::PositiveGamma,
-        PowfDomain::Full,
+    for base in [
+        PowfOptions::new(),
+        PowfOptions::new().admit_zero(),
+        PowfOptions::new().gamma(),
+        PowfOptions::new().positive_gamma(),
+        PowfOptions::new().full_domain(),
     ] {
-        for x in [PowfExecution::Automatic, PowfExecution::Caller] {
+        for x in [Execution::Upgrade, Execution::Caller] {
             for q in [
                 PowfPrecision::Midp,
                 PowfPrecision::Lowp,
                 PowfPrecision::Highp,
             ] {
-                for p in [PowfPortability::BitExact, PowfPortability::BackendDependent] {
-                    for v in [PowfValidation::Checked, PowfValidation::AssumeValid] {
-                        let opts = PowfOptions::new()
-                            .with_domain(d)
-                            .with_execution(x)
-                            .with_precision(q)
-                            .with_portability(p)
-                            .with_validation(v);
-                        let bits = opts.bits();
-                        let in_suite = MIDP.contains(&bits)
-                            || LOWP.contains(&bits)
-                            || HIGHP_PORTABLE.contains(&bits)
-                            || HIGHP_STD.contains(&bits);
-                        match try_powf_runtime(2.0, 0.5, opts) {
+                for p in [Portability::BitExact, Portability::BackendDependent] {
+                    for v in [Validation::Checked, Validation::AssumeValid] {
+                        let opts = base.execution(x).precision(q).portability(p).validation(v);
+                        match opts.runtime().scalar(2.0, 0.5) {
                             Ok(_) => {
+                                let bits = opts.bits();
                                 assert!(
-                                    in_suite,
-                                    "supported PowfOptions encoding {bits} ({opts:?}) missing from parity suite"
+                                    suite.contains(&bits),
+                                    "supported PowfOptions encoding ({opts:?}) missing from parity suite"
                                 );
                                 valid_count += 1;
                             }
                             Err(err) => {
                                 assert_eq!(err.kind, PowfErrorKind::UnsupportedOptions);
-                                assert!(
-                                    !in_suite,
-                                    "unsupported PowfOptions encoding {bits} ({opts:?}) unexpectedly in suite"
-                                );
+                                assert!(!opts.is_valid());
                             }
                         }
                     }
@@ -149,8 +150,5 @@ fn tested_powf_encodings_cover_every_supported_option_combination() {
             }
         }
     }
-    assert_eq!(
-        valid_count,
-        MIDP.len() + LOWP.len() + HIGHP_PORTABLE.len() + HIGHP_STD.len()
-    );
+    assert_eq!(valid_count, suite.len());
 }

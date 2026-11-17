@@ -6,14 +6,14 @@
 # impls omitted; re-export duplicates annotated `[also: path]`.
 # DO NOT EDIT BY HAND — commit regenerated changes with the code.
 #
-# files: magetypes.txt 2796 lines (supported surface) | magetypes.features.txt 96 added (features: avx512,std,w512) | magetypes.internal.txt 42 lines (52 hidden + 0 excluded-feature)
+# files: magetypes.txt 2797 lines (supported surface) | magetypes.features.txt 96 added (features: avx512,std,w512) | magetypes.internal.txt 42 lines (52 hidden + 0 excluded-feature)
 
 ## summary
 #
 #   pub modules                                13
 #   pub types (struct/enum/trait/alias)       381
 #   pub consts/statics                        232
-#   free functions                           4128
+#   free functions                           4188
 #   inherent methods                         1306
 #   enum variants                               1
 #   re-exports                                  2
@@ -25,11 +25,11 @@
 # per-module pub lines:
 #   (root)                          326
 #   cast                              3
-#   prelude                        3912
+#   prelude                        3972
 #   scalar                           36
 #   simd                           1786
 
-## items (2572 lines)
+## items (2573 lines)
 
 pub mod magetypes
 pub use archmage
@@ -115,6 +115,7 @@ pub fn prelude::f32x4<T>::splat_t(T, f32) -> Self [also: prelude::f32x16<T>, pre
 pub fn prelude::f32x4<T>::store(self, &mut [f32; 4]) [also: prelude::f32x4<T>]
 pub fn prelude::f32x4<T>::store_prefix(self, &mut [f32]) [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
 pub fn prelude::f32x4<T>::to_array(self) -> [f32; 4] [also: prelude::f32x4<T>]
+pub fn prelude::f32x4<T>::token(self) -> T [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>, prelude::f64x2<T>, prelude::f64x4<T>, prelude::f64x8<T>, prelude::i16x16<T>, prelude::i16x32<T>, prelude::i16x8<T>, prelude::i32x16<T>, prelude::i32x4<T>, prelude::i32x8<T>, prelude::i64x2<T>, prelude::i64x4<T>, prelude::i64x8<T>, prelude::i8x16<T>, prelude::i8x32<T>, prelude::i8x64<T>, prelude::u16x16<T>, prelude::u16x32<T>, prelude::u16x8<T>, prelude::u32x16<T>, prelude::u32x4<T>, prelude::u32x8<T>, prelude::u64x2<T>, prelude::u64x4<T>, prelude::u64x8<T>, prelude::u8x16<T>, prelude::u8x32<T>, prelude::u8x64<T>]
 pub fn prelude::f32x4<T>::zero_t(T) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>, prelude::f64x2<T>, prelude::f64x4<T>, prelude::f64x8<T>, prelude::i16x16<T>, prelude::i16x32<T>, prelude::i16x8<T>, prelude::i32x16<T>, prelude::i32x4<T>, prelude::i32x8<T>, prelude::i64x2<T>, prelude::i64x4<T>, prelude::i64x8<T>, prelude::i8x16<T>, prelude::i8x32<T>, prelude::i8x64<T>, prelude::u16x16<T>, prelude::u16x32<T>, prelude::u16x8<T>, prelude::u32x16<T>, prelude::u32x4<T>, prelude::u32x8<T>, prelude::u64x2<T>, prelude::u64x4<T>, prelude::u64x8<T>, prelude::u8x16<T>, prelude::u8x32<T>, prelude::u8x64<T>]
 pub fn prelude::f32x4<T>::as_array(&self) -> &[f32; 4] [also: prelude::f32x4<T>]
 pub fn prelude::f32x4<T>::as_array_mut(&mut self) -> &mut [f32; 4] [also: prelude::f32x4<T>]

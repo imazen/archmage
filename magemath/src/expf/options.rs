@@ -1,177 +1,313 @@
-//! Independent compile-time policy axes for the exp family.
+//! Fluent `const` configuration builder for the exponential family (`exp2`, `exp`).
 
-/// Accepted input range and non-finite handling.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
-#[non_exhaustive]
-pub enum ExpfDomain {
-    /// Finite inputs; the approximation's documented range applies
-    /// (`[-126,127.99]` lowp, `[-126,128)` midp, clamped as before).
-    /// NaN and infinities are invalid inputs.
-    #[default]
-    Bounded,
-    /// Every f32 input produces a result: NaN propagates to a NaN result
-    /// (payload unspecified), `+inf` maps to `+inf`, `-inf` maps to `+0`.
-    /// Finite inputs are clamped exactly as `Bounded`.
-    Full,
+use crate::{Execution, Portability, Validation};
+
+const MAGIC: u128 = 0x45;
+const HAS_RANGE: u128 = 1 << 8;
+const FULL: u128 = 1 << 9;
+const LOWP: u128 = 1 << 10;
+const BACKEND: u128 = 1 << 11;
+const ASSUME: u128 = 1 << 12;
+const CALLER: u128 = 1 << 13;
+const RESERVED_MASK: u128 = ((1_u128 << 50) - 1) << 14;
+
+const fn abs(x: f32) -> f32 {
+    if x < 0.0 { -x } else { x }
 }
 
-/// Whole-operation feature selection, independent of numerical policy.
-pub use crate::Execution as ExpfExecution;
-/// Whether accepted results must agree bit for bit across backends.
-pub use crate::Portability as ExpfPortability;
-/// Whether to enforce the selected numerical domain at runtime.
-pub use crate::Validation as ExpfValidation;
+const fn canon_zero(x: f32) -> f32 {
+    if x == 0.0 { 0.0 } else { x }
+}
 
 /// Approximation family, not a global mathematical error bound.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 #[non_exhaustive]
 pub enum ExpfPrecision {
-    /// MIDP graph with refitted coefficients. The ≤1.9 ULP bound below x = 127.5
-    /// was measured exhaustively for the earlier `exp2_midp` fit; a sampled probe
-    /// of this fit found at most 0.81 ULP on `[-126, 127.5)` (`tests/portable_hashes.rs`
-    /// pins its bits; no exhaustive sweep of the refit is recorded yet).
+    /// MIDP graph with refitted coefficients (`<= 1.9 ULP` on `[-126, 127.5)`).
     #[default]
     Midp,
-    /// Shorter LOWP graph with refitted coefficients. The ≤0.56% relative bound
-    /// was measured for the earlier `exp2_lowp` fit; a sampled probe of this fit
-    /// found at most 0.03% on `[-126, 127.5)`.
+    /// Shorter LOWP graph with refitted coefficients (`<= 0.56%` relative error).
     Lowp,
 }
 
-/// Const builder ending in `.bits()`, also accepted by the runtime adapter.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
-#[non_exhaustive]
+/// Fluent `const` configuration builder for [`super::Expf`] and [`crate::SimdMath`].
+///
+/// Declaring an [`ExpfOptions::input_range`] inside `[-126, 127.5]` (`127.99`
+/// for `Lowp`) proves no overflow/underflow clamping is needed and elides the
+/// clamp sequence at compile time.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct ExpfOptions {
-    /// Input range and non-finite handling.
-    pub domain: ExpfDomain,
-    /// Whole-operation backend selection.
-    pub execution: ExpfExecution,
-    /// Cross-backend result agreement.
-    pub portability: ExpfPortability,
-    /// Approximation family.
-    pub precision: ExpfPrecision,
-    /// Numerical precondition enforcement.
-    pub validation: ExpfValidation,
+    input: Option<(u32, u32)>,
+    full: bool,
+    precision: ExpfPrecision,
+    portability: Portability,
+    validation: Validation,
+    execution: Execution,
+}
+
+impl Default for ExpfOptions {
+    #[inline]
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl ExpfOptions {
-    pub(crate) const FULL: u32 = 1;
-    pub(crate) const CALLER: u32 = 4;
-    pub(crate) const LOWP: u32 = 8;
-    pub(crate) const BACKEND: u32 = 16;
-    pub(crate) const ASSUME: u32 = 32;
-
-    /// BitExact MIDP, bounded domain, checked, automatic execution.
-    pub const PORTABLE_MIDP: Self = Self::new();
-    /// BitExact LOWP, bounded domain, checked, automatic execution.
-    pub const PORTABLE_LOWP: Self = Self::new().with_precision(ExpfPrecision::Lowp);
-    /// BitExact MIDP accepting every f32 input, checked.
-    pub const PORTABLE_MIDP_FULL: Self = Self::new().with_domain(ExpfDomain::Full);
-    /// Backend-dependent MIDP, bounded domain, checked.
-    pub const BACKEND_MIDP: Self = Self::new().with_portability(ExpfPortability::BackendDependent);
-    /// BitExact MIDP, bounded domain, unchecked.
-    pub const UNCHECKED_MIDP: Self = Self::new().with_validation(ExpfValidation::AssumeValid);
-    /// BitExact LOWP, bounded domain, unchecked.
-    pub const UNCHECKED_LOWP: Self = Self::UNCHECKED_MIDP.with_precision(ExpfPrecision::Lowp);
-
-    /// Build a configuration.
+    /// Bounded finite domain, `Midp`, `BitExact`, `Checked`, `Execution::Upgrade`.
     pub const fn new() -> Self {
         Self {
-            domain: ExpfDomain::Bounded,
-            execution: ExpfExecution::Automatic,
-            portability: ExpfPortability::BitExact,
+            input: None,
+            full: false,
             precision: ExpfPrecision::Midp,
-            validation: ExpfValidation::Checked,
-        }
-    }
-    /// Select input domain.
-    pub const fn with_domain(self, v: ExpfDomain) -> Self {
-        Self { domain: v, ..self }
-    }
-    /// Select backend execution.
-    pub const fn with_execution(self, v: ExpfExecution) -> Self {
-        Self {
-            execution: v,
-            ..self
-        }
-    }
-    /// Select portability.
-    pub const fn with_portability(self, v: ExpfPortability) -> Self {
-        Self {
-            portability: v,
-            ..self
-        }
-    }
-    /// Select precision.
-    pub const fn with_precision(self, v: ExpfPrecision) -> Self {
-        Self {
-            precision: v,
-            ..self
-        }
-    }
-    /// Select validation.
-    pub const fn with_validation(self, v: ExpfValidation) -> Self {
-        Self {
-            validation: v,
-            ..self
+            portability: Portability::BitExact,
+            validation: Validation::Checked,
+            execution: Execution::Upgrade,
         }
     }
 
-    /// Encode as option bits for const-generic entry points.
-    pub const fn bits(self) -> u32 {
-        let mut bits = match self.domain {
-            ExpfDomain::Bounded => 0,
-            ExpfDomain::Full => Self::FULL,
+    /// Accept inputs in `[lo, hi]`. Both must be finite `f32`s with `lo <= hi`.
+    pub const fn input_range(mut self, lo: f32, hi: f32) -> Self {
+        assert!(
+            lo <= hi && abs(lo) <= f32::MAX && abs(hi) <= f32::MAX,
+            "input range must be finite with lo <= hi"
+        );
+        self.input = Some((canon_zero(lo).to_bits(), canon_zero(hi).to_bits()));
+        self
+    }
+
+    /// Accept every `f32` input (`NaN -> NaN`, `+inf -> +inf`, `-inf -> +0`).
+    pub const fn full_domain(mut self) -> Self {
+        self.full = true;
+        self
+    }
+
+    /// Select the approximation family (`Midp` or `Lowp`).
+    pub const fn precision(mut self, value: ExpfPrecision) -> Self {
+        self.precision = value;
+        self
+    }
+
+    /// Shorthand for `.precision(ExpfPrecision::Lowp)`.
+    pub const fn lowp(self) -> Self {
+        self.precision(ExpfPrecision::Lowp)
+    }
+
+    /// Shorthand for `.precision(ExpfPrecision::Midp)`.
+    pub const fn midp(self) -> Self {
+        self.precision(ExpfPrecision::Midp)
+    }
+
+    /// Select cross-backend agreement.
+    pub const fn portability(mut self, value: Portability) -> Self {
+        self.portability = value;
+        self
+    }
+
+    /// Shorthand for `.portability(Portability::BitExact)`.
+    pub const fn bit_exact(self) -> Self {
+        self.portability(Portability::BitExact)
+    }
+
+    /// Shorthand for `.portability(Portability::BackendDependent)`.
+    pub const fn backend_dependent(self) -> Self {
+        self.portability(Portability::BackendDependent)
+    }
+
+    /// Select numerical precondition enforcement.
+    pub const fn validation(mut self, value: Validation) -> Self {
+        self.validation = value;
+        self
+    }
+
+    /// Shorthand for `.validation(Validation::Checked)`.
+    pub const fn checked(self) -> Self {
+        self.validation(Validation::Checked)
+    }
+
+    /// Shorthand for `.validation(Validation::AssumeValid)`.
+    pub const fn unchecked(self) -> Self {
+        self.validation(Validation::AssumeValid)
+    }
+
+    /// Select whole-operation backend dispatch.
+    pub const fn execution(mut self, value: Execution) -> Self {
+        self.execution = value;
+        self
+    }
+
+    /// Shorthand for `.execution(Execution::Upgrade)`.
+    pub const fn upgrade(self) -> Self {
+        self.execution(Execution::Upgrade)
+    }
+
+    /// Shorthand for `.execution(Execution::Caller)`.
+    pub const fn caller(self) -> Self {
+        self.execution(Execution::Caller)
+    }
+
+    /// Whether this configuration is self-consistent.
+    pub const fn is_valid(&self) -> bool {
+        !(self.full && self.input.is_some())
+    }
+
+    /// Assert that this configuration is self-consistent.
+    pub const fn validate(&self) {
+        assert!(
+            !(self.full && self.input.is_some()),
+            "full_domain cannot be combined with input_range"
+        );
+    }
+
+    /// Whether `exp2(x)` keeps `x` in the un-clamped range (`[-126, 127.5]`
+    /// `Midp` or `[-126, 127.99]` `Lowp`), allowing clamp elision.
+    pub const fn elides_clamp(&self) -> bool {
+        if self.full {
+            return false;
+        }
+        let Some((lo_b, hi_b)) = self.input else {
+            return false;
         };
-        if matches!(self.execution, ExpfExecution::Caller) {
-            bits |= Self::CALLER;
+        let (lo, hi) = (f32::from_bits(lo_b), f32::from_bits(hi_b));
+        let hi_limit = if matches!(self.precision, ExpfPrecision::Lowp) {
+            127.99
+        } else {
+            127.5
+        };
+        lo >= -126.0 && hi <= hi_limit
+    }
+
+    /// Whether `exp(x)` keeps `x * log2(e)` in the un-clamped range, allowing
+    /// clamp elision.
+    pub const fn elides_exp_clamp(&self) -> bool {
+        if self.full {
+            return false;
+        }
+        let Some((lo_b, hi_b)) = self.input else {
+            return false;
+        };
+        let (lo, hi) = (f32::from_bits(lo_b), f32::from_bits(hi_b));
+        let hi_limit = if matches!(self.precision, ExpfPrecision::Lowp) {
+            127.99
+        } else {
+            127.5
+        };
+        let s_lo = lo * core::f32::consts::LOG2_E;
+        let s_hi = hi * core::f32::consts::LOG2_E;
+        s_lo >= -126.0 && s_hi <= hi_limit
+    }
+
+    /// Whether this configuration can never return an input error
+    /// (`.unchecked()` or `.full_domain()`).
+    pub const fn is_infallible(&self) -> bool {
+        self.assume_valid() || self.full
+    }
+
+    /// Pack this configuration into a `u128` const-generic argument.
+    pub const fn bits(self) -> u128 {
+        let mut out = MAGIC;
+        if let Some((lo, hi)) = self.input {
+            out |= HAS_RANGE | ((lo as u128) << 64) | ((hi as u128) << 96);
+        }
+        if self.full {
+            out |= FULL;
         }
         if matches!(self.precision, ExpfPrecision::Lowp) {
-            bits |= Self::LOWP;
+            out |= LOWP;
         }
-        if matches!(self.portability, ExpfPortability::BackendDependent) {
-            bits |= Self::BACKEND;
+        if matches!(self.portability, Portability::BackendDependent) {
+            out |= BACKEND;
         }
-        if matches!(self.validation, ExpfValidation::AssumeValid) {
-            bits |= Self::ASSUME;
+        if matches!(self.validation, Validation::AssumeValid) {
+            out |= ASSUME;
         }
-        bits
+        if matches!(self.execution, Execution::Caller) {
+            out |= CALLER;
+        }
+        out
     }
-    /// Decode option bits for the runtime adapter.
-    pub(crate) const fn from_bits(bits: u32) -> Option<Self> {
-        if !Self::valid(bits) {
+
+    /// Decode a `u128` option word back into [`ExpfOptions`].
+    pub const fn from_bits(bits: u128) -> Option<Self> {
+        if (bits & 0xff) != MAGIC || (bits & RESERVED_MASK) != 0 {
             return None;
         }
-        Some(Self {
-            domain: if bits & 1 == 0 {
-                ExpfDomain::Bounded
-            } else {
-                ExpfDomain::Full
-            },
-            execution: if bits & Self::CALLER == 0 {
-                ExpfExecution::Automatic
-            } else {
-                ExpfExecution::Caller
-            },
-            portability: if bits & Self::BACKEND == 0 {
-                ExpfPortability::BitExact
-            } else {
-                ExpfPortability::BackendDependent
-            },
-            precision: if bits & Self::LOWP == 0 {
-                ExpfPrecision::Midp
-            } else {
+        let lo_b = ((bits >> 64) & 0xffff_ffff) as u32;
+        let hi_b = ((bits >> 96) & 0xffff_ffff) as u32;
+        let input = if (bits & HAS_RANGE) != 0 {
+            if lo_b == 0x8000_0000 || hi_b == 0x8000_0000 {
+                return None;
+            }
+            let lo = f32::from_bits(lo_b);
+            let hi = f32::from_bits(hi_b);
+            if !(lo <= hi && abs(lo) <= f32::MAX && abs(hi) <= f32::MAX) {
+                return None;
+            }
+            Some((lo_b, hi_b))
+        } else {
+            if lo_b != 0 || hi_b != 0 {
+                return None;
+            }
+            None
+        };
+        let opts = Self {
+            input,
+            full: (bits & FULL) != 0,
+            precision: if (bits & LOWP) != 0 {
                 ExpfPrecision::Lowp
-            },
-            validation: if bits & Self::ASSUME == 0 {
-                ExpfValidation::Checked
             } else {
-                ExpfValidation::AssumeValid
+                ExpfPrecision::Midp
             },
-        })
+            portability: if (bits & BACKEND) != 0 {
+                Portability::BackendDependent
+            } else {
+                Portability::BitExact
+            },
+            validation: if (bits & ASSUME) != 0 {
+                Validation::AssumeValid
+            } else {
+                Validation::Checked
+            },
+            execution: if (bits & CALLER) != 0 {
+                Execution::Caller
+            } else {
+                Execution::Upgrade
+            },
+        };
+        if opts.is_valid() { Some(opts) } else { None }
     }
-    /// Reject encodings outside the supported space (const contexts).
-    pub(crate) const fn valid(bits: u32) -> bool {
-        bits & !0b11_1101 == 0 && bits & 3 != 2 && bits & 3 != 3
+
+    pub(crate) const fn decode_const(bits: u128) -> Self {
+        let Some(opts) = Self::from_bits(bits) else {
+            panic!("invalid expf const options");
+        };
+        opts
+    }
+
+    /// Create a dynamic runtime evaluator for this [`ExpfOptions`] value.
+    #[inline(always)]
+    pub const fn runtime(self) -> super::ExpfRuntime {
+        super::ExpfRuntime::new(self)
+    }
+
+    pub(crate) const fn input_bounds(&self) -> Option<(f32, f32)> {
+        match self.input {
+            Some((lo, hi)) => Some((f32::from_bits(lo), f32::from_bits(hi))),
+            None => None,
+        }
+    }
+    pub(crate) const fn is_full(&self) -> bool {
+        self.full
+    }
+    pub(crate) const fn is_lowp(&self) -> bool {
+        matches!(self.precision, ExpfPrecision::Lowp)
+    }
+    pub(crate) const fn is_backend(&self) -> bool {
+        matches!(self.portability, Portability::BackendDependent)
+    }
+    pub(crate) const fn assume_valid(&self) -> bool {
+        matches!(self.validation, Validation::AssumeValid)
+    }
+    pub(crate) const fn is_caller(&self) -> bool {
+        matches!(self.execution, Execution::Caller)
     }
 }

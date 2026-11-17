@@ -45,20 +45,20 @@ pub(super) struct KernelCfg {
 }
 
 impl KernelCfg {
-    pub(super) const fn from_spec(spec: super::PowfSpec) -> Self {
-        let (base_lo, base_hi) = match spec.base_bounds() {
+    pub(super) const fn from_options(opts: super::PowfOptions) -> Self {
+        let (base_lo, base_hi) = match opts.base_bounds() {
             Some(bounds) => bounds,
             None => (f32::MIN_POSITIVE, f32::MAX),
         };
         Self {
-            zero: spec.admits_zero(),
-            ranged: spec.base_bounds().is_some(),
+            zero: opts.admits_zero(),
+            ranged: opts.base_bounds().is_some(),
             base_lo,
             base_hi,
-            elide: spec.elides_range_check(),
-            clamp: spec.should_clamp(),
-            lowp: spec.is_lowp(),
-            assume: spec.assume_valid(),
+            elide: opts.elides_range_check(),
+            clamp: opts.should_clamp(),
+            lowp: opts.is_lowp(),
+            assume: opts.assume_valid(),
         }
     }
 }
@@ -174,7 +174,7 @@ macro_rules! eval_powf {
                 yp / yq + shifted.to_f32()
             };
             let t = log * sp($exponent);
-            if !$assume && !$elide {
+            if !$assume && !$elide && !$clamp {
                 let outside = (t.simd_lt(sp(-126.0)) | t.simd_gt(sp(127.5))).bitcast_to_i32();
                 let outside = if $zero {
                     outside & (zero_mask ^ ip(-1))
@@ -214,7 +214,7 @@ macro_rules! eval_powf {
                 madd(p, y, n)
             };
             let t = log * sp($exponent);
-            if !$assume && !$elide {
+            if !$assume && !$elide && !$clamp {
                 let outside = t.simd_lt(sp(-126.0)) | t.simd_gt(sp(127.5));
                 if outside.bitcast_to_i32().any_true() {
                     return Err(reject(
@@ -412,10 +412,9 @@ graph!(
     16
 );
 
-/// Whole-slice kernel (debug path parameterized on `KernelCfg` to prevent
-/// per-profile monomorphization): one feature region around the loop.
-#[cfg(debug_assertions)]
-#[archmage::magetypes(v4x(cfg(avx512)), v4(cfg(avx512)), v3, neon, wasm128, scalar)]
+/// Whole-slice kernel parameterized on `KernelCfg` (used by `.runtime()` and
+/// debug builds): one feature region around the loop.
+#[archmage::magetypes(v3, neon, wasm128, scalar)]
 pub(super) fn slice8_cfg<const ARITHMETIC: usize>(
     token: Token,
     src: &[f32],
@@ -444,11 +443,62 @@ pub(super) fn slice8_cfg<const ARITHMETIC: usize>(
     Ok(())
 }
 
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[inline(always)]
+fn slice16_cfg_impl<T: magetypes::simd::backends::F32x16Convert, const ARITHMETIC: usize>(
+    token: T,
+    src: &[f32],
+    dst: &mut [f32],
+    exponent: f32,
+    cfg: KernelCfg,
+) -> Result<(), (usize, PowfError)> {
+    use magetypes::simd::generic::f32x16 as V;
+    let (chunks, tail) = V::partition_slice_t(token, src);
+    let (out_chunks, out_tail) = V::partition_slice_mut_t(token, dst);
+    for (i, (s, d)) in chunks.iter().zip(out_chunks.iter_mut()).enumerate() {
+        vector16_dbg::<T, ARITHMETIC>(token, V::load_t(token, s), exponent, cfg)
+            .map_err(|e| (i * 16, e))?
+            .store(d);
+    }
+    if !tail.is_empty() {
+        vector16_dbg::<T, ARITHMETIC>(token, V::load_padded_t(token, tail, tail[0]), exponent, cfg)
+            .map_err(|e| (chunks.len() * 16, e))?
+            .store_prefix(out_tail);
+    }
+    Ok(())
+}
+
+/// 16-lane AVX-512 (`V4`) whole-slice kernel parameterized on `KernelCfg`.
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[archmage::arcane]
+pub(super) fn slice16_cfg_v4<const ARITHMETIC: usize>(
+    token: archmage::X64V4Token,
+    src: &[f32],
+    dst: &mut [f32],
+    exponent: f32,
+    cfg: KernelCfg,
+) -> Result<(), (usize, PowfError)> {
+    slice16_cfg_impl::<_, ARITHMETIC>(token, src, dst, exponent, cfg)
+}
+
+/// 16-lane AVX-512 (`V4x`) whole-slice kernel parameterized on `KernelCfg`.
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[archmage::arcane]
+pub(super) fn slice16_cfg_v4x<const ARITHMETIC: usize>(
+    token: archmage::X64V4xToken,
+    src: &[f32],
+    dst: &mut [f32],
+    exponent: f32,
+    cfg: KernelCfg,
+) -> Result<(), (usize, PowfError)> {
+    slice16_cfg_impl::<_, ARITHMETIC>(token, src, dst, exponent, cfg)
+}
+
 /// Whole-slice kernel: one feature region around the loop, the 8-lane graph
 /// per chunk, and one tail vector padded with `tail[0]` so any range that
 /// excludes `1.0` validates accurately and still reports exact first failure.
 #[cfg(not(debug_assertions))]
-#[archmage::magetypes(v4x(cfg(avx512)), v4(cfg(avx512)), v3, neon, wasm128, scalar)]
+#[archmage::magetypes(v3, neon, wasm128, scalar)]
 pub(super) fn slice8_with<K: Kernel, const ARITHMETIC: usize>(
     token: Token,
     src: &[f32],
@@ -469,4 +519,56 @@ pub(super) fn slice8_with<K: Kernel, const ARITHMETIC: usize>(
             .store_prefix(out_tail);
     }
     Ok(())
+}
+
+#[cfg(all(not(debug_assertions), target_arch = "x86_64", feature = "avx512"))]
+#[inline(always)]
+fn slice16_with_impl<
+    T: magetypes::simd::backends::F32x16Convert,
+    K: Kernel,
+    const ARITHMETIC: usize,
+>(
+    token: T,
+    src: &[f32],
+    dst: &mut [f32],
+    exponent: f32,
+) -> Result<(), (usize, PowfError)> {
+    use magetypes::simd::generic::f32x16 as V;
+    let (chunks, tail) = V::partition_slice_t(token, src);
+    let (out_chunks, out_tail) = V::partition_slice_mut_t(token, dst);
+    for (i, (s, d)) in chunks.iter().zip(out_chunks.iter_mut()).enumerate() {
+        profile16::<T, K, ARITHMETIC>(token, V::load_t(token, s), exponent)
+            .map_err(|e| (i * 16, e))?
+            .store(d);
+    }
+    if !tail.is_empty() {
+        profile16::<T, K, ARITHMETIC>(token, V::load_padded_t(token, tail, tail[0]), exponent)
+            .map_err(|e| (chunks.len() * 16, e))?
+            .store_prefix(out_tail);
+    }
+    Ok(())
+}
+
+/// 16-lane AVX-512 (`V4`) whole-slice kernel (`zmm` native registers).
+#[cfg(all(not(debug_assertions), target_arch = "x86_64", feature = "avx512"))]
+#[archmage::arcane]
+pub(super) fn slice16_with_v4<K: Kernel, const ARITHMETIC: usize>(
+    token: archmage::X64V4Token,
+    src: &[f32],
+    dst: &mut [f32],
+    exponent: f32,
+) -> Result<(), (usize, PowfError)> {
+    slice16_with_impl::<_, K, ARITHMETIC>(token, src, dst, exponent)
+}
+
+/// 16-lane AVX-512 (`V4x`) whole-slice kernel (`zmm` native registers).
+#[cfg(all(not(debug_assertions), target_arch = "x86_64", feature = "avx512"))]
+#[archmage::arcane]
+pub(super) fn slice16_with_v4x<K: Kernel, const ARITHMETIC: usize>(
+    token: archmage::X64V4xToken,
+    src: &[f32],
+    dst: &mut [f32],
+    exponent: f32,
+) -> Result<(), (usize, PowfError)> {
+    slice16_with_impl::<_, K, ARITHMETIC>(token, src, dst, exponent)
 }

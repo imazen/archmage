@@ -1,5 +1,6 @@
 //! One-time operation selection for `cbrtf`.
-use super::{CbrtfError, CbrtfExecution, graph};
+use super::{CbrtfError, graph};
+use crate::Execution;
 use archmage::{IntoConcreteToken, ScalarToken};
 
 #[derive(Clone, Copy, Debug)]
@@ -17,27 +18,40 @@ pub(super) enum Plan {
     Software,
 }
 
+impl Plan {
+    #[inline(always)]
+    pub(super) fn same_tier(self, other: Self) -> bool {
+        core::mem::discriminant(&self) == core::mem::discriminant(&other)
+    }
+}
+
 #[inline(always)]
-fn select_impl<T: IntoConcreteToken>(token: T, execution: CbrtfExecution) -> Plan {
-    let _ = token;
+fn reattune_plan() -> Plan {
+    archmage::reattune!(
+        upgrade(),
+        [
+            _v4x_t(cfg(avx512)),
+            _v4_t(cfg(avx512)),
+            _v3_t,
+            _neon_t,
+            _wasm128_t,
+            _scalar_t
+        ]
+    )
+}
+
+#[inline(always)]
+pub(super) fn select<T: IntoConcreteToken>(token: T, execution: Execution, widen_v3: bool) -> Plan {
+    let _ = (token, widen_v3);
     #[cfg(target_arch = "x86_64")]
     {
-        if let Some(t) = token.as_x64v3() {
-            return Plan::V3(t);
-        }
-        if let Some(t) = token.as_x64v3_crypto() {
-            return Plan::V3(t.v3());
-        }
-        if let Some(t) = token.as_x64v3_gfni_crypto() {
-            return Plan::V3(t.v3());
-        }
         #[cfg(feature = "avx512")]
         {
-            if let Some(t) = token.as_x64v4() {
-                return Plan::V4(t);
-            }
             if let Some(t) = token.as_x64v4x() {
                 return Plan::V4x(t);
+            }
+            if let Some(t) = token.as_x64v4() {
+                return Plan::V4(t);
             }
             if let Some(t) = token.as_avx512_fp16() {
                 return Plan::V4(t.v4());
@@ -45,15 +59,29 @@ fn select_impl<T: IntoConcreteToken>(token: T, execution: CbrtfExecution) -> Pla
         }
         #[cfg(not(feature = "avx512"))]
         {
-            if let Some(t) = token.as_x64v4() {
+            if let Some(t) = token.as_x64v4x() {
                 return Plan::V3(t.v3());
             }
-            if let Some(t) = token.as_x64v4x() {
+            if let Some(t) = token.as_x64v4() {
                 return Plan::V3(t.v3());
             }
             if let Some(t) = token.as_avx512_fp16() {
                 return Plan::V3(t.v3());
             }
+        }
+        if let Some(v3) = token
+            .as_x64v3()
+            .or_else(|| token.as_x64v3_crypto().map(|t| t.v3()))
+            .or_else(|| token.as_x64v3_gfni_crypto().map(|t| t.v3()))
+        {
+            #[cfg(feature = "avx512")]
+            if widen_v3 && execution == Execution::Upgrade {
+                let upgraded = reattune_plan();
+                if matches!(upgraded, Plan::V4(_) | Plan::V4x(_)) {
+                    return upgraded;
+                }
+            }
+            return Plan::V3(v3);
         }
     }
     #[cfg(target_arch = "aarch64")]
@@ -86,20 +114,15 @@ fn select_impl<T: IntoConcreteToken>(token: T, execution: CbrtfExecution) -> Pla
             return Plan::Wasm(t);
         }
     }
-    if execution == CbrtfExecution::Caller {
+    if execution == Execution::Caller {
         return Plan::Software;
     }
-    archmage::reattune!(upgrade(), [_v3_t, _neon_t, _wasm128_t, _scalar_t])
+    reattune_plan()
 }
 
-#[archmage::attune(_*_t)]
+#[archmage::attune(_*_t, +v4(cfg(avx512)), +v4x(cfg(avx512)))]
 fn upgrade(token: Token) -> Plan {
-    select(token, CbrtfExecution::Caller)
-}
-
-#[inline(always)]
-pub(super) fn select<T: IntoConcreteToken>(token: T, execution: CbrtfExecution) -> Plan {
-    select_impl(token, execution)
+    select(token, Execution::Caller, false)
 }
 
 macro_rules! run_cfg {
@@ -128,7 +151,6 @@ macro_rules! run_cfg {
         }
     };
 }
-
 run_cfg!(
     run4_cfg,
     kernel4_cfg_v3,
@@ -189,7 +211,6 @@ macro_rules! run_const {
         }
     };
 }
-
 run_const!(
     run4_const,
     run4_cfg,
@@ -225,6 +246,30 @@ run_const!(
     16
 );
 
+#[cfg_attr(debug_assertions, inline(never))]
+#[cfg_attr(not(debug_assertions), inline(always))]
+pub(super) fn run_slice_cfg(
+    plan: Plan,
+    src: &[f32],
+    dst: &mut [f32],
+    backend: bool,
+    cfg: graph::KernelCfg,
+) -> Result<(), (usize, CbrtfError)> {
+    match plan {
+        #[cfg(target_arch = "x86_64")]
+        Plan::V3(t) => graph::slice8_cfg_v3(t, src, dst, backend, cfg),
+        #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+        Plan::V4(t) => graph::slice16_cfg_v4(t, src, dst, backend, cfg),
+        #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+        Plan::V4x(t) => graph::slice16_cfg_v4x(t, src, dst, backend, cfg),
+        #[cfg(target_arch = "aarch64")]
+        Plan::Neon(t) => graph::slice8_cfg_neon(t, src, dst, backend, cfg),
+        #[cfg(target_arch = "wasm32")]
+        Plan::Wasm(t) => graph::slice8_cfg_wasm128(t, src, dst, backend, cfg),
+        Plan::Software => graph::slice8_cfg_scalar(ScalarToken, src, dst, backend, cfg),
+    }
+}
+
 #[inline(always)]
 pub(super) fn run_slice_const<K: graph::Kernel, const BACKEND: bool>(
     plan: Plan,
@@ -233,29 +278,16 @@ pub(super) fn run_slice_const<K: graph::Kernel, const BACKEND: bool>(
 ) -> Result<(), (usize, CbrtfError)> {
     #[cfg(debug_assertions)]
     {
-        let cfg = graph::cfg_of::<K>();
-        match plan {
-            #[cfg(target_arch = "x86_64")]
-            Plan::V3(t) => graph::slice8_cfg_v3(t, src, dst, BACKEND, cfg),
-            #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-            Plan::V4(t) => graph::slice8_cfg_v4(t, src, dst, BACKEND, cfg),
-            #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-            Plan::V4x(t) => graph::slice8_cfg_v4x(t, src, dst, BACKEND, cfg),
-            #[cfg(target_arch = "aarch64")]
-            Plan::Neon(t) => graph::slice8_cfg_neon(t, src, dst, BACKEND, cfg),
-            #[cfg(target_arch = "wasm32")]
-            Plan::Wasm(t) => graph::slice8_cfg_wasm128(t, src, dst, BACKEND, cfg),
-            Plan::Software => graph::slice8_cfg_scalar(ScalarToken, src, dst, BACKEND, cfg),
-        }
+        run_slice_cfg(plan, src, dst, BACKEND, graph::cfg_of::<K>())
     }
     #[cfg(not(debug_assertions))]
     match plan {
         #[cfg(target_arch = "x86_64")]
         Plan::V3(t) => graph::slice8_with_v3::<K, BACKEND>(t, src, dst),
         #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-        Plan::V4(t) => graph::slice8_with_v4::<K, BACKEND>(t, src, dst),
+        Plan::V4(t) => graph::slice16_with_v4::<K, BACKEND>(t, src, dst),
         #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-        Plan::V4x(t) => graph::slice8_with_v4x::<K, BACKEND>(t, src, dst),
+        Plan::V4x(t) => graph::slice16_with_v4x::<K, BACKEND>(t, src, dst),
         #[cfg(target_arch = "aarch64")]
         Plan::Neon(t) => graph::slice8_with_neon::<K, BACKEND>(t, src, dst),
         #[cfg(target_arch = "wasm32")]

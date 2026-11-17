@@ -1,57 +1,65 @@
-//! Typed profile entry points and runtime adapter for `logf`.
-use super::{LogfError, LogfErrorKind, LogfExecution, LogfOptions, LogfProfile, dispatch, graph};
+//! Const-specialized `Logf<CFG>` and runtime `LogfRuntime` entry points.
+use super::{LogfError, LogfErrorKind, LogfOptions, dispatch, graph};
+use crate::{Execution, SimdVector, SliceError};
 
-struct Of<P>(core::marker::PhantomData<P>);
-impl<P: LogfProfile> graph::Kernel for Of<P> {
-    const RANGED: bool = P::SPEC.input_bounds().is_some();
-    const IN_LO: f32 = match P::SPEC.input_bounds() {
-        Some((lo, _)) => lo,
-        None => 0.0,
-    };
-    const IN_HI: f32 = match P::SPEC.input_bounds() {
-        Some((_, hi)) => hi,
-        None => 0.0,
-    };
-    const SPECIALS: bool = P::SPEC.is_specials();
-    const LOWP: bool = P::SPEC.is_lowp();
-    const ASSUME: bool = P::SPEC.assume_valid();
+pub(crate) struct Cfg<const CFG: u128>;
+
+impl<const CFG: u128> graph::Kernel for Cfg<CFG> {
+    const RANGED: bool = graph::KernelCfg::from_options(LogfOptions::decode_const(CFG)).ranged;
+    const SPECIALS: bool = graph::KernelCfg::from_options(LogfOptions::decode_const(CFG)).specials;
+    const LOWP: bool = graph::KernelCfg::from_options(LogfOptions::decode_const(CFG)).lowp;
+    const ASSUME: bool = graph::KernelCfg::from_options(LogfOptions::decode_const(CFG)).assume;
+    const IN_LO: f32 = graph::KernelCfg::from_options(LogfOptions::decode_const(CFG)).in_lo;
+    const IN_HI: f32 = graph::KernelCfg::from_options(LogfOptions::decode_const(CFG)).in_hi;
 }
 
 macro_rules! vector {
     ($run:ident, $profile:ident, $dispatch:ident, $float:ident, $bound:ident, $n:literal) => {
         #[inline(always)]
-        pub(crate) fn $run<P: LogfProfile, const OP: u8, T: magetypes::simd::backends::$bound>(
+        pub(crate) fn $run<const CFG: u128, const OP: u8, T: magetypes::simd::backends::$bound>(
             token: T,
             input: magetypes::simd::generic::$float<T>,
         ) -> Result<magetypes::simd::generic::$float<T>, LogfError> {
-            const {
-                P::SPEC.validate_op(OP);
-            }
-            let caller = dispatch::select(token, LogfExecution::Caller);
-            if matches!(caller, dispatch::Plan::Software) {
-                if P::SPEC.is_caller() {
-                    return if P::SPEC.is_backend() {
-                        graph::$profile::<T, Of<P>, OP, true>(token, input)
+            let opts = const {
+                let o = LogfOptions::decode_const(CFG);
+                o.validate_op(OP);
+                o
+            };
+            let backend = opts.is_backend();
+            let caller = dispatch::select(token, Execution::Caller, backend, false);
+            let widen_v3 = $n == 16;
+            if matches!(caller, dispatch::Plan::Software) || (widen_v3 && !opts.is_caller()) {
+                if opts.is_caller() {
+                    return if backend {
+                        graph::$profile::<T, Cfg<CFG>, OP, true>(token, input)
                     } else {
-                        graph::$profile::<T, Of<P>, OP, false>(token, input)
+                        graph::$profile::<T, Cfg<CFG>, OP, false>(token, input)
                     };
                 }
-                let plan = dispatch::select(token, LogfExecution::Automatic);
-                let arr = input.to_array();
-                let result = if P::SPEC.is_backend() {
-                    dispatch::$dispatch::<Of<P>, OP, true>(plan, arr)
+                let plan = dispatch::select(token, Execution::Upgrade, backend, widen_v3);
+                if !plan.same_tier(caller) || matches!(caller, dispatch::Plan::Software) {
+                    let arr = input.to_array();
+                    let result = if backend {
+                        dispatch::$dispatch::<Cfg<CFG>, OP, true>(plan, arr)
+                    } else {
+                        dispatch::$dispatch::<Cfg<CFG>, OP, false>(plan, arr)
+                    }?;
+                    return Ok(magetypes::simd::generic::$float::from_array_t(
+                        token, result,
+                    ));
+                }
+            }
+            #[cfg(target_arch = "wasm32")]
+            {
+                let use_relaxed = matches!(caller, dispatch::Plan::Wasm(_, true));
+                return if use_relaxed {
+                    graph::$profile::<T, Cfg<CFG>, OP, true>(token, input)
                 } else {
-                    dispatch::$dispatch::<Of<P>, OP, false>(plan, arr)
-                }?;
-                return Ok(magetypes::simd::generic::$float::from_array_t(
-                    token, result,
-                ));
+                    graph::$profile::<T, Cfg<CFG>, OP, false>(token, input)
+                };
             }
-            if P::SPEC.is_backend() {
-                graph::$profile::<T, Of<P>, OP, true>(token, input)
-            } else {
-                graph::$profile::<T, Of<P>, OP, false>(token, input)
-            }
+            #[cfg(not(target_arch = "wasm32"))]
+            graph::$profile::<T, Cfg<CFG>, OP, true>(token, input)
         }
     };
 }
@@ -61,11 +69,11 @@ vector!(run8, profile8, run8_const, f32x8, F32x8Convert, 8);
 vector!(run16, profile16, run16_const, f32x16, F32x16Convert, 16);
 
 #[inline(always)]
-fn scalar_with_token<P: LogfProfile, const OP: u8, T: magetypes::simd::backends::F32x4Convert>(
+fn scalar_with_token<const CFG: u128, const OP: u8, T: magetypes::simd::backends::F32x4Convert>(
     token: T,
     x: f32,
 ) -> Result<f32, LogfError> {
-    run4::<P, OP, T>(token, magetypes::simd::generic::f32x4::splat_t(token, x))
+    run4::<CFG, OP, T>(token, magetypes::simd::generic::f32x4::splat_t(token, x))
         .map(|v| v.to_array()[0])
         .map_err(|error| LogfError {
             lane_mask: 1,
@@ -74,13 +82,13 @@ fn scalar_with_token<P: LogfProfile, const OP: u8, T: magetypes::simd::backends:
 }
 
 #[inline(always)]
-fn array_with<P: LogfProfile, const OP: u8, const N: usize>(
+fn array_const<const CFG: u128, const OP: u8, const N: usize>(
     inputs: [f32; N],
 ) -> Result<[f32; N], LogfError> {
     use archmage::ScalarToken;
     use magetypes::simd::generic::{f32x4, f32x8};
     const {
-        P::SPEC.validate_op(OP);
+        LogfOptions::decode_const(CFG).validate_op(OP);
     }
     if !matches!(N, 1 | 4 | 8) && !(cfg!(feature = "w512") && N == 16) {
         return Err(LogfError {
@@ -90,24 +98,23 @@ fn array_with<P: LogfProfile, const OP: u8, const N: usize>(
     }
     let mut output = [0.0; N];
     if N == 1 {
-        let value = run4::<P, OP, _>(ScalarToken, f32x4::splat_t(ScalarToken, inputs[0])).map_err(
-            |error| LogfError {
+        let value = run4::<CFG, OP, _>(ScalarToken, f32x4::splat_t(ScalarToken, inputs[0]))
+            .map_err(|error| LogfError {
                 lane_mask: 1,
                 ..error
-            },
-        )?;
+            })?;
         output[0] = value.to_array()[0];
     } else if N == 4 {
         let mut input = [0.0; 4];
         input.copy_from_slice(&inputs);
         output.copy_from_slice(
-            &run4::<P, OP, _>(ScalarToken, f32x4::from_array_t(ScalarToken, input))?.to_array(),
+            &run4::<CFG, OP, _>(ScalarToken, f32x4::from_array_t(ScalarToken, input))?.to_array(),
         );
     } else if N == 8 {
         let mut input = [0.0; 8];
         input.copy_from_slice(&inputs);
         output.copy_from_slice(
-            &run8::<P, OP, _>(ScalarToken, f32x8::from_array_t(ScalarToken, input))?.to_array(),
+            &run8::<CFG, OP, _>(ScalarToken, f32x8::from_array_t(ScalarToken, input))?.to_array(),
         );
     } else {
         #[cfg(feature = "w512")]
@@ -116,7 +123,7 @@ fn array_with<P: LogfProfile, const OP: u8, const N: usize>(
             let mut input = [0.0; 16];
             input.copy_from_slice(&inputs);
             output.copy_from_slice(
-                &run16::<P, OP, _>(ScalarToken, f32x16::from_array_t(ScalarToken, input))?
+                &run16::<CFG, OP, _>(ScalarToken, f32x16::from_array_t(ScalarToken, input))?
                     .to_array(),
             );
             return Ok(output);
@@ -130,133 +137,33 @@ fn array_with<P: LogfProfile, const OP: u8, const N: usize>(
     Ok(output)
 }
 
-/// Configurable scalar `log2` under profile `P`.
-#[inline(always)]
-pub fn try_log2_with<P: LogfProfile>(x: f32) -> Result<f32, LogfError> {
-    try_log2_array_with::<P, 1>([x]).map(|result| result[0])
-}
-/// Scalar `ln`: `log2(x) * ln(2)` under profile `P`.
-#[inline(always)]
-pub fn try_ln_with<P: LogfProfile>(x: f32) -> Result<f32, LogfError> {
-    try_ln_array_with::<P, 1>([x]).map(|result| result[0])
-}
-/// Scalar `log10`: `log2(x) * log10(2)` under profile `P`.
-#[inline(always)]
-pub fn try_log10_with<P: LogfProfile>(x: f32) -> Result<f32, LogfError> {
-    try_log10_array_with::<P, 1>([x]).map(|result| result[0])
-}
-/// Scalar `log1p`: `ln(1+x)`, with a correction for rounding `1+x`, under profile `P`.
-#[inline(always)]
-pub fn try_log1p_with<P: LogfProfile>(x: f32) -> Result<f32, LogfError> {
-    try_log1p_array_with::<P, 1>([x]).map(|result| result[0])
-}
-/// Scalar `log2` retaining the vector caller's feature proof under profile `P`.
-#[inline(always)]
-pub fn try_log2_with_token<P: LogfProfile, T: magetypes::simd::backends::F32x4Convert>(
-    token: T,
-    x: f32,
-) -> Result<f32, LogfError> {
-    scalar_with_token::<P, 0, T>(token, x)
-}
-/// Scalar `ln` retaining the vector caller's feature proof under profile `P`.
-#[inline(always)]
-pub fn try_ln_with_token<P: LogfProfile, T: magetypes::simd::backends::F32x4Convert>(
-    token: T,
-    x: f32,
-) -> Result<f32, LogfError> {
-    scalar_with_token::<P, 1, T>(token, x)
-}
-/// Scalar `log10` retaining the vector caller's feature proof under profile `P`.
-#[inline(always)]
-pub fn try_log10_with_token<P: LogfProfile, T: magetypes::simd::backends::F32x4Convert>(
-    token: T,
-    x: f32,
-) -> Result<f32, LogfError> {
-    scalar_with_token::<P, 2, T>(token, x)
-}
-/// Scalar `log1p` retaining the vector caller's feature proof under profile `P`.
-#[inline(always)]
-pub fn try_log1p_with_token<P: LogfProfile, T: magetypes::simd::backends::F32x4Convert>(
-    token: T,
-    x: f32,
-) -> Result<f32, LogfError> {
-    scalar_with_token::<P, 3, T>(token, x)
-}
-
-/// Version-independent array boundary for `log2` under profile `P`.
-///
-/// Supported widths are 1, 4, 8 and, with `w512`, 16.
-#[inline(always)]
-pub fn try_log2_array_with<P: LogfProfile, const N: usize>(
-    inputs: [f32; N],
-) -> Result<[f32; N], LogfError> {
-    array_with::<P, 0, N>(inputs)
-}
-/// Array `ln` under profile `P`.
-#[inline(always)]
-pub fn try_ln_array_with<P: LogfProfile, const N: usize>(
-    inputs: [f32; N],
-) -> Result<[f32; N], LogfError> {
-    array_with::<P, 1, N>(inputs)
-}
-/// Array `log10` under profile `P`.
-#[inline(always)]
-pub fn try_log10_array_with<P: LogfProfile, const N: usize>(
-    inputs: [f32; N],
-) -> Result<[f32; N], LogfError> {
-    array_with::<P, 2, N>(inputs)
-}
-/// Array `log1p` under profile `P`.
-#[inline(always)]
-pub fn try_log1p_array_with<P: LogfProfile, const N: usize>(
-    inputs: [f32; N],
-) -> Result<[f32; N], LogfError> {
-    array_with::<P, 3, N>(inputs)
-}
-
-/// Runtime-options scalar `log2`.
-#[inline(always)]
-pub fn try_log2_runtime(x: f32, options: LogfOptions) -> Result<f32, LogfError> {
-    try_log2_array_runtime([x], options).map(|result| result[0])
-}
-/// Runtime-options scalar `ln`.
-#[inline(always)]
-pub fn try_ln_runtime(x: f32, options: LogfOptions) -> Result<f32, LogfError> {
-    try_ln_array_runtime([x], options).map(|result| result[0])
-}
-/// Runtime-options scalar `log1p`.
-#[inline(always)]
-pub fn try_log1p_runtime(x: f32, options: LogfOptions) -> Result<f32, LogfError> {
-    try_log1p_array_runtime::<1>([x], options).map(|r| r[0])
-}
-/// Runtime-options scalar `log10`.
-#[inline(always)]
-pub fn try_log10_runtime(x: f32, options: LogfOptions) -> Result<f32, LogfError> {
-    try_log10_array_runtime([x], options).map(|result| result[0])
-}
-
 #[cfg_attr(debug_assertions, inline(never))]
 #[cfg_attr(not(debug_assertions), inline(always))]
-fn array_runtime<const OP: u8, const N: usize>(
+pub(crate) fn runtime_token<T: archmage::IntoConcreteToken, const OP: u8, const N: usize>(
+    token: T,
     inputs: [f32; N],
     options: LogfOptions,
 ) -> Result<[f32; N], LogfError> {
-    let Some(options) = LogfOptions::from_bits(options.bits()) else {
+    if !options.is_valid_op(OP) {
         return Err(LogfError {
             kind: LogfErrorKind::UnsupportedOptions,
             lane_mask: 0,
         });
-    };
+    }
     if !matches!(N, 1 | 4 | 8) && !(cfg!(feature = "w512") && N == 16) {
         return Err(LogfError {
             kind: LogfErrorKind::UnsupportedWidth,
             lane_mask: 0,
         });
     }
-    let spec = super::LogfSpec::from_options(options);
-    let plan = dispatch::select(archmage::ScalarToken, options.execution);
-    let cfg = graph::KernelCfg::from_spec(spec);
-    let backend = spec.is_backend();
+    let exec = if options.is_caller() {
+        Execution::Caller
+    } else {
+        Execution::Upgrade
+    };
+    let backend = options.is_backend();
+    let plan = dispatch::select(token, exec, backend, N == 16);
+    let cfg = graph::KernelCfg::from_options(options);
     let mut output = [0.0; N];
     if N == 1 {
         let value =
@@ -286,173 +193,313 @@ fn array_runtime<const OP: u8, const N: usize>(
     Ok(output)
 }
 
-/// Runtime-options array `log2`.
 #[inline(always)]
-pub fn try_log2_array_runtime<const N: usize>(
-    inputs: [f32; N],
-    options: LogfOptions,
-) -> Result<[f32; N], LogfError> {
-    array_runtime::<0, N>(inputs, options)
-}
-/// Runtime-options array `ln`.
-#[inline(always)]
-pub fn try_ln_array_runtime<const N: usize>(
-    inputs: [f32; N],
-    options: LogfOptions,
-) -> Result<[f32; N], LogfError> {
-    array_runtime::<1, N>(inputs, options)
-}
-/// Runtime-options array `log10`.
-#[inline(always)]
-pub fn try_log10_array_runtime<const N: usize>(
-    inputs: [f32; N],
-    options: LogfOptions,
-) -> Result<[f32; N], LogfError> {
-    array_runtime::<2, N>(inputs, options)
-}
-/// Runtime-options array `log1p`.
-#[inline(always)]
-pub fn try_log1p_array_runtime<const N: usize>(
-    inputs: [f32; N],
-    options: LogfOptions,
-) -> Result<[f32; N], LogfError> {
-    array_runtime::<3, N>(inputs, options)
-}
-
-#[inline(always)]
-fn slice<P: LogfProfile, const OP: u8, T: archmage::IntoConcreteToken>(
+fn slice_const<const CFG: u128, const OP: u8, T: archmage::IntoConcreteToken>(
     token: T,
     src: &[f32],
     dst: &mut [f32],
-) -> Result<(), crate::SliceError<LogfErrorKind>> {
-    const {
-        P::SPEC.validate_op(OP);
-    }
-    assert_eq!(src.len(), dst.len(), "logf slice lengths differ");
-    let plan = dispatch::select(
-        token,
-        if P::SPEC.is_caller() {
-            LogfExecution::Caller
-        } else {
-            LogfExecution::Automatic
-        },
-    );
-    let res = if P::SPEC.is_backend() {
-        dispatch::run_slice_const::<Of<P>, OP, true>(plan, src, dst)
-    } else {
-        dispatch::run_slice_const::<Of<P>, OP, false>(plan, src, dst)
+) -> Result<(), SliceError<LogfErrorKind>> {
+    let opts = const {
+        let o = LogfOptions::decode_const(CFG);
+        o.validate_op(OP);
+        o
     };
-    res.map_err(|(base, e)| crate::SliceError {
+    assert_eq!(src.len(), dst.len(), "logf slice lengths differ");
+    let exec = if opts.is_caller() {
+        Execution::Caller
+    } else {
+        Execution::Upgrade
+    };
+    let backend = opts.is_backend();
+    let plan = dispatch::select(token, exec, backend, true);
+    let res = if backend {
+        dispatch::run_slice_const::<Cfg<CFG>, OP, true>(plan, src, dst)
+    } else {
+        dispatch::run_slice_const::<Cfg<CFG>, OP, false>(plan, src, dst)
+    };
+    res.map_err(|(base, e)| SliceError {
         kind: e.kind,
-        index: base + e.lane_mask.trailing_zeros().min(7) as usize,
+        index: base + e.lane_mask.trailing_zeros().min(15) as usize,
     })
 }
 
-/// Base-2 logarithm (`log2`) of every element of `src` into `dst` under profile `P`.
-///
-/// # Panics
-///
-/// Panics if `src.len() != dst.len()`.
-#[inline]
-pub fn try_log2_slice_with<P: LogfProfile>(
-    src: &[f32],
-    dst: &mut [f32],
-) -> Result<(), crate::SliceError<LogfErrorKind>> {
-    slice::<P, 0, _>(archmage::ScalarToken, src, dst)
-}
-
-/// [`try_log2_slice_with`] retaining the caller's feature proof.
-///
-/// # Panics
-///
-/// Panics if `src.len() != dst.len()`.
-#[inline(always)]
-pub fn try_log2_slice_with_token<P: LogfProfile, T: archmage::IntoConcreteToken>(
+#[cfg_attr(debug_assertions, inline(never))]
+#[cfg_attr(not(debug_assertions), inline(always))]
+fn slice_runtime<T: archmage::IntoConcreteToken, const OP: u8>(
     token: T,
     src: &[f32],
     dst: &mut [f32],
-) -> Result<(), crate::SliceError<LogfErrorKind>> {
-    slice::<P, 0, T>(token, src, dst)
+    options: LogfOptions,
+) -> Result<(), SliceError<LogfErrorKind>> {
+    assert_eq!(src.len(), dst.len(), "logf slice lengths differ");
+    if !options.is_valid_op(OP) {
+        return Err(SliceError {
+            kind: LogfErrorKind::UnsupportedOptions,
+            index: 0,
+        });
+    }
+    let exec = if options.is_caller() {
+        Execution::Caller
+    } else {
+        Execution::Upgrade
+    };
+    let backend = options.is_backend();
+    let plan = dispatch::select(token, exec, backend, true);
+    let cfg = graph::KernelCfg::from_options(options);
+    dispatch::run_slice_cfg(plan, src, dst, OP, backend, cfg).map_err(|(base, e)| SliceError {
+        kind: e.kind,
+        index: base + e.lane_mask.trailing_zeros().min(15) as usize,
+    })
 }
 
-/// Natural logarithm (`ln`) of every element of `src` into `dst` under profile `P`.
-///
-/// # Panics
-///
-/// Panics if `src.len() != dst.len()`.
-#[inline]
-pub fn try_ln_slice_with<P: LogfProfile>(
-    src: &[f32],
-    dst: &mut [f32],
-) -> Result<(), crate::SliceError<LogfErrorKind>> {
-    slice::<P, 1, _>(archmage::ScalarToken, src, dst)
+/// Compile-time specialized logarithm (`log2`, `ln`, `log10`, `log1p`) operator
+/// configured by `const CFG: u128` (produced via [`LogfOptions::bits()`]).
+#[derive(Clone, Copy, Debug, Default)]
+pub struct Logf<const CFG: u128 = { LogfOptions::new().bits() }>;
+
+macro_rules! logf_const_methods {
+    (
+        $scalar:ident,
+        $infallible:ident,
+        $with_token:ident,
+        $array:ident,
+        $slice:ident,
+        $slice_with_token:ident,
+        $simd:ident,
+        $op:literal,
+        $label:literal
+    ) => {
+        #[doc = concat!("Checked scalar `", $label, "(x)`.")]
+        #[inline(always)]
+        pub fn $scalar(x: f32) -> Result<f32, LogfError> {
+            array_const::<CFG, $op, 1>([x]).map(|r| r[0])
+        }
+
+        #[doc = concat!("Infallible scalar `", $label, "(x)` (requires `.unchecked()` or `.full_domain()`).")]
+        #[inline(always)]
+        pub fn $infallible(x: f32) -> f32 {
+            const {
+                let opts = LogfOptions::decode_const(CFG);
+                opts.validate_op($op);
+                assert!(
+                    opts.is_infallible(),
+                    concat!(
+                        "Logf::<CFG>::",
+                        stringify!($infallible),
+                        " requires `.unchecked()` or `.full_domain()`"
+                    )
+                );
+            }
+            match Self::$scalar(x) {
+                Ok(v) => v,
+                Err(_) => x,
+            }
+        }
+
+        #[doc = concat!("Scalar `", $label, "(x)` retaining a vector caller's token.")]
+        #[inline(always)]
+        pub fn $with_token<T: magetypes::simd::backends::F32x4Convert>(
+            token: T,
+            x: f32,
+        ) -> Result<f32, LogfError> {
+            scalar_with_token::<CFG, $op, T>(token, x)
+        }
+
+        #[doc = concat!("Array `", $label, "(x)` for widths `1`, `4`, `8` and (with `w512`) `16`.")]
+        #[inline(always)]
+        pub fn $array<const N: usize>(inputs: [f32; N]) -> Result<[f32; N], LogfError> {
+            array_const::<CFG, $op, N>(inputs)
+        }
+
+        #[doc = concat!("Whole-slice `", $label, "(src[i]) -> dst[i]`.")]
+        #[inline]
+        pub fn $slice(src: &[f32], dst: &mut [f32]) -> Result<(), SliceError<LogfErrorKind>> {
+            slice_const::<CFG, $op, _>(archmage::ScalarToken, src, dst)
+        }
+
+        #[doc = concat!("Whole-slice `", $label, "(src[i]) -> dst[i]` starting from `token`.")]
+        #[inline(always)]
+        pub fn $slice_with_token(
+            token: impl archmage::IntoConcreteToken,
+            src: &[f32],
+            dst: &mut [f32],
+        ) -> Result<(), SliceError<LogfErrorKind>> {
+            slice_const::<CFG, $op, _>(token, src, dst)
+        }
+
+        #[doc = concat!("Vector `", $label, "(input)` reusing `input.token()`.")]
+        #[inline(always)]
+        pub fn $simd<V: SimdVector>(input: V) -> Result<V, LogfError> {
+            input.eval_logf_const::<CFG, $op>()
+        }
+    };
 }
 
-/// [`try_ln_slice_with`] retaining the caller's feature proof.
-///
-/// # Panics
-///
-/// Panics if `src.len() != dst.len()`.
-#[inline(always)]
-pub fn try_ln_slice_with_token<P: LogfProfile, T: archmage::IntoConcreteToken>(
-    token: T,
-    src: &[f32],
-    dst: &mut [f32],
-) -> Result<(), crate::SliceError<LogfErrorKind>> {
-    slice::<P, 1, T>(token, src, dst)
+impl<const CFG: u128> Logf<CFG> {
+    logf_const_methods!(
+        log2,
+        log2_infallible,
+        log2_with_token,
+        log2_array,
+        log2_slice,
+        log2_slice_with_token,
+        log2_simd,
+        0,
+        "log2"
+    );
+    logf_const_methods!(
+        ln,
+        ln_infallible,
+        ln_with_token,
+        ln_array,
+        ln_slice,
+        ln_slice_with_token,
+        ln_simd,
+        1,
+        "ln"
+    );
+    logf_const_methods!(
+        log10,
+        log10_infallible,
+        log10_with_token,
+        log10_array,
+        log10_slice,
+        log10_slice_with_token,
+        log10_simd,
+        2,
+        "log10"
+    );
+    logf_const_methods!(
+        log1p,
+        log1p_infallible,
+        log1p_with_token,
+        log1p_array,
+        log1p_slice,
+        log1p_slice_with_token,
+        log1p_simd,
+        3,
+        "log1p"
+    );
 }
 
-/// Base-10 logarithm (`log10`) of every element of `src` into `dst` under profile `P`.
-///
-/// # Panics
-///
-/// Panics if `src.len() != dst.len()`.
-#[inline]
-pub fn try_log10_slice_with<P: LogfProfile>(
-    src: &[f32],
-    dst: &mut [f32],
-) -> Result<(), crate::SliceError<LogfErrorKind>> {
-    slice::<P, 2, _>(archmage::ScalarToken, src, dst)
+/// Dynamic runtime logarithm evaluator created via [`LogfOptions::runtime()`].
+#[derive(Clone, Copy, Debug)]
+pub struct LogfRuntime {
+    options: LogfOptions,
 }
 
-/// [`try_log10_slice_with`] retaining the caller's feature proof.
-///
-/// # Panics
-///
-/// Panics if `src.len() != dst.len()`.
-#[inline(always)]
-pub fn try_log10_slice_with_token<P: LogfProfile, T: archmage::IntoConcreteToken>(
-    token: T,
-    src: &[f32],
-    dst: &mut [f32],
-) -> Result<(), crate::SliceError<LogfErrorKind>> {
-    slice::<P, 2, T>(token, src, dst)
+macro_rules! logf_runtime_methods {
+    (
+        $scalar:ident,
+        $with_token:ident,
+        $array:ident,
+        $slice:ident,
+        $slice_with_token:ident,
+        $simd:ident,
+        $op:literal,
+        $label:literal
+    ) => {
+        #[doc = concat!("Checked scalar `", $label, "(x)` with runtime options.")]
+        #[inline(always)]
+        pub fn $scalar(self, x: f32) -> Result<f32, LogfError> {
+            self.$array::<1>([x]).map(|r| r[0])
+        }
+
+        #[doc = concat!("Scalar `", $label, "(x)` retaining `token` with runtime options.")]
+        #[inline(always)]
+        pub fn $with_token<T: magetypes::simd::backends::F32x4Convert>(
+            self,
+            token: T,
+            x: f32,
+        ) -> Result<f32, LogfError> {
+            runtime_token::<T, $op, 1>(token, [x], self.options).map(|r| r[0])
+        }
+
+        #[doc = concat!("Array `", $label, "(x)` with runtime options.")]
+        #[inline(always)]
+        pub fn $array<const N: usize>(self, inputs: [f32; N]) -> Result<[f32; N], LogfError> {
+            runtime_token::<_, $op, N>(archmage::ScalarToken, inputs, self.options)
+        }
+
+        #[doc = concat!("Whole-slice `", $label, "(src[i]) -> dst[i]` with runtime options.")]
+        #[inline]
+        pub fn $slice(
+            self,
+            src: &[f32],
+            dst: &mut [f32],
+        ) -> Result<(), SliceError<LogfErrorKind>> {
+            slice_runtime::<_, $op>(archmage::ScalarToken, src, dst, self.options)
+        }
+
+        #[doc = concat!("Whole-slice `", $label, "(src[i]) -> dst[i]` starting from `token` with runtime options.")]
+        #[inline]
+        pub fn $slice_with_token(
+            self,
+            token: impl archmage::IntoConcreteToken,
+            src: &[f32],
+            dst: &mut [f32],
+        ) -> Result<(), SliceError<LogfErrorKind>> {
+            slice_runtime::<_, $op>(token, src, dst, self.options)
+        }
+
+        #[doc = concat!("Vector `", $label, "(input)` with runtime options.")]
+        #[inline(always)]
+        pub fn $simd<V: SimdVector>(self, input: V) -> Result<V, LogfError> {
+            input.eval_logf_runtime::<$op>(self.options)
+        }
+    };
 }
 
-/// Shifted natural logarithm (`ln(1 + x)`) of every element of `src` into
-/// `dst` under profile `P`.
-///
-/// # Panics
-///
-/// Panics if `src.len() != dst.len()`.
-#[inline]
-pub fn try_log1p_slice_with<P: LogfProfile>(
-    src: &[f32],
-    dst: &mut [f32],
-) -> Result<(), crate::SliceError<LogfErrorKind>> {
-    slice::<P, 3, _>(archmage::ScalarToken, src, dst)
-}
+impl LogfRuntime {
+    #[inline(always)]
+    pub(crate) const fn new(options: LogfOptions) -> Self {
+        Self { options }
+    }
 
-/// [`try_log1p_slice_with`] retaining the caller's feature proof.
-///
-/// # Panics
-///
-/// Panics if `src.len() != dst.len()`.
-#[inline(always)]
-pub fn try_log1p_slice_with_token<P: LogfProfile, T: archmage::IntoConcreteToken>(
-    token: T,
-    src: &[f32],
-    dst: &mut [f32],
-) -> Result<(), crate::SliceError<LogfErrorKind>> {
-    slice::<P, 3, T>(token, src, dst)
+    /// Return the underlying [`LogfOptions`].
+    #[inline(always)]
+    pub const fn options(self) -> LogfOptions {
+        self.options
+    }
+
+    logf_runtime_methods!(
+        log2,
+        log2_with_token,
+        log2_array,
+        log2_slice,
+        log2_slice_with_token,
+        log2_simd,
+        0,
+        "log2"
+    );
+    logf_runtime_methods!(
+        ln,
+        ln_with_token,
+        ln_array,
+        ln_slice,
+        ln_slice_with_token,
+        ln_simd,
+        1,
+        "ln"
+    );
+    logf_runtime_methods!(
+        log10,
+        log10_with_token,
+        log10_array,
+        log10_slice,
+        log10_slice_with_token,
+        log10_simd,
+        2,
+        "log10"
+    );
+    logf_runtime_methods!(
+        log1p,
+        log1p_with_token,
+        log1p_array,
+        log1p_slice,
+        log1p_slice_with_token,
+        log1p_simd,
+        3,
+        "log1p"
+    );
 }

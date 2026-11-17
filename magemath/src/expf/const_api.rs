@@ -1,59 +1,69 @@
-//! Typed profile entry points and runtime adapter for `expf`.
-use super::{ExpfError, ExpfErrorKind, ExpfExecution, ExpfOptions, ExpfProfile, dispatch, graph};
+//! Const-specialized `Expf<CFG>` and runtime `ExpfRuntime` entry points.
+use super::{ExpfError, ExpfErrorKind, ExpfOptions, dispatch, graph};
+use crate::{Execution, SimdVector, SliceError};
 
-struct Of<P>(core::marker::PhantomData<P>);
-impl<P: ExpfProfile> graph::Kernel for Of<P> {
-    const RANGED: bool = P::SPEC.input_bounds().is_some();
-    const IN_LO: f32 = match P::SPEC.input_bounds() {
-        Some((lo, _)) => lo,
-        None => 0.0,
-    };
-    const IN_HI: f32 = match P::SPEC.input_bounds() {
-        Some((_, hi)) => hi,
-        None => 0.0,
-    };
-    const FULL: bool = P::SPEC.is_full();
-    const LOWP: bool = P::SPEC.is_lowp();
-    const ASSUME: bool = P::SPEC.assume_valid();
-    const ELIDE_EXP2: bool = P::SPEC.elides_clamp();
-    const ELIDE_EXP: bool = P::SPEC.elides_exp_clamp();
+pub(crate) struct Cfg<const CFG: u128>;
+
+impl<const CFG: u128> graph::Kernel for Cfg<CFG> {
+    const RANGED: bool = graph::KernelCfg::from_options(ExpfOptions::decode_const(CFG)).ranged;
+    const FULL: bool = graph::KernelCfg::from_options(ExpfOptions::decode_const(CFG)).full;
+    const LOWP: bool = graph::KernelCfg::from_options(ExpfOptions::decode_const(CFG)).lowp;
+    const ASSUME: bool = graph::KernelCfg::from_options(ExpfOptions::decode_const(CFG)).assume;
+    const ELIDE_EXP2: bool =
+        graph::KernelCfg::from_options(ExpfOptions::decode_const(CFG)).elide_exp2;
+    const ELIDE_EXP: bool =
+        graph::KernelCfg::from_options(ExpfOptions::decode_const(CFG)).elide_exp;
+    const IN_LO: f32 = graph::KernelCfg::from_options(ExpfOptions::decode_const(CFG)).in_lo;
+    const IN_HI: f32 = graph::KernelCfg::from_options(ExpfOptions::decode_const(CFG)).in_hi;
 }
 
 macro_rules! vector {
     ($run:ident, $profile:ident, $dispatch:ident, $float:ident, $bound:ident, $n:literal) => {
         #[inline(always)]
-        pub(crate) fn $run<P: ExpfProfile, const OP: u8, T: magetypes::simd::backends::$bound>(
+        pub(crate) fn $run<const CFG: u128, const OP: u8, T: magetypes::simd::backends::$bound>(
             token: T,
             input: magetypes::simd::generic::$float<T>,
         ) -> Result<magetypes::simd::generic::$float<T>, ExpfError> {
-            const {
-                P::SPEC.validate();
-            }
-            let caller = dispatch::select(token, ExpfExecution::Caller);
-            if matches!(caller, dispatch::Plan::Software) {
-                if P::SPEC.is_caller() {
-                    return if P::SPEC.is_backend() {
-                        graph::$profile::<T, Of<P>, OP, true>(token, input)
+            let opts = const {
+                let o = ExpfOptions::decode_const(CFG);
+                o.validate();
+                o
+            };
+            let backend = opts.is_backend();
+            let caller = dispatch::select(token, Execution::Caller, backend, false);
+            let widen_v3 = $n == 16;
+            if matches!(caller, dispatch::Plan::Software) || (widen_v3 && !opts.is_caller()) {
+                if opts.is_caller() {
+                    return if backend {
+                        graph::$profile::<T, Cfg<CFG>, OP, true>(token, input)
                     } else {
-                        graph::$profile::<T, Of<P>, OP, false>(token, input)
+                        graph::$profile::<T, Cfg<CFG>, OP, false>(token, input)
                     };
                 }
-                let plan = dispatch::select(token, ExpfExecution::Automatic);
-                let arr = input.to_array();
-                let result = if P::SPEC.is_backend() {
-                    dispatch::$dispatch::<Of<P>, OP, true>(plan, arr)
+                let plan = dispatch::select(token, Execution::Upgrade, backend, widen_v3);
+                if !plan.same_tier(caller) || matches!(caller, dispatch::Plan::Software) {
+                    let arr = input.to_array();
+                    let result = if backend {
+                        dispatch::$dispatch::<Cfg<CFG>, OP, true>(plan, arr)
+                    } else {
+                        dispatch::$dispatch::<Cfg<CFG>, OP, false>(plan, arr)
+                    }?;
+                    return Ok(magetypes::simd::generic::$float::from_array_t(
+                        token, result,
+                    ));
+                }
+            }
+            #[cfg(target_arch = "wasm32")]
+            {
+                let use_relaxed = matches!(caller, dispatch::Plan::Wasm(_, true));
+                return if use_relaxed {
+                    graph::$profile::<T, Cfg<CFG>, OP, true>(token, input)
                 } else {
-                    dispatch::$dispatch::<Of<P>, OP, false>(plan, arr)
-                }?;
-                return Ok(magetypes::simd::generic::$float::from_array_t(
-                    token, result,
-                ));
+                    graph::$profile::<T, Cfg<CFG>, OP, false>(token, input)
+                };
             }
-            if P::SPEC.is_backend() {
-                graph::$profile::<T, Of<P>, OP, true>(token, input)
-            } else {
-                graph::$profile::<T, Of<P>, OP, false>(token, input)
-            }
+            #[cfg(not(target_arch = "wasm32"))]
+            graph::$profile::<T, Cfg<CFG>, OP, true>(token, input)
         }
     };
 }
@@ -63,11 +73,11 @@ vector!(run8, profile8, run8_const, f32x8, F32x8Convert, 8);
 vector!(run16, profile16, run16_const, f32x16, F32x16Convert, 16);
 
 #[inline(always)]
-fn scalar_with_token<P: ExpfProfile, const OP: u8, T: magetypes::simd::backends::F32x4Convert>(
+fn scalar_with_token<const CFG: u128, const OP: u8, T: magetypes::simd::backends::F32x4Convert>(
     token: T,
     x: f32,
 ) -> Result<f32, ExpfError> {
-    run4::<P, OP, T>(token, magetypes::simd::generic::f32x4::splat_t(token, x))
+    run4::<CFG, OP, T>(token, magetypes::simd::generic::f32x4::splat_t(token, x))
         .map(|v| v.to_array()[0])
         .map_err(|error| ExpfError {
             lane_mask: 1,
@@ -76,13 +86,13 @@ fn scalar_with_token<P: ExpfProfile, const OP: u8, T: magetypes::simd::backends:
 }
 
 #[inline(always)]
-fn array_with<P: ExpfProfile, const OP: u8, const N: usize>(
+fn array_const<const CFG: u128, const OP: u8, const N: usize>(
     inputs: [f32; N],
 ) -> Result<[f32; N], ExpfError> {
     use archmage::ScalarToken;
     use magetypes::simd::generic::{f32x4, f32x8};
     const {
-        P::SPEC.validate();
+        ExpfOptions::decode_const(CFG).validate();
     }
     if !matches!(N, 1 | 4 | 8) && !(cfg!(feature = "w512") && N == 16) {
         return Err(ExpfError {
@@ -92,24 +102,23 @@ fn array_with<P: ExpfProfile, const OP: u8, const N: usize>(
     }
     let mut output = [0.0; N];
     if N == 1 {
-        let value = run4::<P, OP, _>(ScalarToken, f32x4::splat_t(ScalarToken, inputs[0])).map_err(
-            |error| ExpfError {
+        let value = run4::<CFG, OP, _>(ScalarToken, f32x4::splat_t(ScalarToken, inputs[0]))
+            .map_err(|error| ExpfError {
                 lane_mask: 1,
                 ..error
-            },
-        )?;
+            })?;
         output[0] = value.to_array()[0];
     } else if N == 4 {
         let mut input = [0.0; 4];
         input.copy_from_slice(&inputs);
         output.copy_from_slice(
-            &run4::<P, OP, _>(ScalarToken, f32x4::from_array_t(ScalarToken, input))?.to_array(),
+            &run4::<CFG, OP, _>(ScalarToken, f32x4::from_array_t(ScalarToken, input))?.to_array(),
         );
     } else if N == 8 {
         let mut input = [0.0; 8];
         input.copy_from_slice(&inputs);
         output.copy_from_slice(
-            &run8::<P, OP, _>(ScalarToken, f32x8::from_array_t(ScalarToken, input))?.to_array(),
+            &run8::<CFG, OP, _>(ScalarToken, f32x8::from_array_t(ScalarToken, input))?.to_array(),
         );
     } else {
         #[cfg(feature = "w512")]
@@ -118,7 +127,7 @@ fn array_with<P: ExpfProfile, const OP: u8, const N: usize>(
             let mut input = [0.0; 16];
             input.copy_from_slice(&inputs);
             output.copy_from_slice(
-                &run16::<P, OP, _>(ScalarToken, f32x16::from_array_t(ScalarToken, input))?
+                &run16::<CFG, OP, _>(ScalarToken, f32x16::from_array_t(ScalarToken, input))?
                     .to_array(),
             );
             return Ok(output);
@@ -132,88 +141,33 @@ fn array_with<P: ExpfProfile, const OP: u8, const N: usize>(
     Ok(output)
 }
 
-/// Configurable scalar `exp2` under profile `P`.
-#[inline(always)]
-pub fn try_exp2_with<P: ExpfProfile>(x: f32) -> Result<f32, ExpfError> {
-    try_exp2_array_with::<P, 1>([x]).map(|result| result[0])
-}
-
-/// Scalar `exp` (base e) under profile `P`.
-#[inline(always)]
-pub fn try_exp_with<P: ExpfProfile>(x: f32) -> Result<f32, ExpfError> {
-    try_exp_array_with::<P, 1>([x]).map(|result| result[0])
-}
-
-/// Scalar `exp2` retaining the vector caller's feature proof under profile `P`.
-#[inline(always)]
-pub fn try_exp2_with_token<P: ExpfProfile, T: magetypes::simd::backends::F32x4Convert>(
-    token: T,
-    x: f32,
-) -> Result<f32, ExpfError> {
-    scalar_with_token::<P, 0, T>(token, x)
-}
-
-/// Scalar `exp` retaining the vector caller's feature proof under profile `P`.
-#[inline(always)]
-pub fn try_exp_with_token<P: ExpfProfile, T: magetypes::simd::backends::F32x4Convert>(
-    token: T,
-    x: f32,
-) -> Result<f32, ExpfError> {
-    scalar_with_token::<P, 1, T>(token, x)
-}
-
-/// Version-independent array boundary for `exp2` under profile `P`.
-///
-/// Supported widths are 1, 4, 8 and, with `w512`, 16.
-#[inline(always)]
-pub fn try_exp2_array_with<P: ExpfProfile, const N: usize>(
-    inputs: [f32; N],
-) -> Result<[f32; N], ExpfError> {
-    array_with::<P, 0, N>(inputs)
-}
-
-/// Array `exp` (base e) under profile `P`.
-#[inline(always)]
-pub fn try_exp_array_with<P: ExpfProfile, const N: usize>(
-    inputs: [f32; N],
-) -> Result<[f32; N], ExpfError> {
-    array_with::<P, 1, N>(inputs)
-}
-
-/// Runtime-options scalar `exp2`; same numerical contract as the profile API.
-#[inline(always)]
-pub fn try_exp2_runtime(x: f32, options: ExpfOptions) -> Result<f32, ExpfError> {
-    try_exp2_array_runtime([x], options).map(|result| result[0])
-}
-
-/// Runtime-options scalar `exp`.
-#[inline(always)]
-pub fn try_exp_runtime(x: f32, options: ExpfOptions) -> Result<f32, ExpfError> {
-    try_exp_array_runtime([x], options).map(|result| result[0])
-}
-
 #[cfg_attr(debug_assertions, inline(never))]
 #[cfg_attr(not(debug_assertions), inline(always))]
-fn array_runtime<const OP: u8, const N: usize>(
+pub(crate) fn runtime_token<T: archmage::IntoConcreteToken, const OP: u8, const N: usize>(
+    token: T,
     inputs: [f32; N],
     options: ExpfOptions,
 ) -> Result<[f32; N], ExpfError> {
-    let Some(options) = ExpfOptions::from_bits(options.bits()) else {
+    if !options.is_valid() {
         return Err(ExpfError {
             kind: ExpfErrorKind::UnsupportedOptions,
             lane_mask: 0,
         });
-    };
+    }
     if !matches!(N, 1 | 4 | 8) && !(cfg!(feature = "w512") && N == 16) {
         return Err(ExpfError {
             kind: ExpfErrorKind::UnsupportedWidth,
             lane_mask: 0,
         });
     }
-    let spec = super::ExpfSpec::from_options(options);
-    let plan = dispatch::select(archmage::ScalarToken, options.execution);
-    let cfg = graph::KernelCfg::from_spec(spec);
-    let backend = spec.is_backend();
+    let exec = if options.is_caller() {
+        Execution::Caller
+    } else {
+        Execution::Upgrade
+    };
+    let backend = options.is_backend();
+    let plan = dispatch::select(token, exec, backend, N == 16);
+    let cfg = graph::KernelCfg::from_options(options);
     let mut output = [0.0; N];
     if N == 1 {
         let value =
@@ -243,103 +197,297 @@ fn array_runtime<const OP: u8, const N: usize>(
     Ok(output)
 }
 
-/// Runtime-options array `exp`.
 #[inline(always)]
-pub fn try_exp_array_runtime<const N: usize>(
-    inputs: [f32; N],
-    options: ExpfOptions,
-) -> Result<[f32; N], ExpfError> {
-    array_runtime::<1, N>(inputs, options)
-}
-
-/// Runtime-options array `exp2`.
-#[inline(always)]
-pub fn try_exp2_array_runtime<const N: usize>(
-    inputs: [f32; N],
-    options: ExpfOptions,
-) -> Result<[f32; N], ExpfError> {
-    array_runtime::<0, N>(inputs, options)
-}
-
-#[inline(always)]
-fn slice<P: ExpfProfile, const OP: u8, T: archmage::IntoConcreteToken>(
+fn slice_const<const CFG: u128, const OP: u8, T: archmage::IntoConcreteToken>(
     token: T,
     src: &[f32],
     dst: &mut [f32],
-) -> Result<(), crate::SliceError<ExpfErrorKind>> {
-    const {
-        P::SPEC.validate();
-    }
-    assert_eq!(src.len(), dst.len(), "expf slice lengths differ");
-    let plan = dispatch::select(
-        token,
-        if P::SPEC.is_caller() {
-            ExpfExecution::Caller
-        } else {
-            ExpfExecution::Automatic
-        },
-    );
-    let res = if P::SPEC.is_backend() {
-        dispatch::run_slice_const::<Of<P>, OP, true>(plan, src, dst)
-    } else {
-        dispatch::run_slice_const::<Of<P>, OP, false>(plan, src, dst)
+) -> Result<(), SliceError<ExpfErrorKind>> {
+    let opts = const {
+        let o = ExpfOptions::decode_const(CFG);
+        o.validate();
+        o
     };
-    res.map_err(|(base, e)| crate::SliceError {
+    assert_eq!(src.len(), dst.len(), "expf slice lengths differ");
+    let exec = if opts.is_caller() {
+        Execution::Caller
+    } else {
+        Execution::Upgrade
+    };
+    let backend = opts.is_backend();
+    let plan = dispatch::select(token, exec, backend, true);
+    let res = if backend {
+        dispatch::run_slice_const::<Cfg<CFG>, OP, true>(plan, src, dst)
+    } else {
+        dispatch::run_slice_const::<Cfg<CFG>, OP, false>(plan, src, dst)
+    };
+    res.map_err(|(base, e)| SliceError {
         kind: e.kind,
-        index: base + e.lane_mask.trailing_zeros().min(7) as usize,
+        index: base + e.lane_mask.trailing_zeros().min(15) as usize,
     })
 }
 
-/// Base-2 exponential (`exp2`) of every element of `src` into `dst` under profile `P`.
-///
-/// # Panics
-///
-/// Panics if `src.len() != dst.len()`.
-#[inline]
-pub fn try_exp2_slice_with<P: ExpfProfile>(
-    src: &[f32],
-    dst: &mut [f32],
-) -> Result<(), crate::SliceError<ExpfErrorKind>> {
-    slice::<P, 0, _>(archmage::ScalarToken, src, dst)
-}
-
-/// [`try_exp2_slice_with`] retaining the caller's feature proof.
-///
-/// # Panics
-///
-/// Panics if `src.len() != dst.len()`.
-#[inline(always)]
-pub fn try_exp2_slice_with_token<P: ExpfProfile, T: archmage::IntoConcreteToken>(
+#[cfg_attr(debug_assertions, inline(never))]
+#[cfg_attr(not(debug_assertions), inline(always))]
+fn slice_runtime<T: archmage::IntoConcreteToken, const OP: u8>(
     token: T,
     src: &[f32],
     dst: &mut [f32],
-) -> Result<(), crate::SliceError<ExpfErrorKind>> {
-    slice::<P, 0, T>(token, src, dst)
+    options: ExpfOptions,
+) -> Result<(), SliceError<ExpfErrorKind>> {
+    assert_eq!(src.len(), dst.len(), "expf slice lengths differ");
+    if !options.is_valid() {
+        return Err(SliceError {
+            kind: ExpfErrorKind::UnsupportedOptions,
+            index: 0,
+        });
+    }
+    let exec = if options.is_caller() {
+        Execution::Caller
+    } else {
+        Execution::Upgrade
+    };
+    let backend = options.is_backend();
+    let plan = dispatch::select(token, exec, backend, true);
+    let cfg = graph::KernelCfg::from_options(options);
+    dispatch::run_slice_cfg(plan, src, dst, OP, backend, cfg).map_err(|(base, e)| SliceError {
+        kind: e.kind,
+        index: base + e.lane_mask.trailing_zeros().min(15) as usize,
+    })
 }
 
-/// Natural exponential (`exp`) of every element of `src` into `dst` under profile `P`.
-///
-/// # Panics
-///
-/// Panics if `src.len() != dst.len()`.
-#[inline]
-pub fn try_exp_slice_with<P: ExpfProfile>(
-    src: &[f32],
-    dst: &mut [f32],
-) -> Result<(), crate::SliceError<ExpfErrorKind>> {
-    slice::<P, 1, _>(archmage::ScalarToken, src, dst)
+/// Compile-time specialized exponential (`exp2`, `exp`) operator configured by
+/// `const CFG: u128` (produced via [`ExpfOptions::bits()`]).
+#[derive(Clone, Copy, Debug, Default)]
+pub struct Expf<const CFG: u128 = { ExpfOptions::new().bits() }>;
+
+impl<const CFG: u128> Expf<CFG> {
+    /// Checked scalar `2^x`.
+    #[inline(always)]
+    pub fn exp2(x: f32) -> Result<f32, ExpfError> {
+        array_const::<CFG, 0, 1>([x]).map(|r| r[0])
+    }
+
+    /// Infallible scalar `2^x` (requires `.unchecked()` or `.full_domain()`).
+    #[inline(always)]
+    pub fn exp2_infallible(x: f32) -> f32 {
+        const {
+            let opts = ExpfOptions::decode_const(CFG);
+            opts.validate();
+            assert!(
+                opts.is_infallible(),
+                "Expf::<CFG>::exp2_infallible requires `.unchecked()` or `.full_domain()`"
+            );
+        }
+        match Self::exp2(x) {
+            Ok(v) => v,
+            Err(_) => x,
+        }
+    }
+
+    /// Scalar `2^x` retaining a vector caller's token.
+    #[inline(always)]
+    pub fn exp2_with_token<T: magetypes::simd::backends::F32x4Convert>(
+        token: T,
+        x: f32,
+    ) -> Result<f32, ExpfError> {
+        scalar_with_token::<CFG, 0, T>(token, x)
+    }
+
+    /// Array `2^x` for widths `1`, `4`, `8` and (with `w512`) `16`.
+    #[inline(always)]
+    pub fn exp2_array<const N: usize>(inputs: [f32; N]) -> Result<[f32; N], ExpfError> {
+        array_const::<CFG, 0, N>(inputs)
+    }
+
+    /// Whole-slice `2^src[i] -> dst[i]`.
+    #[inline]
+    pub fn exp2_slice(src: &[f32], dst: &mut [f32]) -> Result<(), SliceError<ExpfErrorKind>> {
+        slice_const::<CFG, 0, _>(archmage::ScalarToken, src, dst)
+    }
+
+    /// Whole-slice `2^src[i] -> dst[i]` starting from `token`.
+    #[inline(always)]
+    pub fn exp2_slice_with_token(
+        token: impl archmage::IntoConcreteToken,
+        src: &[f32],
+        dst: &mut [f32],
+    ) -> Result<(), SliceError<ExpfErrorKind>> {
+        slice_const::<CFG, 0, _>(token, src, dst)
+    }
+
+    /// Vector `2^input` reusing `input.token()`.
+    #[inline(always)]
+    pub fn exp2_simd<V: SimdVector>(input: V) -> Result<V, ExpfError> {
+        input.eval_expf_const::<CFG, 0>()
+    }
+
+    /// Checked scalar `e^x`.
+    #[inline(always)]
+    pub fn exp(x: f32) -> Result<f32, ExpfError> {
+        array_const::<CFG, 1, 1>([x]).map(|r| r[0])
+    }
+
+    /// Infallible scalar `e^x` (requires `.unchecked()` or `.full_domain()`).
+    #[inline(always)]
+    pub fn exp_infallible(x: f32) -> f32 {
+        const {
+            let opts = ExpfOptions::decode_const(CFG);
+            opts.validate();
+            assert!(
+                opts.is_infallible(),
+                "Expf::<CFG>::exp_infallible requires `.unchecked()` or `.full_domain()`"
+            );
+        }
+        match Self::exp(x) {
+            Ok(v) => v,
+            Err(_) => x,
+        }
+    }
+
+    /// Scalar `e^x` retaining a vector caller's token.
+    #[inline(always)]
+    pub fn exp_with_token<T: magetypes::simd::backends::F32x4Convert>(
+        token: T,
+        x: f32,
+    ) -> Result<f32, ExpfError> {
+        scalar_with_token::<CFG, 1, T>(token, x)
+    }
+
+    /// Array `e^x` for widths `1`, `4`, `8` and (with `w512`) `16`.
+    #[inline(always)]
+    pub fn exp_array<const N: usize>(inputs: [f32; N]) -> Result<[f32; N], ExpfError> {
+        array_const::<CFG, 1, N>(inputs)
+    }
+
+    /// Whole-slice `e^src[i] -> dst[i]`.
+    #[inline]
+    pub fn exp_slice(src: &[f32], dst: &mut [f32]) -> Result<(), SliceError<ExpfErrorKind>> {
+        slice_const::<CFG, 1, _>(archmage::ScalarToken, src, dst)
+    }
+
+    /// Whole-slice `e^src[i] -> dst[i]` starting from `token`.
+    #[inline(always)]
+    pub fn exp_slice_with_token(
+        token: impl archmage::IntoConcreteToken,
+        src: &[f32],
+        dst: &mut [f32],
+    ) -> Result<(), SliceError<ExpfErrorKind>> {
+        slice_const::<CFG, 1, _>(token, src, dst)
+    }
+
+    /// Vector `e^input` reusing `input.token()`.
+    #[inline(always)]
+    pub fn exp_simd<V: SimdVector>(input: V) -> Result<V, ExpfError> {
+        input.eval_expf_const::<CFG, 1>()
+    }
 }
 
-/// [`try_exp_slice_with`] retaining the caller's feature proof.
-///
-/// # Panics
-///
-/// Panics if `src.len() != dst.len()`.
-#[inline(always)]
-pub fn try_exp_slice_with_token<P: ExpfProfile, T: archmage::IntoConcreteToken>(
-    token: T,
-    src: &[f32],
-    dst: &mut [f32],
-) -> Result<(), crate::SliceError<ExpfErrorKind>> {
-    slice::<P, 1, T>(token, src, dst)
+/// Dynamic runtime exponential evaluator created via [`ExpfOptions::runtime()`].
+#[derive(Clone, Copy, Debug)]
+pub struct ExpfRuntime {
+    options: ExpfOptions,
+}
+
+impl ExpfRuntime {
+    #[inline(always)]
+    pub(crate) const fn new(options: ExpfOptions) -> Self {
+        Self { options }
+    }
+
+    /// Return the underlying [`ExpfOptions`].
+    #[inline(always)]
+    pub const fn options(self) -> ExpfOptions {
+        self.options
+    }
+
+    /// Checked scalar `2^x` with runtime options.
+    #[inline(always)]
+    pub fn exp2(self, x: f32) -> Result<f32, ExpfError> {
+        self.exp2_array::<1>([x]).map(|r| r[0])
+    }
+
+    /// Scalar `2^x` retaining `token` with runtime options.
+    #[inline(always)]
+    pub fn exp2_with_token<T: magetypes::simd::backends::F32x4Convert>(
+        self,
+        token: T,
+        x: f32,
+    ) -> Result<f32, ExpfError> {
+        runtime_token::<T, 0, 1>(token, [x], self.options).map(|r| r[0])
+    }
+
+    /// Array `2^x` with runtime options.
+    #[inline(always)]
+    pub fn exp2_array<const N: usize>(self, inputs: [f32; N]) -> Result<[f32; N], ExpfError> {
+        runtime_token::<_, 0, N>(archmage::ScalarToken, inputs, self.options)
+    }
+
+    /// Whole-slice `2^src[i] -> dst[i]` with runtime options.
+    #[inline]
+    pub fn exp2_slice(self, src: &[f32], dst: &mut [f32]) -> Result<(), SliceError<ExpfErrorKind>> {
+        slice_runtime::<_, 0>(archmage::ScalarToken, src, dst, self.options)
+    }
+
+    /// Whole-slice `2^src[i] -> dst[i]` starting from `token` with runtime options.
+    #[inline]
+    pub fn exp2_slice_with_token(
+        self,
+        token: impl archmage::IntoConcreteToken,
+        src: &[f32],
+        dst: &mut [f32],
+    ) -> Result<(), SliceError<ExpfErrorKind>> {
+        slice_runtime::<_, 0>(token, src, dst, self.options)
+    }
+
+    /// Vector `2^input` with runtime options.
+    #[inline(always)]
+    pub fn exp2_simd<V: SimdVector>(self, input: V) -> Result<V, ExpfError> {
+        input.eval_expf_runtime::<0>(self.options)
+    }
+
+    /// Checked scalar `e^x` with runtime options.
+    #[inline(always)]
+    pub fn exp(self, x: f32) -> Result<f32, ExpfError> {
+        self.exp_array::<1>([x]).map(|r| r[0])
+    }
+
+    /// Scalar `e^x` retaining `token` with runtime options.
+    #[inline(always)]
+    pub fn exp_with_token<T: magetypes::simd::backends::F32x4Convert>(
+        self,
+        token: T,
+        x: f32,
+    ) -> Result<f32, ExpfError> {
+        runtime_token::<T, 1, 1>(token, [x], self.options).map(|r| r[0])
+    }
+
+    /// Array `e^x` with runtime options.
+    #[inline(always)]
+    pub fn exp_array<const N: usize>(self, inputs: [f32; N]) -> Result<[f32; N], ExpfError> {
+        runtime_token::<_, 1, N>(archmage::ScalarToken, inputs, self.options)
+    }
+
+    /// Whole-slice `e^src[i] -> dst[i]` with runtime options.
+    #[inline]
+    pub fn exp_slice(self, src: &[f32], dst: &mut [f32]) -> Result<(), SliceError<ExpfErrorKind>> {
+        slice_runtime::<_, 1>(archmage::ScalarToken, src, dst, self.options)
+    }
+
+    /// Whole-slice `e^src[i] -> dst[i]` starting from `token` with runtime options.
+    #[inline]
+    pub fn exp_slice_with_token(
+        self,
+        token: impl archmage::IntoConcreteToken,
+        src: &[f32],
+        dst: &mut [f32],
+    ) -> Result<(), SliceError<ExpfErrorKind>> {
+        slice_runtime::<_, 1>(token, src, dst, self.options)
+    }
+
+    /// Vector `e^input` with runtime options.
+    #[inline(always)]
+    pub fn exp_simd<V: SimdVector>(self, input: V) -> Result<V, ExpfError> {
+        input.eval_expf_runtime::<1>(self.options)
+    }
 }

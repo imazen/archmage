@@ -212,6 +212,12 @@ impl<T: U64x4Backend> u64x4<T> {
         self.0
     }
 
+    /// Get the capability token carried by this vector.
+    #[inline(always)]
+    pub fn token(self) -> T {
+        self.1
+    }
+
     /// Wrap a platform representation (token-gated).
     #[inline(always)]
     pub fn from_repr_t(token: T, repr: T::Repr) -> Self {

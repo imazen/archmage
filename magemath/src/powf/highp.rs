@@ -1,5 +1,5 @@
 //! Shared whole-vector HIGHP validation and the explicitly std-backed policy.
-use super::{PowfError, PowfErrorKind, PowfSpec};
+use super::{PowfError, PowfErrorKind, PowfOptions};
 
 #[derive(Clone, Copy)]
 pub(super) struct HighpCfg {
@@ -11,13 +11,13 @@ pub(super) struct HighpCfg {
 }
 
 impl HighpCfg {
-    pub(super) const fn from_spec(spec: PowfSpec) -> Self {
+    pub(super) const fn from_options(opts: PowfOptions) -> Self {
         Self {
-            zero: spec.admits_zero(),
-            full: spec.is_full(),
-            assume: spec.assume_valid(),
-            elide: spec.elides_range_check(),
-            base: spec.base_bounds(),
+            zero: opts.admits_zero(),
+            full: opts.is_full(),
+            assume: opts.assume_valid(),
+            elide: opts.elides_range_check(),
+            base: opts.base_bounds(),
         }
     }
 }

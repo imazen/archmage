@@ -1,49 +1,54 @@
 //! Whole-slice cost of three ways to apply a magemath function:
-//! - `array8`: `try_*_array_with::<_, 8>` per chunk (Automatic execution per call)
-//! - `attune`: a caller-written `#[attune]` kernel using the vector entries
-//! - `slice`: the `try_*_slice_with` entries
+//! - `array8`: `Powf::<CFG>::array::<8>` per chunk (`Execution::Upgrade` per call)
+//! - `attune`: a caller-written `#[attune]` kernel using `SimdMath` + `scalar_with_token`
+//! - `slice`: the `Powf::<CFG>::slice` / `Expf::<CFG>::exp2_slice` / `Logf::<CFG>::log2_slice` entries
 //!
 //! Run: `cargo bench --bench slices` (no `-C target-cpu`).
 use archmage::prelude::*;
-use magemath::{Caller, expf as e, logf as l, powf as p};
+use magemath::{
+    SimdMath,
+    expf::{Expf, ExpfOptions},
+    logf::{Logf, LogfOptions},
+    powf::{Powf, PowfOptions},
+};
 use zenbench::criterion_compat::*;
 use zenbench::{criterion_group, criterion_main};
 
-type PA = p::presets::GammaMidp;
-type PC = Caller<p::presets::GammaMidp>;
-type EA = e::presets::Midp;
-type EC = Caller<e::presets::Midp>;
-type LA = l::presets::Midp;
-type LC = Caller<l::presets::Midp>;
+const PA: u128 = PowfOptions::new().gamma().midp().bits();
+const PC: u128 = PowfOptions::new().gamma().midp().caller().bits();
+const EA: u128 = ExpfOptions::new().midp().bits();
+const EC: u128 = ExpfOptions::new().midp().caller().bits();
+const LA: u128 = LogfOptions::new().midp().bits();
+const LC: u128 = LogfOptions::new().midp().caller().bits();
 
 fn pow_array8(src: &[f32], dst: &mut [f32], n: f32) {
     let (sc, st) = src.as_chunks::<8>();
     let (dc, dt) = dst.as_chunks_mut::<8>();
     for (s, d) in sc.iter().zip(dc) {
-        *d = p::try_powf_array_with::<PA, 8>(*s, n).unwrap();
+        *d = Powf::<PA>::array::<8>(*s, n).unwrap();
     }
     for (s, d) in st.iter().zip(dt) {
-        *d = p::try_powf_with::<PA>(*s, n).unwrap();
+        *d = Powf::<PA>::scalar(*s, n).unwrap();
     }
 }
 fn exp2_array8(src: &[f32], dst: &mut [f32]) {
     let (sc, st) = src.as_chunks::<8>();
     let (dc, dt) = dst.as_chunks_mut::<8>();
     for (s, d) in sc.iter().zip(dc) {
-        *d = e::try_exp2_array_with::<EA, 8>(*s).unwrap();
+        *d = Expf::<EA>::exp2_array::<8>(*s).unwrap();
     }
     for (s, d) in st.iter().zip(dt) {
-        *d = e::try_exp2_with::<EA>(*s).unwrap();
+        *d = Expf::<EA>::exp2(*s).unwrap();
     }
 }
 fn log2_array8(src: &[f32], dst: &mut [f32]) {
     let (sc, st) = src.as_chunks::<8>();
     let (dc, dt) = dst.as_chunks_mut::<8>();
     for (s, d) in sc.iter().zip(dc) {
-        *d = l::try_log2_array_with::<LA, 8>(*s).unwrap();
+        *d = Logf::<LA>::log2_array::<8>(*s).unwrap();
     }
     for (s, d) in st.iter().zip(dt) {
-        *d = l::try_log2_with::<LA>(*s).unwrap();
+        *d = Logf::<LA>::log2(*s).unwrap();
     }
 }
 
@@ -52,12 +57,13 @@ fn pow_attune_impl(token: Token, src: &[f32], dst: &mut [f32], n: f32) {
     let (sc, st) = f32x8::partition_slice_t(token, src);
     let (dc, dt) = f32x8::partition_slice_mut_t(token, dst);
     for (s, d) in sc.iter().zip(dc.iter_mut()) {
-        p::try_powf_f32x8_with::<PC, _>(token, f32x8::load_t(token, s), n)
+        f32x8::load_t(token, s)
+            .try_powf_with::<PC>(n)
             .unwrap()
             .store(d);
     }
     for (&x, y) in st.iter().zip(dt.iter_mut()) {
-        *y = p::try_powf_with_token::<PC, _>(token, x, n).unwrap();
+        *y = Powf::<PC>::scalar_with_token(token, x, n).unwrap();
     }
 }
 #[attune(_*_t, define(f32x8))]
@@ -65,12 +71,13 @@ fn exp2_attune_impl(token: Token, src: &[f32], dst: &mut [f32]) {
     let (sc, st) = f32x8::partition_slice_t(token, src);
     let (dc, dt) = f32x8::partition_slice_mut_t(token, dst);
     for (s, d) in sc.iter().zip(dc.iter_mut()) {
-        e::try_exp2_f32x8_with::<EC, _>(token, f32x8::load_t(token, s))
+        f32x8::load_t(token, s)
+            .try_exp2_with::<EC>()
             .unwrap()
             .store(d);
     }
     for (&x, y) in st.iter().zip(dt.iter_mut()) {
-        *y = e::try_exp2_with_token::<EC, _>(token, x).unwrap();
+        *y = Expf::<EC>::exp2_with_token(token, x).unwrap();
     }
 }
 #[attune(_*_t, define(f32x8))]
@@ -78,12 +85,13 @@ fn log2_attune_impl(token: Token, src: &[f32], dst: &mut [f32]) {
     let (sc, st) = f32x8::partition_slice_t(token, src);
     let (dc, dt) = f32x8::partition_slice_mut_t(token, dst);
     for (s, d) in sc.iter().zip(dc.iter_mut()) {
-        l::try_log2_f32x8_with::<LC, _>(token, f32x8::load_t(token, s))
+        f32x8::load_t(token, s)
+            .try_log2_with::<LC>()
             .unwrap()
             .store(d);
     }
     for (&x, y) in st.iter().zip(dt.iter_mut()) {
-        *y = l::try_log2_with_token::<LC, _>(token, x).unwrap();
+        *y = Logf::<LC>::log2_with_token(token, x).unwrap();
     }
 }
 
@@ -101,7 +109,7 @@ fn bench(c: &mut Criterion) {
             b.iter(|| attuned!(pow_attune_impl(black_box(&src), &mut dst, black_box(2.4))))
         });
         g.bench_function("pow_slice", |b| {
-            b.iter(|| p::try_powf_slice_with::<PA>(black_box(&src), &mut dst, black_box(2.4)).unwrap())
+            b.iter(|| Powf::<PA>::slice(black_box(&src), &mut dst, black_box(2.4)).unwrap())
         });
         g.bench_function("exp2_array8", |b| {
             b.iter(|| exp2_array8(black_box(&src), &mut dst))
@@ -110,7 +118,7 @@ fn bench(c: &mut Criterion) {
             b.iter(|| attuned!(exp2_attune_impl(black_box(&src), &mut dst)))
         });
         g.bench_function("exp2_slice", |b| {
-            b.iter(|| e::try_exp2_slice_with::<EA>(black_box(&src), &mut dst).unwrap())
+            b.iter(|| Expf::<EA>::exp2_slice(black_box(&src), &mut dst).unwrap())
         });
         g.bench_function("log2_array8", |b| {
             b.iter(|| log2_array8(black_box(&src), &mut dst))
@@ -119,7 +127,7 @@ fn bench(c: &mut Criterion) {
             b.iter(|| attuned!(log2_attune_impl(black_box(&src), &mut dst)))
         });
         g.bench_function("log2_slice", |b| {
-            b.iter(|| l::try_log2_slice_with::<LA>(black_box(&src), &mut dst).unwrap())
+            b.iter(|| Logf::<LA>::log2_slice(black_box(&src), &mut dst).unwrap())
         });
         g.finish();
     }

@@ -6,449 +6,381 @@
 # impls omitted; re-export duplicates annotated `[also: path]`.
 # DO NOT EDIT BY HAND — commit regenerated changes with the code.
 #
-# files: magemath.txt 417 lines (supported surface) | magemath.features.txt 17 added (features: avx512,std,w512) | magemath.internal.txt 77 lines (77 hidden + 0 excluded-feature)
+# files: magemath.txt 348 lines (supported surface) | magemath.features.txt 6 added (features: avx512,std,w512) | magemath.internal.txt 47 lines (47 hidden + 0 excluded-feature)
 
 ## summary
 #
-#   pub modules                                 9
-#   pub types (struct/enum/trait/alias)        72
-#   pub consts/statics                        108
-#   free functions                             82
-#   struct fields                              30
-#   enum variants                              64
-#   trait roster entries (type × trait)       277
-#   auto-trait-complete types                  52
-#   auto-trait exceptions                       4
+#   pub modules                                 5
+#   pub types (struct/enum/trait/alias)        30
+#   pub consts/statics                         98
+#   free functions                             16
+#   inherent methods                          128
+#   struct fields                              10
+#   enum variants                              29
+#   trait roster entries (type × trait)       148
+#   auto-trait-complete types                  27
+#   auto-trait exceptions                       1
 #
 # per-module pub lines:
-#   (root)                           93
-#   cbrtf                            54
-#   expf                             63
-#   logf                             83
-#   powf                             72
+#   (root)                          141
+#   cbrtf                            28
+#   expf                             43
+#   logf                             73
+#   powf                             31
 
-## items (356 lines)
+## items (316 lines)
 
 pub mod magemath
 pub mod cbrtf
-pub mod cbrtf::presets
-#[non_exhaustive] pub enum cbrtf::CbrtfDomain
-pub cbrtf::CbrtfDomain::Bounded
-pub cbrtf::CbrtfDomain::Full
 #[non_exhaustive] pub enum cbrtf::CbrtfErrorKind
 pub cbrtf::CbrtfErrorKind::InvalidInput
 pub cbrtf::CbrtfErrorKind::UnsupportedOptions
 pub cbrtf::CbrtfErrorKind::UnsupportedWidth
-#[non_exhaustive] pub enum cbrtf::CbrtfExecution
-pub cbrtf::CbrtfExecution::Automatic
-pub cbrtf::CbrtfExecution::Caller
-#[non_exhaustive] pub enum cbrtf::CbrtfPortability
-pub cbrtf::CbrtfPortability::BackendDependent
-pub cbrtf::CbrtfPortability::BitExact
 #[non_exhaustive] pub enum cbrtf::CbrtfPrecision
 pub cbrtf::CbrtfPrecision::Lowp
 pub cbrtf::CbrtfPrecision::Midp
-#[non_exhaustive] pub enum cbrtf::CbrtfValidation
-pub cbrtf::CbrtfValidation::AssumeValid
-pub cbrtf::CbrtfValidation::Checked
+pub struct cbrtf::Cbrtf<const CFG: u128>
+pub fn cbrtf::Cbrtf<CFG>::array<const N: usize>([f32; N]) -> core::result::Result<[f32; N], cbrtf::CbrtfError>
+pub fn cbrtf::Cbrtf<CFG>::scalar(f32) -> core::result::Result<f32, cbrtf::CbrtfError>
+pub fn cbrtf::Cbrtf<CFG>::scalar_infallible(f32) -> f32
+pub fn cbrtf::Cbrtf<CFG>::scalar_with_token<T: magetypes::simd::backends::convert::F32x4Convert>(T, f32) -> core::result::Result<f32, cbrtf::CbrtfError>
+pub fn cbrtf::Cbrtf<CFG>::simd<V: SimdVector>(V) -> core::result::Result<V, cbrtf::CbrtfError>
+pub fn cbrtf::Cbrtf<CFG>::slice(&[f32], &mut [f32]) -> core::result::Result<(), SliceError<cbrtf::CbrtfErrorKind>>
+pub fn cbrtf::Cbrtf<CFG>::slice_with_token(impl archmage::tokens::IntoConcreteToken, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<cbrtf::CbrtfErrorKind>>
 pub struct cbrtf::CbrtfError
 pub cbrtf::CbrtfError::kind: cbrtf::CbrtfErrorKind
 pub cbrtf::CbrtfError::lane_mask: u16
-#[non_exhaustive] pub struct cbrtf::CbrtfOptions
-pub cbrtf::CbrtfOptions::domain: cbrtf::CbrtfDomain
-pub cbrtf::CbrtfOptions::execution: Execution
-pub cbrtf::CbrtfOptions::portability: Portability
-pub cbrtf::CbrtfOptions::precision: cbrtf::CbrtfPrecision
-pub cbrtf::CbrtfOptions::validation: Validation
-pub const cbrtf::CbrtfOptions::BACKEND_MIDP: Self
-pub const cbrtf::CbrtfOptions::PORTABLE_LOWP: Self
-pub const cbrtf::CbrtfOptions::PORTABLE_LOWP_FULL: Self
-pub const cbrtf::CbrtfOptions::PORTABLE_MIDP: Self
-pub const cbrtf::CbrtfOptions::PORTABLE_MIDP_FULL: Self
-pub const cbrtf::CbrtfOptions::UNCHECKED_LOWP: Self
-pub const cbrtf::CbrtfOptions::UNCHECKED_MIDP: Self
-pub const fn cbrtf::CbrtfOptions::bits(self) -> u32
+pub struct cbrtf::CbrtfOptions
+pub const fn cbrtf::CbrtfOptions::backend_dependent(self) -> Self
+pub const fn cbrtf::CbrtfOptions::bit_exact(self) -> Self
+pub const fn cbrtf::CbrtfOptions::bits(self) -> u128
+pub const fn cbrtf::CbrtfOptions::caller(self) -> Self
+pub const fn cbrtf::CbrtfOptions::checked(self) -> Self
+pub const fn cbrtf::CbrtfOptions::elides_denorm_check(&self) -> bool
+pub const fn cbrtf::CbrtfOptions::execution(self, Execution) -> Self
+pub const fn cbrtf::CbrtfOptions::from_bits(u128) -> core::option::Option<Self>
+pub const fn cbrtf::CbrtfOptions::full_domain(self) -> Self
+pub const fn cbrtf::CbrtfOptions::input_range(self, f32, f32) -> Self
+pub const fn cbrtf::CbrtfOptions::is_infallible(&self) -> bool
+pub const fn cbrtf::CbrtfOptions::is_valid(&self) -> bool
+pub const fn cbrtf::CbrtfOptions::lowp(self) -> Self
+pub const fn cbrtf::CbrtfOptions::midp(self) -> Self
 pub const fn cbrtf::CbrtfOptions::new() -> Self
-pub const fn cbrtf::CbrtfOptions::with_domain(self, cbrtf::CbrtfDomain) -> Self
-pub const fn cbrtf::CbrtfOptions::with_execution(self, Execution) -> Self
-pub const fn cbrtf::CbrtfOptions::with_portability(self, Portability) -> Self
-pub const fn cbrtf::CbrtfOptions::with_precision(self, cbrtf::CbrtfPrecision) -> Self
-pub const fn cbrtf::CbrtfOptions::with_validation(self, Validation) -> Self
-pub struct cbrtf::CbrtfSpec
-pub const fn cbrtf::CbrtfSpec::domain(self, cbrtf::CbrtfDomain) -> Self
-pub const fn cbrtf::CbrtfSpec::execution(self, Execution) -> Self
-pub const fn cbrtf::CbrtfSpec::from_options(cbrtf::CbrtfOptions) -> Self
-pub const fn cbrtf::CbrtfSpec::full_domain(self) -> Self
-pub const fn cbrtf::CbrtfSpec::input_range(self, f32, f32) -> Self
-pub const fn cbrtf::CbrtfSpec::new() -> Self
-pub const fn cbrtf::CbrtfSpec::portability(self, Portability) -> Self
-pub const fn cbrtf::CbrtfSpec::precision(self, cbrtf::CbrtfPrecision) -> Self
-pub const fn cbrtf::CbrtfSpec::validate(&self)
-pub const fn cbrtf::CbrtfSpec::validation(self, Validation) -> Self
-pub trait cbrtf::CbrtfProfile: 'static
-pub const cbrtf::CbrtfProfile::SPEC: cbrtf::CbrtfSpec
+pub const fn cbrtf::CbrtfOptions::portability(self, Portability) -> Self
+pub const fn cbrtf::CbrtfOptions::precision(self, cbrtf::CbrtfPrecision) -> Self
+pub const fn cbrtf::CbrtfOptions::runtime(self) -> cbrtf::CbrtfRuntime
+pub const fn cbrtf::CbrtfOptions::unchecked(self) -> Self
+pub const fn cbrtf::CbrtfOptions::upgrade(self) -> Self
+pub const fn cbrtf::CbrtfOptions::validate(&self)
+pub const fn cbrtf::CbrtfOptions::validation(self, Validation) -> Self
+pub struct cbrtf::CbrtfRuntime
+pub fn cbrtf::CbrtfRuntime::array<const N: usize>(self, [f32; N]) -> core::result::Result<[f32; N], cbrtf::CbrtfError>
+pub const fn cbrtf::CbrtfRuntime::options(self) -> cbrtf::CbrtfOptions
+pub fn cbrtf::CbrtfRuntime::scalar(self, f32) -> core::result::Result<f32, cbrtf::CbrtfError>
+pub fn cbrtf::CbrtfRuntime::scalar_with_token<T: magetypes::simd::backends::convert::F32x4Convert>(self, T, f32) -> core::result::Result<f32, cbrtf::CbrtfError>
+pub fn cbrtf::CbrtfRuntime::simd<V: SimdVector>(self, V) -> core::result::Result<V, cbrtf::CbrtfError>
+pub fn cbrtf::CbrtfRuntime::slice(self, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<cbrtf::CbrtfErrorKind>>
+pub fn cbrtf::CbrtfRuntime::slice_with_token(self, impl archmage::tokens::IntoConcreteToken, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<cbrtf::CbrtfErrorKind>>
 pub fn cbrtf::try_cbrt(f32) -> core::result::Result<f32, cbrtf::CbrtfError>
-pub fn cbrtf::try_cbrt_array_runtime<const N: usize>([f32; N], cbrtf::CbrtfOptions) -> core::result::Result<[f32; N], cbrtf::CbrtfError>
-pub fn cbrtf::try_cbrt_array_with<P: cbrtf::CbrtfProfile, const N: usize>([f32; N]) -> core::result::Result<[f32; N], cbrtf::CbrtfError>
-pub fn cbrtf::try_cbrt_f32x4_with<P: cbrtf::CbrtfProfile, T: magetypes::simd::backends::convert::F32x4Convert>(T, magetypes::simd::generic::generated::f32x4_impl::f32x4<T>) -> core::result::Result<magetypes::simd::generic::generated::f32x4_impl::f32x4<T>, cbrtf::CbrtfError>
-pub fn cbrtf::try_cbrt_f32x8_with<P: cbrtf::CbrtfProfile, T: magetypes::simd::backends::convert::F32x8Convert>(T, magetypes::simd::generic::generated::f32x8_impl::f32x8<T>) -> core::result::Result<magetypes::simd::generic::generated::f32x8_impl::f32x8<T>, cbrtf::CbrtfError>
-pub fn cbrtf::try_cbrt_runtime(f32, cbrtf::CbrtfOptions) -> core::result::Result<f32, cbrtf::CbrtfError>
-pub fn cbrtf::try_cbrt_slice_with<P: cbrtf::CbrtfProfile>(&[f32], &mut [f32]) -> core::result::Result<(), SliceError<cbrtf::CbrtfErrorKind>>
-pub fn cbrtf::try_cbrt_slice_with_token<P: cbrtf::CbrtfProfile, T: archmage::tokens::IntoConcreteToken>(T, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<cbrtf::CbrtfErrorKind>>
-pub fn cbrtf::try_cbrt_with<P: cbrtf::CbrtfProfile>(f32) -> core::result::Result<f32, cbrtf::CbrtfError>
-pub fn cbrtf::try_cbrt_with_token<P: cbrtf::CbrtfProfile, T: magetypes::simd::backends::convert::F32x4Convert>(T, f32) -> core::result::Result<f32, cbrtf::CbrtfError>
+pub fn cbrtf::try_cbrt_slice(&[f32], &mut [f32]) -> core::result::Result<(), SliceError<cbrtf::CbrtfErrorKind>>
 pub mod expf
-pub mod expf::presets
-pub struct expf::presets::Lowp [also: cbrtf::presets, logf::presets]
-pub struct expf::presets::LowpFull [also: cbrtf::presets]
-pub struct expf::presets::Midp [also: cbrtf::presets, logf::presets]
-pub struct expf::presets::MidpFull [also: cbrtf::presets]
-#[non_exhaustive] pub enum expf::ExpfDomain
-pub expf::ExpfDomain::Bounded
-pub expf::ExpfDomain::Full
 #[non_exhaustive] pub enum expf::ExpfErrorKind
 pub expf::ExpfErrorKind::InvalidInput
 pub expf::ExpfErrorKind::UnsupportedOptions
 pub expf::ExpfErrorKind::UnsupportedWidth
-#[non_exhaustive] pub enum expf::ExpfExecution
-pub expf::ExpfExecution::Automatic
-pub expf::ExpfExecution::Caller
-#[non_exhaustive] pub enum expf::ExpfPortability
-pub expf::ExpfPortability::BackendDependent
-pub expf::ExpfPortability::BitExact
 #[non_exhaustive] pub enum expf::ExpfPrecision
 pub expf::ExpfPrecision::Lowp
 pub expf::ExpfPrecision::Midp
-#[non_exhaustive] pub enum expf::ExpfValidation
-pub expf::ExpfValidation::AssumeValid
-pub expf::ExpfValidation::Checked
+pub struct expf::Expf<const CFG: u128>
+pub fn expf::Expf<CFG>::exp(f32) -> core::result::Result<f32, expf::ExpfError>
+pub fn expf::Expf<CFG>::exp2(f32) -> core::result::Result<f32, expf::ExpfError>
+pub fn expf::Expf<CFG>::exp2_array<const N: usize>([f32; N]) -> core::result::Result<[f32; N], expf::ExpfError>
+pub fn expf::Expf<CFG>::exp2_infallible(f32) -> f32
+pub fn expf::Expf<CFG>::exp2_simd<V: SimdVector>(V) -> core::result::Result<V, expf::ExpfError>
+pub fn expf::Expf<CFG>::exp2_slice(&[f32], &mut [f32]) -> core::result::Result<(), SliceError<expf::ExpfErrorKind>>
+pub fn expf::Expf<CFG>::exp2_slice_with_token(impl archmage::tokens::IntoConcreteToken, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<expf::ExpfErrorKind>>
+pub fn expf::Expf<CFG>::exp2_with_token<T: magetypes::simd::backends::convert::F32x4Convert>(T, f32) -> core::result::Result<f32, expf::ExpfError>
+pub fn expf::Expf<CFG>::exp_array<const N: usize>([f32; N]) -> core::result::Result<[f32; N], expf::ExpfError>
+pub fn expf::Expf<CFG>::exp_infallible(f32) -> f32
+pub fn expf::Expf<CFG>::exp_simd<V: SimdVector>(V) -> core::result::Result<V, expf::ExpfError>
+pub fn expf::Expf<CFG>::exp_slice(&[f32], &mut [f32]) -> core::result::Result<(), SliceError<expf::ExpfErrorKind>>
+pub fn expf::Expf<CFG>::exp_slice_with_token(impl archmage::tokens::IntoConcreteToken, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<expf::ExpfErrorKind>>
+pub fn expf::Expf<CFG>::exp_with_token<T: magetypes::simd::backends::convert::F32x4Convert>(T, f32) -> core::result::Result<f32, expf::ExpfError>
 pub struct expf::ExpfError
 pub expf::ExpfError::kind: expf::ExpfErrorKind
 pub expf::ExpfError::lane_mask: u16
-#[non_exhaustive] pub struct expf::ExpfOptions
-pub expf::ExpfOptions::domain: expf::ExpfDomain
-pub expf::ExpfOptions::execution: Execution
-pub expf::ExpfOptions::portability: Portability
-pub expf::ExpfOptions::precision: expf::ExpfPrecision
-pub expf::ExpfOptions::validation: Validation
-pub const expf::ExpfOptions::BACKEND_MIDP: Self
-pub const expf::ExpfOptions::PORTABLE_LOWP: Self
-pub const expf::ExpfOptions::PORTABLE_MIDP: Self
-pub const expf::ExpfOptions::PORTABLE_MIDP_FULL: Self
-pub const expf::ExpfOptions::UNCHECKED_LOWP: Self
-pub const expf::ExpfOptions::UNCHECKED_MIDP: Self
-pub const fn expf::ExpfOptions::bits(self) -> u32
+pub struct expf::ExpfOptions
+pub const fn expf::ExpfOptions::backend_dependent(self) -> Self
+pub const fn expf::ExpfOptions::bit_exact(self) -> Self
+pub const fn expf::ExpfOptions::bits(self) -> u128
+pub const fn expf::ExpfOptions::caller(self) -> Self
+pub const fn expf::ExpfOptions::checked(self) -> Self
+pub const fn expf::ExpfOptions::elides_clamp(&self) -> bool
+pub const fn expf::ExpfOptions::elides_exp_clamp(&self) -> bool
+pub const fn expf::ExpfOptions::execution(self, Execution) -> Self
+pub const fn expf::ExpfOptions::from_bits(u128) -> core::option::Option<Self>
+pub const fn expf::ExpfOptions::full_domain(self) -> Self
+pub const fn expf::ExpfOptions::input_range(self, f32, f32) -> Self
+pub const fn expf::ExpfOptions::is_infallible(&self) -> bool
+pub const fn expf::ExpfOptions::is_valid(&self) -> bool
+pub const fn expf::ExpfOptions::lowp(self) -> Self
+pub const fn expf::ExpfOptions::midp(self) -> Self
 pub const fn expf::ExpfOptions::new() -> Self
-pub const fn expf::ExpfOptions::with_domain(self, expf::ExpfDomain) -> Self
-pub const fn expf::ExpfOptions::with_execution(self, Execution) -> Self
-pub const fn expf::ExpfOptions::with_portability(self, Portability) -> Self
-pub const fn expf::ExpfOptions::with_precision(self, expf::ExpfPrecision) -> Self
-pub const fn expf::ExpfOptions::with_validation(self, Validation) -> Self
-pub struct expf::ExpfSpec
-pub const fn expf::ExpfSpec::domain(self, expf::ExpfDomain) -> Self
-pub const fn expf::ExpfSpec::elides_clamp(&self) -> bool
-pub const fn expf::ExpfSpec::elides_exp_clamp(&self) -> bool
-pub const fn expf::ExpfSpec::execution(self, Execution) -> Self
-pub const fn expf::ExpfSpec::from_options(expf::ExpfOptions) -> Self
-pub const fn expf::ExpfSpec::full_domain(self) -> Self
-pub const fn expf::ExpfSpec::input_range(self, f32, f32) -> Self
-pub const fn expf::ExpfSpec::new() -> Self
-pub const fn expf::ExpfSpec::portability(self, Portability) -> Self
-pub const fn expf::ExpfSpec::precision(self, expf::ExpfPrecision) -> Self
-pub const fn expf::ExpfSpec::validate(&self)
-pub const fn expf::ExpfSpec::validation(self, Validation) -> Self
-pub struct expf::Options<const BITS: u32> [also: cbrtf, logf, powf]
-pub trait expf::ExpfProfile: 'static
-pub const expf::ExpfProfile::SPEC: expf::ExpfSpec
+pub const fn expf::ExpfOptions::portability(self, Portability) -> Self
+pub const fn expf::ExpfOptions::precision(self, expf::ExpfPrecision) -> Self
+pub const fn expf::ExpfOptions::runtime(self) -> expf::ExpfRuntime
+pub const fn expf::ExpfOptions::unchecked(self) -> Self
+pub const fn expf::ExpfOptions::upgrade(self) -> Self
+pub const fn expf::ExpfOptions::validate(&self)
+pub const fn expf::ExpfOptions::validation(self, Validation) -> Self
+pub struct expf::ExpfRuntime
+pub fn expf::ExpfRuntime::exp(self, f32) -> core::result::Result<f32, expf::ExpfError>
+pub fn expf::ExpfRuntime::exp2(self, f32) -> core::result::Result<f32, expf::ExpfError>
+pub fn expf::ExpfRuntime::exp2_array<const N: usize>(self, [f32; N]) -> core::result::Result<[f32; N], expf::ExpfError>
+pub fn expf::ExpfRuntime::exp2_simd<V: SimdVector>(self, V) -> core::result::Result<V, expf::ExpfError>
+pub fn expf::ExpfRuntime::exp2_slice(self, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<expf::ExpfErrorKind>>
+pub fn expf::ExpfRuntime::exp2_slice_with_token(self, impl archmage::tokens::IntoConcreteToken, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<expf::ExpfErrorKind>>
+pub fn expf::ExpfRuntime::exp2_with_token<T: magetypes::simd::backends::convert::F32x4Convert>(self, T, f32) -> core::result::Result<f32, expf::ExpfError>
+pub fn expf::ExpfRuntime::exp_array<const N: usize>(self, [f32; N]) -> core::result::Result<[f32; N], expf::ExpfError>
+pub fn expf::ExpfRuntime::exp_simd<V: SimdVector>(self, V) -> core::result::Result<V, expf::ExpfError>
+pub fn expf::ExpfRuntime::exp_slice(self, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<expf::ExpfErrorKind>>
+pub fn expf::ExpfRuntime::exp_slice_with_token(self, impl archmage::tokens::IntoConcreteToken, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<expf::ExpfErrorKind>>
+pub fn expf::ExpfRuntime::exp_with_token<T: magetypes::simd::backends::convert::F32x4Convert>(self, T, f32) -> core::result::Result<f32, expf::ExpfError>
+pub const fn expf::ExpfRuntime::options(self) -> expf::ExpfOptions
 pub fn expf::try_exp(f32) -> core::result::Result<f32, expf::ExpfError>
 pub fn expf::try_exp2(f32) -> core::result::Result<f32, expf::ExpfError>
-pub fn expf::try_exp2_array_runtime<const N: usize>([f32; N], expf::ExpfOptions) -> core::result::Result<[f32; N], expf::ExpfError>
-pub fn expf::try_exp2_array_with<P: expf::ExpfProfile, const N: usize>([f32; N]) -> core::result::Result<[f32; N], expf::ExpfError>
-pub fn expf::try_exp2_f32x4_with<P: expf::ExpfProfile, T: magetypes::simd::backends::convert::F32x4Convert>(T, magetypes::simd::generic::generated::f32x4_impl::f32x4<T>) -> core::result::Result<magetypes::simd::generic::generated::f32x4_impl::f32x4<T>, expf::ExpfError>
-pub fn expf::try_exp2_f32x8_with<P: expf::ExpfProfile, T: magetypes::simd::backends::convert::F32x8Convert>(T, magetypes::simd::generic::generated::f32x8_impl::f32x8<T>) -> core::result::Result<magetypes::simd::generic::generated::f32x8_impl::f32x8<T>, expf::ExpfError>
-pub fn expf::try_exp2_runtime(f32, expf::ExpfOptions) -> core::result::Result<f32, expf::ExpfError>
-pub fn expf::try_exp2_slice_with<P: expf::ExpfProfile>(&[f32], &mut [f32]) -> core::result::Result<(), SliceError<expf::ExpfErrorKind>>
-pub fn expf::try_exp2_slice_with_token<P: expf::ExpfProfile, T: archmage::tokens::IntoConcreteToken>(T, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<expf::ExpfErrorKind>>
-pub fn expf::try_exp2_with<P: expf::ExpfProfile>(f32) -> core::result::Result<f32, expf::ExpfError>
-pub fn expf::try_exp2_with_token<P: expf::ExpfProfile, T: magetypes::simd::backends::convert::F32x4Convert>(T, f32) -> core::result::Result<f32, expf::ExpfError>
-pub fn expf::try_exp_array_runtime<const N: usize>([f32; N], expf::ExpfOptions) -> core::result::Result<[f32; N], expf::ExpfError>
-pub fn expf::try_exp_array_with<P: expf::ExpfProfile, const N: usize>([f32; N]) -> core::result::Result<[f32; N], expf::ExpfError>
-pub fn expf::try_exp_f32x4_with<P: expf::ExpfProfile, T: magetypes::simd::backends::convert::F32x4Convert>(T, magetypes::simd::generic::generated::f32x4_impl::f32x4<T>) -> core::result::Result<magetypes::simd::generic::generated::f32x4_impl::f32x4<T>, expf::ExpfError>
-pub fn expf::try_exp_f32x8_with<P: expf::ExpfProfile, T: magetypes::simd::backends::convert::F32x8Convert>(T, magetypes::simd::generic::generated::f32x8_impl::f32x8<T>) -> core::result::Result<magetypes::simd::generic::generated::f32x8_impl::f32x8<T>, expf::ExpfError>
-pub fn expf::try_exp_runtime(f32, expf::ExpfOptions) -> core::result::Result<f32, expf::ExpfError>
-pub fn expf::try_exp_slice_with<P: expf::ExpfProfile>(&[f32], &mut [f32]) -> core::result::Result<(), SliceError<expf::ExpfErrorKind>>
-pub fn expf::try_exp_slice_with_token<P: expf::ExpfProfile, T: archmage::tokens::IntoConcreteToken>(T, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<expf::ExpfErrorKind>>
-pub fn expf::try_exp_with<P: expf::ExpfProfile>(f32) -> core::result::Result<f32, expf::ExpfError>
-pub fn expf::try_exp_with_token<P: expf::ExpfProfile, T: magetypes::simd::backends::convert::F32x4Convert>(T, f32) -> core::result::Result<f32, expf::ExpfError>
+pub fn expf::try_exp2_slice(&[f32], &mut [f32]) -> core::result::Result<(), SliceError<expf::ExpfErrorKind>>
+pub fn expf::try_exp_slice(&[f32], &mut [f32]) -> core::result::Result<(), SliceError<expf::ExpfErrorKind>>
 pub mod logf
-pub mod logf::presets
-pub struct logf::presets::LowpSpecials
-pub struct logf::presets::MidpSpecials
-#[non_exhaustive] pub enum logf::LogfDomain
-pub logf::LogfDomain::Positive
-pub logf::LogfDomain::Specials
 #[non_exhaustive] pub enum logf::LogfErrorKind
 pub logf::LogfErrorKind::InvalidInput
 pub logf::LogfErrorKind::UnsupportedOptions
 pub logf::LogfErrorKind::UnsupportedWidth
-#[non_exhaustive] pub enum logf::LogfExecution
-pub logf::LogfExecution::Automatic
-pub logf::LogfExecution::Caller
-#[non_exhaustive] pub enum logf::LogfPortability
-pub logf::LogfPortability::BackendDependent
-pub logf::LogfPortability::BitExact
 #[non_exhaustive] pub enum logf::LogfPrecision
 pub logf::LogfPrecision::Lowp
 pub logf::LogfPrecision::Midp
-#[non_exhaustive] pub enum logf::LogfValidation
-pub logf::LogfValidation::AssumeValid
-pub logf::LogfValidation::Checked
+pub struct logf::Logf<const CFG: u128>
+pub fn logf::Logf<CFG>::ln(f32) -> core::result::Result<f32, logf::LogfError>
+pub fn logf::Logf<CFG>::ln_array<const N: usize>([f32; N]) -> core::result::Result<[f32; N], logf::LogfError>
+pub fn logf::Logf<CFG>::ln_infallible(f32) -> f32
+pub fn logf::Logf<CFG>::ln_simd<V: SimdVector>(V) -> core::result::Result<V, logf::LogfError>
+pub fn logf::Logf<CFG>::ln_slice(&[f32], &mut [f32]) -> core::result::Result<(), SliceError<logf::LogfErrorKind>>
+pub fn logf::Logf<CFG>::ln_slice_with_token(impl archmage::tokens::IntoConcreteToken, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<logf::LogfErrorKind>>
+pub fn logf::Logf<CFG>::ln_with_token<T: magetypes::simd::backends::convert::F32x4Convert>(T, f32) -> core::result::Result<f32, logf::LogfError>
+pub fn logf::Logf<CFG>::log10(f32) -> core::result::Result<f32, logf::LogfError>
+pub fn logf::Logf<CFG>::log10_array<const N: usize>([f32; N]) -> core::result::Result<[f32; N], logf::LogfError>
+pub fn logf::Logf<CFG>::log10_infallible(f32) -> f32
+pub fn logf::Logf<CFG>::log10_simd<V: SimdVector>(V) -> core::result::Result<V, logf::LogfError>
+pub fn logf::Logf<CFG>::log10_slice(&[f32], &mut [f32]) -> core::result::Result<(), SliceError<logf::LogfErrorKind>>
+pub fn logf::Logf<CFG>::log10_slice_with_token(impl archmage::tokens::IntoConcreteToken, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<logf::LogfErrorKind>>
+pub fn logf::Logf<CFG>::log10_with_token<T: magetypes::simd::backends::convert::F32x4Convert>(T, f32) -> core::result::Result<f32, logf::LogfError>
+pub fn logf::Logf<CFG>::log1p(f32) -> core::result::Result<f32, logf::LogfError>
+pub fn logf::Logf<CFG>::log1p_array<const N: usize>([f32; N]) -> core::result::Result<[f32; N], logf::LogfError>
+pub fn logf::Logf<CFG>::log1p_infallible(f32) -> f32
+pub fn logf::Logf<CFG>::log1p_simd<V: SimdVector>(V) -> core::result::Result<V, logf::LogfError>
+pub fn logf::Logf<CFG>::log1p_slice(&[f32], &mut [f32]) -> core::result::Result<(), SliceError<logf::LogfErrorKind>>
+pub fn logf::Logf<CFG>::log1p_slice_with_token(impl archmage::tokens::IntoConcreteToken, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<logf::LogfErrorKind>>
+pub fn logf::Logf<CFG>::log1p_with_token<T: magetypes::simd::backends::convert::F32x4Convert>(T, f32) -> core::result::Result<f32, logf::LogfError>
+pub fn logf::Logf<CFG>::log2(f32) -> core::result::Result<f32, logf::LogfError>
+pub fn logf::Logf<CFG>::log2_array<const N: usize>([f32; N]) -> core::result::Result<[f32; N], logf::LogfError>
+pub fn logf::Logf<CFG>::log2_infallible(f32) -> f32
+pub fn logf::Logf<CFG>::log2_simd<V: SimdVector>(V) -> core::result::Result<V, logf::LogfError>
+pub fn logf::Logf<CFG>::log2_slice(&[f32], &mut [f32]) -> core::result::Result<(), SliceError<logf::LogfErrorKind>>
+pub fn logf::Logf<CFG>::log2_slice_with_token(impl archmage::tokens::IntoConcreteToken, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<logf::LogfErrorKind>>
+pub fn logf::Logf<CFG>::log2_with_token<T: magetypes::simd::backends::convert::F32x4Convert>(T, f32) -> core::result::Result<f32, logf::LogfError>
 pub struct logf::LogfError
 pub logf::LogfError::kind: logf::LogfErrorKind
 pub logf::LogfError::lane_mask: u16
-#[non_exhaustive] pub struct logf::LogfOptions
-pub logf::LogfOptions::domain: logf::LogfDomain
-pub logf::LogfOptions::execution: Execution
-pub logf::LogfOptions::portability: Portability
-pub logf::LogfOptions::precision: logf::LogfPrecision
-pub logf::LogfOptions::validation: Validation
-pub const logf::LogfOptions::BACKEND_MIDP: Self
-pub const logf::LogfOptions::PORTABLE_LOWP: Self
-pub const logf::LogfOptions::PORTABLE_MIDP: Self
-pub const logf::LogfOptions::PORTABLE_MIDP_SPECIALS: Self
-pub const logf::LogfOptions::UNCHECKED_LOWP: Self
-pub const logf::LogfOptions::UNCHECKED_MIDP: Self
-pub const fn logf::LogfOptions::bits(self) -> u32
+pub struct logf::LogfOptions
+pub const fn logf::LogfOptions::backend_dependent(self) -> Self
+pub const fn logf::LogfOptions::bit_exact(self) -> Self
+pub const fn logf::LogfOptions::bits(self) -> u128
+pub const fn logf::LogfOptions::caller(self) -> Self
+pub const fn logf::LogfOptions::checked(self) -> Self
+pub const fn logf::LogfOptions::execution(self, Execution) -> Self
+pub const fn logf::LogfOptions::from_bits(u128) -> core::option::Option<Self>
+pub const fn logf::LogfOptions::full_domain(self) -> Self
+pub const fn logf::LogfOptions::input_range(self, f32, f32) -> Self
+pub const fn logf::LogfOptions::is_infallible(&self) -> bool
+pub const fn logf::LogfOptions::is_valid(&self) -> bool
+pub const fn logf::LogfOptions::lowp(self) -> Self
+pub const fn logf::LogfOptions::midp(self) -> Self
 pub const fn logf::LogfOptions::new() -> Self
-pub const fn logf::LogfOptions::with_domain(self, logf::LogfDomain) -> Self
-pub const fn logf::LogfOptions::with_execution(self, Execution) -> Self
-pub const fn logf::LogfOptions::with_portability(self, Portability) -> Self
-pub const fn logf::LogfOptions::with_precision(self, logf::LogfPrecision) -> Self
-pub const fn logf::LogfOptions::with_validation(self, Validation) -> Self
-pub struct logf::LogfSpec
-pub const fn logf::LogfSpec::domain(self, logf::LogfDomain) -> Self
-pub const fn logf::LogfSpec::execution(self, Execution) -> Self
-pub const fn logf::LogfSpec::from_options(logf::LogfOptions) -> Self
-pub const fn logf::LogfSpec::input_range(self, f32, f32) -> Self
-pub const fn logf::LogfSpec::new() -> Self
-pub const fn logf::LogfSpec::portability(self, Portability) -> Self
-pub const fn logf::LogfSpec::precision(self, logf::LogfPrecision) -> Self
-pub const fn logf::LogfSpec::specials_domain(self) -> Self
-pub const fn logf::LogfSpec::validate(&self)
-pub const fn logf::LogfSpec::validation(self, Validation) -> Self
-pub trait logf::LogfProfile: 'static
-pub const logf::LogfProfile::SPEC: logf::LogfSpec
+pub const fn logf::LogfOptions::portability(self, Portability) -> Self
+pub const fn logf::LogfOptions::precision(self, logf::LogfPrecision) -> Self
+pub const fn logf::LogfOptions::runtime(self) -> logf::LogfRuntime
+pub const fn logf::LogfOptions::unchecked(self) -> Self
+pub const fn logf::LogfOptions::upgrade(self) -> Self
+pub const fn logf::LogfOptions::validate(&self)
+pub const fn logf::LogfOptions::validation(self, Validation) -> Self
+pub struct logf::LogfRuntime
+pub fn logf::LogfRuntime::ln(self, f32) -> core::result::Result<f32, logf::LogfError>
+pub fn logf::LogfRuntime::ln_array<const N: usize>(self, [f32; N]) -> core::result::Result<[f32; N], logf::LogfError>
+pub fn logf::LogfRuntime::ln_simd<V: SimdVector>(self, V) -> core::result::Result<V, logf::LogfError>
+pub fn logf::LogfRuntime::ln_slice(self, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<logf::LogfErrorKind>>
+pub fn logf::LogfRuntime::ln_slice_with_token(self, impl archmage::tokens::IntoConcreteToken, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<logf::LogfErrorKind>>
+pub fn logf::LogfRuntime::ln_with_token<T: magetypes::simd::backends::convert::F32x4Convert>(self, T, f32) -> core::result::Result<f32, logf::LogfError>
+pub fn logf::LogfRuntime::log10(self, f32) -> core::result::Result<f32, logf::LogfError>
+pub fn logf::LogfRuntime::log10_array<const N: usize>(self, [f32; N]) -> core::result::Result<[f32; N], logf::LogfError>
+pub fn logf::LogfRuntime::log10_simd<V: SimdVector>(self, V) -> core::result::Result<V, logf::LogfError>
+pub fn logf::LogfRuntime::log10_slice(self, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<logf::LogfErrorKind>>
+pub fn logf::LogfRuntime::log10_slice_with_token(self, impl archmage::tokens::IntoConcreteToken, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<logf::LogfErrorKind>>
+pub fn logf::LogfRuntime::log10_with_token<T: magetypes::simd::backends::convert::F32x4Convert>(self, T, f32) -> core::result::Result<f32, logf::LogfError>
+pub fn logf::LogfRuntime::log1p(self, f32) -> core::result::Result<f32, logf::LogfError>
+pub fn logf::LogfRuntime::log1p_array<const N: usize>(self, [f32; N]) -> core::result::Result<[f32; N], logf::LogfError>
+pub fn logf::LogfRuntime::log1p_simd<V: SimdVector>(self, V) -> core::result::Result<V, logf::LogfError>
+pub fn logf::LogfRuntime::log1p_slice(self, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<logf::LogfErrorKind>>
+pub fn logf::LogfRuntime::log1p_slice_with_token(self, impl archmage::tokens::IntoConcreteToken, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<logf::LogfErrorKind>>
+pub fn logf::LogfRuntime::log1p_with_token<T: magetypes::simd::backends::convert::F32x4Convert>(self, T, f32) -> core::result::Result<f32, logf::LogfError>
+pub fn logf::LogfRuntime::log2(self, f32) -> core::result::Result<f32, logf::LogfError>
+pub fn logf::LogfRuntime::log2_array<const N: usize>(self, [f32; N]) -> core::result::Result<[f32; N], logf::LogfError>
+pub fn logf::LogfRuntime::log2_simd<V: SimdVector>(self, V) -> core::result::Result<V, logf::LogfError>
+pub fn logf::LogfRuntime::log2_slice(self, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<logf::LogfErrorKind>>
+pub fn logf::LogfRuntime::log2_slice_with_token(self, impl archmage::tokens::IntoConcreteToken, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<logf::LogfErrorKind>>
+pub fn logf::LogfRuntime::log2_with_token<T: magetypes::simd::backends::convert::F32x4Convert>(self, T, f32) -> core::result::Result<f32, logf::LogfError>
+pub const fn logf::LogfRuntime::options(self) -> logf::LogfOptions
 pub fn logf::try_ln(f32) -> core::result::Result<f32, logf::LogfError>
-pub fn logf::try_ln_array_runtime<const N: usize>([f32; N], logf::LogfOptions) -> core::result::Result<[f32; N], logf::LogfError>
-pub fn logf::try_ln_array_with<P: logf::LogfProfile, const N: usize>([f32; N]) -> core::result::Result<[f32; N], logf::LogfError>
-pub fn logf::try_ln_f32x4_with<P: logf::LogfProfile, T: magetypes::simd::backends::convert::F32x4Convert>(T, magetypes::simd::generic::generated::f32x4_impl::f32x4<T>) -> core::result::Result<magetypes::simd::generic::generated::f32x4_impl::f32x4<T>, logf::LogfError>
-pub fn logf::try_ln_f32x8_with<P: logf::LogfProfile, T: magetypes::simd::backends::convert::F32x8Convert>(T, magetypes::simd::generic::generated::f32x8_impl::f32x8<T>) -> core::result::Result<magetypes::simd::generic::generated::f32x8_impl::f32x8<T>, logf::LogfError>
-pub fn logf::try_ln_runtime(f32, logf::LogfOptions) -> core::result::Result<f32, logf::LogfError>
-pub fn logf::try_ln_slice_with<P: logf::LogfProfile>(&[f32], &mut [f32]) -> core::result::Result<(), SliceError<logf::LogfErrorKind>>
-pub fn logf::try_ln_slice_with_token<P: logf::LogfProfile, T: archmage::tokens::IntoConcreteToken>(T, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<logf::LogfErrorKind>>
-pub fn logf::try_ln_with<P: logf::LogfProfile>(f32) -> core::result::Result<f32, logf::LogfError>
-pub fn logf::try_ln_with_token<P: logf::LogfProfile, T: magetypes::simd::backends::convert::F32x4Convert>(T, f32) -> core::result::Result<f32, logf::LogfError>
+pub fn logf::try_ln_slice(&[f32], &mut [f32]) -> core::result::Result<(), SliceError<logf::LogfErrorKind>>
 pub fn logf::try_log10(f32) -> core::result::Result<f32, logf::LogfError>
-pub fn logf::try_log10_array_runtime<const N: usize>([f32; N], logf::LogfOptions) -> core::result::Result<[f32; N], logf::LogfError>
-pub fn logf::try_log10_array_with<P: logf::LogfProfile, const N: usize>([f32; N]) -> core::result::Result<[f32; N], logf::LogfError>
-pub fn logf::try_log10_f32x4_with<P: logf::LogfProfile, T: magetypes::simd::backends::convert::F32x4Convert>(T, magetypes::simd::generic::generated::f32x4_impl::f32x4<T>) -> core::result::Result<magetypes::simd::generic::generated::f32x4_impl::f32x4<T>, logf::LogfError>
-pub fn logf::try_log10_f32x8_with<P: logf::LogfProfile, T: magetypes::simd::backends::convert::F32x8Convert>(T, magetypes::simd::generic::generated::f32x8_impl::f32x8<T>) -> core::result::Result<magetypes::simd::generic::generated::f32x8_impl::f32x8<T>, logf::LogfError>
-pub fn logf::try_log10_runtime(f32, logf::LogfOptions) -> core::result::Result<f32, logf::LogfError>
-pub fn logf::try_log10_slice_with<P: logf::LogfProfile>(&[f32], &mut [f32]) -> core::result::Result<(), SliceError<logf::LogfErrorKind>>
-pub fn logf::try_log10_slice_with_token<P: logf::LogfProfile, T: archmage::tokens::IntoConcreteToken>(T, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<logf::LogfErrorKind>>
-pub fn logf::try_log10_with<P: logf::LogfProfile>(f32) -> core::result::Result<f32, logf::LogfError>
-pub fn logf::try_log10_with_token<P: logf::LogfProfile, T: magetypes::simd::backends::convert::F32x4Convert>(T, f32) -> core::result::Result<f32, logf::LogfError>
+pub fn logf::try_log10_slice(&[f32], &mut [f32]) -> core::result::Result<(), SliceError<logf::LogfErrorKind>>
 pub fn logf::try_log1p(f32) -> core::result::Result<f32, logf::LogfError>
-pub fn logf::try_log1p_array_runtime<const N: usize>([f32; N], logf::LogfOptions) -> core::result::Result<[f32; N], logf::LogfError>
-pub fn logf::try_log1p_array_with<P: logf::LogfProfile, const N: usize>([f32; N]) -> core::result::Result<[f32; N], logf::LogfError>
-pub fn logf::try_log1p_f32x4_with<P: logf::LogfProfile, T: magetypes::simd::backends::convert::F32x4Convert>(T, magetypes::simd::generic::generated::f32x4_impl::f32x4<T>) -> core::result::Result<magetypes::simd::generic::generated::f32x4_impl::f32x4<T>, logf::LogfError>
-pub fn logf::try_log1p_f32x8_with<P: logf::LogfProfile, T: magetypes::simd::backends::convert::F32x8Convert>(T, magetypes::simd::generic::generated::f32x8_impl::f32x8<T>) -> core::result::Result<magetypes::simd::generic::generated::f32x8_impl::f32x8<T>, logf::LogfError>
-pub fn logf::try_log1p_runtime(f32, logf::LogfOptions) -> core::result::Result<f32, logf::LogfError>
-pub fn logf::try_log1p_slice_with<P: logf::LogfProfile>(&[f32], &mut [f32]) -> core::result::Result<(), SliceError<logf::LogfErrorKind>>
-pub fn logf::try_log1p_slice_with_token<P: logf::LogfProfile, T: archmage::tokens::IntoConcreteToken>(T, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<logf::LogfErrorKind>>
-pub fn logf::try_log1p_with<P: logf::LogfProfile>(f32) -> core::result::Result<f32, logf::LogfError>
-pub fn logf::try_log1p_with_token<P: logf::LogfProfile, T: magetypes::simd::backends::convert::F32x4Convert>(T, f32) -> core::result::Result<f32, logf::LogfError>
+pub fn logf::try_log1p_slice(&[f32], &mut [f32]) -> core::result::Result<(), SliceError<logf::LogfErrorKind>>
 pub fn logf::try_log2(f32) -> core::result::Result<f32, logf::LogfError>
-pub fn logf::try_log2_array_runtime<const N: usize>([f32; N], logf::LogfOptions) -> core::result::Result<[f32; N], logf::LogfError>
-pub fn logf::try_log2_array_with<P: logf::LogfProfile, const N: usize>([f32; N]) -> core::result::Result<[f32; N], logf::LogfError>
-pub fn logf::try_log2_f32x4_with<P: logf::LogfProfile, T: magetypes::simd::backends::convert::F32x4Convert>(T, magetypes::simd::generic::generated::f32x4_impl::f32x4<T>) -> core::result::Result<magetypes::simd::generic::generated::f32x4_impl::f32x4<T>, logf::LogfError>
-pub fn logf::try_log2_f32x8_with<P: logf::LogfProfile, T: magetypes::simd::backends::convert::F32x8Convert>(T, magetypes::simd::generic::generated::f32x8_impl::f32x8<T>) -> core::result::Result<magetypes::simd::generic::generated::f32x8_impl::f32x8<T>, logf::LogfError>
-pub fn logf::try_log2_runtime(f32, logf::LogfOptions) -> core::result::Result<f32, logf::LogfError>
-pub fn logf::try_log2_slice_with<P: logf::LogfProfile>(&[f32], &mut [f32]) -> core::result::Result<(), SliceError<logf::LogfErrorKind>>
-pub fn logf::try_log2_slice_with_token<P: logf::LogfProfile, T: archmage::tokens::IntoConcreteToken>(T, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<logf::LogfErrorKind>>
-pub fn logf::try_log2_with<P: logf::LogfProfile>(f32) -> core::result::Result<f32, logf::LogfError>
-pub fn logf::try_log2_with_token<P: logf::LogfProfile, T: magetypes::simd::backends::convert::F32x4Convert>(T, f32) -> core::result::Result<f32, logf::LogfError>
+pub fn logf::try_log2_slice(&[f32], &mut [f32]) -> core::result::Result<(), SliceError<logf::LogfErrorKind>>
 pub mod powf
-pub mod powf::presets
-pub struct powf::presets::FullHighp
-pub struct powf::presets::GammaHighp
-pub struct powf::presets::GammaLowp
-pub struct powf::presets::GammaMidp
-pub struct powf::presets::NonNegativeNormalMidp
-pub struct powf::presets::NormalLowp
-pub struct powf::presets::NormalMidp
-pub struct powf::presets::PositiveGammaLowp
-pub struct powf::presets::PositiveGammaMidp
-#[non_exhaustive] pub enum powf::PowfDomain
-pub powf::PowfDomain::Full
-pub powf::PowfDomain::Gamma
-pub powf::PowfDomain::NonNegativeNormal
-pub powf::PowfDomain::PositiveGamma
-pub powf::PowfDomain::PositiveNormal
 #[non_exhaustive] pub enum powf::PowfErrorKind
 pub powf::PowfErrorKind::InvalidBase
 pub powf::PowfErrorKind::InvalidExponent
 pub powf::PowfErrorKind::OutsideApproximationRange
 pub powf::PowfErrorKind::UnsupportedOptions
 pub powf::PowfErrorKind::UnsupportedWidth
-#[non_exhaustive] pub enum powf::PowfExecution
-pub powf::PowfExecution::Automatic
-pub powf::PowfExecution::Caller
-#[non_exhaustive] pub enum powf::PowfPortability
-pub powf::PowfPortability::BackendDependent
-pub powf::PowfPortability::BitExact
 #[non_exhaustive] pub enum powf::PowfPrecision
 pub powf::PowfPrecision::Highp
 pub powf::PowfPrecision::Lowp
 pub powf::PowfPrecision::Midp
-#[non_exhaustive] pub enum powf::PowfValidation
-pub powf::PowfValidation::AssumeValid
-pub powf::PowfValidation::Checked
+pub struct powf::Powf<const CFG: u128>
+pub fn powf::Powf<CFG>::array<const N: usize>([f32; N], f32) -> core::result::Result<[f32; N], powf::PowfError>
+pub fn powf::Powf<CFG>::scalar(f32, f32) -> core::result::Result<f32, powf::PowfError>
+pub fn powf::Powf<CFG>::scalar_infallible(f32, f32) -> f32
+pub fn powf::Powf<CFG>::scalar_with_token<T: magetypes::simd::backends::convert::F32x4Convert>(T, f32, f32) -> core::result::Result<f32, powf::PowfError>
+pub fn powf::Powf<CFG>::simd<V: SimdVector>(V, f32) -> core::result::Result<V, powf::PowfError>
+pub fn powf::Powf<CFG>::slice(&[f32], &mut [f32], f32) -> core::result::Result<(), SliceError<powf::PowfErrorKind>>
+pub fn powf::Powf<CFG>::slice_with_token(impl archmage::tokens::IntoConcreteToken, &[f32], &mut [f32], f32) -> core::result::Result<(), SliceError<powf::PowfErrorKind>>
 pub struct powf::PowfError
 pub powf::PowfError::kind: powf::PowfErrorKind
 pub powf::PowfError::lane_mask: u16
-#[non_exhaustive] pub struct powf::PowfOptions
-pub powf::PowfOptions::domain: powf::PowfDomain
-pub powf::PowfOptions::execution: Execution
-pub powf::PowfOptions::portability: Portability
-pub powf::PowfOptions::precision: powf::PowfPrecision
-pub powf::PowfOptions::validation: Validation
-pub const powf::PowfOptions::BACKEND_GAMMA_LOWP: Self
-pub const powf::PowfOptions::BACKEND_GAMMA_MIDP: Self
-pub const powf::PowfOptions::BACKEND_POSITIVE_GAMMA_LOWP: Self
-pub const powf::PowfOptions::BACKEND_POSITIVE_GAMMA_MIDP: Self
-pub const powf::PowfOptions::PORTABLE_GAMMA_HIGHP: Self
-pub const powf::PowfOptions::PORTABLE_GAMMA_LOWP: Self
-pub const powf::PowfOptions::PORTABLE_GAMMA_MIDP: Self
-pub const powf::PowfOptions::PORTABLE_HIGHP: Self
-pub const powf::PowfOptions::PORTABLE_NORMAL_MIDP: Self
-pub const powf::PowfOptions::PORTABLE_POSITIVE_GAMMA_LOWP: Self
-pub const powf::PowfOptions::PORTABLE_POSITIVE_GAMMA_MIDP: Self
-pub const powf::PowfOptions::STD_HIGHP: Self
-pub const fn powf::PowfOptions::bits(self) -> u32
+pub struct powf::PowfOptions
+pub const fn powf::PowfOptions::admit_zero(self) -> Self
+pub const fn powf::PowfOptions::backend_dependent(self) -> Self
+pub const fn powf::PowfOptions::base_range(self, f32, f32) -> Self
+pub const fn powf::PowfOptions::bit_exact(self) -> Self
+pub const fn powf::PowfOptions::bits(self) -> u128
+pub const fn powf::PowfOptions::caller(self) -> Self
+pub const fn powf::PowfOptions::checked(self) -> Self
+pub const fn powf::PowfOptions::clamp_output(self) -> Self
+pub const fn powf::PowfOptions::elides_range_check(&self) -> bool
+pub const fn powf::PowfOptions::execution(self, Execution) -> Self
+pub const fn powf::PowfOptions::exponent_range(self, f32, f32) -> Self
+pub const fn powf::PowfOptions::from_bits(u128) -> core::option::Option<Self>
+pub const fn powf::PowfOptions::full_domain(self) -> Self
+pub const fn powf::PowfOptions::gamma(self) -> Self
+pub const fn powf::PowfOptions::highp(self) -> Self
+pub const fn powf::PowfOptions::is_infallible(&self) -> bool
+pub const fn powf::PowfOptions::is_valid(&self) -> bool
+pub const fn powf::PowfOptions::lowp(self) -> Self
+pub const fn powf::PowfOptions::midp(self) -> Self
 pub const fn powf::PowfOptions::new() -> Self
-pub const fn powf::PowfOptions::with_domain(self, powf::PowfDomain) -> Self
-pub const fn powf::PowfOptions::with_execution(self, Execution) -> Self
-pub const fn powf::PowfOptions::with_portability(self, Portability) -> Self
-pub const fn powf::PowfOptions::with_precision(self, powf::PowfPrecision) -> Self
-pub const fn powf::PowfOptions::with_validation(self, Validation) -> Self
-pub struct powf::PowfSpec
-pub const fn powf::PowfSpec::admit_zero(self) -> Self
-pub const fn powf::PowfSpec::base_range(self, f32, f32) -> Self
-pub const fn powf::PowfSpec::clamp_output(self) -> Self
-pub const fn powf::PowfSpec::elides_range_check(&self) -> bool
-pub const fn powf::PowfSpec::execution(self, Execution) -> Self
-pub const fn powf::PowfSpec::exponent_range(self, f32, f32) -> Self
-pub const fn powf::PowfSpec::from_options(powf::PowfOptions) -> Self
-pub const fn powf::PowfSpec::full_domain(self) -> Self
-pub const fn powf::PowfSpec::new() -> Self
-pub const fn powf::PowfSpec::portability(self, Portability) -> Self
-pub const fn powf::PowfSpec::precision(self, powf::PowfPrecision) -> Self
-pub const fn powf::PowfSpec::validate(&self)
-pub const fn powf::PowfSpec::validation(self, Validation) -> Self
-pub trait powf::PowfProfile: 'static
-pub const powf::PowfProfile::SPEC: powf::PowfSpec
+pub const fn powf::PowfOptions::portability(self, Portability) -> Self
+pub const fn powf::PowfOptions::positive_gamma(self) -> Self
+pub const fn powf::PowfOptions::precision(self, powf::PowfPrecision) -> Self
+pub const fn powf::PowfOptions::runtime(self) -> powf::PowfRuntime
+pub const fn powf::PowfOptions::unchecked(self) -> Self
+pub const fn powf::PowfOptions::upgrade(self) -> Self
+pub const fn powf::PowfOptions::validate(&self)
+pub const fn powf::PowfOptions::validation(self, Validation) -> Self
+pub struct powf::PowfRuntime
+pub fn powf::PowfRuntime::array<const N: usize>(self, [f32; N], f32) -> core::result::Result<[f32; N], powf::PowfError>
+pub const fn powf::PowfRuntime::options(self) -> powf::PowfOptions
+pub fn powf::PowfRuntime::scalar(self, f32, f32) -> core::result::Result<f32, powf::PowfError>
+pub fn powf::PowfRuntime::scalar_with_token<T: magetypes::simd::backends::convert::F32x4Convert>(self, T, f32, f32) -> core::result::Result<f32, powf::PowfError>
+pub fn powf::PowfRuntime::simd<V: SimdVector>(self, V, f32) -> core::result::Result<V, powf::PowfError>
+pub fn powf::PowfRuntime::slice(self, &[f32], &mut [f32], f32) -> core::result::Result<(), SliceError<powf::PowfErrorKind>>
+pub fn powf::PowfRuntime::slice_with_token(self, impl archmage::tokens::IntoConcreteToken, &[f32], &mut [f32], f32) -> core::result::Result<(), SliceError<powf::PowfErrorKind>>
 pub fn powf::try_powf(f32, f32) -> core::result::Result<f32, powf::PowfError>
-pub fn powf::try_powf_array_runtime<const N: usize>([f32; N], f32, powf::PowfOptions) -> core::result::Result<[f32; N], powf::PowfError>
-pub fn powf::try_powf_array_with<P: powf::PowfProfile, const N: usize>([f32; N], f32) -> core::result::Result<[f32; N], powf::PowfError>
-pub fn powf::try_powf_f32x4_runtime<T: magetypes::simd::backends::convert::F32x4Convert>(T, magetypes::simd::generic::generated::f32x4_impl::f32x4<T>, f32, powf::PowfOptions) -> core::result::Result<magetypes::simd::generic::generated::f32x4_impl::f32x4<T>, powf::PowfError>
-pub fn powf::try_powf_f32x4_with<P: powf::PowfProfile, T: magetypes::simd::backends::convert::F32x4Convert>(T, magetypes::simd::generic::generated::f32x4_impl::f32x4<T>, f32) -> core::result::Result<magetypes::simd::generic::generated::f32x4_impl::f32x4<T>, powf::PowfError>
-pub fn powf::try_powf_f32x8_runtime<T: magetypes::simd::backends::convert::F32x8Convert>(T, magetypes::simd::generic::generated::f32x8_impl::f32x8<T>, f32, powf::PowfOptions) -> core::result::Result<magetypes::simd::generic::generated::f32x8_impl::f32x8<T>, powf::PowfError>
-pub fn powf::try_powf_f32x8_with<P: powf::PowfProfile, T: magetypes::simd::backends::convert::F32x8Convert>(T, magetypes::simd::generic::generated::f32x8_impl::f32x8<T>, f32) -> core::result::Result<magetypes::simd::generic::generated::f32x8_impl::f32x8<T>, powf::PowfError>
-pub fn powf::try_powf_runtime(f32, f32, powf::PowfOptions) -> core::result::Result<f32, powf::PowfError>
-pub fn powf::try_powf_slice_with<P: powf::PowfProfile>(&[f32], &mut [f32], f32) -> core::result::Result<(), SliceError<powf::PowfErrorKind>>
-pub fn powf::try_powf_slice_with_token<P: powf::PowfProfile, T: archmage::tokens::IntoConcreteToken>(T, &[f32], &mut [f32], f32) -> core::result::Result<(), SliceError<powf::PowfErrorKind>>
-pub fn powf::try_powf_with<P: powf::PowfProfile>(f32, f32) -> core::result::Result<f32, powf::PowfError>
-pub fn powf::try_powf_with_token<P: powf::PowfProfile, T: magetypes::simd::backends::convert::F32x4Convert>(T, f32, f32) -> core::result::Result<f32, powf::PowfError>
+pub fn powf::try_powf_slice(&[f32], &mut [f32], f32) -> core::result::Result<(), SliceError<powf::PowfErrorKind>>
 #[non_exhaustive] pub enum Execution
-pub Execution::Automatic
 pub Execution::Caller
+pub Execution::Upgrade
 #[non_exhaustive] pub enum Portability
 pub Portability::BackendDependent
 pub Portability::BitExact
 #[non_exhaustive] pub enum Validation
 pub Validation::AssumeValid
 pub Validation::Checked
-pub struct Backend<P>(_)
-pub struct Caller<P>(_)
 pub struct SliceError<K>
 pub SliceError::index: usize
 pub SliceError::kind: K
-pub struct Unchecked<P>(_)
+pub trait SimdMath: SimdVector
+pub fn SimdMath::cbrt<const CFG: u128>(self) -> Self
+pub fn SimdMath::exp<const CFG: u128>(self) -> Self
+pub fn SimdMath::exp2<const CFG: u128>(self) -> Self
+pub fn SimdMath::ln<const CFG: u128>(self) -> Self
+pub fn SimdMath::log10<const CFG: u128>(self) -> Self
+pub fn SimdMath::log1p<const CFG: u128>(self) -> Self
+pub fn SimdMath::log2<const CFG: u128>(self) -> Self
+pub fn SimdMath::powf<const CFG: u128>(self, f32) -> Self
+pub fn SimdMath::try_cbrt(self) -> core::result::Result<Self, cbrtf::CbrtfError>
+pub fn SimdMath::try_cbrt_with<const CFG: u128>(self) -> core::result::Result<Self, cbrtf::CbrtfError>
+pub fn SimdMath::try_exp(self) -> core::result::Result<Self, expf::ExpfError>
+pub fn SimdMath::try_exp2(self) -> core::result::Result<Self, expf::ExpfError>
+pub fn SimdMath::try_exp2_with<const CFG: u128>(self) -> core::result::Result<Self, expf::ExpfError>
+pub fn SimdMath::try_exp_with<const CFG: u128>(self) -> core::result::Result<Self, expf::ExpfError>
+pub fn SimdMath::try_ln(self) -> core::result::Result<Self, logf::LogfError>
+pub fn SimdMath::try_ln_with<const CFG: u128>(self) -> core::result::Result<Self, logf::LogfError>
+pub fn SimdMath::try_log10(self) -> core::result::Result<Self, logf::LogfError>
+pub fn SimdMath::try_log10_with<const CFG: u128>(self) -> core::result::Result<Self, logf::LogfError>
+pub fn SimdMath::try_log1p(self) -> core::result::Result<Self, logf::LogfError>
+pub fn SimdMath::try_log1p_with<const CFG: u128>(self) -> core::result::Result<Self, logf::LogfError>
+pub fn SimdMath::try_log2(self) -> core::result::Result<Self, logf::LogfError>
+pub fn SimdMath::try_log2_with<const CFG: u128>(self) -> core::result::Result<Self, logf::LogfError>
+pub fn SimdMath::try_powf(self, f32) -> core::result::Result<Self, powf::PowfError>
+pub fn SimdMath::try_powf_with<const CFG: u128>(self, f32) -> core::result::Result<Self, powf::PowfError>
+pub trait SimdVector: private::Sealed
 
-## trait impls (56 types)
+## trait impls (30 types)
 
-Backend<P>: Clone, Copy, Debug, cbrtf::CbrtfProfile, expf::ExpfProfile, logf::LogfProfile, powf::PowfProfile
-Caller<P>: Clone, Copy, Debug, cbrtf::CbrtfProfile, expf::ExpfProfile, logf::LogfProfile, powf::PowfProfile
 Execution: Clone, Copy, Debug, Default, Eq, PartialEq
 Portability: Clone, Copy, Debug, Default, Eq, PartialEq
 SliceError<K>: Clone, Copy, Debug, Display, Eq, PartialEq
-Unchecked<P>: Clone, Copy, Debug, cbrtf::CbrtfProfile, expf::ExpfProfile, logf::LogfProfile, powf::PowfProfile
 Validation: Clone, Copy, Debug, Default, Eq, PartialEq
-cbrtf::CbrtfDomain: Clone, Copy, Debug, Default, Eq, PartialEq
+cbrtf::Cbrtf<CFG>: Clone, Copy, Debug, Default
 cbrtf::CbrtfError: Clone, Copy, Debug, Display, Eq, PartialEq
 cbrtf::CbrtfErrorKind: Clone, Copy, Debug, Eq, PartialEq
 cbrtf::CbrtfOptions: Clone, Copy, Debug, Default, Eq, PartialEq
 cbrtf::CbrtfPrecision: Clone, Copy, Debug, Default, Eq, PartialEq
-cbrtf::CbrtfSpec: Clone, Copy, Debug, Default
-cbrtf::Options<BITS>: Clone, Copy, Debug, cbrtf::CbrtfProfile
-cbrtf::presets::Lowp: Clone, Copy, Debug, cbrtf::CbrtfProfile
-cbrtf::presets::LowpFull: Clone, Copy, Debug, cbrtf::CbrtfProfile
-cbrtf::presets::Midp: Clone, Copy, Debug, cbrtf::CbrtfProfile
-cbrtf::presets::MidpFull: Clone, Copy, Debug, cbrtf::CbrtfProfile
-expf::ExpfDomain: Clone, Copy, Debug, Default, Eq, PartialEq
+cbrtf::CbrtfRuntime: Clone, Copy, Debug
+expf::Expf<CFG>: Clone, Copy, Debug, Default
 expf::ExpfError: Clone, Copy, Debug, Display, Eq, PartialEq
 expf::ExpfErrorKind: Clone, Copy, Debug, Eq, PartialEq
 expf::ExpfOptions: Clone, Copy, Debug, Default, Eq, PartialEq
 expf::ExpfPrecision: Clone, Copy, Debug, Default, Eq, PartialEq
-expf::ExpfSpec: Clone, Copy, Debug, Default
-expf::Options<BITS>: Clone, Copy, Debug, expf::ExpfProfile
-expf::presets::Lowp: Clone, Copy, Debug, expf::ExpfProfile
-expf::presets::LowpFull: Clone, Copy, Debug, expf::ExpfProfile
-expf::presets::Midp: Clone, Copy, Debug, expf::ExpfProfile
-expf::presets::MidpFull: Clone, Copy, Debug, expf::ExpfProfile
-logf::LogfDomain: Clone, Copy, Debug, Default, Eq, PartialEq
+expf::ExpfRuntime: Clone, Copy, Debug
+logf::Logf<CFG>: Clone, Copy, Debug, Default
 logf::LogfError: Clone, Copy, Debug, Display, Eq, PartialEq
 logf::LogfErrorKind: Clone, Copy, Debug, Eq, PartialEq
 logf::LogfOptions: Clone, Copy, Debug, Default, Eq, PartialEq
 logf::LogfPrecision: Clone, Copy, Debug, Default, Eq, PartialEq
-logf::LogfSpec: Clone, Copy, Debug, Default
-logf::Options<BITS>: Clone, Copy, Debug, logf::LogfProfile
-logf::presets::Lowp: Clone, Copy, Debug, logf::LogfProfile
-logf::presets::LowpSpecials: Clone, Copy, Debug, logf::LogfProfile
-logf::presets::Midp: Clone, Copy, Debug, logf::LogfProfile
-logf::presets::MidpSpecials: Clone, Copy, Debug, logf::LogfProfile
-powf::Options<BITS>: Clone, Copy, Debug, powf::PowfProfile
-powf::PowfDomain: Clone, Copy, Debug, Default, Eq, PartialEq
+logf::LogfRuntime: Clone, Copy, Debug
+magetypes::simd::generic::generated::f32x4_impl::f32x4<T>: SimdMath, SimdVector
+magetypes::simd::generic::generated::f32x8_impl::f32x8<T>: SimdMath, SimdVector
+powf::Powf<CFG>: Clone, Copy, Debug, Default
 powf::PowfError: Clone, Copy, Debug, Display, Eq, PartialEq
 powf::PowfErrorKind: Clone, Copy, Debug, Eq, PartialEq
 powf::PowfOptions: Clone, Copy, Debug, Default, Eq, PartialEq
 powf::PowfPrecision: Clone, Copy, Debug, Default, Eq, PartialEq
-powf::PowfSpec: Clone, Copy, Debug, Default
-powf::presets::FullHighp: Clone, Copy, Debug, powf::PowfProfile
-powf::presets::GammaHighp: Clone, Copy, Debug, powf::PowfProfile
-powf::presets::GammaLowp: Clone, Copy, Debug, powf::PowfProfile
-powf::presets::GammaMidp: Clone, Copy, Debug, powf::PowfProfile
-powf::presets::NonNegativeNormalMidp: Clone, Copy, Debug, powf::PowfProfile
-powf::presets::NormalLowp: Clone, Copy, Debug, powf::PowfProfile
-powf::presets::NormalMidp: Clone, Copy, Debug, powf::PowfProfile
-powf::presets::PositiveGammaLowp: Clone, Copy, Debug, powf::PowfProfile
-powf::presets::PositiveGammaMidp: Clone, Copy, Debug, powf::PowfProfile
+powf::PowfRuntime: Clone, Copy, Debug
 
 ## auto traits
 
-52 types implement all of: Freeze, RefUnwindSafe, Send, Sync, Unpin, UnwindSafe
-Backend<P>: !Freeze !RefUnwindSafe !Send !Sync !Unpin !UnwindSafe
-Caller<P>: !Freeze !RefUnwindSafe !Send !Sync !Unpin !UnwindSafe
+27 types implement all of: Freeze, RefUnwindSafe, Send, Sync, Unpin, UnwindSafe
 SliceError<K>: !Freeze !RefUnwindSafe !Send !Sync !Unpin !UnwindSafe
-Unchecked<P>: !Freeze !RefUnwindSafe !Send !Sync !Unpin !UnwindSafe

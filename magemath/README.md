@@ -1,47 +1,54 @@
 # Magemath
 
-Configurable f32 power, exponential, logarithm and cube-root approximations, built on
+Configurable `f32` power, exponential, logarithm and cube-root approximations, built on
 [Magetypes](../magetypes) vectors and [Archmage](..) feature proofs.
 `no_std` by default; opt in to `std` for runtime CPU detection and native fallbacks.
 
 ```rust
-use magemath::powf::{presets::GammaMidp, try_powf_array_with, try_powf_slice_with};
+use magemath::powf::{Powf, PowfOptions, try_powf_slice};
 
-let result = try_powf_array_with::<GammaMidp, 4>([0.0, 0.125, 0.5, 1.0], 2.2).unwrap();
+const GAMMA: u128 = PowfOptions::new().gamma().midp().bits();
+
+let result = Powf::<GAMMA>::array([0.0, 0.125, 0.5, 1.0], 2.2).unwrap();
 assert_eq!(result[0], 0.0);
 assert_eq!(result[3], 1.0);
 
 let src = [0.0, 0.125, 0.5, 1.0, 2.0];
 let mut dst = [0.0; 5];
-try_powf_slice_with::<GammaMidp>(&src, &mut dst, 2.2).unwrap();
+Powf::<GAMMA>::slice(&src, &mut dst, 2.2).unwrap();
+
+// Default positive-normal Midp convenience helpers:
+let mut pos_dst = [0.0; 3];
+try_powf_slice(&[0.25, 0.5, 2.0], &mut pos_dst, 2.2).unwrap();
 ```
 
-Profiles implement [`PowfProfile`](powf::PowfProfile) / [`ExpfProfile`](expf::ExpfProfile) /
-[`LogfProfile`](logf::LogfProfile) / [`CbrtfProfile`](cbrtf::CbrtfProfile) with declared
-range bounds (or use built-in [`powf::presets`], root modifiers [`Caller`], [`Unchecked`],
-[`Backend`], or the legacy `Options<BITS>` adapter). These are bounded approximations,
-not universal correctly rounded libm functions.
+Each family has one fluent `const` options builder ([`PowfOptions`](powf::PowfOptions),
+[`ExpfOptions`](expf::ExpfOptions), [`LogfOptions`](logf::LogfOptions),
+[`CbrtfOptions`](cbrtf::CbrtfOptions)) ending in `.bits()` for compile-time
+specialization (`Powf<CFG>`, `Expf<CFG>`, `Logf<CFG>`, `Cbrtf<CFG>`, and inline
+vector methods via [`SimdMath`]) or `.runtime()` for dynamic options. These are
+bounded approximations, not universal correctly rounded libm functions.
 
-Use `try_*_f32x4_with` / `try_*_f32x8_with` (and x16 with `w512`) inside an
-`#[attune(_*_t, define(f32x8))]` kernel, passing the caller's token and using
-`*_with_token` for the scalar tail with the same profile and token proof:
+Inside an `#[attune(_*_t, define(f32x8))]` kernel, import [`SimdMath`] to call
+configured operations inline on any Magetypes `f32` vector (`self.token()` is
+reused automatically), and use `*_with_token` for scalar tails:
 
 ```rust
 use archmage::prelude::*;
-use magemath::Caller;
-use magemath::powf::{
-    PowfError, presets::GammaMidp, try_powf_f32x8_with, try_powf_with_token,
-};
+use magemath::SimdMath;
+use magemath::powf::{Powf, PowfError, PowfOptions};
+
+const GAMMA_CALLER: u128 = PowfOptions::new().gamma().midp().caller().bits();
 
 #[attune(_*_t, define(f32x8))]
 fn powf_slice_impl(token: Token, src: &[f32], dst: &mut [f32], exp: f32) -> Result<(), PowfError> {
     let (sc, st) = f32x8::partition_slice_t(token, src);
     let (dc, dt) = f32x8::partition_slice_mut_t(token, dst);
     for (s, d) in sc.iter().zip(dc.iter_mut()) {
-        try_powf_f32x8_with::<Caller<GammaMidp>, _>(token, f32x8::load_t(token, s), exp)?.store(d);
+        f32x8::load_t(token, s).try_powf_with::<GAMMA_CALLER>(exp)?.store(d);
     }
     for (&x, y) in st.iter().zip(dt.iter_mut()) {
-        *y = try_powf_with_token::<Caller<GammaMidp>, _>(token, x, exp)?;
+        *y = Powf::<GAMMA_CALLER>::scalar_with_token(token, x, exp)?;
     }
     Ok(())
 }

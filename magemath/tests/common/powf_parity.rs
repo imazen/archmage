@@ -5,9 +5,9 @@
 #[path = "scalar_vector_parity.rs"]
 pub mod parity;
 
-pub use magemath::powf::{
-    self as p, PowfDomain, PowfError, PowfErrorKind, PowfExecution, PowfOptions, PowfPortability,
-    PowfPrecision, PowfValidation,
+pub use magemath::{
+    Execution, Portability, SimdMath, Validation,
+    powf::{self as p, Powf, PowfError, PowfErrorKind, PowfOptions, PowfPrecision},
 };
 pub use parity::{assert_array_res_eq, assert_f32_eq, assert_scalar_res_eq};
 
@@ -57,14 +57,14 @@ pub const POWF_FULL_EXPS: [f32; 10] = [
 ];
 
 pub const fn powf_options_from_bits(f: u32) -> PowfOptions {
-    let domain = if f & 128 != 0 {
-        PowfDomain::PositiveGamma
+    let base = if f & 128 != 0 {
+        PowfOptions::new().positive_gamma()
     } else {
         match f & 3 {
-            0 => PowfDomain::PositiveNormal,
-            1 => PowfDomain::NonNegativeNormal,
-            2 => PowfDomain::Gamma,
-            _ => PowfDomain::Full,
+            0 => PowfOptions::new(),
+            1 => PowfOptions::new().admit_zero(),
+            2 => PowfOptions::new().gamma(),
+            _ => PowfOptions::new().full_domain(),
         }
     };
     let precision = if f & 64 != 0 {
@@ -74,31 +74,28 @@ pub const fn powf_options_from_bits(f: u32) -> PowfOptions {
     } else {
         PowfPrecision::Midp
     };
-    PowfOptions::new()
-        .with_domain(domain)
-        .with_execution(if f & 4 == 0 {
-            PowfExecution::Automatic
+    base.precision(precision)
+        .execution(if f & 4 == 0 {
+            Execution::Upgrade
         } else {
-            PowfExecution::Caller
+            Execution::Caller
         })
-        .with_precision(precision)
-        .with_portability(if f & 16 == 0 {
-            PowfPortability::BitExact
+        .portability(if f & 16 == 0 {
+            Portability::BitExact
         } else {
-            PowfPortability::BackendDependent
+            Portability::BackendDependent
         })
-        .with_validation(if f & 32 == 0 {
-            PowfValidation::Checked
+        .validation(if f & 32 == 0 {
+            Validation::Checked
         } else {
-            PowfValidation::AssumeValid
+            Validation::AssumeValid
         })
 }
 
-// Non-generic over `const F`: materializes the 104-arm runtime dispatch table
-// once per width rather than 32 times per test crate in `--release`.
+// Non-generic over `const CFG`: materializes the runtime dispatch path once per width.
 #[inline(never)]
 fn rt_powf_scalar(x: f32, n: f32, opts: PowfOptions) -> Result<f32, PowfError> {
-    p::try_powf_runtime(x, n, opts)
+    opts.runtime().scalar(x, n)
 }
 
 #[inline(never)]
@@ -107,7 +104,7 @@ fn rt_powf_arr<const N: usize>(
     n: f32,
     opts: PowfOptions,
 ) -> Result<[f32; N], PowfError> {
-    p::try_powf_array_runtime::<N>(xs, n, opts)
+    opts.runtime().array::<N>(xs, n)
 }
 
 #[inline(never)]
@@ -116,25 +113,28 @@ fn def_powf_scalar(x: f32, n: f32) -> Result<f32, PowfError> {
 }
 
 #[inline(never)]
-pub fn c_powf_scalar<const F: u32>(x: f32, n: f32) -> Result<f32, PowfError> {
-    p::try_powf_with::<p::Options<F>>(x, n)
+pub fn c_powf_scalar<const CFG: u128>(x: f32, n: f32) -> Result<f32, PowfError> {
+    Powf::<CFG>::scalar(x, n)
 }
 
 #[inline(never)]
-fn c_powf_arr<const F: u32, const N: usize>(xs: [f32; N], n: f32) -> Result<[f32; N], PowfError> {
-    p::try_powf_array_with::<p::Options<F>, N>(xs, n)
+fn c_powf_arr<const CFG: u128, const N: usize>(
+    xs: [f32; N],
+    n: f32,
+) -> Result<[f32; N], PowfError> {
+    Powf::<CFG>::array::<N>(xs, n)
 }
 
 #[inline(never)]
-fn c_powf_scalar_tok<const F: u32>(x: f32, n: f32) -> Result<f32, PowfError> {
-    p::try_powf_with_token::<p::Options<F>, _>(archmage::ScalarToken, x, n)
+fn c_powf_scalar_tok<const CFG: u128>(x: f32, n: f32) -> Result<f32, PowfError> {
+    Powf::<CFG>::scalar_with_token(archmage::ScalarToken, x, n)
 }
 
 #[inline(never)]
-pub fn standalone_powf<const F: u32>() {
+pub fn standalone_powf<const F: u32, const CFG: u128>() {
     use core::hint::black_box;
     let opts = black_box(powf_options_from_bits(F));
-    assert_eq!(opts.bits(), F);
+    assert_eq!(PowfOptions::from_bits(CFG), Some(opts));
     let core_bases = black_box(&POWF_CORE_BASES);
     let core_exps = black_box(&POWF_CORE_EXPS);
     let full_bases = black_box(&POWF_FULL_BASES);
@@ -142,63 +142,63 @@ pub fn standalone_powf<const F: u32>() {
 
     for &n in core_exps {
         for &x in core_bases {
-            let s = c_powf_scalar::<F>(x, n);
+            let s = c_powf_scalar::<CFG>(x, n);
             assert!(s.is_ok(), "expected Ok on core powf ({x:?}, {n:?})");
             if F == 0 {
-                assert_scalar_res_eq(def_powf_scalar(x, n), s, "try_powf vs _with::<0>");
+                assert_scalar_res_eq(def_powf_scalar(x, n), s, "try_powf vs Powf::<DEFAULT>");
             }
             assert_scalar_res_eq(
-                c_powf_arr::<F, 1>([x], n).map(|a| a[0]),
+                c_powf_arr::<CFG, 1>([x], n).map(|a| a[0]),
                 s,
-                "powf array_with::<F, 1> vs _with",
+                "powf array::<1> vs scalar",
             );
-            assert_scalar_res_eq(rt_powf_scalar(x, n, opts), s, "powf runtime vs _with");
+            assert_scalar_res_eq(rt_powf_scalar(x, n, opts), s, "powf runtime vs const");
             assert_scalar_res_eq(
                 rt_powf_arr::<1>([x], n, opts).map(|a| a[0]),
                 s,
-                "powf array_runtime::<1> vs _with",
+                "powf runtime array::<1> vs const",
             );
         }
 
         for &pack in core_bases.as_chunks::<4>().0 {
-            let a_with = c_powf_arr::<F, 4>(pack, n);
+            let a_with = c_powf_arr::<CFG, 4>(pack, n);
             let a_rt = rt_powf_arr::<4>(pack, n, opts);
-            assert_array_res_eq(a_rt, a_with, "powf array_runtime::<4> vs array_with");
+            assert_array_res_eq(a_rt, a_with, "powf runtime array::<4> vs const array");
             let arr = a_with.unwrap();
             for i in 0..4 {
                 assert_f32_eq(
                     arr[i],
-                    c_powf_scalar::<F>(pack[i], n).unwrap(),
-                    "powf array_with::<F, 4> lane vs _with",
+                    c_powf_scalar::<CFG>(pack[i], n).unwrap(),
+                    "powf array::<4> lane vs scalar",
                 );
             }
         }
 
         for &pack in core_bases.as_chunks::<8>().0 {
-            let a_with = c_powf_arr::<F, 8>(pack, n);
+            let a_with = c_powf_arr::<CFG, 8>(pack, n);
             let a_rt = rt_powf_arr::<8>(pack, n, opts);
-            assert_array_res_eq(a_rt, a_with, "powf array_runtime::<8> vs array_with");
+            assert_array_res_eq(a_rt, a_with, "powf runtime array::<8> vs const array");
             let arr = a_with.unwrap();
             for i in 0..8 {
                 assert_f32_eq(
                     arr[i],
-                    c_powf_scalar::<F>(pack[i], n).unwrap(),
-                    "powf array_with::<F, 8> lane vs _with",
+                    c_powf_scalar::<CFG>(pack[i], n).unwrap(),
+                    "powf array::<8> lane vs scalar",
                 );
             }
         }
 
         #[cfg(feature = "w512")]
         {
-            let a_with = c_powf_arr::<F, 16>(*core_bases, n);
+            let a_with = c_powf_arr::<CFG, 16>(*core_bases, n);
             let a_rt = rt_powf_arr::<16>(*core_bases, n, opts);
-            assert_array_res_eq(a_rt, a_with, "powf array_runtime::<16> vs array_with");
+            assert_array_res_eq(a_rt, a_with, "powf runtime array::<16> vs const array");
             let arr = a_with.unwrap();
             for i in 0..16 {
                 assert_f32_eq(
                     arr[i],
-                    c_powf_scalar::<F>(core_bases[i], n).unwrap(),
-                    "powf array_with::<F, 16> lane vs _with",
+                    c_powf_scalar::<CFG>(core_bases[i], n).unwrap(),
+                    "powf array::<16> lane vs scalar",
                 );
             }
         }
@@ -207,12 +207,12 @@ pub fn standalone_powf<const F: u32>() {
     if (F & 3 == 1) || (F & 3 == 2 && F & 128 == 0) || (F & 3 == 3) {
         let zpack = black_box([0.0, 0.25, 1.0, 16.0]);
         for &n in core_exps {
-            let a = c_powf_arr::<F, 4>(zpack, n).unwrap();
+            let a = c_powf_arr::<CFG, 4>(zpack, n).unwrap();
             for i in 0..4 {
                 assert_f32_eq(
                     a[i],
-                    c_powf_scalar::<F>(zpack[i], n).unwrap(),
-                    "powf +0.0 pack vs _with",
+                    c_powf_scalar::<CFG>(zpack[i], n).unwrap(),
+                    "powf +0.0 pack vs scalar",
                 );
             }
         }
@@ -221,12 +221,12 @@ pub fn standalone_powf<const F: u32>() {
     if F & 3 != 2 {
         let npack = black_box([0.125, 0.5, 2.5, 1024.0]);
         for n in black_box([-0.5_f32, -1.5]) {
-            let a = c_powf_arr::<F, 4>(npack, n).unwrap();
+            let a = c_powf_arr::<CFG, 4>(npack, n).unwrap();
             for i in 0..4 {
                 assert_f32_eq(
                     a[i],
-                    c_powf_scalar::<F>(npack[i], n).unwrap(),
-                    "powf negative exponent pack vs _with",
+                    c_powf_scalar::<CFG>(npack[i], n).unwrap(),
+                    "powf negative exponent pack vs scalar",
                 );
             }
         }
@@ -234,64 +234,64 @@ pub fn standalone_powf<const F: u32>() {
 
     if F & 3 == 3 {
         for &n in full_exps {
-            let a = c_powf_arr::<F, 8>(*full_bases, n).unwrap();
+            let a = c_powf_arr::<CFG, 8>(*full_bases, n).unwrap();
             let rt = rt_powf_arr::<8>(*full_bases, n, opts).unwrap();
             for i in 0..8 {
-                let s = c_powf_scalar::<F>(full_bases[i], n).unwrap();
-                assert_f32_eq(a[i], s, "powf Full array_with vs _with");
-                assert_f32_eq(rt[i], s, "powf Full array_runtime vs _with");
+                let s = c_powf_scalar::<CFG>(full_bases[i], n).unwrap();
+                assert_f32_eq(a[i], s, "powf Full array vs scalar");
+                assert_f32_eq(rt[i], s, "powf Full runtime array vs scalar");
             }
         }
     }
 
-    let bad_w = c_powf_arr::<F, 3>([1.0; 3], 2.2).unwrap_err();
+    let bad_w = c_powf_arr::<CFG, 3>([1.0; 3], 2.2).unwrap_err();
     assert_eq!(bad_w.kind, PowfErrorKind::UnsupportedWidth);
     assert_eq!(bad_w.lane_mask, 0);
     assert_eq!(rt_powf_arr::<3>([1.0; 3], 2.2, opts).unwrap_err(), bad_w);
 
     if F & 32 == 0 && F & 3 != 3 {
         for bad_n in [f32::NAN, f32::INFINITY, f32::from_bits(1)] {
-            let es = c_powf_scalar::<F>(2.0, bad_n).unwrap_err();
+            let es = c_powf_scalar::<CFG>(2.0, bad_n).unwrap_err();
             assert_eq!(es.kind, PowfErrorKind::InvalidExponent);
             assert_eq!(es.lane_mask, 1);
             if F == 0 {
                 assert_eq!(def_powf_scalar(2.0, bad_n).unwrap_err(), es);
             }
             assert_eq!(rt_powf_scalar(2.0, bad_n, opts).unwrap_err(), es);
-            let e4 = c_powf_arr::<F, 4>([2.0; 4], bad_n).unwrap_err();
+            let e4 = c_powf_arr::<CFG, 4>([2.0; 4], bad_n).unwrap_err();
             assert_eq!(e4.kind, PowfErrorKind::InvalidExponent);
             assert_eq!(e4.lane_mask, 0b1111);
         }
         if F & 3 == 2 {
             for bad_n in [-0.5_f32, 4.5] {
-                let es = c_powf_scalar::<F>(2.0, bad_n).unwrap_err();
+                let es = c_powf_scalar::<CFG>(2.0, bad_n).unwrap_err();
                 assert_eq!(es.kind, PowfErrorKind::InvalidExponent);
                 assert_eq!(es.lane_mask, 1);
-                let e4 = c_powf_arr::<F, 4>([2.0; 4], bad_n).unwrap_err();
+                let e4 = c_powf_arr::<CFG, 4>([2.0; 4], bad_n).unwrap_err();
                 assert_eq!(e4.kind, PowfErrorKind::InvalidExponent);
                 assert_eq!(e4.lane_mask, 0b1111);
             }
         }
 
         let mixed_base = [1.0, -2.0, 0.5, f32::NAN];
-        let eb4 = c_powf_arr::<F, 4>(mixed_base, 2.2).unwrap_err();
+        let eb4 = c_powf_arr::<CFG, 4>(mixed_base, 2.2).unwrap_err();
         assert_eq!(eb4.kind, PowfErrorKind::InvalidBase);
         assert_eq!(eb4.lane_mask, 0b1010);
         assert_eq!(rt_powf_arr::<4>(mixed_base, 2.2, opts).unwrap_err(), eb4);
 
         if F & 3 == 0 || F & 128 != 0 {
             let z_rej = [0.0, 1.0, -0.0, 2.0];
-            let ez4 = c_powf_arr::<F, 4>(z_rej, 2.2).unwrap_err();
+            let ez4 = c_powf_arr::<CFG, 4>(z_rej, 2.2).unwrap_err();
             assert_eq!(ez4.kind, PowfErrorKind::InvalidBase);
             assert_eq!(ez4.lane_mask, 0b0101);
         }
 
         if F & 3 < 2 {
             let oor = [1.0, 1.0e20, 2.0, 1.0e-20];
-            let er4 = c_powf_arr::<F, 4>(oor, 10.0).unwrap_err();
+            let er4 = c_powf_arr::<CFG, 4>(oor, 10.0).unwrap_err();
             assert_eq!(er4.kind, PowfErrorKind::OutsideApproximationRange);
             assert_eq!(er4.lane_mask, 0b1010);
-            let ers = c_powf_scalar::<F>(1.0e20, 10.0).unwrap_err();
+            let ers = c_powf_scalar::<CFG>(1.0e20, 10.0).unwrap_err();
             assert_eq!(ers.kind, PowfErrorKind::OutsideApproximationRange);
             assert_eq!(ers.lane_mask, 1);
         }
@@ -300,8 +300,8 @@ pub fn standalone_powf<const F: u32>() {
     if F & 16 != 0 && F & 4 != 0 {
         for &x in &POWF_CORE_BASES[..4] {
             assert_f32_eq(
-                c_powf_scalar::<F>(x, 2.2).unwrap(),
-                c_powf_scalar_tok::<F>(x, 2.2).unwrap(),
+                c_powf_scalar::<CFG>(x, 2.2).unwrap(),
+                c_powf_scalar_tok::<CFG>(x, 2.2).unwrap(),
                 "powf BackendDependent Caller standalone vs ScalarToken",
             );
         }
@@ -318,7 +318,9 @@ macro_rules! define_powf_token_op {
             opts: PowfOptions,
         ) -> Result<[f32; 4], PowfError> {
             use magetypes::simd::generic::f32x4;
-            p::try_powf_f32x4_runtime(t, f32x4::from_array_t(t, xs), n, opts).map(|v| v.to_array())
+            opts.runtime()
+                .simd(f32x4::from_array_t(t, xs), n)
+                .map(|v| v.to_array())
         }
         #[inline(never)]
         fn tok_rt8(
@@ -328,35 +330,39 @@ macro_rules! define_powf_token_op {
             opts: PowfOptions,
         ) -> Result<[f32; 8], PowfError> {
             use magetypes::simd::generic::f32x8;
-            p::try_powf_f32x8_runtime(t, f32x8::from_array_t(t, xs), n, opts).map(|v| v.to_array())
+            opts.runtime()
+                .simd(f32x8::from_array_t(t, xs), n)
+                .map(|v| v.to_array())
         }
         define_powf_token_op!(@def_rt16 $has_x16, $tok_ty);
 
         #[inline(never)]
-        fn $fn_name<const F: u32>(token: $tok_ty) {
+        fn $fn_name<const F: u32, const CFG: u128>(token: $tok_ty) {
             #[inline(never)]
-            fn eval4<const FLAGS: u32>(
+            fn eval4<const C: u128>(
                 t: $tok_ty,
                 xs: [f32; 4],
                 n: f32,
             ) -> Result<[f32; 4], PowfError> {
                 use magetypes::simd::generic::f32x4;
-                p::try_powf_f32x4_with::<p::Options<FLAGS>, _>(t, f32x4::from_array_t(t, xs), n)
+                f32x4::from_array_t(t, xs)
+                    .try_powf_with::<C>(n)
                     .map(|v| v.to_array())
             }
             #[inline(never)]
-            fn eval8<const FLAGS: u32>(
+            fn eval8<const C: u128>(
                 t: $tok_ty,
                 xs: [f32; 8],
                 n: f32,
             ) -> Result<[f32; 8], PowfError> {
                 use magetypes::simd::generic::f32x8;
-                p::try_powf_f32x8_with::<p::Options<FLAGS>, _>(t, f32x8::from_array_t(t, xs), n)
+                f32x8::from_array_t(t, xs)
+                    .try_powf_with::<C>(n)
                     .map(|v| v.to_array())
             }
             #[inline(never)]
-            fn eval_tail<const FLAGS: u32>(t: $tok_ty, x: f32, n: f32) -> Result<f32, PowfError> {
-                p::try_powf_with_token::<p::Options<FLAGS>, _>(t, x, n)
+            fn eval_tail<const C: u128>(t: $tok_ty, x: f32, n: f32) -> Result<f32, PowfError> {
+                Powf::<C>::scalar_with_token(t, x, n)
             }
 
             let opts = core::hint::black_box(powf_options_from_bits(F));
@@ -367,43 +373,43 @@ macro_rules! define_powf_token_op {
 
             for &n in core_exps {
                 for &xs in core_bases.as_chunks::<4>().0 {
-                    let v4 = eval4::<F>(token, xs, n).unwrap();
+                    let v4 = eval4::<CFG>(token, xs, n).unwrap();
                     let r4 = tok_rt4(token, xs, n, opts).unwrap();
                     for i in 0..4 {
-                        let tail = eval_tail::<F>(token, xs[i], n).unwrap();
+                        let tail = eval_tail::<CFG>(token, xs[i], n).unwrap();
                         assert_f32_eq(v4[i], tail, "powf x4 vs _with_token");
                         assert_f32_eq(r4[i], tail, "powf x4_runtime vs _with_token");
                         if F & 16 == 0 {
                             assert_f32_eq(
                                 tail,
-                                c_powf_scalar::<F>(xs[i], n).unwrap(),
-                                "powf BitExact _with_token vs _with",
+                                c_powf_scalar::<CFG>(xs[i], n).unwrap(),
+                                "powf BitExact _with_token vs scalar",
                             );
                         }
                     }
                 }
 
                 for &xs in core_bases.as_chunks::<8>().0 {
-                    let v8 = eval8::<F>(token, xs, n).unwrap();
+                    let v8 = eval8::<CFG>(token, xs, n).unwrap();
                     let r8 = tok_rt8(token, xs, n, opts).unwrap();
                     for i in 0..8 {
-                        let tail = eval_tail::<F>(token, xs[i], n).unwrap();
+                        let tail = eval_tail::<CFG>(token, xs[i], n).unwrap();
                         assert_f32_eq(v8[i], tail, "powf x8 vs _with_token");
                         assert_f32_eq(r8[i], tail, "powf x8_runtime vs _with_token");
                     }
                 }
 
-                define_powf_token_op!(@x16 $has_x16, $tok_ty, token, F, opts, n, core_bases, eval_tail);
+                define_powf_token_op!(@x16 $has_x16, $tok_ty, token, CFG, opts, n, core_bases, eval_tail);
             }
 
             if (F & 3 == 1) || (F & 3 == 2 && F & 128 == 0) || (F & 3 == 3) {
                 let zpack = core::hint::black_box([0.0, 0.25, 1.0, 16.0]);
                 for &n in core_exps {
-                    let v4 = eval4::<F>(token, zpack, n).unwrap();
+                    let v4 = eval4::<CFG>(token, zpack, n).unwrap();
                     for i in 0..4 {
                         assert_f32_eq(
                             v4[i],
-                            eval_tail::<F>(token, zpack[i], n).unwrap(),
+                            eval_tail::<CFG>(token, zpack[i], n).unwrap(),
                             "powf +0.0 x4 vs _with_token",
                         );
                     }
@@ -412,43 +418,43 @@ macro_rules! define_powf_token_op {
 
             if F & 3 == 3 {
                 for &n in full_exps {
-                    let v8 = eval8::<F>(token, *full_bases, n).unwrap();
+                    let v8 = eval8::<CFG>(token, *full_bases, n).unwrap();
                     let r8 = tok_rt8(token, *full_bases, n, opts).unwrap();
                     for i in 0..8 {
-                        let tail = eval_tail::<F>(token, full_bases[i], n).unwrap();
+                        let tail = eval_tail::<CFG>(token, full_bases[i], n).unwrap();
                         assert_f32_eq(v8[i], tail, "powf Full x8 vs _with_token");
                         assert_f32_eq(r8[i], tail, "powf Full x8_runtime vs _with_token");
                         if F & 16 == 0 {
                             assert_f32_eq(
                                 tail,
-                                c_powf_scalar::<F>(full_bases[i], n).unwrap(),
-                                "powf Full BitExact _with_token vs _with",
+                                c_powf_scalar::<CFG>(full_bases[i], n).unwrap(),
+                                "powf Full BitExact _with_token vs scalar",
                             );
                         }
                     }
                 }
             } else if F & 32 == 0 {
-                let es = eval_tail::<F>(token, 2.0, f32::NAN).unwrap_err();
+                let es = eval_tail::<CFG>(token, 2.0, f32::NAN).unwrap_err();
                 assert_eq!(es.kind, PowfErrorKind::InvalidExponent);
                 assert_eq!(es.lane_mask, 1);
-                let ev = eval4::<F>(token, [2.0; 4], f32::NAN).unwrap_err();
+                let ev = eval4::<CFG>(token, [2.0; 4], f32::NAN).unwrap_err();
                 assert_eq!(ev.kind, PowfErrorKind::InvalidExponent);
                 assert_eq!(ev.lane_mask, 0b1111);
 
                 let mb = [1.0, -2.0, 0.5, f32::NAN];
-                let eb = eval4::<F>(token, mb, 2.2).unwrap_err();
+                let eb = eval4::<CFG>(token, mb, 2.2).unwrap_err();
                 assert_eq!(eb.kind, PowfErrorKind::InvalidBase);
                 assert_eq!(eb.lane_mask, 0b1010);
-                let ebs = eval_tail::<F>(token, -2.0, 2.2).unwrap_err();
+                let ebs = eval_tail::<CFG>(token, -2.0, 2.2).unwrap_err();
                 assert_eq!(ebs.kind, PowfErrorKind::InvalidBase);
                 assert_eq!(ebs.lane_mask, 1);
 
                 if F & 3 < 2 {
                     let oor = [1.0, 1.0e20, 2.0, 1.0e-20];
-                    let er = eval4::<F>(token, oor, 10.0).unwrap_err();
+                    let er = eval4::<CFG>(token, oor, 10.0).unwrap_err();
                     assert_eq!(er.kind, PowfErrorKind::OutsideApproximationRange);
                     assert_eq!(er.lane_mask, 0b1010);
-                    let ers = eval_tail::<F>(token, 1.0e20, 10.0).unwrap_err();
+                    let ers = eval_tail::<CFG>(token, 1.0e20, 10.0).unwrap_err();
                     assert_eq!(ers.kind, PowfErrorKind::OutsideApproximationRange);
                     assert_eq!(ers.lane_mask, 1);
                 }
@@ -465,32 +471,34 @@ macro_rules! define_powf_token_op {
             opts: PowfOptions,
         ) -> Result<[f32; 16], PowfError> {
             use magetypes::simd::generic::f32x16;
-            p::try_powf_f32x16_runtime(t, f32x16::from_array_t(t, xs), n, opts)
+            opts.runtime()
+                .simd(f32x16::from_array_t(t, xs), n)
                 .map(|v| v.to_array())
         }
     };
     (@def_rt16 no, $tok_ty:ty) => {};
-    (@x16 yes, $tok_ty:ty, $token:ident, $f:ident, $opts:ident, $n:ident, $core_bases:ident, $eval_tail:ident) => {
+    (@x16 yes, $tok_ty:ty, $token:ident, $cfg:ident, $opts:ident, $n:ident, $core_bases:ident, $eval_tail:ident) => {
         #[cfg(feature = "w512")]
         {
             #[inline(never)]
-            fn eval16<const FLAGS: u32>(
+            fn eval16<const C: u128>(
                 t: $tok_ty,
                 xs: [f32; 16],
                 exp: f32,
             ) -> Result<[f32; 16], PowfError> {
                 use magetypes::simd::generic::f32x16;
-                p::try_powf_f32x16_with::<p::Options<FLAGS>, _>(t, f32x16::from_array_t(t, xs), exp)
+                f32x16::from_array_t(t, xs)
+                    .try_powf_with::<C>(exp)
                     .map(|v| v.to_array())
             }
-            let v16 = eval16::<$f>($token, *$core_bases, $n).unwrap();
+            let v16 = eval16::<$cfg>($token, *$core_bases, $n).unwrap();
             let r16 = tok_rt16($token, *$core_bases, $n, $opts).unwrap();
             for i in 0..16 {
-                let tail = $eval_tail::<$f>($token, $core_bases[i], $n).unwrap();
+                let tail = $eval_tail::<$cfg>($token, $core_bases[i], $n).unwrap();
                 assert_f32_eq(v16[i], tail, "powf x16 vs _with_token");
                 assert_f32_eq(r16[i], tail, "powf x16_runtime vs _with_token");
             }
         }
     };
-    (@x16 no, $tok_ty:ty, $token:ident, $f:ident, $opts:ident, $n:ident, $core_bases:ident, $eval_tail:ident) => {};
+    (@x16 no, $tok_ty:ty, $token:ident, $cfg:ident, $opts:ident, $n:ident, $core_bases:ident, $eval_tail:ident) => {};
 }

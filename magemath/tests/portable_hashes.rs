@@ -1,18 +1,26 @@
 //! Cross-backend, cross-architecture pin of BitExact result bits.
 use archmage::ScalarToken;
-use magemath::{cbrtf as c, expf as e, logf as l, powf as p};
+use magemath::{
+    SimdMath,
+    cbrtf::{Cbrtf, CbrtfOptions},
+    expf::{Expf, ExpfOptions},
+    logf::{Logf, LogfOptions},
+    powf::{Powf, PowfOptions},
+};
 use magetypes::simd::generic::f32x8;
-type GM = p::presets::GammaMidp;
-type GL = p::presets::GammaLowp;
-type GH = p::presets::GammaHighp;
-type FH = p::presets::FullHighp;
-type NM = p::presets::NormalMidp;
-type EM = e::presets::Midp;
-type EL = e::presets::Lowp;
-type LM = l::presets::Midp;
-type LL = l::presets::Lowp;
-type CM = c::presets::MidpFull;
-type CL = c::presets::LowpFull;
+
+const GM: u128 = PowfOptions::new().gamma().midp().bits();
+const GL: u128 = PowfOptions::new().gamma().lowp().bits();
+const GH: u128 = PowfOptions::new().gamma().highp().bits();
+const FH: u128 = PowfOptions::new().full_domain().highp().bits();
+const NM: u128 = PowfOptions::new().midp().bits();
+const EM: u128 = ExpfOptions::new().midp().bits();
+const EL: u128 = ExpfOptions::new().lowp().bits();
+const LM: u128 = LogfOptions::new().midp().bits();
+const LL: u128 = LogfOptions::new().lowp().bits();
+const CM: u128 = CbrtfOptions::new().full_domain().midp().bits();
+const CL: u128 = CbrtfOptions::new().full_domain().lowp().bits();
+
 static NONE: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
 fn mix(h: &mut u64, r: Option<[f32; 8]>) {
     match r {
@@ -42,7 +50,7 @@ const NAMES: [&str; 11] = [
     "cbrt lowp full",
 ];
 
-/// Result bits of every BitExact preset over a fixed input stride, hashed.
+/// Result bits of every BitExact configuration over a fixed input stride, hashed.
 /// A change here is a change to portable results: refits, reordered arithmetic
 /// or a backend that rounds differently.
 #[test]
@@ -103,30 +111,30 @@ fn portable_result_hashes() {
         let v = f32x8::from_array_t(t, xs);
         let a = |r: Option<f32x8<ScalarToken>>| r.map(|v| v.to_array());
         let auto = [
-            p::try_powf_array_with::<GM, 8>(ys, g).ok(),
-            p::try_powf_array_with::<GL, 8>(ys, g).ok(),
-            p::try_powf_array_with::<GH, 8>(ys, g).ok(),
-            p::try_powf_array_with::<FH, 8>(xs, n).ok(),
-            p::try_powf_array_with::<NM, 8>(ys, g).ok(),
-            e::try_exp2_array_with::<EM, 8>(xs).ok(),
-            e::try_exp2_array_with::<EL, 8>(xs).ok(),
-            l::try_log2_array_with::<LM, 8>(ys).ok(),
-            l::try_log2_array_with::<LL, 8>(ys).ok(),
-            c::try_cbrt_array_with::<CM, 8>(xs).ok(),
-            c::try_cbrt_array_with::<CL, 8>(xs).ok(),
+            Powf::<GM>::array::<8>(ys, g).ok(),
+            Powf::<GL>::array::<8>(ys, g).ok(),
+            Powf::<GH>::array::<8>(ys, g).ok(),
+            Powf::<FH>::array::<8>(xs, n).ok(),
+            Powf::<NM>::array::<8>(ys, g).ok(),
+            Expf::<EM>::exp2_array::<8>(xs).ok(),
+            Expf::<EL>::exp2_array::<8>(xs).ok(),
+            Logf::<LM>::log2_array::<8>(ys).ok(),
+            Logf::<LL>::log2_array::<8>(ys).ok(),
+            Cbrtf::<CM>::array::<8>(xs).ok(),
+            Cbrtf::<CL>::array::<8>(xs).ok(),
         ];
         let sc = [
-            a(p::try_powf_f32x8_with::<GM, _>(t, w, g).ok()),
-            a(p::try_powf_f32x8_with::<GL, _>(t, w, g).ok()),
-            a(p::try_powf_f32x8_with::<GH, _>(t, w, g).ok()),
-            a(p::try_powf_f32x8_with::<FH, _>(t, v, n).ok()),
-            a(p::try_powf_f32x8_with::<NM, _>(t, w, g).ok()),
-            a(e::try_exp2_f32x8_with::<EM, _>(t, v).ok()),
-            a(e::try_exp2_f32x8_with::<EL, _>(t, v).ok()),
-            a(l::try_log2_f32x8_with::<LM, _>(t, w).ok()),
-            a(l::try_log2_f32x8_with::<LL, _>(t, w).ok()),
-            a(c::try_cbrt_f32x8_with::<CM, _>(t, v).ok()),
-            a(c::try_cbrt_f32x8_with::<CL, _>(t, v).ok()),
+            a(w.try_powf_with::<GM>(g).ok()),
+            a(w.try_powf_with::<GL>(g).ok()),
+            a(w.try_powf_with::<GH>(g).ok()),
+            a(v.try_powf_with::<FH>(n).ok()),
+            a(w.try_powf_with::<NM>(g).ok()),
+            a(v.try_exp2_with::<EM>().ok()),
+            a(v.try_exp2_with::<EL>().ok()),
+            a(w.try_log2_with::<LM>().ok()),
+            a(w.try_log2_with::<LL>().ok()),
+            a(v.try_cbrt_with::<CM>().ok()),
+            a(v.try_cbrt_with::<CL>().ok()),
         ];
         for k in 0..11 {
             mix(&mut ha[k], auto[k]);
