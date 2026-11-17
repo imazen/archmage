@@ -34,6 +34,7 @@ fn inner_neon(token: archmage::NeonToken, x: f32) -> f32 {
 #[target_feature(enable = "simd128")]
 #[inline]
 fn inner_wasm128(token: archmage::Wasm128Token, x: f32) -> f32 {
+    let _: () = <archmage::Wasm128Token>::__ARCHMAGE_ASSERT_TIER_1E0DF26B;
     let _ = token;
     x
 }
@@ -73,6 +74,7 @@ fn outer_neon(token: archmage::NeonToken, x: f32) -> f32 {
 #[target_feature(enable = "simd128")]
 #[inline]
 fn outer_wasm128(token: archmage::Wasm128Token, x: f32) -> f32 {
+    let _: () = <archmage::Wasm128Token>::__ARCHMAGE_ASSERT_TIER_1E0DF26B;
     inner_wasm128(token, x)
 }
 fn outer_scalar(token: archmage::ScalarToken, x: f32) -> f32 {

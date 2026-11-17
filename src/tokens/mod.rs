@@ -252,6 +252,10 @@ impl ScalarToken {
     /// Must match `expected_tier_tag("ScalarToken")` in the proc-macro registry.
     #[doc(hidden)]
     pub const __ARCHMAGE_TIER_TAG: u32 = 0xD141EACA;
+
+    #[doc(hidden)]
+    pub const __ARCHMAGE_ASSERT_TIER_D141EACA: () =
+        [()][!(Self::__ARCHMAGE_TIER_TAG == 0xD141EACA) as usize];
 }
 
 impl ScalarToken {

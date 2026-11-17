@@ -499,6 +499,7 @@ pub(crate) fn suffix_path(path: &syn::Path, suffix: &str) -> syn::Path {
 pub(crate) fn gen_tier_trait_assertion(
     tier_traits: &[String],
     token_ident: &Ident,
+    ref_depth: usize,
 ) -> proc_macro2::TokenStream {
     if tier_traits.is_empty() {
         return quote! {};
@@ -507,11 +508,12 @@ pub(crate) fn gen_tier_trait_assertion(
         let ident = format_ident!("{}", name);
         quote! { + ::archmage::#ident }
     });
+    let derefs = std::iter::repeat_n(quote!(*), ref_depth);
     quote! {
         {
             #[inline(always)]
             const fn __archmage_assert_tier_trait<__T: ?Sized #(#bounds)*>(_: &__T) {}
-            __archmage_assert_tier_trait(&#token_ident);
+            __archmage_assert_tier_trait(&#(#derefs)*#token_ident);
         }
     }
 }
@@ -604,13 +606,27 @@ pub(crate) fn avx512_import_error(
 }
 
 /// The error when a signature has no usable token parameter. A featureless
-/// bound such as `SimdToken` gets its own explanation; `forms` lists the
-/// macro's accepted spellings.
+/// bound such as `SimdToken` or a conflicting multi-architecture bound gets its
+/// own explanation; `forms` lists the macro's accepted spellings.
 pub(crate) fn missing_token_error(
     sig: &Signature,
+    self_type: Option<&Type>,
     macro_name: &str,
     forms: &str,
 ) -> proc_macro2::TokenStream {
+    if let Some((t1, a1, t2, a2)) =
+        crate::token_discovery::diagnose_mixed_arch_traits(sig, self_type)
+    {
+        let msg = format!(
+            "cannot combine token bounds from different architectures (`{t1}` for `{a1}` \
+             and `{t2}` for `{a2}`) in #[{macro_name}]: a single `#[target_feature]` \
+             function can only target one CPU architecture.\n\
+             \n\
+             Write separate functions per architecture, or use `#[attune]` / `#[magetypes]` \
+             to generate per-tier variants."
+        );
+        return syn::Error::new_spanned(sig, msg).to_compile_error();
+    }
     if let Some(trait_name) = crate::token_discovery::diagnose_featureless_token(sig) {
         let msg = format!(
             "`{trait_name}` cannot be used as a token bound in #[{macro_name}] \

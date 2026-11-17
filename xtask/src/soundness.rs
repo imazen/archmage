@@ -101,7 +101,7 @@ mod raw_context;
 /// where all backend intrinsic calls live, and `tests/expand` holds the
 /// committed macro-expansion snapshots — scanning them means macro *output*
 /// is subject to the same verification as handwritten code.
-const SCAN_ROOTS: &[&str] = &["src", "magetypes/src", "tests/expand"];
+const SCAN_ROOTS: &[&str] = &["src", "magetypes/src", "magemath/src", "tests/expand"];
 
 /// Global floor on verified intrinsic calls (measured 4478 at
 /// introduction, 2026-07-14). If a legitimate refactor reduces coverage
@@ -410,10 +410,10 @@ impl<'r> Scanner<'r> {
             if !has_body {
                 continue;
             }
-            let signature = &text[sig_start..sig_end];
+            let signature = strip_return_type(&text[sig_start..sig_end]);
             let mut features: HashSet<String> = HashSet::new();
             let mut names: Vec<&str> = Vec::new();
-            for cap in self.token_name_re.captures_iter(signature) {
+            for cap in self.token_name_re.captures_iter(&signature) {
                 let name = cap.get(1).unwrap().as_str();
                 if let Some(token) = self.reg.find_token(name) {
                     features.extend(token.features.iter().cloned());
@@ -456,7 +456,9 @@ impl<'r> Scanner<'r> {
 ///   the macros' emitted `unsafe` is documented at its source in
 ///   `archmage-macros/src/`.
 fn safety_comment_rules(rel: &str, raw: &str, errors: &mut Vec<String>) {
-    let in_scope = rel.starts_with("src") || rel.starts_with("magetypes/src");
+    let in_scope = rel.starts_with("src")
+        || rel.starts_with("magetypes/src")
+        || rel.starts_with("magemath/src");
     if !in_scope {
         return;
     }
@@ -989,6 +991,68 @@ fn find_matching_brace(text: &str, open: usize) -> Option<usize> {
         }
     }
     None
+}
+
+/// Blank out the top-level `-> ReturnType` segment of a `fn` signature while
+/// preserving its generics, parameter list, and any trailing `where` clause.
+///
+/// Without this, a function returning a token (`fn bad() -> Option<X64V4Token>`)
+/// would appear to be gated by that token's feature set.
+fn strip_return_type(sig: &str) -> std::borrow::Cow<'_, str> {
+    let bytes = sig.as_bytes();
+    let mut i = 0usize;
+    let mut paren = 0i32;
+    let mut bracket = 0i32;
+    let mut angle = 0i32;
+    let mut seen_params = false;
+    let mut ret_start: Option<usize> = None;
+    let mut ret_end = bytes.len();
+
+    while i < bytes.len() {
+        if i + 1 < bytes.len() && bytes[i] == b'-' && bytes[i + 1] == b'>' {
+            if seen_params && paren == 0 && bracket == 0 && angle == 0 && ret_start.is_none() {
+                ret_start = Some(i);
+            }
+            i += 2;
+            continue;
+        }
+        match bytes[i] {
+            b'(' => {
+                paren += 1;
+                seen_params = true;
+            }
+            b')' => paren = (paren - 1).max(0),
+            b'[' => bracket += 1,
+            b']' => bracket = (bracket - 1).max(0),
+            b'<' => angle += 1,
+            b'>' => angle = (angle - 1).max(0),
+            b'w' if ret_start.is_some()
+                && paren == 0
+                && bracket == 0
+                && angle == 0
+                && bytes[i..].starts_with(b"where")
+                && (i == 0 || !bytes[i - 1].is_ascii_alphanumeric() && bytes[i - 1] != b'_')
+                && (i + 5 == bytes.len()
+                    || !bytes[i + 5].is_ascii_alphanumeric() && bytes[i + 5] != b'_') =>
+            {
+                ret_end = i;
+                break;
+            }
+            _ => {}
+        }
+        i += 1;
+    }
+
+    let Some(start) = ret_start else {
+        return std::borrow::Cow::Borrowed(sig);
+    };
+    let mut owned = bytes.to_vec();
+    for b in &mut owned[start..ret_end] {
+        if *b != b'\n' {
+            *b = b' ';
+        }
+    }
+    std::borrow::Cow::Owned(String::from_utf8(owned).expect("ASCII spaces preserve UTF-8"))
 }
 
 /// Scan forward from a fn name to the end of its signature. Returns
@@ -1696,6 +1760,26 @@ mod tests {
             scan.errors
         );
         assert!(scan.errors[0].contains("rogue"));
+    }
+
+    #[test]
+    fn return_type_token_does_not_gate_body() {
+        let bad = scan_at(
+            "src/test_ret.rs",
+            "fn forge() -> Option<archmage::X64V4Token> { _mm512_setzero_ps(); None }\n",
+        );
+        assert!(
+            bad.errors.iter().any(|e| e.contains("UNGATED")),
+            "expected UNGATED error when token only appears in return type: {:?}",
+            bad.errors
+        );
+
+        let good = scan_at(
+            "src/test_ret.rs",
+            "fn pass(t: archmage::X64V4Token) -> archmage::X64V4Token { _mm512_setzero_ps(); t }\n",
+        );
+        assert!(good.errors.is_empty(), "{:?}", good.errors);
+        assert_eq!(good.verified, 1);
     }
 
     #[test]

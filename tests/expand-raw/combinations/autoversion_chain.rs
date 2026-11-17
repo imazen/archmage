@@ -77,6 +77,7 @@ fn inner_neon(__archmage_token: archmage::NeonToken, data: &[f32; 4]) -> f32 {
 #[inline]
 #[allow(dead_code)]
 fn inner_wasm128(_token: archmage::Wasm128Token, data: &[f32; 4]) -> f32 {
+    let _: () = <archmage::Wasm128Token>::__ARCHMAGE_ASSERT_TIER_1E0DF26B;
     data.iter().sum()
 }
 #[allow(dead_code)]
@@ -164,6 +165,7 @@ fn outer_neon(
 #[inline]
 #[allow(dead_code)]
 fn outer_wasm128(_token: archmage::Wasm128Token, data: &[f32; 4], scale: f32) -> f32 {
+    let _: () = <archmage::Wasm128Token>::__ARCHMAGE_ASSERT_TIER_1E0DF26B;
     inner(data) * scale
 }
 #[allow(dead_code)]

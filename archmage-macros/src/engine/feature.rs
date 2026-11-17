@@ -22,6 +22,8 @@ pub(crate) struct FeatureContext {
     pub(crate) magetypes_namespace: Option<&'static str>,
     /// The token parameter when the features came from the signature.
     pub(crate) token_ident: Option<Ident>,
+    /// Outer reference layers on `token_ident` (`0` for `T`, `1` for `&T`).
+    pub(crate) ref_depth: usize,
     /// Tier traits to re-state through `::archmage::` (trait or generic bound).
     pub(crate) tier_traits: Vec<String>,
 }
@@ -37,6 +39,7 @@ impl FeatureContext {
                 target_arch: None,
                 magetypes_namespace: None,
                 token_ident: None,
+                ref_depth: 0,
                 tier_traits: Vec::new(),
             });
         }
@@ -47,6 +50,7 @@ impl FeatureContext {
             target_arch: token_to_arch(tier_token),
             magetypes_namespace: token_to_magetypes_namespace(tier_token),
             token_ident: None,
+            ref_depth: 0,
             tier_traits: Vec::new(),
         })
     }
@@ -62,6 +66,7 @@ impl FeatureContext {
             target_arch: info.target_arch,
             magetypes_namespace: info.magetypes_namespace,
             token_ident: Some(info.ident),
+            ref_depth: info.ref_depth,
             tier_traits: info.tier_traits,
         }
     }
@@ -164,7 +169,7 @@ pub(crate) fn emit(
         options.import_magetypes,
     );
     let tier_trait_assertion = match &tier.token_ident {
-        Some(ident) => gen_tier_trait_assertion(&tier.tier_traits, ident),
+        Some(ident) => gen_tier_trait_assertion(&tier.tier_traits, ident, tier.ref_depth),
         None => quote! {},
     };
     prepend_to_body(

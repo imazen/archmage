@@ -5,7 +5,10 @@ use syn::visit::{self, Visit};
 use crate::registry::Registry;
 
 pub(super) fn verify(reg: &Registry, rel: &str, text: &str, errors: &mut Vec<String>) {
-    if !rel.starts_with("magetypes/src") || !text.contains("from_context") {
+    let in_scope = rel.starts_with("magetypes/src")
+        || rel.starts_with("magemath/src")
+        || ((rel == "src" || rel.starts_with("src/")) && !rel.starts_with("src/tokens/generated/"));
+    if !in_scope || !text.contains("from_context") {
         return;
     }
     let file = match syn::parse_file(text) {
@@ -66,7 +69,7 @@ impl ContextVisitor<'_> {
                     .last()
                     .map(|s| s.ident.to_string())
                     .as_deref(),
-                Some("rite" | "token_target_features")
+                Some("rite" | "token_target_features" | "attune")
             ) {
                 // Explicit single-tier form only. Unknown/compound forms fail closed.
                 if let Ok(tier) = attr.parse_args::<syn::Ident>() {
@@ -202,7 +205,7 @@ impl<'ast> Visit<'ast> for ContextVisitor<'_> {
 mod tests {
     use super::*;
 
-    fn check(source: &str) -> Vec<String> {
+    fn check_at(rel: &str, source: &str) -> Vec<String> {
         let reg = Registry::load(
             &std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
                 .parent()
@@ -211,8 +214,12 @@ mod tests {
         )
         .unwrap();
         let mut errors = Vec::new();
-        verify(&reg, "magetypes/src/test.rs", source, &mut errors);
+        verify(&reg, rel, source, &mut errors);
         errors
+    }
+
+    fn check(source: &str) -> Vec<String> {
+        check_at("magetypes/src/test.rs", source)
     }
 
     #[test]
@@ -221,12 +228,22 @@ mod tests {
             "archmage::rite(v3)",
             "archmage::rite(v4)",
             "archmage::token_target_features(v3)",
+            "archmage::attune(v3)",
+            "archmage::attune(v4)",
         ] {
             let source =
                 format!("#[{attribute}] fn wrap() {{ archmage::X64V3Token::from_context(); }}");
             assert!(check(&source).is_empty(), "{source}: {:?}", check(&source));
         }
         assert!(check("#[target_feature(enable = \"neon\")] fn wrap() { archmage::NeonToken::from_context(); }").is_empty());
+    }
+
+    #[test]
+    fn audits_src_and_magemath_while_exempting_generated_tokens() {
+        let bad = "fn wrap() { archmage::X64V3Token::from_context(); }";
+        assert!(!check_at("src/helper.rs", bad).is_empty());
+        assert!(!check_at("magemath/src/helper.rs", bad).is_empty());
+        assert!(check_at("src/tokens/generated/x86.rs", bad).is_empty());
     }
 
     #[test]

@@ -741,13 +741,13 @@ fn receivers_and_generic_modes_keep_feature_checks() {
         (
             quote!(nested),
             quote!(
-                fn f<T: HasX64V2 + HasNeon>(token: T) {}
+                fn f<T: HasNeon + HasNeonAes>(token: T) {}
             ),
         ),
         (
             quote!(),
             quote!(
-                fn f<T: HasX64V2 + HasNeon>(token: T) {}
+                fn f<T: HasNeon + HasNeonAes>(token: T) {}
             ),
         ),
     ] {
@@ -755,6 +755,20 @@ fn receivers_and_generic_modes_keep_feature_checks() {
         assert!(!out.to_string().contains("compile_error"));
         assert!(out.to_string().contains("target_feature"));
         syn::parse2::<syn::File>(out).unwrap();
+    }
+    for args in [quote!(nested), quote!()] {
+        let out = expand(
+            "arcane",
+            args,
+            quote!(
+                fn f<T: HasX64V2 + HasNeon>(token: T) {}
+            ),
+        )
+        .unwrap()
+        .to_string();
+        assert!(out.contains("compile_error"), "{out}");
+        assert!(out.contains("HasX64V2"), "{out}");
+        assert!(out.contains("HasNeon"), "{out}");
     }
     let out = expand(
         "rite",
@@ -937,8 +951,10 @@ fn combined_trait_features_preserve_first_seen_order() {
     assert_eq!(single, redundant);
 
     for names in [
-        ["HasX64V2", "HasNeon"],
-        ["HasNeon", "HasX64V2"],
+        ["HasNeonAes", "HasNeonSha3"],
+        ["HasNeonSha3", "HasNeonAes"],
+        ["HasX64V2", "Has256BitSimd"],
+        ["Has256BitSimd", "HasX64V2"],
         ["HasX64V2", "HasX64V4"],
         ["HasX64V4", "HasX64V2"],
     ] {
@@ -957,6 +973,8 @@ fn combined_trait_features_preserve_first_seen_order() {
             expected.join(",")
         );
     }
+    assert!(traits_to_features(&["HasX64V2".into(), "HasNeon".into()]).is_none());
+    assert!(traits_to_features(&["HasNeon".into(), "HasX64V2".into()]).is_none());
     assert!(traits_to_features(&["UnknownTrait".into()]).is_none());
     let unusual = ["future_feature", "avx2", "future_feature"];
     let csv = crate::token_discovery::features_csv(None, &unusual);

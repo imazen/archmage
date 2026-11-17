@@ -75,6 +75,14 @@ impl Wasm128Token {
     #[inline]
     #[target_feature(enable = "simd128")]
     pub fn from_context() -> Self {
+        #[cfg(not(target_feature = "simd128"))]
+        {
+            // Anchor a simd128 opcode on an opaque lane so LLVM cannot fold
+            // the vector to scalar stores and WASM module validation enforces
+            // `simd128` even when the caller drops the zero-sized proof.
+            let z = core::arch::wasm32::i32x4_splat(core::hint::black_box(0));
+            let _ = core::hint::black_box(core::arch::wasm32::v128_any_true(z));
+        }
         Self { _private: () }
     }
 
@@ -197,6 +205,14 @@ impl Wasm128RelaxedToken {
     #[inline]
     #[target_feature(enable = "simd128,relaxed-simd")]
     pub fn from_context() -> Self {
+        #[cfg(not(all(target_feature = "simd128", target_feature = "relaxed-simd")))]
+        {
+            // Anchor a relaxed-simd opcode on an opaque lane so LLVM cannot
+            // fold it away and WASM module validation enforces both features
+            // even when the caller drops the zero-sized proof.
+            let z = core::arch::wasm32::i32x4_splat(core::hint::black_box(0));
+            let _ = core::hint::black_box(core::arch::wasm32::i32x4_relaxed_laneselect(z, z, z));
+        }
         Self { _private: () }
     }
 

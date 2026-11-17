@@ -190,6 +190,7 @@ pub(crate) fn rite_single_impl(mut input_fn: LightFn, args: RiteArgs) -> TokenSt
             None => {
                 return missing_token_error(
                     &input_fn.sig,
+                    None,
                     "rite",
                     " or a tier name. Supported forms:\n\
                      - Tier name: `#[rite(v3)]`, `#[rite(neon)]`\n\

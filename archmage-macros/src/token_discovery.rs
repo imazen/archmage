@@ -110,8 +110,35 @@ pub(crate) fn find_generic_bounds(sig: &Signature, type_name: &str) -> Option<Ve
     }
 }
 
+/// Return the first pair of trait names with conflicting target architectures,
+/// if any exist in `trait_names`.
+pub(crate) fn find_mixed_arch_traits(
+    trait_names: &[String],
+) -> Option<(String, &'static str, String, &'static str)> {
+    let mut first: Option<(&str, &'static str)> = None;
+    for trait_name in trait_names {
+        if let Some(arch) = trait_to_arch(trait_name) {
+            match first {
+                Some((prev_name, prev_arch)) if prev_arch != arch => {
+                    return Some((prev_name.to_string(), prev_arch, trait_name.clone(), arch));
+                }
+                None => first = Some((trait_name.as_str(), arch)),
+                _ => {}
+            }
+        }
+    }
+    None
+}
+
 /// Convert trait names to features, collecting all features from all traits.
+///
+/// Returns `None` if no trait maps to features or if traits from conflicting
+/// CPU architectures (e.g. `HasX64V2 + HasNeon`) are combined on one token.
 pub(crate) fn traits_to_features(trait_names: &[String]) -> Option<Cow<'static, [&'static str]>> {
+    if find_mixed_arch_traits(trait_names).is_some() {
+        return None;
+    }
+
     // Registry lists are unique (tested); only a union that adds features
     // needs owned storage. Preserve first-seen order for generated attributes.
     let mut all_features: Cow<'static, [&'static str]> = Cow::Borrowed(&[]);
@@ -217,10 +244,41 @@ pub(crate) fn diagnose_featureless_token(sig: &Signature) -> Option<&'static str
     None
 }
 
+/// Diagnose mixed-architecture trait bounds (e.g. `HasX64V2 + HasNeon`) when
+/// `find_token_param` failed.
+pub(crate) fn diagnose_mixed_arch_traits(
+    sig: &Signature,
+    self_type: Option<&Type>,
+) -> Option<(String, &'static str, String, &'static str)> {
+    let check_ty = |ty: &Type| -> Option<(String, &'static str, String, &'static str)> {
+        match extract_token_type_info(ty)? {
+            TokenTypeInfo::ImplTrait(names) => find_mixed_arch_traits(&names),
+            TokenTypeInfo::Generic(type_name) => {
+                let bounds = find_generic_bounds(sig, &type_name)?;
+                find_mixed_arch_traits(&bounds)
+            }
+            TokenTypeInfo::Concrete(_) => None,
+        }
+    };
+    for arg in &sig.inputs {
+        if let FnArg::Typed(PatType { ty, .. }) = arg
+            && let Some(conflict) = check_ty(ty)
+        {
+            return Some(conflict);
+        }
+    }
+    if let Some(self_ty) = self_type {
+        return check_ty(self_ty);
+    }
+    None
+}
+
 /// Result of finding a token parameter in a function signature.
 pub(crate) struct TokenParamInfo {
     /// The parameter identifier (e.g., `token`)
     pub ident: Ident,
+    /// Number of outer reference layers on the parameter type (`0` for `T`, `1` for `&T`).
+    pub ref_depth: usize,
     /// Target features to enable (e.g., `["avx2", "fma"]`)
     pub features: Cow<'static, [&'static str]>,
     /// Target architecture (Some for concrete tokens, None for traits/generics)
@@ -273,16 +331,22 @@ pub(crate) fn find_token_param(sig: &Signature) -> Option<TokenParamInfo> {
                 continue;
             }
             FnArg::Typed(PatType { pat, ty, .. }) => {
-                if let Some(info) = extract_token_type_info(ty) {
+                let mut ref_depth = 0usize;
+                let mut inner_ty: &Type = ty.as_ref();
+                while let Type::Reference(r) = inner_ty {
+                    ref_depth += 1;
+                    inner_ty = r.elem.as_ref();
+                }
+                if let Some(info) = extract_token_type_info(inner_ty) {
                     let (features, arch, token_name, mage_ns, full_type, tier_traits) = match info {
                         TokenTypeInfo::Concrete(ref name) => {
                             let features = token_to_features(name).map(Cow::Borrowed);
                             let arch = token_to_arch(name);
                             let ns = token_to_magetypes_namespace(name);
-                            // Clone the full Type for const tier tag assertion.
+                            // Clone the unwrapped Type for const tier tag assertion.
                             // This preserves any path prefix (e.g., `my_crate::X64V3Token`)
-                            // so the assertion resolves through re-exports.
-                            let full_type = Some(ty.as_ref().clone());
+                            // while stripping `&`/`&mut` so `<T>::__ARCHMAGE_ASSERT_TIER_*` resolves.
+                            let full_type = Some(inner_ty.clone());
                             (
                                 features,
                                 arch,
@@ -326,6 +390,7 @@ pub(crate) fn find_token_param(sig: &Signature) -> Option<TokenParamInfo> {
                         if let Some(ident) = ident {
                             return Some(TokenParamInfo {
                                 ident,
+                                ref_depth,
                                 features,
                                 target_arch: arch,
                                 token_type_name: token_name,

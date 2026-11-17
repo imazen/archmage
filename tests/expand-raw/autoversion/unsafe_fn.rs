@@ -117,6 +117,7 @@ unsafe fn process_wasm128(
     ptr: *const f32,
     len: usize,
 ) -> f32 {
+    let _: () = <archmage::Wasm128Token>::__ARCHMAGE_ASSERT_TIER_1E0DF26B;
     let mut s = 0.0f32;
     for i in 0..len {
         s += unsafe { *ptr.add(i) };

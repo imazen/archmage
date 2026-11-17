@@ -116,18 +116,30 @@ impl Process for Filter {
         unsafe { __simd_inner_process_neon(self, __archmage_token, data) }
     }
     #[cfg(target_arch = "wasm32")]
-    #[target_feature(enable = "simd128")]
-    #[inline]
     #[allow(dead_code)]
-    fn process_wasm128(&self, _token: archmage::Wasm128Token, data: &[f32; 4]) -> f32 {
-        let _self = self;
-        let mut sum = 0.0f32;
-        for &x in data {
-            if x > _self.cutoff {
-                sum += x;
+    #[inline(always)]
+    fn process_wasm128(
+        &self,
+        __archmage_token: archmage::Wasm128Token,
+        data: &[f32; 4],
+    ) -> f32 {
+        #[target_feature(enable = "simd128")]
+        #[inline]
+        fn __simd_inner_process_wasm128(
+            _self: &Filter,
+            _token: archmage::Wasm128Token,
+            data: &[f32; 4],
+        ) -> f32 {
+            let mut sum = 0.0f32;
+            for &x in data {
+                if x > _self.cutoff {
+                    sum += x;
+                }
             }
+            sum
         }
-        sum
+        let _: () = <archmage::Wasm128Token>::__ARCHMAGE_ASSERT_TIER_1E0DF26B;
+        __simd_inner_process_wasm128(self, __archmage_token, data)
     }
     #[allow(dead_code)]
     fn process_scalar(&self, _token: archmage::ScalarToken, data: &[f32; 4]) -> f32 {

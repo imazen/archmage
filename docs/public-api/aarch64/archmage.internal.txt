@@ -10,7 +10,7 @@
 ## summary
 #
 #   pub modules                                 1
-#   pub consts/statics                         35
+#   pub consts/statics                         36
 #   pub macros                                  5
 #   free functions                              1
 #   inherent methods                           23
@@ -22,9 +22,9 @@
 #   __private                         1
 #   prelude                           2
 #   testing                           1
-#   tokens                           55
+#   tokens                           56
 
-## items (67 lines)
+## items (68 lines)
 
 pub const tokens::Arm64V2Token::__ARCHMAGE_ASSERT_TIER_B0231590: ()
 pub const tokens::Arm64V2Token::__ARCHMAGE_TIER_TAG: u32
@@ -40,6 +40,7 @@ pub const tokens::NeonSha3Token::__ARCHMAGE_ASSERT_TIER_8215198F: ()
 pub const tokens::NeonSha3Token::__ARCHMAGE_TIER_TAG: u32
 pub const tokens::NeonToken::__ARCHMAGE_ASSERT_TIER_72CB52B2: ()
 pub const tokens::NeonToken::__ARCHMAGE_TIER_TAG: u32
+pub const tokens::ScalarToken::__ARCHMAGE_ASSERT_TIER_D141EACA: ()
 pub const tokens::ScalarToken::__ARCHMAGE_TIER_TAG: u32
 pub const tokens::Wasm128RelaxedToken::__ARCHMAGE_ASSERT_TIER_821D5452: ()
 pub const tokens::Wasm128RelaxedToken::__ARCHMAGE_TIER_TAG: u32

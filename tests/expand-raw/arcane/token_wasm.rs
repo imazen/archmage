@@ -4,6 +4,7 @@ use archmage::{arcane, Wasm128Token};
 #[target_feature(enable = "simd128")]
 #[inline]
 fn process(token: Wasm128Token, a: f32) -> f32 {
+    let _: () = <Wasm128Token>::__ARCHMAGE_ASSERT_TIER_1E0DF26B;
     a + 1.0
 }
 fn main() {}

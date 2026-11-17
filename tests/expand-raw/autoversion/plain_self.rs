@@ -81,6 +81,7 @@ impl P {
     #[inline]
     #[allow(dead_code)]
     fn apply_wasm128(&self, _token: archmage::Wasm128Token, x: f32) -> f32 {
+        let _: () = <archmage::Wasm128Token>::__ARCHMAGE_ASSERT_TIER_1E0DF26B;
         x * self.f
     }
     #[allow(dead_code)]

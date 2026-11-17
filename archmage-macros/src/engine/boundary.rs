@@ -93,8 +93,11 @@ pub(crate) fn expand(
     }
 
     // Find the token parameter, its features, target arch, and token type name
+    let mut from_self_receiver = false;
+    let mut receiver_ref_depth = 0usize;
     let TokenParamInfo {
         ident: mut _token_ident,
+        ref_depth,
         features,
         target_arch,
         token_type_name,
@@ -102,21 +105,26 @@ pub(crate) fn expand(
         token_type,
         tier_traits,
     } = match find_token_param(&input_fn.sig).or_else(|| {
-        // A concrete token receiver can itself prove the required features.
+        // A concrete or trait-bounded token receiver can itself prove the required features.
         // Reuse normal discovery so token validation and feature lookup agree.
         let self_ty = args.self_type.as_ref()?;
-        if !has_self_receiver {
+        let Some(FnArg::Receiver(receiver)) = input_fn.sig.inputs.first() else {
             return None;
-        }
+        };
         let mut receiver_sig = input_fn.sig.clone();
         receiver_sig.inputs.clear();
         receiver_sig.inputs.push(syn::parse_quote!(_self: #self_ty));
-        find_token_param(&receiver_sig)
+        let found = find_token_param(&receiver_sig)?;
+        from_self_receiver = true;
+        receiver_ref_depth =
+            usize::from(!matches!(receiver.kind, syn::ReceiverKind::Value)) + found.ref_depth;
+        Some(found)
     }) {
         Some(result) => result,
         None => {
             return missing_token_error(
                 &input_fn.sig,
+                args.self_type.as_ref(),
                 macro_name,
                 &format!(
                     ". Supported forms:\n\
@@ -167,9 +175,18 @@ pub(crate) fn expand(
         crate::common::rename_underscore_params(&mut sig);
         sig
     };
-    let wrapper_token_ident = find_token_param(&wrapper_sig)
-        .map(|info| info.ident)
-        .unwrap_or_else(|| _token_ident.clone());
+    let wrapper_token_ident = if from_self_receiver {
+        format_ident!("self")
+    } else {
+        find_token_param(&wrapper_sig)
+            .map(|info| info.ident)
+            .unwrap_or_else(|| _token_ident.clone())
+    };
+    let wrapper_ref_depth = if from_self_receiver {
+        receiver_ref_depth
+    } else {
+        ref_depth
+    };
     if let Some(ident) = rename_wildcard_token(&mut input_fn.sig) {
         _token_ident = ident;
     }
@@ -221,45 +238,64 @@ pub(crate) fn expand(
         })
         .attribute(&input_fn.vis);
 
+    let token_assertion =
+        gen_token_assertion(&token_type_name, &token_type, args.suppress_const_test);
+
     // Scalar has no instruction-set boundary. Preserve its signature and body
-    // without emitting the invalid #[target_feature(enable = "")].
-    if features_csv.is_empty() {
+    // without emitting the invalid #[target_feature(enable = "")] — except when
+    // `_self = Type` is used, where nested boundary emission enforces that the
+    // receiver actually has `Type` and performs `Self` substitution.
+    if features_csv.is_empty() && args.self_type.is_none() {
+        let direct_tier_trait_assertion =
+            gen_tier_trait_assertion(&tier_traits, &_token_ident, ref_depth);
         mark_emitted_fn_header(&mut input_fn.vis, &mut input_fn.sig);
         let vis = &input_fn.vis;
         let sig = &input_fn.sig;
         let attrs = filter_inline_attrs(&input_fn.attrs);
         let body = &input_fn.body;
-        let self_binding = args
-            .self_type
-            .as_ref()
-            .map(|_| quote! { let _self = self; });
         let cfg = gen_cfg_guard(None, args.shared.cfg_feature.as_deref());
-        let body = braced_body(&input_fn.brace_token, quote! { #self_binding #body });
+        let body = braced_body(
+            &input_fn.brace_token,
+            quote! { #token_assertion #direct_tier_trait_assertion #body },
+        );
         return quote! { #cfg #(#attrs)* #inline_attr #vis #sig #body };
     }
-    let target_feature_attrs: Vec<Attribute> =
-        vec![parse_quote!(#[target_feature(enable = #features_csv)])];
+    let target_feature_attrs: Vec<Attribute> = if features_csv.is_empty() {
+        Vec::new()
+    } else {
+        vec![parse_quote!(#[target_feature(enable = #features_csv)])]
+    };
 
     // On wasm32, #[target_feature(enable = "simd128")] functions are safe (Rust 1.54+).
     // The wasm validation model guarantees unsupported instructions trap deterministically,
-    // so there's no UB from feature mismatch. Skip the unsafe wrapper entirely.
-    if target_arch == Some("wasm32") {
-        return arcane_impl_wasm_safe(input_fn, &args, target_feature_attrs, inline_attr);
+    // so there's no UB from feature mismatch. Skip the wrapper when `_self = Type` is absent.
+    if target_arch == Some("wasm32") && args.self_type.is_none() {
+        let direct_tier_trait_assertion =
+            gen_tier_trait_assertion(&tier_traits, &_token_ident, ref_depth);
+        return arcane_impl_wasm_safe(
+            input_fn,
+            &args,
+            target_feature_attrs,
+            inline_attr,
+            quote! { #token_assertion #direct_tier_trait_assertion },
+        );
     }
 
+    let safe_callee = features_csv.is_empty() || target_arch == Some("wasm32");
     let cfg_guard = gen_cfg_guard(target_arch, args.shared.cfg_feature.as_deref());
     drop_attrs_equal_to(&mut input_fn.attrs, &cfg_guard);
     let parts = BoundaryParts {
         cfg_guard,
         target_feature_attrs,
         inline_attr,
-        token_assertion: gen_token_assertion(
-            &token_type_name,
-            &token_type,
-            args.suppress_const_test,
+        token_assertion,
+        tier_trait_assertion: gen_tier_trait_assertion(
+            &tier_traits,
+            &wrapper_token_ident,
+            wrapper_ref_depth,
         ),
-        tier_trait_assertion: gen_tier_trait_assertion(&tier_traits, &wrapper_token_ident),
         wrapper_sig,
+        safe_callee,
     };
     let callee = if args.nested {
         format!("__simd_inner_{}", input_fn.sig.ident)
@@ -267,6 +303,9 @@ pub(crate) fn expand(
         format!("__arcane_{}", input_fn.sig.ident)
     };
     if let Some(err) = reserved_param_error(&input_fn.sig, &callee, macro_name) {
+        return err;
+    }
+    if let Some(err) = reserved_param_error(&parts.wrapper_sig, &callee, macro_name) {
         return err;
     }
     emit_boundary(input_fn, &args, parts)
@@ -308,21 +347,21 @@ struct BoundaryParts {
     token_assertion: TokenStream,
     tier_trait_assertion: TokenStream,
     wrapper_sig: syn::Signature,
+    safe_callee: bool,
 }
 
-/// WASM-safe expansion: emits rite-style output (no unsafe wrapper).
+/// WASM-safe expansion: emits rite-style output (no unsafe wrapper) when `_self` is absent.
 ///
 /// On wasm32, `#[target_feature(enable = "simd128")]` is safe — the wasm validation
 /// model traps deterministically on unsupported instructions, so there's no UB.
-/// We emit the function directly with `#[target_feature]` + `#[inline]`, like `#[rite]`.
-///
-/// If `_self = Type` is set, we inject `let _self = self;` at the top of the body
-/// (the function stays in impl scope, so `Self` resolves naturally — no replacement needed).
+/// We emit the function directly with `#[target_feature]` + `#[inline]`, like `#[rite]`,
+/// while still running the token/trait identity assertions at the top of the body.
 pub(crate) fn arcane_impl_wasm_safe(
     mut input_fn: LightFn,
     args: &BoundaryOptions,
     target_feature_attrs: Vec<Attribute>,
     inline_attr: Option<Attribute>,
+    assertions: TokenStream,
 ) -> TokenStream {
     drop_attrs_equal_to(
         &mut input_fn.attrs,
@@ -333,17 +372,10 @@ pub(crate) fn arcane_impl_wasm_safe(
     let sig = &input_fn.sig;
     let attrs = &input_fn.attrs;
 
-    // If _self = Type is set, inject `let _self = self;` at top of body so user code
-    // referencing `_self` works. The function remains in impl scope, so `Self` resolves
-    // naturally — no Self replacement needed (unlike nested mode's inner fn).
-    let body = if args.self_type.is_some() {
-        let original_body = &input_fn.body;
-        quote! {
-            let _self = self;
-            #original_body
-        }
-    } else {
-        input_fn.body.clone()
+    let original_body = &input_fn.body;
+    let body = quote! {
+        #assertions
+        #original_body
     };
 
     // Prepend target_feature + inline attrs, filtering user #[inline] to avoid duplicates
@@ -374,6 +406,7 @@ fn emit_boundary(input: LightFn, options: &BoundaryOptions, parts: BoundaryParts
         token_assertion,
         tier_trait_assertion,
         wrapper_sig,
+        safe_callee,
     } = parts;
     let sig = &input.sig;
     let generics = &sig.generics;
@@ -472,7 +505,11 @@ fn emit_boundary(input: LightFn, options: &BoundaryOptions, parts: BoundaryParts
         #before #(#target_feature_attrs)* #inline_attr #after
         #unsafety fn #name #generics (#params) #output #where_clause #body
     };
-    let proof_call = proof_call(call);
+    let proof_call = if safe_callee && matches!(unsafety, syn::Safety::Default) {
+        call
+    } else {
+        proof_call(call)
+    };
     let sibling = (!options.nested).then_some(&inner);
     let sibling_cfg = (!options.nested).then_some(&cfg_guard);
     let nested = options.nested.then_some(&inner);

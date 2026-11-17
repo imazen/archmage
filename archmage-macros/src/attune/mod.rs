@@ -63,6 +63,13 @@ pub(crate) fn expand(attr: TokenStream, item: TokenStream) -> syn::Result<TokenS
                 if placeholder {
                     specialize_syntax(&mut input.sig, &quote!(#token))?;
                 } else {
+                    if let Some(error) = crate::engine::boundary::reserved_param_error(
+                        &input.sig,
+                        "__attune_token",
+                        "attune",
+                    ) {
+                        return Ok(error);
+                    }
                     let position =
                         usize::from(matches!(input.sig.inputs.first(), Some(FnArg::Receiver(_))));
                     input
@@ -270,6 +277,16 @@ fn family(mut input: LightFn, args: Args) -> syn::Result<TokenStream> {
     // The dispatcher forwards; it takes reserved names for `_name` params.
     let mut forward_sig = input.sig.clone();
     crate::common::rename_underscore_params(&mut forward_sig);
+    if args.dispatcher.is_some() {
+        for sig in [&input.sig, &forward_sig] {
+            if let Some(error) =
+                crate::engine::boundary::reserved_param_error(sig, "__attune_proof", "attune")
+            {
+                return Ok(error);
+            }
+        }
+    }
+    let is_unsafe_fn = matches!(input.sig.safety, syn::Safety::Unsafe(_));
     let base = input.sig.ident.clone();
     let mut tiers: Vec<_> = args.selections.iter().map(|s| s.tier).collect();
     if args.dispatcher.is_some() && !tiers.iter().any(|t| t.name == "scalar") {
@@ -336,6 +353,16 @@ fn family(mut input: LightFn, args: Args) -> syn::Result<TokenStream> {
                 gate,
                 &args,
             )?);
+            if args.dispatcher.is_some() {
+                let proof_callee = proof_name.to_string();
+                for sig in [&input.sig, &forward_sig] {
+                    if let Some(error) =
+                        crate::engine::boundary::reserved_param_error(sig, &proof_callee, "attune")
+                    {
+                        return Ok(error);
+                    }
+                }
+            }
             let token: syn::Path = syn::parse_str(&format!("::{}", tier.token_path))?;
             let invocation = forward(
                 &forward_sig,
@@ -343,9 +370,19 @@ fn family(mut input: LightFn, args: Args) -> syn::Result<TokenStream> {
                 args.options.in_impl,
                 Some(quote!(__attune_proof)),
             );
+            let invocation = if is_unsafe_fn {
+                crate::engine::boundary::proof_call(invocation)
+            } else {
+                invocation
+            };
             let guard = gen_cfg_guard(tier.target_arch, gate);
             dispatch_arms.push(if tier.name == "scalar" {
                 let invocation = forward(&forward_sig, &proof_name, args.options.in_impl, Some(quote!(::archmage::ScalarToken)));
+                let invocation = if is_unsafe_fn {
+                    crate::engine::boundary::proof_call(invocation)
+                } else {
+                    invocation
+                };
                 quote!(#guard { break '__attune_dispatch #invocation; })
             } else { quote!(#guard { if let Some(__attune_proof) = <#token as ::archmage::SimdToken>::summon() { break '__attune_dispatch #invocation; } }) });
         }
@@ -398,23 +435,34 @@ fn proof_entry(
     args: &Args,
 ) -> syn::Result<TokenStream> {
     let mut wrapper = input.clone();
-    // Check the author's names before forwarding renames them; the renamed
-    // `__archmage_*` names cannot collide with the `__attune_*` callee.
-    if let Some(error) = crate::engine::boundary::reserved_param_error(
-        &wrapper.sig,
-        &direct_name.to_string(),
-        "attune",
-    ) {
+    let direct_callee = direct_name.to_string();
+    let injects_token = !wrapper.sig.inputs.iter().any(placeholder_parameter);
+    // Check both before and after `rename_underscore_params`: a renamed
+    // `name(_v3 = __archmage_evil)` can collide with `_evil -> __archmage_evil`.
+    if let Some(error) =
+        crate::engine::boundary::reserved_param_error(&wrapper.sig, &direct_callee, "attune")
+    {
+        return Ok(error);
+    }
+    if injects_token
+        && let Some(error) =
+            crate::engine::boundary::reserved_param_error(&wrapper.sig, "__attune_token", "attune")
+    {
         return Ok(error);
     }
     crate::common::rename_underscore_params(&mut wrapper.sig);
+    if let Some(error) =
+        crate::engine::boundary::reserved_param_error(&wrapper.sig, &direct_callee, "attune")
+    {
+        return Ok(error);
+    }
     let invocation = forward(&wrapper.sig, direct_name, args.options.in_impl, None);
     let token: syn::Path = syn::parse_str(&format!("::{}", tier.token_path))?;
     let position = usize::from(matches!(
         wrapper.sig.inputs.first(),
         Some(FnArg::Receiver(_))
     ));
-    if !wrapper.sig.inputs.iter().any(placeholder_parameter) {
+    if injects_token {
         wrapper
             .sig
             .inputs
@@ -447,11 +495,14 @@ fn proof_entry(
     if !allowed.is_empty() {
         wrapper.attrs.push(parse_quote!(#[allow(#(#allowed),*)]));
     }
-    wrapper.body = if tier.name == "scalar" || tier.target_arch == Some("wasm32") {
+    wrapper.body = if !matches!(wrapper.sig.safety, syn::Safety::Unsafe(_))
+        && (tier.name == "scalar" || tier.target_arch == Some("wasm32"))
+    {
         invocation
     } else {
         // SAFETY: this signature accepts the registry's concrete sealed
-        // proof, and the sibling exists in the same definition scope.
+        // proof, and the sibling exists in the same definition scope; for
+        // `unsafe fn`, the caller already discharged the function's contract.
         crate::engine::boundary::proof_call(invocation)
     };
     let guard = gen_cfg_guard(
