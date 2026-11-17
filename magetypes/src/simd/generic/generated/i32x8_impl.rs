@@ -780,15 +780,6 @@ impl<T: I32x8Backend> i32x8<T> {
         Self::from_slice_t(token, slice)
     }
     #[inline(always)]
-    #[doc = "Deprecated token-taking spelling of [`Self::load_padded_t`].\n\nUse `load_padded_t` to keep explicit-token construction when `load_padded` becomes tokenless in magetypes 0.10."]
-    #[deprecated(
-        note = "Use load_padded_t(token, slice, pad); load_padded becomes tokenless in magetypes 0.10."
-    )]
-    #[forbid(unsafe_code)]
-    pub fn load_padded(token: T, slice: &[i32], pad: i32) -> Self {
-        Self::load_padded_t(token, slice, pad)
-    }
-    #[inline(always)]
     #[doc = "Deprecated token-taking spelling of [`Self::partition_slice_t`].\n\nUse `partition_slice_t` to keep explicit-token construction when `partition_slice` becomes tokenless in magetypes 0.10."]
     #[deprecated(
         note = "Use partition_slice_t(token, data); partition_slice becomes tokenless in magetypes 0.10."
