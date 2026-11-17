@@ -930,10 +930,10 @@ fn generate_float_backend_trait(ty: &FloatVecType) -> String {
 
             // ====== Math ======
 
-            /// Lane-wise minimum matching `{elem}::min` (returns the numeric operand on single-`NaN`; `±0.0` unspecified).
+            /// Lane-wise minimum matching `{elem}::min` (returns the numeric operand on a single quiet `NaN`; signalling `NaN` and `±0.0` unspecified).
             fn min(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
-            /// Lane-wise maximum matching `{elem}::max` (returns the numeric operand on single-`NaN`; `±0.0` unspecified).
+            /// Lane-wise maximum matching `{elem}::max` (returns the numeric operand on a single quiet `NaN`; signalling `NaN` and `±0.0` unspecified).
             fn max(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
             {min_max_fast_trait}
 
@@ -1047,10 +1047,15 @@ fn generate_float_backend_trait(ty: &FloatVecType) -> String {
 
             // ====== Default implementations ======
 
-            /// Clamp values between lo and hi.
+            /// Clamp values between `lo` and `hi`: `min_fast(max_fast(a, lo), hi)`,
+            /// two instructions on native backends.
+            ///
+            /// A quiet `NaN` lane in `a` becomes `lo` on x86, NEON, strict WASM, and
+            /// `ScalarToken`; signalling `NaN`, WASM `relaxed-simd` `NaN` lanes, `NaN`
+            /// bounds, and `lo > hi` are unspecified per backend, and `clamp` never panics.
             #[inline(always)]
             fn clamp(self, a: Self::Repr, lo: Self::Repr, hi: Self::Repr) -> Self::Repr {{
-                <Self as {trait_name}>::min(self, <Self as {trait_name}>::max(self, a, lo), hi)
+                <Self as {trait_name}>::min_fast(self, <Self as {trait_name}>::max_fast(self, a, lo), hi)
             }}
 
             /// Working-tier reciprocal — defaults to delegating to
@@ -3437,9 +3442,10 @@ fn generate_neon_float_impl(ty: &FloatVecType) -> String {
         min_body = {
             let items: Vec<String> = (0..sub_count)
                 .map(|i| {
-                    format!(
-                        "vminnmq_{ns}(vminnmq_{ns}(a[{i}], a[{i}]), vminnmq_{ns}(b[{i}], b[{i}]))"
-                    )
+                    // One fminnm/fmaxnm: a quiet NaN yields the numeric
+                    // operand; a signalling NaN yields a quiet NaN, which the
+                    // min/max contract leaves unspecified (as Rust does).
+                    format!("vminnmq_{ns}(a[{i}], b[{i}])")
                 })
                 .collect();
             format!("[{}]", items.join(", "))
@@ -3447,9 +3453,10 @@ fn generate_neon_float_impl(ty: &FloatVecType) -> String {
         max_body = {
             let items: Vec<String> = (0..sub_count)
                 .map(|i| {
-                    format!(
-                        "vmaxnmq_{ns}(vmaxnmq_{ns}(a[{i}], a[{i}]), vmaxnmq_{ns}(b[{i}], b[{i}]))"
-                    )
+                    // One fminnm/fmaxnm: a quiet NaN yields the numeric
+                    // operand; a signalling NaN yields a quiet NaN, which the
+                    // min/max contract leaves unspecified (as Rust does).
+                    format!("vmaxnmq_{ns}(a[{i}], b[{i}])")
                 })
                 .collect();
             format!("[{}]", items.join(", "))
@@ -3768,9 +3775,9 @@ fn generate_neon_native_impl(ty: &FloatVecType) -> String {
             {arcane}
             fn neg(self, a: {repr}) -> {repr} {{ vnegq_{ns}(a) }}
             {arcane}
-            fn min(self, a: {repr}, b: {repr}) -> {repr} {{ vminnmq_{ns}(vminnmq_{ns}(a, a), vminnmq_{ns}(b, b)) }}
+            fn min(self, a: {repr}, b: {repr}) -> {repr} {{ vminnmq_{ns}(a, b) }}
             {arcane}
-            fn max(self, a: {repr}, b: {repr}) -> {repr} {{ vmaxnmq_{ns}(vmaxnmq_{ns}(a, a), vmaxnmq_{ns}(b, b)) }}
+            fn max(self, a: {repr}, b: {repr}) -> {repr} {{ vmaxnmq_{ns}(a, b) }}
             {arcane}
             fn minimum(self, a: {repr}, b: {repr}) -> {repr} {{ vminq_{ns}(a, b) }}
             {arcane}

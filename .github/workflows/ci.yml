@@ -265,6 +265,9 @@ jobs:
       - name: Run tests
         run: cargo test --features "${{ env.FEATURES }}"
 
+      - name: Run release float NaN and scalar parity tests
+        run: cargo test -p magetypes --release --features "${{ env.FEATURES }}" --test fast_and_rgb_ops --test scalar_parity
+
       - name: Magemath contracts (std and no_std)
         run: |
           cargo test -p magemath --features "${{ env.FEATURES }}"

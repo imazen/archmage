@@ -8,7 +8,16 @@
 //!
 //! - Arithmetic: `a + b`, `a - b`, `a * b`, `a / b`, `-a`
 //! - Magnitude / sign: `x.abs()`, `x.copysign(y)`
-//! - Rust numeric min/max/clamp (`1.0` over a single `NaN`): `a.min(b)`, `a.max(b)`, `x.clamp(lo, hi)`
+//! - Rust numeric min/max (`1.0` over a single quiet `NaN`): `a.min(b)`,
+//!   `a.max(b)`. Signalling `NaN` handling is unspecified in both: NEON vectors
+//!   return a quiet `NaN`, the other backends the numeric operand.
+//!
+//! `x.clamp(lo, hi)` is **not** vector `clamp`: `f32::clamp` keeps a `NaN` input
+//! and panics on `lo > hi` or `NaN` bounds, while vector `clamp` is
+//! `max_fast` then `min_fast` and turns a quiet `NaN` lane into `lo` on x86,
+//! NEON, strict WASM, and `ScalarToken` (signalling `NaN` and WASM
+//! `relaxed-simd` `NaN` lanes are unspecified per backend). Use
+//! [`clamp_f32`] / [`clamp_f64`].
 //! - Saturating float-to-integer (`to_i32_saturating`): `x as i32`
 //!
 //! ## What this module provides
@@ -31,6 +40,7 @@
 //!    kernels call them with no extra trait bounds):
 //!    - Fast platform-native min/max (`NaN` / `±0.0` unspecified): [`min_fast_f32`],
 //!      [`max_fast_f32`], [`min_fast_f64`], [`max_fast_f64`]
+//!    - Vector `clamp` (`max_fast` then `min_fast`): [`clamp_f32`], [`clamp_f64`]
 //!    - Relaxed FMA (`v.mul_add_relaxed` / `v.mul_sub_relaxed`):
 //!      [`mul_add_relaxed_f32`], [`mul_sub_relaxed_f32`], [`mul_add_relaxed_f64`],
 //!      [`mul_sub_relaxed_f64`]
@@ -40,14 +50,15 @@
 #![forbid(unsafe_code)]
 
 use crate::simd::backends::sealed::Sealed;
-use archmage::SimdToken;
+use archmage::{IntoConcreteToken, SimdToken};
 
 // ============================================================================
 // Portable no_std scalar helpers (zero token argument, non-generic)
 // ============================================================================
 
 /// IEEE 754-2019 `minimum` for `f32`: propagates `NaN` (returning quiet `NaN`)
-/// and strictly orders `-0.0 < +0.0`.
+/// and strictly orders `-0.0 < +0.0`. The vector forms return a quiet `NaN`
+/// whose sign and payload differ by backend; this returns the canonical one.
 ///
 /// Matches [`f32x4::minimum`](crate::simd::generic::f32x4::minimum),
 /// [`f32x8::minimum`](crate::simd::generic::f32x8::minimum), and
@@ -58,7 +69,8 @@ pub const fn minimum_f32(a: f32, b: f32) -> f32 {
 }
 
 /// IEEE 754-2019 `maximum` for `f32`: propagates `NaN` (returning quiet `NaN`)
-/// and strictly orders `-0.0 < +0.0`.
+/// and strictly orders `-0.0 < +0.0`. The vector forms return a quiet `NaN`
+/// whose sign and payload differ by backend; this returns the canonical one.
 ///
 /// Matches [`f32x4::maximum`](crate::simd::generic::f32x4::maximum),
 /// [`f32x8::maximum`](crate::simd::generic::f32x8::maximum), and
@@ -69,7 +81,8 @@ pub const fn maximum_f32(a: f32, b: f32) -> f32 {
 }
 
 /// IEEE 754-2019 `minimum` for `f64`: propagates `NaN` (returning quiet `NaN`)
-/// and strictly orders `-0.0 < +0.0`.
+/// and strictly orders `-0.0 < +0.0`. The vector forms return a quiet `NaN`
+/// whose sign and payload differ by backend; this returns the canonical one.
 ///
 /// Matches [`f64x2::minimum`](crate::simd::generic::f64x2::minimum),
 /// [`f64x4::minimum`](crate::simd::generic::f64x4::minimum), and
@@ -80,7 +93,8 @@ pub const fn minimum_f64(a: f64, b: f64) -> f64 {
 }
 
 /// IEEE 754-2019 `maximum` for `f64`: propagates `NaN` (returning quiet `NaN`)
-/// and strictly orders `-0.0 < +0.0`.
+/// and strictly orders `-0.0 < +0.0`. The vector forms return a quiet `NaN`
+/// whose sign and payload differ by backend; this returns the canonical one.
 ///
 /// Matches [`f64x2::maximum`](crate::simd::generic::f64x2::maximum),
 /// [`f64x4::maximum`](crate::simd::generic::f64x4::maximum), and
@@ -178,10 +192,10 @@ pub fn mul_sub_fused_f64(a: f64, b: f64, c: f64) -> f64 {
 ///
 /// Sealed — implemented only for `archmage` SIMD tokens, and required as a
 /// supertrait of `F32x4Backend`, `F32x8Backend`, and `F32x16Backend` so generic
-/// kernels can call [`min_fast_f32`], [`max_fast_f32`], [`mul_add_relaxed_f32`],
-/// [`mul_sub_relaxed_f32`], [`to_i32`], and [`to_i32_fast`] directly in their
-/// scalar tails.
-pub trait F32ScalarBackend: SimdToken + Sealed + Copy + 'static {
+/// kernels can call [`min_fast_f32`], [`max_fast_f32`], [`clamp_f32`],
+/// [`mul_add_relaxed_f32`], [`mul_sub_relaxed_f32`], [`to_i32`], and
+/// [`to_i32_fast`] directly in their scalar tails.
+pub trait F32ScalarBackend: IntoConcreteToken + SimdToken + Sealed + Copy + 'static {
     /// Fast scalar minimum matching `f32xN::<Self>::min_fast`.
     fn min_fast_f32(self, a: f32, b: f32) -> f32;
 
@@ -205,9 +219,10 @@ pub trait F32ScalarBackend: SimdToken + Sealed + Copy + 'static {
 ///
 /// Sealed — implemented only for `archmage` SIMD tokens, and required as a
 /// supertrait of `F64x2Backend`, `F64x4Backend`, and `F64x8Backend` so generic
-/// kernels can call [`min_fast_f64`], [`max_fast_f64`], [`mul_add_relaxed_f64`],
-/// and [`mul_sub_relaxed_f64`] directly in their scalar tails.
-pub trait F64ScalarBackend: SimdToken + Sealed + Copy + 'static {
+/// kernels can call [`min_fast_f64`], [`max_fast_f64`], [`clamp_f64`],
+/// [`mul_add_relaxed_f64`], and [`mul_sub_relaxed_f64`] directly in their
+/// scalar tails.
+pub trait F64ScalarBackend: IntoConcreteToken + SimdToken + Sealed + Copy + 'static {
     /// Fast scalar minimum matching `f64xN::<Self>::min_fast`.
     fn min_fast_f64(self, a: f64, b: f64) -> f64;
 
@@ -675,6 +690,18 @@ pub fn max_fast_f32<T: F32ScalarBackend>(token: T, a: f32, b: f32) -> f32 {
     token.max_fast_f32(a, b)
 }
 
+/// Token-matched `f32` clamp, matching the active token's `f32xN::clamp`:
+/// `min_fast_f32(token, max_fast_f32(token, x, lo), hi)`.
+///
+/// Exact when `lo <= hi` and nothing is `NaN`. A quiet `NaN` `x` becomes `lo`
+/// on x86, NEON, strict WASM, and `ScalarToken`; signalling `NaN`, WASM
+/// `relaxed-simd` `NaN` lanes, `NaN` bounds, and `lo > hi` are unspecified per
+/// backend. Unlike `f32::clamp` it never panics.
+#[inline(always)]
+pub fn clamp_f32<T: F32ScalarBackend>(token: T, x: f32, lo: f32, hi: f32) -> f32 {
+    token.min_fast_f32(token.max_fast_f32(x, lo), hi)
+}
+
 /// Token-matched relaxed `f32` multiply-add `a * b + c`, matching the active
 /// token's `mul_add_relaxed`.
 #[inline(always)]
@@ -716,6 +743,18 @@ pub fn min_fast_f64<T: F64ScalarBackend>(token: T, a: f64, b: f64) -> f64 {
 #[inline(always)]
 pub fn max_fast_f64<T: F64ScalarBackend>(token: T, a: f64, b: f64) -> f64 {
     token.max_fast_f64(a, b)
+}
+
+/// Token-matched `f64` clamp, matching the active token's `f64xN::clamp`:
+/// `min_fast_f64(token, max_fast_f64(token, x, lo), hi)`.
+///
+/// Exact when `lo <= hi` and nothing is `NaN`. A quiet `NaN` `x` becomes `lo`
+/// on x86, NEON, strict WASM, and `ScalarToken`; signalling `NaN`, WASM
+/// `relaxed-simd` `NaN` lanes, `NaN` bounds, and `lo > hi` are unspecified per
+/// backend. Unlike `f64::clamp` it never panics.
+#[inline(always)]
+pub fn clamp_f64<T: F64ScalarBackend>(token: T, x: f64, lo: f64, hi: f64) -> f64 {
+    token.min_fast_f64(token.max_fast_f64(x, lo), hi)
 }
 
 /// Token-matched relaxed `f64` multiply-add `a * b + c`, matching the active

@@ -67,10 +67,10 @@ pub trait F32x4Backend:
 
     // ====== Math ======
 
-    /// Lane-wise minimum matching `f32::min` (returns the numeric operand on single-`NaN`; `±0.0` unspecified).
+    /// Lane-wise minimum matching `f32::min` (returns the numeric operand on a single quiet `NaN`; signalling `NaN` and `±0.0` unspecified).
     fn min(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
-    /// Lane-wise maximum matching `f32::max` (returns the numeric operand on single-`NaN`; `±0.0` unspecified).
+    /// Lane-wise maximum matching `f32::max` (returns the numeric operand on a single quiet `NaN`; signalling `NaN` and `±0.0` unspecified).
     fn max(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
     /// IEEE 754-2019 minimum (`NaN`-propagating, `-0.0 < +0.0`).
@@ -205,10 +205,15 @@ pub trait F32x4Backend:
 
     // ====== Default implementations ======
 
-    /// Clamp values between lo and hi.
+    /// Clamp values between `lo` and `hi`: `min_fast(max_fast(a, lo), hi)`,
+    /// two instructions on native backends.
+    ///
+    /// A quiet `NaN` lane in `a` becomes `lo` on x86, NEON, strict WASM, and
+    /// `ScalarToken`; signalling `NaN`, WASM `relaxed-simd` `NaN` lanes, `NaN`
+    /// bounds, and `lo > hi` are unspecified per backend, and `clamp` never panics.
     #[inline(always)]
     fn clamp(self, a: Self::Repr, lo: Self::Repr, hi: Self::Repr) -> Self::Repr {
-        <Self as F32x4Backend>::min(self, <Self as F32x4Backend>::max(self, a, lo), hi)
+        <Self as F32x4Backend>::min_fast(self, <Self as F32x4Backend>::max_fast(self, a, lo), hi)
     }
 
     /// Working-tier reciprocal — defaults to delegating to

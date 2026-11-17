@@ -91,12 +91,16 @@ chunks and a tail. You need no aligned allocator and no padding.
 ### Scalar tails
 
 Plain Rust operators and `core` methods (`+ - * / -`, `.abs()`, `.min()`,
-`.max()`, `.clamp()`, `as i32`) work in `#![no_std]` and already match
+`.max()`, `as i32`) work in `#![no_std]` and already match
 `magetypes` portable vector semantics. Reach for `magetypes::scalar` only where
 `core` 1.89 omits an operation (`minimum_f32` / `maximum_f32`, `#![no_std]`
 `round_f32` ties-to-even / `floor_f32` / `ceil_f32` / `sqrt_f32`,
 `mul_add_fused_f32`) or for token-matched single-instruction primitives
-(`min_fast_f32`, `max_fast_f32`, `mul_add_relaxed_f32`, `to_i32_fast`, `to_i32`):
+(`min_fast_f32`, `max_fast_f32`, `clamp_f32`, `mul_add_relaxed_f32`,
+`to_i32_fast`, `to_i32`). Vector `clamp` is `max_fast` then `min_fast`: a quiet
+`NaN` lane becomes `lo` on x86, NEON, strict WASM, and `ScalarToken` (signalling
+`NaN` and WASM `relaxed-simd` `NaN` lanes are unspecified per backend) and it
+never panics, so its tail is `scalar::clamp_f32`, not `f32::clamp`:
 
 ```rust
 use archmage::prelude::*;

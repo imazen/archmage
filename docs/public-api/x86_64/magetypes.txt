@@ -6,14 +6,14 @@
 # impls omitted; re-export duplicates annotated `[also: path]`.
 # DO NOT EDIT BY HAND — commit regenerated changes with the code.
 #
-# files: magetypes.txt 2794 lines (supported surface) | magetypes.features.txt 96 added (features: avx512,std,w512) | magetypes.internal.txt 42 lines (52 hidden + 0 excluded-feature)
+# files: magetypes.txt 2796 lines (supported surface) | magetypes.features.txt 96 added (features: avx512,std,w512) | magetypes.internal.txt 42 lines (52 hidden + 0 excluded-feature)
 
 ## summary
 #
 #   pub modules                                13
 #   pub types (struct/enum/trait/alias)       381
 #   pub consts/statics                        232
-#   free functions                           4126
+#   free functions                           4128
 #   inherent methods                         1306
 #   enum variants                               1
 #   re-exports                                  2
@@ -26,10 +26,10 @@
 #   (root)                          326
 #   cast                              3
 #   prelude                        3912
-#   scalar                           34
+#   scalar                           36
 #   simd                           1786
 
-## items (2570 lines)
+## items (2572 lines)
 
 pub mod magetypes
 pub use archmage
@@ -974,20 +974,22 @@ pub fn prelude::F32x8FromHalves::from_halves(self, <Self as simd::backends::F32x
 pub fn prelude::F32x8FromHalves::high(self, <Self as simd::backends::F32x8Backend>::Repr) -> <Self as simd::backends::F32x4Backend>::Repr
 pub fn prelude::F32x8FromHalves::low(self, <Self as simd::backends::F32x8Backend>::Repr) -> <Self as simd::backends::F32x4Backend>::Repr
 pub mod scalar
-pub trait scalar::F32ScalarBackend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static [also: simd::backends]
+pub trait scalar::F32ScalarBackend: archmage::tokens::IntoConcreteToken + archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static [also: simd::backends]
 pub fn scalar::F32ScalarBackend::max_fast_f32(self, f32, f32) -> f32
 pub fn scalar::F32ScalarBackend::min_fast_f32(self, f32, f32) -> f32
 pub fn scalar::F32ScalarBackend::mul_add_relaxed_f32(self, f32, f32, f32) -> f32
 pub fn scalar::F32ScalarBackend::mul_sub_relaxed_f32(self, f32, f32, f32) -> f32
 pub fn scalar::F32ScalarBackend::to_i32_fast_scalar(self, f32) -> i32
 pub fn scalar::F32ScalarBackend::to_i32_scalar(self, f32) -> i32
-pub trait scalar::F64ScalarBackend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static [also: simd::backends]
+pub trait scalar::F64ScalarBackend: archmage::tokens::IntoConcreteToken + archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static [also: simd::backends]
 pub fn scalar::F64ScalarBackend::max_fast_f64(self, f64, f64) -> f64
 pub fn scalar::F64ScalarBackend::min_fast_f64(self, f64, f64) -> f64
 pub fn scalar::F64ScalarBackend::mul_add_relaxed_f64(self, f64, f64, f64) -> f64
 pub fn scalar::F64ScalarBackend::mul_sub_relaxed_f64(self, f64, f64, f64) -> f64
 pub fn scalar::ceil_f32(f32) -> f32
 pub fn scalar::ceil_f64(f64) -> f64
+pub fn scalar::clamp_f32<T: scalar::F32ScalarBackend>(T, f32, f32, f32) -> f32
+pub fn scalar::clamp_f64<T: scalar::F64ScalarBackend>(T, f64, f64, f64) -> f64
 pub fn scalar::floor_f32(f32) -> f32
 pub fn scalar::floor_f64(f64) -> f64
 pub fn scalar::max_fast_f32<T: scalar::F32ScalarBackend>(T, f32, f32) -> f32

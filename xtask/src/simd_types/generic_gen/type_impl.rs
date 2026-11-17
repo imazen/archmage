@@ -642,6 +642,11 @@ fn gen_float_math(ty: &SimdType) -> String {
             /// If one lane is `NaN` and the other is numeric (including `±inf`), returns
             /// the numeric lane; `(-0.0, +0.0)` tie-breaking is unspecified. Scalar tail
             /// equivalent: `{elem}::min`.
+            ///
+            /// Signalling `NaN` handling is unspecified and differs by backend, as
+            /// Rust leaves it for `{elem}::min`: NEON returns a quiet `NaN` (one
+            /// `fminnm`, the same instruction as [`min_fast`](Self::min_fast)); x86,
+            /// WASM and `ScalarToken` return the numeric lane.
             #[inline(always)]
             pub fn min(self, other: Self) -> Self {{
                 Self(T::min(self.1, self.0, other.0), self.1)
@@ -652,6 +657,11 @@ fn gen_float_math(ty: &SimdType) -> String {
             /// If one lane is `NaN` and the other is numeric (including `±inf`), returns
             /// the numeric lane; `(-0.0, +0.0)` tie-breaking is unspecified. Scalar tail
             /// equivalent: `{elem}::max`.
+            ///
+            /// Signalling `NaN` handling is unspecified and differs by backend, as
+            /// Rust leaves it for `{elem}::max`: NEON returns a quiet `NaN` (one
+            /// `fmaxnm`, the same instruction as [`max_fast`](Self::max_fast)); x86,
+            /// WASM and `ScalarToken` return the numeric lane.
             #[inline(always)]
             pub fn max(self, other: Self) -> Self {{
                 Self(T::max(self.1, self.0, other.0), self.1)
@@ -659,6 +669,7 @@ fn gen_float_math(ty: &SimdType) -> String {
 
             /// IEEE 754-2019 lane-wise minimum (propagates `NaN` and orders `-0.0 < +0.0`).
             ///
+            /// A `NaN` result is quiet; its sign and payload differ by backend.
             /// Scalar tail equivalent: [`minimum_{elem}`](crate::scalar::minimum_{elem}).
             #[inline(always)]
             pub fn minimum(self, other: Self) -> Self {{
@@ -667,6 +678,7 @@ fn gen_float_math(ty: &SimdType) -> String {
 
             /// IEEE 754-2019 lane-wise maximum (propagates `NaN` and orders `-0.0 < +0.0`).
             ///
+            /// A `NaN` result is quiet; its sign and payload differ by backend.
             /// Scalar tail equivalent: [`maximum_{elem}`](crate::scalar::maximum_{elem}).
             #[inline(always)]
             pub fn maximum(self, other: Self) -> Self {{
@@ -693,7 +705,16 @@ fn gen_float_math(ty: &SimdType) -> String {
                 Self(T::max_fast(self.1, self.0, other.0), self.1)
             }}
 
-            /// Clamp between lo and hi.
+            /// Clamp between `lo` and `hi`: `self.max_fast(lo).min_fast(hi)`, two
+            /// instructions on native backends.
+            ///
+            /// Exact when `lo <= hi` and nothing is `NaN`. A quiet `NaN` lane in `self`
+            /// becomes `lo` on x86, NEON, strict WASM, and `ScalarToken`; a signalling
+            /// `NaN` lane (`lo` on x86, `hi` on NEON) and any `NaN` with WASM
+            /// `relaxed-simd` are unspecified per backend. `NaN` bounds and `lo > hi`
+            /// give an unspecified lane and never panic. [`{elem}::clamp`] differs: it
+            /// keeps `NaN` and panics on such bounds. Scalar tail equivalent:
+            /// [`clamp_{elem}`](crate::scalar::clamp_{elem}).
             #[inline(always)]
             pub fn clamp(self, lo: Self, hi: Self) -> Self {{
                 Self(T::clamp(self.1, self.0, lo.0, hi.0), self.1)

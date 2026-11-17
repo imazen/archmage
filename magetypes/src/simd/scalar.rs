@@ -113,7 +113,7 @@ impl f32x1 {
         i32x1(self.0 as i32)
     }
 
-    /// Element-wise clamp.
+    /// Element-wise clamp (matches [`f32::clamp`]).
     #[inline(always)]
     pub fn clamp(self, lo: Self, hi: Self) -> Self {
         Self(self.0.clamp(lo.0, hi.0))
@@ -357,10 +357,11 @@ impl f64x1 {
         Self(if self.0 > other.0 { self.0 } else { other.0 })
     }
 
-    /// Element-wise clamp.
+    /// Element-wise clamp matching `f64x2::<ScalarToken>::clamp`: a quiet
+    /// `NaN` input becomes `lo`, and it never panics (unlike [`f64::clamp`]).
     #[inline(always)]
     pub fn clamp(self, lo: Self, hi: Self) -> Self {
-        Self(self.0.clamp(lo.0, hi.0))
+        self.max_fast(lo).min_fast(hi)
     }
 
     /// Element-wise square root.

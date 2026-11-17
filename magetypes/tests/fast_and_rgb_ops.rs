@@ -109,6 +109,19 @@ fn check_f32_edge_pair_results(
     } else if a.is_nan() && b.is_nan() {
         assert!(v_min.is_nan(), "{tier} min(NaN, NaN)");
         assert!(v_max.is_nan(), "{tier} max(NaN, NaN)");
+    } else if (a.is_nan() && a.to_bits() & 0x0040_0000 == 0)
+        || (b.is_nan() && b.to_bits() & 0x0040_0000 == 0)
+    {
+        // Signalling NaN beside a number: unspecified, as for `f32::min`. Accept
+        // the numeric operand (x86, WASM, scalar) or a quiet NaN (NEON).
+        let numeric = if a.is_nan() { b } else { a };
+        for (name, v) in [("min", v_min), ("max", v_max)] {
+            assert!(
+                v.to_bits() == numeric.to_bits() || (v.is_nan() && v.to_bits() & 0x0040_0000 != 0),
+                "{tier} {name}({a}, {b}) = {v} ({:#x})",
+                v.to_bits()
+            );
+        }
     } else {
         assert_eq!(v_min.to_bits(), a.min(b).to_bits(), "{tier} min({a}, {b})");
         assert_eq!(v_max.to_bits(), a.max(b).to_bits(), "{tier} max({a}, {b})");
@@ -162,6 +175,20 @@ fn check_f64_edge_pair_results(
     } else if a.is_nan() && b.is_nan() {
         assert!(v_min.is_nan(), "{tier} min(NaN, NaN)");
         assert!(v_max.is_nan(), "{tier} max(NaN, NaN)");
+    } else if (a.is_nan() && a.to_bits() & 0x0008_0000_0000_0000 == 0)
+        || (b.is_nan() && b.to_bits() & 0x0008_0000_0000_0000 == 0)
+    {
+        // Signalling NaN beside a number: unspecified, as for `f64::min`. Accept
+        // the numeric operand (x86, WASM, scalar) or a quiet NaN (NEON).
+        let numeric = if a.is_nan() { b } else { a };
+        for (name, v) in [("min", v_min), ("max", v_max)] {
+            assert!(
+                v.to_bits() == numeric.to_bits()
+                    || (v.is_nan() && v.to_bits() & 0x0008_0000_0000_0000 != 0),
+                "{tier} {name}({a}, {b}) = {v} ({:#x})",
+                v.to_bits()
+            );
+        }
     } else {
         assert_eq!(v_min.to_bits(), a.min(b).to_bits(), "{tier} min({a}, {b})");
         assert_eq!(v_max.to_bits(), a.max(b).to_bits(), "{tier} max({a}, {b})");
@@ -806,6 +833,22 @@ fn check_scalar1() {
             "f64x1 max_fast",
         );
     }
+    for (x, lo, hi) in [
+        (-10.0, -5.0, 5.0),
+        (0.5, -5.0, 5.0),
+        (10.0, -5.0, 5.0),
+        (f64::NAN, -5.0, 5.0),
+        (f64::NEG_INFINITY, -5.0, 5.0),
+        (f64::INFINITY, -5.0, 5.0),
+        (1.0, 10.0, -10.0),
+        (1.0, f64::NAN, 5.0),
+    ] {
+        assert_f64_bits_or_nan(
+            f64x1(x).clamp(f64x1(lo), f64x1(hi)).0,
+            scalar::clamp_f64(ScalarToken, x, lo, hi),
+            "f64x1 clamp",
+        );
+    }
 }
 
 /// Exhaustive parity check between `magetypes::scalar` helpers and `f32x4` /
@@ -870,6 +913,30 @@ where
                 scalar::to_i32_fast(token, x),
                 "{tier} to_i32_fast({x})"
             );
+        }
+        for (lo, hi) in [
+            (-5.0f32, 5.0f32),
+            (0.0, 255.0),
+            (10.0, -10.0),
+            (f32::NAN, 5.0),
+            (-5.0, f32::NAN),
+        ] {
+            let got = vx
+                .clamp(f32x4::splat_t(token, lo), f32x4::splat_t(token, hi))
+                .to_array()[0];
+            assert_f32_bits_or_nan(
+                got,
+                scalar::clamp_f32(token, x, lo, hi),
+                &format!("{tier} clamp_f32({x}, {lo}, {hi})"),
+            );
+            #[cfg(not(all(target_arch = "wasm32", target_feature = "relaxed-simd")))]
+            if x.is_nan() && x.to_bits() & 0x0040_0000 != 0 && !lo.is_nan() && !hi.is_nan() {
+                assert_eq!(
+                    got.to_bits(),
+                    lo.min(hi).to_bits(),
+                    "{tier} quiet NaN clamp({x}, {lo}, {hi}) must map to lo (clamped by hi)"
+                );
+            }
         }
     }
     let f32_triples = [
@@ -946,6 +1013,30 @@ where
             scalar::sqrt_f64(x),
             &format!("{tier} sqrt_f64({x})"),
         );
+        for (lo, hi) in [
+            (-5.0f64, 5.0f64),
+            (0.0, 255.0),
+            (10.0, -10.0),
+            (f64::NAN, 5.0),
+            (-5.0, f64::NAN),
+        ] {
+            let got = vx
+                .clamp(f64x2::splat_t(token, lo), f64x2::splat_t(token, hi))
+                .to_array()[0];
+            assert_f64_bits_or_nan(
+                got,
+                scalar::clamp_f64(token, x, lo, hi),
+                &format!("{tier} clamp_f64({x}, {lo}, {hi})"),
+            );
+            #[cfg(not(all(target_arch = "wasm32", target_feature = "relaxed-simd")))]
+            if x.is_nan() && !lo.is_nan() && !hi.is_nan() {
+                assert_eq!(
+                    got.to_bits(),
+                    lo.min(hi).to_bits(),
+                    "{tier} quiet NaN f64 clamp({x}, {lo}, {hi}) must map to lo"
+                );
+            }
+        }
     }
     let e64 = 1.0 / 134_217_728.0f64;
     let f64_triples = [
