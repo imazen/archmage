@@ -2,17 +2,17 @@
 use archmage::ScalarToken;
 use magemath::{cbrtf as c, expf as e, logf as l, powf as p};
 use magetypes::simd::generic::f32x8;
-const GM: u32 = p::PowfOptions::PORTABLE_GAMMA_MIDP.bits();
-const GL: u32 = p::PowfOptions::PORTABLE_GAMMA_LOWP.bits();
-const GH: u32 = p::PowfOptions::PORTABLE_GAMMA_HIGHP.bits();
-const FH: u32 = p::PowfOptions::PORTABLE_HIGHP.bits();
-const NM: u32 = p::PowfOptions::PORTABLE_NORMAL_MIDP.bits();
-const EM: u32 = e::ExpfOptions::PORTABLE_MIDP.bits();
-const EL: u32 = e::ExpfOptions::PORTABLE_LOWP.bits();
-const LM: u32 = l::LogfOptions::PORTABLE_MIDP.bits();
-const LL: u32 = l::LogfOptions::PORTABLE_LOWP.bits();
-const CM: u32 = c::CbrtfOptions::PORTABLE_MIDP_FULL.bits();
-const CL: u32 = c::CbrtfOptions::PORTABLE_LOWP_FULL.bits();
+type GM = p::presets::GammaMidp;
+type GL = p::presets::GammaLowp;
+type GH = p::presets::GammaHighp;
+type FH = p::presets::FullHighp;
+type NM = p::presets::NormalMidp;
+type EM = e::presets::Midp;
+type EL = e::presets::Lowp;
+type LM = l::presets::Midp;
+type LL = l::presets::Lowp;
+type CM = c::presets::MidpFull;
+type CL = c::presets::LowpFull;
 static NONE: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
 fn mix(h: &mut u64, r: Option<[f32; 8]>) {
     match r {

@@ -15,26 +15,11 @@ pub enum LogfDomain {
 }
 
 /// Whole-operation feature selection, independent of numerical policy.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
-#[non_exhaustive]
-pub enum LogfExecution {
-    /// Reuse a capable caller or select a native tier once per operation.
-    #[default]
-    Automatic,
-    /// Retain the caller's Magetypes tier without autonomous upgrades.
-    Caller,
-}
-
+pub use crate::Execution as LogfExecution;
 /// Whether accepted results must agree bit for bit across backends.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
-#[non_exhaustive]
-pub enum LogfPortability {
-    /// One fused graph, with exact software FMA when necessary.
-    #[default]
-    BitExact,
-    /// Native fused or separate graph; result bits may vary.
-    BackendDependent,
-}
+pub use crate::Portability as LogfPortability;
+/// Whether to enforce the selected numerical domain at runtime.
+pub use crate::Validation as LogfValidation;
 
 /// Approximation family, not a global mathematical error bound.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -49,18 +34,6 @@ pub enum LogfPrecision {
     /// absolute error (8.5e-6 is the exhaustive bound recorded for `log2_lowp`).
     /// Relative error is unbounded near x = 1.
     Lowp,
-}
-
-/// Whether to enforce the selected numerical domain at runtime.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
-#[non_exhaustive]
-pub enum LogfValidation {
-    /// Reject the whole vector, returning the exact mask for failing lanes.
-    #[default]
-    Checked,
-    /// Omit numerical input checks. The caller promises the same domain.
-    /// Violations have unspecified numerical results, never memory unsoundness.
-    AssumeValid,
 }
 
 /// Const builder ending in `.bits()`, also accepted by the runtime adapter.
@@ -80,13 +53,11 @@ pub struct LogfOptions {
 }
 
 impl LogfOptions {
-    pub(crate) const DEFAULT: u32 = 0;
     pub(crate) const SPECIALS: u32 = 1;
     pub(crate) const CALLER: u32 = 4;
     pub(crate) const LOWP: u32 = 8;
     pub(crate) const BACKEND: u32 = 16;
     pub(crate) const ASSUME: u32 = 32;
-    pub(crate) const LEGACY: u32 = 64;
 
     /// BitExact MIDP, positive domain, checked, automatic execution.
     pub const PORTABLE_MIDP: Self = Self::new();

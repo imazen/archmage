@@ -1,67 +1,96 @@
 //! Shared whole-vector HIGHP validation and the explicitly std-backed policy.
-use super::{PowfError, PowfErrorKind, PowfOptions};
+use super::{PowfError, PowfErrorKind, PowfSpec};
 
-#[inline(always)]
-pub(super) fn check_bases<const OPTIONS: u32, const N: usize>(
-    bases: &[f32; N],
+#[derive(Clone, Copy)]
+pub(super) struct HighpCfg {
+    pub(super) zero: bool,
+    pub(super) full: bool,
+    pub(super) assume: bool,
+    pub(super) elide: bool,
+    pub(super) base: Option<(f32, f32)>,
+}
+
+impl HighpCfg {
+    pub(super) const fn from_spec(spec: PowfSpec) -> Self {
+        Self {
+            zero: spec.admits_zero(),
+            full: spec.is_full(),
+            assume: spec.assume_valid(),
+            elide: spec.elides_range_check(),
+            base: spec.base_bounds(),
+        }
+    }
+}
+
+#[cfg_attr(debug_assertions, inline(never))]
+#[cfg_attr(not(debug_assertions), inline(always))]
+pub(super) fn check_bases_cfg(
+    cfg: HighpCfg,
+    bases: &[f32],
     exponent: f32,
 ) -> Result<(), PowfError> {
-    let domain = OPTIONS & 3;
-    if OPTIONS & PowfOptions::ASSUME == 0 && domain != 3 {
-        let mut mask = 0;
-        for (i, &x) in bases.iter().enumerate() {
-            let valid = if domain == 2 {
-                (OPTIONS & PowfOptions::POSITIVE == 0 && x.to_bits() == 0)
-                    || (1.0 / 65_536.0..=65_536.0).contains(&x)
-            } else {
-                (x.is_normal() && x > 0.) || (domain == 1 && x.to_bits() == 0 && exponent >= 0.)
-            };
-            mask |= u16::from(!valid) << i;
-        }
-        if mask != 0 {
-            return Err(PowfError {
-                kind: PowfErrorKind::InvalidBase,
-                lane_mask: mask,
-            });
-        }
+    if cfg.assume || cfg.full {
+        return Ok(());
+    }
+    let mut mask = 0;
+    for (i, &x) in bases.iter().enumerate() {
+        let valid = match cfg.base {
+            Some((lo, hi)) => {
+                (cfg.zero && exponent >= 0. && x.to_bits() == 0) || (lo..=hi).contains(&x)
+            }
+            None => (x.is_normal() && x > 0.) || (cfg.zero && x.to_bits() == 0 && exponent >= 0.),
+        };
+        mask |= u16::from(!valid) << i;
+    }
+    if mask != 0 {
+        return Err(PowfError {
+            kind: PowfErrorKind::InvalidBase,
+            lane_mask: mask,
+        });
     }
     Ok(())
 }
-#[inline(always)]
-pub(super) fn check_results<const OPTIONS: u32, const N: usize>(
-    bases: &[f32; N],
-    result: &[f32; N],
+
+#[cfg_attr(debug_assertions, inline(never))]
+#[cfg_attr(not(debug_assertions), inline(always))]
+pub(super) fn check_results_cfg(
+    cfg: HighpCfg,
+    bases: &[f32],
+    result: &[f32],
     exponent: f32,
 ) -> Result<(), PowfError> {
-    let domain = OPTIONS & 3;
-    if OPTIONS & PowfOptions::ASSUME == 0 && domain < 2 {
-        let mut mask = 0;
-        for (i, &x) in result.iter().enumerate() {
-            let valid = x.is_normal()
-                || (domain == 1 && bases[i].to_bits() == 0 && exponent > 0. && x.to_bits() == 0);
-            mask |= u16::from(!valid) << i;
-        }
-        if mask != 0 {
-            return Err(PowfError {
-                kind: PowfErrorKind::OutsideApproximationRange,
-                lane_mask: mask,
-            });
-        }
+    if cfg.assume || cfg.full || cfg.elide {
+        return Ok(());
+    }
+    let mut mask = 0;
+    for (i, &x) in result.iter().enumerate() {
+        let valid = x.is_normal()
+            || (cfg.zero && bases[i].to_bits() == 0 && exponent > 0. && x.to_bits() == 0);
+        mask |= u16::from(!valid) << i;
+    }
+    if mask != 0 {
+        return Err(PowfError {
+            kind: PowfErrorKind::OutsideApproximationRange,
+            lane_mask: mask,
+        });
     }
     Ok(())
 }
+
 #[cfg(feature = "std")]
-#[inline(always)]
-pub(super) fn run<const OPTIONS: u32, const N: usize>(
+#[cfg_attr(debug_assertions, inline(never))]
+#[cfg_attr(not(debug_assertions), inline(always))]
+pub(super) fn run_cfg<const N: usize>(
+    cfg: HighpCfg,
     bases: [f32; N],
     exponent: f32,
 ) -> Result<[f32; N], PowfError> {
-    check_bases::<OPTIONS, N>(&bases, exponent)?;
+    check_bases_cfg(cfg, &bases, exponent)?;
     // Prevent LLVM's `@llvm.pow.f32(2^k, y) -> exp2f(k * y)` rewrite on
     // constant power-of-two bases, which rounds `k * y` in binary32 (~6 ULP)
     // and breaks parity between constant-folded scalar calls and vector packs.
     let exp = core::hint::black_box(exponent);
     let result = bases.map(|x| core::hint::black_box(x).powf(exp));
-    check_results::<OPTIONS, N>(&bases, &result, exponent)?;
+    check_results_cfg(cfg, &bases, &result, exponent)?;
     Ok(result)
 }

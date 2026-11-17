@@ -1,158 +1,295 @@
-//! Const-configured exp2 graphs, instantiated per width and arithmetic provider.
+//! Configured exp2/exp graphs, instantiated per width, kernel config, and portability.
 #![allow(clippy::excessive_precision)] // Preserve the fitted f32 coefficient spellings.
-use super::{ExpfError, ExpfErrorKind, ExpfOptions};
+use super::{ExpfError, ExpfErrorKind};
 
-// Private flags (not accepted public encodings): infallible methods use them.
-pub(super) const ELIDE_CLAMP: u32 = 256;
+pub(super) trait Kernel: 'static {
+    const RANGED: bool;
+    const IN_LO: f32;
+    const IN_HI: f32;
+    const FULL: bool;
+    const LOWP: bool;
+    const ASSUME: bool;
+    const ELIDE_EXP2: bool;
+    const ELIDE_EXP: bool;
+}
 
-macro_rules! graph {
-    ($vector:ident, $profile:ident, $const_entry:ident, $float:ident, $int:ident, $bound:ident, $lanes:literal) => {
-        #[cfg_attr(debug_assertions, inline(never))]
-        #[cfg_attr(not(debug_assertions), inline(always))]
-        fn $vector<T: magetypes::simd::backends::$bound, const FIXED_OPTIONS: u32>(
-            token: T,
-            input: magetypes::simd::generic::$float<T>,
-            options: u32,
-        ) -> Result<magetypes::simd::generic::$float<T>, ExpfError> {
-            // Debug shares one graph per token/width without discarding any flag.
-            // Optimized builds keep the integer const through the arithmetic.
-            #[cfg(not(debug_assertions))]
-            let options = {
-                let _ = options;
-                FIXED_OPTIONS
-            };
-            use magetypes::simd::generic::{$float as V, $int as I};
-            let sp = |x| V::splat_t(token, x);
-            let ip = |x| I::splat_t(token, x);
-            let reject = |mask: I<T>, kind| {
-                let lane_mask = mask
-                    .to_array()
-                    .iter()
-                    .enumerate()
-                    .fold(0_u16, |m, (i, &v)| m | (u16::from(v != 0) << i));
-                ExpfError { kind, lane_mask }
-            };
-            let bits = input.bitcast_to_i32();
-            let abs = bits & ip(0x7fff_ffff_u32 as i32);
-            if options & ExpfOptions::ASSUME == 0 && options & ExpfOptions::FULL == 0 {
-                // Bounded domain: NaN and infinities are invalid inputs.
-                let invalid = abs.simd_ge(ip(0x7f80_0000));
-                if invalid.any_true() {
-                    return Err(reject(invalid, ExpfErrorKind::InvalidInput));
-                }
+#[derive(Clone, Copy)]
+pub(super) struct KernelCfg {
+    pub(super) ranged: bool,
+    pub(super) in_lo: f32,
+    pub(super) in_hi: f32,
+    pub(super) full: bool,
+    pub(super) lowp: bool,
+    pub(super) assume: bool,
+    pub(super) elide_exp2: bool,
+    pub(super) elide_exp: bool,
+}
+
+impl KernelCfg {
+    pub(super) const fn from_spec(spec: super::ExpfSpec) -> Self {
+        let (in_lo, in_hi) = match spec.input_bounds() {
+            Some(bounds) => bounds,
+            None => (0.0, 0.0),
+        };
+        Self {
+            ranged: spec.input_bounds().is_some(),
+            in_lo,
+            in_hi,
+            full: spec.is_full(),
+            lowp: spec.is_lowp(),
+            assume: spec.assume_valid(),
+            elide_exp2: spec.elides_clamp(),
+            elide_exp: spec.elides_exp_clamp(),
+        }
+    }
+}
+
+#[cfg(debug_assertions)]
+#[inline(always)]
+pub(super) const fn cfg_of<K: Kernel>() -> KernelCfg {
+    KernelCfg {
+        ranged: K::RANGED,
+        in_lo: K::IN_LO,
+        in_hi: K::IN_HI,
+        full: K::FULL,
+        lowp: K::LOWP,
+        assume: K::ASSUME,
+        elide_exp2: K::ELIDE_EXP2,
+        elide_exp: K::ELIDE_EXP,
+    }
+}
+
+macro_rules! eval_expf {
+    (
+        $V:ident,
+        $I:ident,
+        $token:ident,
+        $input:ident,
+        $op:expr,
+        $backend:expr,
+        $ranged:expr,
+        $in_lo:expr,
+        $in_hi:expr,
+        $full:expr,
+        $lowp:expr,
+        $assume:expr,
+        $elide_exp2:expr,
+        $elide_exp:expr
+    ) => {{
+        let sp = |x| $V::splat_t($token, x);
+        let ip = |x| $I::splat_t($token, x);
+        let reject = |mask: $I<T>, kind| {
+            let lane_mask = mask
+                .to_array()
+                .iter()
+                .enumerate()
+                .fold(0_u16, |m, (i, &v)| m | (u16::from(v != 0) << i));
+            ExpfError { kind, lane_mask }
+        };
+        if !$assume && $ranged {
+            let invalid =
+                ($input.simd_ge(sp($in_lo)) & $input.simd_le(sp($in_hi))).bitcast_to_i32() ^ ip(-1);
+            if invalid.any_true() {
+                return Err(reject(invalid, ExpfErrorKind::InvalidInput));
             }
-            let madd = |a: V<T>, b: V<T>, c: V<T>| -> V<T> {
-                if options & ExpfOptions::BACKEND != 0 {
-                    a.mul_add_relaxed(b, c)
-                } else {
-                    a.mul_add_fused(b, c)
-                }
-            };
-            let result = if options & ExpfOptions::LOWP != 0 {
-                // Same coefficients and arithmetic order as exp2_lowp.
-                let x = if options & ELIDE_CLAMP == 0 {
-                    input.max(sp(-126.0)).min(sp(127.99))
-                } else {
-                    input
-                };
-                let xi = x.floor();
-                let xf = x - xi;
-                let (c3, c2) = if options & ExpfOptions::LEGACY != 0 {
-                    (0.055_504_11, 0.240_226_5)
-                } else {
-                    (0.071_916_997_023_492_97, 0.234_336_384_644_832_92)
-                };
-                let p = madd(sp(c3), xf, sp(c2));
-                let p = madd(p, xf, sp(core::f32::consts::LN_2));
-                let p = madd(p, xf, sp(1.0));
-                let integer = if token.as_scalar().is_some() {
-                    xi.to_i32()
-                } else {
-                    xi.to_i32_round()
-                };
-                p * (integer + ip(127)).shl_const::<23>().bitcast_to_f32()
+        }
+        let arg = if $op == 1 {
+            $input * sp(core::f32::consts::LOG2_E)
+        } else {
+            $input
+        };
+        if !$assume && !$ranged && !$full {
+            let bits = arg.bitcast_to_i32();
+            let abs = bits & ip(0x7fff_ffff_u32 as i32);
+            let invalid = abs.simd_ge(ip(0x7f80_0000));
+            if invalid.any_true() {
+                return Err(reject(invalid, ExpfErrorKind::InvalidInput));
+            }
+        }
+        let elide_clamp = if $op == 1 { $elide_exp } else { $elide_exp2 };
+        let madd = |a: $V<T>, b: $V<T>, c: $V<T>| -> $V<T> {
+            if $backend {
+                a.mul_add_relaxed(b, c)
             } else {
-                // Same coefficients and arithmetic order as exp2_midp:
-                // round-to-nearest split, xi clamped to 127.
-                let underflow_limit = sp(-126.0);
-                let overflow_limit = sp(128.0);
-                let reduced = if options & ELIDE_CLAMP == 0 {
-                    input.max(underflow_limit).min(overflow_limit)
-                } else {
-                    input
-                };
-                let xi = reduced.round().min(sp(127.0));
-                let xf = reduced - xi;
-                let (c6, c5, c4, c3, c2) = if options & ExpfOptions::LEGACY != 0 {
-                    (
-                        0.000_154_47,
-                        0.001_333_37,
-                        0.009_618_055,
-                        0.055_504_545,
-                        0.240_226_46,
-                    )
-                } else {
-                    (
-                        0.000_152_527_896_498_79,
-                        0.001_338_604_727_826_21,
-                        0.009_618_715_779_149_75,
-                        0.055_503_695_542_993_11,
-                        0.240_226_463_934_714_0,
-                    )
-                };
-                let p = madd(sp(c6), xf, sp(c5));
-                let p = madd(p, xf, sp(c4));
-                let p = madd(p, xf, sp(c3));
-                let p = madd(p, xf, sp(c2));
-                let p = madd(p, xf, sp(core::f32::consts::LN_2));
-                let p = madd(p, xf, sp(1.0));
-                let integer = if token.as_scalar().is_some() {
-                    xi.to_i32()
-                } else {
-                    xi.to_i32_round()
-                };
-                let scale = (integer + ip(127)).shl_const::<23>().bitcast_to_f32();
-                let result = p * scale;
-                if options & ELIDE_CLAMP == 0 {
-                    let is_underflow = input.simd_lt(underflow_limit);
-                    let is_overflow = input.simd_ge(overflow_limit);
-                    let result = V::blend(is_underflow, sp(0.0), result);
-                    V::blend(is_overflow, sp(f32::INFINITY), result)
-                } else {
-                    result
-                }
+                a.mul_add_fused(b, c)
+            }
+        };
+        let result = if $lowp {
+            let x = if !elide_clamp {
+                arg.max(sp(-126.0)).min(sp(127.99))
+            } else {
+                arg
             };
-            let result = if options & ExpfOptions::FULL != 0 {
-                // Full domain: non-finite inputs produce specials, not errors.
-                let nan = input.simd_ne(input);
-                let pos_inf = input.simd_eq(sp(f32::INFINITY));
-                let neg_inf = input.simd_eq(sp(f32::NEG_INFINITY));
-                let result = V::blend(nan, sp(f32::NAN), result);
-                let result = V::blend(pos_inf, sp(f32::INFINITY), result);
-                V::blend(neg_inf, sp(0.0), result)
+            let xi = x.floor();
+            let xf = x - xi;
+            let p = madd(
+                sp(0.071_916_997_023_492_97),
+                xf,
+                sp(0.234_336_384_644_832_92),
+            );
+            let p = madd(p, xf, sp(core::f32::consts::LN_2));
+            let p = madd(p, xf, sp(1.0));
+            let integer = if $token.as_scalar().is_some() {
+                xi.to_i32()
+            } else {
+                xi.to_i32_round()
+            };
+            p * (integer + ip(127)).shl_const::<23>().bitcast_to_f32()
+        } else {
+            let underflow_limit = sp(-126.0);
+            let overflow_limit = sp(128.0);
+            let reduced = if !elide_clamp {
+                arg.max(underflow_limit).min(overflow_limit)
+            } else {
+                arg
+            };
+            let xi = if elide_clamp {
+                reduced.round()
+            } else {
+                reduced.round().min(sp(127.0))
+            };
+            let xf = reduced - xi;
+            let p = madd(
+                sp(0.000_152_527_896_498_79),
+                xf,
+                sp(0.001_338_604_727_826_21),
+            );
+            let p = madd(p, xf, sp(0.009_618_715_779_149_75));
+            let p = madd(p, xf, sp(0.055_503_695_542_993_11));
+            let p = madd(p, xf, sp(0.240_226_463_934_714_0));
+            let p = madd(p, xf, sp(core::f32::consts::LN_2));
+            let p = madd(p, xf, sp(1.0));
+            let integer = if $token.as_scalar().is_some() {
+                xi.to_i32()
+            } else {
+                xi.to_i32_round()
+            };
+            let scale = (integer + ip(127)).shl_const::<23>().bitcast_to_f32();
+            let result = p * scale;
+            if !elide_clamp {
+                let is_underflow = arg.simd_lt(underflow_limit);
+                let is_overflow = arg.simd_ge(overflow_limit);
+                let result = $V::blend(is_underflow, sp(0.0), result);
+                $V::blend(is_overflow, sp(f32::INFINITY), result)
             } else {
                 result
-            };
-            Ok(result)
+            }
+        };
+        let result = if $full {
+            let nan = $input.simd_ne($input);
+            let pos_inf = $input.simd_eq(sp(f32::INFINITY));
+            let neg_inf = $input.simd_eq(sp(f32::NEG_INFINITY));
+            let result = $V::blend(nan, sp(f32::NAN), result);
+            let result = $V::blend(pos_inf, sp(f32::INFINITY), result);
+            $V::blend(neg_inf, sp(0.0), result)
+        } else {
+            result
+        };
+        Ok(result)
+    }};
+}
+
+macro_rules! graph {
+    ($vector_dbg:ident, $vector_rel:ident, $profile:ident, $cfg_entry:ident, $const_entry:ident, $float:ident, $int:ident, $bound:ident, $lanes:literal) => {
+        #[cfg_attr(debug_assertions, inline(never))]
+        #[cfg_attr(not(debug_assertions), inline)]
+        fn $vector_dbg<T: magetypes::simd::backends::$bound>(
+            token: T,
+            input: magetypes::simd::generic::$float<T>,
+            op: u8,
+            backend: bool,
+            cfg: KernelCfg,
+        ) -> Result<magetypes::simd::generic::$float<T>, ExpfError> {
+            use magetypes::simd::generic::{$float as V, $int as I};
+            eval_expf!(
+                V,
+                I,
+                token,
+                input,
+                op,
+                backend,
+                cfg.ranged,
+                cfg.in_lo,
+                cfg.in_hi,
+                cfg.full,
+                cfg.lowp,
+                cfg.assume,
+                cfg.elide_exp2,
+                cfg.elide_exp
+            )
+        }
+
+        #[cfg(not(debug_assertions))]
+        #[inline(always)]
+        fn $vector_rel<
+            T: magetypes::simd::backends::$bound,
+            K: Kernel,
+            const OP: u8,
+            const BACKEND: bool,
+        >(
+            token: T,
+            input: magetypes::simd::generic::$float<T>,
+        ) -> Result<magetypes::simd::generic::$float<T>, ExpfError> {
+            use magetypes::simd::generic::{$float as V, $int as I};
+            eval_expf!(
+                V,
+                I,
+                token,
+                input,
+                OP,
+                BACKEND,
+                K::RANGED,
+                K::IN_LO,
+                K::IN_HI,
+                K::FULL,
+                K::LOWP,
+                K::ASSUME,
+                K::ELIDE_EXP2,
+                K::ELIDE_EXP
+            )
         }
 
         #[inline(always)]
-        pub(super) fn $profile<T: magetypes::simd::backends::$bound, const OPTIONS: u32>(
+        pub(super) fn $profile<
+            T: magetypes::simd::backends::$bound,
+            K: Kernel,
+            const OP: u8,
+            const BACKEND: bool,
+        >(
             token: T,
             input: magetypes::simd::generic::$float<T>,
         ) -> Result<magetypes::simd::generic::$float<T>, ExpfError> {
             #[cfg(debug_assertions)]
-            return $vector::<T, 0>(token, input, OPTIONS);
+            return $vector_dbg::<T>(token, input, OP, BACKEND, cfg_of::<K>());
             #[cfg(not(debug_assertions))]
-            $vector::<T, OPTIONS>(token, input, OPTIONS)
+            $vector_rel::<T, K, OP, BACKEND>(token, input)
         }
 
         #[archmage::magetypes(v4x(cfg(avx512)), v4(cfg(avx512)), v3, neon, wasm128, scalar)]
-        pub(super) fn $const_entry<const OPTIONS: u32>(
+        pub(super) fn $cfg_entry(
+            token: Token,
+            input: [f32; $lanes],
+            op: u8,
+            backend: bool,
+            cfg: KernelCfg,
+        ) -> Result<[f32; $lanes], ExpfError> {
+            $vector_dbg::<Token>(
+                token,
+                magetypes::simd::generic::$float::from_array_t(token, input),
+                op,
+                backend,
+                cfg,
+            )
+            .map(|result| result.to_array())
+        }
+
+        #[cfg(not(debug_assertions))]
+        #[archmage::magetypes(v4x(cfg(avx512)), v4(cfg(avx512)), v3, neon, wasm128, scalar)]
+        pub(super) fn $const_entry<K: Kernel, const OP: u8, const BACKEND: bool>(
             token: Token,
             input: [f32; $lanes],
         ) -> Result<[f32; $lanes], ExpfError> {
-            $profile::<Token, OPTIONS>(
+            $profile::<Token, K, OP, BACKEND>(
                 token,
                 magetypes::simd::generic::$float::from_array_t(token, input),
             )
@@ -162,8 +299,10 @@ macro_rules! graph {
 }
 
 graph!(
-    vector4,
+    vector4_dbg,
+    vector4_rel,
     profile4,
+    kernel4_cfg,
     kernel4_with,
     f32x4,
     i32x4,
@@ -171,8 +310,10 @@ graph!(
     4
 );
 graph!(
-    vector8,
+    vector8_dbg,
+    vector8_rel,
     profile8,
+    kernel8_cfg,
     kernel8_with,
     f32x8,
     i32x8,
@@ -181,8 +322,10 @@ graph!(
 );
 #[cfg(feature = "w512")]
 graph!(
-    vector16,
+    vector16_dbg,
+    vector16_rel,
     profile16,
+    kernel16_cfg,
     kernel16_with,
     f32x16,
     i32x16,
@@ -190,30 +333,59 @@ graph!(
     16
 );
 
-/// Whole-slice kernel (`OP = 0`: `exp2`, `OP = 1`: `exp`): one feature region
-/// around the loop, the 8-lane graph per chunk, and one padded vector for the
-/// remainder. The pad value 1.0 is finite, so only real lanes can be rejected.
+/// Whole-slice kernel (`op = 0`: `exp2`, `op = 1`: `exp`): debug path
+/// parameterized on `KernelCfg`.
+#[cfg(debug_assertions)]
 #[archmage::magetypes(v4x(cfg(avx512)), v4(cfg(avx512)), v3, neon, wasm128, scalar)]
-pub(super) fn slice8_with<const OP: u8, const OPTIONS: u32>(
+pub(super) fn slice8_cfg(
+    token: Token,
+    src: &[f32],
+    dst: &mut [f32],
+    op: u8,
+    backend: bool,
+    cfg: KernelCfg,
+) -> Result<(), (usize, ExpfError)> {
+    use magetypes::simd::generic::f32x8 as V;
+    let (chunks, tail) = V::partition_slice_t(token, src);
+    let (out_chunks, out_tail) = V::partition_slice_mut_t(token, dst);
+    for (i, (s, d)) in chunks.iter().zip(out_chunks.iter_mut()).enumerate() {
+        vector8_dbg::<Token>(token, V::load_t(token, s), op, backend, cfg)
+            .map_err(|e| (i * 8, e))?
+            .store(d);
+    }
+    if !tail.is_empty() {
+        vector8_dbg::<Token>(
+            token,
+            V::load_padded_t(token, tail, tail[0]),
+            op,
+            backend,
+            cfg,
+        )
+        .map_err(|e| (chunks.len() * 8, e))?
+        .store_prefix(out_tail);
+    }
+    Ok(())
+}
+
+/// Whole-slice kernel (`OP = 0`: `exp2`, `OP = 1`: `exp`): one feature region
+/// around the loop, the 8-lane graph per chunk, and `tail[0]` padding.
+#[cfg(not(debug_assertions))]
+#[archmage::magetypes(v4x(cfg(avx512)), v4(cfg(avx512)), v3, neon, wasm128, scalar)]
+pub(super) fn slice8_with<K: Kernel, const OP: u8, const BACKEND: bool>(
     token: Token,
     src: &[f32],
     dst: &mut [f32],
 ) -> Result<(), (usize, ExpfError)> {
     use magetypes::simd::generic::f32x8 as V;
-    let scale = V::splat_t(token, core::f32::consts::LOG2_E);
     let (chunks, tail) = V::partition_slice_t(token, src);
     let (out_chunks, out_tail) = V::partition_slice_mut_t(token, dst);
     for (i, (s, d)) in chunks.iter().zip(out_chunks.iter_mut()).enumerate() {
-        let v = V::load_t(token, s);
-        let v = if OP == 1 { v * scale } else { v };
-        profile8::<Token, OPTIONS>(token, v)
+        profile8::<Token, K, OP, BACKEND>(token, V::load_t(token, s))
             .map_err(|e| (i * 8, e))?
             .store(d);
     }
     if !tail.is_empty() {
-        let v = V::load_padded_t(token, tail, 1.0);
-        let v = if OP == 1 { v * scale } else { v };
-        profile8::<Token, OPTIONS>(token, v)
+        profile8::<Token, K, OP, BACKEND>(token, V::load_padded_t(token, tail, tail[0]))
             .map_err(|e| (chunks.len() * 8, e))?
             .store_prefix(out_tail);
     }

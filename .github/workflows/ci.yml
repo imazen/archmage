@@ -157,6 +157,10 @@ jobs:
           cargo test -p magemath --features "${{ env.FEATURES }}"
           cargo test -p magemath --no-default-features --features w512
 
+      - name: Magemath compile and monomorphization budget
+        if: matrix.os == 'ubuntu-latest'
+        run: python3 xtask/check_compile_budget.py
+
       - name: Portable and native FMA contracts (std and no_std)
         run: |
           cargo test -p magetypes --features "${{ env.FEATURES }}" --test fma_contract --test float_inequality --test float_negation

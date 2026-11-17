@@ -93,7 +93,6 @@ fn select_impl<T: IntoConcreteToken>(token: T, execution: LogfExecution) -> Plan
     archmage::reattune!(upgrade(), [_v3_t, _neon_t, _wasm128_t, _scalar_t])
 }
 
-// Use the supported attunement boundary for autonomous operation selection.
 #[archmage::attune(_*_t)]
 fn upgrade(token: Token) -> Plan {
     select(token, LogfExecution::Caller)
@@ -104,31 +103,96 @@ pub(super) fn select<T: IntoConcreteToken>(token: T, execution: LogfExecution) -
     select_impl(token, execution)
 }
 
-macro_rules! run_const {
+macro_rules! run_cfg {
     ($name:ident, $v3:ident, $v4:ident, $v4x:ident, $neon:ident, $wasm:ident, $scalar:ident, $n:literal) => {
-        #[inline(always)]
-        pub(super) fn $name<const OP: u8, const OPTIONS: u32>(
+        #[cfg_attr(debug_assertions, inline(never))]
+        #[cfg_attr(not(debug_assertions), inline(always))]
+        pub(super) fn $name(
             plan: Plan,
             input: [f32; $n],
+            op: u8,
+            backend: bool,
+            cfg: graph::KernelCfg,
         ) -> Result<[f32; $n], LogfError> {
             match plan {
                 #[cfg(target_arch = "x86_64")]
-                Plan::V3(t) => graph::$v3::<OP, OPTIONS>(t, input),
+                Plan::V3(t) => graph::$v3(t, input, op, backend, cfg),
                 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-                Plan::V4(t) => graph::$v4::<OP, OPTIONS>(t, input),
+                Plan::V4(t) => graph::$v4(t, input, op, backend, cfg),
                 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-                Plan::V4x(t) => graph::$v4x::<OP, OPTIONS>(t, input),
+                Plan::V4x(t) => graph::$v4x(t, input, op, backend, cfg),
                 #[cfg(target_arch = "aarch64")]
-                Plan::Neon(t) => graph::$neon::<OP, OPTIONS>(t, input),
+                Plan::Neon(t) => graph::$neon(t, input, op, backend, cfg),
                 #[cfg(target_arch = "wasm32")]
-                Plan::Wasm(t) => graph::$wasm::<OP, OPTIONS>(t, input),
-                Plan::Software => graph::$scalar::<OP, OPTIONS>(ScalarToken, input),
+                Plan::Wasm(t) => graph::$wasm(t, input, op, backend, cfg),
+                Plan::Software => graph::$scalar(ScalarToken, input, op, backend, cfg),
+            }
+        }
+    };
+}
+run_cfg!(
+    run4_cfg,
+    kernel4_cfg_v3,
+    kernel4_cfg_v4,
+    kernel4_cfg_v4x,
+    kernel4_cfg_neon,
+    kernel4_cfg_wasm128,
+    kernel4_cfg_scalar,
+    4
+);
+run_cfg!(
+    run8_cfg,
+    kernel8_cfg_v3,
+    kernel8_cfg_v4,
+    kernel8_cfg_v4x,
+    kernel8_cfg_neon,
+    kernel8_cfg_wasm128,
+    kernel8_cfg_scalar,
+    8
+);
+#[cfg(feature = "w512")]
+run_cfg!(
+    run16_cfg,
+    kernel16_cfg_v3,
+    kernel16_cfg_v4,
+    kernel16_cfg_v4x,
+    kernel16_cfg_neon,
+    kernel16_cfg_wasm128,
+    kernel16_cfg_scalar,
+    16
+);
+
+macro_rules! run_const {
+    ($name:ident, $cfg_fn:ident, $v3:ident, $v4:ident, $v4x:ident, $neon:ident, $wasm:ident, $scalar:ident, $n:literal) => {
+        #[inline(always)]
+        pub(super) fn $name<K: graph::Kernel, const OP: u8, const BACKEND: bool>(
+            plan: Plan,
+            input: [f32; $n],
+        ) -> Result<[f32; $n], LogfError> {
+            #[cfg(debug_assertions)]
+            {
+                return $cfg_fn(plan, input, OP, BACKEND, graph::cfg_of::<K>());
+            }
+            #[cfg(not(debug_assertions))]
+            match plan {
+                #[cfg(target_arch = "x86_64")]
+                Plan::V3(t) => graph::$v3::<K, OP, BACKEND>(t, input),
+                #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+                Plan::V4(t) => graph::$v4::<K, OP, BACKEND>(t, input),
+                #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+                Plan::V4x(t) => graph::$v4x::<K, OP, BACKEND>(t, input),
+                #[cfg(target_arch = "aarch64")]
+                Plan::Neon(t) => graph::$neon::<K, OP, BACKEND>(t, input),
+                #[cfg(target_arch = "wasm32")]
+                Plan::Wasm(t) => graph::$wasm::<K, OP, BACKEND>(t, input),
+                Plan::Software => graph::$scalar::<K, OP, BACKEND>(ScalarToken, input),
             }
         }
     };
 }
 run_const!(
     run4_const,
+    run4_cfg,
     kernel4_with_v3,
     kernel4_with_v4,
     kernel4_with_v4x,
@@ -139,6 +203,7 @@ run_const!(
 );
 run_const!(
     run8_const,
+    run8_cfg,
     kernel8_with_v3,
     kernel8_with_v4,
     kernel8_with_v4x,
@@ -150,6 +215,7 @@ run_const!(
 #[cfg(feature = "w512")]
 run_const!(
     run16_const,
+    run16_cfg,
     kernel16_with_v3,
     kernel16_with_v4,
     kernel16_with_v4x,
@@ -160,22 +226,40 @@ run_const!(
 );
 
 #[inline(always)]
-pub(super) fn run_slice_const<const OP: u8, const OPTIONS: u32>(
+pub(super) fn run_slice_const<K: graph::Kernel, const OP: u8, const BACKEND: bool>(
     plan: Plan,
     src: &[f32],
     dst: &mut [f32],
 ) -> Result<(), (usize, LogfError)> {
+    #[cfg(debug_assertions)]
+    {
+        let cfg = graph::cfg_of::<K>();
+        match plan {
+            #[cfg(target_arch = "x86_64")]
+            Plan::V3(t) => graph::slice8_cfg_v3(t, src, dst, OP, BACKEND, cfg),
+            #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+            Plan::V4(t) => graph::slice8_cfg_v4(t, src, dst, OP, BACKEND, cfg),
+            #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+            Plan::V4x(t) => graph::slice8_cfg_v4x(t, src, dst, OP, BACKEND, cfg),
+            #[cfg(target_arch = "aarch64")]
+            Plan::Neon(t) => graph::slice8_cfg_neon(t, src, dst, OP, BACKEND, cfg),
+            #[cfg(target_arch = "wasm32")]
+            Plan::Wasm(t) => graph::slice8_cfg_wasm128(t, src, dst, OP, BACKEND, cfg),
+            Plan::Software => graph::slice8_cfg_scalar(ScalarToken, src, dst, OP, BACKEND, cfg),
+        }
+    }
+    #[cfg(not(debug_assertions))]
     match plan {
         #[cfg(target_arch = "x86_64")]
-        Plan::V3(t) => graph::slice8_with_v3::<OP, OPTIONS>(t, src, dst),
+        Plan::V3(t) => graph::slice8_with_v3::<K, OP, BACKEND>(t, src, dst),
         #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-        Plan::V4(t) => graph::slice8_with_v4::<OP, OPTIONS>(t, src, dst),
+        Plan::V4(t) => graph::slice8_with_v4::<K, OP, BACKEND>(t, src, dst),
         #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-        Plan::V4x(t) => graph::slice8_with_v4x::<OP, OPTIONS>(t, src, dst),
+        Plan::V4x(t) => graph::slice8_with_v4x::<K, OP, BACKEND>(t, src, dst),
         #[cfg(target_arch = "aarch64")]
-        Plan::Neon(t) => graph::slice8_with_neon::<OP, OPTIONS>(t, src, dst),
+        Plan::Neon(t) => graph::slice8_with_neon::<K, OP, BACKEND>(t, src, dst),
         #[cfg(target_arch = "wasm32")]
-        Plan::Wasm(t) => graph::slice8_with_wasm128::<OP, OPTIONS>(t, src, dst),
-        Plan::Software => graph::slice8_with_scalar::<OP, OPTIONS>(ScalarToken, src, dst),
+        Plan::Wasm(t) => graph::slice8_with_wasm128::<K, OP, BACKEND>(t, src, dst),
+        Plan::Software => graph::slice8_with_scalar::<K, OP, BACKEND>(ScalarToken, src, dst),
     }
 }

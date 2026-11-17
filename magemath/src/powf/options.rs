@@ -21,29 +21,11 @@ pub enum PowfDomain {
 }
 
 /// Whole-operation feature selection, independent of numerical policy.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
-#[non_exhaustive]
-pub enum PowfExecution {
-    /// Reuse a capable caller or select a native tier once per power operation.
-    #[default]
-    Automatic,
-    /// Retain the caller's Magetypes tier without autonomous upgrades.
-    /// A std HIGHP provider may still use its own internal CPU dispatch.
-    Caller,
-}
-
+pub use crate::Execution as PowfExecution;
 /// Whether accepted results must agree bit for bit across backends.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
-#[non_exhaustive]
-pub enum PowfPortability {
-    /// One fused graph, with exact software FMA when necessary. Not std power.
-    /// Full HIGHP preserves NaN classification; NaN payload/sign are unspecified.
-    #[default]
-    BitExact,
-    /// Native fused or separate graph; result bits and range rejection may vary.
-    /// HIGHP also inherits std platform special-value classification differences.
-    BackendDependent,
-}
+pub use crate::Portability as PowfPortability;
+/// Whether to enforce the selected numerical domain at runtime.
+pub use crate::Validation as PowfValidation;
 
 /// Approximation family, not a global mathematical error bound.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -57,19 +39,6 @@ pub enum PowfPrecision {
     /// Table-based binary64 graph for BitExact; std power for BackendDependent.
     /// BackendDependent requires `std`. Neither is a global ONE_ULP promise.
     Highp,
-}
-
-/// Whether to enforce the selected numerical domain at runtime.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
-#[non_exhaustive]
-pub enum PowfValidation {
-    /// Reject the whole vector, returning the exact mask for the first failing stage.
-    #[default]
-    Checked,
-    /// Omit numerical input/output checks. The caller promises the same domain.
-    /// Violations have unspecified numerical results, never memory unsoundness.
-    /// Supported widths and valid option encodings are still enforced.
-    AssumeValid,
 }
 
 /// Const builder ending in `.bits()`, also accepted by the runtime adapter.
@@ -89,7 +58,6 @@ pub struct PowfOptions {
 }
 
 impl PowfOptions {
-    pub(crate) const DEFAULT: u32 = 0;
     pub(crate) const GAMMA: u32 = 2;
     pub(crate) const CALLER: u32 = 4;
     pub(crate) const LOWP: u32 = 8;
@@ -203,6 +171,49 @@ impl PowfOptions {
                 PowfValidation::AssumeValid => Self::ASSUME,
             }
     }
+    pub(crate) const fn from_bits(bits: u32) -> Option<Self> {
+        if !Self::valid(bits) {
+            return None;
+        }
+        let domain = match bits & 3 {
+            0 => PowfDomain::PositiveNormal,
+            1 => PowfDomain::NonNegativeNormal,
+            2 => {
+                if bits & Self::POSITIVE != 0 {
+                    PowfDomain::PositiveGamma
+                } else {
+                    PowfDomain::Gamma
+                }
+            }
+            _ => PowfDomain::Full,
+        };
+        Some(Self {
+            domain,
+            execution: if bits & Self::CALLER == 0 {
+                PowfExecution::Automatic
+            } else {
+                PowfExecution::Caller
+            },
+            portability: if bits & Self::BACKEND == 0 {
+                PowfPortability::BitExact
+            } else {
+                PowfPortability::BackendDependent
+            },
+            precision: if bits & Self::LOWP != 0 {
+                PowfPrecision::Lowp
+            } else if bits & Self::HIGHP != 0 {
+                PowfPrecision::Highp
+            } else {
+                PowfPrecision::Midp
+            },
+            validation: if bits & Self::ASSUME == 0 {
+                PowfValidation::Checked
+            } else {
+                PowfValidation::AssumeValid
+            },
+        })
+    }
+
     pub(crate) const fn valid(bits: u32) -> bool {
         if bits & !255 != 0
             || bits & (Self::LOWP | Self::HIGHP) == Self::LOWP | Self::HIGHP

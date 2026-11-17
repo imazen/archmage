@@ -231,11 +231,11 @@ macro_rules! check_standalone_family {
             }
             #[inline(never)]
             fn c_scalar<const F: u32>(x: f32) -> Result<f32, $err_ty> {
-                $mod_alias::$try_with::<F>(x)
+                $mod_alias::$try_with::<$mod_alias::Options<F>>(x)
             }
             #[inline(never)]
             fn c_arr<const F: u32, const N: usize>(xs: [f32; N]) -> Result<[f32; N], $err_ty> {
-                $mod_alias::$try_array_with::<F, N>(xs)
+                $mod_alias::$try_array_with::<$mod_alias::Options<F>, N>(xs)
             }
             #[inline(never)]
             fn def_scalar(x: f32) -> Result<f32, $err_ty> {
@@ -449,20 +449,20 @@ macro_rules! define_single_token_op {
             #[inline(never)]
             fn eval4<const FLAGS: u32>(t: $tok_ty, xs: [f32; 4]) -> Result<[f32; 4], $err_ty> {
                 use magetypes::simd::generic::f32x4;
-                $mod_id::$vec4::<FLAGS, _>(t, f32x4::from_array_t(t, xs)).map(|v| v.to_array())
+                $mod_id::$vec4::<$mod_id::Options<FLAGS>, _>(t, f32x4::from_array_t(t, xs)).map(|v| v.to_array())
             }
             #[inline(never)]
             fn eval8<const FLAGS: u32>(t: $tok_ty, xs: [f32; 8]) -> Result<[f32; 8], $err_ty> {
                 use magetypes::simd::generic::f32x8;
-                $mod_id::$vec8::<FLAGS, _>(t, f32x8::from_array_t(t, xs)).map(|v| v.to_array())
+                $mod_id::$vec8::<$mod_id::Options<FLAGS>, _>(t, f32x8::from_array_t(t, xs)).map(|v| v.to_array())
             }
             #[inline(never)]
             fn eval_tail<const FLAGS: u32>(t: $tok_ty, x: f32) -> Result<f32, $err_ty> {
-                $mod_id::$tail_fn::<FLAGS, _>(t, x)
+                $mod_id::$tail_fn::<$mod_id::Options<FLAGS>, _>(t, x)
             }
             #[inline(never)]
             fn eval_with<const FLAGS: u32>(x: f32) -> Result<f32, $err_ty> {
-                $mod_id::$with_fn::<FLAGS>(x)
+                $mod_id::$with_fn::<$mod_id::Options<FLAGS>>(x)
             }
 
             for &xs in $valid_arr.as_chunks::<4>().0 {
@@ -515,7 +515,7 @@ macro_rules! define_single_token_op {
             #[inline(never)]
             fn eval16<const FLAGS: u32>(t: $tok_ty, xs: [f32; 16]) -> Result<[f32; 16], $err_ty> {
                 use magetypes::simd::generic::f32x16;
-                $mod_id::$vec16::<FLAGS, _>(t, f32x16::from_array_t(t, xs)).map(|v| v.to_array())
+                $mod_id::$vec16::<$mod_id::Options<FLAGS>, _>(t, f32x16::from_array_t(t, xs)).map(|v| v.to_array())
             }
             let v16 = eval16::<$f>($token, $arr).unwrap();
             for i in 0..16 {
@@ -670,25 +670,25 @@ fn token_scalar_and_vector_widths_match_across_all_32_configs() {
 
     for &x in &EXP2_BOUNDED_VALID {
         assert_f32_eq(
-            e::try_exp2_with::<20>(x).unwrap(),
-            e::try_exp2_with_token::<20, _>(archmage::ScalarToken, x).unwrap(),
+            e::try_exp2_with::<e::Options<20>>(x).unwrap(),
+            e::try_exp2_with_token::<e::Options<20>, _>(archmage::ScalarToken, x).unwrap(),
             "exp2 BackendDependent Caller standalone vs ScalarToken",
         );
         assert_f32_eq(
-            e::try_exp2_with::<28>(x).unwrap(),
-            e::try_exp2_with_token::<28, _>(archmage::ScalarToken, x).unwrap(),
+            e::try_exp2_with::<e::Options<28>>(x).unwrap(),
+            e::try_exp2_with_token::<e::Options<28>, _>(archmage::ScalarToken, x).unwrap(),
             "exp2 BackendDependent Lowp Caller standalone vs ScalarToken",
         );
     }
     for &x in &CBRT_BOUNDED_VALID {
         assert_f32_eq(
-            c::try_cbrt_with::<20>(x).unwrap(),
-            c::try_cbrt_with_token::<20, _>(archmage::ScalarToken, x).unwrap(),
+            c::try_cbrt_with::<c::Options<20>>(x).unwrap(),
+            c::try_cbrt_with_token::<c::Options<20>, _>(archmage::ScalarToken, x).unwrap(),
             "cbrt BackendDependent Caller standalone vs ScalarToken",
         );
         assert_f32_eq(
-            c::try_cbrt_with::<28>(x).unwrap(),
-            c::try_cbrt_with_token::<28, _>(archmage::ScalarToken, x).unwrap(),
+            c::try_cbrt_with::<c::Options<28>>(x).unwrap(),
+            c::try_cbrt_with_token::<c::Options<28>, _>(archmage::ScalarToken, x).unwrap(),
             "cbrt BackendDependent Lowp Caller standalone vs ScalarToken",
         );
     }

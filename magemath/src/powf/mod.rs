@@ -13,10 +13,11 @@
 //! The flat Magetypes power methods are unchanged and remain supported.
 //!
 //! ```
-//! use magemath::powf::{try_powf, try_powf_with, PowfDomain, PowfOptions};
+//! use magemath::powf::{presets::{GammaMidp, NonNegativeNormalMidp}, try_powf, try_powf_with};
 //! assert_eq!(try_powf(4.0, 0.5).unwrap(), 2.0);
 //! assert!(try_powf(f32::NAN, 2.4).is_err());
-//! assert_eq!(try_powf_with::<{ PowfOptions::new().with_domain(PowfDomain::NonNegativeNormal).bits() }>(0.0, 2.4).unwrap(), 0.0);
+//! assert_eq!(try_powf_with::<NonNegativeNormalMidp>(0.0, 2.4).unwrap(), 0.0);
+//! let _ = try_powf_with::<GammaMidp>(0.25, 2.2).unwrap();
 //! ```
 
 pub(crate) mod const_api;
@@ -36,6 +37,7 @@ mod highp_scalar;
     target_arch = "wasm32"
 ))]
 mod highp_simd;
+mod profile;
 mod std_probe;
 #[cfg(test)]
 mod tests;
@@ -46,6 +48,7 @@ mod options;
 pub use options::{
     PowfDomain, PowfExecution, PowfOptions, PowfPortability, PowfPrecision, PowfValidation,
 };
+pub use profile::{Options, PowfProfile, PowfSpec, presets};
 
 /// Reason a complete vector was rejected.
 ///
@@ -102,7 +105,7 @@ impl std::error::Error for PowfError {}
 /// Bounded scalar power using the default positive-normal domain.
 #[inline(always)]
 pub fn try_powf(base: f32, exponent: f32) -> Result<f32, PowfError> {
-    try_powf_with::<{ PowfOptions::DEFAULT }>(base, exponent)
+    try_powf_with::<presets::NormalMidp>(base, exponent)
 }
 
 /// Scalar power with explicit runtime policy options.
@@ -143,37 +146,37 @@ pub(crate) fn try_powf_token_runtime<T: archmage::IntoConcreteToken, const N: us
 }
 
 /// Configured powf on a 4-lane vector, preserving the caller's feature proof.
-/// Use the same options and token with the scalar `*_with_token` entry for tails.
+/// Use the same profile and token with [`try_powf_with_token`] for scalar tails.
 #[inline(always)]
-pub fn try_powf_f32x4_with<const OPTIONS: u32, T: magetypes::simd::backends::F32x4Convert>(
+pub fn try_powf_f32x4_with<P: PowfProfile, T: magetypes::simd::backends::F32x4Convert>(
     token: T,
     input: magetypes::simd::generic::f32x4<T>,
     exponent: f32,
 ) -> Result<magetypes::simd::generic::f32x4<T>, PowfError> {
-    const_api::run4::<T, OPTIONS>(token, input, exponent)
+    const_api::run4::<P, T>(token, input, exponent)
 }
 
 /// Configured powf on a 8-lane vector, preserving the caller's feature proof.
-/// Use the same options and token with the scalar `*_with_token` entry for tails.
+/// Use the same profile and token with [`try_powf_with_token`] for scalar tails.
 #[inline(always)]
-pub fn try_powf_f32x8_with<const OPTIONS: u32, T: magetypes::simd::backends::F32x8Convert>(
+pub fn try_powf_f32x8_with<P: PowfProfile, T: magetypes::simd::backends::F32x8Convert>(
     token: T,
     input: magetypes::simd::generic::f32x8<T>,
     exponent: f32,
 ) -> Result<magetypes::simd::generic::f32x8<T>, PowfError> {
-    const_api::run8::<T, OPTIONS>(token, input, exponent)
+    const_api::run8::<P, T>(token, input, exponent)
 }
 
 /// Configured powf on a 16-lane vector, preserving the caller's feature proof.
-/// Use the same options and token with the scalar `*_with_token` entry for tails.
+/// Use the same profile and token with [`try_powf_with_token`] for scalar tails.
 #[cfg(feature = "w512")]
 #[inline(always)]
-pub fn try_powf_f32x16_with<const OPTIONS: u32, T: magetypes::simd::backends::F32x16Convert>(
+pub fn try_powf_f32x16_with<P: PowfProfile, T: magetypes::simd::backends::F32x16Convert>(
     token: T,
     input: magetypes::simd::generic::f32x16<T>,
     exponent: f32,
 ) -> Result<magetypes::simd::generic::f32x16<T>, PowfError> {
-    const_api::run16::<T, OPTIONS>(token, input, exponent)
+    const_api::run16::<P, T>(token, input, exponent)
 }
 
 /// Power on a 4-lane vector with runtime options, retaining the caller proof.

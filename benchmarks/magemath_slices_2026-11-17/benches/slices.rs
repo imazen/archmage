@@ -5,16 +5,16 @@
 //!
 //! Run: `cargo bench --bench slices` (no `-C target-cpu`).
 use archmage::prelude::*;
-use magemath::{expf as e, logf as l, powf as p};
+use magemath::{Caller, expf as e, logf as l, powf as p};
 use zenbench::criterion_compat::*;
 use zenbench::{criterion_group, criterion_main};
 
-const PA: u32 = p::PowfOptions::PORTABLE_GAMMA_MIDP.bits();
-const PC: u32 = p::PowfOptions::PORTABLE_GAMMA_MIDP.with_execution(p::PowfExecution::Caller).bits();
-const EA: u32 = e::ExpfOptions::PORTABLE_MIDP.bits();
-const EC: u32 = e::ExpfOptions::PORTABLE_MIDP.with_execution(e::ExpfExecution::Caller).bits();
-const LA: u32 = l::LogfOptions::PORTABLE_MIDP.bits();
-const LC: u32 = l::LogfOptions::PORTABLE_MIDP.with_execution(l::LogfExecution::Caller).bits();
+type PA = p::presets::GammaMidp;
+type PC = Caller<p::presets::GammaMidp>;
+type EA = e::presets::Midp;
+type EC = Caller<e::presets::Midp>;
+type LA = l::presets::Midp;
+type LC = Caller<l::presets::Midp>;
 
 fn pow_array8(src: &[f32], dst: &mut [f32], n: f32) {
     let (sc, st) = src.as_chunks::<8>();
@@ -52,7 +52,9 @@ fn pow_attune_impl(token: Token, src: &[f32], dst: &mut [f32], n: f32) {
     let (sc, st) = f32x8::partition_slice_t(token, src);
     let (dc, dt) = f32x8::partition_slice_mut_t(token, dst);
     for (s, d) in sc.iter().zip(dc.iter_mut()) {
-        p::try_powf_f32x8_with::<PC, _>(token, f32x8::load_t(token, s), n).unwrap().store(d);
+        p::try_powf_f32x8_with::<PC, _>(token, f32x8::load_t(token, s), n)
+            .unwrap()
+            .store(d);
     }
     for (&x, y) in st.iter().zip(dt.iter_mut()) {
         *y = p::try_powf_with_token::<PC, _>(token, x, n).unwrap();
@@ -63,7 +65,9 @@ fn exp2_attune_impl(token: Token, src: &[f32], dst: &mut [f32]) {
     let (sc, st) = f32x8::partition_slice_t(token, src);
     let (dc, dt) = f32x8::partition_slice_mut_t(token, dst);
     for (s, d) in sc.iter().zip(dc.iter_mut()) {
-        e::try_exp2_f32x8_with::<EC, _>(token, f32x8::load_t(token, s)).unwrap().store(d);
+        e::try_exp2_f32x8_with::<EC, _>(token, f32x8::load_t(token, s))
+            .unwrap()
+            .store(d);
     }
     for (&x, y) in st.iter().zip(dt.iter_mut()) {
         *y = e::try_exp2_with_token::<EC, _>(token, x).unwrap();
@@ -74,7 +78,9 @@ fn log2_attune_impl(token: Token, src: &[f32], dst: &mut [f32]) {
     let (sc, st) = f32x8::partition_slice_t(token, src);
     let (dc, dt) = f32x8::partition_slice_mut_t(token, dst);
     for (s, d) in sc.iter().zip(dc.iter_mut()) {
-        l::try_log2_f32x8_with::<LC, _>(token, f32x8::load_t(token, s)).unwrap().store(d);
+        l::try_log2_f32x8_with::<LC, _>(token, f32x8::load_t(token, s))
+            .unwrap()
+            .store(d);
     }
     for (&x, y) in st.iter().zip(dt.iter_mut()) {
         *y = l::try_log2_with_token::<LC, _>(token, x).unwrap();
@@ -83,20 +89,41 @@ fn log2_attune_impl(token: Token, src: &[f32], dst: &mut [f32]) {
 
 fn bench(c: &mut Criterion) {
     for len in [64usize, 4096] {
-        let src: Vec<f32> = (0..len).map(|i| 0.01 + 3.9 * i as f32 / len as f32).collect();
+        let src: Vec<f32> = (0..len)
+            .map(|i| 0.01 + 3.9 * i as f32 / len as f32)
+            .collect();
         let mut dst = vec![0.0f32; len];
         let mut g = c.benchmark_group(format!("len{len}"));
-        g.bench_function("pow_array8", |b| b.iter(|| pow_array8(black_box(&src), &mut dst, black_box(2.4))));
-        g.bench_function("pow_attune", |b| b.iter(|| attuned!(pow_attune_impl(black_box(&src), &mut dst, black_box(2.4)))));
-        g.bench_function("pow_slice", |b| b.iter(|| p::try_powf_slice_with::<PA>(black_box(&src), &mut dst, black_box(2.4)).unwrap()));
-        g.bench_function("exp2_array8", |b| b.iter(|| exp2_array8(black_box(&src), &mut dst)));
-        g.bench_function("exp2_attune", |b| b.iter(|| attuned!(exp2_attune_impl(black_box(&src), &mut dst))));
-        g.bench_function("exp2_slice", |b| b.iter(|| e::try_exp2_slice_with::<EA>(black_box(&src), &mut dst).unwrap()));
-        g.bench_function("log2_array8", |b| b.iter(|| log2_array8(black_box(&src), &mut dst)));
-        g.bench_function("log2_attune", |b| b.iter(|| attuned!(log2_attune_impl(black_box(&src), &mut dst))));
-        g.bench_function("log2_slice", |b| b.iter(|| l::try_log2_slice_with::<LA>(black_box(&src), &mut dst).unwrap()));
+        g.bench_function("pow_array8", |b| {
+            b.iter(|| pow_array8(black_box(&src), &mut dst, black_box(2.4)))
+        });
+        g.bench_function("pow_attune", |b| {
+            b.iter(|| attuned!(pow_attune_impl(black_box(&src), &mut dst, black_box(2.4))))
+        });
+        g.bench_function("pow_slice", |b| {
+            b.iter(|| p::try_powf_slice_with::<PA>(black_box(&src), &mut dst, black_box(2.4)).unwrap())
+        });
+        g.bench_function("exp2_array8", |b| {
+            b.iter(|| exp2_array8(black_box(&src), &mut dst))
+        });
+        g.bench_function("exp2_attune", |b| {
+            b.iter(|| attuned!(exp2_attune_impl(black_box(&src), &mut dst)))
+        });
+        g.bench_function("exp2_slice", |b| {
+            b.iter(|| e::try_exp2_slice_with::<EA>(black_box(&src), &mut dst).unwrap())
+        });
+        g.bench_function("log2_array8", |b| {
+            b.iter(|| log2_array8(black_box(&src), &mut dst))
+        });
+        g.bench_function("log2_attune", |b| {
+            b.iter(|| attuned!(log2_attune_impl(black_box(&src), &mut dst)))
+        });
+        g.bench_function("log2_slice", |b| {
+            b.iter(|| l::try_log2_slice_with::<LA>(black_box(&src), &mut dst).unwrap())
+        });
         g.finish();
     }
 }
+
 criterion_group!(benches, bench);
 criterion_main!(benches);

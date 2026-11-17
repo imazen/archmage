@@ -1,13 +1,14 @@
 //! Canonical HIGHP values come from an independent exact-rational graph oracle.
 #![allow(deprecated)] // Intentional coverage of retained Magetypes compatibility APIs.
-use magemath::powf::{self, PowfErrorKind, PowfExecution, PowfOptions};
+use magemath::{
+    Caller, Unchecked,
+    powf::{self, Options, PowfErrorKind, PowfExecution, PowfOptions, presets},
+};
 mod fixtures {
     include!("common/highp_vectors.rs");
 }
-const FULL: u32 = PowfOptions::PORTABLE_HIGHP.bits();
-const CALLER: u32 = PowfOptions::PORTABLE_HIGHP
-    .with_execution(PowfExecution::Caller)
-    .bits();
+type Full = presets::FullHighp;
+type CallerFull = Caller<presets::FullHighp>;
 fn equal(actual: f32, expected: u32) {
     if expected & 0x7fffffff > 0x7f800000 {
         assert!(actual.is_nan());
@@ -15,10 +16,10 @@ fn equal(actual: f32, expected: u32) {
         assert_eq!(actual.to_bits(), expected);
     }
 }
-fn verify<const F: u32, const N: usize>() {
+fn verify<P: powf::PowfProfile, const N: usize>() {
     for &[x, n, y] in fixtures::CASES {
         let result =
-            powf::try_powf_array_with::<F, N>([f32::from_bits(x); N], f32::from_bits(n)).unwrap();
+            powf::try_powf_array_with::<P, N>([f32::from_bits(x); N], f32::from_bits(n)).unwrap();
         for v in result {
             equal(v, y);
         }
@@ -26,21 +27,21 @@ fn verify<const F: u32, const N: usize>() {
 }
 #[test]
 fn canonical_scalar_and_all_array_widths() {
-    verify::<FULL, 1>();
-    verify::<CALLER, 1>();
-    verify::<FULL, 4>();
-    verify::<CALLER, 4>();
-    verify::<FULL, 8>();
-    verify::<CALLER, 8>();
+    verify::<Full, 1>();
+    verify::<CallerFull, 1>();
+    verify::<Full, 4>();
+    verify::<CallerFull, 4>();
+    verify::<Full, 8>();
+    verify::<CallerFull, 8>();
     #[cfg(feature = "w512")]
     {
-        verify::<FULL, 16>();
-        verify::<CALLER, 16>();
+        verify::<Full, 16>();
+        verify::<CallerFull, 16>();
     }
 }
 #[test]
 fn canonical_checked_masks_and_const_assumptions() {
-    const G: u32 = PowfOptions::PORTABLE_GAMMA_HIGHP.bits();
+    type G = presets::GammaHighp;
     assert_eq!(
         powf::try_powf_array_with::<G, 4>([0., 1., 4., 16.], 0.).unwrap(),
         [1.; 4]
@@ -55,9 +56,7 @@ fn canonical_checked_masks_and_const_assumptions() {
             .lane_mask,
         15
     );
-    const A: u32 = PowfOptions::PORTABLE_GAMMA_HIGHP
-        .with_validation(powf::PowfValidation::AssumeValid)
-        .bits();
+    type A = Unchecked<presets::GammaHighp>;
     for n in [0., 0.5, 2.4, 4.] {
         let xs = [0., 1. / 65536., 1., 65536.];
         assert_eq!(
@@ -76,7 +75,7 @@ fn canonical_checked_masks_and_const_assumptions() {
 // cannot catch lane ordering, gather or packing mistakes.
 #[archmage::magetypes(v3, neon, wasm128, scalar)]
 fn vector4(token: Token, x: [f32; 4], n: f32) -> [f32; 4] {
-    magemath::powf::try_powf_f32x4_with::<CALLER, _>(
+    magemath::powf::try_powf_f32x4_with::<CallerFull, _>(
         token,
         magetypes::simd::generic::f32x4::from_array_t(token, x),
         n,
@@ -91,7 +90,7 @@ fn mixed<const N: usize>() {
         let x = core::array::from_fn(|i| f32::from_bits(chunk[i % chunk.len()][0]));
         for (i, &[_, n, expected]) in chunk.iter().enumerate() {
             equal(
-                powf::try_powf_array_with::<FULL, N>(x, f32::from_bits(n)).unwrap()[i],
+                powf::try_powf_array_with::<Full, N>(x, f32::from_bits(n)).unwrap()[i],
                 expected,
             );
         }
@@ -132,10 +131,8 @@ fn canonical_mixed_lanes() {
 }
 
 fn gamma_mixed<const N: usize>() {
-    const G: u32 = PowfOptions::PORTABLE_GAMMA_HIGHP.bits();
-    const A: u32 = PowfOptions::PORTABLE_GAMMA_HIGHP
-        .with_validation(powf::PowfValidation::AssumeValid)
-        .bits();
+    type G = presets::GammaHighp;
+    type A = Unchecked<presets::GammaHighp>;
     let mut cases: Vec<_> = fixtures::CASES
         .iter()
         .copied()
@@ -176,7 +173,7 @@ fn canonical_gamma_mixed_lanes() {
 fn every_canonical_highp_encoding_reaches_the_same_graph() {
     macro_rules! check {
         ($($flags:literal),+ $(,)?) => {$(
-            let expected = powf::try_powf_array_with::<$flags, 4>([2., 4., 8., 16.], 0.5).unwrap();
+            let expected = powf::try_powf_array_with::<Options<$flags>, 4>([2., 4., 8., 16.], 0.5).unwrap();
             let runtime = powf::try_powf_array_runtime([2., 4., 8., 16.], 0.5,
                 PowfOptions::PORTABLE_HIGHP
                     .with_domain(match $flags & 3 {

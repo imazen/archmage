@@ -218,7 +218,7 @@ fn scalar_array_and_auto_have_identical_graph() {
                 ..options(allow_zero)
             };
             let result = try_powf_runtime(b, n, options);
-            let constant = const_options!(options, |FLAGS| try_powf_with::<FLAGS>(b, n));
+            let constant = const_options!(options, |FLAGS| try_powf_with::<Options<FLAGS>>(b, n));
             assert_eq!(constant.map(f32::to_bits), result.map(f32::to_bits));
             assert_eq!(
                 const_options!(options, |FLAGS| magetypes::simd::scalar::f32x1(b)
@@ -227,8 +227,11 @@ fn scalar_array_and_auto_have_identical_graph() {
                 result.map(f32::to_bits)
             );
             assert_eq!(
-                const_options!(options, |FLAGS| try_powf_array_with::<FLAGS, 1>([b], n))
-                    .map(|v| v.map(f32::to_bits)),
+                const_options!(options, |FLAGS| try_powf_array_with::<Options<FLAGS>, 1>(
+                    [b],
+                    n
+                ))
+                .map(|v| v.map(f32::to_bits)),
                 result.map(|v| [v.to_bits()])
             );
             assert_eq!(
@@ -468,52 +471,47 @@ fn nan_sign_payload_and_subnormal_families_reject_with_exact_masks() {
 
 #[test]
 fn const_array_width_and_rejection_precedence() {
-    const FLAGS: u32 = PowfOptions::GAMMA | PowfOptions::CALLER;
+    type Flags = Options<{ PowfOptions::GAMMA | PowfOptions::CALLER }>;
+    type CallerDefault = Options<{ PowfOptions::CALLER }>;
     assert_eq!(
-        try_powf_array_with::<FLAGS, 0>([], f32::NAN).unwrap_err(),
+        try_powf_array_with::<Flags, 0>([], f32::NAN).unwrap_err(),
         PowfError {
             kind: PowfErrorKind::UnsupportedWidth,
             lane_mask: 0
         }
     );
     assert_eq!(
-        try_powf_array_with::<FLAGS, 3>([1.0; 3], f32::NAN).unwrap_err(),
+        try_powf_array_with::<Flags, 3>([1.0; 3], f32::NAN).unwrap_err(),
         PowfError {
             kind: PowfErrorKind::UnsupportedWidth,
             lane_mask: 0
         }
     );
     assert_eq!(
-        try_powf_array_with::<FLAGS, 32>([1.0; 32], f32::NAN).unwrap_err(),
+        try_powf_array_with::<Flags, 32>([1.0; 32], f32::NAN).unwrap_err(),
         PowfError {
             kind: PowfErrorKind::UnsupportedWidth,
             lane_mask: 0
         }
     );
     assert_eq!(
-        try_powf_array_with::<FLAGS, 4>([f32::NAN; 4], f32::NAN).unwrap_err(),
+        try_powf_array_with::<Flags, 4>([f32::NAN; 4], f32::NAN).unwrap_err(),
         PowfError {
             kind: PowfErrorKind::InvalidExponent,
             lane_mask: 15
         }
     );
     assert_eq!(
-        try_powf_array_with::<{ PowfOptions::CALLER }, 4>(
-            [2.0, f32::NAN, f32::from_bits(1), -1.0],
-            2.4
-        )
-        .unwrap_err(),
+        try_powf_array_with::<CallerDefault, 4>([2.0, f32::NAN, f32::from_bits(1), -1.0], 2.4)
+            .unwrap_err(),
         PowfError {
             kind: PowfErrorKind::InvalidBase,
             lane_mask: 14
         }
     );
     assert_eq!(
-        try_powf_array_with::<{ PowfOptions::CALLER }, 4>(
-            [2.0, 4.0, f32::MAX, f32::MIN_POSITIVE],
-            2.0
-        )
-        .unwrap_err(),
+        try_powf_array_with::<CallerDefault, 4>([2.0, 4.0, f32::MAX, f32::MIN_POSITIVE], 2.0)
+            .unwrap_err(),
         PowfError {
             kind: PowfErrorKind::OutsideApproximationRange,
             lane_mask: 12
@@ -619,16 +617,22 @@ fn lowp_admitted_zero_survives_huge_exponent_in_both_const_modes() {
         .with_execution(PowfExecution::Caller)
         .bits();
     for n in [1_073_741_824., f32::MAX] {
-        assert_eq!(try_powf_with::<PORTABLE>(0., n).unwrap().to_bits(), 0);
-        assert_eq!(try_powf_with::<BACKEND>(0., n).unwrap().to_bits(), 0);
+        assert_eq!(
+            try_powf_with::<Options<PORTABLE>>(0., n).unwrap().to_bits(),
+            0
+        );
+        assert_eq!(
+            try_powf_with::<Options<BACKEND>>(0., n).unwrap().to_bits(),
+            0
+        );
     }
 }
 
 #[test]
 #[cfg(feature = "std")]
 fn std_highp_full_domain_and_restricted_masks() {
-    const STD: u32 = PowfOptions::STD_HIGHP.bits();
-    let result = try_powf_array_with::<STD, 4>([-2., -0., f32::INFINITY, f32::NAN], 3.).unwrap();
+    type Std = presets::StdHighp;
+    let result = try_powf_array_with::<Std, 4>([-2., -0., f32::INFINITY, f32::NAN], 3.).unwrap();
     // Std power has unspecified precision, including under Miri. Only its
     // admitted domain and sign/classification are the HIGHP contract here.
     assert!(result[0].is_normal() && result[0].is_sign_negative());
@@ -636,14 +640,14 @@ fn std_highp_full_domain_and_restricted_masks() {
     assert_eq!(result[2], f32::INFINITY);
     assert!(result[3].is_nan());
     assert_eq!(
-        try_powf_array_with::<STD, 4>([f32::NAN, 0., -0., f32::INFINITY], 0.).unwrap(),
+        try_powf_array_with::<Std, 4>([f32::NAN, 0., -0., f32::INFINITY], 0.).unwrap(),
         [1.; 4]
     );
-    assert_eq!(try_powf_with::<STD>(0., -1.).unwrap(), f32::INFINITY);
-    let tiny = try_powf_with::<STD>(f32::from_bits(1), 1.).unwrap();
+    assert_eq!(try_powf_with::<Std>(0., -1.).unwrap(), f32::INFINITY);
+    let tiny = try_powf_with::<Std>(f32::from_bits(1), 1.).unwrap();
     assert!(tiny.is_subnormal() || tiny == 0.);
     assert_eq!(
-        try_powf_array_with::<STD, 3>([1.; 3], 2.).unwrap_err().kind,
+        try_powf_array_with::<Std, 3>([1.; 3], 2.).unwrap_err().kind,
         PowfErrorKind::UnsupportedWidth
     );
     let opts = PowfOptions::STD_HIGHP.with_domain(PowfDomain::PositiveNormal);
@@ -713,12 +717,13 @@ fn positive_gamma_preserves_nonzero_graph_and_rejects_zero() {
         };
         for n in [0., -0., 0.5, 2.4, 4.] {
             let input = [1.0 / 65_536.0, 0.75, 1., 65_536.0];
-            let got = try_powf_array_with::<FLAGS, 4>(input, n).unwrap();
-            let gamma = try_powf_array_with::<GAMMA_FLAGS, 4>(input, n).unwrap();
+            let got = try_powf_array_with::<Options<FLAGS>, 4>(input, n).unwrap();
+            let gamma = try_powf_array_with::<Options<GAMMA_FLAGS>, 4>(input, n).unwrap();
             compare(got, gamma);
             for (x, y) in input.into_iter().zip(got) {
                 compare(
-                    [try_powf_with_token::<FLAGS, _>(archmage::ScalarToken, x, n).unwrap(); 4],
+                    [try_powf_with_token::<Options<FLAGS>, _>(archmage::ScalarToken, x, n).unwrap();
+                        4],
                     [y; 4],
                 );
             }
@@ -726,14 +731,15 @@ fn positive_gamma_preserves_nonzero_graph_and_rejects_zero() {
             if options.validation == PowfValidation::Checked {
                 for x in [0., -0., f32::from_bits(1), f32::NAN, f32::INFINITY] {
                     assert_eq!(
-                        try_powf_with_token::<FLAGS, _>(archmage::ScalarToken, x, n).unwrap_err(),
+                        try_powf_with_token::<Options<FLAGS>, _>(archmage::ScalarToken, x, n)
+                            .unwrap_err(),
                         PowfError {
                             kind: PowfErrorKind::InvalidBase,
                             lane_mask: 1
                         }
                     );
                     assert_eq!(
-                        try_powf_array_with::<FLAGS, 4>([1., x, 1., x], n).unwrap_err(),
+                        try_powf_array_with::<Options<FLAGS>, 4>([1., x, 1., x], n).unwrap_err(),
                         PowfError {
                             kind: PowfErrorKind::InvalidBase,
                             lane_mask: 10
@@ -780,7 +786,7 @@ macro_rules! configured_vector {
                 token: T,
                 n: f32,
             ) -> Result<Self, PowfError> {
-                super::$constant::<F, _>(token, self, n)
+                super::$constant::<Options<F>, _>(token, self, n)
             }
             fn configured_powf_runtime(
                 self,
@@ -818,7 +824,7 @@ impl ConfiguredPowf<archmage::ScalarToken> for magetypes::simd::scalar::f32x1 {
         _: archmage::ScalarToken,
         n: f32,
     ) -> Result<Self, PowfError> {
-        try_powf_with::<F>(self.0, n).map(Self)
+        try_powf_with::<Options<F>>(self.0, n).map(Self)
     }
     fn configured_powf_runtime(
         self,

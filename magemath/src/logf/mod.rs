@@ -2,16 +2,19 @@
 //! validation, mirroring [`crate::powf`].
 //!
 //! MIDP and LOWP evaluate the existing `log2_midp`/`log2_lowp` approximations
-//! on `log2(x)`, with `ln`/`log10` as scale-by-constant aliases. `Positive`
-//! rejects `x <= 0`, subnormals, NaN and infinities under Checked; `Specials`
-//! returns the IEEE specials (`0 -> -inf`, `<0 -> NaN`, NaN -> NaN,
-//! `+inf -> +inf`). `AssumeValid` omits checks while retaining memory safety.
+//! on `log2(x)`, with `ln`/`log10` as scale-by-constant aliases and in-register
+//! `log1p`. `Positive` rejects `x <= 0`, subnormals, NaN and infinities under
+//! Checked; `Specials` returns IEEE specials (`0 -> -inf`, `<0 -> NaN`,
+//! `NaN -> NaN`, `+inf -> +inf`). Declaring a [`LogfSpec::input_range`]
+//! validates against `[lo, hi]` in one SIMD comparison pair. `AssumeValid`
+//! omits checks while retaining memory safety.
 //! The flat Magetypes logarithm methods are unchanged and remain supported.
 
 pub(crate) mod const_api;
 mod dispatch;
 mod graph;
 mod options;
+mod profile;
 #[cfg(test)]
 mod tests;
 pub use const_api::{
@@ -26,12 +29,13 @@ pub use const_api::{
 pub use options::{
     LogfDomain, LogfExecution, LogfOptions, LogfPortability, LogfPrecision, LogfValidation,
 };
+pub use profile::{LogfProfile, LogfSpec, Options, presets};
 
 /// Reason a complete vector was rejected.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[non_exhaustive]
 pub enum LogfErrorKind {
-    /// An input fails the domain: `x <= 0`, subnormal, NaN or infinite.
+    /// An input fails the domain or declared input range.
     InvalidInput,
     /// The array width is not 1, 4, 8, or enabled width 16.
     UnsupportedWidth,
@@ -60,147 +64,147 @@ impl std::error::Error for LogfError {}
 /// Positive-domain scalar log2 using the default checked MIDP domain.
 #[inline(always)]
 pub fn try_log2(x: f32) -> Result<f32, LogfError> {
-    try_log2_with::<{ LogfOptions::DEFAULT }>(x)
+    try_log2_with::<presets::Midp>(x)
 }
 
 /// Positive-domain scalar ln using the default checked MIDP domain.
 #[inline(always)]
 pub fn try_ln(x: f32) -> Result<f32, LogfError> {
-    try_ln_with::<{ LogfOptions::DEFAULT }>(x)
+    try_ln_with::<presets::Midp>(x)
 }
 
 /// Positive-domain scalar log10 using the default checked MIDP domain.
 #[inline(always)]
 pub fn try_log10(x: f32) -> Result<f32, LogfError> {
-    try_log10_with::<{ LogfOptions::DEFAULT }>(x)
+    try_log10_with::<presets::Midp>(x)
 }
 
 /// Positive-domain scalar log1p (`ln(1 + x)`) using the default checked MIDP domain.
 #[inline(always)]
 pub fn try_log1p(x: f32) -> Result<f32, LogfError> {
-    try_log1p_with::<{ LogfOptions::DEFAULT }>(x)
+    try_log1p_with::<presets::Midp>(x)
 }
 
 /// Configured log2 on a 4-lane vector, preserving the caller's feature proof.
-/// Use the same options and token with the scalar `*_with_token` entry for tails.
+/// Use the same profile and token with [`try_log2_with_token`] for scalar tails.
 #[inline(always)]
-pub fn try_log2_f32x4_with<const OPTIONS: u32, T: magetypes::simd::backends::F32x4Convert>(
+pub fn try_log2_f32x4_with<P: LogfProfile, T: magetypes::simd::backends::F32x4Convert>(
     token: T,
     input: magetypes::simd::generic::f32x4<T>,
 ) -> Result<magetypes::simd::generic::f32x4<T>, LogfError> {
-    const_api::run4::<T, 0, OPTIONS>(token, input)
+    const_api::run4::<P, 0, T>(token, input)
 }
 
 /// Configured ln on a 4-lane vector, preserving the caller's feature proof.
-/// Use the same options and token with the scalar `*_with_token` entry for tails.
+/// Use the same profile and token with [`try_ln_with_token`] for scalar tails.
 #[inline(always)]
-pub fn try_ln_f32x4_with<const OPTIONS: u32, T: magetypes::simd::backends::F32x4Convert>(
+pub fn try_ln_f32x4_with<P: LogfProfile, T: magetypes::simd::backends::F32x4Convert>(
     token: T,
     input: magetypes::simd::generic::f32x4<T>,
 ) -> Result<magetypes::simd::generic::f32x4<T>, LogfError> {
-    const_api::run4::<T, 1, OPTIONS>(token, input)
+    const_api::run4::<P, 1, T>(token, input)
 }
 
 /// Configured log10 on a 4-lane vector, preserving the caller's feature proof.
-/// Use the same options and token with the scalar `*_with_token` entry for tails.
+/// Use the same profile and token with [`try_log10_with_token`] for scalar tails.
 #[inline(always)]
-pub fn try_log10_f32x4_with<const OPTIONS: u32, T: magetypes::simd::backends::F32x4Convert>(
+pub fn try_log10_f32x4_with<P: LogfProfile, T: magetypes::simd::backends::F32x4Convert>(
     token: T,
     input: magetypes::simd::generic::f32x4<T>,
 ) -> Result<magetypes::simd::generic::f32x4<T>, LogfError> {
-    const_api::run4::<T, 2, OPTIONS>(token, input)
+    const_api::run4::<P, 2, T>(token, input)
 }
 
 /// Configured log1p on a 4-lane vector, preserving the caller's feature proof.
-/// Use the same options and token with the scalar `*_with_token` entry for tails.
+/// Use the same profile and token with [`try_log1p_with_token`] for scalar tails.
 #[inline(always)]
-pub fn try_log1p_f32x4_with<const OPTIONS: u32, T: magetypes::simd::backends::F32x4Convert>(
+pub fn try_log1p_f32x4_with<P: LogfProfile, T: magetypes::simd::backends::F32x4Convert>(
     token: T,
     input: magetypes::simd::generic::f32x4<T>,
 ) -> Result<magetypes::simd::generic::f32x4<T>, LogfError> {
-    const_api::run4::<T, 3, OPTIONS>(token, input)
+    const_api::run4::<P, 3, T>(token, input)
 }
 
-/// Configured log2 on a 8-lane vector, preserving the caller's feature proof.
-/// Use the same options and token with the scalar `*_with_token` entry for tails.
+/// Configured log2 on an 8-lane vector, preserving the caller's feature proof.
+/// Use the same profile and token with [`try_log2_with_token`] for scalar tails.
 #[inline(always)]
-pub fn try_log2_f32x8_with<const OPTIONS: u32, T: magetypes::simd::backends::F32x8Convert>(
+pub fn try_log2_f32x8_with<P: LogfProfile, T: magetypes::simd::backends::F32x8Convert>(
     token: T,
     input: magetypes::simd::generic::f32x8<T>,
 ) -> Result<magetypes::simd::generic::f32x8<T>, LogfError> {
-    const_api::run8::<T, 0, OPTIONS>(token, input)
+    const_api::run8::<P, 0, T>(token, input)
 }
 
-/// Configured ln on a 8-lane vector, preserving the caller's feature proof.
-/// Use the same options and token with the scalar `*_with_token` entry for tails.
+/// Configured ln on an 8-lane vector, preserving the caller's feature proof.
+/// Use the same profile and token with [`try_ln_with_token`] for scalar tails.
 #[inline(always)]
-pub fn try_ln_f32x8_with<const OPTIONS: u32, T: magetypes::simd::backends::F32x8Convert>(
+pub fn try_ln_f32x8_with<P: LogfProfile, T: magetypes::simd::backends::F32x8Convert>(
     token: T,
     input: magetypes::simd::generic::f32x8<T>,
 ) -> Result<magetypes::simd::generic::f32x8<T>, LogfError> {
-    const_api::run8::<T, 1, OPTIONS>(token, input)
+    const_api::run8::<P, 1, T>(token, input)
 }
 
-/// Configured log10 on a 8-lane vector, preserving the caller's feature proof.
-/// Use the same options and token with the scalar `*_with_token` entry for tails.
+/// Configured log10 on an 8-lane vector, preserving the caller's feature proof.
+/// Use the same profile and token with [`try_log10_with_token`] for scalar tails.
 #[inline(always)]
-pub fn try_log10_f32x8_with<const OPTIONS: u32, T: magetypes::simd::backends::F32x8Convert>(
+pub fn try_log10_f32x8_with<P: LogfProfile, T: magetypes::simd::backends::F32x8Convert>(
     token: T,
     input: magetypes::simd::generic::f32x8<T>,
 ) -> Result<magetypes::simd::generic::f32x8<T>, LogfError> {
-    const_api::run8::<T, 2, OPTIONS>(token, input)
+    const_api::run8::<P, 2, T>(token, input)
 }
 
-/// Configured log1p on a 8-lane vector, preserving the caller's feature proof.
-/// Use the same options and token with the scalar `*_with_token` entry for tails.
+/// Configured log1p on an 8-lane vector, preserving the caller's feature proof.
+/// Use the same profile and token with [`try_log1p_with_token`] for scalar tails.
 #[inline(always)]
-pub fn try_log1p_f32x8_with<const OPTIONS: u32, T: magetypes::simd::backends::F32x8Convert>(
+pub fn try_log1p_f32x8_with<P: LogfProfile, T: magetypes::simd::backends::F32x8Convert>(
     token: T,
     input: magetypes::simd::generic::f32x8<T>,
 ) -> Result<magetypes::simd::generic::f32x8<T>, LogfError> {
-    const_api::run8::<T, 3, OPTIONS>(token, input)
+    const_api::run8::<P, 3, T>(token, input)
 }
 
 /// Configured log2 on a 16-lane vector, preserving the caller's feature proof.
-/// Use the same options and token with the scalar `*_with_token` entry for tails.
+/// Use the same profile and token with [`try_log2_with_token`] for scalar tails.
 #[cfg(feature = "w512")]
 #[inline(always)]
-pub fn try_log2_f32x16_with<const OPTIONS: u32, T: magetypes::simd::backends::F32x16Convert>(
+pub fn try_log2_f32x16_with<P: LogfProfile, T: magetypes::simd::backends::F32x16Convert>(
     token: T,
     input: magetypes::simd::generic::f32x16<T>,
 ) -> Result<magetypes::simd::generic::f32x16<T>, LogfError> {
-    const_api::run16::<T, 0, OPTIONS>(token, input)
+    const_api::run16::<P, 0, T>(token, input)
 }
 
 /// Configured ln on a 16-lane vector, preserving the caller's feature proof.
-/// Use the same options and token with the scalar `*_with_token` entry for tails.
+/// Use the same profile and token with [`try_ln_with_token`] for scalar tails.
 #[cfg(feature = "w512")]
 #[inline(always)]
-pub fn try_ln_f32x16_with<const OPTIONS: u32, T: magetypes::simd::backends::F32x16Convert>(
+pub fn try_ln_f32x16_with<P: LogfProfile, T: magetypes::simd::backends::F32x16Convert>(
     token: T,
     input: magetypes::simd::generic::f32x16<T>,
 ) -> Result<magetypes::simd::generic::f32x16<T>, LogfError> {
-    const_api::run16::<T, 1, OPTIONS>(token, input)
+    const_api::run16::<P, 1, T>(token, input)
 }
 
 /// Configured log10 on a 16-lane vector, preserving the caller's feature proof.
-/// Use the same options and token with the scalar `*_with_token` entry for tails.
+/// Use the same profile and token with [`try_log10_with_token`] for scalar tails.
 #[cfg(feature = "w512")]
 #[inline(always)]
-pub fn try_log10_f32x16_with<const OPTIONS: u32, T: magetypes::simd::backends::F32x16Convert>(
+pub fn try_log10_f32x16_with<P: LogfProfile, T: magetypes::simd::backends::F32x16Convert>(
     token: T,
     input: magetypes::simd::generic::f32x16<T>,
 ) -> Result<magetypes::simd::generic::f32x16<T>, LogfError> {
-    const_api::run16::<T, 2, OPTIONS>(token, input)
+    const_api::run16::<P, 2, T>(token, input)
 }
 
 /// Configured log1p on a 16-lane vector, preserving the caller's feature proof.
-/// Use the same options and token with the scalar `*_with_token` entry for tails.
+/// Use the same profile and token with [`try_log1p_with_token`] for scalar tails.
 #[cfg(feature = "w512")]
 #[inline(always)]
-pub fn try_log1p_f32x16_with<const OPTIONS: u32, T: magetypes::simd::backends::F32x16Convert>(
+pub fn try_log1p_f32x16_with<P: LogfProfile, T: magetypes::simd::backends::F32x16Convert>(
     token: T,
     input: magetypes::simd::generic::f32x16<T>,
 ) -> Result<magetypes::simd::generic::f32x16<T>, LogfError> {
-    const_api::run16::<T, 3, OPTIONS>(token, input)
+    const_api::run16::<P, 3, T>(token, input)
 }

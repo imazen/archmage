@@ -166,11 +166,11 @@ macro_rules! check_standalone_log_op {
             }
             #[inline(never)]
             fn c_scalar<const F: u32>(x: f32) -> Result<f32, LogfError> {
-                l::$try_with::<F>(x)
+                l::$try_with::<l::Options<F>>(x)
             }
             #[inline(never)]
             fn c_arr<const F: u32, const N: usize>(xs: [f32; N]) -> Result<[f32; N], LogfError> {
-                l::$try_array_with::<F, N>(xs)
+                l::$try_array_with::<l::Options<F>, N>(xs)
             }
             #[inline(never)]
             fn def_scalar(x: f32) -> Result<f32, LogfError> {
@@ -405,20 +405,20 @@ macro_rules! define_log_token_op {
             #[inline(never)]
             fn eval4<const FLAGS: u32>(t: $tok_ty, xs: [f32; 4]) -> Result<[f32; 4], LogfError> {
                 use magetypes::simd::generic::f32x4;
-                l::$vec4::<FLAGS, _>(t, f32x4::from_array_t(t, xs)).map(|v| v.to_array())
+                l::$vec4::<l::Options<FLAGS>, _>(t, f32x4::from_array_t(t, xs)).map(|v| v.to_array())
             }
             #[inline(never)]
             fn eval8<const FLAGS: u32>(t: $tok_ty, xs: [f32; 8]) -> Result<[f32; 8], LogfError> {
                 use magetypes::simd::generic::f32x8;
-                l::$vec8::<FLAGS, _>(t, f32x8::from_array_t(t, xs)).map(|v| v.to_array())
+                l::$vec8::<l::Options<FLAGS>, _>(t, f32x8::from_array_t(t, xs)).map(|v| v.to_array())
             }
             #[inline(never)]
             fn eval_tail<const FLAGS: u32>(t: $tok_ty, x: f32) -> Result<f32, LogfError> {
-                l::$tail_fn::<FLAGS, _>(t, x)
+                l::$tail_fn::<l::Options<FLAGS>, _>(t, x)
             }
             #[inline(never)]
             fn eval_with<const FLAGS: u32>(x: f32) -> Result<f32, LogfError> {
-                l::$with_fn::<FLAGS>(x)
+                l::$with_fn::<l::Options<FLAGS>>(x)
             }
 
             for &xs in $pos_valid.as_chunks::<4>().0 {
@@ -474,7 +474,7 @@ macro_rules! define_log_token_op {
             #[inline(never)]
             fn eval16<const FLAGS: u32>(t: $tok_ty, xs: [f32; 16]) -> Result<[f32; 16], LogfError> {
                 use magetypes::simd::generic::f32x16;
-                l::$vec16::<FLAGS, _>(t, f32x16::from_array_t(t, xs)).map(|v| v.to_array())
+                l::$vec16::<l::Options<FLAGS>, _>(t, f32x16::from_array_t(t, xs)).map(|v| v.to_array())
             }
             let v16 = eval16::<$f>($token, $arr).unwrap();
             for i in 0..16 {
@@ -623,13 +623,13 @@ fn token_logf_scalar_and_vector_widths_match_across_all_32_configs() {
 
     for &x in &LOG1P_POSITIVE_VALID {
         assert_f32_eq(
-            l::try_log1p_with::<20>(x).unwrap(),
-            l::try_log1p_with_token::<20, _>(archmage::ScalarToken, x).unwrap(),
+            l::try_log1p_with::<l::Options<20>>(x).unwrap(),
+            l::try_log1p_with_token::<l::Options<20>, _>(archmage::ScalarToken, x).unwrap(),
             "log1p BackendDependent Caller standalone vs ScalarToken",
         );
         assert_f32_eq(
-            l::try_log1p_with::<28>(x).unwrap(),
-            l::try_log1p_with_token::<28, _>(archmage::ScalarToken, x).unwrap(),
+            l::try_log1p_with::<l::Options<28>>(x).unwrap(),
+            l::try_log1p_with_token::<l::Options<28>, _>(archmage::ScalarToken, x).unwrap(),
             "log1p BackendDependent Lowp Caller standalone vs ScalarToken",
         );
     }

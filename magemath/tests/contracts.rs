@@ -19,9 +19,9 @@ fn canonical_power_matches_independent_fixtures() {
         let base = f32::from_bits(base);
         let n = f32::from_bits(n);
         let result = match domain {
-            0 => p::try_powf_with::<4>(base, n),
-            1 => p::try_powf_with::<5>(base, n),
-            2 => p::try_powf_with::<6>(base, n),
+            0 => p::try_powf_with::<p::Options<4>>(base, n),
+            1 => p::try_powf_with::<p::Options<5>>(base, n),
+            2 => p::try_powf_with::<p::Options<6>>(base, n),
             _ => panic!("fixture domain"),
         };
         if stage == 0 {
@@ -92,18 +92,29 @@ fn every_exp_log_const_configuration_has_a_runtime_counterpart() {
         for x in [0.5, 0.99, 1., 1.5, 127.25] {
             assert_eq!(
                 e::try_exp2_runtime(x, eo).unwrap().to_bits(),
-                e::try_exp2_with::<F>(x).unwrap().to_bits()
+                e::try_exp2_with::<e::Options<F>>(x).unwrap().to_bits()
             );
             assert_eq!(
                 l::try_log2_runtime(x, lo).unwrap().to_bits(),
-                l::try_log2_with::<F>(x).unwrap().to_bits()
+                l::try_log2_with::<l::Options<F>>(x).unwrap().to_bits()
             );
         }
         if F & 1 != 0 {
-            assert!(e::try_exp2_with::<F>(f32::NAN).unwrap().is_nan());
-            assert_eq!(e::try_exp2_with::<F>(f32::NEG_INFINITY), Ok(0.));
-            assert_eq!(l::try_log2_with::<F>(-0.), Ok(f32::NEG_INFINITY));
-            assert!(l::try_log2_with::<F>(f32::NAN).unwrap().is_nan());
+            assert!(
+                e::try_exp2_with::<e::Options<F>>(f32::NAN)
+                    .unwrap()
+                    .is_nan()
+            );
+            assert_eq!(e::try_exp2_with::<e::Options<F>>(f32::NEG_INFINITY), Ok(0.));
+            assert_eq!(
+                l::try_log2_with::<l::Options<F>>(-0.),
+                Ok(f32::NEG_INFINITY)
+            );
+            assert!(
+                l::try_log2_with::<l::Options<F>>(f32::NAN)
+                    .unwrap()
+                    .is_nan()
+            );
         }
     }
     macro_rules! run{($($f:literal),*)=>{$(compare::<$f>();)*};}
@@ -117,24 +128,29 @@ fn every_exp_log_const_configuration_has_a_runtime_counterpart() {
 fn signed_zero_and_whole_vector_rejection() {
     for bits in [0, 0x80000000] {
         let x = f32::from_bits(bits);
-        assert_eq!(l::try_log1p_with::<4>(x).unwrap().to_bits(), bits);
         assert_eq!(
-            l::try_log1p_with_token::<4, _>(archmage::ScalarToken, x)
+            l::try_log1p_with::<l::Options<4>>(x).unwrap().to_bits(),
+            bits
+        );
+        assert_eq!(
+            l::try_log1p_with_token::<l::Options<4>, _>(archmage::ScalarToken, x)
                 .unwrap()
                 .to_bits(),
             bits
         );
     }
     assert_eq!(
-        l::try_log1p_with_token::<0, _>(archmage::ScalarToken, -2.)
+        l::try_log1p_with_token::<l::Options<0>, _>(archmage::ScalarToken, -2.)
             .unwrap_err()
             .lane_mask,
         1
     );
-    let error = l::try_log2_array_with::<0, 4>([1., 0., f32::NAN, -1.]).unwrap_err();
+    let error = l::try_log2_array_with::<l::Options<0>, 4>([1., 0., f32::NAN, -1.]).unwrap_err();
     assert_eq!(error.lane_mask, 0b1110);
     assert_eq!(
-        e::try_exp2_array_with::<0, 3>([0.; 3]).unwrap_err().kind,
+        e::try_exp2_array_with::<e::Options<0>, 3>([0.; 3])
+            .unwrap_err()
+            .kind,
         e::ExpfErrorKind::UnsupportedWidth
     );
 }
@@ -146,46 +162,58 @@ fn check_tails(token: Token) {
             use magetypes::simd::generic::$vec as Vec;
             let xs: [f32; $n] = core::array::from_fn(|i| 0.5 + (i % 8) as f32 / 16.);
             let input = Vec::from_array_t(token, xs);
-            let got = e::$exp::<$f, _>(token, input).unwrap().to_array();
-            let power = p::$pow::<$f, _>(token, input, 2.4).unwrap().to_array();
-            let log = l::$log::<$f, _>(token, input).unwrap().to_array();
-            let ln = l::$ln::<$f, _>(token, input).unwrap().to_array();
-            let log10 = l::$log10::<$f, _>(token, input).unwrap().to_array();
-            let log1p = l::$log1p::<$f, _>(token, input).unwrap().to_array();
+            let got = e::$exp::<e::Options<$f>, _>(token, input)
+                .unwrap()
+                .to_array();
+            let power = p::$pow::<p::Options<$f>, _>(token, input, 2.4)
+                .unwrap()
+                .to_array();
+            let log = l::$log::<l::Options<$f>, _>(token, input)
+                .unwrap()
+                .to_array();
+            let ln = l::$ln::<l::Options<$f>, _>(token, input)
+                .unwrap()
+                .to_array();
+            let log10 = l::$log10::<l::Options<$f>, _>(token, input)
+                .unwrap()
+                .to_array();
+            let log1p = l::$log1p::<l::Options<$f>, _>(token, input)
+                .unwrap()
+                .to_array();
             for i in 0..$n {
                 assert_eq!(
                     got[i].to_bits(),
-                    e::try_exp2_with_token::<$f, _>(token, xs[i])
+                    e::try_exp2_with_token::<e::Options<$f>, _>(token, xs[i])
                         .unwrap()
                         .to_bits()
                 );
                 assert_eq!(
                     power[i].to_bits(),
-                    p::try_powf_with_token::<$f, _>(token, xs[i], 2.4)
+                    p::try_powf_with_token::<p::Options<$f>, _>(token, xs[i], 2.4)
                         .unwrap()
                         .to_bits()
                 );
                 assert_eq!(
                     log[i].to_bits(),
-                    l::try_log2_with_token::<$f, _>(token, xs[i])
+                    l::try_log2_with_token::<l::Options<$f>, _>(token, xs[i])
                         .unwrap()
                         .to_bits()
                 );
                 assert_eq!(
                     ln[i].to_bits(),
-                    l::try_ln_with_token::<$f, _>(token, xs[i])
+                    l::try_ln_with_token::<l::Options<$f>, _>(token, xs[i])
                         .unwrap()
                         .to_bits()
                 );
                 assert_eq!(
                     log10[i].to_bits(),
-                    l::try_log10_with_token::<$f, _>(token, xs[i])
+                    l::try_log10_with_token::<l::Options<$f>, _>(token, xs[i])
                         .unwrap()
                         .to_bits()
                 );
                 assert_eq!(
                     log1p[i].to_bits(),
-                    l::try_log1p_with_token::<$f, _>(token, xs[i])
+                    l::try_log1p_with_token::<l::Options<$f>, _>(token, xs[i])
                         .unwrap()
                         .to_bits()
                 );

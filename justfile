@@ -552,6 +552,7 @@ magemath-check:
     cargo test -p magemath --release --features "std avx512" --test contracts
     cargo clippy -p magemath --all-targets --features "std avx512" -- -D warnings
     cargo fmt -p magemath -- --check
+    python3 xtask/check_compile_budget.py
 
 # Magemath on strict SIMD WASM (needs wasmtime).
 magemath-check-wasm:

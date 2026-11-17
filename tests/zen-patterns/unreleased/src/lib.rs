@@ -56,34 +56,27 @@ pub mod attune_suppress_const {
 }
 
 pub mod magemath_tails {
-    //! Vector chunks and `*_with_token` scalar tails sharing one `const` profile
+    //! Vector chunks and `*_with_token` scalar tails sharing one typed profile
     //! and the caller's token inside an `#[attune(_*_t, ...)]` family.
 
+    use magemath::Caller;
     use magemath::cbrtf::{
-        CbrtfError, CbrtfExecution, CbrtfOptions, try_cbrt_f32x8_with, try_cbrt_with_token,
+        CbrtfError, presets::Midp as CbrtMidp, try_cbrt_f32x8_with, try_cbrt_with_token,
     };
     use magemath::expf::{
-        ExpfError, ExpfExecution, ExpfOptions, try_exp2_f32x8_with, try_exp2_with_token,
+        ExpfError, presets::Midp as ExpMidp, try_exp2_f32x8_with, try_exp2_with_token,
     };
     use magemath::logf::{
-        LogfError, LogfExecution, LogfOptions, try_log2_f32x8_with, try_log2_with_token,
+        LogfError, presets::Midp as LogMidp, try_log2_f32x8_with, try_log2_with_token,
     };
     use magemath::powf::{
-        PowfError, PowfExecution, PowfOptions, try_powf_f32x8_with, try_powf_with_token,
+        PowfError, presets::GammaMidp, try_powf_f32x8_with, try_powf_with_token,
     };
 
-    pub const POWF_FLAGS: u32 = PowfOptions::PORTABLE_GAMMA_MIDP
-        .with_execution(PowfExecution::Caller)
-        .bits();
-    pub const EXPF_FLAGS: u32 = ExpfOptions::PORTABLE_MIDP
-        .with_execution(ExpfExecution::Caller)
-        .bits();
-    pub const LOGF_FLAGS: u32 = LogfOptions::PORTABLE_MIDP
-        .with_execution(LogfExecution::Caller)
-        .bits();
-    pub const CBRTF_FLAGS: u32 = CbrtfOptions::PORTABLE_MIDP
-        .with_execution(CbrtfExecution::Caller)
-        .bits();
+    pub type PowfProfile = Caller<GammaMidp>;
+    pub type ExpfProfile = Caller<ExpMidp>;
+    pub type LogfProfile = Caller<LogMidp>;
+    pub type CbrtfProfile = Caller<CbrtMidp>;
 
     #[archmage::attune(_*_t, +v4x(cfg(avx512)), define(f32x8))]
     fn powf_slice_inner(
@@ -95,11 +88,11 @@ pub mod magemath_tails {
         let (sc, st) = f32x8::partition_slice_t(token, src);
         let (dc, dt) = f32x8::partition_slice_mut_t(token, dst);
         for (i, o) in sc.iter().zip(dc.iter_mut()) {
-            let v = try_powf_f32x8_with::<POWF_FLAGS, _>(token, f32x8::load_t(token, i), exp)?;
+            let v = try_powf_f32x8_with::<PowfProfile, _>(token, f32x8::load_t(token, i), exp)?;
             v.store(o);
         }
         for (&x, o) in st.iter().zip(dt.iter_mut()) {
-            *o = try_powf_with_token::<POWF_FLAGS, _>(token, x, exp)?;
+            *o = try_powf_with_token::<PowfProfile, _>(token, x, exp)?;
         }
         Ok(())
     }
@@ -116,11 +109,11 @@ pub mod magemath_tails {
         let (sc, st) = f32x8::partition_slice_t(token, src);
         let (dc, dt) = f32x8::partition_slice_mut_t(token, dst);
         for (i, o) in sc.iter().zip(dc.iter_mut()) {
-            let v = try_exp2_f32x8_with::<EXPF_FLAGS, _>(token, f32x8::load_t(token, i))?;
+            let v = try_exp2_f32x8_with::<ExpfProfile, _>(token, f32x8::load_t(token, i))?;
             v.store(o);
         }
         for (&x, o) in st.iter().zip(dt.iter_mut()) {
-            *o = try_exp2_with_token::<EXPF_FLAGS, _>(token, x)?;
+            *o = try_exp2_with_token::<ExpfProfile, _>(token, x)?;
         }
         Ok(())
     }
@@ -137,11 +130,11 @@ pub mod magemath_tails {
         let (sc, st) = f32x8::partition_slice_t(token, src);
         let (dc, dt) = f32x8::partition_slice_mut_t(token, dst);
         for (i, o) in sc.iter().zip(dc.iter_mut()) {
-            let v = try_log2_f32x8_with::<LOGF_FLAGS, _>(token, f32x8::load_t(token, i))?;
+            let v = try_log2_f32x8_with::<LogfProfile, _>(token, f32x8::load_t(token, i))?;
             v.store(o);
         }
         for (&x, o) in st.iter().zip(dt.iter_mut()) {
-            *o = try_log2_with_token::<LOGF_FLAGS, _>(token, x)?;
+            *o = try_log2_with_token::<LogfProfile, _>(token, x)?;
         }
         Ok(())
     }
@@ -158,11 +151,11 @@ pub mod magemath_tails {
         let (sc, st) = f32x8::partition_slice_t(token, src);
         let (dc, dt) = f32x8::partition_slice_mut_t(token, dst);
         for (i, o) in sc.iter().zip(dc.iter_mut()) {
-            let v = try_cbrt_f32x8_with::<CBRTF_FLAGS, _>(token, f32x8::load_t(token, i))?;
+            let v = try_cbrt_f32x8_with::<CbrtfProfile, _>(token, f32x8::load_t(token, i))?;
             v.store(o);
         }
         for (&x, o) in st.iter().zip(dt.iter_mut()) {
-            *o = try_cbrt_with_token::<CBRTF_FLAGS, _>(token, x)?;
+            *o = try_cbrt_with_token::<CbrtfProfile, _>(token, x)?;
         }
         Ok(())
     }

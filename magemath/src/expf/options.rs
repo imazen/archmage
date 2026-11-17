@@ -16,26 +16,11 @@ pub enum ExpfDomain {
 }
 
 /// Whole-operation feature selection, independent of numerical policy.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
-#[non_exhaustive]
-pub enum ExpfExecution {
-    /// Reuse a capable caller or select a native tier once per operation.
-    #[default]
-    Automatic,
-    /// Retain the caller's Magetypes tier without autonomous upgrades.
-    Caller,
-}
-
+pub use crate::Execution as ExpfExecution;
 /// Whether accepted results must agree bit for bit across backends.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
-#[non_exhaustive]
-pub enum ExpfPortability {
-    /// One fused graph, with exact software FMA when necessary.
-    #[default]
-    BitExact,
-    /// Native fused or separate graph; result bits may vary.
-    BackendDependent,
-}
+pub use crate::Portability as ExpfPortability;
+/// Whether to enforce the selected numerical domain at runtime.
+pub use crate::Validation as ExpfValidation;
 
 /// Approximation family, not a global mathematical error bound.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -51,19 +36,6 @@ pub enum ExpfPrecision {
     /// was measured for the earlier `exp2_lowp` fit; a sampled probe of this fit
     /// found at most 0.03% on `[-126, 127.5)`.
     Lowp,
-}
-
-/// Whether to enforce the selected numerical domain at runtime.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
-#[non_exhaustive]
-pub enum ExpfValidation {
-    /// Reject the whole vector, returning the exact mask for failing lanes.
-    #[default]
-    Checked,
-    /// Omit numerical input checks. The caller promises the same domain.
-    /// Violations have unspecified numerical results, never memory unsoundness.
-    /// Supported widths and valid option encodings are still enforced.
-    AssumeValid,
 }
 
 /// Const builder ending in `.bits()`, also accepted by the runtime adapter.
@@ -83,13 +55,11 @@ pub struct ExpfOptions {
 }
 
 impl ExpfOptions {
-    pub(crate) const DEFAULT: u32 = 0;
     pub(crate) const FULL: u32 = 1;
     pub(crate) const CALLER: u32 = 4;
     pub(crate) const LOWP: u32 = 8;
     pub(crate) const BACKEND: u32 = 16;
     pub(crate) const ASSUME: u32 = 32;
-    pub(crate) const LEGACY: u32 = 64;
 
     /// BitExact MIDP, bounded domain, checked, automatic execution.
     pub const PORTABLE_MIDP: Self = Self::new();

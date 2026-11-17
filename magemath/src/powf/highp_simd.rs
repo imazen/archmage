@@ -15,7 +15,8 @@ macro_rules! packed {
         #[inline(always)]
         pub(super) fn $name<
             T: magetypes::simd::backends::$backend + F64x2Backend,
-            const OPTIONS: u32,
+            const ELIDE: bool,
+            const ZERO: bool,
             const N: usize,
         >(
             t: T,
@@ -23,20 +24,20 @@ macro_rules! packed {
             n: f32,
         ) -> [f32; N] {
             use magetypes::simd::generic::$vector as V;
-            if OPTIONS & 3 == 2 && n == 0. {
+            if ELIDE && n == 0. {
                 return [1.; N];
             }
             let mut out = [0.; N];
             let mut offset = 0;
             while offset + $lanes <= N {
-                let mut normal = OPTIONS & 3 == 2 || (n.is_finite() && n != 0.);
-                if OPTIONS & 3 != 2 {
+                let mut normal = ELIDE || (n.is_finite() && n != 0.);
+                if !ELIDE {
                     for lane in 0..$lanes {
                         normal &=
                             x[offset + lane].to_bits().wrapping_sub(0x0080_0000) < 0x7f00_0000;
                     }
                 }
-                if OPTIONS & 3 == 2 && OPTIONS & super::PowfOptions::POSITIVE == 0 {
+                if ELIDE && ZERO {
                     // Zero is admitted, but uncommon. One pack predicate keeps
                     // zero restoration out of the ordinary arithmetic graph.
                     for lane in 0..$lanes {
@@ -66,7 +67,7 @@ macro_rules! packed {
                     let q = p.mul_add_relaxed(r2, q);
                     let logx = h.mul_add_relaxed(r4, q);
                     let ylogx = V::splat_t(t, f64::from(n)) * logx;
-                    if OPTIONS & 3 != 2 {
+                    if !ELIDE {
                         // Keep the complete scalar under/overflow policy for the
                         // uncommon edge region, including signed final rounding.
                         for value in ylogx.to_array() {
@@ -96,20 +97,13 @@ macro_rules! packed {
                     }
                 }
                 for lane in 0..$lanes {
-                    out[offset + lane] = if OPTIONS & 3 == 2 {
-                        highp_scalar::pow::<T, { graph::NATIVE }, true>(t, x[offset + lane], n)
-                    } else {
-                        highp_scalar::pow::<T, { graph::NATIVE }, false>(t, x[offset + lane], n)
-                    };
+                    out[offset + lane] =
+                        highp_scalar::pow::<T, { graph::NATIVE }, ELIDE>(t, x[offset + lane], n);
                 }
                 offset += $lanes;
             }
             while offset < N {
-                out[offset] = if OPTIONS & 3 == 2 {
-                    highp_scalar::pow::<T, { graph::NATIVE }, true>(t, x[offset], n)
-                } else {
-                    highp_scalar::pow::<T, { graph::NATIVE }, false>(t, x[offset], n)
-                };
+                out[offset] = highp_scalar::pow::<T, { graph::NATIVE }, ELIDE>(t, x[offset], n);
                 offset += 1;
             }
             out
@@ -131,7 +125,8 @@ pub(super) fn wide<
     T: magetypes::simd::backends::F64x8Backend
         + magetypes::simd::backends::F64x4Backend
         + F64x2Backend,
-    const OPTIONS: u32,
+    const ELIDE: bool,
+    const ZERO: bool,
     const N: usize,
 >(
     t: T,
@@ -139,8 +134,8 @@ pub(super) fn wide<
     n: f32,
 ) -> [f32; N] {
     if N < 8 {
-        packed4::<T, OPTIONS, N>(t, x, n)
+        packed4::<T, ELIDE, ZERO, N>(t, x, n)
     } else {
-        packed8::<T, OPTIONS, N>(t, x, n)
+        packed8::<T, ELIDE, ZERO, N>(t, x, n)
     }
 }

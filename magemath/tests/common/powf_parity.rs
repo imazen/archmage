@@ -117,17 +117,17 @@ fn def_powf_scalar(x: f32, n: f32) -> Result<f32, PowfError> {
 
 #[inline(never)]
 pub fn c_powf_scalar<const F: u32>(x: f32, n: f32) -> Result<f32, PowfError> {
-    p::try_powf_with::<F>(x, n)
+    p::try_powf_with::<p::Options<F>>(x, n)
 }
 
 #[inline(never)]
 fn c_powf_arr<const F: u32, const N: usize>(xs: [f32; N], n: f32) -> Result<[f32; N], PowfError> {
-    p::try_powf_array_with::<F, N>(xs, n)
+    p::try_powf_array_with::<p::Options<F>, N>(xs, n)
 }
 
 #[inline(never)]
 fn c_powf_scalar_tok<const F: u32>(x: f32, n: f32) -> Result<f32, PowfError> {
-    p::try_powf_with_token::<F, _>(archmage::ScalarToken, x, n)
+    p::try_powf_with_token::<p::Options<F>, _>(archmage::ScalarToken, x, n)
 }
 
 #[inline(never)]
@@ -341,7 +341,7 @@ macro_rules! define_powf_token_op {
                 n: f32,
             ) -> Result<[f32; 4], PowfError> {
                 use magetypes::simd::generic::f32x4;
-                p::try_powf_f32x4_with::<FLAGS, _>(t, f32x4::from_array_t(t, xs), n)
+                p::try_powf_f32x4_with::<p::Options<FLAGS>, _>(t, f32x4::from_array_t(t, xs), n)
                     .map(|v| v.to_array())
             }
             #[inline(never)]
@@ -351,12 +351,12 @@ macro_rules! define_powf_token_op {
                 n: f32,
             ) -> Result<[f32; 8], PowfError> {
                 use magetypes::simd::generic::f32x8;
-                p::try_powf_f32x8_with::<FLAGS, _>(t, f32x8::from_array_t(t, xs), n)
+                p::try_powf_f32x8_with::<p::Options<FLAGS>, _>(t, f32x8::from_array_t(t, xs), n)
                     .map(|v| v.to_array())
             }
             #[inline(never)]
             fn eval_tail<const FLAGS: u32>(t: $tok_ty, x: f32, n: f32) -> Result<f32, PowfError> {
-                p::try_powf_with_token::<FLAGS, _>(t, x, n)
+                p::try_powf_with_token::<p::Options<FLAGS>, _>(t, x, n)
             }
 
             let opts = core::hint::black_box(powf_options_from_bits(F));
@@ -480,7 +480,7 @@ macro_rules! define_powf_token_op {
                 exp: f32,
             ) -> Result<[f32; 16], PowfError> {
                 use magetypes::simd::generic::f32x16;
-                p::try_powf_f32x16_with::<FLAGS, _>(t, f32x16::from_array_t(t, xs), exp)
+                p::try_powf_f32x16_with::<p::Options<FLAGS>, _>(t, f32x16::from_array_t(t, xs), exp)
                     .map(|v| v.to_array())
             }
             let v16 = eval16::<$f>($token, *$core_bases, $n).unwrap();

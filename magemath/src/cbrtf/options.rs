@@ -20,26 +20,11 @@ pub enum CbrtfDomain {
 }
 
 /// Whole-operation feature selection, independent of numerical policy.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
-#[non_exhaustive]
-pub enum CbrtfExecution {
-    /// Reuse a capable caller or select a native tier once per operation.
-    #[default]
-    Automatic,
-    /// Retain the caller's Magetypes tier without autonomous upgrades.
-    Caller,
-}
-
+pub use crate::Execution as CbrtfExecution;
 /// Whether accepted results must agree bit for bit across backends.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
-#[non_exhaustive]
-pub enum CbrtfPortability {
-    /// Identical IEEE-754 rounding graph across all backends.
-    #[default]
-    BitExact,
-    /// Permits backend-specific fused multiply-add in the Halley step.
-    BackendDependent,
-}
+pub use crate::Portability as CbrtfPortability;
+/// Whether to enforce the selected numerical domain at runtime.
+pub use crate::Validation as CbrtfValidation;
 
 /// Approximation family (1 vs 2 Halley iterations from the vectorized Kahan seed).
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -50,18 +35,6 @@ pub enum CbrtfPrecision {
     Midp,
     /// Vectorized Kahan seed + 1 Halley iteration; <= 259 ULP (~15 bits, 3e-5 rel error).
     Lowp,
-}
-
-/// Whether to enforce the selected numerical domain at runtime.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
-#[non_exhaustive]
-pub enum CbrtfValidation {
-    /// Reject the whole vector, returning the exact mask for failing lanes.
-    #[default]
-    Checked,
-    /// Omit numerical input checks. The caller promises the same domain.
-    /// Violations have unspecified numerical results, never memory unsoundness.
-    AssumeValid,
 }
 
 /// Const builder ending in `.bits()`, also accepted by the runtime adapter.
@@ -81,7 +54,6 @@ pub struct CbrtfOptions {
 }
 
 impl CbrtfOptions {
-    pub(crate) const DEFAULT: u32 = 0;
     pub(crate) const FULL: u32 = 1;
     pub(crate) const CALLER: u32 = 4;
     pub(crate) const LOWP: u32 = 8;

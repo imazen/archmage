@@ -31,55 +31,57 @@ and remain supported. Migrate a kernel when you need what Magemath adds:
 | `cbrt_lowp*`, `cbrt_midp*` | `magemath::cbrtf::try_cbrt_f32xN_with` |
 
 `N` is 4 or 8, and 16 with the `w512` feature. Every family also has a plain
-scalar entry (`try_powf_with::<FLAGS>(x, y)`), a token-preserving scalar entry
-for tails (`try_powf_with_token::<FLAGS, _>(token, x, y)`), array entries
-(`try_*_array_with`) and runtime-option entries (`try_*_runtime`).
+scalar entry (`try_powf_with::<P>(x, y)`), a token-preserving scalar entry
+for tails (`try_powf_with_token::<P, _>(token, x, y)`), array entries
+(`try_*_array_with`), slice entries (`try_*_slice_with`, `try_*_slice_with_token`),
+and runtime-option entries (`try_*_runtime`).
 
 A flat method's name does not map mechanically to a profile. An infallible
 method accepts every input and returns unspecified values outside its range;
 a checked profile rejects them. Choose the domain your code actually
-establishes. `AssumeValid` validation removes the checks; it is safe Rust, but
+establishes (use `powf::presets::*`, custom `*Spec` profiles, or modifiers
+`Caller<P>`, `Unchecked<P>`, `Backend<P>`). `Validation::AssumeValid` /
+`Unchecked<P>` removes the checks; it is safe Rust, but
 inputs outside the stated domain give unspecified numbers.
 
 ## Profiles in brief
 
-- **powf:** `PositiveNormal`, `NonNegativeNormal`, `Gamma`, `PositiveGamma`
-  and `Full` (HIGHP) domains. MIDP/LOWP approximate `exp2(n * log2(x))`, so the
-  error grows with the magnitude of the product. HIGHP evaluates a canonical
-  binary64 graph; `STD_HIGHP` delegates to std and needs the `std` feature.
-- **expf:** checked finite inputs reject NaN and infinity and keep the existing
-  clamps. Exp2 MIDP's 1.9-ULP target applies below 127.5, not at the clamp rail.
-- **logf:** `Positive` accepts positive normal finite inputs. `Specials` keeps
-  the historical special-value results, including inaccurate subnormals. MIDP
-  targets 4.5 ULP on normal inputs; LOWP has an absolute-error budget and large
-  relative error near 1. LOWP log1p can return a negative value for tiny
+- **powf:** `NormalMidp`, `NonNegativeNormalMidp`, `GammaMidp`, `PositiveGammaMidp`,
+  `GammaHighp`, `FullHighp` (HIGHP), `StdHighp` (requires `std`), plus custom
+  [`PowfSpec`](../magemath) ranges (`base_range`, `exponent_range`). MIDP/LOWP
+  approximate `exp2(n * log2(x))`, so error grows with the magnitude of the product.
+- **expf:** checked finite inputs reject NaN and infinity (`Midp`, `Lowp`, `MidpFull`,
+  `LowpFull`) or custom `ExpfSpec::input_range` (which elides clamps inside `[-126, 127.5]`).
+  Exp2 MIDP's 1.9-ULP target applies below 127.5, not at the clamp rail.
+- **logf:** `Positive` accepts positive normal finite inputs (`Midp`, `Lowp`).
+  `Specials` (`MidpSpecials`, `LowpSpecials`) keeps historical special-value results,
+  including inaccurate subnormals. Custom `LogfSpec::input_range` validates `[lo, hi]`
+  in one comparison pair. LOWP `log1p` can return a negative value for tiny
   positive arguments; use MIDP there.
 - **cbrtf:** `Bounded` handles `±0.0` and normal finite `|x| < f32::MAX / 3`,
-  rejecting subnormals, larger magnitudes, infinities and NaN. `Full` rescales
-  subnormals and large normals and propagates `±0.0`, `±inf` and NaN. LOWP uses
-  one Halley step (≤ 259 ULP), MIDP two (≤ 3.2 ULP).
+  rejecting subnormals, larger magnitudes, infinities and NaN (`Midp`, `Lowp`).
+  `Full` (`MidpFull`, `LowpFull`) rescales subnormals and large normals and propagates
+  `±0.0`, `±inf` and NaN. LOWP uses one Halley step (≤ 259 ULP), MIDP two (≤ 3.2 ULP).
 
 All guarantees assume round-to-nearest with gradual underflow. NaN payloads and
 floating-point exception flags are not part of any contract.
 
 ## Keep the caller's token, including in tails
 
-Scalar and array entries may select a backend once per call. In a typed kernel,
+Scalar, array, and slice entries may select a backend once per call. In a typed kernel,
 pass the token you already hold to the vector entry and use `*_with_token` for
-the remainder with the same flags:
+the remainder with the same profile:
 
 ```rust
 use archmage::ScalarToken;
 use magetypes::simd::generic::f32x4;
-use magemath::powf::{PowfExecution, PowfOptions, try_powf_f32x4_with, try_powf_with_token};
+use magemath::Caller;
+use magemath::powf::{presets::GammaMidp, try_powf_f32x4_with, try_powf_with_token};
 
-const FLAGS: u32 = PowfOptions::PORTABLE_GAMMA_MIDP
-    .with_execution(PowfExecution::Caller)
-    .bits();
 let token = ScalarToken; // A native kernel passes its own token here.
 let input = f32x4::from_array_t(token, [0.0, 0.25, 0.5, 1.0]);
-let body = try_powf_f32x4_with::<FLAGS, _>(token, input, 2.2).unwrap();
-let tail = try_powf_with_token::<FLAGS, _>(token, 0.5, 2.2).unwrap();
+let body = try_powf_f32x4_with::<Caller<GammaMidp>, _>(token, input, 2.2).unwrap();
+let tail = try_powf_with_token::<Caller<GammaMidp>, _>(token, 0.5, 2.2).unwrap();
 assert_eq!(body.to_array()[2].to_bits(), tail.to_bits());
 ```
 

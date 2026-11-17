@@ -9,83 +9,95 @@
 
 ## summary
 #
-#   inherent methods                           33
-#   trait roster entries (type × trait)        32
+#   inherent methods                           24
+#   trait roster entries (type × trait)        53
 #
 # per-module pub lines:
-#   (root)                            1
-#   cbrtf                             8
-#   expf                              8
-#   logf                              8
-#   powf                              8
+#   (root)                            4
+#   cbrtf                             5
+#   expf                              5
+#   logf                              5
+#   powf                              5
 
-## items (33 lines)
+## items (24 lines)
 
+pub fn Execution::assert_fields_are_eq(&self)
+pub fn Portability::assert_fields_are_eq(&self)
 pub fn SliceError<K>::assert_fields_are_eq(&self)
+pub fn Validation::assert_fields_are_eq(&self)
 pub fn cbrtf::CbrtfDomain::assert_fields_are_eq(&self)
 pub fn cbrtf::CbrtfError::assert_fields_are_eq(&self)
 pub fn cbrtf::CbrtfErrorKind::assert_fields_are_eq(&self)
-pub fn cbrtf::CbrtfExecution::assert_fields_are_eq(&self)
 pub fn cbrtf::CbrtfOptions::assert_fields_are_eq(&self)
-pub fn cbrtf::CbrtfPortability::assert_fields_are_eq(&self)
 pub fn cbrtf::CbrtfPrecision::assert_fields_are_eq(&self)
-pub fn cbrtf::CbrtfValidation::assert_fields_are_eq(&self)
 pub fn expf::ExpfDomain::assert_fields_are_eq(&self)
 pub fn expf::ExpfError::assert_fields_are_eq(&self)
 pub fn expf::ExpfErrorKind::assert_fields_are_eq(&self)
-pub fn expf::ExpfExecution::assert_fields_are_eq(&self)
 pub fn expf::ExpfOptions::assert_fields_are_eq(&self)
-pub fn expf::ExpfPortability::assert_fields_are_eq(&self)
 pub fn expf::ExpfPrecision::assert_fields_are_eq(&self)
-pub fn expf::ExpfValidation::assert_fields_are_eq(&self)
 pub fn logf::LogfDomain::assert_fields_are_eq(&self)
 pub fn logf::LogfError::assert_fields_are_eq(&self)
 pub fn logf::LogfErrorKind::assert_fields_are_eq(&self)
-pub fn logf::LogfExecution::assert_fields_are_eq(&self)
 pub fn logf::LogfOptions::assert_fields_are_eq(&self)
-pub fn logf::LogfPortability::assert_fields_are_eq(&self)
 pub fn logf::LogfPrecision::assert_fields_are_eq(&self)
-pub fn logf::LogfValidation::assert_fields_are_eq(&self)
 pub fn powf::PowfDomain::assert_fields_are_eq(&self)
 pub fn powf::PowfError::assert_fields_are_eq(&self)
 pub fn powf::PowfErrorKind::assert_fields_are_eq(&self)
-pub fn powf::PowfExecution::assert_fields_are_eq(&self)
 pub fn powf::PowfOptions::assert_fields_are_eq(&self)
-pub fn powf::PowfPortability::assert_fields_are_eq(&self)
 pub fn powf::PowfPrecision::assert_fields_are_eq(&self)
-pub fn powf::PowfValidation::assert_fields_are_eq(&self)
 
-## trait impls (32 types)
+## trait impls (53 types)
 
+Execution: TrivialClone
+Portability: TrivialClone
+Validation: TrivialClone
 cbrtf::CbrtfDomain: TrivialClone
 cbrtf::CbrtfError: TrivialClone
 cbrtf::CbrtfErrorKind: TrivialClone
-cbrtf::CbrtfExecution: TrivialClone
 cbrtf::CbrtfOptions: TrivialClone
-cbrtf::CbrtfPortability: TrivialClone
 cbrtf::CbrtfPrecision: TrivialClone
-cbrtf::CbrtfValidation: TrivialClone
+cbrtf::CbrtfSpec: TrivialClone
+cbrtf::Options<BITS>: TrivialClone
+cbrtf::presets::Lowp: TrivialClone
+cbrtf::presets::LowpFull: TrivialClone
+cbrtf::presets::Midp: TrivialClone
+cbrtf::presets::MidpFull: TrivialClone
 expf::ExpfDomain: TrivialClone
 expf::ExpfError: TrivialClone
 expf::ExpfErrorKind: TrivialClone
-expf::ExpfExecution: TrivialClone
 expf::ExpfOptions: TrivialClone
-expf::ExpfPortability: TrivialClone
 expf::ExpfPrecision: TrivialClone
-expf::ExpfValidation: TrivialClone
+expf::ExpfSpec: TrivialClone
+expf::Options<BITS>: TrivialClone
+expf::presets::Lowp: TrivialClone
+expf::presets::LowpFull: TrivialClone
+expf::presets::Midp: TrivialClone
+expf::presets::MidpFull: TrivialClone
 logf::LogfDomain: TrivialClone
 logf::LogfError: TrivialClone
 logf::LogfErrorKind: TrivialClone
-logf::LogfExecution: TrivialClone
 logf::LogfOptions: TrivialClone
-logf::LogfPortability: TrivialClone
 logf::LogfPrecision: TrivialClone
-logf::LogfValidation: TrivialClone
+logf::LogfSpec: TrivialClone
+logf::Options<BITS>: TrivialClone
+logf::presets::Lowp: TrivialClone
+logf::presets::LowpSpecials: TrivialClone
+logf::presets::Midp: TrivialClone
+logf::presets::MidpSpecials: TrivialClone
+powf::Options<BITS>: TrivialClone
 powf::PowfDomain: TrivialClone
 powf::PowfError: TrivialClone
 powf::PowfErrorKind: TrivialClone
-powf::PowfExecution: TrivialClone
 powf::PowfOptions: TrivialClone
-powf::PowfPortability: TrivialClone
 powf::PowfPrecision: TrivialClone
-powf::PowfValidation: TrivialClone
+powf::PowfSpec: TrivialClone
+powf::presets::FullHighp: TrivialClone
+powf::presets::GammaHighp: TrivialClone
+powf::presets::GammaLowp: TrivialClone
+powf::presets::GammaMidp: TrivialClone
+powf::presets::NonNegativeNormalMidp: TrivialClone
+powf::presets::NormalLowp: TrivialClone
+powf::presets::NormalMidp: TrivialClone
+powf::presets::PositiveGammaLowp: TrivialClone
+powf::presets::PositiveGammaMidp: TrivialClone
+powf::presets::StdHighp: TrivialClone
