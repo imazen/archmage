@@ -3,7 +3,7 @@
 use super::{ExpfError, ExpfErrorKind, ExpfOptions};
 
 // Private flags (not accepted public encodings): infallible methods use them.
-pub(super) const CLAMP: u32 = 256;
+pub(super) const ELIDE_CLAMP: u32 = 256;
 
 macro_rules! graph {
     ($vector:ident, $profile:ident, $const_entry:ident, $float:ident, $int:ident, $bound:ident, $lanes:literal) => {
@@ -50,7 +50,7 @@ macro_rules! graph {
             };
             let result = if options & ExpfOptions::LOWP != 0 {
                 // Same coefficients and arithmetic order as exp2_lowp.
-                let x = if options & CLAMP == 0 {
+                let x = if options & ELIDE_CLAMP == 0 {
                     input.max(sp(-126.0)).min(sp(127.99))
                 } else {
                     input
@@ -65,9 +65,7 @@ macro_rules! graph {
                 let p = madd(sp(c3), xf, sp(c2));
                 let p = madd(p, xf, sp(core::f32::consts::LN_2));
                 let p = madd(p, xf, sp(1.0));
-                let integer = if core::any::TypeId::of::<T>()
-                    == core::any::TypeId::of::<archmage::ScalarToken>()
-                {
+                let integer = if token.as_scalar().is_some() {
                     xi.to_i32()
                 } else {
                     xi.to_i32_round()
@@ -78,7 +76,7 @@ macro_rules! graph {
                 // round-to-nearest split, xi clamped to 127.
                 let underflow_limit = sp(-126.0);
                 let overflow_limit = sp(128.0);
-                let reduced = if options & CLAMP == 0 {
+                let reduced = if options & ELIDE_CLAMP == 0 {
                     input.max(underflow_limit).min(overflow_limit)
                 } else {
                     input
@@ -108,16 +106,14 @@ macro_rules! graph {
                 let p = madd(p, xf, sp(c2));
                 let p = madd(p, xf, sp(core::f32::consts::LN_2));
                 let p = madd(p, xf, sp(1.0));
-                let integer = if core::any::TypeId::of::<T>()
-                    == core::any::TypeId::of::<archmage::ScalarToken>()
-                {
+                let integer = if token.as_scalar().is_some() {
                     xi.to_i32()
                 } else {
                     xi.to_i32_round()
                 };
                 let scale = (integer + ip(127)).shl_const::<23>().bitcast_to_f32();
                 let result = p * scale;
-                if options & CLAMP == 0 {
+                if options & ELIDE_CLAMP == 0 {
                     let is_underflow = input.simd_lt(underflow_limit);
                     let is_overflow = input.simd_ge(overflow_limit);
                     let result = V::blend(is_underflow, sp(0.0), result);
@@ -193,3 +189,33 @@ graph!(
     F32x16Convert,
     16
 );
+
+/// Whole-slice kernel (`OP = 0`: `exp2`, `OP = 1`: `exp`): one feature region
+/// around the loop, the 8-lane graph per chunk, and one padded vector for the
+/// remainder. The pad value 1.0 is finite, so only real lanes can be rejected.
+#[archmage::magetypes(v4x(cfg(avx512)), v4(cfg(avx512)), v3, neon, wasm128, scalar)]
+pub(super) fn slice8_with<const OP: u8, const OPTIONS: u32>(
+    token: Token,
+    src: &[f32],
+    dst: &mut [f32],
+) -> Result<(), (usize, ExpfError)> {
+    use magetypes::simd::generic::f32x8 as V;
+    let scale = V::splat_t(token, core::f32::consts::LOG2_E);
+    let (chunks, tail) = V::partition_slice_t(token, src);
+    let (out_chunks, out_tail) = V::partition_slice_mut_t(token, dst);
+    for (i, (s, d)) in chunks.iter().zip(out_chunks.iter_mut()).enumerate() {
+        let v = V::load_t(token, s);
+        let v = if OP == 1 { v * scale } else { v };
+        profile8::<Token, OPTIONS>(token, v)
+            .map_err(|e| (i * 8, e))?
+            .store(d);
+    }
+    if !tail.is_empty() {
+        let v = V::load_padded_t(token, tail, 1.0);
+        let v = if OP == 1 { v * scale } else { v };
+        profile8::<Token, OPTIONS>(token, v)
+            .map_err(|e| (chunks.len() * 8, e))?
+            .store_prefix(out_tail);
+    }
+    Ok(())
+}

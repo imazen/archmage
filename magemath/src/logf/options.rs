@@ -40,10 +40,14 @@ pub enum LogfPortability {
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 #[non_exhaustive]
 pub enum LogfPrecision {
-    /// Existing MIDP coefficients and graph; at most 4.5 ULP.
+    /// MIDP graph with refitted coefficients. The 4.5 ULP bound was measured
+    /// exhaustively for the earlier `log2_midp` fit; a sampled probe of this fit
+    /// found at most 2.65 ULP over positive normal inputs.
     #[default]
     Midp,
-    /// Existing shorter LOWP coefficients; ~6e-6 absolute error.
+    /// Existing shorter LOWP rational fit; a sampled probe found at most 6.4e-6
+    /// absolute error (8.5e-6 is the exhaustive bound recorded for `log2_lowp`).
+    /// Relative error is unbounded near x = 1.
     Lowp,
 }
 

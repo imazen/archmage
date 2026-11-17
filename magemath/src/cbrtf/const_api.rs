@@ -136,7 +136,7 @@ pub fn try_cbrt_array_runtime<const N: usize>(
 
 #[cfg_attr(debug_assertions, inline(never))]
 #[cfg_attr(not(debug_assertions), inline(always))]
-fn token_array<T: archmage::SimdToken, const N: usize>(
+fn token_array<T: archmage::IntoConcreteToken, const N: usize>(
     token: T,
     inputs: [f32; N],
     options: u32,
@@ -187,4 +187,56 @@ fn token_array<T: archmage::SimdToken, const N: usize>(
             })
         }
     }
+}
+
+#[inline(always)]
+fn slice<const OPTIONS: u32, T: archmage::IntoConcreteToken>(
+    token: T,
+    src: &[f32],
+    dst: &mut [f32],
+) -> Result<(), crate::SliceError<CbrtfErrorKind>> {
+    const {
+        assert!(CbrtfOptions::valid(OPTIONS), "invalid cbrtf const options");
+    }
+    assert_eq!(src.len(), dst.len(), "cbrtf slice lengths differ");
+    let plan = dispatch::select(
+        token,
+        if OPTIONS & CbrtfOptions::CALLER != 0 {
+            CbrtfExecution::Caller
+        } else {
+            CbrtfExecution::Automatic
+        },
+    );
+    dispatch::run_slice_const::<OPTIONS>(plan, src, dst).map_err(|(base, e)| crate::SliceError {
+        kind: e.kind,
+        index: base + e.lane_mask.trailing_zeros().min(7) as usize,
+    })
+}
+
+/// Cube root (`cbrt`) of every element of `src` into `dst`, selecting a
+/// backend once.
+///
+/// # Panics
+///
+/// Panics if `src.len() != dst.len()`.
+#[inline]
+pub fn try_cbrt_slice_with<const OPTIONS: u32>(
+    src: &[f32],
+    dst: &mut [f32],
+) -> Result<(), crate::SliceError<CbrtfErrorKind>> {
+    slice::<OPTIONS, _>(archmage::ScalarToken, src, dst)
+}
+
+/// [`try_cbrt_slice_with`] retaining the caller's feature proof.
+///
+/// # Panics
+///
+/// Panics if `src.len() != dst.len()`.
+#[inline(always)]
+pub fn try_cbrt_slice_with_token<const OPTIONS: u32, T: archmage::IntoConcreteToken>(
+    token: T,
+    src: &[f32],
+    dst: &mut [f32],
+) -> Result<(), crate::SliceError<CbrtfErrorKind>> {
+    slice::<OPTIONS, T>(token, src, dst)
 }

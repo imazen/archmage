@@ -21,7 +21,10 @@
 
 pub(crate) mod const_api;
 mod dispatch;
-pub use const_api::{try_powf_array_with, try_powf_with, try_powf_with_token};
+pub use const_api::{
+    try_powf_array_with, try_powf_slice_with, try_powf_slice_with_token, try_powf_with,
+    try_powf_with_token,
+};
 mod graph;
 mod highp;
 mod highp_data;
@@ -67,7 +70,7 @@ pub enum PowfErrorKind {
     InvalidExponent,
     /// A base is outside the selected input domain.
     InvalidBase,
-    /// The approximation's computed `n * log2(x)` is outside [-126,127.5],
+    /// The approximation's computed `n * log2(x)` is outside `[-126, 127.5]`,
     /// or a restricted HIGHP result is outside its normal-output domain.
     OutsideApproximationRange,
     /// The array width is not 1, 4, 8, or enabled width 16.
@@ -130,7 +133,7 @@ pub fn try_powf_array_runtime<const N: usize>(
 }
 
 #[inline(always)]
-pub(crate) fn try_powf_token_runtime<T: archmage::SimdToken, const N: usize>(
+pub(crate) fn try_powf_token_runtime<T: archmage::IntoConcreteToken, const N: usize>(
     token: T,
     bases: [f32; N],
     exponent: f32,

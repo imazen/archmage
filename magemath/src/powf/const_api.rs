@@ -202,7 +202,7 @@ vector!(run8, profile8, run8_const, f32x8, F32x8Convert, 8);
 vector!(run16, profile16, run16_const, f32x16, F32x16Convert, 16);
 
 #[inline(always)]
-fn select<T: archmage::SimdToken, const OPTIONS: u32>(
+fn select<T: archmage::IntoConcreteToken, const OPTIONS: u32>(
     token: T,
     execution: PowfExecution,
 ) -> dispatch::Plan {
@@ -226,7 +226,7 @@ fn select<T: archmage::SimdToken, const OPTIONS: u32>(
 // Preserve release specialization and the measured optimized call shape.
 #[cfg_attr(debug_assertions, inline(never))]
 #[cfg_attr(not(debug_assertions), inline(always))]
-fn token_array<T: archmage::SimdToken, const OPTIONS: u32, const N: usize>(
+fn token_array<T: archmage::IntoConcreteToken, const OPTIONS: u32, const N: usize>(
     token: T,
     bases: [f32; N],
     n: f32,
@@ -277,7 +277,7 @@ fn token_array<T: archmage::SimdToken, const OPTIONS: u32, const N: usize>(
 }
 #[cfg_attr(debug_assertions, inline(never))]
 #[cfg_attr(not(debug_assertions), inline(always))]
-pub(super) fn runtime<T: archmage::SimdToken, const N: usize>(
+pub(super) fn runtime<T: archmage::IntoConcreteToken, const N: usize>(
     token: T,
     bases: [f32; N],
     n: f32,
@@ -413,4 +413,73 @@ pub(super) fn runtime<T: archmage::SimdToken, const N: usize>(
             lane_mask: 0,
         }),
     }
+}
+
+/// Power of every element of `src` into `dst`, selecting a backend once.
+///
+/// Results are the same bits the array and vector entries produce for each
+/// element. Checked presets stop at the first rejected vector and report the
+/// index of its first rejected element; `dst` is then unspecified. An invalid
+/// exponent reports index 0.
+///
+/// ```
+/// use magemath::powf::{PowfOptions, try_powf_slice_with};
+/// const CURVE: u32 = PowfOptions::PORTABLE_GAMMA_MIDP.bits();
+/// let src = [0.0, 0.25, 0.5, 1.0, 2.0];
+/// let mut dst = [0.0; 5];
+/// try_powf_slice_with::<CURVE>(&src, &mut dst, 2.0).unwrap();
+/// assert_eq!(dst[0], 0.0);
+/// assert_eq!(dst[3], 1.0);
+/// ```
+///
+/// # Panics
+///
+/// Panics if `src.len() != dst.len()`.
+#[inline]
+pub fn try_powf_slice_with<const OPTIONS: u32>(
+    src: &[f32],
+    dst: &mut [f32],
+    n: f32,
+) -> Result<(), crate::SliceError<PowfErrorKind>> {
+    try_powf_slice_with_token::<OPTIONS, _>(archmage::ScalarToken, src, dst, n)
+}
+
+/// [`try_powf_slice_with`] retaining the caller's feature proof: with
+/// `PowfExecution::Caller` the loop runs on `token`'s tier.
+///
+/// # Panics
+///
+/// Panics if `src.len() != dst.len()`.
+#[inline(always)]
+pub fn try_powf_slice_with_token<const OPTIONS: u32, T: archmage::IntoConcreteToken>(
+    token: T,
+    src: &[f32],
+    dst: &mut [f32],
+    n: f32,
+) -> Result<(), crate::SliceError<PowfErrorKind>> {
+    const {
+        assert!(PowfOptions::valid(OPTIONS), "invalid powf const options");
+    }
+    assert_eq!(src.len(), dst.len(), "powf slice lengths differ");
+    let first = |base: usize, e: PowfError| crate::SliceError {
+        kind: e.kind,
+        index: base + e.lane_mask.trailing_zeros().min(15) as usize,
+    };
+    exponent::<OPTIONS, 1>(n).map_err(|e| crate::SliceError {
+        kind: e.kind,
+        index: 0,
+    })?;
+    if OPTIONS & PowfOptions::HIGHP != 0 {
+        return super::highp_dispatch::for_token_slice::<T, OPTIONS>(token, src, dst, n)
+            .map_err(|(base, e)| first(base, e));
+    }
+    let plan = select::<T, OPTIONS>(
+        token,
+        if OPTIONS & PowfOptions::CALLER != 0 {
+            PowfExecution::Caller
+        } else {
+            PowfExecution::Automatic
+        },
+    );
+    dispatch::run_slice_const::<OPTIONS>(plan, src, dst, n).map_err(|(base, e)| first(base, e))
 }

@@ -111,14 +111,10 @@ macro_rules! graph {
                     let (a, b, c) = (a.to_array(), b.to_array(), c.to_array());
                     #[cfg(target_arch = "wasm32")]
                     if ARITHMETIC == WASM_SOFTWARE {
-                        let any: &dyn core::any::Any = &token;
-                        let proof = any
-                            .downcast_ref::<archmage::Wasm128Token>()
+                        let proof = token
+                            .as_wasm128()
                             .expect("private WASM mode requires its matching proof");
-                        return V::from_array_t(
-                            token,
-                            super::wasm::software_lanes(*proof, a, b, c),
-                        );
+                        return V::from_array_t(token, super::wasm::software_lanes(proof, a, b, c));
                     }
                     #[cfg(all(feature = "std", not(miri)))]
                     if ARITHMETIC == STD {
@@ -171,9 +167,7 @@ macro_rules! graph {
                 let p = madd(p, xf, sp(1.0));
                 // floor made xi integral. All admitted lanes, including the
                 // Gamma zero sentinel, fit i32; truncation and RNE agree.
-                let integer = if core::any::TypeId::of::<T>()
-                    == core::any::TypeId::of::<archmage::ScalarToken>()
-                {
+                let integer = if token.as_scalar().is_some() {
                     xi.to_i32()
                 } else {
                     // Native conversions already cost one instruction. Keep
@@ -231,9 +225,7 @@ macro_rules! graph {
                 let p = madd(p, xf, sp(core::f32::consts::LN_2));
                 let p = madd(p, xf, sp(1.0));
                 // round already made xi integral in the admitted range.
-                let integer = if core::any::TypeId::of::<T>()
-                    == core::any::TypeId::of::<archmage::ScalarToken>()
-                {
+                let integer = if token.as_scalar().is_some() {
                     xi.to_i32()
                 } else {
                     // Native conversions already cost one instruction. Keep
@@ -364,3 +356,29 @@ graph!(
     F32x16Convert,
     16
 );
+
+/// Whole-slice kernel: one feature region around the loop, the 8-lane graph
+/// per chunk, and one padded vector for the remainder. The pad value 1.0 is
+/// inside every restricted domain, so only real lanes can be rejected.
+#[archmage::magetypes(v4x(cfg(avx512)), v4(cfg(avx512)), v3, neon, wasm128, scalar)]
+pub(super) fn slice8_with<const ARITHMETIC: usize, const OPTIONS: u32>(
+    token: Token,
+    src: &[f32],
+    dst: &mut [f32],
+    exponent: f32,
+) -> Result<(), (usize, PowfError)> {
+    use magetypes::simd::generic::f32x8 as V;
+    let (chunks, tail) = V::partition_slice_t(token, src);
+    let (out_chunks, out_tail) = V::partition_slice_mut_t(token, dst);
+    for (i, (s, d)) in chunks.iter().zip(out_chunks.iter_mut()).enumerate() {
+        profile8::<Token, ARITHMETIC, OPTIONS>(token, V::load_t(token, s), exponent)
+            .map_err(|e| (i * 8, e))?
+            .store(d);
+    }
+    if !tail.is_empty() {
+        profile8::<Token, ARITHMETIC, OPTIONS>(token, V::load_padded_t(token, tail, 1.0), exponent)
+            .map_err(|e| (chunks.len() * 8, e))?
+            .store_prefix(out_tail);
+    }
+    Ok(())
+}

@@ -3,7 +3,7 @@
 use super::{LogfError, LogfErrorKind, LogfOptions};
 
 macro_rules! graph {
-    ($vector:ident, $profile:ident, $const_entry:ident, $float:ident, $int:ident, $bound:ident, $lanes:literal) => {
+    ($vector:ident, $eval_op:ident, $profile:ident, $const_entry:ident, $float:ident, $int:ident, $bound:ident, $lanes:literal) => {
         #[cfg_attr(debug_assertions, inline(never))]
         #[cfg_attr(not(debug_assertions), inline(always))]
         fn $vector<T: magetypes::simd::backends::$bound, const FIXED_OPTIONS: u32>(
@@ -104,23 +104,75 @@ macro_rules! graph {
             Ok(result)
         }
 
+        #[cfg_attr(debug_assertions, inline(never))]
+        #[cfg_attr(not(debug_assertions), inline(always))]
+        fn $eval_op<
+            T: magetypes::simd::backends::$bound,
+            const FIXED_OP: u8,
+            const FIXED_OPTIONS: u32,
+        >(
+            token: T,
+            input: magetypes::simd::generic::$float<T>,
+            op: u8,
+            options: u32,
+        ) -> Result<magetypes::simd::generic::$float<T>, LogfError> {
+            #[cfg(not(debug_assertions))]
+            let (op, options) = {
+                let _ = (op, options);
+                (FIXED_OP, FIXED_OPTIONS)
+            };
+            use magetypes::simd::generic::$float as V;
+            if op == 3 {
+                let sp = |x| V::splat_t(token, x);
+                let one = sp(1.0);
+                let two = sp(2.0);
+                let u = input + one;
+                let finite_pos = u.simd_gt(sp(0.0)) & u.simd_lt(sp(f32::INFINITY));
+                let c_raw = V::blend(
+                    u.simd_ge(two),
+                    (one - (u - input)) / u,
+                    (input - (u - one)) / u,
+                );
+                let c = V::blend(finite_pos, c_raw, sp(0.0));
+                let log2_u = $vector::<T, FIXED_OPTIONS>(token, u, options)?;
+                let ln2 = sp(core::f32::consts::LN_2);
+                let res = if options & LogfOptions::BACKEND != 0 {
+                    log2_u.mul_add_relaxed(ln2, c)
+                } else {
+                    log2_u.mul_add_fused(ln2, c)
+                };
+                Ok(V::blend(input.simd_eq(sp(0.0)), input, res))
+            } else {
+                let log2_v = $vector::<T, FIXED_OPTIONS>(token, input, options)?;
+                Ok(match op {
+                    1 => log2_v * V::splat_t(token, core::f32::consts::LN_2),
+                    2 => log2_v * V::splat_t(token, core::f32::consts::LOG10_2),
+                    _ => log2_v,
+                })
+            }
+        }
+
         #[inline(always)]
-        pub(super) fn $profile<T: magetypes::simd::backends::$bound, const OPTIONS: u32>(
+        pub(super) fn $profile<
+            T: magetypes::simd::backends::$bound,
+            const OP: u8,
+            const OPTIONS: u32,
+        >(
             token: T,
             input: magetypes::simd::generic::$float<T>,
         ) -> Result<magetypes::simd::generic::$float<T>, LogfError> {
             #[cfg(debug_assertions)]
-            return $vector::<T, 0>(token, input, OPTIONS);
+            return $eval_op::<T, 0, 0>(token, input, OP, OPTIONS);
             #[cfg(not(debug_assertions))]
-            $vector::<T, OPTIONS>(token, input, OPTIONS)
+            $eval_op::<T, OP, OPTIONS>(token, input, OP, OPTIONS)
         }
 
         #[archmage::magetypes(v4x(cfg(avx512)), v4(cfg(avx512)), v3, neon, wasm128, scalar)]
-        pub(super) fn $const_entry<const OPTIONS: u32>(
+        pub(super) fn $const_entry<const OP: u8, const OPTIONS: u32>(
             token: Token,
             input: [f32; $lanes],
         ) -> Result<[f32; $lanes], LogfError> {
-            $profile::<Token, OPTIONS>(
+            $profile::<Token, OP, OPTIONS>(
                 token,
                 magetypes::simd::generic::$float::from_array_t(token, input),
             )
@@ -131,6 +183,7 @@ macro_rules! graph {
 
 graph!(
     vector4,
+    eval_op4,
     profile4,
     kernel4_with,
     f32x4,
@@ -140,6 +193,7 @@ graph!(
 );
 graph!(
     vector8,
+    eval_op8,
     profile8,
     kernel8_with,
     f32x8,
@@ -150,6 +204,7 @@ graph!(
 #[cfg(feature = "w512")]
 graph!(
     vector16,
+    eval_op16,
     profile16,
     kernel16_with,
     f32x16,
@@ -157,3 +212,29 @@ graph!(
     F32x16Convert,
     16
 );
+
+/// Whole-slice kernel (`OP`: `0=log2`, `1=ln`, `2=log10`, `3=log1p`): one
+/// feature region around the loop, the 8-lane graph per chunk, and one padded
+/// vector for the remainder. The pad value 1.0 is valid for both `log2(1.0)`
+/// and `log1p(1.0) = ln(2)`, so only real lanes can be rejected.
+#[archmage::magetypes(v4x(cfg(avx512)), v4(cfg(avx512)), v3, neon, wasm128, scalar)]
+pub(super) fn slice8_with<const OP: u8, const OPTIONS: u32>(
+    token: Token,
+    src: &[f32],
+    dst: &mut [f32],
+) -> Result<(), (usize, LogfError)> {
+    use magetypes::simd::generic::f32x8 as V;
+    let (chunks, tail) = V::partition_slice_t(token, src);
+    let (out_chunks, out_tail) = V::partition_slice_mut_t(token, dst);
+    for (i, (s, d)) in chunks.iter().zip(out_chunks.iter_mut()).enumerate() {
+        profile8::<Token, OP, OPTIONS>(token, V::load_t(token, s))
+            .map_err(|e| (i * 8, e))?
+            .store(d);
+    }
+    if !tail.is_empty() {
+        profile8::<Token, OP, OPTIONS>(token, V::load_padded_t(token, tail, 1.0))
+            .map_err(|e| (chunks.len() * 8, e))?
+            .store_prefix(out_tail);
+    }
+    Ok(())
+}

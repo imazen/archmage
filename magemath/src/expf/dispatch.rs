@@ -1,7 +1,7 @@
 //! One-time operation selection. The chosen proof is reused for the whole
 //! polynomial, never per operation.
 use super::{ExpfError, ExpfExecution, graph};
-use archmage::{ScalarToken, SimdToken};
+use archmage::{IntoConcreteToken, ScalarToken};
 
 #[derive(Clone, Copy, Debug)]
 pub(super) enum Plan {
@@ -19,52 +19,72 @@ pub(super) enum Plan {
 }
 
 #[inline(always)]
-fn select_impl<T: SimdToken>(token: T, execution: ExpfExecution) -> Plan {
+fn select_impl<T: IntoConcreteToken>(token: T, execution: ExpfExecution) -> Plan {
     let _ = token;
-    #[cfg(any(
-        target_arch = "x86_64",
-        target_arch = "aarch64",
-        target_arch = "wasm32"
-    ))]
-    let any: &dyn core::any::Any = &token;
     #[cfg(target_arch = "x86_64")]
     {
-        if let Some(t) = any.downcast_ref::<archmage::X64V3Token>() {
-            return Plan::V3(*t);
+        if let Some(t) = token.as_x64v3() {
+            return Plan::V3(t);
+        }
+        if let Some(t) = token.as_x64v3_crypto() {
+            return Plan::V3(t.v3());
+        }
+        if let Some(t) = token.as_x64v3_gfni_crypto() {
+            return Plan::V3(t.v3());
         }
         #[cfg(feature = "avx512")]
         {
-            if let Some(t) = any.downcast_ref::<archmage::X64V4Token>() {
-                return Plan::V4(*t);
+            if let Some(t) = token.as_x64v4() {
+                return Plan::V4(t);
             }
-            if let Some(t) = any.downcast_ref::<archmage::X64V4xToken>() {
-                return Plan::V4x(*t);
+            if let Some(t) = token.as_x64v4x() {
+                return Plan::V4x(t);
             }
-            if let Some(t) = any.downcast_ref::<archmage::Avx512Fp16Token>() {
+            if let Some(t) = token.as_avx512_fp16() {
                 return Plan::V4(t.v4());
             }
         }
         #[cfg(not(feature = "avx512"))]
         {
-            if let Some(t) = any.downcast_ref::<archmage::X64V4Token>() {
+            if let Some(t) = token.as_x64v4() {
                 return Plan::V3(t.v3());
             }
-            if let Some(t) = any.downcast_ref::<archmage::X64V4xToken>() {
+            if let Some(t) = token.as_x64v4x() {
                 return Plan::V3(t.v3());
             }
-            if let Some(t) = any.downcast_ref::<archmage::Avx512Fp16Token>() {
+            if let Some(t) = token.as_avx512_fp16() {
                 return Plan::V3(t.v3());
             }
         }
     }
     #[cfg(target_arch = "aarch64")]
-    if let Some(t) = any.downcast_ref::<archmage::NeonToken>() {
-        return Plan::Neon(*t);
+    {
+        if let Some(t) = token.as_neon() {
+            return Plan::Neon(t);
+        }
+        if let Some(t) = token.as_neon_aes() {
+            return Plan::Neon(t.neon());
+        }
+        if let Some(t) = token.as_neon_sha3() {
+            return Plan::Neon(t.neon());
+        }
+        if let Some(t) = token.as_neon_crc() {
+            return Plan::Neon(t.neon());
+        }
+        if let Some(t) = token.as_arm_v2() {
+            return Plan::Neon(t.neon());
+        }
+        if let Some(t) = token.as_arm_v3() {
+            return Plan::Neon(t.neon());
+        }
     }
     #[cfg(target_arch = "wasm32")]
     {
-        if let Some(t) = any.downcast_ref::<archmage::Wasm128Token>() {
-            return Plan::Wasm(*t);
+        if let Some(t) = token
+            .as_wasm128()
+            .or_else(|| token.as_wasm128_relaxed().map(|r| r.wasm128()))
+        {
+            return Plan::Wasm(t);
         }
     }
     if execution == ExpfExecution::Caller {
@@ -80,7 +100,7 @@ fn upgrade(token: Token) -> Plan {
 }
 
 #[inline(always)]
-pub(super) fn select<T: SimdToken>(token: T, execution: ExpfExecution) -> Plan {
+pub(super) fn select<T: IntoConcreteToken>(token: T, execution: ExpfExecution) -> Plan {
     select_impl(token, execution)
 }
 
@@ -138,3 +158,24 @@ run_const!(
     kernel16_with_scalar,
     16
 );
+
+#[inline(always)]
+pub(super) fn run_slice_const<const OP: u8, const OPTIONS: u32>(
+    plan: Plan,
+    src: &[f32],
+    dst: &mut [f32],
+) -> Result<(), (usize, ExpfError)> {
+    match plan {
+        #[cfg(target_arch = "x86_64")]
+        Plan::V3(t) => graph::slice8_with_v3::<OP, OPTIONS>(t, src, dst),
+        #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+        Plan::V4(t) => graph::slice8_with_v4::<OP, OPTIONS>(t, src, dst),
+        #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+        Plan::V4x(t) => graph::slice8_with_v4x::<OP, OPTIONS>(t, src, dst),
+        #[cfg(target_arch = "aarch64")]
+        Plan::Neon(t) => graph::slice8_with_neon::<OP, OPTIONS>(t, src, dst),
+        #[cfg(target_arch = "wasm32")]
+        Plan::Wasm(t) => graph::slice8_with_wasm128::<OP, OPTIONS>(t, src, dst),
+        Plan::Software => graph::slice8_with_scalar::<OP, OPTIONS>(ScalarToken, src, dst),
+    }
+}

@@ -167,3 +167,28 @@ graph!(
     F32x16Convert,
     16
 );
+
+/// Whole-slice kernel: one feature region around the loop, the 8-lane graph
+/// per chunk, and one padded vector for the remainder. The pad value 1.0 is
+/// finite and normal, so only real lanes can be rejected.
+#[archmage::magetypes(v4x(cfg(avx512)), v4(cfg(avx512)), v3, neon, wasm128, scalar)]
+pub(super) fn slice8_with<const OPTIONS: u32>(
+    token: Token,
+    src: &[f32],
+    dst: &mut [f32],
+) -> Result<(), (usize, CbrtfError)> {
+    use magetypes::simd::generic::f32x8 as V;
+    let (chunks, tail) = V::partition_slice_t(token, src);
+    let (out_chunks, out_tail) = V::partition_slice_mut_t(token, dst);
+    for (i, (s, d)) in chunks.iter().zip(out_chunks.iter_mut()).enumerate() {
+        profile8::<Token, OPTIONS>(token, V::load_t(token, s))
+            .map_err(|e| (i * 8, e))?
+            .store(d);
+    }
+    if !tail.is_empty() {
+        profile8::<Token, OPTIONS>(token, V::load_padded_t(token, tail, 1.0))
+            .map_err(|e| (chunks.len() * 8, e))?
+            .store_prefix(out_tail);
+    }
+    Ok(())
+}

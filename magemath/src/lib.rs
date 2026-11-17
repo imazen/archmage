@@ -27,6 +27,29 @@
 extern crate alloc;
 #[cfg(any(feature = "std", test))]
 extern crate std;
+/// Failure of a slice operation: the reason and the first input that caused it.
+///
+/// `kind` is the family's error kind (for example
+/// [`powf::PowfErrorKind`]). Slice entries stop at the first rejected vector;
+/// the destination's contents are unspecified after an error.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct SliceError<K> {
+    /// Which part of the contract failed.
+    pub kind: K,
+    /// Index of the first rejected input. Zero for a rejected uniform argument
+    /// such as the exponent.
+    pub index: usize,
+}
+
+impl<K: core::fmt::Debug> core::fmt::Display for SliceError<K> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "{:?} at index {}", self.kind, self.index)
+    }
+}
+
+#[cfg(feature = "std")]
+impl<K: core::fmt::Debug> std::error::Error for SliceError<K> {}
+
 pub mod cbrtf;
 pub mod expf;
 pub mod logf;

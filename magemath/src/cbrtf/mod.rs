@@ -15,8 +15,8 @@ mod options;
 mod tests;
 
 pub use const_api::{
-    try_cbrt_array_runtime, try_cbrt_array_with, try_cbrt_runtime, try_cbrt_with,
-    try_cbrt_with_token,
+    try_cbrt_array_runtime, try_cbrt_array_with, try_cbrt_runtime, try_cbrt_slice_with,
+    try_cbrt_slice_with_token, try_cbrt_with, try_cbrt_with_token,
 };
 pub use options::{
     CbrtfDomain, CbrtfExecution, CbrtfOptions, CbrtfPortability, CbrtfPrecision, CbrtfValidation,

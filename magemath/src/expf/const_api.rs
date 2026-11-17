@@ -177,7 +177,7 @@ pub fn try_exp2_array_runtime<const N: usize>(
 // in unoptimized builds, mirroring the powf adapter.
 #[cfg_attr(debug_assertions, inline(never))]
 #[cfg_attr(not(debug_assertions), inline(always))]
-fn token_array<T: archmage::SimdToken, const N: usize>(
+fn token_array<T: archmage::IntoConcreteToken, const N: usize>(
     token: T,
     inputs: [f32; N],
     options: u32,
@@ -228,4 +228,86 @@ fn token_array<T: archmage::SimdToken, const N: usize>(
             })
         }
     }
+}
+
+#[inline(always)]
+fn slice<const OP: u8, const OPTIONS: u32, T: archmage::IntoConcreteToken>(
+    token: T,
+    src: &[f32],
+    dst: &mut [f32],
+) -> Result<(), crate::SliceError<ExpfErrorKind>> {
+    const {
+        assert!(ExpfOptions::valid(OPTIONS), "invalid expf const options");
+    }
+    assert_eq!(src.len(), dst.len(), "expf slice lengths differ");
+    let plan = dispatch::select(
+        token,
+        if OPTIONS & ExpfOptions::CALLER != 0 {
+            ExpfExecution::Caller
+        } else {
+            ExpfExecution::Automatic
+        },
+    );
+    dispatch::run_slice_const::<OP, OPTIONS>(plan, src, dst).map_err(|(base, e)| {
+        crate::SliceError {
+            kind: e.kind,
+            index: base + e.lane_mask.trailing_zeros().min(7) as usize,
+        }
+    })
+}
+
+/// Base-2 exponential (`exp2`) of every element of `src` into `dst`, selecting
+/// a backend once.
+///
+/// # Panics
+///
+/// Panics if `src.len() != dst.len()`.
+#[inline]
+pub fn try_exp2_slice_with<const OPTIONS: u32>(
+    src: &[f32],
+    dst: &mut [f32],
+) -> Result<(), crate::SliceError<ExpfErrorKind>> {
+    slice::<0, OPTIONS, _>(archmage::ScalarToken, src, dst)
+}
+
+/// [`try_exp2_slice_with`] retaining the caller's feature proof.
+///
+/// # Panics
+///
+/// Panics if `src.len() != dst.len()`.
+#[inline(always)]
+pub fn try_exp2_slice_with_token<const OPTIONS: u32, T: archmage::IntoConcreteToken>(
+    token: T,
+    src: &[f32],
+    dst: &mut [f32],
+) -> Result<(), crate::SliceError<ExpfErrorKind>> {
+    slice::<0, OPTIONS, T>(token, src, dst)
+}
+
+/// Natural exponential (`exp`) of every element of `src` into `dst`, selecting
+/// a backend once.
+///
+/// # Panics
+///
+/// Panics if `src.len() != dst.len()`.
+#[inline]
+pub fn try_exp_slice_with<const OPTIONS: u32>(
+    src: &[f32],
+    dst: &mut [f32],
+) -> Result<(), crate::SliceError<ExpfErrorKind>> {
+    slice::<1, OPTIONS, _>(archmage::ScalarToken, src, dst)
+}
+
+/// [`try_exp_slice_with`] retaining the caller's feature proof.
+///
+/// # Panics
+///
+/// Panics if `src.len() != dst.len()`.
+#[inline(always)]
+pub fn try_exp_slice_with_token<const OPTIONS: u32, T: archmage::IntoConcreteToken>(
+    token: T,
+    src: &[f32],
+    dst: &mut [f32],
+) -> Result<(), crate::SliceError<ExpfErrorKind>> {
+    slice::<1, OPTIONS, T>(token, src, dst)
 }

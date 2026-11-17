@@ -1,5 +1,5 @@
 use super::{PowfError, PowfExecution, PowfOptions, graph};
-use archmage::{ScalarToken, SimdToken};
+use archmage::{IntoConcreteToken, ScalarToken};
 
 #[derive(Clone, Copy, Debug)]
 pub(super) enum Plan {
@@ -19,56 +19,76 @@ pub(super) enum Plan {
 }
 
 #[inline(always)]
-fn select_impl<T: SimdToken, const EXACT: bool, const DOUBLE: bool>(
+fn select_impl<T: IntoConcreteToken, const EXACT: bool, const DOUBLE: bool>(
     token: T,
     execution: PowfExecution,
 ) -> Plan {
     let _ = token;
-    #[cfg(any(
-        target_arch = "x86_64",
-        target_arch = "aarch64",
-        target_arch = "wasm32"
-    ))]
-    let any: &dyn core::any::Any = &token;
     #[cfg(target_arch = "x86_64")]
     {
-        if let Some(t) = any.downcast_ref::<archmage::X64V3Token>() {
-            return Plan::V3(*t);
+        if let Some(t) = token.as_x64v3() {
+            return Plan::V3(t);
+        }
+        if let Some(t) = token.as_x64v3_crypto() {
+            return Plan::V3(t.v3());
+        }
+        if let Some(t) = token.as_x64v3_gfni_crypto() {
+            return Plan::V3(t.v3());
         }
         #[cfg(feature = "avx512")]
         {
-            if let Some(t) = any.downcast_ref::<archmage::X64V4Token>() {
-                return Plan::V4(*t);
+            if let Some(t) = token.as_x64v4() {
+                return Plan::V4(t);
             }
-            if let Some(t) = any.downcast_ref::<archmage::X64V4xToken>() {
-                return Plan::V4x(*t);
+            if let Some(t) = token.as_x64v4x() {
+                return Plan::V4x(t);
             }
-            if let Some(t) = any.downcast_ref::<archmage::Avx512Fp16Token>() {
+            if let Some(t) = token.as_avx512_fp16() {
                 return Plan::V4(t.v4());
             }
         }
         #[cfg(not(feature = "avx512"))]
         {
-            if let Some(t) = any.downcast_ref::<archmage::X64V4Token>() {
+            if let Some(t) = token.as_x64v4() {
                 return Plan::V3(t.v3());
             }
-            if let Some(t) = any.downcast_ref::<archmage::X64V4xToken>() {
+            if let Some(t) = token.as_x64v4x() {
                 return Plan::V3(t.v3());
             }
-            if let Some(t) = any.downcast_ref::<archmage::Avx512Fp16Token>() {
+            if let Some(t) = token.as_avx512_fp16() {
                 return Plan::V3(t.v3());
             }
         }
     }
     #[cfg(target_arch = "aarch64")]
-    if let Some(t) = any.downcast_ref::<archmage::NeonToken>() {
-        return Plan::Neon(*t);
+    {
+        if let Some(t) = token.as_neon() {
+            return Plan::Neon(t);
+        }
+        if let Some(t) = token.as_neon_aes() {
+            return Plan::Neon(t.neon());
+        }
+        if let Some(t) = token.as_neon_sha3() {
+            return Plan::Neon(t.neon());
+        }
+        if let Some(t) = token.as_neon_crc() {
+            return Plan::Neon(t.neon());
+        }
+        if let Some(t) = token.as_arm_v2() {
+            return Plan::Neon(t.neon());
+        }
+        if let Some(t) = token.as_arm_v3() {
+            return Plan::Neon(t.neon());
+        }
     }
     #[cfg(target_arch = "wasm32")]
     {
-        if let Some(t) = any.downcast_ref::<archmage::Wasm128Token>() {
+        if let Some(t) = token
+            .as_wasm128()
+            .or_else(|| token.as_wasm128_relaxed().map(|r| r.wasm128()))
+        {
             return Plan::Wasm(
-                *t,
+                t,
                 !EXACT
                     || if DOUBLE {
                         crate::wasm_fma::powf_f64_fuses()
@@ -106,12 +126,12 @@ fn upgrade(token: Token) -> Plan {
 }
 
 #[inline(always)]
-pub(super) fn select<T: SimdToken>(token: T, execution: PowfExecution) -> Plan {
+pub(super) fn select<T: IntoConcreteToken>(token: T, execution: PowfExecution) -> Plan {
     select_impl::<T, true, false>(token, execution)
 }
 
 #[inline(always)]
-pub(super) fn select_relaxed<T: SimdToken>(token: T, execution: PowfExecution) -> Plan {
+pub(super) fn select_relaxed<T: IntoConcreteToken>(token: T, execution: PowfExecution) -> Plan {
     select_impl::<T, false, false>(token, execution)
 }
 
@@ -197,6 +217,56 @@ fn upgrade_highp(token: Token) -> Plan {
     select_impl::<_, true, true>(token, PowfExecution::Caller)
 }
 #[inline(always)]
-pub(super) fn select_highp<T: SimdToken>(token: T, execution: PowfExecution) -> Plan {
+pub(super) fn select_highp<T: IntoConcreteToken>(token: T, execution: PowfExecution) -> Plan {
     select_impl::<T, true, true>(token, execution)
+}
+
+#[inline(always)]
+pub(super) fn run_slice_const<const OPTIONS: u32>(
+    plan: Plan,
+    src: &[f32],
+    dst: &mut [f32],
+    exponent: f32,
+) -> Result<(), (usize, PowfError)> {
+    match plan {
+        #[cfg(target_arch = "x86_64")]
+        Plan::V3(t) => graph::slice8_with_v3::<{ graph::NATIVE }, OPTIONS>(t, src, dst, exponent),
+        #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+        Plan::V4(t) => graph::slice8_with_v4::<{ graph::NATIVE }, OPTIONS>(t, src, dst, exponent),
+        #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+        Plan::V4x(t) => graph::slice8_with_v4x::<{ graph::NATIVE }, OPTIONS>(t, src, dst, exponent),
+        #[cfg(target_arch = "aarch64")]
+        Plan::Neon(t) => {
+            graph::slice8_with_neon::<{ graph::NATIVE }, OPTIONS>(t, src, dst, exponent)
+        }
+        #[cfg(target_arch = "wasm32")]
+        Plan::Wasm(t, true) => {
+            graph::slice8_with_wasm128::<{ graph::NATIVE }, OPTIONS>(t, src, dst, exponent)
+        }
+        #[cfg(target_arch = "wasm32")]
+        Plan::Wasm(t, false) => {
+            graph::slice8_with_wasm128::<{ graph::WASM_SOFTWARE }, OPTIONS>(t, src, dst, exponent)
+        }
+        Plan::Software => {
+            if OPTIONS & PowfOptions::BACKEND != 0 {
+                graph::slice8_with_scalar::<{ graph::RELAXED }, OPTIONS>(
+                    ScalarToken,
+                    src,
+                    dst,
+                    exponent,
+                )
+            } else {
+                graph::slice8_with_scalar::<{ graph::SOFTWARE }, OPTIONS>(
+                    ScalarToken,
+                    src,
+                    dst,
+                    exponent,
+                )
+            }
+        }
+        #[cfg(all(feature = "std", not(miri)))]
+        Plan::Std => {
+            graph::slice8_with_scalar::<{ graph::STD }, OPTIONS>(ScalarToken, src, dst, exponent)
+        }
+    }
 }

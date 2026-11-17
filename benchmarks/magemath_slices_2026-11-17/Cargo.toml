@@ -1,0 +1,20 @@
+[package]
+name = "magemath-slices-bench"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[workspace]
+
+[dependencies]
+archmage = { path = "../..", features = ["std", "avx512"] }
+magetypes = { path = "../../magetypes", features = ["std", "avx512"] }
+magemath = { path = "../../magemath", features = ["std", "avx512"] }
+zenbench = { version = "0.1.10", features = ["criterion-compat"] }
+
+[[bench]]
+name = "slices"
+harness = false
+
+[profile.bench]
+lto = "thin"

@@ -41,10 +41,15 @@ pub enum ExpfPortability {
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 #[non_exhaustive]
 pub enum ExpfPrecision {
-    /// Existing MIDP coefficients and graph; ≤1.9 ULP below x = 127.5.
+    /// MIDP graph with refitted coefficients. The ≤1.9 ULP bound below x = 127.5
+    /// was measured exhaustively for the earlier `exp2_midp` fit; a sampled probe
+    /// of this fit found at most 0.81 ULP on `[-126, 127.5)` (`tests/portable_hashes.rs`
+    /// pins its bits; no exhaustive sweep of the refit is recorded yet).
     #[default]
     Midp,
-    /// Existing shorter LOWP coefficients; ≤0.56% relative error.
+    /// Shorter LOWP graph with refitted coefficients. The ≤0.56% relative bound
+    /// was measured for the earlier `exp2_lowp` fit; a sampled probe of this fit
+    /// found at most 0.03% on `[-126, 127.5)`.
     Lowp,
 }
 

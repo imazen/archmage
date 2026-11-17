@@ -9,17 +9,19 @@
 
 ## summary
 #
-#   inherent methods                           32
+#   inherent methods                           33
 #   trait roster entries (type × trait)        32
 #
 # per-module pub lines:
+#   (root)                            1
 #   cbrtf                             8
 #   expf                              8
 #   logf                              8
 #   powf                              8
 
-## items (32 lines)
+## items (33 lines)
 
+pub fn SliceError<K>::assert_fields_are_eq(&self)
 pub fn cbrtf::CbrtfDomain::assert_fields_are_eq(&self)
 pub fn cbrtf::CbrtfError::assert_fields_are_eq(&self)
 pub fn cbrtf::CbrtfErrorKind::assert_fields_are_eq(&self)

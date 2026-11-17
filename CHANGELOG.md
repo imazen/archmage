@@ -281,6 +281,8 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 
 - Add the `magemath` (`0.1.0`) crate (`no_std` by default, optional `std`, `w512`, `avx512`) providing configurable `f32` `powf`, `expf` (`exp2`, `exp`), `logf` (`log2`, `ln`, `log10`, `log1p`), and `cbrtf` approximations with explicit domain, precision, portability, and execution profiles plus matching scalar and `*_with_token` entry points for SIMD tails (`docs/MAGEMATH-MIGRATION.md`, `magemath/VALIDATION.md`).
 - Mark all `*Options` structs, policy-axis enums (`*Domain`, `*Execution`, `*Portability`, `*Precision`, `*Validation`), and `*ErrorKind` enums `#[non_exhaustive]` so future approximation families, domains, and option axes remain minor-compatible.
+- Add single-dispatch slice entry points `try_{powf,exp2,exp,log2,ln,log10,log1p,cbrt}_slice_with` (and `*_slice_with_token`): one backend selection and one feature region per slice (including `HIGHP` `powf` and in-register SIMD `log1p`), a padded vector for the remainder, and `magemath::SliceError { kind, index }` naming the first rejected element. Result bits equal the scalar and vector entries. On Zen 4 the per-chunk 8-element array entries took 4.6x to 12x as long (`benchmarks/magemath_slices_2026-11-17/RESULTS.md`).
+- Replace `core::any::Any` / `TypeId` downcasts inside `magemath` with static `archmage::IntoConcreteToken` selection, and pin bit-exact hashes across 11 presets in `magemath/tests/portable_hashes.rs`.
 
 ## Workspace
 

@@ -6,27 +6,28 @@
 # impls omitted; re-export duplicates annotated `[also: path]`.
 # DO NOT EDIT BY HAND — commit regenerated changes with the code.
 #
-# files: magemath.txt 281 lines (supported surface) | magemath.features.txt 13 added (features: avx512,std,w512) | magemath.internal.txt 64 lines (64 hidden + 0 excluded-feature)
+# files: magemath.txt 302 lines (supported surface) | magemath.features.txt 14 added (features: avx512,std,w512) | magemath.internal.txt 65 lines (65 hidden + 0 excluded-feature)
 
 ## summary
 #
 #   pub modules                                 5
-#   pub types (struct/enum/trait/alias)        32
+#   pub types (struct/enum/trait/alias)        33
 #   pub consts/statics                         59
-#   free functions                             66
-#   struct fields                              28
+#   free functions                             82
+#   struct fields                              30
 #   enum variants                              58
-#   trait roster entries (type × trait)       188
+#   trait roster entries (type × trait)       194
 #   auto-trait-complete types                  32
+#   auto-trait exceptions                       1
 #
 # per-module pub lines:
-#   (root)                           33
-#   cbrtf                            43
-#   expf                             50
-#   logf                             66
-#   powf                             56
+#   (root)                           36
+#   cbrtf                            45
+#   expf                             54
+#   logf                             74
+#   powf                             58
 
-## items (248 lines)
+## items (267 lines)
 
 pub mod magemath
 pub mod cbrtf
@@ -78,6 +79,8 @@ pub fn cbrtf::try_cbrt_array_with<const OPTIONS: u32, const N: usize>([f32; N]) 
 pub fn cbrtf::try_cbrt_f32x4_with<const OPTIONS: u32, T: magetypes::simd::backends::convert::F32x4Convert>(T, magetypes::simd::generic::generated::f32x4_impl::f32x4<T>) -> core::result::Result<magetypes::simd::generic::generated::f32x4_impl::f32x4<T>, cbrtf::CbrtfError>
 pub fn cbrtf::try_cbrt_f32x8_with<const OPTIONS: u32, T: magetypes::simd::backends::convert::F32x8Convert>(T, magetypes::simd::generic::generated::f32x8_impl::f32x8<T>) -> core::result::Result<magetypes::simd::generic::generated::f32x8_impl::f32x8<T>, cbrtf::CbrtfError>
 pub fn cbrtf::try_cbrt_runtime(f32, cbrtf::CbrtfOptions) -> core::result::Result<f32, cbrtf::CbrtfError>
+pub fn cbrtf::try_cbrt_slice_with<const OPTIONS: u32>(&[f32], &mut [f32]) -> core::result::Result<(), SliceError<cbrtf::CbrtfErrorKind>>
+pub fn cbrtf::try_cbrt_slice_with_token<const OPTIONS: u32, T: archmage::tokens::IntoConcreteToken>(T, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<cbrtf::CbrtfErrorKind>>
 pub fn cbrtf::try_cbrt_with<const OPTIONS: u32>(f32) -> core::result::Result<f32, cbrtf::CbrtfError>
 pub fn cbrtf::try_cbrt_with_token<const OPTIONS: u32, T: magetypes::simd::backends::convert::F32x4Convert>(T, f32) -> core::result::Result<f32, cbrtf::CbrtfError>
 pub mod expf
@@ -129,6 +132,8 @@ pub fn expf::try_exp2_array_with<const OPTIONS: u32, const N: usize>([f32; N]) -
 pub fn expf::try_exp2_f32x4_with<const OPTIONS: u32, T: magetypes::simd::backends::convert::F32x4Convert>(T, magetypes::simd::generic::generated::f32x4_impl::f32x4<T>) -> core::result::Result<magetypes::simd::generic::generated::f32x4_impl::f32x4<T>, expf::ExpfError>
 pub fn expf::try_exp2_f32x8_with<const OPTIONS: u32, T: magetypes::simd::backends::convert::F32x8Convert>(T, magetypes::simd::generic::generated::f32x8_impl::f32x8<T>) -> core::result::Result<magetypes::simd::generic::generated::f32x8_impl::f32x8<T>, expf::ExpfError>
 pub fn expf::try_exp2_runtime(f32, expf::ExpfOptions) -> core::result::Result<f32, expf::ExpfError>
+pub fn expf::try_exp2_slice_with<const OPTIONS: u32>(&[f32], &mut [f32]) -> core::result::Result<(), SliceError<expf::ExpfErrorKind>>
+pub fn expf::try_exp2_slice_with_token<const OPTIONS: u32, T: archmage::tokens::IntoConcreteToken>(T, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<expf::ExpfErrorKind>>
 pub fn expf::try_exp2_with<const OPTIONS: u32>(f32) -> core::result::Result<f32, expf::ExpfError>
 pub fn expf::try_exp2_with_token<const OPTIONS: u32, T: magetypes::simd::backends::convert::F32x4Convert>(T, f32) -> core::result::Result<f32, expf::ExpfError>
 pub fn expf::try_exp_array_runtime<const N: usize>([f32; N], expf::ExpfOptions) -> core::result::Result<[f32; N], expf::ExpfError>
@@ -136,6 +141,8 @@ pub fn expf::try_exp_array_with<const OPTIONS: u32, const N: usize>([f32; N]) ->
 pub fn expf::try_exp_f32x4_with<const OPTIONS: u32, T: magetypes::simd::backends::convert::F32x4Convert>(T, magetypes::simd::generic::generated::f32x4_impl::f32x4<T>) -> core::result::Result<magetypes::simd::generic::generated::f32x4_impl::f32x4<T>, expf::ExpfError>
 pub fn expf::try_exp_f32x8_with<const OPTIONS: u32, T: magetypes::simd::backends::convert::F32x8Convert>(T, magetypes::simd::generic::generated::f32x8_impl::f32x8<T>) -> core::result::Result<magetypes::simd::generic::generated::f32x8_impl::f32x8<T>, expf::ExpfError>
 pub fn expf::try_exp_runtime(f32, expf::ExpfOptions) -> core::result::Result<f32, expf::ExpfError>
+pub fn expf::try_exp_slice_with<const OPTIONS: u32>(&[f32], &mut [f32]) -> core::result::Result<(), SliceError<expf::ExpfErrorKind>>
+pub fn expf::try_exp_slice_with_token<const OPTIONS: u32, T: archmage::tokens::IntoConcreteToken>(T, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<expf::ExpfErrorKind>>
 pub fn expf::try_exp_with<const OPTIONS: u32>(f32) -> core::result::Result<f32, expf::ExpfError>
 pub fn expf::try_exp_with_token<const OPTIONS: u32, T: magetypes::simd::backends::convert::F32x4Convert>(T, f32) -> core::result::Result<f32, expf::ExpfError>
 pub mod logf
@@ -186,6 +193,8 @@ pub fn logf::try_ln_array_with<const OPTIONS: u32, const N: usize>([f32; N]) -> 
 pub fn logf::try_ln_f32x4_with<const OPTIONS: u32, T: magetypes::simd::backends::convert::F32x4Convert>(T, magetypes::simd::generic::generated::f32x4_impl::f32x4<T>) -> core::result::Result<magetypes::simd::generic::generated::f32x4_impl::f32x4<T>, logf::LogfError>
 pub fn logf::try_ln_f32x8_with<const OPTIONS: u32, T: magetypes::simd::backends::convert::F32x8Convert>(T, magetypes::simd::generic::generated::f32x8_impl::f32x8<T>) -> core::result::Result<magetypes::simd::generic::generated::f32x8_impl::f32x8<T>, logf::LogfError>
 pub fn logf::try_ln_runtime(f32, logf::LogfOptions) -> core::result::Result<f32, logf::LogfError>
+pub fn logf::try_ln_slice_with<const OPTIONS: u32>(&[f32], &mut [f32]) -> core::result::Result<(), SliceError<logf::LogfErrorKind>>
+pub fn logf::try_ln_slice_with_token<const OPTIONS: u32, T: archmage::tokens::IntoConcreteToken>(T, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<logf::LogfErrorKind>>
 pub fn logf::try_ln_with<const OPTIONS: u32>(f32) -> core::result::Result<f32, logf::LogfError>
 pub fn logf::try_ln_with_token<const OPTIONS: u32, T: magetypes::simd::backends::convert::F32x4Convert>(T, f32) -> core::result::Result<f32, logf::LogfError>
 pub fn logf::try_log10(f32) -> core::result::Result<f32, logf::LogfError>
@@ -194,6 +203,8 @@ pub fn logf::try_log10_array_with<const OPTIONS: u32, const N: usize>([f32; N]) 
 pub fn logf::try_log10_f32x4_with<const OPTIONS: u32, T: magetypes::simd::backends::convert::F32x4Convert>(T, magetypes::simd::generic::generated::f32x4_impl::f32x4<T>) -> core::result::Result<magetypes::simd::generic::generated::f32x4_impl::f32x4<T>, logf::LogfError>
 pub fn logf::try_log10_f32x8_with<const OPTIONS: u32, T: magetypes::simd::backends::convert::F32x8Convert>(T, magetypes::simd::generic::generated::f32x8_impl::f32x8<T>) -> core::result::Result<magetypes::simd::generic::generated::f32x8_impl::f32x8<T>, logf::LogfError>
 pub fn logf::try_log10_runtime(f32, logf::LogfOptions) -> core::result::Result<f32, logf::LogfError>
+pub fn logf::try_log10_slice_with<const OPTIONS: u32>(&[f32], &mut [f32]) -> core::result::Result<(), SliceError<logf::LogfErrorKind>>
+pub fn logf::try_log10_slice_with_token<const OPTIONS: u32, T: archmage::tokens::IntoConcreteToken>(T, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<logf::LogfErrorKind>>
 pub fn logf::try_log10_with<const OPTIONS: u32>(f32) -> core::result::Result<f32, logf::LogfError>
 pub fn logf::try_log10_with_token<const OPTIONS: u32, T: magetypes::simd::backends::convert::F32x4Convert>(T, f32) -> core::result::Result<f32, logf::LogfError>
 pub fn logf::try_log1p(f32) -> core::result::Result<f32, logf::LogfError>
@@ -202,6 +213,8 @@ pub fn logf::try_log1p_array_with<const OPTIONS: u32, const N: usize>([f32; N]) 
 pub fn logf::try_log1p_f32x4_with<const OPTIONS: u32, T: magetypes::simd::backends::convert::F32x4Convert>(T, magetypes::simd::generic::generated::f32x4_impl::f32x4<T>) -> core::result::Result<magetypes::simd::generic::generated::f32x4_impl::f32x4<T>, logf::LogfError>
 pub fn logf::try_log1p_f32x8_with<const OPTIONS: u32, T: magetypes::simd::backends::convert::F32x8Convert>(T, magetypes::simd::generic::generated::f32x8_impl::f32x8<T>) -> core::result::Result<magetypes::simd::generic::generated::f32x8_impl::f32x8<T>, logf::LogfError>
 pub fn logf::try_log1p_runtime(f32, logf::LogfOptions) -> core::result::Result<f32, logf::LogfError>
+pub fn logf::try_log1p_slice_with<const OPTIONS: u32>(&[f32], &mut [f32]) -> core::result::Result<(), SliceError<logf::LogfErrorKind>>
+pub fn logf::try_log1p_slice_with_token<const OPTIONS: u32, T: archmage::tokens::IntoConcreteToken>(T, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<logf::LogfErrorKind>>
 pub fn logf::try_log1p_with<const OPTIONS: u32>(f32) -> core::result::Result<f32, logf::LogfError>
 pub fn logf::try_log1p_with_token<const OPTIONS: u32, T: magetypes::simd::backends::convert::F32x4Convert>(T, f32) -> core::result::Result<f32, logf::LogfError>
 pub fn logf::try_log2(f32) -> core::result::Result<f32, logf::LogfError>
@@ -210,6 +223,8 @@ pub fn logf::try_log2_array_with<const OPTIONS: u32, const N: usize>([f32; N]) -
 pub fn logf::try_log2_f32x4_with<const OPTIONS: u32, T: magetypes::simd::backends::convert::F32x4Convert>(T, magetypes::simd::generic::generated::f32x4_impl::f32x4<T>) -> core::result::Result<magetypes::simd::generic::generated::f32x4_impl::f32x4<T>, logf::LogfError>
 pub fn logf::try_log2_f32x8_with<const OPTIONS: u32, T: magetypes::simd::backends::convert::F32x8Convert>(T, magetypes::simd::generic::generated::f32x8_impl::f32x8<T>) -> core::result::Result<magetypes::simd::generic::generated::f32x8_impl::f32x8<T>, logf::LogfError>
 pub fn logf::try_log2_runtime(f32, logf::LogfOptions) -> core::result::Result<f32, logf::LogfError>
+pub fn logf::try_log2_slice_with<const OPTIONS: u32>(&[f32], &mut [f32]) -> core::result::Result<(), SliceError<logf::LogfErrorKind>>
+pub fn logf::try_log2_slice_with_token<const OPTIONS: u32, T: archmage::tokens::IntoConcreteToken>(T, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<logf::LogfErrorKind>>
 pub fn logf::try_log2_with<const OPTIONS: u32>(f32) -> core::result::Result<f32, logf::LogfError>
 pub fn logf::try_log2_with_token<const OPTIONS: u32, T: magetypes::simd::backends::convert::F32x4Convert>(T, f32) -> core::result::Result<f32, logf::LogfError>
 pub mod powf
@@ -274,11 +289,17 @@ pub fn powf::try_powf_f32x4_with<const OPTIONS: u32, T: magetypes::simd::backend
 pub fn powf::try_powf_f32x8_runtime<T: magetypes::simd::backends::convert::F32x8Convert>(T, magetypes::simd::generic::generated::f32x8_impl::f32x8<T>, f32, powf::PowfOptions) -> core::result::Result<magetypes::simd::generic::generated::f32x8_impl::f32x8<T>, powf::PowfError>
 pub fn powf::try_powf_f32x8_with<const OPTIONS: u32, T: magetypes::simd::backends::convert::F32x8Convert>(T, magetypes::simd::generic::generated::f32x8_impl::f32x8<T>, f32) -> core::result::Result<magetypes::simd::generic::generated::f32x8_impl::f32x8<T>, powf::PowfError>
 pub fn powf::try_powf_runtime(f32, f32, powf::PowfOptions) -> core::result::Result<f32, powf::PowfError>
+pub fn powf::try_powf_slice_with<const OPTIONS: u32>(&[f32], &mut [f32], f32) -> core::result::Result<(), SliceError<powf::PowfErrorKind>>
+pub fn powf::try_powf_slice_with_token<const OPTIONS: u32, T: archmage::tokens::IntoConcreteToken>(T, &[f32], &mut [f32], f32) -> core::result::Result<(), SliceError<powf::PowfErrorKind>>
 pub fn powf::try_powf_with<const OPTIONS: u32>(f32, f32) -> core::result::Result<f32, powf::PowfError>
 pub fn powf::try_powf_with_token<const OPTIONS: u32, T: magetypes::simd::backends::convert::F32x4Convert>(T, f32, f32) -> core::result::Result<f32, powf::PowfError>
+pub struct SliceError<K>
+pub SliceError::index: usize
+pub SliceError::kind: K
 
-## trait impls (32 types)
+## trait impls (33 types)
 
+SliceError<K>: Clone, Copy, Debug, Display, Eq, PartialEq
 cbrtf::CbrtfDomain: Clone, Copy, Debug, Default, Eq, PartialEq
 cbrtf::CbrtfError: Clone, Copy, Debug, Display, Eq, PartialEq
 cbrtf::CbrtfErrorKind: Clone, Copy, Debug, Eq, PartialEq
@@ -315,3 +336,4 @@ powf::PowfValidation: Clone, Copy, Debug, Default, Eq, PartialEq
 ## auto traits
 
 32 types implement all of: Freeze, RefUnwindSafe, Send, Sync, Unpin, UnwindSafe
+SliceError<K>: !Freeze !RefUnwindSafe !Send !Sync !Unpin !UnwindSafe
