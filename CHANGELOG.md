@@ -13,6 +13,7 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 
 - Remove `guaranteed()` from `SimdToken` trait — use `compiled_with()` instead (deprecated since 0.6.0, zero callers)
 - Remove width traits `Has128BitSimd`, `Has256BitSimd`, `Has512BitSimd` — use concrete tokens or tier traits (`HasX64V2`, `HasX64V4`) instead (deprecated since 0.9.9; `Has256BitSimd` only enables AVX, not AVX2/FMA)
+- Planned 0.10: add "adx" and "sha" target features to `X64V3GfniCryptoToken`, `X64V4xToken`, and `Avx512Fp16Token` to match real shipping CPUs at those tiers (Alder Lake+, Ice Lake+, Sapphire Rapids+, Zen 4+); deferred from 0.9.x because adding required `#[target_feature]` gates breaks semver on existing `from_context` and `magetypes` `from_raw` signatures (#174).
 
 ### [0.9.32] - 2026-11-16
 
