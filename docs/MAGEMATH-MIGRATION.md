@@ -23,25 +23,27 @@ and remain supported. Migrate a kernel when you need what Magemath adds:
 
 | Flat Magetypes method | Inline vector (`SimdMath`) | Operator struct |
 |---|---|---|
-| `pow_lowp*`, `pow_midp*` | `v.try_powf_with::<CFG>(n)` / `v.powf::<CFG>(n)` | `magemath::powf::Powf::<CFG>` |
+| `pow_lowp*`, `pow_midp*` | `v.try_powf_with::<CFG>(n)` / `v.powf::<CFG>(n)` / `v.powf_const::<CFG>()` | `magemath::powf::Powf::<CFG>` |
 | `exp2_lowp*`, `exp2_midp*` | `v.try_exp2_with::<CFG>()` / `v.exp2::<CFG>()` | `magemath::expf::Expf::<CFG>` |
 | `exp_lowp*`, `exp_midp*` | `v.try_exp_with::<CFG>()` / `v.exp::<CFG>()` | `magemath::expf::Expf::<CFG>` |
 | `log2_lowp*`, `log2_midp*` | `v.try_log2_with::<CFG>()` / `v.log2::<CFG>()` | `magemath::logf::Logf::<CFG>` |
 | `ln_lowp*`, `ln_midp*` | `v.try_ln_with::<CFG>()` / `v.ln::<CFG>()` | `magemath::logf::Logf::<CFG>` |
 | `log10_lowp*`, `log10_midp*` | `v.try_log10_with::<CFG>()` / `v.log10::<CFG>()` | `magemath::logf::Logf::<CFG>` |
-| `log1p` compositions | `v.try_log1p_with::<CFG>()` / `v.log1p::<CFG>()` | `magemath::logf::Logf::<CFG>` |
+| `log1p` compositions | `v.try_log1p_with::<CFG>()` / `v.log1p::<CFG>()` | `magemath::log1pf::Log1pf::<CFG>` |
 | `cbrt_lowp*`, `cbrt_midp*` | `v.try_cbrt_with::<CFG>()` / `v.cbrt::<CFG>()` | `magemath::cbrtf::Cbrtf::<CFG>` |
 
 `SimdMath` works on `f32x4<T>`, `f32x8<T>`, and (with `w512`) `f32x16<T>`,
 reusing the token already stored in the vector (`v.token()`). Every operator
-struct (`Powf<CFG>`, `Expf<CFG>`, `Logf<CFG>`, `Cbrtf<CFG>`) also provides
-scalar, infallible scalar, `*_with_token`, array (`[f32; N]`), slice,
-`*_slice_with_token`, and `*_simd` methods, while `options.runtime()` provides
-the matching dynamic runtime adapter. Default-option free helpers (`try_powf`,
-`try_powf_slice`, `try_exp2`, `try_ln`, `try_cbrt`, ...) cover common defaults
-without defining a `const`.
+struct (`Powf<CFG>`, `Expf<CFG>`, `Logf<CFG>`, `Log1pf<CFG>`, `Cbrtf<CFG>`) also
+provides scalar, infallible scalar, `*_with_token`, array (`[f32; N]`), slice,
+`*_slice_with_token`, and `*_simd` methods (plus `*_const` methods on `Powf<CFG>`
+and `PowfRuntime` when `PowfOptions::const_exponent(n)` is set), while
+`options.runtime()` provides the matching dynamic runtime adapter. Default-option
+free helpers (`try_powf`, `try_powf_slice`, `try_exp2`, `try_ln`, `try_log1p`,
+`try_cbrt`, ...) cover common defaults without defining a `const`.
 
-An infallible `SimdMath` method (`v.powf::<CFG>(n)`, `v.exp2::<CFG>()`, ...) or
+An infallible `SimdMath` method (`v.powf::<CFG>(n)`, `v.powf_const::<CFG>()`,
+`v.exp2::<CFG>()`, ...) or
 `*_infallible` scalar method fails to compile unless `CFG` is infallible
 (`.clamp_out_of_bounds()`, `.assume_in_bounds()` / `.unchecked()`, or
 `.admit_all_floats()` / `.full_domain()`). Removing checks via
@@ -52,36 +54,49 @@ lanes should clamp safely into the configured domain (`NaN -> NaN`).
 
 ## Options builders in brief
 
-Every builder separates **what inputs are supported** from **what happens out of
-bounds** (`.error_on_out_of_bounds()` / `.checked()`, `.clamp_out_of_bounds()`,
-`.assume_in_bounds()` / `.unchecked()`):
+Every builder separates **what inputs are supported** (via discrete `#[non_exhaustive]`
+per-family `*Domain` enums, custom outward-rounded `bf16` bounds, and `Subnormals`)
+from **what happens out of bounds** (`.error_on_out_of_bounds()` / `.checked()`,
+`.clamp_out_of_bounds()`, `.assume_in_bounds()` / `.unchecked()`). Subnormal
+rescaling (`Subnormals::Normalize`, `.admit_subnormals()`) is opt-in across all
+bounded domains (`Subnormals::Reject` by default); `.flush_or_clamp_subnormals()` /
+`.shove_subnormals()` (`Subnormals::FlushOrClamp`) shoves nonzero subnormals to
+`±0.0` (when `0` is admitted) or the lower normal bound (when `0` is excluded),
+even under `Validation::Checked`:
 
-- **powf (`PowfOptions`):** positive normal bases by default; `.admit_zero()` /
-  `.admit_zero_base()`, `.admit_subnormals()`, `.gamma_domain()` / `.gamma()`
-  (`0` or `[2^-16, 2^16]`, exponent `[0, 4]`), `.positive_gamma_domain()` /
-  `.positive_gamma()`, `.unit_gamma_domain()`, `.srgb_encode_domain()`
-  (elides range checks across all positive normals `(0, 1]` for `exp <= 0.99`),
-  custom `.base_range(lo, hi)` and `.exponent_range(lo, hi)` (outward-rounded
-  to 25-bit `f32` boundaries up to `MAX_EXP_BOUND = 0x7f7f_ff80`),
-  `.saturate_output()` / `.clamp_output()`, `.lowp()` / `.midp()` / `.highp()`,
-  and `.admit_all_floats().highp()`.
-- **expf (`ExpfOptions`):** checked finite inputs reject NaN and infinity by
-  default; `.admit_all_floats()` / `.full_domain()` propagates IEEE specials,
-  `.unclamped_exp2_range()` / `.unclamped_exp_range()` elides overflow/underflow
-  clamps inside `[-126, 127.5)`, and `.small_exp2_range()` (`[-0.5, 0.5]`) /
-  `.small_exp_range()` also elides integer `2^k` reduction.
-- **logf (`LogfOptions`):** accepts positive normal finite inputs (`> -1` for
-  `log1p`) by default; `.admit_zero()` cheaply maps `±0 -> -inf`
-  (`log1p(-1) -> -inf`), `.admit_subnormals()` normalizes positive subnormals
-  (`* 2^23`, `- 23` exponent), `.admit_all_floats()` / `.full_domain()` enables
-  both plus `< 0 -> NaN` and `+inf -> +inf`, and `.near_one_range()` /
-  `.small_log1p_range()` elides single-octave exponent extraction. LOWP `log1p`
-  can return a negative value for tiny positive arguments; use MIDP there.
-- **cbrtf (`CbrtfOptions`):** handles `±0.0` and normal finite `|x| < f32::MAX / 3`
-  by default; `.admit_subnormals()` and `.unit_range()` (`[-1, 1]` with
-  subnormals) rescale subnormals without full-domain `>= 1e36` / `±inf` overhead,
-  `.admit_all_floats()` / `.full_domain()` covers every `f32`, and
-  `.input_range(lo, hi)` elides denormal handling when strictly normal.
+- **powf (`PowfOptions`, `PowfDomain`):** `PositiveNormals` by default, plus
+  `NonNegative` (`.admit_zero()`), `Unit`, `PositiveUnit`, `UnitEncode`
+  (`.srgb_encode_domain()`), `SdrGamma` (`.unit_gamma_domain()`), `HdrGamma`
+  (`.gamma()`), `PositiveGamma`, `PqRatio`, and `AllFloats` (`.full_domain().highp()`).
+  Custom `.base_range(lo, hi)` and `.exponent_range(lo, hi)` pack outward-rounded
+  `bf16` bounds (`MAX_BF16 = 0x7f7f_0000`). `.const_exponent(n: f32)` specializes
+  for a compile-time exponent (`v.powf_const::<CFG>()`, `Powf::<CFG>::slice_const`,
+  ...), eliminating runtime exponent validation, proving range-check elision at
+  compile time, and lowering `0, 0.25, ±0.5, ±1, 1.5, ±2, 3, 4` to exact IEEE
+  hardware multiply/sqrt/divide sequences (`f64`-promoted on `Highp`).
+- **expf (`ExpfOptions`, `ExpfDomain`):** `Finite` by default (subnormals map
+  naturally to `1.0`), plus `NormalOutput` (`.unclamped_exp2_range()` /
+  `.unclamped_exp_range()`), `NonPositive` (`[-MAX, 0.0]`, elides upper overflow
+  clamp), `SignedUnit`, `SingleOctave` (`.small_exp2_range()` / `.small_exp_range()`,
+  elides integer `2^k` reduction), `PositiveOctave`, `AllFloats`, and custom
+  `bf16` `.input_range(lo, hi)`.
+- **logf (`LogfOptions`, `LogfDomain`):** `PositiveNormals` by default, plus
+  `NonNegative` (`.admit_zero()`), `Unit`, `PositiveUnit`, `Hdr`, `PositiveHdr`,
+  `SingleOctave` (`.near_one_range()`, elides exponent extraction), `AllFloats`,
+  and custom `bf16` `.input_range(lo, hi)`.
+- **log1pf (`Log1pfOptions`, `Log1pfDomain`):** dedicated `pub mod log1pf` for
+  `ln(1 + x)` centered at `0` with singularity at `-1`: `GreaterThanNegOne` by
+  default, plus `FromNegOne` (`.admit_neg_one()`), `NonNegative`, `Unit`,
+  `OpenSignedUnit`, `SignedUnit`, `AroundZero` (`[-0.25, 0.25]`, elides exponent
+  extraction and `1 + x >= 2` Kahan branch), `SingleOctave`, `AllFloats`, and
+  `bf16` `.input_range(lo, hi)`. LOWP `log1p` has ~`1.3e-6` intercept near `0`;
+  use MIDP when exact small-`x` sign preservation matters.
+- **cbrtf (`CbrtfOptions`, `CbrtfDomain`):** `Bounded` (`±0.0` and normal
+  `|x| < f32::MAX / 3`) by default, plus `Unit` (`[0, 1]`), `SignedUnit`
+  (`.unit_range()`, `[-1, 1]`), `PositiveNormals`, `AllFloats`, and custom `bf16`
+  `.input_range(lo, hi)` (`|bound| <= MAX_CBRT_BF16 = 0x7ed5_0000`). Subnormals
+  remain opt-in on `Unit` and `SignedUnit` unless `.admit_subnormals()` or
+  `.flush_or_clamp_subnormals()` is enabled.
 
 All guarantees assume round-to-nearest with gradual underflow. NaN payloads and
 floating-point exception flags are not part of any contract.

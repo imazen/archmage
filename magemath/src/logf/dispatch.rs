@@ -21,7 +21,7 @@ pub(crate) enum Plan {
 
 impl Plan {
     #[inline(always)]
-    pub(super) fn same_tier(self, other: Self) -> bool {
+    pub(crate) fn same_tier(self, other: Self) -> bool {
         core::mem::discriminant(&self) == core::mem::discriminant(&other)
     }
 }
@@ -167,7 +167,7 @@ macro_rules! run_cfg {
     ($name:ident, $v3:ident, $v4:ident, $v4x:ident, $neon:ident, $wasm:ident, $scalar:ident, $n:literal) => {
         #[cfg_attr(debug_assertions, inline(never))]
         #[cfg_attr(not(debug_assertions), inline(always))]
-        pub(super) fn $name(
+        pub(crate) fn $name(
             plan: Plan,
             input: [f32; $n],
             op: u8,
@@ -233,7 +233,7 @@ run_cfg!(
 macro_rules! run_const {
     ($name:ident, $cfg_fn:ident, $v3:ident, $v4:ident, $v4x:ident, $neon:ident, $wasm:ident, $scalar:ident, $n:literal) => {
         #[inline(always)]
-        pub(super) fn $name<K: graph::Kernel, const OP: u8, const BACKEND: bool>(
+        pub(crate) fn $name<K: graph::Kernel, const OP: u8, const BACKEND: bool>(
             plan: Plan,
             input: [f32; $n],
         ) -> Result<[f32; $n], LogfError> {
@@ -303,7 +303,7 @@ run_const!(
 
 #[cfg_attr(debug_assertions, inline(never))]
 #[cfg_attr(not(debug_assertions), inline(always))]
-pub(super) fn run_slice_cfg(
+pub(crate) fn run_slice_cfg(
     plan: Plan,
     src: &[f32],
     dst: &mut [f32],
@@ -337,7 +337,7 @@ pub(super) fn run_slice_cfg(
 }
 
 #[inline(always)]
-pub(super) fn run_slice_const<K: graph::Kernel, const OP: u8, const BACKEND: bool>(
+pub(crate) fn run_slice_const<K: graph::Kernel, const OP: u8, const BACKEND: bool>(
     plan: Plan,
     src: &[f32],
     dst: &mut [f32],

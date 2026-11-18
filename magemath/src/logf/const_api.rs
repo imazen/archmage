@@ -8,6 +8,8 @@ impl<const CFG: u128> graph::Kernel for Cfg<CFG> {
     const RANGED: bool = graph::KernelCfg::from_options(LogfOptions::decode_const(CFG)).ranged;
     const ZERO: bool = graph::KernelCfg::from_options(LogfOptions::decode_const(CFG)).zero;
     const SUBNORM: bool = graph::KernelCfg::from_options(LogfOptions::decode_const(CFG)).subnorm;
+    const FLUSH_SUB: bool =
+        graph::KernelCfg::from_options(LogfOptions::decode_const(CFG)).flush_sub;
     const SPECIALS: bool = graph::KernelCfg::from_options(LogfOptions::decode_const(CFG)).specials;
     const CLAMP_OOB: bool =
         graph::KernelCfg::from_options(LogfOptions::decode_const(CFG)).clamp_oob;
@@ -15,8 +17,7 @@ impl<const CFG: u128> graph::Kernel for Cfg<CFG> {
     const ASSUME: bool = graph::KernelCfg::from_options(LogfOptions::decode_const(CFG)).assume;
     const ELIDE_RED: bool =
         graph::KernelCfg::from_options(LogfOptions::decode_const(CFG)).elide_red;
-    const ELIDE_RED_LOG1P: bool =
-        graph::KernelCfg::from_options(LogfOptions::decode_const(CFG)).elide_red_log1p;
+    const ELIDE_RED_LOG1P: bool = false;
     const IN_LO: f32 = graph::KernelCfg::from_options(LogfOptions::decode_const(CFG)).in_lo;
     const IN_HI: f32 = graph::KernelCfg::from_options(LogfOptions::decode_const(CFG)).in_hi;
 }
@@ -30,7 +31,7 @@ macro_rules! vector {
         ) -> Result<magetypes::simd::generic::$float<T>, LogfError> {
             let opts = const {
                 let o = LogfOptions::decode_const(CFG);
-                o.validate_op(OP);
+                o.validate();
                 o
             };
             let backend = opts.is_backend();
@@ -90,7 +91,7 @@ fn array_const<const CFG: u128, const OP: u8, const N: usize>(
     use archmage::ScalarToken;
     use magetypes::simd::generic::{f32x4, f32x8};
     const {
-        LogfOptions::decode_const(CFG).validate_op(OP);
+        LogfOptions::decode_const(CFG).validate();
     }
     if !matches!(N, 1 | 4 | 8) && !(cfg!(feature = "w512") && N == 16) {
         return Err(LogfError {
@@ -146,7 +147,7 @@ pub(crate) fn runtime_token<T: archmage::IntoConcreteToken, const OP: u8, const 
     inputs: [f32; N],
     options: LogfOptions,
 ) -> Result<[f32; N], LogfError> {
-    if !options.is_valid_op(OP) {
+    if !options.is_valid() {
         return Err(LogfError {
             kind: LogfErrorKind::UnsupportedOptions,
             lane_mask: 0,
@@ -203,7 +204,7 @@ fn slice_const<const CFG: u128, const OP: u8, T: archmage::IntoConcreteToken>(
 ) -> Result<(), SliceError<LogfErrorKind>> {
     let opts = const {
         let o = LogfOptions::decode_const(CFG);
-        o.validate_op(OP);
+        o.validate();
         o
     };
     assert_eq!(src.len(), dst.len(), "logf slice lengths differ");
@@ -234,7 +235,7 @@ fn slice_runtime<T: archmage::IntoConcreteToken, const OP: u8>(
     options: LogfOptions,
 ) -> Result<(), SliceError<LogfErrorKind>> {
     assert_eq!(src.len(), dst.len(), "logf slice lengths differ");
-    if !options.is_valid_op(OP) {
+    if !options.is_valid() {
         return Err(SliceError {
             kind: LogfErrorKind::UnsupportedOptions,
             index: 0,
@@ -254,17 +255,14 @@ fn slice_runtime<T: archmage::IntoConcreteToken, const OP: u8>(
     })
 }
 
-/// Compile-time specialized logarithm (`log2`, `ln`, `log10`, `log1p`) operator
+/// Compile-time specialized logarithm (`log2`, `ln`, `log10`) operator
 /// configured by `const CFG: u128` (produced via [`LogfOptions::bits()`]).
 ///
-/// Use `<Logf>::ln(x)` / `<Logf>::log2(x)` for default [`LogfOptions::new()`]
-/// options or `Logf::<CFG>::ln(x)` for a custom `const CFG: u128`:
-///
 /// ```
-/// use magemath::logf::{Logf, LogfOptions};
+/// use magemath::logf::{Logf, LogfDomain, LogfOptions};
 /// assert_eq!(<Logf>::log2(8.0).unwrap(), 3.0);
 ///
-/// const NEAR_ONE: u128 = LogfOptions::new().near_one_range().bits();
+/// const NEAR_ONE: u128 = LogfOptions::new().domain(LogfDomain::SingleOctave).bits();
 /// assert_eq!(Logf::<NEAR_ONE>::ln(1.0).unwrap(), 0.0);
 /// ```
 #[derive(Clone, Copy, Debug, Default)]
@@ -293,7 +291,7 @@ macro_rules! logf_const_methods {
         pub fn $infallible(x: f32) -> f32 {
             const {
                 let opts = LogfOptions::decode_const(CFG);
-                opts.validate_op($op);
+                opts.validate();
                 assert!(
                     opts.is_infallible(),
                     concat!(
@@ -381,17 +379,6 @@ impl<const CFG: u128> Logf<CFG> {
         log10_simd,
         2,
         "log10"
-    );
-    logf_const_methods!(
-        log1p,
-        log1p_infallible,
-        log1p_with_token,
-        log1p_array,
-        log1p_slice,
-        log1p_slice_with_token,
-        log1p_simd,
-        3,
-        "log1p"
     );
 }
 
@@ -504,15 +491,5 @@ impl LogfRuntime {
         log10_simd,
         2,
         "log10"
-    );
-    logf_runtime_methods!(
-        log1p,
-        log1p_with_token,
-        log1p_array,
-        log1p_slice,
-        log1p_slice_with_token,
-        log1p_simd,
-        3,
-        "log1p"
     );
 }

@@ -3,6 +3,7 @@
 use magemath::{
     Execution, Portability, SimdMath, Validation,
     expf::{self as e, Expf, ExpfOptions, ExpfPrecision},
+    log1pf::{Log1pf, Log1pfOptions, Log1pfPrecision},
     logf::{Logf, LogfOptions, LogfPrecision},
     powf::{self as p, Powf, PowfOptions, PowfPrecision},
 };
@@ -142,21 +143,22 @@ fn every_exp_log_const_configuration_has_a_runtime_counterpart() {
 
 #[test]
 fn signed_zero_and_whole_vector_rejection() {
-    const LOG_CALLER: u128 = LogfOptions::new().caller().bits();
+    const LOG1P_CALLER: u128 = Log1pfOptions::new().caller().bits();
+    const LOG1P_DEFAULT: u128 = Log1pfOptions::new().bits();
     const LOG_DEFAULT: u128 = LogfOptions::new().bits();
     const EXP_DEFAULT: u128 = ExpfOptions::new().bits();
     for bits in [0, 0x80000000] {
         let x = f32::from_bits(bits);
-        assert_eq!(Logf::<LOG_CALLER>::log1p(x).unwrap().to_bits(), bits);
+        assert_eq!(Log1pf::<LOG1P_CALLER>::scalar(x).unwrap().to_bits(), bits);
         assert_eq!(
-            Logf::<LOG_CALLER>::log1p_with_token(archmage::ScalarToken, x)
+            Log1pf::<LOG1P_CALLER>::scalar_with_token(archmage::ScalarToken, x)
                 .unwrap()
                 .to_bits(),
             bits
         );
     }
     assert_eq!(
-        Logf::<LOG_DEFAULT>::log1p_with_token(archmage::ScalarToken, -2.)
+        Log1pf::<LOG1P_DEFAULT>::scalar_with_token(archmage::ScalarToken, -2.)
             .unwrap_err()
             .lane_mask,
         1
@@ -174,10 +176,11 @@ fn signed_zero_and_whole_vector_rejection() {
 #[archmage::magetypes(v4x(cfg(avx512)), v4(cfg(avx512)), v3, neon, wasm128, scalar)]
 fn check_tails(token: Token) {
     macro_rules! check {
-        ($ecfg:expr, $pcfg:expr, $lcfg:expr, $n:literal, $vec:ident) => {{
+        ($ecfg:expr, $pcfg:expr, $lcfg:expr, $l1pcfg:expr, $n:literal, $vec:ident) => {{
             const ECFG: u128 = $ecfg;
             const PCFG: u128 = $pcfg;
             const LCFG: u128 = $lcfg;
+            const L1PCFG: u128 = $l1pcfg;
             use magetypes::simd::generic::$vec as Vec;
             let xs: [f32; $n] = core::array::from_fn(|i| 0.5 + (i % 8) as f32 / 16.);
             let input = Vec::from_array_t(token, xs);
@@ -186,7 +189,7 @@ fn check_tails(token: Token) {
             let log = input.try_log2_with::<LCFG>().unwrap().to_array();
             let ln = input.try_ln_with::<LCFG>().unwrap().to_array();
             let log10 = input.try_log10_with::<LCFG>().unwrap().to_array();
-            let log1p = input.try_log1p_with::<LCFG>().unwrap().to_array();
+            let log1p = input.try_log1p_with::<L1PCFG>().unwrap().to_array();
             for i in 0..$n {
                 assert_eq!(
                     got[i].to_bits(),
@@ -218,7 +221,7 @@ fn check_tails(token: Token) {
                 );
                 assert_eq!(
                     log1p[i].to_bits(),
-                    Logf::<LCFG>::log1p_with_token(token, xs[i])
+                    Log1pf::<L1PCFG>::scalar_with_token(token, xs[i])
                         .unwrap()
                         .to_bits()
                 );
@@ -226,7 +229,7 @@ fn check_tails(token: Token) {
         }};
     }
     macro_rules! profile {
-        ($prec_e:expr, $prec_p:expr, $prec_l:expr, $port:expr) => {
+        ($prec_e:expr, $prec_p:expr, $prec_l:expr, $prec_l1p:expr, $port:expr) => {
             check!(
                 ExpfOptions::new()
                     .precision($prec_e)
@@ -240,6 +243,11 @@ fn check_tails(token: Token) {
                     .bits(),
                 LogfOptions::new()
                     .precision($prec_l)
+                    .portability($port)
+                    .caller()
+                    .bits(),
+                Log1pfOptions::new()
+                    .precision($prec_l1p)
                     .portability($port)
                     .caller()
                     .bits(),
@@ -259,6 +267,11 @@ fn check_tails(token: Token) {
                     .bits(),
                 LogfOptions::new()
                     .precision($prec_l)
+                    .portability($port)
+                    .caller()
+                    .bits(),
+                Log1pfOptions::new()
+                    .precision($prec_l1p)
                     .portability($port)
                     .caller()
                     .bits(),
@@ -282,6 +295,11 @@ fn check_tails(token: Token) {
                     .portability($port)
                     .caller()
                     .bits(),
+                Log1pfOptions::new()
+                    .precision($prec_l1p)
+                    .portability($port)
+                    .caller()
+                    .bits(),
                 16,
                 f32x16
             );
@@ -291,24 +309,28 @@ fn check_tails(token: Token) {
         ExpfPrecision::Midp,
         PowfPrecision::Midp,
         LogfPrecision::Midp,
+        Log1pfPrecision::Midp,
         Portability::BitExact
     );
     profile!(
         ExpfPrecision::Lowp,
         PowfPrecision::Lowp,
         LogfPrecision::Lowp,
+        Log1pfPrecision::Lowp,
         Portability::BitExact
     );
     profile!(
         ExpfPrecision::Midp,
         PowfPrecision::Midp,
         LogfPrecision::Midp,
+        Log1pfPrecision::Midp,
         Portability::BackendDependent
     );
     profile!(
         ExpfPrecision::Lowp,
         PowfPrecision::Lowp,
         LogfPrecision::Lowp,
+        Log1pfPrecision::Lowp,
         Portability::BackendDependent
     );
 }

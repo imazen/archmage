@@ -9,16 +9,17 @@
 
 ## summary
 #
-#   trait roster entries (type × trait)         7
+#   trait roster entries (type × trait)         8
 
 ## items (0 lines)
 
 
-## trait impls (6 types)
+## trait impls (7 types)
 
 SliceError<K>: Error
 cbrtf::CbrtfError: Error
 expf::ExpfError: Error
+log1pf::Log1pfError: Error
 logf::LogfError: Error
 magetypes::simd::generic::generated::f32x16_impl::f32x16<T>: SimdMath, SimdVector
 powf::PowfError: Error

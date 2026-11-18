@@ -5,6 +5,7 @@ use magemath::{
     SliceError,
     cbrtf::{self as c, Cbrtf, CbrtfOptions},
     expf::{self as e, Expf, ExpfOptions},
+    log1pf as l1p,
     logf::{self as l, Logf, LogfOptions},
     powf::{self as p, Powf, PowfOptions},
 };
@@ -69,7 +70,13 @@ fn unary_slices_match_scalar_entries() {
     );
     check(l::try_ln_slice, l::try_ln, 1e-6, 1e6, "ln midp");
     check(l::try_log10_slice, l::try_log10, 1e-6, 1e6, "log10 midp");
-    check(l::try_log1p_slice, l::try_log1p, -0.99, 100.0, "log1p midp");
+    check(
+        l1p::try_log1p_slice,
+        l1p::try_log1p,
+        -0.99,
+        100.0,
+        "log1p midp",
+    );
     check(c::try_cbrt_slice, c::try_cbrt, -1e6, 1e6, "cbrt midp");
     check(
         Cbrtf::<CBRT_LOWP_FULL>::slice,

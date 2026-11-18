@@ -1,14 +1,17 @@
-//! Comprehensive verification of option constraints, out-of-bounds policies,
-//! granular domain flags, polynomial zero-reduction ranges, and holding each
-//! individual option constraint fixed while sweeping all other option axes.
+//! Comprehensive verification of discrete `*Domain` enums, `Subnormals`
+//! (`Reject`, `FlushOrClamp`, `Normalize`), `bf16` custom range bounds,
+//! `PowfOptions::const_exponent` (IEEE hardware algebraic + general fast-paths),
+//! dedicated `log1pf`, and holding each individual option constraint fixed
+//! while sweeping all other option axes.
 
 use archmage::ScalarToken;
 use magemath::{
-    Execution, Portability, SimdMath, SliceError, Validation,
-    cbrtf::{Cbrtf, CbrtfErrorKind, CbrtfOptions, CbrtfPrecision},
-    expf::{Expf, ExpfErrorKind, ExpfOptions, ExpfPrecision, try_exp},
-    logf::{Logf, LogfErrorKind, LogfOptions, LogfPrecision},
-    powf::{MAX_EXP_BOUND, Powf, PowfErrorKind, PowfOptions, PowfPrecision},
+    Execution, MAX_BF16, MAX_CBRT_BF16, Portability, SimdMath, SliceError, Subnormals, Validation,
+    cbrtf::{Cbrtf, CbrtfDomain, CbrtfErrorKind, CbrtfOptions, CbrtfPrecision},
+    expf::{Expf, ExpfDomain, ExpfErrorKind, ExpfOptions, ExpfPrecision, try_exp},
+    log1pf::{Log1pf, Log1pfDomain, Log1pfErrorKind, Log1pfOptions, Log1pfPrecision},
+    logf::{Logf, LogfDomain, LogfErrorKind, LogfOptions, LogfPrecision},
+    powf::{MAX_EXP_BOUND, Powf, PowfDomain, PowfErrorKind, PowfOptions, PowfPrecision},
 };
 #[cfg(feature = "w512")]
 use magetypes::simd::generic::f32x16;
@@ -39,14 +42,14 @@ fn assert_close_rel(actual: f32, expected: f32, max_rel: f32, ctx: &str) {
 }
 
 // ============================================================================
-// 1. Targeted regressions for review findings & edge boundaries
+// 1. Targeted regressions for edge boundaries & bf16 bounds
 // ============================================================================
 
 #[test]
-fn expf_midp_127_5_upper_endpoint_stays_finite_and_neighbors_elide() {
+fn expf_midp_127_5_upper_endpoint_stays_finite_and_bf16_neighbors_elide() {
+    // 127.5 (`0x42ff_0000`) and 127.0 (`0x42fe_0000`) are adjacent exact bf16 values.
     const AT_127_5: ExpfOptions = ExpfOptions::new().input_range(127.5, 127.5);
-    const BELOW_127_5: ExpfOptions =
-        ExpfOptions::new().input_range(-126.0, f32::from_bits(127.5_f32.to_bits() - 1));
+    const BELOW_127_5: ExpfOptions = ExpfOptions::new().input_range(-126.0, 127.0);
     assert!(!AT_127_5.elides_clamp());
     assert!(BELOW_127_5.elides_clamp());
 
@@ -61,7 +64,7 @@ fn expf_midp_127_5_upper_endpoint_stays_finite_and_neighbors_elide() {
         ref_val.to_bits()
     );
 
-    let pred = f32::from_bits(127.5_f32.to_bits() - 1);
+    let pred = 127.0_f32;
     let pred_ref = <Expf>::exp2(pred).unwrap();
     assert!(pred_ref.is_finite());
     assert_eq!(
@@ -71,31 +74,39 @@ fn expf_midp_127_5_upper_endpoint_stays_finite_and_neighbors_elide() {
         pred_ref.to_bits()
     );
 
-    // `0x42b0_c0a6` scales by LOG2_E to exact 127.5f32.
-    let exp_edge = f32::from_bits(0x42b0_c0a6);
-    assert_eq!(exp_edge * core::f32::consts::LOG2_E, 127.5);
-    let exp_at = ExpfOptions::new().input_range(exp_edge, exp_edge);
+    // `88.5` (`0x42b1_0000`, exact bf16) scales by LOG2_E to 127.678 >= 127.5
+    // (still < 128, so exp(88.5) = 2.723e38 is finite, proving !elides_exp_clamp
+    // kept the pre-round clamp active instead of overflowing round() at 127.5);
+    // `88.0` (`0x42b0_0000`, exact bf16) scales by LOG2_E to 126.957 < 127.5.
+    let exp_above = 88.5_f32;
+    let exp_at = ExpfOptions::new().input_range(exp_above, exp_above);
     assert!(!exp_at.elides_exp_clamp());
-    let exp_ref = try_exp(exp_edge).unwrap();
-    assert!(exp_ref.is_finite());
+    let exp_above_val = exp_at.runtime().exp(exp_above).unwrap();
+    assert!(exp_above_val.is_finite() && exp_above_val > 2.7e38);
     assert_eq!(
-        exp_at.runtime().exp(exp_edge).unwrap().to_bits(),
-        exp_ref.to_bits()
-    );
-    const EXP_AT_BITS: u128 = ExpfOptions::new()
-        .input_range(f32::from_bits(0x42b0_c0a6), f32::from_bits(0x42b0_c0a6))
-        .bits();
-    assert_eq!(
-        Expf::<EXP_AT_BITS>::exp(exp_edge).unwrap().to_bits(),
-        exp_ref.to_bits()
+        exp_above_val.to_bits(),
+        try_exp(exp_above).unwrap().to_bits()
     );
 
-    let exp_pred = f32::from_bits(0x42b0_c0a5);
-    assert!(exp_pred * core::f32::consts::LOG2_E < 127.5);
     assert!(
         ExpfOptions::new()
-            .input_range(-87.0, exp_pred)
+            .input_range(-87.0, 88.0)
             .elides_exp_clamp()
+    );
+    assert!(
+        ExpfOptions::new()
+            .domain(ExpfDomain::NonPositive)
+            .runtime()
+            .exp(0.0)
+            .unwrap()
+            == 1.0
+    );
+    assert!(
+        ExpfOptions::new()
+            .domain(ExpfDomain::NonPositive)
+            .runtime()
+            .exp(0.1)
+            .is_err()
     );
 }
 
@@ -104,37 +115,35 @@ fn expf_default_checked_accepts_large_finite_inputs_when_scaled_arg_overflows() 
     assert_eq!(try_exp(f32::MAX).unwrap(), f32::INFINITY);
     assert_eq!(try_exp(-f32::MAX).unwrap().to_bits(), 0.0_f32.to_bits());
 
-    const RANGED_ALL_FINITE: u128 = ExpfOptions::new().input_range(-f32::MAX, f32::MAX).bits();
+    const RANGED_ALL_BF16: u128 = ExpfOptions::new().input_range(-MAX_BF16, MAX_BF16).bits();
     assert_eq!(
-        Expf::<RANGED_ALL_FINITE>::exp(f32::MAX).unwrap(),
+        Expf::<RANGED_ALL_BF16>::exp(MAX_BF16).unwrap(),
         f32::INFINITY
     );
     assert_eq!(
-        Expf::<RANGED_ALL_FINITE>::exp(-f32::MAX).unwrap().to_bits(),
+        Expf::<RANGED_ALL_BF16>::exp(-MAX_BF16).unwrap().to_bits(),
         0.0_f32.to_bits()
     );
 
     const DEFAULT_LOWP: u128 = ExpfOptions::new().lowp().bits();
     const RANGED_LOWP: u128 = ExpfOptions::new()
         .lowp()
-        .input_range(-f32::MAX, f32::MAX)
+        .input_range(-MAX_BF16, MAX_BF16)
         .bits();
     assert_eq!(
-        Expf::<DEFAULT_LOWP>::exp(f32::MAX).unwrap().to_bits(),
-        Expf::<RANGED_LOWP>::exp(f32::MAX).unwrap().to_bits()
+        Expf::<DEFAULT_LOWP>::exp(MAX_BF16).unwrap().to_bits(),
+        Expf::<RANGED_LOWP>::exp(MAX_BF16).unwrap().to_bits()
     );
     assert_eq!(
-        Expf::<DEFAULT_LOWP>::exp(-f32::MAX).unwrap().to_bits(),
-        Expf::<RANGED_LOWP>::exp(-f32::MAX).unwrap().to_bits()
+        Expf::<DEFAULT_LOWP>::exp(-MAX_BF16).unwrap().to_bits(),
+        Expf::<RANGED_LOWP>::exp(-MAX_BF16).unwrap().to_bits()
     );
 }
 
 #[test]
 fn highp_slice_reports_earliest_failing_index_across_mixed_error_stages() {
     const CHECKED_HIGHP: u128 = PowfOptions::new().highp().bits();
-    // Lane 0 overflows normal output (`OutsideApproximationRange`), lane 1 fails base validation (`InvalidBase`).
     let chunk_a = [f32::MAX, f32::NAN, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 2.0];
-    // Lane 1 fails base validation before lane 2 overflows normal output.
     let chunk_b = [1.0, f32::NAN, f32::MAX, 1.0, 1.0, 1.0, 1.0, 1.0, 2.0];
     let mut dst = [0.0; 9];
 
@@ -195,25 +204,34 @@ fn highp_slice_reports_earliest_failing_index_across_mixed_error_stages() {
 }
 
 #[test]
-fn logf_granular_zero_vs_subnormals_vs_full_domain() {
+fn logf_and_log1pf_granular_zero_vs_subnormals_vs_full_domain() {
     const ZERO_ONLY: u128 = LogfOptions::new().admit_zero().bits();
     const SUB_ONLY: u128 = LogfOptions::new().admit_subnormals().bits();
+    const FLUSH_ZERO: u128 = LogfOptions::new()
+        .admit_zero()
+        .flush_or_clamp_subnormals()
+        .bits();
     const FULL_MIDP: u128 = LogfOptions::new().admit_all_floats().bits();
     const FULL_LOWP: u128 = LogfOptions::new().admit_all_floats().lowp().bits();
+    const L1P_NEG_ONE: u128 = Log1pfOptions::new().domain(Log1pfDomain::FromNegOne).bits();
 
-    // admit_zero accepts ±0.0 -> -inf and log1p(-1.0) -> -inf, while rejecting subnormals.
     assert_eq!(Logf::<ZERO_ONLY>::log2(0.0).unwrap(), f32::NEG_INFINITY);
     assert_eq!(Logf::<ZERO_ONLY>::log2(-0.0).unwrap(), f32::NEG_INFINITY);
-    assert_eq!(Logf::<ZERO_ONLY>::log1p(-1.0).unwrap(), f32::NEG_INFINITY);
+    assert_eq!(
+        Log1pf::<L1P_NEG_ONE>::scalar(-1.0).unwrap(),
+        f32::NEG_INFINITY
+    );
     assert!(Logf::<ZERO_ONLY>::log2(f32::from_bits(1)).is_err());
+    assert_eq!(
+        Logf::<FLUSH_ZERO>::log2(f32::from_bits(1)).unwrap(),
+        f32::NEG_INFINITY
+    );
 
-    // admit_subnormals normalizes positive subnormals accurately while rejecting ±0.0.
     assert!(Logf::<SUB_ONLY>::log2(0.0).is_err());
     assert_eq!(Logf::<SUB_ONLY>::log2(f32::from_bits(1)).unwrap(), -149.0);
     assert_eq!(Logf::<FULL_MIDP>::log2(f32::from_bits(1)).unwrap(), -149.0);
     assert!((Logf::<FULL_LOWP>::log2(f32::from_bits(1)).unwrap() - (-149.0)).abs() < 1e-4);
 
-    // Non-power-of-two subnormals across all log variants.
     for shift in [0_u32, 1, 7, 15, 22] {
         let sub = f32::from_bits((1_u32 << shift) | (shift * 3));
         let exact_log2 = (sub as f64).log2() as f32;
@@ -260,8 +278,8 @@ fn positive_gamma_clears_prior_zero_and_subnormal_flags() {
 }
 
 #[test]
-fn subnormal_only_intervals_rejected_until_admit_subnormals_enabled() {
-    let sub_exp = f32::from_bits(0x80);
+fn subnormal_only_intervals_rejected_until_subnormal_policy_enabled() {
+    let sub_exp = f32::from_bits(0x0001_0000); // exact nonzero bf16 subnormal
     let bad_pow = PowfOptions::new().exponent_range(sub_exp, sub_exp);
     assert!(!bad_pow.is_valid());
     assert_eq!(
@@ -274,45 +292,60 @@ fn subnormal_only_intervals_rejected_until_admit_subnormals_enabled() {
     assert_eq!(PowfOptions::from_bits(ok_pow.bits()), Some(ok_pow));
     assert_eq!(ok_pow.runtime().scalar(2.0, sub_exp).unwrap(), 1.0);
 
-    // MAX_EXP_BOUND is accepted at both poles.
+    // Pure nonzero-subnormal interval remains invalid under FlushOrClamp (no non-subnormal
+    // value in [sub_exp, sub_exp]), whereas [0.0, sub_exp] admits 0.0 under FlushOrClamp.
+    assert!(!bad_pow.flush_or_clamp_subnormals().is_valid());
+    let flush_pow = PowfOptions::new()
+        .exponent_range(0.0, sub_exp)
+        .flush_or_clamp_subnormals();
+    assert!(flush_pow.is_valid());
+    assert_eq!(PowfOptions::from_bits(flush_pow.bits()), Some(flush_pow));
+    assert_eq!(flush_pow.runtime().scalar(2.0, sub_exp).unwrap(), 1.0);
+
+    // MAX_EXP_BOUND and MAX_CBRT_BF16 are accepted at both poles.
     let wide_exp = PowfOptions::new().exponent_range(-MAX_EXP_BOUND, MAX_EXP_BOUND);
     assert!(wide_exp.is_valid());
     assert_eq!(PowfOptions::from_bits(wide_exp.bits()), Some(wide_exp));
 
-    let sub_x = f32::from_bits(0x100);
-    let bad_cbrt = CbrtfOptions::new().input_range(f32::from_bits(1), sub_x);
+    let wide_cbrt = CbrtfOptions::new().input_range(-MAX_CBRT_BF16, MAX_CBRT_BF16);
+    assert!(wide_cbrt.is_valid());
+    assert_eq!(CbrtfOptions::from_bits(wide_cbrt.bits()), Some(wide_cbrt));
+
+    let sub_lo = f32::from_bits(0x0001_0000);
+    let sub_hi = f32::from_bits(0x0004_0000);
+    let bad_cbrt = CbrtfOptions::new().input_range(sub_lo, sub_hi);
     assert!(!bad_cbrt.is_valid());
     assert_eq!(
-        bad_cbrt.runtime().scalar(sub_x).unwrap_err().kind,
+        bad_cbrt.runtime().scalar(sub_hi).unwrap_err().kind,
         CbrtfErrorKind::UnsupportedOptions
     );
 
     let ok_cbrt = bad_cbrt.admit_subnormals();
     assert!(ok_cbrt.is_valid());
     assert_eq!(CbrtfOptions::from_bits(ok_cbrt.bits()), Some(ok_cbrt));
-    // 2^-147 -> cbrt = 2^-49.
-    let x_147 = f32::from_bits(1 << 2);
+    // 0x0004_0000 = 2^-126 * 2^-5 = 2^-131; test 0x0008_0000 = 2^-130? 0x0002_0000 = 2^-132 -> cbrt = 2^-44.
+    let x_132 = f32::from_bits(0x0002_0000);
     assert_close_rel(
-        ok_cbrt.runtime().scalar(x_147).unwrap(),
-        f32::from_bits((127 - 49) << 23),
+        ok_cbrt.runtime().scalar(x_132).unwrap(),
+        f32::from_bits((127 - 44) << 23),
         1e-6,
         "subnormal cbrt",
     );
 }
 
 // ============================================================================
-// 2. Polynomial fitting & zero-reduction range verification
+// 2. Polynomial fitting, discrete domains & zero-reduction range verification
 // ============================================================================
 
 #[test]
 fn polynomial_single_octave_zero_reduction_matches_full_graph_bit_for_bit() {
-    const SMALL_EXP2_M: u128 = ExpfOptions::new().small_exp2_range().bits();
+    const SMALL_EXP2_M: u128 = ExpfOptions::new().domain(ExpfDomain::SingleOctave).bits();
     const SMALL_EXP_M: u128 = ExpfOptions::new().small_exp_range().bits();
     const SMALL_EXP2_L: u128 = ExpfOptions::new()
-        .input_range(0.0, 0.999_999_94)
+        .domain(ExpfDomain::PositiveOctave)
         .lowp()
         .bits();
-    const UNCLAMP_EXP2: u128 = ExpfOptions::new().unclamped_exp2_range().bits();
+    const UNCLAMP_EXP2: u128 = ExpfOptions::new().domain(ExpfDomain::NormalOutput).bits();
     const UNCLAMP_EXP: u128 = ExpfOptions::new().unclamped_exp_range().bits();
 
     assert!(
@@ -329,6 +362,11 @@ fn polynomial_single_octave_zero_reduction_matches_full_graph_bit_for_bit() {
         ExpfOptions::from_bits(SMALL_EXP2_L)
             .unwrap()
             .elides_reduction()
+    );
+    assert!(
+        ExpfOptions::from_bits(SMALL_EXP2_L)
+            .unwrap()
+            .elides_exp_reduction()
     );
     assert!(ExpfOptions::from_bits(UNCLAMP_EXP2).unwrap().elides_clamp());
     assert!(
@@ -367,23 +405,43 @@ fn polynomial_single_octave_zero_reduction_matches_full_graph_bit_for_bit() {
         );
     }
 
-    const NEAR_ONE_M: u128 = LogfOptions::new().near_one_range().bits();
-    const SMALL_LOG1P_M: u128 = LogfOptions::new().small_log1p_range().bits();
-    const SMALL_LOG1P_L: u128 = LogfOptions::new().small_log1p_range().lowp().bits();
+    const NEAR_ONE_M: u128 = LogfOptions::new().domain(LogfDomain::SingleOctave).bits();
+    const NEAR_ONE_L: u128 = LogfOptions::new()
+        .domain(LogfDomain::SingleOctave)
+        .lowp()
+        .bits();
+    const SMALL_LOG1P_M: u128 = Log1pfOptions::new().domain(Log1pfDomain::AroundZero).bits();
+    const SMALL_LOG1P_L: u128 = Log1pfOptions::new()
+        .domain(Log1pfDomain::AroundZero)
+        .lowp()
+        .bits();
+    const OCTAVE_LOG1P_M: u128 = Log1pfOptions::new()
+        .domain(Log1pfDomain::SingleOctave)
+        .bits();
     assert!(
         LogfOptions::from_bits(NEAR_ONE_M)
             .unwrap()
             .elides_reduction()
     );
     assert!(
-        LogfOptions::from_bits(SMALL_LOG1P_M)
+        LogfOptions::from_bits(NEAR_ONE_L)
             .unwrap()
-            .elides_log1p_reduction()
+            .elides_reduction()
     );
     assert!(
-        LogfOptions::from_bits(SMALL_LOG1P_L)
+        Log1pfOptions::from_bits(SMALL_LOG1P_M)
             .unwrap()
-            .elides_log1p_reduction()
+            .elides_reduction()
+    );
+    assert!(
+        Log1pfOptions::from_bits(SMALL_LOG1P_L)
+            .unwrap()
+            .elides_reduction()
+    );
+    assert!(
+        Log1pfOptions::from_bits(OCTAVE_LOG1P_M)
+            .unwrap()
+            .elides_reduction()
     );
 
     let lo_b = 0x3f35_04f3_u32;
@@ -403,38 +461,55 @@ fn polynomial_single_octave_zero_reduction_matches_full_graph_bit_for_bit() {
             "ln midp near-one mismatch at {x}"
         );
     }
-    assert_eq!(
-        Logf::<NEAR_ONE_M>::log2(1.0).unwrap().to_bits(),
-        <Logf>::log2(1.0).unwrap().to_bits()
-    );
 
     for i in 0..=256 {
         let x = -0.25 + (i as f32) / 512.0;
+        let x = if i == 128 { 0.0 } else { x };
         assert_eq!(
-            Logf::<SMALL_LOG1P_M>::log1p(x).unwrap().to_bits(),
-            <Logf>::log1p(x).unwrap().to_bits(),
+            Log1pf::<SMALL_LOG1P_M>::scalar(x).unwrap().to_bits(),
+            <Log1pf>::scalar(x).unwrap().to_bits(),
             "log1p midp mismatch at {x}"
         );
         assert_eq!(
-            Logf::<SMALL_LOG1P_L>::log1p(x).unwrap().to_bits(),
-            Logf::<{ LogfOptions::new().lowp().bits() }>::log1p(x)
+            Log1pf::<SMALL_LOG1P_L>::scalar(x).unwrap().to_bits(),
+            Log1pf::<{ Log1pfOptions::new().lowp().bits() }>::scalar(x)
                 .unwrap()
                 .to_bits(),
             "log1p lowp mismatch at {x}"
         );
     }
     assert_eq!(
-        Logf::<SMALL_LOG1P_M>::log1p(-0.0).unwrap().to_bits(),
+        Log1pf::<SMALL_LOG1P_M>::scalar(-0.0).unwrap().to_bits(),
         (-0.0_f32).to_bits()
     );
 
-    // Sign-aware srgb_encode_domain and unit_gamma_domain elide range checks!
-    const SRGB_ENC: PowfOptions = PowfOptions::new().srgb_encode_domain();
-    const UNIT_GAMMA: PowfOptions = PowfOptions::new().unit_gamma_domain();
+    // Discrete PowfDomain & CbrtfDomain subnormal opt-in verification.
+    const SRGB_ENC: PowfOptions = PowfOptions::new().domain(PowfDomain::UnitEncode);
+    const UNIT_GAMMA: PowfOptions = PowfOptions::new().domain(PowfDomain::SdrGamma);
+    const PQ_DOM: PowfOptions = PowfOptions::new().domain(PowfDomain::PqRatio);
     const UNIT_CBRT: CbrtfOptions = CbrtfOptions::new().unit_range();
+    const UNIT_CBRT_FLUSH: CbrtfOptions =
+        CbrtfOptions::new().unit_range().flush_or_clamp_subnormals();
+    const UNIT_CBRT_NORM: CbrtfOptions = CbrtfOptions::new().unit_range().admit_subnormals();
+
     assert!(SRGB_ENC.elides_range_check());
     assert!(UNIT_GAMMA.elides_range_check());
-    assert!(UNIT_CBRT.elides_denorm_check());
+    assert!(PQ_DOM.elides_range_check());
+    // Subnormals are off by default on CbrtfDomain::SignedUnit / Unit!
+    assert!(!UNIT_CBRT.elides_denorm_check());
+    assert!(UNIT_CBRT_NORM.elides_denorm_check());
+    assert!(Cbrtf::<{ UNIT_CBRT.bits() }>::scalar(f32::from_bits(1)).is_err());
+    assert_eq!(
+        Cbrtf::<{ UNIT_CBRT_FLUSH.bits() }>::scalar(-f32::from_bits(1))
+            .unwrap()
+            .to_bits(),
+        (-0.0_f32).to_bits()
+    );
+    assert!(
+        Cbrtf::<{ UNIT_CBRT_NORM.bits() }>::scalar(f32::from_bits(4))
+            .unwrap()
+            .is_normal()
+    );
     assert_close_rel(
         Cbrtf::<{ UNIT_CBRT.bits() }>::scalar(-0.125).unwrap(),
         -0.5,
@@ -446,6 +521,258 @@ fn polynomial_single_octave_zero_reduction_matches_full_graph_bit_for_bit() {
         (f32::MIN_POSITIVE as f64).powf(1.0 / 2.4) as f32,
         1e-5,
         "srgb encode min_positive",
+    );
+    assert_close_rel(
+        Powf::<{ PQ_DOM.bits() }>::scalar(0.9, 78.84375).unwrap(),
+        (0.9_f64).powf(78.84375) as f32,
+        2e-5,
+        "pq ratio m2",
+    );
+}
+
+// ============================================================================
+// 3. PowfOptions::const_exponent IEEE algebraic & general fast-paths
+// ============================================================================
+
+#[test]
+fn powf_const_exponent_algebraic_and_general_fast_paths() {
+    macro_rules! check_const_exp {
+        ($opts:expr, $exp:literal, $inputs:expr, $max_rel:expr) => {{
+            const OPTS: PowfOptions = $opts;
+            const CFG: u128 = OPTS.bits();
+            assert_eq!(PowfOptions::from_bits(CFG), Some(OPTS));
+            let rt = OPTS.runtime();
+            let xs: [f32; 8] = $inputs;
+
+            let a8 = Powf::<CFG>::array_const(xs).unwrap();
+            let ra8 = rt.array_const(xs).unwrap();
+            let v8 = f32x8::from_array_t(ScalarToken, xs)
+                .try_powf_const::<CFG>()
+                .unwrap()
+                .to_array();
+            let rv8 = rt
+                .simd_const(f32x8::from_array_t(ScalarToken, xs))
+                .unwrap()
+                .to_array();
+
+            let sl_in: [f32; 19] = core::array::from_fn(|i| xs[i % 8]);
+            let (mut sl_c, mut sl_r) = ([0.0_f32; 19], [0.0_f32; 19]);
+            Powf::<CFG>::slice_const(&sl_in, &mut sl_c).unwrap();
+            rt.slice_const(&sl_in, &mut sl_r).unwrap();
+
+            for i in 0..8 {
+                let sc = Powf::<CFG>::scalar_const(xs[i]).unwrap();
+                let sct = Powf::<CFG>::scalar_const_with_token(ScalarToken, xs[i]).unwrap();
+                let rsc = rt.scalar_const(xs[i]).unwrap();
+                assert_bits_or_nan(sc, a8[i], "scalar_const vs array_const");
+                assert_bits_or_nan(sct, a8[i], "scalar_const_with_token vs array_const");
+                assert_bits_or_nan(rsc, a8[i], "runtime scalar_const vs array_const");
+                assert_bits_or_nan(ra8[i], a8[i], "runtime array_const vs array_const");
+                assert_bits_or_nan(v8[i], a8[i], "try_powf_const vs array_const");
+                assert_bits_or_nan(rv8[i], a8[i], "runtime simd_const vs array_const");
+                let want = (xs[i] as f64).powf($exp as f64) as f32;
+                assert_close_rel(a8[i], want, $max_rel, concat!("exp=", stringify!($exp)));
+            }
+            for i in 0..19 {
+                assert_bits_or_nan(sl_c[i], a8[i % 8], "slice_const vs array_const");
+                assert_bits_or_nan(sl_r[i], a8[i % 8], "runtime slice_const vs array_const");
+            }
+
+            #[cfg(target_arch = "x86_64")]
+            if let Some(tok) = <archmage::X64V3Token as archmage::SimdToken>::summon() {
+                let v3_out = f32x8::from_array_t(tok, xs)
+                    .try_powf_const::<CFG>()
+                    .unwrap()
+                    .to_array();
+                for i in 0..8 {
+                    if OPTS != OPTS.backend_dependent() {
+                        assert_bits_or_nan(v3_out[i], a8[i], "V3 vs ScalarToken const_exponent");
+                    }
+                }
+            }
+        }};
+    }
+
+    let zero_pos = [0.0_f32, 0.0625, 0.25, 0.5, 0.75, 1.0, 4.0, 16.0];
+    let strict_pos = [0.0625_f32, 0.125, 0.25, 0.5, 1.0, 2.0, 4.0, 16.0];
+
+    // All 11 IEEE hardware algebraic fast-paths across Midp, Lowp, and Highp!
+    check_const_exp!(
+        PowfOptions::new().admit_zero().const_exponent(0.0),
+        0.0,
+        zero_pos,
+        0.0
+    );
+    check_const_exp!(
+        PowfOptions::new().admit_zero().const_exponent(1.0),
+        1.0,
+        zero_pos,
+        0.0
+    );
+    check_const_exp!(
+        PowfOptions::new().const_exponent(-1.0),
+        -1.0,
+        strict_pos,
+        1e-7
+    );
+    check_const_exp!(
+        PowfOptions::new().gamma().const_exponent(2.0),
+        2.0,
+        zero_pos,
+        1e-7
+    );
+    check_const_exp!(
+        PowfOptions::new().const_exponent(-2.0),
+        -2.0,
+        strict_pos,
+        2e-7
+    );
+    check_const_exp!(
+        PowfOptions::new().gamma().const_exponent(3.0),
+        3.0,
+        zero_pos,
+        2e-7
+    );
+    check_const_exp!(
+        PowfOptions::new().gamma().const_exponent(4.0),
+        4.0,
+        zero_pos,
+        2e-7
+    );
+    check_const_exp!(
+        PowfOptions::new().admit_zero().const_exponent(0.5),
+        0.5,
+        zero_pos,
+        1e-7
+    );
+    check_const_exp!(
+        PowfOptions::new().const_exponent(-0.5),
+        -0.5,
+        strict_pos,
+        2e-7
+    );
+    check_const_exp!(
+        PowfOptions::new().gamma().const_exponent(1.5),
+        1.5,
+        zero_pos,
+        2e-7
+    );
+    check_const_exp!(
+        PowfOptions::new().admit_zero().const_exponent(0.25),
+        0.25,
+        zero_pos,
+        2e-7
+    );
+
+    // Highp algebraic compound accuracy (<= 0.5 ULP via f64 intermediates) & Lowp parity.
+    check_const_exp!(
+        PowfOptions::new().gamma().highp().const_exponent(3.0),
+        3.0,
+        zero_pos,
+        1e-7
+    );
+    check_const_exp!(
+        PowfOptions::new().highp().const_exponent(-0.5),
+        -0.5,
+        strict_pos,
+        1e-7
+    );
+    check_const_exp!(
+        PowfOptions::new().gamma().highp().const_exponent(1.5),
+        1.5,
+        zero_pos,
+        1e-7
+    );
+    check_const_exp!(
+        PowfOptions::new().admit_zero().highp().const_exponent(0.25),
+        0.25,
+        zero_pos,
+        1e-7
+    );
+    check_const_exp!(
+        PowfOptions::new().gamma().lowp().const_exponent(0.5),
+        0.5,
+        zero_pos,
+        1e-7
+    );
+
+    // General constant exponents (2.4, 1/2.4, PQ 78.84375, BT.709 0.45, -1.5).
+    check_const_exp!(
+        PowfOptions::new()
+            .domain(PowfDomain::HdrGamma)
+            .const_exponent(2.4),
+        2.4,
+        zero_pos,
+        2e-5
+    );
+    check_const_exp!(
+        PowfOptions::new()
+            .domain(PowfDomain::Unit)
+            .const_exponent(1.0 / 2.4),
+        0.41666666,
+        [0.0, 1e-6, 0.01, 0.1, 0.25, 0.5, 0.75, 1.0],
+        2e-5
+    );
+    check_const_exp!(
+        PowfOptions::new()
+            .domain(PowfDomain::PqRatio)
+            .const_exponent(78.84375),
+        78.84375,
+        [0.84, 0.86, 0.88, 0.90, 0.92, 0.95, 0.98, 1.0],
+        2e-5
+    );
+    check_const_exp!(
+        PowfOptions::new()
+            .domain(PowfDomain::Unit)
+            .lowp()
+            .const_exponent(0.45),
+        0.45,
+        [0.0, 0.05, 0.1, 0.2, 0.4, 0.6, 0.8, 1.0],
+        1e-2
+    );
+    check_const_exp!(
+        PowfOptions::new().const_exponent(-1.5),
+        -1.5,
+        strict_pos,
+        2e-5
+    );
+
+    // Infallible powf_const & scalar_const_infallible + Checked overflow rejection on algebraic path.
+    const INFALLIBLE_SRGB: u128 = PowfOptions::new()
+        .domain(PowfDomain::Unit)
+        .const_exponent(2.4)
+        .clamp_out_of_bounds()
+        .bits();
+    let v = f32x4::from_array_t(ScalarToken, [-1.0, f32::from_bits(1), 0.5, f32::NAN]);
+    let out = v.powf_const::<INFALLIBLE_SRGB>().to_array();
+    assert_eq!(out[0], 0.0);
+    assert_eq!(out[1], 0.0);
+    assert!(out[3].is_nan());
+    assert_eq!(
+        Powf::<INFALLIBLE_SRGB>::scalar_const_infallible(0.5).to_bits(),
+        out[2].to_bits()
+    );
+
+    const CHECKED_SQ: u128 = PowfOptions::new().const_exponent(2.0).bits();
+    assert_eq!(
+        Powf::<CHECKED_SQ>::scalar_const(1.0e20).unwrap_err().kind,
+        PowfErrorKind::OutsideApproximationRange
+    );
+    assert_eq!(
+        Powf::<CHECKED_SQ>::scalar_const(1.0e-20).unwrap_err().kind,
+        PowfErrorKind::OutsideApproximationRange
+    );
+
+    // Runtime API rejects mismatched const_exponent vs runtime-n calls with UnsupportedOptions.
+    let const_rt = PowfOptions::new().const_exponent(2.0).runtime();
+    assert_eq!(
+        const_rt.scalar(2.0, 2.0).unwrap_err().kind,
+        PowfErrorKind::UnsupportedOptions
+    );
+    let dyn_rt = PowfOptions::new().runtime();
+    assert_eq!(
+        dyn_rt.scalar_const(2.0).unwrap_err().kind,
+        PowfErrorKind::UnsupportedOptions
     );
 }
 
@@ -462,6 +789,10 @@ fn infallible_clamp_out_of_bounds_works_inline_on_simd_math_chains() {
     const LOG_CLAMP: u128 = LogfOptions::new()
         .input_range(0.25, 4.0)
         .admit_zero()
+        .clamp_out_of_bounds()
+        .bits();
+    const LOG1P_CLAMP: u128 = Log1pfOptions::new()
+        .domain(Log1pfDomain::AroundZero)
         .clamp_out_of_bounds()
         .bits();
     const CBRT_CLAMP: u128 = CbrtfOptions::new()
@@ -487,10 +818,18 @@ fn infallible_clamp_out_of_bounds_works_inline_on_simd_math_chains() {
     let l = f32x4::from_array_t(ScalarToken, [-5.0, 0.125, 16.0, f32::NAN])
         .log2::<LOG_CLAMP>()
         .to_array();
-    assert_eq!(l[0], f32::NEG_INFINITY); // <= 0 clamps to +0.0 -> -inf under admit_zero
+    assert_eq!(l[0], f32::NEG_INFINITY);
     assert_close_rel(l[1], -2.0, 1e-6, "0.125 clamps to 0.25 -> -2");
     assert_close_rel(l[2], 2.0, 1e-6, "16 clamps to 4 -> +2");
     assert!(l[3].is_nan());
+
+    let l1p = f32x4::from_array_t(ScalarToken, [-2.0, f32::from_bits(1), 2.0, f32::NAN])
+        .log1p::<LOG1P_CLAMP>()
+        .to_array();
+    assert_close_rel(l1p[0], (-0.25_f32).ln_1p(), 1e-6, "clamped log1p lo");
+    assert_eq!(l1p[1], 0.0); // subnormal shoved to 0.0!
+    assert_close_rel(l1p[2], (0.25_f32).ln_1p(), 1e-6, "clamped log1p hi");
+    assert!(l1p[3].is_nan());
 
     let c = f32x4::from_array_t(ScalarToken, [-8.0, -0.125, 8.0, f32::NAN])
         .cbrt::<CBRT_CLAMP>()
@@ -502,7 +841,7 @@ fn infallible_clamp_out_of_bounds_works_inline_on_simd_math_chains() {
 }
 
 // ============================================================================
-// 3. Single-constraint-held exhaustive permutation compliance across all 4 families
+// 4. Single-constraint-held exhaustive permutation compliance across all 5 families
 // ============================================================================
 
 fn verify_powf_option_compliance(opts: PowfOptions, in_exp: f32) {
@@ -527,14 +866,16 @@ fn verify_powf_option_compliance(opts: PowfOptions, in_exp: f32) {
     assert_eq!(PowfOptions::from_bits(encoded), Some(opts));
     let rt = opts.runtime();
 
-    let decoded = PowfOptions::from_bits(encoded).unwrap();
-    let is_full = decoded == opts.admit_all_floats();
-    let is_clamp_oob = decoded == opts.clamp_out_of_bounds();
-    let is_assume = decoded == opts.assume_in_bounds();
+    let is_full = opts.selected_domain() == PowfDomain::AllFloats;
+    let is_clamp_oob = opts == opts.clamp_out_of_bounds() && !is_full;
+    let is_assume = opts == opts.assume_in_bounds() && !is_full;
     let is_checked = !is_full && !is_clamp_oob && !is_assume;
 
-    // 1. In-bounds agreement across scalar, array<4>, array<8>, f32x4, f32x8, f32x16, and slice(19).
-    let in_bases4 = [0.25_f32, 0.5, 0.75, 1.0];
+    let in_bases4 = if opts.selected_domain() == PowfDomain::PqRatio {
+        [0.85_f32, 0.9, 0.95, 1.0]
+    } else {
+        [0.25_f32, 0.5, 0.75, 1.0]
+    };
     let n = in_exp;
     let s0 = rt.scalar(in_bases4[0], n).unwrap();
     let a4 = rt.array(in_bases4, n).unwrap();
@@ -578,9 +919,8 @@ fn verify_powf_option_compliance(opts: PowfOptions, in_exp: f32) {
         assert_bits_or_nan(slice_out[i], a4[i % 4], "powf slice19 vs array4");
     }
 
-    // 2. Out-of-bounds / special-value behavior according to Validation & Domain.
     if is_checked {
-        let mut bad = [0.5_f32; 9];
+        let mut bad = [in_bases4[1]; 9];
         bad[7] = -1.0;
         let mut dst = [0.0; 9];
         assert_eq!(
@@ -591,17 +931,16 @@ fn verify_powf_option_compliance(opts: PowfOptions, in_exp: f32) {
             })
         );
         assert_eq!(
-            rt.array([0.5, -1.0, f32::NAN, 0.5], n)
+            rt.array([in_bases4[1], -1.0, f32::NAN, in_bases4[1]], n)
                 .unwrap_err()
                 .lane_mask,
             0b0110
         );
         assert_eq!(
-            rt.scalar(0.5, f32::NAN).unwrap_err().kind,
+            rt.scalar(in_bases4[1], f32::NAN).unwrap_err().kind,
             PowfErrorKind::InvalidExponent
         );
     } else if is_clamp_oob {
-        // Must never return Err on any float input or exponent!
         for &exp in &[
             -10.0_f32,
             -0.0,
@@ -618,7 +957,7 @@ fn verify_powf_option_compliance(opts: PowfOptions, in_exp: f32) {
                 -0.0,
                 0.0,
                 f32::from_bits(1),
-                0.5,
+                in_bases4[1],
                 1e6,
                 f32::NAN,
             ];
@@ -632,15 +971,7 @@ fn verify_powf_option_compliance(opts: PowfOptions, in_exp: f32) {
                 assert_bits_or_nan(dst[i], res8[i], "powf clamp_oob slice vs array8");
             }
             if exp.is_nan() {
-                if is_full {
-                    // IEEE 754 pow(x, qNaN): 1.0^NaN == 1.0, other lanes NaN.
-                    assert!(res8[5].is_nan());
-                } else {
-                    assert!(res8.iter().all(|v| v.is_nan()));
-                }
-            } else if is_full && exp == 0.0 {
-                // IEEE 754 pow(qNaN, ±0.0) == 1.0 under full_domain Highp.
-                assert_eq!(res8[7], 1.0);
+                assert!(res8.iter().all(|v| v.is_nan()));
             } else {
                 assert!(res8[7].is_nan(), "NaN base must propagate NaN");
                 assert!(!res8[5].is_nan(), "finite in-bounds base must not be NaN");
@@ -669,19 +1000,25 @@ fn verify_powf_option_compliance(opts: PowfOptions, in_exp: f32) {
 
 #[test]
 fn powf_hold_each_constraint_across_all_other_permutations() {
-    let bases: [Option<(f32, f32)>; 3] = [
-        None,
-        Some((1.0 / 65_536.0, 65_536.0)),
-        Some((f32::MIN_POSITIVE, 1.0)),
+    let domains = [
+        PowfDomain::PositiveNormals,
+        PowfDomain::NonNegative,
+        PowfDomain::Unit,
+        PowfDomain::HdrGamma,
+        PowfDomain::PqRatio,
+        PowfDomain::AllFloats,
     ];
-    let exps: [Option<(f32, f32)>; 4] = [
+    let bases: [Option<(f32, f32)>; 2] = [None, Some((1.0 / 65_536.0, 65_536.0))];
+    let exps: [Option<(f32, f32)>; 3] = [
         None,
-        Some((0.0, 0.99)),
         Some((-2.0, 4.0)),
-        Some((f32::from_bits(0x80), f32::from_bits(0x80))),
+        Some((f32::from_bits(0x0001_0000), f32::from_bits(0x0001_0000))),
     ];
-    // 0=none, 1=zero, 2=subnorm, 3=zero+subnorm, 4=all_floats
-    let doms = [0_u8, 1, 2, 3, 4];
+    let subs = [
+        Subnormals::Reject,
+        Subnormals::FlushOrClamp,
+        Subnormals::Normalize,
+    ];
     let clamps = [false, true];
     let precs = [
         PowfPrecision::Lowp,
@@ -696,112 +1033,115 @@ fn powf_hold_each_constraint_across_all_other_permutations() {
     ];
     let execs = [Execution::Upgrade, Execution::Caller];
 
-    let build = |b: Option<(f32, f32)>,
-                 e: Option<(f32, f32)>,
-                 d: u8,
-                 c: bool,
-                 pr: PowfPrecision,
-                 po: Portability,
-                 va: Validation,
-                 ex: Execution| {
-        let mut o = PowfOptions::new()
-            .precision(pr)
-            .portability(po)
-            .validation(va)
-            .execution(ex);
-        if let Some((lo, hi)) = b {
-            o = o.base_range(lo, hi);
-        }
-        if let Some((lo, hi)) = e {
-            o = o.exponent_range(lo, hi);
-        }
-        match d {
-            1 => o = o.admit_zero(),
-            2 => o = o.admit_subnormals(),
-            3 => o = o.admit_zero().admit_subnormals(),
-            4 => o = o.admit_all_floats(),
-            _ => {}
-        }
-        if c {
-            o = o.saturate_output();
-        }
-        o
-    };
+    let mut valid_counts = [0_usize; 16];
 
-    // Track how many valid permutations each held constraint exercised so no
-    // constraint can vacuously pass with zero valid combinations.
-    let mut valid_counts = [0_usize; 14];
-
-    for &b in &bases {
-        for &e in &exps {
-            for &d in &doms {
-                for &c in &clamps {
-                    for &pr in &precs {
-                        for &po in &ports {
-                            for &va in &vals {
-                                for &ex in &execs {
-                                    let opts = build(b, e, d, c, pr, po, va, ex);
-                                    let sample_exp = match e {
-                                        Some((lo, hi)) if lo == hi => lo,
-                                        _ => 0.5,
-                                    };
-                                    verify_powf_option_compliance(opts, sample_exp);
-                                    if opts.is_valid() {
-                                        if matches!(d, 1 | 3)
-                                            && e.is_none_or(|(lo, hi)| lo <= 0.0 && hi >= 0.5)
-                                        {
-                                            valid_counts[0] += 1;
-                                            assert_eq!(
-                                                opts.runtime().scalar(0.0, 0.0).unwrap(),
-                                                1.0
-                                            );
-                                            assert_eq!(
-                                                opts.runtime().scalar(0.0, 0.5).unwrap(),
-                                                0.0
-                                            );
+    for &dom in &domains {
+        for &b in &bases {
+            for &e in &exps {
+                for &sub in &subs {
+                    for &c in &clamps {
+                        for &pr in &precs {
+                            for &po in &ports {
+                                for &va in &vals {
+                                    for &ex in &execs {
+                                        let mut opts = PowfOptions::new()
+                                            .domain(dom)
+                                            .precision(pr)
+                                            .portability(po)
+                                            .validation(va)
+                                            .execution(ex);
+                                        if let Some((lo, hi)) = b {
+                                            opts = opts.base_range(lo, hi);
                                         }
-                                        if matches!(d, 2 | 3) {
-                                            valid_counts[1] += 1;
-                                            let sub = f32::from_bits(1 << 8); // 2^-141
-                                            let got =
-                                                opts.runtime().scalar(sub, sample_exp).unwrap();
-                                            assert!(got.is_normal() && got > 0.0);
+                                        if let Some((lo, hi)) = e {
+                                            opts = opts.exponent_range(lo, hi);
                                         }
-                                        if d == 4 {
-                                            valid_counts[2] += 1;
-                                        }
-                                        if b.is_some() {
-                                            valid_counts[3] += 1;
-                                        }
-                                        if e.is_some() {
-                                            valid_counts[4] += 1;
-                                        }
+                                        opts = opts.subnormals(sub);
                                         if c {
-                                            valid_counts[5] += 1;
+                                            opts = opts.saturate_output();
                                         }
-                                        if pr == PowfPrecision::Lowp {
-                                            valid_counts[6] += 1;
-                                        }
-                                        if pr == PowfPrecision::Midp {
-                                            valid_counts[7] += 1;
-                                        }
-                                        if pr == PowfPrecision::Highp {
-                                            valid_counts[8] += 1;
-                                        }
-                                        if po == Portability::BitExact {
-                                            valid_counts[9] += 1;
-                                        }
-                                        if va == Validation::Checked {
-                                            valid_counts[10] += 1;
-                                        }
-                                        if va == Validation::ClampOutOfBounds {
-                                            valid_counts[11] += 1;
-                                        }
-                                        if va == Validation::AssumeValid {
-                                            valid_counts[12] += 1;
-                                        }
-                                        if ex == Execution::Caller {
-                                            valid_counts[13] += 1;
+
+                                        let sample_exp = match e {
+                                            Some((lo, hi)) if lo == hi => lo,
+                                            _ => 0.5,
+                                        };
+                                        verify_powf_option_compliance(opts, sample_exp);
+                                        if opts.is_valid() {
+                                            if matches!(
+                                                dom,
+                                                PowfDomain::NonNegative
+                                                    | PowfDomain::Unit
+                                                    | PowfDomain::HdrGamma
+                                            ) && e.is_none_or(|(lo, hi)| lo <= 0.0 && hi >= 0.5)
+                                            {
+                                                valid_counts[0] += 1;
+                                                assert_eq!(
+                                                    opts.runtime().scalar(0.0, 0.0).unwrap(),
+                                                    1.0
+                                                );
+                                                assert_eq!(
+                                                    opts.runtime().scalar(0.0, 0.5).unwrap(),
+                                                    0.0
+                                                );
+                                            }
+                                            if sub == Subnormals::Normalize {
+                                                valid_counts[1] += 1;
+                                                let s_in = f32::from_bits(1 << 8);
+                                                let got = opts
+                                                    .runtime()
+                                                    .scalar(s_in, sample_exp)
+                                                    .unwrap();
+                                                assert!(got.is_normal() && got > 0.0);
+                                            }
+                                            if sub == Subnormals::FlushOrClamp {
+                                                valid_counts[2] += 1;
+                                                if va == Validation::Checked {
+                                                    assert!(
+                                                        opts.runtime()
+                                                            .scalar(f32::from_bits(1), sample_exp)
+                                                            .is_ok()
+                                                    );
+                                                }
+                                            }
+                                            if dom == PowfDomain::AllFloats {
+                                                valid_counts[3] += 1;
+                                            }
+                                            if dom == PowfDomain::PqRatio {
+                                                valid_counts[4] += 1;
+                                            }
+                                            if b.is_some() {
+                                                valid_counts[5] += 1;
+                                            }
+                                            if e.is_some() {
+                                                valid_counts[6] += 1;
+                                            }
+                                            if c {
+                                                valid_counts[7] += 1;
+                                            }
+                                            if pr == PowfPrecision::Lowp {
+                                                valid_counts[8] += 1;
+                                            }
+                                            if pr == PowfPrecision::Midp {
+                                                valid_counts[9] += 1;
+                                            }
+                                            if pr == PowfPrecision::Highp {
+                                                valid_counts[10] += 1;
+                                            }
+                                            if po == Portability::BitExact {
+                                                valid_counts[11] += 1;
+                                            }
+                                            if va == Validation::Checked {
+                                                valid_counts[12] += 1;
+                                            }
+                                            if va == Validation::ClampOutOfBounds {
+                                                valid_counts[13] += 1;
+                                            }
+                                            if va == Validation::AssumeValid {
+                                                valid_counts[14] += 1;
+                                            }
+                                            if ex == Execution::Caller {
+                                                valid_counts[15] += 1;
+                                            }
                                         }
                                     }
                                 }
@@ -823,13 +1163,16 @@ fn powf_hold_each_constraint_across_all_other_permutations() {
 
 #[test]
 fn expf_hold_each_constraint_across_all_other_permutations() {
-    let ranges: [Option<(f32, f32)>; 4] = [
-        None,
-        Some((-0.3, 0.3)),
-        Some((0.0, 0.5)),
-        Some((-20.0, 20.0)),
+    let domains = [
+        ExpfDomain::Finite,
+        ExpfDomain::NormalOutput,
+        ExpfDomain::NonPositive,
+        ExpfDomain::SignedUnit,
+        ExpfDomain::SingleOctave,
+        ExpfDomain::PositiveOctave,
+        ExpfDomain::AllFloats,
     ];
-    let fulls = [false, true];
+    let ranges: [Option<(f32, f32)>; 2] = [None, Some((-20.0, 20.0))];
     let precs = [ExpfPrecision::Midp, ExpfPrecision::Lowp];
     let ports = [Portability::BitExact, Portability::BackendDependent];
     let vals = [
@@ -839,16 +1182,16 @@ fn expf_hold_each_constraint_across_all_other_permutations() {
     ];
     let execs = [Execution::Upgrade, Execution::Caller];
 
-    let mut valid_counts = [0_usize; 9];
-    let in_vals = [0.0_f32, 0.1, 0.2, 0.25];
+    let mut valid_counts = [0_usize; 11];
 
-    for &r in &ranges {
-        for &full in &fulls {
+    for &dom in &domains {
+        for &r in &ranges {
             for &pr in &precs {
                 for &po in &ports {
                     for &va in &vals {
                         for &ex in &execs {
                             let mut opts = ExpfOptions::new()
+                                .domain(dom)
                                 .precision(pr)
                                 .portability(po)
                                 .validation(va)
@@ -856,14 +1199,11 @@ fn expf_hold_each_constraint_across_all_other_permutations() {
                             if let Some((lo, hi)) = r {
                                 opts = opts.input_range(lo, hi);
                             }
-                            if full {
-                                opts = opts.admit_all_floats();
-                            }
 
                             if !opts.is_valid() {
                                 assert_eq!(ExpfOptions::from_bits(opts.bits()), None);
                                 assert_eq!(
-                                    opts.runtime().exp2(0.1).unwrap_err().kind,
+                                    opts.runtime().exp2(0.0).unwrap_err().kind,
                                     ExpfErrorKind::UnsupportedOptions
                                 );
                                 continue;
@@ -871,6 +1211,11 @@ fn expf_hold_each_constraint_across_all_other_permutations() {
 
                             assert_eq!(ExpfOptions::from_bits(opts.bits()), Some(opts));
                             let rt = opts.runtime();
+                            let in_vals = if dom == ExpfDomain::NonPositive && r.is_none() {
+                                [-0.25_f32, -0.125, -0.0625, 0.0]
+                            } else {
+                                [0.0_f32, 0.1, 0.2, 0.25]
+                            };
                             let a4_2 = rt.exp2_array(in_vals).unwrap();
                             let a4_e = rt.exp_array(in_vals).unwrap();
                             let v4 = f32x4::from_array_t(ScalarToken, in_vals);
@@ -890,13 +1235,11 @@ fn expf_hold_each_constraint_across_all_other_permutations() {
                                 assert_bits_or_nan(s4_e[i], a4_e[i], "exp simd vs array");
                             }
 
+                            let full = dom == ExpfDomain::AllFloats;
                             if va == Validation::Checked && !full {
                                 valid_counts[0] += 1;
                                 assert!(rt.exp2(f32::NAN).is_err());
                                 assert!(rt.exp(f32::INFINITY).is_err());
-                                if let Some((_, hi)) = r {
-                                    assert!(rt.exp2(hi + 1.0).is_err());
-                                }
                             }
                             if va == Validation::ClampOutOfBounds {
                                 valid_counts[1] += 1;
@@ -915,20 +1258,26 @@ fn expf_hold_each_constraint_across_all_other_permutations() {
                                 assert_eq!(rt.exp(f32::INFINITY).unwrap(), f32::INFINITY);
                                 assert!(rt.exp2(f32::NAN).unwrap().is_nan());
                             }
-                            if r.is_some() {
+                            if dom == ExpfDomain::NonPositive && r.is_none() {
                                 valid_counts[4] += 1;
                             }
-                            if pr == ExpfPrecision::Lowp {
+                            if dom == ExpfDomain::SingleOctave && r.is_none() {
                                 valid_counts[5] += 1;
                             }
-                            if pr == ExpfPrecision::Midp {
+                            if r.is_some() {
                                 valid_counts[6] += 1;
                             }
-                            if po == Portability::BitExact {
+                            if pr == ExpfPrecision::Lowp {
                                 valid_counts[7] += 1;
                             }
-                            if ex == Execution::Caller {
+                            if pr == ExpfPrecision::Midp {
                                 valid_counts[8] += 1;
+                            }
+                            if po == Portability::BitExact {
+                                valid_counts[9] += 1;
+                            }
+                            if ex == Execution::Caller {
+                                valid_counts[10] += 1;
                             }
                         }
                     }
@@ -944,15 +1293,20 @@ fn expf_hold_each_constraint_across_all_other_permutations() {
 
 #[test]
 fn logf_hold_each_constraint_across_all_other_permutations() {
-    let ranges: [Option<(f32, f32)>; 5] = [
-        None,
-        Some((0.75, 1.25)),
-        Some((-0.25, 0.25)),
-        Some((0.0, 1.0)),
-        Some((-1.0, 1.0)),
+    let domains = [
+        LogfDomain::PositiveNormals,
+        LogfDomain::NonNegative,
+        LogfDomain::Unit,
+        LogfDomain::PositiveHdr,
+        LogfDomain::SingleOctave,
+        LogfDomain::AllFloats,
     ];
-    // 0=none, 1=zero, 2=subnorm, 3=zero+subnorm, 4=all_floats
-    let doms = [0_u8, 1, 2, 3, 4];
+    let ranges: [Option<(f32, f32)>; 3] = [None, Some((0.75, 1.25)), Some((0.0, 1.0))];
+    let subs = [
+        Subnormals::Reject,
+        Subnormals::FlushOrClamp,
+        Subnormals::Normalize,
+    ];
     let precs = [LogfPrecision::Midp, LogfPrecision::Lowp];
     let ports = [Portability::BitExact, Portability::BackendDependent];
     let vals = [
@@ -962,35 +1316,39 @@ fn logf_hold_each_constraint_across_all_other_permutations() {
     ];
     let execs = [Execution::Upgrade, Execution::Caller];
 
-    let mut valid_counts = [0_usize; 11];
+    let mut valid_counts = [0_usize; 12];
     let pos_in = [0.8_f32, 0.85, 0.9, 1.0];
-    let log1p_in = [-0.1_f32, 0.0, 0.1, 0.2];
 
-    for &r in &ranges {
-        for &d in &doms {
-            for &pr in &precs {
-                for &po in &ports {
-                    for &va in &vals {
-                        for &ex in &execs {
-                            let mut opts = LogfOptions::new()
-                                .precision(pr)
-                                .portability(po)
-                                .validation(va)
-                                .execution(ex);
-                            if let Some((lo, hi)) = r {
-                                opts = opts.input_range(lo, hi);
-                            }
-                            match d {
-                                1 => opts = opts.admit_zero(),
-                                2 => opts = opts.admit_subnormals(),
-                                3 => opts = opts.admit_zero().admit_subnormals(),
-                                4 => opts = opts.admit_all_floats(),
-                                _ => {}
-                            }
+    for &dom in &domains {
+        for &r in &ranges {
+            for &sub in &subs {
+                for &pr in &precs {
+                    for &po in &ports {
+                        for &va in &vals {
+                            for &ex in &execs {
+                                let mut opts = LogfOptions::new()
+                                    .domain(dom)
+                                    .precision(pr)
+                                    .portability(po)
+                                    .validation(va)
+                                    .execution(ex);
+                                if let Some((lo, hi)) = r {
+                                    opts = opts.input_range(lo, hi);
+                                }
+                                opts = opts.subnormals(sub);
 
-                            let rt = opts.runtime();
-                            // Check log2 / ln / log10 (`op` 0..=2)
-                            if let Ok(a4) = rt.log2_array(pos_in) {
+                                if !opts.is_valid() {
+                                    assert_eq!(LogfOptions::from_bits(opts.bits()), None);
+                                    assert_eq!(
+                                        opts.runtime().log2(1.0).unwrap_err().kind,
+                                        LogfErrorKind::UnsupportedOptions
+                                    );
+                                    continue;
+                                }
+
+                                assert_eq!(LogfOptions::from_bits(opts.bits()), Some(opts));
+                                let rt = opts.runtime();
+                                let a4 = rt.log2_array(pos_in).unwrap();
                                 let v4 = f32x4::from_array_t(ScalarToken, pos_in);
                                 let s4 = rt.log2_simd(v4).unwrap().to_array();
                                 let mut sl = [0.0; 10];
@@ -1003,85 +1361,66 @@ fn logf_hold_each_constraint_across_all_other_permutations() {
                                     assert_bits_or_nan(s4[i], a4[i], "log2 simd vs array");
                                 }
 
-                                if matches!(d, 1 | 3 | 4) {
+                                if matches!(
+                                    dom,
+                                    LogfDomain::NonNegative
+                                        | LogfDomain::Unit
+                                        | LogfDomain::AllFloats
+                                ) && r.is_none_or(|(lo, _)| lo == 0.0)
+                                {
                                     valid_counts[0] += 1;
                                     assert_eq!(rt.log2(0.0).unwrap(), f32::NEG_INFINITY);
                                     assert_eq!(rt.ln(-0.0).unwrap(), f32::NEG_INFINITY);
                                 }
-                                if matches!(d, 2..=4)
-                                    && r.is_none_or(|(lo, _)| lo <= f32::from_bits(1))
-                                {
+                                if opts.subnormals_policy() == Subnormals::Normalize {
                                     valid_counts[1] += 1;
                                     let sub_res = rt.log2(f32::from_bits(1)).unwrap();
                                     assert!((sub_res - (-149.0)).abs() < 1e-3);
                                 }
-                                if d == 4 {
+                                if sub == Subnormals::FlushOrClamp {
                                     valid_counts[2] += 1;
+                                    if va == Validation::Checked {
+                                        assert!(rt.log2(f32::from_bits(1)).is_ok());
+                                    }
+                                }
+                                if dom == LogfDomain::AllFloats {
+                                    valid_counts[3] += 1;
                                     assert!(rt.ln(-2.0).unwrap().is_nan());
                                     assert_eq!(rt.log10(f32::INFINITY).unwrap(), f32::INFINITY);
                                 }
-                                if va == Validation::Checked && d != 4 {
-                                    valid_counts[3] += 1;
+                                if va == Validation::Checked && dom != LogfDomain::AllFloats {
+                                    valid_counts[4] += 1;
                                     assert!(rt.log2(-2.0).is_err());
                                     assert!(rt.log2(f32::NAN).is_err());
                                 }
                                 if va == Validation::ClampOutOfBounds {
-                                    valid_counts[4] += 1;
+                                    valid_counts[5] += 1;
                                     let oob = [f32::NEG_INFINITY, -1.0, f32::INFINITY, f32::NAN];
                                     let c_out = rt.log2_array(oob).unwrap();
                                     assert!(c_out[3].is_nan());
-                                    if d == 4 {
+                                    if dom == LogfDomain::AllFloats {
                                         assert!(c_out[0].is_nan());
                                     } else {
                                         assert!(!c_out[0].is_nan());
                                     }
                                 }
                                 if va == Validation::AssumeValid {
-                                    valid_counts[5] += 1;
-                                }
-                                if r.is_some() {
                                     valid_counts[6] += 1;
                                 }
-                                if pr == LogfPrecision::Lowp {
+                                if r.is_some() {
                                     valid_counts[7] += 1;
                                 }
-                                if pr == LogfPrecision::Midp {
+                                if pr == LogfPrecision::Lowp {
                                     valid_counts[8] += 1;
                                 }
-                                if po == Portability::BitExact {
+                                if pr == LogfPrecision::Midp {
                                     valid_counts[9] += 1;
                                 }
-                                if ex == Execution::Caller {
+                                if po == Portability::BitExact {
                                     valid_counts[10] += 1;
                                 }
-                            } else {
-                                assert_eq!(
-                                    rt.log2(1.0).unwrap_err().kind,
-                                    LogfErrorKind::UnsupportedOptions
-                                );
-                            }
-
-                            // Check log1p (`op == 3`) when range covers `log1p_in`.
-                            let covers_log1p = r.is_none_or(|(lo, hi)| lo <= -0.1 && hi >= 0.2);
-                            if covers_log1p && let Ok(a4_1p) = rt.log1p_array(log1p_in) {
-                                let mut sl = [0.0; 9];
-                                let sl_in: [f32; 9] = core::array::from_fn(|i| log1p_in[i % 4]);
-                                rt.log1p_slice(&sl_in, &mut sl).unwrap();
-                                for i in 0..9 {
-                                    assert_bits_or_nan(sl[i], a4_1p[i % 4], "log1p slice vs array");
-                                }
-                                if matches!(d, 1 | 3 | 4) {
-                                    assert_eq!(rt.log1p(-1.0).unwrap(), f32::NEG_INFINITY);
-                                }
-                                if va == Validation::ClampOutOfBounds {
-                                    let oob = [f32::NEG_INFINITY, -5.0, f32::INFINITY, f32::NAN];
-                                    let c1p = rt.log1p_array(oob).unwrap();
-                                    assert!(c1p[3].is_nan());
-                                    if d == 4 {
-                                        assert!(c1p[1].is_nan());
-                                    } else {
-                                        assert!(!c1p[1].is_nan());
-                                    }
+                                if ex == Execution::Caller {
+                                    valid_counts[11] += 1;
                                 }
                             }
                         }
@@ -1097,15 +1436,178 @@ fn logf_hold_each_constraint_across_all_other_permutations() {
 }
 
 #[test]
-fn cbrtf_hold_each_constraint_across_all_other_permutations() {
-    let ranges: [Option<(f32, f32)>; 4] = [
-        None,
-        Some((-1.0, 1.0)),
-        Some((0.125, 8.0)),
-        Some((f32::from_bits(1), f32::from_bits(0x100))),
+fn log1pf_hold_each_constraint_across_all_other_permutations() {
+    let domains = [
+        Log1pfDomain::GreaterThanNegOne,
+        Log1pfDomain::FromNegOne,
+        Log1pfDomain::Unit,
+        Log1pfDomain::SignedUnit,
+        Log1pfDomain::AroundZero,
+        Log1pfDomain::SingleOctave,
+        Log1pfDomain::AllFloats,
     ];
-    // 0=none, 1=subnorm, 2=all_floats
-    let doms = [0_u8, 1, 2];
+    let ranges: [Option<(f32, f32)>; 3] = [None, Some((-0.25, 0.25)), Some((-1.0, 1.0))];
+    let subs = [
+        Subnormals::Reject,
+        Subnormals::FlushOrClamp,
+        Subnormals::Normalize,
+    ];
+    let precs = [Log1pfPrecision::Midp, Log1pfPrecision::Lowp];
+    let ports = [Portability::BitExact, Portability::BackendDependent];
+    let vals = [
+        Validation::Checked,
+        Validation::ClampOutOfBounds,
+        Validation::AssumeValid,
+    ];
+    let execs = [Execution::Upgrade, Execution::Caller];
+
+    let mut valid_counts = [0_usize; 12];
+    let sample_in = [0.0_f32, 0.0625, 0.125, 0.25];
+
+    for &dom in &domains {
+        for &r in &ranges {
+            for &sub in &subs {
+                for &pr in &precs {
+                    for &po in &ports {
+                        for &va in &vals {
+                            for &ex in &execs {
+                                let mut opts = Log1pfOptions::new()
+                                    .domain(dom)
+                                    .precision(pr)
+                                    .portability(po)
+                                    .validation(va)
+                                    .execution(ex);
+                                if let Some((lo, hi)) = r {
+                                    opts = opts.input_range(lo, hi);
+                                }
+                                opts = opts.subnormals(sub);
+
+                                if !opts.is_valid() {
+                                    assert_eq!(Log1pfOptions::from_bits(opts.bits()), None);
+                                    assert_eq!(
+                                        opts.runtime().scalar(0.0).unwrap_err().kind,
+                                        Log1pfErrorKind::UnsupportedOptions
+                                    );
+                                    continue;
+                                }
+
+                                assert_eq!(Log1pfOptions::from_bits(opts.bits()), Some(opts));
+                                let rt = opts.runtime();
+                                let a4 = rt.array(sample_in).unwrap();
+                                let v4 = f32x4::from_array_t(ScalarToken, sample_in);
+                                let s4 = rt.simd(v4).unwrap().to_array();
+                                let mut sl = [0.0; 9];
+                                let sl_in: [f32; 9] = core::array::from_fn(|i| sample_in[i % 4]);
+                                rt.slice(&sl_in, &mut sl).unwrap();
+                                for i in 0..9 {
+                                    assert_bits_or_nan(sl[i], a4[i % 4], "log1pf slice vs array");
+                                }
+                                for i in 0..4 {
+                                    assert_bits_or_nan(s4[i], a4[i], "log1pf simd vs array");
+                                }
+
+                                if matches!(
+                                    dom,
+                                    Log1pfDomain::FromNegOne
+                                        | Log1pfDomain::SignedUnit
+                                        | Log1pfDomain::AllFloats
+                                ) && r.is_none_or(|(lo, _)| lo == -1.0)
+                                {
+                                    valid_counts[0] += 1;
+                                    assert_eq!(rt.scalar(-1.0).unwrap(), f32::NEG_INFINITY);
+                                }
+                                if opts.subnormals_policy() == Subnormals::Normalize {
+                                    valid_counts[1] += 1;
+                                    let sub_val = rt.scalar(f32::from_bits(1)).unwrap();
+                                    if pr == Log1pfPrecision::Midp {
+                                        assert_eq!(sub_val.to_bits(), 1);
+                                    } else {
+                                        assert!(sub_val.abs() < 2e-5);
+                                    }
+                                }
+                                if sub == Subnormals::FlushOrClamp {
+                                    valid_counts[2] += 1;
+                                    if va == Validation::Checked {
+                                        assert_eq!(
+                                            rt.scalar(f32::from_bits(1)).unwrap().to_bits(),
+                                            0,
+                                            "failed on {opts:?}"
+                                        );
+                                    }
+                                }
+                                if dom == Log1pfDomain::AllFloats {
+                                    valid_counts[3] += 1;
+                                    assert!(rt.scalar(-2.0).unwrap().is_nan());
+                                }
+                                if va == Validation::Checked && dom != Log1pfDomain::AllFloats {
+                                    valid_counts[4] += 1;
+                                    assert!(rt.scalar(-2.0).is_err());
+                                    assert!(rt.scalar(f32::NAN).is_err());
+                                    if sub == Subnormals::Reject {
+                                        assert!(rt.scalar(f32::from_bits(1)).is_err());
+                                    }
+                                }
+                                if va == Validation::ClampOutOfBounds {
+                                    valid_counts[5] += 1;
+                                    let oob = [f32::NEG_INFINITY, -5.0, f32::INFINITY, f32::NAN];
+                                    let c1p = rt.array(oob).unwrap();
+                                    assert!(c1p[3].is_nan());
+                                    if dom == Log1pfDomain::AllFloats {
+                                        assert!(c1p[1].is_nan());
+                                    } else {
+                                        assert!(!c1p[1].is_nan());
+                                    }
+                                }
+                                if va == Validation::AssumeValid {
+                                    valid_counts[6] += 1;
+                                }
+                                if r.is_some() {
+                                    valid_counts[7] += 1;
+                                }
+                                if pr == Log1pfPrecision::Lowp {
+                                    valid_counts[8] += 1;
+                                }
+                                if pr == Log1pfPrecision::Midp {
+                                    valid_counts[9] += 1;
+                                }
+                                if po == Portability::BitExact {
+                                    valid_counts[10] += 1;
+                                }
+                                if ex == Execution::Caller {
+                                    valid_counts[11] += 1;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    for (idx, &count) in valid_counts.iter().enumerate() {
+        assert!(count > 0, "log1pf held constraint {idx} had 0 valid cases");
+    }
+}
+
+#[test]
+fn cbrtf_hold_each_constraint_across_all_other_permutations() {
+    let domains = [
+        CbrtfDomain::Bounded,
+        CbrtfDomain::Unit,
+        CbrtfDomain::SignedUnit,
+        CbrtfDomain::PositiveNormals,
+        CbrtfDomain::AllFloats,
+    ];
+    let ranges: [Option<(f32, f32)>; 3] = [
+        None,
+        Some((0.125, 8.0)),
+        Some((f32::from_bits(0x0001_0000), f32::from_bits(0x0004_0000))),
+    ];
+    let subs = [
+        Subnormals::Reject,
+        Subnormals::FlushOrClamp,
+        Subnormals::Normalize,
+    ];
     let precs = [CbrtfPrecision::Midp, CbrtfPrecision::Lowp];
     let ports = [Portability::BitExact, Portability::BackendDependent];
     let vals = [
@@ -1115,124 +1617,127 @@ fn cbrtf_hold_each_constraint_across_all_other_permutations() {
     ];
     let execs = [Execution::Upgrade, Execution::Caller];
 
-    let mut valid_counts = [0_usize; 10];
+    let mut valid_counts = [0_usize; 12];
     let normal_in = [0.125_f32, 0.25, 0.5, 1.0];
 
-    for &r in &ranges {
-        for &d in &doms {
-            for &pr in &precs {
-                for &po in &ports {
-                    for &va in &vals {
-                        for &ex in &execs {
-                            let mut opts = CbrtfOptions::new()
-                                .precision(pr)
-                                .portability(po)
-                                .validation(va)
-                                .execution(ex);
-                            if let Some((lo, hi)) = r {
-                                opts = opts.input_range(lo, hi);
-                            }
-                            match d {
-                                1 => opts = opts.admit_subnormals(),
-                                2 => opts = opts.admit_all_floats(),
-                                _ => {}
-                            }
+    for &dom in &domains {
+        for &r in &ranges {
+            for &sub in &subs {
+                for &pr in &precs {
+                    for &po in &ports {
+                        for &va in &vals {
+                            for &ex in &execs {
+                                let mut opts = CbrtfOptions::new()
+                                    .domain(dom)
+                                    .precision(pr)
+                                    .portability(po)
+                                    .validation(va)
+                                    .execution(ex);
+                                if let Some((lo, hi)) = r {
+                                    opts = opts.input_range(lo, hi);
+                                }
+                                opts = opts.subnormals(sub);
 
-                            if !opts.is_valid() {
-                                assert_eq!(CbrtfOptions::from_bits(opts.bits()), None);
-                                assert_eq!(
-                                    opts.runtime().scalar(0.5).unwrap_err().kind,
-                                    CbrtfErrorKind::UnsupportedOptions
-                                );
-                                continue;
-                            }
+                                if !opts.is_valid() {
+                                    assert_eq!(CbrtfOptions::from_bits(opts.bits()), None);
+                                    assert_eq!(
+                                        opts.runtime().scalar(0.5).unwrap_err().kind,
+                                        CbrtfErrorKind::UnsupportedOptions
+                                    );
+                                    continue;
+                                }
 
-                            assert_eq!(CbrtfOptions::from_bits(opts.bits()), Some(opts));
-                            let rt = opts.runtime();
+                                assert_eq!(CbrtfOptions::from_bits(opts.bits()), Some(opts));
+                                let rt = opts.runtime();
 
-                            let sample: [f32; 4] =
-                                if r == Some((f32::from_bits(1), f32::from_bits(0x100))) {
+                                let sample: [f32; 4] = if r
+                                    == Some((
+                                        f32::from_bits(0x0001_0000),
+                                        f32::from_bits(0x0004_0000),
+                                    )) {
                                     [
-                                        f32::from_bits(1),
-                                        f32::from_bits(4),
-                                        f32::from_bits(16),
-                                        f32::from_bits(64),
+                                        f32::from_bits(0x0001_0000),
+                                        f32::from_bits(0x0002_0000),
+                                        f32::from_bits(0x0003_0000),
+                                        f32::from_bits(0x0004_0000),
                                     ]
                                 } else {
                                     normal_in
                                 };
 
-                            let a4 = rt.array(sample).unwrap();
-                            let v4 = f32x4::from_array_t(ScalarToken, sample);
-                            let s4 = rt.simd(v4).unwrap().to_array();
-                            let mut sl = [0.0; 11];
-                            let sl_in: [f32; 11] = core::array::from_fn(|i| sample[i % 4]);
-                            rt.slice(&sl_in, &mut sl).unwrap();
-                            for i in 0..11 {
-                                assert_bits_or_nan(sl[i], a4[i % 4], "cbrt slice vs array");
-                            }
-                            for i in 0..4 {
-                                assert_bits_or_nan(s4[i], a4[i], "cbrt simd vs array");
-                            }
-
-                            if matches!(d, 1 | 2)
-                                && r.is_none_or(|(lo, hi)| {
-                                    lo <= f32::from_bits(4) && hi >= f32::from_bits(4)
-                                })
-                            {
-                                valid_counts[0] += 1;
-                                let c_sub = rt.scalar(f32::from_bits(4)).unwrap();
-                                assert!(c_sub.is_normal() && c_sub > 0.0);
-                            }
-                            if d == 2 {
-                                valid_counts[1] += 1;
-                                assert_eq!(
-                                    rt.scalar(f32::NEG_INFINITY).unwrap(),
-                                    f32::NEG_INFINITY
-                                );
-                                assert!(rt.scalar(f32::NAN).unwrap().is_nan());
-                            }
-                            if va == Validation::Checked && d != 2 {
-                                valid_counts[2] += 1;
-                                assert!(rt.scalar(f32::NAN).is_err());
-                                assert!(rt.scalar(f32::MAX).is_err());
-                                if d == 0
-                                    && r.is_none_or(|(lo, hi)| {
-                                        lo < f32::MIN_POSITIVE && hi > -f32::MIN_POSITIVE
-                                    })
-                                {
-                                    assert!(rt.scalar(f32::from_bits(1)).is_err());
+                                let a4 = rt.array(sample).unwrap();
+                                let v4 = f32x4::from_array_t(ScalarToken, sample);
+                                let s4 = rt.simd(v4).unwrap().to_array();
+                                let mut sl = [0.0; 11];
+                                let sl_in: [f32; 11] = core::array::from_fn(|i| sample[i % 4]);
+                                rt.slice(&sl_in, &mut sl).unwrap();
+                                for i in 0..11 {
+                                    assert_bits_or_nan(sl[i], a4[i % 4], "cbrt slice vs array");
                                 }
-                            }
-                            if va == Validation::ClampOutOfBounds {
-                                valid_counts[3] += 1;
-                                let oob = [
-                                    f32::NEG_INFINITY,
-                                    -f32::from_bits(1),
-                                    f32::INFINITY,
-                                    f32::NAN,
-                                ];
-                                let out = rt.array(oob).unwrap();
-                                assert!(out[3].is_nan());
-                                assert!(!out[0].is_nan() && out[0].is_finite() || d == 2);
-                            }
-                            if va == Validation::AssumeValid {
-                                valid_counts[4] += 1;
-                            }
-                            if r.is_some() {
-                                valid_counts[5] += 1;
-                            }
-                            if pr == CbrtfPrecision::Lowp {
-                                valid_counts[6] += 1;
-                            }
-                            if pr == CbrtfPrecision::Midp {
-                                valid_counts[7] += 1;
-                            }
-                            if po == Portability::BitExact {
-                                valid_counts[8] += 1;
-                            }
-                            if ex == Execution::Caller {
-                                valid_counts[9] += 1;
+                                for i in 0..4 {
+                                    assert_bits_or_nan(s4[i], a4[i], "cbrt simd vs array");
+                                }
+
+                                if opts.subnormals_policy() == Subnormals::Normalize {
+                                    valid_counts[0] += 1;
+                                    let c_sub = rt.scalar(f32::from_bits(0x0002_0000)).unwrap();
+                                    assert!(c_sub.is_normal() && c_sub > 0.0);
+                                }
+                                if sub == Subnormals::FlushOrClamp {
+                                    valid_counts[1] += 1;
+                                    if va == Validation::Checked {
+                                        assert!(rt.scalar(f32::from_bits(0x0002_0000)).is_ok());
+                                    }
+                                }
+                                if dom == CbrtfDomain::AllFloats {
+                                    valid_counts[2] += 1;
+                                    assert_eq!(
+                                        rt.scalar(f32::NEG_INFINITY).unwrap(),
+                                        f32::NEG_INFINITY
+                                    );
+                                    assert!(rt.scalar(f32::NAN).unwrap().is_nan());
+                                }
+                                if dom == CbrtfDomain::PositiveNormals && r.is_none() {
+                                    valid_counts[3] += 1;
+                                }
+                                if va == Validation::Checked && dom != CbrtfDomain::AllFloats {
+                                    valid_counts[4] += 1;
+                                    assert!(rt.scalar(f32::NAN).is_err());
+                                    assert!(rt.scalar(f32::MAX).is_err());
+                                }
+                                if va == Validation::ClampOutOfBounds {
+                                    valid_counts[5] += 1;
+                                    let oob = [
+                                        f32::NEG_INFINITY,
+                                        -f32::from_bits(1),
+                                        f32::INFINITY,
+                                        f32::NAN,
+                                    ];
+                                    let out = rt.array(oob).unwrap();
+                                    assert!(out[3].is_nan());
+                                    assert!(
+                                        (!out[0].is_nan() && out[0].is_finite())
+                                            || dom == CbrtfDomain::AllFloats
+                                    );
+                                }
+                                if va == Validation::AssumeValid {
+                                    valid_counts[6] += 1;
+                                }
+                                if r.is_some() {
+                                    valid_counts[7] += 1;
+                                }
+                                if pr == CbrtfPrecision::Lowp {
+                                    valid_counts[8] += 1;
+                                }
+                                if pr == CbrtfPrecision::Midp {
+                                    valid_counts[9] += 1;
+                                }
+                                if po == Portability::BitExact {
+                                    valid_counts[10] += 1;
+                                }
+                                if ex == Execution::Caller {
+                                    valid_counts[11] += 1;
+                                }
                             }
                         }
                     }
@@ -1330,7 +1835,6 @@ fn const_generic_specializations_match_runtime_across_new_constraints() {
         assert_bits_or_nan(c_sub[i], r_sub[i], "const vs runtime cbrt subnorm");
     }
 
-    // Exp, log1p, and failing-slice const vs runtime checks.
     const EXP_SMALL_CLAMP: ExpfOptions = ExpfOptions::new().small_exp_range().clamp_out_of_bounds();
     let e_probe = [-5.0_f32, -0.0, 0.2, f32::NAN];
     let ce = Expf::<{ EXP_SMALL_CLAMP.bits() }>::exp_array(e_probe).unwrap();
@@ -1339,11 +1843,12 @@ fn const_generic_specializations_match_runtime_across_new_constraints() {
         assert_bits_or_nan(ce[i], re[i], "const vs runtime exp small clamp");
     }
 
-    const LOG1P_SMALL_CLAMP: LogfOptions =
-        LogfOptions::new().small_log1p_range().clamp_out_of_bounds();
+    const LOG1P_SMALL_CLAMP: Log1pfOptions = Log1pfOptions::new()
+        .domain(Log1pfDomain::AroundZero)
+        .clamp_out_of_bounds();
     let l1p_probe = [-2.0_f32, -0.0, 0.1, f32::NAN];
-    let cl1p = Logf::<{ LOG1P_SMALL_CLAMP.bits() }>::log1p_array(l1p_probe).unwrap();
-    let rl1p = LOG1P_SMALL_CLAMP.runtime().log1p_array(l1p_probe).unwrap();
+    let cl1p = Log1pf::<{ LOG1P_SMALL_CLAMP.bits() }>::array(l1p_probe).unwrap();
+    let rl1p = LOG1P_SMALL_CLAMP.runtime().array(l1p_probe).unwrap();
     for i in 0..4 {
         assert_bits_or_nan(cl1p[i], rl1p[i], "const vs runtime log1p small clamp");
     }
@@ -1362,9 +1867,6 @@ fn const_generic_specializations_match_runtime_across_new_constraints() {
 
 #[test]
 fn powf_subnormal_straddling_exponent_intervals_clamp_to_admitted_endpoints() {
-    // Positive-only interval starting in excluded subnormals: only `MIN_POSITIVE` is admitted.
-    // Clamping a subnormal/zero/negative exponent with zero base must evaluate `0^MIN_POSITIVE = 0.0`,
-    // never `0^0 = 1.0`.
     const POS_OPTS: PowfOptions = PowfOptions::new()
         .admit_zero_base()
         .exponent_range(f32::MIN_POSITIVE / 2.0, f32::MIN_POSITIVE)
@@ -1429,8 +1931,6 @@ fn powf_subnormal_straddling_exponent_intervals_clamp_to_admitted_endpoints() {
         }
     }
 
-    // Symmetric negative-only interval ending in excluded negative subnormals:
-    // effective upper bound is `-MIN_POSITIVE`, never `0.0`.
     const NEG_OPTS: PowfOptions = PowfOptions::new()
         .exponent_range(-f32::MIN_POSITIVE, -f32::MIN_POSITIVE / 2.0)
         .clamp_out_of_bounds();
@@ -1446,4 +1946,63 @@ fn powf_subnormal_straddling_exponent_intervals_clamp_to_admitted_endpoints() {
             ref_at_neg_min.to_bits()
         );
     }
+}
+
+#[test]
+fn ranged_subnormal_admission_and_flush_clamp_preserve_exact_endpoints() {
+    let min_sub = f32::from_bits(1);
+    let sub_bf16 = f32::from_bits(0x0001_0000);
+
+    // PowfDomain::Unit + admit_subnormals + clamp_out_of_bounds preserves min_sub on Midp & Highp.
+    let unit_midp = PowfOptions::new()
+        .domain(PowfDomain::Unit)
+        .admit_subnormals()
+        .clamp_out_of_bounds();
+    let unit_highp = unit_midp.highp();
+    assert_close_rel(
+        unit_midp.runtime().scalar(min_sub, 0.5).unwrap(),
+        min_sub.sqrt(),
+        1e-6,
+        "midp unit subnorm",
+    );
+    assert_eq!(
+        unit_highp.runtime().scalar(min_sub, 0.5).unwrap(),
+        min_sub.sqrt()
+    );
+
+    // PowfDomain::PositiveUnit + admit_subnormals + clamp_out_of_bounds clamps <= 0 to min_sub (not MIN_POSITIVE).
+    let pos_unit_midp = PowfOptions::new()
+        .domain(PowfDomain::PositiveUnit)
+        .admit_subnormals()
+        .clamp_out_of_bounds();
+    let pos_unit_highp = pos_unit_midp.highp();
+    assert_close_rel(
+        pos_unit_midp.runtime().scalar(-1.0, 0.5).unwrap(),
+        min_sub.sqrt(),
+        1e-6,
+        "midp positive unit clamp to min_sub",
+    );
+    assert_eq!(
+        pos_unit_highp.runtime().scalar(-1.0, 0.5).unwrap(),
+        min_sub.sqrt()
+    );
+
+    // Logf custom [sub_bf16, 1.0] with FlushOrClamp shoves subnormals to MIN_POSITIVE (-126.0), not unscaled sub_bf16.
+    let log_flush = LogfOptions::new()
+        .input_range(sub_bf16, 1.0)
+        .flush_or_clamp_subnormals();
+    assert!(log_flush.is_valid());
+    assert_eq!(log_flush.runtime().log2(sub_bf16).unwrap(), -126.0);
+    assert_eq!(log_flush.runtime().log2(min_sub).unwrap(), -126.0);
+
+    // CbrtfDomain::PositiveNormals + admit_subnormals scales subnormals properly.
+    let cbrt_pos_sub = CbrtfOptions::new()
+        .domain(CbrtfDomain::PositiveNormals)
+        .admit_subnormals();
+    assert!(cbrt_pos_sub.is_valid());
+    let c = cbrt_pos_sub
+        .runtime()
+        .scalar(f32::from_bits(0x0002_0000))
+        .unwrap();
+    assert!((c - 2.0_f32.powi(-44)).abs() < 2.0_f32.powi(-60));
 }

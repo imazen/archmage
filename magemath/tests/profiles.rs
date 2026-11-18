@@ -6,6 +6,7 @@ use magemath::{
     Portability, SimdMath, SliceError,
     cbrtf::{self as c, Cbrtf, CbrtfOptions},
     expf::{self as e, Expf, ExpfOptions},
+    log1pf::{Log1pf, Log1pfOptions},
     logf::{self as l, Logf, LogfOptions},
     powf::{self as p, Powf, PowfOptions},
 };
@@ -208,7 +209,10 @@ const EXP_CLAMPED_SPEC: ExpfOptions = ExpfOptions::new().input_range(2.0, 8.0);
 const EXP_CLAMPED: u128 = EXP_CLAMPED_SPEC.bits();
 const EXP_TIGHT_SPEC: ExpfOptions = ExpfOptions::new().input_range(-10.0, 10.0);
 const LOG_EXCLUDING_ONE: u128 = LogfOptions::new().input_range(2.0, 8.0).bits();
-const LOG1P_SMALL: u128 = LogfOptions::new().input_range(-0.5, 0.5).bits();
+const LOG1P_SMALL: u128 = Log1pfOptions::new()
+    .input_range(-0.5, 0.5)
+    .admit_subnormals()
+    .bits();
 const CBRT_EXCLUDING_ONE_SPEC: CbrtfOptions = CbrtfOptions::new().input_range(2.0, 8.0);
 const CBRT_EXCLUDING_ONE: u128 = CBRT_EXCLUDING_ONE_SPEC.bits();
 const CBRT_NEAR_ZERO_SPEC: CbrtfOptions = CbrtfOptions::new().input_range(-8.0, 8.0);
@@ -252,11 +256,11 @@ fn custom_range_tails_excluding_one_accept_and_reject_exact_indices() {
 
         let log1p_src = uniform(len, -0.5, 0.5, 200 + len as u32);
         let mut log1p_dst = vec![0.0; len];
-        Logf::<LOG1P_SMALL>::log1p_slice(&log1p_src, &mut log1p_dst).unwrap();
+        Log1pf::<LOG1P_SMALL>::slice(&log1p_src, &mut log1p_dst).unwrap();
         for (i, &x) in log1p_src.iter().enumerate() {
             assert_eq!(
                 log1p_dst[i].to_bits(),
-                Logf::<LOG1P_SMALL>::log1p(x).unwrap().to_bits()
+                Log1pf::<LOG1P_SMALL>::scalar(x).unwrap().to_bits()
             );
         }
 
@@ -332,9 +336,10 @@ fn simd_math_inline_chaining_and_token_extraction_across_all_families() {
     const P_FAST: u128 = PowfOptions::new().gamma().unchecked().bits();
     const E_FAST: u128 = ExpfOptions::new().unchecked().bits();
     const L_FAST: u128 = LogfOptions::new().unchecked().bits();
+    const L1P_FAST: u128 = Log1pfOptions::new().unchecked().bits();
     const C_FAST: u128 = CbrtfOptions::new().unchecked().bits();
     const EB: u128 = ExpfOptions::new().backend_dependent().caller().bits();
-    const LB: u128 = LogfOptions::new().backend_dependent().caller().bits();
+    const L1PB: u128 = Log1pfOptions::new().backend_dependent().caller().bits();
     const CB: u128 = CbrtfOptions::new().backend_dependent().caller().bits();
 
     const { assert!(Portability::BitExact as u8 != Portability::BackendDependent as u8) };
@@ -368,7 +373,7 @@ fn simd_math_inline_chaining_and_token_extraction_across_all_families() {
     );
     assert_eq!(
         v4.try_log1p().unwrap().to_array(),
-        v4.log1p::<L_FAST>().to_array()
+        v4.log1p::<L1P_FAST>().to_array()
     );
     assert_eq!(
         v4.try_cbrt().unwrap().to_array(),
@@ -398,9 +403,9 @@ fn simd_math_inline_chaining_and_token_extraction_across_all_families() {
     Expf::<EB>::exp_slice_with_token(ScalarToken, &[0.5; 9], &mut edst).unwrap();
     assert_eq!(edst[8].to_bits(), es.to_bits());
 
-    let ls = Logf::<LB>::log1p_with_token(ScalarToken, 0.5).unwrap();
+    let ls = Log1pf::<L1PB>::scalar_with_token(ScalarToken, 0.5).unwrap();
     let mut ldst = [0.0; 9];
-    Logf::<LB>::log1p_slice_with_token(ScalarToken, &[0.5; 9], &mut ldst).unwrap();
+    Log1pf::<L1PB>::slice_with_token(ScalarToken, &[0.5; 9], &mut ldst).unwrap();
     assert_eq!(ldst[8].to_bits(), ls.to_bits());
 
     let cs = Cbrtf::<CB>::scalar_with_token(ScalarToken, 2.5).unwrap();

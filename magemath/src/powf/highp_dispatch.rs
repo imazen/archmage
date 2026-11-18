@@ -18,55 +18,101 @@ fn run<const IN_CONTEXT: bool, const ELIDE: bool, const ZERO: bool, const N: usi
 ) -> Result<[f32; N], PowfError> {
     let (bases, nan_mask) = highp::sanitize_bases_cfg::<N>(cfg, bases, n);
     highp::check_bases_cfg(cfg, &bases, n)?;
-    let mut out = match plan {
-        #[cfg(target_arch = "x86_64")]
-        Plan::V3(t) => {
-            if IN_CONTEXT {
-                highp_simd::packed4::<archmage::X64V3Token, ELIDE, ZERO, N>(t, bases, n)
-            } else {
-                v3::<ELIDE, ZERO, N>(t, bases, n)
+    let mut out = if cfg.alg_kind != 0 {
+        match plan {
+            #[cfg(target_arch = "x86_64")]
+            Plan::V3(t) => {
+                if IN_CONTEXT {
+                    highp::eval_alg_token::<_, N>(t, cfg.alg_kind, bases)
+                } else {
+                    v3_alg::<N>(t, cfg.alg_kind, bases)
+                }
             }
-        }
-        #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-        Plan::V4(t) => {
-            if IN_CONTEXT {
-                highp_simd::wide::<archmage::X64V4Token, ELIDE, ZERO, N>(t, bases, n)
-            } else {
-                v4::<ELIDE, ZERO, N>(t, bases, n)
+            #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+            Plan::V4(t) => {
+                if IN_CONTEXT {
+                    highp::eval_alg_token::<_, N>(t, cfg.alg_kind, bases)
+                } else {
+                    v4_alg::<N>(t, cfg.alg_kind, bases)
+                }
             }
-        }
-        #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-        Plan::V4x(t) => {
-            if IN_CONTEXT {
-                highp_simd::wide::<archmage::X64V4xToken, ELIDE, ZERO, N>(t, bases, n)
-            } else {
-                v4x::<ELIDE, ZERO, N>(t, bases, n)
+            #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+            Plan::V4x(t) => {
+                if IN_CONTEXT {
+                    highp::eval_alg_token::<_, N>(t, cfg.alg_kind, bases)
+                } else {
+                    v4x_alg::<N>(t, cfg.alg_kind, bases)
+                }
             }
-        }
-        #[cfg(target_arch = "aarch64")]
-        Plan::Neon(t) => {
-            if IN_CONTEXT {
-                highp_simd::packed2::<archmage::NeonToken, ELIDE, ZERO, N>(t, bases, n)
-            } else {
-                neon::<ELIDE, ZERO, N>(t, bases, n)
+            #[cfg(target_arch = "aarch64")]
+            Plan::Neon(t) => {
+                if IN_CONTEXT {
+                    highp::eval_alg_token::<_, N>(t, cfg.alg_kind, bases)
+                } else {
+                    neon_alg::<N>(t, cfg.alg_kind, bases)
+                }
             }
-        }
-        #[cfg(target_arch = "wasm32")]
-        Plan::Wasm(t, true) => {
-            if IN_CONTEXT {
-                highp_simd::packed2::<archmage::Wasm128Token, ELIDE, ZERO, N>(t, bases, n)
-            } else {
-                wasm::<ELIDE, ZERO, N>(t, bases, n)
+            #[cfg(target_arch = "wasm32")]
+            Plan::Wasm(t, _) => {
+                if IN_CONTEXT {
+                    highp::eval_alg_token::<_, N>(t, cfg.alg_kind, bases)
+                } else {
+                    wasm_alg::<N>(t, cfg.alg_kind, bases)
+                }
             }
+            _ => highp::eval_alg_token::<_, N>(ScalarToken, cfg.alg_kind, bases),
         }
-        _ => scalar::<ScalarToken, { graph::SOFTWARE }, ELIDE, N>(ScalarToken, bases, n),
+    } else {
+        match plan {
+            #[cfg(target_arch = "x86_64")]
+            Plan::V3(t) => {
+                if IN_CONTEXT {
+                    highp_simd::packed4::<archmage::X64V3Token, ELIDE, ZERO, N>(t, bases, n)
+                } else {
+                    v3::<ELIDE, ZERO, N>(t, bases, n)
+                }
+            }
+            #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+            Plan::V4(t) => {
+                if IN_CONTEXT {
+                    highp_simd::wide::<archmage::X64V4Token, ELIDE, ZERO, N>(t, bases, n)
+                } else {
+                    v4::<ELIDE, ZERO, N>(t, bases, n)
+                }
+            }
+            #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+            Plan::V4x(t) => {
+                if IN_CONTEXT {
+                    highp_simd::wide::<archmage::X64V4xToken, ELIDE, ZERO, N>(t, bases, n)
+                } else {
+                    v4x::<ELIDE, ZERO, N>(t, bases, n)
+                }
+            }
+            #[cfg(target_arch = "aarch64")]
+            Plan::Neon(t) => {
+                if IN_CONTEXT {
+                    highp_simd::packed2::<archmage::NeonToken, ELIDE, ZERO, N>(t, bases, n)
+                } else {
+                    neon::<ELIDE, ZERO, N>(t, bases, n)
+                }
+            }
+            #[cfg(target_arch = "wasm32")]
+            Plan::Wasm(t, true) => {
+                if IN_CONTEXT {
+                    highp_simd::packed2::<archmage::Wasm128Token, ELIDE, ZERO, N>(t, bases, n)
+                } else {
+                    wasm::<ELIDE, ZERO, N>(t, bases, n)
+                }
+            }
+            _ => scalar::<ScalarToken, { graph::SOFTWARE }, ELIDE, N>(ScalarToken, bases, n),
+        }
     };
     highp::check_results_cfg(cfg, &bases, &out, n)?;
     highp::restore_nans(&mut out, nan_mask);
     Ok(out)
 }
 
-#[inline(always)]
+#[inline]
 fn scalar<
     T: magetypes::simd::backends::F64x2Backend,
     const MODE: usize,
@@ -92,7 +138,7 @@ fn scalar<
     target_arch = "wasm32"
 ))]
 macro_rules! entry {
-    ($name:ident,$token:ident,$packed:ident) => {
+    ($name:ident,$alg_name:ident,$token:ident,$packed:ident) => {
         #[archmage::arcane]
         fn $name<const ELIDE: bool, const ZERO: bool, const N: usize>(
             t: archmage::$token,
@@ -101,20 +147,57 @@ macro_rules! entry {
         ) -> [f32; N] {
             highp_simd::$packed::<_, ELIDE, ZERO, N>(t, x, n)
         }
+
+        #[archmage::arcane]
+        fn $alg_name<const N: usize>(t: archmage::$token, alg_kind: u8, x: [f32; N]) -> [f32; N] {
+            highp::eval_alg_token::<_, N>(t, alg_kind, x)
+        }
     };
 }
 #[cfg(target_arch = "x86_64")]
-entry!(v3, X64V3Token, packed4);
+entry!(v3, v3_alg, X64V3Token, packed4);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-entry!(v4, X64V4Token, wide);
+entry!(v4, v4_alg, X64V4Token, wide);
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-entry!(v4x, X64V4xToken, wide);
+entry!(v4x, v4x_alg, X64V4xToken, wide);
 #[cfg(target_arch = "aarch64")]
-entry!(neon, NeonToken, packed2);
+entry!(neon, neon_alg, NeonToken, packed2);
 #[cfg(target_arch = "wasm32")]
-entry!(wasm, Wasm128Token, packed2);
+entry!(wasm, wasm_alg, Wasm128Token, packed2);
 
-#[inline(always)]
+#[inline]
+fn eval_alg_slice_loop<T: magetypes::simd::backends::F64x2Backend>(
+    t: T,
+    cfg: highp::HighpCfg,
+    src: &[f32],
+    dst: &mut [f32],
+    n: f32,
+) -> Result<(), (usize, PowfError)> {
+    let (chunks, tail) = src.as_chunks::<8>();
+    let (out_chunks, out_tail) = dst.as_chunks_mut::<8>();
+    for (i, (s, d)) in chunks.iter().zip(out_chunks.iter_mut()).enumerate() {
+        let (bases, nan_mask) = highp::sanitize_bases_cfg::<8>(cfg, *s, n);
+        highp::check_bases_cfg(cfg, &bases, n).map_err(|e| (i * 8, e))?;
+        let mut out = highp::eval_alg_token::<T, 8>(t, cfg.alg_kind, bases);
+        highp::check_results_cfg(cfg, &bases, &out, n).map_err(|e| (i * 8, e))?;
+        highp::restore_nans(&mut out, nan_mask);
+        *d = out;
+    }
+    let tail_base = chunks.len() * 8;
+    for (i, (&x, d)) in tail.iter().zip(out_tail.iter_mut()).enumerate() {
+        let ([bx], nan_mask) = highp::sanitize_bases_cfg::<1>(cfg, [x], n);
+        highp::check_bases_cfg(cfg, &[bx], n)
+            .map_err(|e| (tail_base + i, PowfError { lane_mask: 1, ..e }))?;
+        let mut out = highp::eval_alg_token::<T, 1>(t, cfg.alg_kind, [bx]);
+        highp::check_results_cfg(cfg, &[bx], &out, n)
+            .map_err(|e| (tail_base + i, PowfError { lane_mask: 1, ..e }))?;
+        highp::restore_nans(&mut out, nan_mask);
+        *d = out[0];
+    }
+    Ok(())
+}
+
+#[inline]
 fn eval_slice_loop<
     T: magetypes::simd::backends::F64x2Backend,
     const MODE: usize,
@@ -128,6 +211,9 @@ fn eval_slice_loop<
     n: f32,
     mut eval8: F,
 ) -> Result<(), (usize, PowfError)> {
+    if cfg.alg_kind != 0 {
+        return eval_alg_slice_loop(t, cfg, src, dst, n);
+    }
     let (chunks, tail) = src.as_chunks::<8>();
     let (out_chunks, out_tail) = dst.as_chunks_mut::<8>();
     for (i, (s, d)) in chunks.iter().zip(out_chunks.iter_mut()).enumerate() {
@@ -150,6 +236,23 @@ fn eval_slice_loop<
         *d = out[0];
     }
     Ok(())
+}
+
+#[inline(never)]
+fn scalar_slice<const ELIDE: bool>(
+    cfg: highp::HighpCfg,
+    src: &[f32],
+    dst: &mut [f32],
+    n: f32,
+) -> Result<(), (usize, PowfError)> {
+    eval_slice_loop::<_, { graph::SOFTWARE }, ELIDE, _>(
+        ScalarToken,
+        cfg,
+        src,
+        dst,
+        n,
+        scalar::<ScalarToken, { graph::SOFTWARE }, ELIDE, 8>,
+    )
 }
 
 #[cfg(any(
@@ -273,21 +376,14 @@ fn run_slice<const IN_CONTEXT: bool, const ELIDE: bool, const ZERO: bool>(
                 wasm_slice::<ELIDE, ZERO>(t, cfg, src, dst, n)
             }
         }
-        _ => eval_slice_loop::<_, { graph::SOFTWARE }, ELIDE, _>(
-            ScalarToken,
-            cfg,
-            src,
-            dst,
-            n,
-            scalar::<ScalarToken, { graph::SOFTWARE }, ELIDE, 8>,
-        ),
+        _ => scalar_slice::<ELIDE>(cfg, src, dst, n),
     }
 }
 
 // The direct form inlines into an already capable vector caller. Upgrades
 // enter one arcane boundary for the complete graph instead.
 #[cfg_attr(debug_assertions, inline(never))]
-#[cfg_attr(not(debug_assertions), inline(always))]
+#[cfg_attr(not(debug_assertions), inline)]
 pub(super) fn for_token_cfg<T: archmage::IntoConcreteToken, const N: usize>(
     t: T,
     opts: PowfOptions,
@@ -318,7 +414,7 @@ pub(super) fn for_token_cfg<T: archmage::IntoConcreteToken, const N: usize>(
 }
 
 #[cfg_attr(debug_assertions, inline(never))]
-#[cfg_attr(not(debug_assertions), inline(always))]
+#[cfg_attr(not(debug_assertions), inline)]
 pub(super) fn for_token_slice_cfg<T: archmage::IntoConcreteToken>(
     t: T,
     opts: PowfOptions,

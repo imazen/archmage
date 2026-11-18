@@ -49,7 +49,7 @@ mod tests;
 mod wasm;
 
 pub use const_api::{Powf, PowfRuntime};
-pub use options::{MAX_EXP_BOUND, PowfOptions, PowfPrecision};
+pub use options::{MAX_EXP_BOUND, PowfDomain, PowfOptions, PowfPrecision};
 
 /// Reason a complete vector was rejected.
 ///

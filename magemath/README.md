@@ -24,10 +24,14 @@ try_powf_slice(&[0.25, 0.5, 2.0], &mut pos_dst, 2.2).unwrap();
 
 Each family has one fluent `const` options builder ([`PowfOptions`](powf::PowfOptions),
 [`ExpfOptions`](expf::ExpfOptions), [`LogfOptions`](logf::LogfOptions),
-[`CbrtfOptions`](cbrtf::CbrtfOptions)) ending in `.bits()` for compile-time
-specialization (`Powf<CFG>`, `Expf<CFG>`, `Logf<CFG>`, `Cbrtf<CFG>`, and inline
-vector methods via [`SimdMath`]) or `.runtime()` for dynamic options. These are
-bounded approximations, not universal correctly rounded libm functions.
+[`Log1pfOptions`](log1pf::Log1pfOptions), [`CbrtfOptions`](cbrtf::CbrtfOptions))
+with discrete `#[non_exhaustive]` `*Domain` presets, explicit [`Subnormals`](Subnormals)
+policies (`Reject` default, `FlushOrClamp`, opt-in `Normalize`), outward-rounded
+`bf16` custom range/clamp bounds, and (for `powf`) compile-time `.const_exponent(n)`
+specialization — ending in `.bits()` for `const CFG: u128` (`Powf<CFG>`, `Expf<CFG>`,
+`Logf<CFG>`, `Log1pf<CFG>`, `Cbrtf<CFG>`, and inline vector methods via [`SimdMath`])
+or `.runtime()` for dynamic options. These are bounded approximations, not universal
+correctly rounded libm functions.
 
 Inside an `#[attune(_*_t, define(f32x8))]` kernel, import [`SimdMath`] to call
 configured operations inline on any Magetypes `f32` vector (`self.token()` is

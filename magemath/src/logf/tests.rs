@@ -21,8 +21,13 @@ fn specials_domain() {
 }
 
 #[test]
-fn aliases_and_runtime() {
+fn aliases_subnormals_and_runtime() {
     const MIDP: u128 = LogfOptions::new().bits();
+    const FLUSH_POS: u128 = LogfOptions::new().flush_or_clamp_subnormals().bits();
+    const FLUSH_UNIT: u128 = LogfOptions::new()
+        .domain(LogfDomain::Unit)
+        .flush_or_clamp_subnormals()
+        .bits();
     let x = 4.0_f32;
     assert_eq!(try_ln(x), try_log2(x).map(|v| v * core::f32::consts::LN_2));
     assert_eq!(
@@ -36,44 +41,12 @@ fn aliases_and_runtime() {
         LogfErrorKind::UnsupportedWidth
     );
     assert_eq!(LogfOptions::new().runtime().log2(8.0), Ok(3.0));
-}
-
-#[test]
-fn log1p_basics() {
-    const C: u128 = LogfOptions::new().caller().bits();
-    const S: u128 = LogfOptions::new().full_domain().caller().bits();
-    assert_eq!(Logf::<C>::log1p(0.0), Ok(0.0));
     assert_eq!(
-        Logf::<C>::log1p(1.0).unwrap() - core::f32::consts::LN_2,
-        0.0
-    );
-    assert!((Logf::<C>::log1p(-0.5).unwrap() + core::f32::consts::LN_2).abs() < 1e-6);
-    // correction recovers what u = 1+x rounds away for tiny x
-    for x in [1e-8f32, -1e-8, 1e-20, 2.5e-5, -0.4142] {
-        let got = Logf::<C>::log1p(x).unwrap();
-        let r = (x as f64).ln_1p() as f32;
-        assert_eq!(got, r, "log1p({x}): {got} vs {r}");
-    }
-    // full domain
-    assert_eq!(Logf::<S>::log1p(-1.0), Ok(f32::NEG_INFINITY));
-    assert!(Logf::<S>::log1p(-1.5).unwrap().is_nan());
-    assert_eq!(Logf::<S>::log1p(f32::INFINITY), Ok(f32::INFINITY));
-    // positive domain rejects x <= -1
-    assert_eq!(
-        Logf::<C>::log1p(-1.0).unwrap_err().kind,
-        LogfErrorKind::InvalidInput
+        Logf::<FLUSH_POS>::log2(f32::from_bits(1)),
+        Logf::<MIDP>::log2(f32::MIN_POSITIVE)
     );
     assert_eq!(
-        Logf::<C>::log1p(-2.0).unwrap_err().kind,
-        LogfErrorKind::InvalidInput
-    );
-    // array + runtime parity
-    assert_eq!(
-        Logf::<C>::log1p_array::<1>([0.5]),
-        Ok([f32::from_bits(0x3ecf_991f)]) // MPFR256 RNE log1p(0.5); std is an approximate oracle under Miri.
-    );
-    assert_eq!(
-        LogfOptions::new().runtime().log1p(1.0).unwrap(),
-        core::f32::consts::LN_2
+        Logf::<FLUSH_UNIT>::log2(f32::from_bits(1)),
+        Ok(f32::NEG_INFINITY)
     );
 }

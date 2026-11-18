@@ -2,6 +2,7 @@
 #![forbid(unsafe_code)]
 use magemath::{
     expf::{Expf, ExpfOptions},
+    log1pf::{Log1pf, Log1pfOptions},
     logf::{Logf, LogfOptions},
 };
 
@@ -14,17 +15,17 @@ fn negative_zero_log_is_negative_infinity() {
 
 #[test]
 fn log1p_preserves_negative_zero() {
-    const MIDP: u128 = LogfOptions::new().bits();
+    const MIDP: u128 = Log1pfOptions::new().bits();
     assert_eq!(
-        Logf::<MIDP>::log1p(-0.0).unwrap().to_bits(),
+        Log1pf::<MIDP>::scalar(-0.0).unwrap().to_bits(),
         (-0.0f32).to_bits()
     );
 }
 
 #[test]
 fn scalar_token_error_mask_has_only_one_lane() {
-    const MIDP: u128 = LogfOptions::new().bits();
-    let error = Logf::<MIDP>::log1p_with_token(archmage::ScalarToken, -2.0).unwrap_err();
+    const MIDP: u128 = Log1pfOptions::new().bits();
+    let error = Log1pf::<MIDP>::scalar_with_token(archmage::ScalarToken, -2.0).unwrap_err();
     assert_eq!(error.lane_mask, 1);
 }
 

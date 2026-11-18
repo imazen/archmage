@@ -899,149 +899,176 @@ fn avx512_selector_upgrades_and_falls_back_across_all_families() {
 
 #[test]
 fn malformed_u128_words_are_rejected_across_all_families() {
-    use crate::{cbrtf::CbrtfOptions, expf::ExpfOptions, logf::LogfOptions};
+    use crate::{cbrtf::CbrtfOptions, expf::ExpfOptions, log1pf::Log1pfOptions, logf::LogfOptions};
+
+    let one_bf16 = 0x3f80_u128; // 1.0
+    let two_bf16 = 0x4000_u128; // 2.0
+    let neg_zero_bf16 = 0x8000_u128;
+    let inf_bf16 = 0x7f80_u128;
+    let nan_bf16 = 0x7fc0_u128;
+    let sub_bf16 = 0x0001_u128;
 
     let p_base = PowfOptions::new().bits();
-    // Precision = 3 (reserved).
-    assert_eq!(PowfOptions::from_bits(p_base | (0b11 << 9)), None);
-    // ASSUME and CLAMP_OOB simultaneously set.
-    assert_eq!(PowfOptions::from_bits(p_base | (1 << 12) | (1 << 15)), None);
-    // FULL combined with ZERO or SUBNORM.
+    // Out-of-range enum discriminants (PowfDomain = 10, Subnormals = 3, Validation = 3, Precision = 3, EXP_MODE = 3).
+    assert_eq!(
+        PowfOptions::from_bits((p_base & !(0x1f << 4)) | (10 << 4)),
+        None
+    );
+    assert_eq!(
+        PowfOptions::from_bits((p_base & !(0x7 << 9)) | (3 << 9)),
+        None
+    );
+    assert_eq!(
+        PowfOptions::from_bits((p_base & !(0x7 << 12)) | (3 << 12)),
+        None
+    );
+    assert_eq!(
+        PowfOptions::from_bits((p_base & !(0x7 << 15)) | (3 << 15)),
+        None
+    );
+    assert_eq!(PowfOptions::from_bits(p_base | (3 << 23)), None);
+    // Reserved bits [26..64].
+    assert_eq!(PowfOptions::from_bits(p_base | (1_u128 << 26)), None);
+    assert_eq!(PowfOptions::from_bits(p_base | (1_u128 << 63)), None);
+    // AllFloats combined with subnormal override or custom base/exp.
     let p_full = PowfOptions::new().full_domain().highp().bits();
-    assert_eq!(PowfOptions::from_bits(p_full | (1 << 6)), None);
-    assert_eq!(PowfOptions::from_bits(p_full | (1 << 14)), None);
-    // Base payload present without HAS_BASE, or inverted / subnormal / Inf / NaN with HAS_BASE.
-    let one_b = 1.0_f32.to_bits() as u128;
-    let two_b = 2.0_f32.to_bits() as u128;
-    assert_eq!(PowfOptions::from_bits(p_base | (one_b << 16)), None);
+    assert_eq!(PowfOptions::from_bits(p_full | (1 << 9)), None);
     assert_eq!(
-        PowfOptions::from_bits(p_base | (1 << 4) | (two_b << 16) | (one_b << 47)),
+        PowfOptions::from_bits(p_full | (2 << 23) | ((1.0_f32.to_bits() as u128) << 96)),
+        None
+    );
+    // Base payload without HAS_CUSTOM_BASE, or inverted / subnormal / -0.0 / Inf / NaN with HAS_CUSTOM_BASE.
+    assert_eq!(PowfOptions::from_bits(p_base | (one_bf16 << 64)), None);
+    assert_eq!(
+        PowfOptions::from_bits(p_base | (1 << 22) | (two_bf16 << 64) | (one_bf16 << 80)),
         None
     );
     assert_eq!(
-        PowfOptions::from_bits(p_base | (1 << 4) | (1_u128 << 16) | (one_b << 47)),
+        PowfOptions::from_bits(p_base | (1 << 22) | (sub_bf16 << 64) | (one_bf16 << 80)),
         None
     );
     assert_eq!(
-        PowfOptions::from_bits(
-            p_base
-                | (1 << 4)
-                | (one_b << 16)
-                | (((f32::INFINITY.to_bits() & 0x7fff_ffff) as u128) << 47)
-        ),
+        PowfOptions::from_bits(p_base | (1 << 22) | (one_bf16 << 64) | (inf_bf16 << 80)),
         None
     );
     assert_eq!(
-        PowfOptions::from_bits(
-            p_base
-                | (1 << 4)
-                | (one_b << 16)
-                | (((f32::NAN.to_bits() & 0x7fff_ffff) as u128) << 47)
-        ),
+        PowfOptions::from_bits(p_base | (1 << 22) | (one_bf16 << 64) | (nan_bf16 << 80)),
         None
     );
-    // Exponent payload without HAS_EXP, encoded -0.0, NaN, Inf, inverted, or subnormal-only.
-    let exp_neg_zero_25: u128 = (0x8000_0000_u32 >> 7) as u128;
-    let exp_inf_25: u128 = (f32::INFINITY.to_bits() >> 7) as u128;
-    let exp_nan_25: u128 = (f32::NAN.to_bits() >> 7) as u128;
-    let exp_sub_25: u128 = 1; // 0x80 when shifted << 7 (nonzero subnormal)
-    assert_eq!(PowfOptions::from_bits(p_base | (1_u128 << 78)), None);
+    // Exponent slot without EXP_MODE, RangeBf16 with -0.0 / Inf / NaN / inverted / subnormal-only,
+    // and ConstF32 with -0.0 / Inf / NaN / subnormal-under-Reject.
+    assert_eq!(PowfOptions::from_bits(p_base | (one_bf16 << 96)), None);
     assert_eq!(
-        PowfOptions::from_bits(p_base | (1 << 5) | (exp_neg_zero_25 << 78)),
+        PowfOptions::from_bits(p_base | (1 << 23) | (neg_zero_bf16 << 96) | (one_bf16 << 112)),
         None
     );
     assert_eq!(
-        PowfOptions::from_bits(p_base | (1 << 5) | (exp_inf_25 << 103)),
+        PowfOptions::from_bits(p_base | (1 << 23) | (one_bf16 << 96) | (inf_bf16 << 112)),
         None
     );
     assert_eq!(
-        PowfOptions::from_bits(p_base | (1 << 5) | (exp_nan_25 << 103)),
+        PowfOptions::from_bits(p_base | (1 << 23) | (one_bf16 << 96) | (nan_bf16 << 112)),
         None
     );
     assert_eq!(
-        PowfOptions::from_bits(p_base | (1 << 5) | (exp_sub_25 << 78) | (exp_sub_25 << 103)),
+        PowfOptions::from_bits(p_base | (1 << 23) | (sub_bf16 << 96) | (sub_bf16 << 112)),
+        None
+    );
+    assert_eq!(
+        PowfOptions::from_bits(p_base | (2 << 23) | (0x8000_0000_u128 << 96)),
+        None
+    );
+    assert_eq!(
+        PowfOptions::from_bits(p_base | (2 << 23) | ((f32::INFINITY.to_bits() as u128) << 96)),
+        None
+    );
+    assert_eq!(
+        PowfOptions::from_bits(p_base | (2 << 23) | ((f32::NAN.to_bits() as u128) << 96)),
+        None
+    );
+    assert_eq!(
+        PowfOptions::from_bits(p_base | (2 << 23) | (1_u128 << 96)),
         None
     );
 
-    // Expf, Logf, Cbrtf: reserved bits, ASSUME|CLAMP_OOB, absent HAS_RANGE payloads, -0.0, NaN, Inf, inverted.
-    let neg_zero_b = (-0.0_f32).to_bits() as u128;
-    let nan_b = f32::NAN.to_bits() as u128;
-    let inf_b = f32::INFINITY.to_bits() as u128;
-
+    // Expf, Logf, Log1pf, Cbrtf: reserved bits, out-of-range discriminants, absent HAS_CUSTOM_RANGE payloads,
+    // -0.0, NaN, Inf, inverted, and MAX_CBRT_BF16 bound check.
     let e_base = ExpfOptions::new().bits();
-    assert_eq!(ExpfOptions::from_bits(e_base | (1_u128 << 15)), None);
-    assert_eq!(ExpfOptions::from_bits(e_base | (1_u128 << 63)), None);
-    assert_eq!(ExpfOptions::from_bits(e_base | (1 << 12) | (1 << 14)), None);
-    assert_eq!(ExpfOptions::from_bits(e_base | (one_b << 64)), None);
     assert_eq!(
-        ExpfOptions::from_bits(e_base | (1 << 8) | (neg_zero_b << 64) | (one_b << 96)),
+        ExpfOptions::from_bits((e_base & !(0x1f << 4)) | (7 << 4)),
+        None
+    );
+    assert_eq!(ExpfOptions::from_bits(e_base | (1_u128 << 20)), None);
+    assert_eq!(ExpfOptions::from_bits(e_base | (1_u128 << 96)), None);
+    assert_eq!(ExpfOptions::from_bits(e_base | (one_bf16 << 64)), None);
+    assert_eq!(
+        ExpfOptions::from_bits(e_base | (1 << 19) | (neg_zero_bf16 << 64) | (one_bf16 << 80)),
         None
     );
     assert_eq!(
-        ExpfOptions::from_bits(e_base | (1 << 8) | (nan_b << 64) | (one_b << 96)),
+        ExpfOptions::from_bits(e_base | (1 << 19) | (nan_bf16 << 64) | (one_bf16 << 80)),
         None
     );
     assert_eq!(
-        ExpfOptions::from_bits(e_base | (1 << 8) | (one_b << 64) | (inf_b << 96)),
+        ExpfOptions::from_bits(e_base | (1 << 19) | (one_bf16 << 64) | (inf_bf16 << 80)),
         None
     );
     assert_eq!(
-        ExpfOptions::from_bits(e_base | (1 << 8) | (two_b << 64) | (one_b << 96)),
+        ExpfOptions::from_bits(e_base | (1 << 19) | (two_bf16 << 64) | (one_bf16 << 80)),
         None
     );
 
-    let l_base = LogfOptions::new().bits();
-    assert_eq!(LogfOptions::from_bits(l_base | (1_u128 << 17)), None);
-    assert_eq!(LogfOptions::from_bits(l_base | (1_u128 << 63)), None);
-    assert_eq!(LogfOptions::from_bits(l_base | (1 << 12) | (1 << 16)), None);
-    assert_eq!(LogfOptions::from_bits(l_base | (1 << 9) | (1 << 14)), None);
-    assert_eq!(LogfOptions::from_bits(l_base | (one_b << 64)), None);
-    assert_eq!(
-        LogfOptions::from_bits(l_base | (1 << 8) | (neg_zero_b << 64) | (one_b << 96)),
-        None
-    );
-    assert_eq!(
-        LogfOptions::from_bits(l_base | (1 << 8) | (nan_b << 64) | (one_b << 96)),
-        None
-    );
-    assert_eq!(
-        LogfOptions::from_bits(l_base | (1 << 8) | (one_b << 64) | (inf_b << 96)),
-        None
-    );
-    assert_eq!(
-        LogfOptions::from_bits(l_base | (1 << 8) | (two_b << 64) | (one_b << 96)),
-        None
-    );
+    for (l_base, decode) in [
+        (
+            LogfOptions::new().bits(),
+            (|b| LogfOptions::from_bits(b).is_some()) as fn(u128) -> bool,
+        ),
+        (Log1pfOptions::new().bits(), |b| {
+            Log1pfOptions::from_bits(b).is_some()
+        }),
+    ] {
+        assert!(!decode(l_base | (1_u128 << 24)));
+        assert!(!decode(l_base | (1_u128 << 96)));
+        assert!(!decode(l_base | (one_bf16 << 64)));
+        assert!(!decode(
+            l_base | (1 << 22) | (neg_zero_bf16 << 64) | (one_bf16 << 80)
+        ));
+        assert!(!decode(
+            l_base | (1 << 22) | (nan_bf16 << 64) | (one_bf16 << 80)
+        ));
+        assert!(!decode(
+            l_base | (1 << 22) | (one_bf16 << 64) | (inf_bf16 << 80)
+        ));
+        assert!(!decode(
+            l_base | (1 << 22) | (two_bf16 << 64) | (one_bf16 << 80)
+        ));
+    }
 
     let c_base = CbrtfOptions::new().bits();
-    assert_eq!(CbrtfOptions::from_bits(c_base | (1_u128 << 16)), None);
-    assert_eq!(CbrtfOptions::from_bits(c_base | (1_u128 << 63)), None);
     assert_eq!(
-        CbrtfOptions::from_bits(c_base | (1 << 12) | (1 << 15)),
+        CbrtfOptions::from_bits((c_base & !(0x1f << 4)) | (5 << 4)),
         None
     );
-    assert_eq!(CbrtfOptions::from_bits(c_base | (1 << 9) | (1 << 14)), None);
-    assert_eq!(CbrtfOptions::from_bits(c_base | (one_b << 64)), None);
+    assert_eq!(CbrtfOptions::from_bits(c_base | (1_u128 << 23)), None);
+    assert_eq!(CbrtfOptions::from_bits(c_base | (1_u128 << 96)), None);
+    assert_eq!(CbrtfOptions::from_bits(c_base | (one_bf16 << 64)), None);
     assert_eq!(
-        CbrtfOptions::from_bits(c_base | (1 << 8) | (neg_zero_b << 64) | (one_b << 96)),
-        None
-    );
-    assert_eq!(
-        CbrtfOptions::from_bits(c_base | (1 << 8) | (nan_b << 64) | (one_b << 96)),
+        CbrtfOptions::from_bits(c_base | (1 << 22) | (neg_zero_bf16 << 64) | (one_bf16 << 80)),
         None
     );
     assert_eq!(
-        CbrtfOptions::from_bits(c_base | (1 << 8) | (one_b << 64) | (inf_b << 96)),
+        CbrtfOptions::from_bits(c_base | (1 << 22) | (sub_bf16 << 64) | (sub_bf16 << 80)),
         None
     );
+    // MAX_BF16 (0x7f7f) exceeds MAX_CBRT_BF16 (0x7ed5) and must be rejected on CbrtfOptions.
     assert_eq!(
-        CbrtfOptions::from_bits(c_base | (1 << 8) | (two_b << 64) | (one_b << 96)),
+        CbrtfOptions::from_bits(c_base | (1 << 22) | (one_bf16 << 64) | (0x7f7f_u128 << 80)),
         None
     );
-    assert_eq!(
-        CbrtfOptions::from_bits(c_base | (1 << 8) | (1_u128 << 64) | (1_u128 << 96)),
-        None
-    );
+    // Cross-family magic rejection for Log1pfOptions too.
+    assert_eq!(PowfOptions::from_bits(Log1pfOptions::new().bits()), None);
+    assert_eq!(LogfOptions::from_bits(Log1pfOptions::new().bits()), None);
+    assert_eq!(Log1pfOptions::from_bits(LogfOptions::new().bits()), None);
 }
 
 #[test]

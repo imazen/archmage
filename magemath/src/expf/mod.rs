@@ -28,7 +28,7 @@ mod options;
 mod tests;
 
 pub use const_api::{Expf, ExpfRuntime};
-pub use options::{ExpfOptions, ExpfPrecision};
+pub use options::{ExpfDomain, ExpfOptions, ExpfPrecision};
 
 /// Reason a complete vector was rejected.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

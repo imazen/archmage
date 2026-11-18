@@ -1,30 +1,68 @@
-//! Fluent `const` configuration builder for the cube-root (`cbrtf`) family.
+//! Fluent `const` configuration builder, discrete [`CbrtfDomain`] enum,
+//! [`Subnormals`] policy, and `bf16` custom range bounds for `cbrtf`.
 
-use crate::{Execution, Portability, Validation};
+use crate::{
+    Execution, Portability, Subnormals, Validation,
+    bf16::{MAX_CBRT_BF16, ceil_bf16, decode_bf16_finite, expand_bf16, floor_bf16},
+};
 
-const MAX_BOUNDED: f32 = f32::MAX / 3.0;
+const MAX_BOUNDED_INCLUSIVE: f32 = f32::from_bits((f32::MAX / 3.0).to_bits() - 1);
 
-const MAGIC: u128 = 0x43;
-const HAS_RANGE: u128 = 1 << 8;
-const FULL: u128 = 1 << 9;
-const LOWP: u128 = 1 << 10;
-const BACKEND: u128 = 1 << 11;
-const ASSUME: u128 = 1 << 12;
-const CALLER: u128 = 1 << 13;
-const SUBNORM: u128 = 1 << 14;
-const CLAMP_OOB: u128 = 1 << 15;
-const RESERVED_MASK: u128 = ((1_u128 << 48) - 1) << 16;
+// Uniform u128 layout:
+//   [0..4]   = MAGIC (0xD)
+//   [4..9]   = CbrtfDomain (0..=4)
+//   [9..12]  = Subnormals (0..=2)
+//   [12..15] = Validation (0..=2)
+//   [15..18] = CbrtfPrecision (0..=1)
+//   [18..20] = Portability (0..=1)
+//   [20..22] = Execution (0..=1)
+//   [22]     = HAS_CUSTOM_RANGE
+//   [23..64] = RESERVED_LO (41 bits, must be 0)
+//   [64..80] = in_lo_bf16 (u16, 0 when !HAS_CUSTOM_RANGE)
+//   [80..96] = in_hi_bf16 (u16, 0 when !HAS_CUSTOM_RANGE)
+//   [96..128]= RESERVED_HI (32 bits, must be 0)
+const MAGIC: u128 = 0xD;
+const DOMAIN_SHIFT: u32 = 4;
+const SUBNORM_SHIFT: u32 = 9;
+const VALIDATION_SHIFT: u32 = 12;
+const PREC_SHIFT: u32 = 15;
+const PORTABILITY_SHIFT: u32 = 18;
+const EXECUTION_SHIFT: u32 = 20;
+const HAS_CUSTOM_RANGE: u128 = 1 << 22;
+const RESERVED_LO_MASK: u128 = ((1_u128 << 41) - 1) << 23;
+const IN_LO_SHIFT: u32 = 64;
+const IN_HI_SHIFT: u32 = 80;
+const RESERVED_HI_MASK: u128 = 0xffff_ffff_u128 << 96;
 
 const fn abs(x: f32) -> f32 {
     if x < 0.0 { -x } else { x }
 }
 
-const fn canon_zero(x: f32) -> f32 {
-    if x == 0.0 { 0.0 } else { x }
-}
-
 const fn is_nonzero_subnormal_only_interval(lo: f32, hi: f32) -> bool {
     (lo > 0.0 && hi < f32::MIN_POSITIVE) || (lo > -f32::MIN_POSITIVE && hi < 0.0)
+}
+
+/// Discrete input domain for [`CbrtfOptions`].
+///
+/// Subnormal rescaling (`* 2^24` / `* 2^-8`) is **off by default** on every
+/// domain except [`CbrtfDomain::AllFloats`]; opt in explicitly via
+/// [`CbrtfOptions::admit_subnormals`] or shove subnormals to `0` / `MIN_POSITIVE`
+/// via [`CbrtfOptions::flush_or_clamp_subnormals`].
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[non_exhaustive]
+pub enum CbrtfDomain {
+    /// `±0.0` and normal floats strictly below `f32::MAX / 3.0`.
+    #[default]
+    Bounded,
+    /// Non-negative unit interval `[0.0, 1.0]` (`{±0.0} ∪ [f32::MIN_POSITIVE, 1.0]` by default).
+    Unit,
+    /// Signed unit interval `[-1.0, 1.0]` (`[-1.0, -MIN_POSITIVE] ∪ {±0.0} ∪ [MIN_POSITIVE, 1.0]` by default).
+    SignedUnit,
+    /// Strictly positive normal floats `[f32::MIN_POSITIVE, f32::MAX / 3.0)`,
+    /// eliding subnormal checks and zero restoration.
+    PositiveNormals,
+    /// Every `f32` input (`±0`, subnormals, `>= 1e36`, `±inf`, `NaN`).
+    AllFloats,
 }
 
 /// Approximation family, not a global mathematical error bound.
@@ -39,31 +77,11 @@ pub enum CbrtfPrecision {
 }
 
 /// Fluent `const` configuration builder for [`super::Cbrtf`] and [`crate::SimdMath`].
-///
-/// Options separate **what inputs are supported** ([`input_range`](Self::input_range),
-/// [`admit_subnormals`](Self::admit_subnormals), [`unit_range`](Self::unit_range),
-/// and [`admit_all_floats`](Self::admit_all_floats)) from **how out-of-bounds
-/// inputs are handled**:
-///
-/// - [`error_on_out_of_bounds`](Self::error_on_out_of_bounds) (default, alias
-///   [`checked`](Self::checked)): return `Err` on out-of-domain inputs.
-/// - [`clamp_out_of_bounds`](Self::clamp_out_of_bounds): clamp non-NaN inputs
-///   into the configured domain and propagate `NaN` as `NaN` (infallible).
-/// - [`assume_in_bounds`](Self::assume_in_bounds) (alias [`unchecked`](Self::unchecked)):
-///   omit runtime checks and clamps when the caller already guarantees bounds
-///   (infallible).
-///
-/// Declaring [`input_range`](Self::input_range) with `lo >= f32::MIN_POSITIVE`
-/// (or `hi <= -f32::MIN_POSITIVE`) proves subnormals cannot occur and elides
-/// per-lane subnormal handling at compile time. When `[-1, 1]` perceptual
-/// color inputs may include dark subnormals, [`unit_range`](Self::unit_range)
-/// or [`admit_subnormals`](Self::admit_subnormals) adds exact `* 2^24` / `* 2^-8`
-/// subnormal scaling without paying for full-domain `>= 1e36` / `±inf` handling.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct CbrtfOptions {
-    input: Option<(u32, u32)>,
-    subnormals: bool,
-    full: bool,
+    domain: CbrtfDomain,
+    custom_range: Option<(u16, u16)>,
+    subnormals: Subnormals,
     precision: CbrtfPrecision,
     portability: Portability,
     validation: Validation,
@@ -78,13 +96,13 @@ impl Default for CbrtfOptions {
 }
 
 impl CbrtfOptions {
-    /// Bounded domain (`±0` and normals strictly below `f32::MAX / 3`), `Midp`,
-    /// `BitExact`, `Checked` (`error_on_out_of_bounds`), `Execution::Upgrade`.
+    /// `CbrtfDomain::Bounded`, `Subnormals::Reject`, `Midp`, `BitExact`,
+    /// `Validation::Checked` (`error_on_out_of_bounds`), `Execution::Upgrade`.
     pub const fn new() -> Self {
         Self {
-            input: None,
-            subnormals: false,
-            full: false,
+            domain: CbrtfDomain::Bounded,
+            custom_range: None,
+            subnormals: Subnormals::Reject,
             precision: CbrtfPrecision::Midp,
             portability: Portability::BitExact,
             validation: Validation::Checked,
@@ -92,45 +110,66 @@ impl CbrtfOptions {
         }
     }
 
-    /// Restrict inputs to `[lo, hi]` within the active cube-root domain
-    /// (`±0` and normals strictly below `f32::MAX / 3` unless
-    /// [`admit_subnormals`](Self::admit_subnormals) is enabled).
-    ///
-    /// Both bounds must be finite `f32`s strictly below `f32::MAX / 3` in
-    /// magnitude with `lo <= hi`. Intervals containing only nonzero subnormals
-    /// require [`admit_subnormals`](Self::admit_subnormals).
-    pub const fn input_range(mut self, lo: f32, hi: f32) -> Self {
-        assert!(
-            lo <= hi && abs(lo) < MAX_BOUNDED && abs(hi) < MAX_BOUNDED,
-            "cbrtf input range must satisfy -f32::MAX/3 < lo <= hi < f32::MAX/3"
-        );
-        self.input = Some((canon_zero(lo).to_bits(), canon_zero(hi).to_bits()));
-        self
-    }
-
-    /// Also accept nonzero subnormal inputs (`0 < |x| < f32::MIN_POSITIVE`),
-    /// rescaling them accurately by `* 2^24` before the Kahan seed and `* 2^-8`
-    /// afterward without paying full-domain `>= 1e36` / `±inf` overhead.
-    pub const fn admit_subnormals(mut self) -> Self {
-        if !self.full {
-            self.subnormals = true;
+    /// Select the discrete [`CbrtfDomain`], clearing any custom [`input_range`](Self::input_range).
+    pub const fn domain(mut self, domain: CbrtfDomain) -> Self {
+        self.domain = domain;
+        self.custom_range = None;
+        if matches!(domain, CbrtfDomain::AllFloats) {
+            self.subnormals = Subnormals::Reject;
         }
         self
     }
 
-    /// Signed unit cube-root domain `[-1.0, 1.0]` including `±0.0` and
-    /// subnormals (ideal for Oklab / perceptual color transforms):
-    /// `.input_range(-1.0, 1.0).admit_subnormals()`.
-    pub const fn unit_range(self) -> Self {
-        self.input_range(-1.0, 1.0).admit_subnormals()
+    /// Override input bounds with outward-rounded `bf16` `[lo, hi]`
+    /// (`|bound| <= MAX_CBRT_BF16`, `lo <= hi`).
+    pub const fn input_range(mut self, lo: f32, hi: f32) -> Self {
+        assert!(
+            lo <= hi && abs(lo) <= MAX_CBRT_BF16 && abs(hi) <= MAX_CBRT_BF16,
+            "cbrtf input range must satisfy -MAX_CBRT_BF16 <= lo <= hi <= MAX_CBRT_BF16 (< f32::MAX / 3)"
+        );
+        self.custom_range = Some((floor_bf16(lo), ceil_bf16(hi)));
+        self
     }
 
-    /// Accept every `f32` input (rescaling subnormals and large magnitudes,
-    /// propagating `±0`, `±inf`, and `NaN`).
-    pub const fn admit_all_floats(mut self) -> Self {
-        self.full = true;
-        self.subnormals = false;
+    /// Signed unit cube-root domain `[-1.0, 1.0]` (`CbrtfDomain::SignedUnit`;
+    /// subnormals remain opt-in via [`admit_subnormals`](Self::admit_subnormals)
+    /// or [`flush_or_clamp_subnormals`](Self::flush_or_clamp_subnormals)).
+    pub const fn unit_range(self) -> Self {
+        self.domain(CbrtfDomain::SignedUnit)
+    }
+
+    /// Configure how nonzero subnormal inputs (`0 < |x| < f32::MIN_POSITIVE`) are handled.
+    pub const fn subnormals(mut self, policy: Subnormals) -> Self {
+        self.subnormals = policy;
         self
+    }
+
+    /// Treat nonzero subnormals as out-of-bounds (`Subnormals::Reject`, default).
+    pub const fn reject_subnormals(self) -> Self {
+        self.subnormals(Subnormals::Reject)
+    }
+
+    /// Shove nonzero subnormals out to `±0.0` (when `0.0` is in range) or the
+    /// nearest normal range endpoint (when `0.0` is excluded), even under
+    /// [`Validation::Checked`].
+    pub const fn flush_or_clamp_subnormals(self) -> Self {
+        self.subnormals(Subnormals::FlushOrClamp)
+    }
+
+    /// Alias for [`flush_or_clamp_subnormals`](Self::flush_or_clamp_subnormals).
+    pub const fn shove_subnormals(self) -> Self {
+        self.flush_or_clamp_subnormals()
+    }
+
+    /// Opt in to exact subnormal rescaling (`* 2^24` before the Kahan seed and
+    /// `* 2^-8` afterward; `Subnormals::Normalize`).
+    pub const fn admit_subnormals(self) -> Self {
+        self.subnormals(Subnormals::Normalize)
+    }
+
+    /// Accept every `f32` input (`CbrtfDomain::AllFloats`).
+    pub const fn admit_all_floats(self) -> Self {
+        self.domain(CbrtfDomain::AllFloats)
     }
 
     /// Alias for [`admit_all_floats`](Self::admit_all_floats).
@@ -176,8 +215,7 @@ impl CbrtfOptions {
         self
     }
 
-    /// Return `Err` when any input falls outside the configured domain
-    /// (`Validation::Checked`, default).
+    /// Return `Err` when any input falls outside the configured domain (`Validation::Checked`, default).
     pub const fn error_on_out_of_bounds(self) -> Self {
         self.validation(Validation::Checked)
     }
@@ -193,8 +231,7 @@ impl CbrtfOptions {
         self.validation(Validation::ClampOutOfBounds)
     }
 
-    /// Omit numerical input checks and clamps; caller guarantees all inputs lie
-    /// within the configured domain (`Validation::AssumeValid`, infallible).
+    /// Omit numerical input checks and clamps (`Validation::AssumeValid`, infallible).
     pub const fn assume_in_bounds(self) -> Self {
         self.validation(Validation::AssumeValid)
     }
@@ -220,33 +257,92 @@ impl CbrtfOptions {
         self.execution(Execution::Caller)
     }
 
+    /// Active discrete [`CbrtfDomain`].
+    pub const fn selected_domain(&self) -> CbrtfDomain {
+        self.domain
+    }
+
+    /// Active [`Subnormals`] policy (`Normalize` when `CbrtfDomain::AllFloats`).
+    pub const fn subnormals_policy(&self) -> Subnormals {
+        if self.is_full() {
+            Subnormals::Normalize
+        } else {
+            self.subnormals
+        }
+    }
+
+    pub(crate) const fn is_full(&self) -> bool {
+        matches!(self.domain, CbrtfDomain::AllFloats)
+    }
+
+    pub(crate) const fn input_bounds(&self) -> Option<(f32, f32)> {
+        if self.is_full() {
+            return None;
+        }
+        if let Some((lo, hi)) = self.custom_range {
+            return Some((expand_bf16(lo), expand_bf16(hi)));
+        }
+        match self.domain {
+            CbrtfDomain::Bounded | CbrtfDomain::AllFloats => None,
+            CbrtfDomain::Unit => Some((0.0, 1.0)),
+            CbrtfDomain::SignedUnit => Some((-1.0, 1.0)),
+            CbrtfDomain::PositiveNormals => Some((
+                if self.admits_subnormals() {
+                    f32::from_bits(1)
+                } else {
+                    f32::MIN_POSITIVE
+                },
+                MAX_BOUNDED_INCLUSIVE,
+            )),
+        }
+    }
+
     /// Whether this configuration is self-consistent.
     pub const fn is_valid(&self) -> bool {
-        if self.full && self.input.is_some() {
-            return false;
+        if self.is_full() {
+            return self.custom_range.is_none() && matches!(self.subnormals, Subnormals::Reject);
         }
-        if !self.admits_subnormals()
-            && let Some((lo_b, hi_b)) = self.input
-            && is_nonzero_subnormal_only_interval(f32::from_bits(lo_b), f32::from_bits(hi_b))
-        {
-            return false;
+        if let Some((lo, hi)) = self.input_bounds() {
+            if !self.admits_subnormals() && is_nonzero_subnormal_only_interval(lo, hi) {
+                return false;
+            }
+            if matches!(self.subnormals, Subnormals::Normalize)
+                && (lo >= f32::MIN_POSITIVE || hi <= -f32::MIN_POSITIVE || (lo == 0.0 && hi == 0.0))
+            {
+                return false;
+            }
         }
         true
     }
 
     /// Assert that this configuration is self-consistent.
     pub const fn validate(&self) {
-        assert!(
-            !(self.full && self.input.is_some()),
-            "full_domain cannot be combined with input_range"
-        );
-        if !self.admits_subnormals()
-            && let Some((lo_b, hi_b)) = self.input
-        {
+        if self.is_full() {
             assert!(
-                !is_nonzero_subnormal_only_interval(f32::from_bits(lo_b), f32::from_bits(hi_b)),
-                "cbrtf input_range contains only nonzero subnormals; add .admit_subnormals() or include 0.0 / normal bounds"
+                self.custom_range.is_none() && matches!(self.subnormals, Subnormals::Reject),
+                "CbrtfDomain::AllFloats / full_domain cannot be combined with custom input_range or subnormal overrides"
             );
+            return;
+        }
+        if let Some((lo, hi)) = self.input_bounds() {
+            assert!(
+                !(!self.admits_subnormals() && is_nonzero_subnormal_only_interval(lo, hi)),
+                "cbrtf input_range contains only nonzero subnormals; add .admit_subnormals()"
+            );
+            assert!(
+                !(matches!(self.subnormals, Subnormals::Normalize)
+                    && (lo >= f32::MIN_POSITIVE
+                        || hi <= -f32::MIN_POSITIVE
+                        || (lo == 0.0 && hi == 0.0))),
+                "admit_subnormals requires input bounds to include nonzero subnormals around 0.0; use .flush_or_clamp_subnormals() on normal-only intervals"
+            );
+        }
+    }
+
+    const fn range_excludes_subnormals(&self) -> bool {
+        match self.input_bounds() {
+            Some((lo, hi)) => lo >= f32::MIN_POSITIVE || hi <= -f32::MIN_POSITIVE,
+            None => false,
         }
     }
 
@@ -256,99 +352,140 @@ impl CbrtfOptions {
         !self.denorm_possible()
     }
 
-    /// Whether this configuration can never return an input error
-    /// (`.clamp_out_of_bounds()`, `.assume_in_bounds()` / `.unchecked()`, or
-    /// `.admit_all_floats()` / `.full_domain()`).
+    pub(crate) const fn denorm_possible(&self) -> bool {
+        !self.range_excludes_subnormals() && !self.admits_subnormals()
+    }
+
+    pub(crate) const fn scale_subnormals(&self) -> bool {
+        !self.is_full()
+            && matches!(self.subnormals, Subnormals::Normalize)
+            && !self.range_excludes_subnormals()
+    }
+
+    pub(crate) const fn flushes_subnormals(&self) -> bool {
+        !self.is_full() && matches!(self.subnormals, Subnormals::FlushOrClamp)
+    }
+
+    pub(crate) const fn admits_subnormals(&self) -> bool {
+        self.is_full() || matches!(self.subnormals, Subnormals::Normalize)
+    }
+
+    /// Whether this configuration can never return an input error.
     pub const fn is_infallible(&self) -> bool {
-        self.assume_valid() || self.clamp_oob() || self.full
+        self.is_valid() && (self.assume_valid() || self.clamp_oob() || self.is_full())
     }
 
     /// Pack this configuration into a `u128` const-generic argument.
-    pub const fn bits(self) -> u128 {
-        let mut out = MAGIC;
-        if let Some((lo, hi)) = self.input {
-            out |= HAS_RANGE | ((lo as u128) << 64) | ((hi as u128) << 96);
-        }
-        if self.subnormals {
-            out |= SUBNORM;
-        }
-        if self.full {
-            out |= FULL;
-        }
-        if matches!(self.precision, CbrtfPrecision::Lowp) {
-            out |= LOWP;
-        }
-        if matches!(self.portability, Portability::BackendDependent) {
-            out |= BACKEND;
-        }
-        match self.validation {
-            Validation::Checked => {}
-            Validation::ClampOutOfBounds => out |= CLAMP_OOB,
-            Validation::AssumeValid => out |= ASSUME,
-        }
-        if matches!(self.execution, Execution::Caller) {
-            out |= CALLER;
+    pub const fn bits(&self) -> u128 {
+        let dom: u128 = match self.domain {
+            CbrtfDomain::Bounded => 0,
+            CbrtfDomain::Unit => 1,
+            CbrtfDomain::SignedUnit => 2,
+            CbrtfDomain::PositiveNormals => 3,
+            CbrtfDomain::AllFloats => 4,
+        };
+        let sub: u128 = match self.subnormals {
+            Subnormals::Reject => 0,
+            Subnormals::FlushOrClamp => 1,
+            Subnormals::Normalize => 2,
+        };
+        let val: u128 = match self.validation {
+            Validation::Checked => 0,
+            Validation::ClampOutOfBounds => 1,
+            Validation::AssumeValid => 2,
+        };
+        let prec: u128 = match self.precision {
+            CbrtfPrecision::Midp => 0,
+            CbrtfPrecision::Lowp => 1,
+        };
+        let port: u128 = match self.portability {
+            Portability::BitExact => 0,
+            Portability::BackendDependent => 1,
+        };
+        let exec: u128 = match self.execution {
+            Execution::Upgrade => 0,
+            Execution::Caller => 1,
+        };
+        let mut out = MAGIC
+            | (dom << DOMAIN_SHIFT)
+            | (sub << SUBNORM_SHIFT)
+            | (val << VALIDATION_SHIFT)
+            | (prec << PREC_SHIFT)
+            | (port << PORTABILITY_SHIFT)
+            | (exec << EXECUTION_SHIFT);
+        if let Some((lo, hi)) = self.custom_range {
+            out |= HAS_CUSTOM_RANGE | ((lo as u128) << IN_LO_SHIFT) | ((hi as u128) << IN_HI_SHIFT);
         }
         out
     }
 
     const fn from_bits_raw(bits: u128) -> Option<Self> {
-        if (bits & 0xff) != MAGIC || (bits & RESERVED_MASK) != 0 {
+        if (bits & 0xf) != MAGIC || (bits & RESERVED_LO_MASK) != 0 || (bits & RESERVED_HI_MASK) != 0
+        {
             return None;
         }
-        if (bits & ASSUME) != 0 && (bits & CLAMP_OOB) != 0 {
-            return None;
-        }
-        let full = (bits & FULL) != 0;
-        let subnormals = (bits & SUBNORM) != 0;
-        if full && subnormals {
-            return None;
-        }
-        let lo_b = ((bits >> 64) & 0xffff_ffff) as u32;
-        let hi_b = ((bits >> 96) & 0xffff_ffff) as u32;
-        let input = if (bits & HAS_RANGE) != 0 {
-            if lo_b == 0x8000_0000 || hi_b == 0x8000_0000 {
+        let domain = match (bits >> DOMAIN_SHIFT) & 0x1f {
+            0 => CbrtfDomain::Bounded,
+            1 => CbrtfDomain::Unit,
+            2 => CbrtfDomain::SignedUnit,
+            3 => CbrtfDomain::PositiveNormals,
+            4 => CbrtfDomain::AllFloats,
+            _ => return None,
+        };
+        let subnormals = match (bits >> SUBNORM_SHIFT) & 0x7 {
+            0 => Subnormals::Reject,
+            1 => Subnormals::FlushOrClamp,
+            2 => Subnormals::Normalize,
+            _ => return None,
+        };
+        let validation = match (bits >> VALIDATION_SHIFT) & 0x7 {
+            0 => Validation::Checked,
+            1 => Validation::ClampOutOfBounds,
+            2 => Validation::AssumeValid,
+            _ => return None,
+        };
+        let precision = match (bits >> PREC_SHIFT) & 0x7 {
+            0 => CbrtfPrecision::Midp,
+            1 => CbrtfPrecision::Lowp,
+            _ => return None,
+        };
+        let portability = match (bits >> PORTABILITY_SHIFT) & 0x3 {
+            0 => Portability::BitExact,
+            1 => Portability::BackendDependent,
+            _ => return None,
+        };
+        let execution = match (bits >> EXECUTION_SHIFT) & 0x3 {
+            0 => Execution::Upgrade,
+            1 => Execution::Caller,
+            _ => return None,
+        };
+        let lo_u16 = ((bits >> IN_LO_SHIFT) & 0xffff) as u16;
+        let hi_u16 = ((bits >> IN_HI_SHIFT) & 0xffff) as u16;
+        let custom_range = if (bits & HAS_CUSTOM_RANGE) != 0 {
+            let Some(lo) = decode_bf16_finite(lo_u16) else {
+                return None;
+            };
+            let Some(hi) = decode_bf16_finite(hi_u16) else {
+                return None;
+            };
+            if !(lo <= hi && abs(lo) <= MAX_CBRT_BF16 && abs(hi) <= MAX_CBRT_BF16) {
                 return None;
             }
-            let lo = f32::from_bits(lo_b);
-            let hi = f32::from_bits(hi_b);
-            if !(lo <= hi && abs(lo) < MAX_BOUNDED && abs(hi) < MAX_BOUNDED) {
-                return None;
-            }
-            Some((lo_b, hi_b))
+            Some((lo_u16, hi_u16))
         } else {
-            if lo_b != 0 || hi_b != 0 {
+            if lo_u16 != 0 || hi_u16 != 0 {
                 return None;
             }
             None
         };
-        let validation = if (bits & ASSUME) != 0 {
-            Validation::AssumeValid
-        } else if (bits & CLAMP_OOB) != 0 {
-            Validation::ClampOutOfBounds
-        } else {
-            Validation::Checked
-        };
         Some(Self {
-            input,
+            domain,
+            custom_range,
             subnormals,
-            full,
-            precision: if (bits & LOWP) != 0 {
-                CbrtfPrecision::Lowp
-            } else {
-                CbrtfPrecision::Midp
-            },
-            portability: if (bits & BACKEND) != 0 {
-                Portability::BackendDependent
-            } else {
-                Portability::BitExact
-            },
+            precision,
+            portability,
             validation,
-            execution: if (bits & CALLER) != 0 {
-                Execution::Caller
-            } else {
-                Execution::Upgrade
-            },
+            execution,
         })
     }
 
@@ -374,30 +511,6 @@ impl CbrtfOptions {
         super::CbrtfRuntime::new(self)
     }
 
-    pub(crate) const fn input_bounds(&self) -> Option<(f32, f32)> {
-        match self.input {
-            Some((lo, hi)) => Some((f32::from_bits(lo), f32::from_bits(hi))),
-            None => None,
-        }
-    }
-    const fn range_excludes_subnormals(&self) -> bool {
-        match self.input_bounds() {
-            Some((lo, hi)) => lo >= f32::MIN_POSITIVE || hi <= -f32::MIN_POSITIVE,
-            None => false,
-        }
-    }
-    pub(crate) const fn denorm_possible(&self) -> bool {
-        !self.range_excludes_subnormals() && !self.admits_subnormals()
-    }
-    pub(crate) const fn scale_subnormals(&self) -> bool {
-        self.subnormals && !self.range_excludes_subnormals()
-    }
-    pub(crate) const fn admits_subnormals(&self) -> bool {
-        self.subnormals || self.full
-    }
-    pub(crate) const fn is_full(&self) -> bool {
-        self.full
-    }
     pub(crate) const fn is_lowp(&self) -> bool {
         matches!(self.precision, CbrtfPrecision::Lowp)
     }

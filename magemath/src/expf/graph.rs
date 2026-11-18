@@ -9,14 +9,18 @@ pub(super) const WASM_SOFTWARE: usize = 2;
 
 pub(super) trait Kernel: 'static {
     const RANGED: bool;
-    const IN_LO: f32;
-    const IN_HI: f32;
+    const IN_LO_EXP2: f32;
+    const IN_HI_EXP2: f32;
+    const IN_LO_EXP: f32;
+    const IN_HI_EXP: f32;
     const FULL: bool;
     const CLAMP_OOB: bool;
     const LOWP: bool;
     const ASSUME: bool;
     const ELIDE_EXP2: bool;
     const ELIDE_EXP: bool;
+    const ELIDE_OVERFLOW_EXP2: bool;
+    const ELIDE_OVERFLOW_EXP: bool;
     const ELIDE_RED_EXP2: bool;
     const ELIDE_RED_EXP: bool;
 }
@@ -24,34 +28,46 @@ pub(super) trait Kernel: 'static {
 #[derive(Clone, Copy)]
 pub(super) struct KernelCfg {
     pub(super) ranged: bool,
-    pub(super) in_lo: f32,
-    pub(super) in_hi: f32,
+    pub(super) in_lo_exp2: f32,
+    pub(super) in_hi_exp2: f32,
+    pub(super) in_lo_exp: f32,
+    pub(super) in_hi_exp: f32,
     pub(super) full: bool,
     pub(super) clamp_oob: bool,
     pub(super) lowp: bool,
     pub(super) assume: bool,
     pub(super) elide_exp2: bool,
     pub(super) elide_exp: bool,
+    pub(super) elide_overflow_exp2: bool,
+    pub(super) elide_overflow_exp: bool,
     pub(super) elide_red_exp2: bool,
     pub(super) elide_red_exp: bool,
 }
 
 impl KernelCfg {
     pub(super) const fn from_options(opts: super::ExpfOptions) -> Self {
-        let (in_lo, in_hi) = match opts.input_bounds() {
+        let (in_lo_exp2, in_hi_exp2) = match opts.exp2_bounds() {
+            Some(bounds) => bounds,
+            None => (0.0, 0.0),
+        };
+        let (in_lo_exp, in_hi_exp) = match opts.exp_bounds() {
             Some(bounds) => bounds,
             None => (0.0, 0.0),
         };
         Self {
-            ranged: opts.input_bounds().is_some(),
-            in_lo,
-            in_hi,
+            ranged: opts.exp2_bounds().is_some(),
+            in_lo_exp2,
+            in_hi_exp2,
+            in_lo_exp,
+            in_hi_exp,
             full: opts.is_full(),
             clamp_oob: opts.clamp_oob(),
             lowp: opts.is_lowp(),
             assume: opts.assume_valid(),
             elide_exp2: opts.elides_clamp(),
             elide_exp: opts.elides_exp_clamp(),
+            elide_overflow_exp2: opts.elides_exp2_overflow(),
+            elide_overflow_exp: opts.elides_exp_overflow(),
             elide_red_exp2: opts.elides_reduction(),
             elide_red_exp: opts.elides_exp_reduction(),
         }
@@ -63,14 +79,18 @@ impl KernelCfg {
 pub(super) const fn cfg_of<K: Kernel>() -> KernelCfg {
     KernelCfg {
         ranged: K::RANGED,
-        in_lo: K::IN_LO,
-        in_hi: K::IN_HI,
+        in_lo_exp2: K::IN_LO_EXP2,
+        in_hi_exp2: K::IN_HI_EXP2,
+        in_lo_exp: K::IN_LO_EXP,
+        in_hi_exp: K::IN_HI_EXP,
         full: K::FULL,
         clamp_oob: K::CLAMP_OOB,
         lowp: K::LOWP,
         assume: K::ASSUME,
         elide_exp2: K::ELIDE_EXP2,
         elide_exp: K::ELIDE_EXP,
+        elide_overflow_exp2: K::ELIDE_OVERFLOW_EXP2,
+        elide_overflow_exp: K::ELIDE_OVERFLOW_EXP,
         elide_red_exp2: K::ELIDE_RED_EXP2,
         elide_red_exp: K::ELIDE_RED_EXP,
     }
@@ -85,19 +105,25 @@ macro_rules! eval_expf {
         $op:expr,
         $arithmetic:expr,
         $ranged:expr,
-        $in_lo:expr,
-        $in_hi:expr,
+        $in_lo_exp2:expr,
+        $in_hi_exp2:expr,
+        $in_lo_exp:expr,
+        $in_hi_exp:expr,
         $full:expr,
         $clamp_oob:expr,
         $lowp:expr,
         $assume:expr,
         $elide_exp2:expr,
         $elide_exp:expr,
+        $elide_overflow_exp2:expr,
+        $elide_overflow_exp:expr,
         $elide_red_exp2:expr,
         $elide_red_exp:expr
     ) => {{
         let sp = |x| $V::splat_t($token, x);
         let ip = |x| $I::splat_t($token, x);
+        let in_lo = if $op == 1 { $in_lo_exp } else { $in_lo_exp2 };
+        let in_hi = if $op == 1 { $in_hi_exp } else { $in_hi_exp2 };
         let reject = |mask: $I<T>, kind| {
             let lane_mask = mask
                 .to_array()
@@ -108,7 +134,7 @@ macro_rules! eval_expf {
         };
         if !$assume && !$clamp_oob {
             if $ranged {
-                let invalid = ($input.simd_ge(sp($in_lo)) & $input.simd_le(sp($in_hi)))
+                let invalid = ($input.simd_ge(sp(in_lo)) & $input.simd_le(sp(in_hi)))
                     .bitcast_to_i32()
                     ^ ip(-1);
                 if invalid.any_true() {
@@ -130,7 +156,7 @@ macro_rules! eval_expf {
         };
         let work_in = if $clamp_oob && !$full {
             let (lo_b, hi_b, safe) = if $ranged {
-                ($in_lo, $in_hi, $in_lo)
+                (in_lo, in_hi, in_lo)
             } else {
                 (-f32::MAX, f32::MAX, 0.0)
             };
@@ -149,6 +175,11 @@ macro_rules! eval_expf {
             work_in
         };
         let elide_clamp = if $op == 1 { $elide_exp } else { $elide_exp2 };
+        let elide_overflow = if $op == 1 {
+            $elide_overflow_exp
+        } else {
+            $elide_overflow_exp2
+        };
         let elide_red = if $op == 1 {
             $elide_red_exp
         } else {
@@ -186,10 +217,12 @@ macro_rules! eval_expf {
                 let p = madd(p, xf, sp(core::f32::consts::LN_2));
                 madd(p, xf, sp(1.0))
             } else {
-                let x = if !elide_clamp {
-                    arg.max(sp(-126.0)).min(sp(127.99))
-                } else {
+                let x = if elide_clamp {
                     arg
+                } else if elide_overflow {
+                    arg.max(sp(-126.0))
+                } else {
+                    arg.max(sp(-126.0)).min(sp(127.99))
                 };
                 let xi = x.floor();
                 let xf = x - xi;
@@ -222,12 +255,14 @@ macro_rules! eval_expf {
         } else {
             let underflow_limit = sp(-126.0);
             let overflow_limit = sp(128.0);
-            let reduced = if !elide_clamp {
-                arg.max(underflow_limit).min(overflow_limit)
-            } else {
+            let reduced = if elide_clamp {
                 arg
+            } else if elide_overflow {
+                arg.max(underflow_limit)
+            } else {
+                arg.max(underflow_limit).min(overflow_limit)
             };
-            let xi = if elide_clamp {
+            let xi = if elide_clamp || elide_overflow {
                 reduced.round()
             } else {
                 reduced.round().min(sp(127.0))
@@ -250,13 +285,16 @@ macro_rules! eval_expf {
             };
             let scale = (integer + ip(127)).shl_const::<23>().bitcast_to_f32();
             let result = p * scale;
-            if !elide_clamp {
+            if elide_clamp {
+                result
+            } else if elide_overflow {
+                let is_underflow = arg.simd_lt(underflow_limit);
+                $V::blend(is_underflow, sp(0.0), result)
+            } else {
                 let is_underflow = arg.simd_lt(underflow_limit);
                 let is_overflow = arg.simd_ge(overflow_limit);
                 let result = $V::blend(is_underflow, sp(0.0), result);
                 $V::blend(is_overflow, sp(f32::INFINITY), result)
-            } else {
-                result
             }
         };
         let result = if $full {
@@ -294,14 +332,18 @@ macro_rules! graph {
                 op,
                 ARITHMETIC,
                 cfg.ranged,
-                cfg.in_lo,
-                cfg.in_hi,
+                cfg.in_lo_exp2,
+                cfg.in_hi_exp2,
+                cfg.in_lo_exp,
+                cfg.in_hi_exp,
                 cfg.full,
                 cfg.clamp_oob,
                 cfg.lowp,
                 cfg.assume,
                 cfg.elide_exp2,
                 cfg.elide_exp,
+                cfg.elide_overflow_exp2,
+                cfg.elide_overflow_exp,
                 cfg.elide_red_exp2,
                 cfg.elide_red_exp
             )
@@ -327,14 +369,18 @@ macro_rules! graph {
                 OP,
                 ARITHMETIC,
                 K::RANGED,
-                K::IN_LO,
-                K::IN_HI,
+                K::IN_LO_EXP2,
+                K::IN_HI_EXP2,
+                K::IN_LO_EXP,
+                K::IN_HI_EXP,
                 K::FULL,
                 K::CLAMP_OOB,
                 K::LOWP,
                 K::ASSUME,
                 K::ELIDE_EXP2,
                 K::ELIDE_EXP,
+                K::ELIDE_OVERFLOW_EXP2,
+                K::ELIDE_OVERFLOW_EXP,
                 K::ELIDE_RED_EXP2,
                 K::ELIDE_RED_EXP
             )

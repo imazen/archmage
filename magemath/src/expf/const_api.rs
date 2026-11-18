@@ -15,12 +15,20 @@ impl<const CFG: u128> graph::Kernel for Cfg<CFG> {
         graph::KernelCfg::from_options(ExpfOptions::decode_const(CFG)).elide_exp2;
     const ELIDE_EXP: bool =
         graph::KernelCfg::from_options(ExpfOptions::decode_const(CFG)).elide_exp;
+    const ELIDE_OVERFLOW_EXP2: bool =
+        graph::KernelCfg::from_options(ExpfOptions::decode_const(CFG)).elide_overflow_exp2;
+    const ELIDE_OVERFLOW_EXP: bool =
+        graph::KernelCfg::from_options(ExpfOptions::decode_const(CFG)).elide_overflow_exp;
     const ELIDE_RED_EXP2: bool =
         graph::KernelCfg::from_options(ExpfOptions::decode_const(CFG)).elide_red_exp2;
     const ELIDE_RED_EXP: bool =
         graph::KernelCfg::from_options(ExpfOptions::decode_const(CFG)).elide_red_exp;
-    const IN_LO: f32 = graph::KernelCfg::from_options(ExpfOptions::decode_const(CFG)).in_lo;
-    const IN_HI: f32 = graph::KernelCfg::from_options(ExpfOptions::decode_const(CFG)).in_hi;
+    const IN_LO_EXP2: f32 =
+        graph::KernelCfg::from_options(ExpfOptions::decode_const(CFG)).in_lo_exp2;
+    const IN_HI_EXP2: f32 =
+        graph::KernelCfg::from_options(ExpfOptions::decode_const(CFG)).in_hi_exp2;
+    const IN_LO_EXP: f32 = graph::KernelCfg::from_options(ExpfOptions::decode_const(CFG)).in_lo_exp;
+    const IN_HI_EXP: f32 = graph::KernelCfg::from_options(ExpfOptions::decode_const(CFG)).in_hi_exp;
 }
 
 macro_rules! vector {

@@ -1,19 +1,24 @@
-//! Configurable `f32` pow, exponential, logarithm, and cube-root approximations.
+//! Configurable `f32` pow, exponential, logarithm, `log1p`, and cube-root approximations.
 //!
 //! Configure operations with fluent `const` option builders —
-//! [`powf::PowfOptions`], [`expf::ExpfOptions`], [`logf::LogfOptions`], and
-//! [`cbrtf::CbrtfOptions`] — ending in `.bits()` for compile-time
-//! specialization through [`powf::Powf`], [`expf::Expf`], [`logf::Logf`],
-//! [`cbrtf::Cbrtf`], or inline on Magetypes SIMD vectors via [`SimdMath`].
-//! Dynamic runtime configurations use `.runtime()` on the same option value.
+//! [`powf::PowfOptions`], [`expf::ExpfOptions`], [`logf::LogfOptions`],
+//! [`log1pf::Log1pfOptions`], and [`cbrtf::CbrtfOptions`] — ending in `.bits()`
+//! for compile-time specialization through [`powf::Powf`], [`expf::Expf`],
+//! [`logf::Logf`], [`log1pf::Log1pf`], [`cbrtf::Cbrtf`], or inline on Magetypes
+//! SIMD vectors via [`SimdMath`]. Dynamic runtime configurations use
+//! `.runtime()` on the same option value.
 //!
 //! ```
 //! use archmage::ScalarToken;
 //! use magetypes::simd::generic::f32x4;
-//! use magemath::{SimdMath, powf::{Powf, PowfOptions}};
+//! use magemath::{SimdMath, powf::{Powf, PowfDomain, PowfOptions}};
 //!
-//! const GAMMA: u128 = PowfOptions::new().gamma().midp().bits();
-//! const FAST_GAMMA: u128 = PowfOptions::new().gamma().midp().unchecked().bits();
+//! const GAMMA: u128 = PowfOptions::new().domain(PowfDomain::HdrGamma).midp().bits();
+//! const SRGB_DEC: u128 = PowfOptions::new()
+//!     .domain(PowfDomain::Unit)
+//!     .const_exponent(2.4)
+//!     .clamp_out_of_bounds()
+//!     .bits();
 //!
 //! let src = [0.0, 0.25, 0.5, 1.0];
 //! let mut dst = [0.0; 4];
@@ -21,9 +26,9 @@
 //!
 //! let v = f32x4::from_array_t(ScalarToken, src);
 //! let checked = v.try_powf_with::<GAMMA>(2.2).unwrap();
-//! let inline = v.powf::<FAST_GAMMA>(2.2);
+//! let decoded = v.powf_const::<SRGB_DEC>();
 //! assert_eq!(checked.to_array(), dst);
-//! assert_eq!(inline.to_array(), dst);
+//! assert_eq!(decoded.to_array()[3], 1.0);
 //! ```
 //!
 //! Magemath depends on Magetypes and Archmage. It does not replace vector
@@ -35,6 +40,9 @@
 extern crate alloc;
 #[cfg(any(feature = "std", test))]
 extern crate std;
+
+pub mod bf16;
+pub use bf16::{MAX_BF16, MAX_CBRT_BF16};
 
 /// Whole-operation feature selection, independent of numerical policy.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -64,6 +72,27 @@ pub enum Portability {
     BackendDependent,
 }
 
+/// How nonzero subnormal inputs (`0 < |x| < f32::MIN_POSITIVE`) are handled.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[non_exhaustive]
+pub enum Subnormals {
+    /// Subnormal normalization is off by default: [`Validation::Checked`]
+    /// rejects nonzero subnormals, [`Validation::ClampOutOfBounds`] shoves them
+    /// out to `±0.0` (when zero is admitted) or `±f32::MIN_POSITIVE` (when zero
+    /// is excluded), and [`Validation::AssumeValid`] emits zero subnormal ops.
+    #[default]
+    Reject,
+    /// Shove nonzero subnormals out to `±0.0` (when zero is admitted by the
+    /// domain) or `±f32::MIN_POSITIVE` (when zero is excluded) before kernel
+    /// evaluation — even under [`Validation::Checked`] — avoiding subnormal
+    /// rescaling overhead while still rejecting out-of-range inputs (`< lo`,
+    /// `> hi`, `±inf`, `NaN`).
+    FlushOrClamp,
+    /// Accurately rescale nonzero subnormals (`* 2^23` / `* 2^24` with
+    /// exponent adjustment) before evaluation (`.admit_subnormals()`).
+    Normalize,
+}
+
 /// How out-of-bounds inputs and intermediate ranges are handled at runtime.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 #[non_exhaustive]
@@ -73,9 +102,9 @@ pub enum Validation {
     /// (`.error_on_out_of_bounds()` / `.checked()`).
     #[default]
     Checked,
-    /// Clamp finite out-of-bounds inputs into the configured domain/range (and
-    /// saturate out-of-range outputs on `Midp`/`Lowp`), propagating `NaN` as
-    /// `NaN` without returning a numerical error (`.clamp_out_of_bounds()`).
+    /// Clamp finite/infinite out-of-bounds inputs into the configured domain
+    /// (and saturate out-of-range outputs on `Midp`/`Lowp`), propagating `NaN`
+    /// as `NaN` without returning a numerical error (`.clamp_out_of_bounds()`).
     ClampOutOfBounds,
     /// Omit numerical input/output checks and clamps. The caller promises all
     /// inputs satisfy the configured domain (`.assume_in_bounds()` / `.unchecked()`).
@@ -113,9 +142,14 @@ mod private {
             self,
             exponent: f32,
         ) -> Result<Self, crate::powf::PowfError>;
+        fn eval_powf_const_exp<const CFG: u128>(self) -> Result<Self, crate::powf::PowfError>;
         fn eval_powf_runtime(
             self,
             exponent: f32,
+            options: crate::powf::PowfOptions,
+        ) -> Result<Self, crate::powf::PowfError>;
+        fn eval_powf_runtime_const_exp(
+            self,
             options: crate::powf::PowfOptions,
         ) -> Result<Self, crate::powf::PowfError>;
 
@@ -135,6 +169,12 @@ mod private {
             options: crate::logf::LogfOptions,
         ) -> Result<Self, crate::logf::LogfError>;
 
+        fn eval_log1pf_const<const CFG: u128>(self) -> Result<Self, crate::log1pf::Log1pfError>;
+        fn eval_log1pf_runtime(
+            self,
+            options: crate::log1pf::Log1pfOptions,
+        ) -> Result<Self, crate::log1pf::Log1pfError>;
+
         fn eval_cbrtf_const<const CFG: u128>(self) -> Result<Self, crate::cbrtf::CbrtfError>;
         fn eval_cbrtf_runtime(
             self,
@@ -153,12 +193,12 @@ pub trait SimdVector: private::Sealed {}
 /// so no redundant token parameter or lane-width suffix is needed.
 ///
 /// - `try_*` uses each family's default checked `Midp` `BitExact` options.
-/// - `try_*_with::<CFG>` specializes at compile time from `*Options::bits()`.
-/// - Infallible `powf::<CFG>`, `exp2::<CFG>`, `exp::<CFG>`, `log2::<CFG>`,
-///   `ln::<CFG>`, `log10::<CFG>`, `log1p::<CFG>`, and `cbrt::<CFG>` return `Self`
-///   directly and fail at compile time unless `CFG` is infallible
+/// - `try_*_with::<CFG>` (and `try_powf_const::<CFG>`) specializes at compile time from `*Options::bits()`.
+/// - Infallible `powf::<CFG>`, `powf_const::<CFG>`, `exp2::<CFG>`, `exp::<CFG>`,
+///   `log2::<CFG>`, `ln::<CFG>`, `log10::<CFG>`, `log1p::<CFG>`, and `cbrt::<CFG>`
+///   return `Self` directly and fail at compile time unless `CFG` is infallible
 ///   (`.clamp_out_of_bounds()`, `.assume_in_bounds()` / `.unchecked()`, or
-///   `.admit_all_floats()` / `.full_domain()`).
+///   `AllFloats` / `.admit_all_floats()`).
 pub trait SimdMath: SimdVector {
     /// Checked `self^exponent` with default [`powf::PowfOptions::new()`].
     #[inline(always)]
@@ -169,13 +209,32 @@ pub trait SimdMath: SimdVector {
     /// Checked `self^exponent` specialized for `const CFG: u128`.
     #[inline(always)]
     fn try_powf_with<const CFG: u128>(self, exponent: f32) -> Result<Self, powf::PowfError> {
+        const {
+            let opts = powf::PowfOptions::decode_const(CFG);
+            assert!(
+                !opts.has_const_exponent(),
+                "CFG sets `.const_exponent(...)`; call `try_powf_const::<CFG>()` so the constant exponent is not ignored"
+            );
+        }
         self.eval_powf_const::<CFG>(exponent)
+    }
+
+    /// Checked `self^N` where `N` is configured via [`powf::PowfOptions::const_exponent`].
+    #[inline(always)]
+    fn try_powf_const<const CFG: u128>(self) -> Result<Self, powf::PowfError> {
+        const {
+            let opts = powf::PowfOptions::decode_const(CFG);
+            assert!(
+                opts.has_const_exponent(),
+                "SimdMath::try_powf_const::<CFG> requires `.const_exponent(n)` on PowfOptions"
+            );
+        }
+        self.eval_powf_const_exp::<CFG>()
     }
 
     /// Infallible `self^exponent` specialized for `const CFG: u128`.
     ///
-    /// Fails to compile unless `CFG` sets `.clamp_out_of_bounds()`,
-    /// `.assume_in_bounds()` / `.unchecked()`, or `.admit_all_floats().highp()`:
+    /// Fails to compile unless `CFG` is infallible and does not set `.const_exponent(n)`:
     ///
     /// ```compile_fail
     /// use archmage::ScalarToken;
@@ -191,11 +250,36 @@ pub trait SimdMath: SimdVector {
             let opts = powf::PowfOptions::decode_const(CFG);
             opts.validate();
             assert!(
+                !opts.has_const_exponent(),
+                "CFG sets `.const_exponent(...)`; call `powf_const::<CFG>()` so the constant exponent is not ignored"
+            );
+            assert!(
                 opts.is_infallible(),
                 "SimdMath::powf::<CFG> requires `.clamp_out_of_bounds()`, `.assume_in_bounds()` / `.unchecked()`, or `.admit_all_floats().highp()`; use `try_powf_with::<CFG>` for checked options"
             );
         }
         match self.eval_powf_const::<CFG>(exponent) {
+            Ok(v) => v,
+            Err(_) => unreachable!("infallible configuration returned Err"),
+        }
+    }
+
+    /// Infallible `self^N` where `N` is configured via [`powf::PowfOptions::const_exponent`].
+    #[inline(always)]
+    fn powf_const<const CFG: u128>(self) -> Self {
+        const {
+            let opts = powf::PowfOptions::decode_const(CFG);
+            opts.validate();
+            assert!(
+                opts.has_const_exponent(),
+                "SimdMath::powf_const::<CFG> requires `.const_exponent(n)` on PowfOptions"
+            );
+            assert!(
+                opts.is_infallible(),
+                "SimdMath::powf_const::<CFG> requires `.clamp_out_of_bounds()`, `.assume_in_bounds()` / `.unchecked()`, or `.admit_all_floats().highp()`; use `try_powf_const::<CFG>` for checked options"
+            );
+        }
+        match self.eval_powf_const_exp::<CFG>() {
             Ok(v) => v,
             Err(_) => unreachable!("infallible configuration returned Err"),
         }
@@ -214,9 +298,6 @@ pub trait SimdMath: SimdVector {
     }
 
     /// Infallible `2^self` specialized for `const CFG: u128`.
-    ///
-    /// Fails to compile unless `CFG` sets `.clamp_out_of_bounds()`,
-    /// `.assume_in_bounds()` / `.unchecked()`, or `.admit_all_floats()` / `.full_domain()`.
     #[inline(always)]
     fn exp2<const CFG: u128>(self) -> Self {
         const {
@@ -246,9 +327,6 @@ pub trait SimdMath: SimdVector {
     }
 
     /// Infallible `e^self` specialized for `const CFG: u128`.
-    ///
-    /// Fails to compile unless `CFG` sets `.clamp_out_of_bounds()`,
-    /// `.assume_in_bounds()` / `.unchecked()`, or `.admit_all_floats()` / `.full_domain()`.
     #[inline(always)]
     fn exp<const CFG: u128>(self) -> Self {
         const {
@@ -278,14 +356,11 @@ pub trait SimdMath: SimdVector {
     }
 
     /// Infallible `log2(self)` specialized for `const CFG: u128`.
-    ///
-    /// Fails to compile unless `CFG` sets `.clamp_out_of_bounds()`,
-    /// `.assume_in_bounds()` / `.unchecked()`, or `.admit_all_floats()` / `.full_domain()`.
     #[inline(always)]
     fn log2<const CFG: u128>(self) -> Self {
         const {
             let opts = logf::LogfOptions::decode_const(CFG);
-            opts.validate_op(0);
+            opts.validate();
             assert!(
                 opts.is_infallible(),
                 "SimdMath::log2::<CFG> requires `.clamp_out_of_bounds()`, `.assume_in_bounds()` / `.unchecked()`, or `.admit_all_floats()`; use `try_log2_with::<CFG>` for checked options"
@@ -310,14 +385,11 @@ pub trait SimdMath: SimdVector {
     }
 
     /// Infallible `ln(self)` specialized for `const CFG: u128`.
-    ///
-    /// Fails to compile unless `CFG` sets `.clamp_out_of_bounds()`,
-    /// `.assume_in_bounds()` / `.unchecked()`, or `.admit_all_floats()` / `.full_domain()`.
     #[inline(always)]
     fn ln<const CFG: u128>(self) -> Self {
         const {
             let opts = logf::LogfOptions::decode_const(CFG);
-            opts.validate_op(1);
+            opts.validate();
             assert!(
                 opts.is_infallible(),
                 "SimdMath::ln::<CFG> requires `.clamp_out_of_bounds()`, `.assume_in_bounds()` / `.unchecked()`, or `.admit_all_floats()`; use `try_ln_with::<CFG>` for checked options"
@@ -342,14 +414,11 @@ pub trait SimdMath: SimdVector {
     }
 
     /// Infallible `log10(self)` specialized for `const CFG: u128`.
-    ///
-    /// Fails to compile unless `CFG` sets `.clamp_out_of_bounds()`,
-    /// `.assume_in_bounds()` / `.unchecked()`, or `.admit_all_floats()` / `.full_domain()`.
     #[inline(always)]
     fn log10<const CFG: u128>(self) -> Self {
         const {
             let opts = logf::LogfOptions::decode_const(CFG);
-            opts.validate_op(2);
+            opts.validate();
             assert!(
                 opts.is_infallible(),
                 "SimdMath::log10::<CFG> requires `.clamp_out_of_bounds()`, `.assume_in_bounds()` / `.unchecked()`, or `.admit_all_floats()`; use `try_log10_with::<CFG>` for checked options"
@@ -361,33 +430,30 @@ pub trait SimdMath: SimdVector {
         }
     }
 
-    /// Checked `ln(1 + self)` with default [`logf::LogfOptions::new()`].
+    /// Checked `ln(1 + self)` with default [`log1pf::Log1pfOptions::new()`].
     #[inline(always)]
-    fn try_log1p(self) -> Result<Self, logf::LogfError> {
-        self.try_log1p_with::<{ logf::LogfOptions::new().bits() }>()
+    fn try_log1p(self) -> Result<Self, log1pf::Log1pfError> {
+        self.try_log1p_with::<{ log1pf::Log1pfOptions::new().bits() }>()
     }
 
-    /// Checked `ln(1 + self)` specialized for `const CFG: u128`.
+    /// Checked `ln(1 + self)` specialized for [`log1pf::Log1pfOptions`] `const CFG: u128`.
     #[inline(always)]
-    fn try_log1p_with<const CFG: u128>(self) -> Result<Self, logf::LogfError> {
-        self.eval_logf_const::<CFG, 3>()
+    fn try_log1p_with<const CFG: u128>(self) -> Result<Self, log1pf::Log1pfError> {
+        self.eval_log1pf_const::<CFG>()
     }
 
-    /// Infallible `ln(1 + self)` specialized for `const CFG: u128`.
-    ///
-    /// Fails to compile unless `CFG` sets `.clamp_out_of_bounds()`,
-    /// `.assume_in_bounds()` / `.unchecked()`, or `.admit_all_floats()` / `.full_domain()`.
+    /// Infallible `ln(1 + self)` specialized for [`log1pf::Log1pfOptions`] `const CFG: u128`.
     #[inline(always)]
     fn log1p<const CFG: u128>(self) -> Self {
         const {
-            let opts = logf::LogfOptions::decode_const(CFG);
-            opts.validate_op(3);
+            let opts = log1pf::Log1pfOptions::decode_const(CFG);
+            opts.validate();
             assert!(
                 opts.is_infallible(),
                 "SimdMath::log1p::<CFG> requires `.clamp_out_of_bounds()`, `.assume_in_bounds()` / `.unchecked()`, or `.admit_all_floats()`; use `try_log1p_with::<CFG>` for checked options"
             );
         }
-        match self.eval_logf_const::<CFG, 3>() {
+        match self.eval_log1pf_const::<CFG>() {
             Ok(v) => v,
             Err(_) => unreachable!("infallible configuration returned Err"),
         }
@@ -406,9 +472,6 @@ pub trait SimdMath: SimdVector {
     }
 
     /// Infallible `cbrt(self)` specialized for `const CFG: u128`.
-    ///
-    /// Fails to compile unless `CFG` sets `.clamp_out_of_bounds()`,
-    /// `.assume_in_bounds()` / `.unchecked()`, or `.admit_all_floats()` / `.full_domain()`.
     #[inline(always)]
     fn cbrt<const CFG: u128>(self) -> Self {
         const {
@@ -427,7 +490,7 @@ pub trait SimdMath: SimdVector {
 }
 
 macro_rules! impl_simd_vector {
-    ($vec:ident, $bound:ident, $run_powf:ident, $run_expf:ident, $run_logf:ident, $run_cbrtf:ident, $lanes:literal) => {
+    ($vec:ident, $bound:ident, $run_powf:ident, $run_powf_const:ident, $run_expf:ident, $run_logf:ident, $run_log1pf:ident, $run_cbrtf:ident, $lanes:literal) => {
         impl<T: magetypes::simd::backends::$bound> private::Sealed
             for magetypes::simd::generic::$vec<T>
         {
@@ -440,6 +503,11 @@ macro_rules! impl_simd_vector {
             }
 
             #[inline(always)]
+            fn eval_powf_const_exp<const CFG: u128>(self) -> Result<Self, powf::PowfError> {
+                powf::const_api::$run_powf_const::<CFG, T>(self.token(), self)
+            }
+
+            #[inline(always)]
             fn eval_powf_runtime(
                 self,
                 exponent: f32,
@@ -447,6 +515,16 @@ macro_rules! impl_simd_vector {
             ) -> Result<Self, powf::PowfError> {
                 let token = self.token();
                 powf::const_api::runtime::<T, $lanes>(token, self.to_array(), exponent, options)
+                    .map(|arr| magetypes::simd::generic::$vec::from_array_t(token, arr))
+            }
+
+            #[inline(always)]
+            fn eval_powf_runtime_const_exp(
+                self,
+                options: powf::PowfOptions,
+            ) -> Result<Self, powf::PowfError> {
+                let token = self.token();
+                powf::const_api::runtime_const_exp::<T, $lanes>(token, self.to_array(), options)
                     .map(|arr| magetypes::simd::generic::$vec::from_array_t(token, arr))
             }
 
@@ -485,6 +563,21 @@ macro_rules! impl_simd_vector {
             }
 
             #[inline(always)]
+            fn eval_log1pf_const<const CFG: u128>(self) -> Result<Self, log1pf::Log1pfError> {
+                log1pf::const_api::$run_log1pf::<CFG, T>(self.token(), self)
+            }
+
+            #[inline(always)]
+            fn eval_log1pf_runtime(
+                self,
+                options: log1pf::Log1pfOptions,
+            ) -> Result<Self, log1pf::Log1pfError> {
+                let token = self.token();
+                log1pf::const_api::runtime_token::<T, $lanes>(token, self.to_array(), options)
+                    .map(|arr| magetypes::simd::generic::$vec::from_array_t(token, arr))
+            }
+
+            #[inline(always)]
             fn eval_cbrtf_const<const CFG: u128>(self) -> Result<Self, cbrtf::CbrtfError> {
                 cbrtf::const_api::$run_cbrtf::<CFG, T>(self.token(), self)
             }
@@ -509,13 +602,44 @@ macro_rules! impl_simd_vector {
     };
 }
 
-impl_simd_vector!(f32x4, F32x4Convert, run4, run4, run4, run4, 4);
-impl_simd_vector!(f32x8, F32x8Convert, run8, run8, run8, run8, 8);
+impl_simd_vector!(
+    f32x4,
+    F32x4Convert,
+    run4,
+    run4_const,
+    run4,
+    run4,
+    run4,
+    run4,
+    4
+);
+impl_simd_vector!(
+    f32x8,
+    F32x8Convert,
+    run8,
+    run8_const,
+    run8,
+    run8,
+    run8,
+    run8,
+    8
+);
 #[cfg(feature = "w512")]
-impl_simd_vector!(f32x16, F32x16Convert, run16, run16, run16, run16, 16);
+impl_simd_vector!(
+    f32x16,
+    F32x16Convert,
+    run16,
+    run16_const,
+    run16,
+    run16,
+    run16,
+    run16,
+    16
+);
 
 pub mod cbrtf;
 pub mod expf;
+pub mod log1pf;
 pub mod logf;
 pub mod powf;
 mod soft_fma;

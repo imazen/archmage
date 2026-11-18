@@ -60,12 +60,14 @@ use magemath::{
     SimdMath,
     cbrtf::{Cbrtf, CbrtfOptions},
     expf::{Expf, ExpfOptions},
+    log1pf::{Log1pf, Log1pfDomain, Log1pfOptions},
     logf::{Logf, LogfOptions},
-    powf::{Powf, PowfError, PowfOptions},
+    powf::{Powf, PowfDomain, PowfError, PowfOptions},
 };
 
 const P_GAMMA: u128 = PowfOptions::new().gamma_domain().midp().bits();
 const P_SRGB: u128 = PowfOptions::new().srgb_encode_domain().clamp_out_of_bounds().bits();
+const P_SRGB_CONST: u128 = PowfOptions::new().domain(PowfDomain::Unit).const_exponent(1.0 / 2.4).clamp_out_of_bounds().bits();
 const P_LOWP: u128 = PowfOptions::new().unit_gamma_domain().lowp().assume_in_bounds().caller().bits();
 const P_HIGHP: u128 = PowfOptions::new().admit_all_floats().highp().bits();
 const E_MIDP: u128 = ExpfOptions::new().unclamped_exp_range().bits();
@@ -74,7 +76,7 @@ const E_CLAMP: u128 = ExpfOptions::new().input_range(-4.0, 4.0).clamp_out_of_bou
 const L_MIDP: u128 = LogfOptions::new().admit_zero().bits();
 const L_SUB: u128 = LogfOptions::new().admit_subnormals().bits();
 const L_NEAR: u128 = LogfOptions::new().near_one_range().assume_in_bounds().caller().bits();
-const L_1P: u128 = LogfOptions::new().small_log1p_range().clamp_out_of_bounds().bits();
+const L_1P: u128 = Log1pfOptions::new().domain(Log1pfDomain::AroundZero).clamp_out_of_bounds().bits();
 const C_UNIT: u128 = CbrtfOptions::new().unit_range().clamp_out_of_bounds().caller().bits();
 const C_FULL: u128 = CbrtfOptions::new().admit_all_floats().lowp().bits();
 
@@ -96,7 +98,7 @@ fn color_chain_inner(token: Token, src: &[f32], dst: &mut [f32], gamma: f32) -> 
         let mut head = [0.0; 4];
         head.copy_from_slice(&st[..4]);
         let v4 = f32x4::from_array_t(token, head)
-            .powf::<P_SRGB>(gamma)
+            .powf_const::<P_SRGB_CONST>()
             .exp::<E_CLAMP>()
             .log1p::<L_1P>();
         dt[..4].copy_from_slice(&v4.to_array());
@@ -114,10 +116,12 @@ fn color_chain_inner(token: Token, src: &[f32], dst: &mut [f32], gamma: f32) -> 
 pub fn run_consumer_pipeline(src: &[f32], dst: &mut [f32], gamma: f32) -> f32 {
     let _ = attuned!(color_chain_inner(src, dst, gamma), [_v4x, _v3, _neon, _wasm128, _scalar]);
     let _ = Powf::<P_GAMMA>::slice(src, dst, gamma);
+    let _ = Powf::<P_SRGB_CONST>::slice_const(src, dst);
     let _ = Powf::<P_HIGHP>::slice(src, dst, gamma);
     let _ = Expf::<E_MIDP>::exp_slice(src, dst);
     let _ = Logf::<L_MIDP>::ln_slice(src, dst);
     let _ = Logf::<L_SUB>::log2_slice(src, dst);
+    let _ = Log1pf::<L_1P>::slice(src, dst);
     let _ = Cbrtf::<C_FULL>::slice(src, dst);
     if src.len() >= 16 {
         let mut a16 = [0.0; 16];

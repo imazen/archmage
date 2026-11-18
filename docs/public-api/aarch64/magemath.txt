@@ -6,32 +6,44 @@
 # impls omitted; re-export duplicates annotated `[also: path]`.
 # DO NOT EDIT BY HAND — commit regenerated changes with the code.
 #
-# files: magemath.txt 387 lines (supported surface) | magemath.features.txt 6 added (features: avx512,std,w512) | magemath.internal.txt 47 lines (47 hidden + 0 excluded-feature)
+# files: magemath.txt 545 lines (supported surface) | magemath.features.txt 7 added (features: avx512,std,w512) | magemath.internal.txt 69 lines (69 hidden + 0 excluded-feature)
 
 ## summary
 #
-#   pub modules                                 5
-#   pub types (struct/enum/trait/alias)        30
-#   pub consts/statics                        136
+#   pub modules                                 7
+#   pub types (struct/enum/trait/alias)        42
+#   pub consts/statics                        206
 #   free functions                             16
-#   inherent methods                          128
-#   struct fields                              10
-#   enum variants                              30
-#   trait roster entries (type × trait)       148
-#   auto-trait-complete types                  27
+#   inherent methods                          143
+#   struct fields                              12
+#   enum variants                              77
+#   trait roster entries (type × trait)       214
+#   auto-trait-complete types                  39
 #   auto-trait exceptions                       1
 #
 # per-module pub lines:
-#   (root)                          179
-#   cbrtf                            28
-#   expf                             43
-#   logf                             73
-#   powf                             32
+#   (root)                          255
+#   bf16                              2
+#   cbrtf                            34
+#   expf                             51
+#   log1pf                           38
+#   logf                             67
+#   powf                             56
 
-## items (355 lines)
+## items (501 lines)
 
 pub mod magemath
+pub mod bf16
+pub const fn bf16::ceil_bf16(f32) -> u16
+pub const fn bf16::expand_bf16(u16) -> f32
+pub const fn bf16::floor_bf16(f32) -> u16
 pub mod cbrtf
+#[non_exhaustive] pub enum cbrtf::CbrtfDomain
+pub cbrtf::CbrtfDomain::AllFloats
+pub cbrtf::CbrtfDomain::Bounded
+pub cbrtf::CbrtfDomain::PositiveNormals
+pub cbrtf::CbrtfDomain::SignedUnit
+pub cbrtf::CbrtfDomain::Unit
 #[non_exhaustive] pub enum cbrtf::CbrtfErrorKind
 pub cbrtf::CbrtfErrorKind::InvalidInput
 pub cbrtf::CbrtfErrorKind::UnsupportedOptions
@@ -56,13 +68,15 @@ pub const fn cbrtf::CbrtfOptions::admit_subnormals(self) -> Self
 pub const fn cbrtf::CbrtfOptions::assume_in_bounds(self) -> Self
 pub const fn cbrtf::CbrtfOptions::backend_dependent(self) -> Self
 pub const fn cbrtf::CbrtfOptions::bit_exact(self) -> Self
-pub const fn cbrtf::CbrtfOptions::bits(self) -> u128
+pub const fn cbrtf::CbrtfOptions::bits(&self) -> u128
 pub const fn cbrtf::CbrtfOptions::caller(self) -> Self
 pub const fn cbrtf::CbrtfOptions::checked(self) -> Self
 pub const fn cbrtf::CbrtfOptions::clamp_out_of_bounds(self) -> Self
+pub const fn cbrtf::CbrtfOptions::domain(self, cbrtf::CbrtfDomain) -> Self
 pub const fn cbrtf::CbrtfOptions::elides_denorm_check(&self) -> bool
 pub const fn cbrtf::CbrtfOptions::error_on_out_of_bounds(self) -> Self
 pub const fn cbrtf::CbrtfOptions::execution(self, Execution) -> Self
+pub const fn cbrtf::CbrtfOptions::flush_or_clamp_subnormals(self) -> Self
 pub const fn cbrtf::CbrtfOptions::from_bits(u128) -> core::option::Option<Self>
 pub const fn cbrtf::CbrtfOptions::full_domain(self) -> Self
 pub const fn cbrtf::CbrtfOptions::input_range(self, f32, f32) -> Self
@@ -73,7 +87,12 @@ pub const fn cbrtf::CbrtfOptions::midp(self) -> Self
 pub const fn cbrtf::CbrtfOptions::new() -> Self
 pub const fn cbrtf::CbrtfOptions::portability(self, Portability) -> Self
 pub const fn cbrtf::CbrtfOptions::precision(self, cbrtf::CbrtfPrecision) -> Self
+pub const fn cbrtf::CbrtfOptions::reject_subnormals(self) -> Self
 pub const fn cbrtf::CbrtfOptions::runtime(self) -> cbrtf::CbrtfRuntime
+pub const fn cbrtf::CbrtfOptions::selected_domain(&self) -> cbrtf::CbrtfDomain
+pub const fn cbrtf::CbrtfOptions::shove_subnormals(self) -> Self
+pub const fn cbrtf::CbrtfOptions::subnormals(self, Subnormals) -> Self
+pub const fn cbrtf::CbrtfOptions::subnormals_policy(&self) -> Subnormals
 pub const fn cbrtf::CbrtfOptions::unchecked(self) -> Self
 pub const fn cbrtf::CbrtfOptions::unit_range(self) -> Self
 pub const fn cbrtf::CbrtfOptions::upgrade(self) -> Self
@@ -90,6 +109,14 @@ pub fn cbrtf::CbrtfRuntime::slice_with_token(self, impl archmage::tokens::IntoCo
 pub fn cbrtf::try_cbrt(f32) -> core::result::Result<f32, cbrtf::CbrtfError>
 pub fn cbrtf::try_cbrt_slice(&[f32], &mut [f32]) -> core::result::Result<(), SliceError<cbrtf::CbrtfErrorKind>>
 pub mod expf
+#[non_exhaustive] pub enum expf::ExpfDomain
+pub expf::ExpfDomain::AllFloats
+pub expf::ExpfDomain::Finite
+pub expf::ExpfDomain::NonPositive
+pub expf::ExpfDomain::NormalOutput
+pub expf::ExpfDomain::PositiveOctave
+pub expf::ExpfDomain::SignedUnit
+pub expf::ExpfDomain::SingleOctave
 #[non_exhaustive] pub enum expf::ExpfErrorKind
 pub expf::ExpfErrorKind::InvalidInput
 pub expf::ExpfErrorKind::UnsupportedOptions
@@ -120,10 +147,11 @@ pub const fn expf::ExpfOptions::admit_all_floats(self) -> Self
 pub const fn expf::ExpfOptions::assume_in_bounds(self) -> Self
 pub const fn expf::ExpfOptions::backend_dependent(self) -> Self
 pub const fn expf::ExpfOptions::bit_exact(self) -> Self
-pub const fn expf::ExpfOptions::bits(self) -> u128
+pub const fn expf::ExpfOptions::bits(&self) -> u128
 pub const fn expf::ExpfOptions::caller(self) -> Self
 pub const fn expf::ExpfOptions::checked(self) -> Self
 pub const fn expf::ExpfOptions::clamp_out_of_bounds(self) -> Self
+pub const fn expf::ExpfOptions::domain(self, expf::ExpfDomain) -> Self
 pub const fn expf::ExpfOptions::elides_clamp(&self) -> bool
 pub const fn expf::ExpfOptions::elides_exp_clamp(&self) -> bool
 pub const fn expf::ExpfOptions::elides_exp_reduction(&self) -> bool
@@ -141,6 +169,7 @@ pub const fn expf::ExpfOptions::new() -> Self
 pub const fn expf::ExpfOptions::portability(self, Portability) -> Self
 pub const fn expf::ExpfOptions::precision(self, expf::ExpfPrecision) -> Self
 pub const fn expf::ExpfOptions::runtime(self) -> expf::ExpfRuntime
+pub const fn expf::ExpfOptions::selected_domain(&self) -> expf::ExpfDomain
 pub const fn expf::ExpfOptions::small_exp2_range(self) -> Self
 pub const fn expf::ExpfOptions::small_exp_range(self) -> Self
 pub const fn expf::ExpfOptions::unchecked(self) -> Self
@@ -167,7 +196,94 @@ pub fn expf::try_exp(f32) -> core::result::Result<f32, expf::ExpfError>
 pub fn expf::try_exp2(f32) -> core::result::Result<f32, expf::ExpfError>
 pub fn expf::try_exp2_slice(&[f32], &mut [f32]) -> core::result::Result<(), SliceError<expf::ExpfErrorKind>>
 pub fn expf::try_exp_slice(&[f32], &mut [f32]) -> core::result::Result<(), SliceError<expf::ExpfErrorKind>>
+pub mod log1pf
+#[non_exhaustive] pub enum log1pf::Log1pfDomain
+pub log1pf::Log1pfDomain::AllFloats
+pub log1pf::Log1pfDomain::AroundZero
+pub log1pf::Log1pfDomain::FromNegOne
+pub log1pf::Log1pfDomain::GreaterThanNegOne
+pub log1pf::Log1pfDomain::NonNegative
+pub log1pf::Log1pfDomain::OpenSignedUnit
+pub log1pf::Log1pfDomain::SignedUnit
+pub log1pf::Log1pfDomain::SingleOctave
+pub log1pf::Log1pfDomain::Unit
+#[non_exhaustive] pub enum log1pf::Log1pfErrorKind
+pub log1pf::Log1pfErrorKind::InvalidInput
+pub log1pf::Log1pfErrorKind::UnsupportedOptions
+pub log1pf::Log1pfErrorKind::UnsupportedWidth
+#[non_exhaustive] pub enum log1pf::Log1pfPrecision
+pub log1pf::Log1pfPrecision::Lowp
+pub log1pf::Log1pfPrecision::Midp
+pub struct log1pf::Log1pf<const CFG: u128>
+pub fn log1pf::Log1pf<CFG>::array<const N: usize>([f32; N]) -> core::result::Result<[f32; N], log1pf::Log1pfError>
+pub fn log1pf::Log1pf<CFG>::scalar(f32) -> core::result::Result<f32, log1pf::Log1pfError>
+pub fn log1pf::Log1pf<CFG>::scalar_infallible(f32) -> f32
+pub fn log1pf::Log1pf<CFG>::scalar_with_token<T: magetypes::simd::backends::convert::F32x4Convert>(T, f32) -> core::result::Result<f32, log1pf::Log1pfError>
+pub fn log1pf::Log1pf<CFG>::simd<V: SimdVector>(V) -> core::result::Result<V, log1pf::Log1pfError>
+pub fn log1pf::Log1pf<CFG>::slice(&[f32], &mut [f32]) -> core::result::Result<(), SliceError<log1pf::Log1pfErrorKind>>
+pub fn log1pf::Log1pf<CFG>::slice_with_token(impl archmage::tokens::IntoConcreteToken, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<log1pf::Log1pfErrorKind>>
+pub struct log1pf::Log1pfError
+pub log1pf::Log1pfError::kind: log1pf::Log1pfErrorKind
+pub log1pf::Log1pfError::lane_mask: u16
+pub struct log1pf::Log1pfOptions
+pub const fn log1pf::Log1pfOptions::admit_all_floats(self) -> Self
+pub const fn log1pf::Log1pfOptions::admit_neg_one(self) -> Self
+pub const fn log1pf::Log1pfOptions::admit_subnormals(self) -> Self
+pub const fn log1pf::Log1pfOptions::admit_zero(self) -> Self
+pub const fn log1pf::Log1pfOptions::around_zero_range(self) -> Self
+pub const fn log1pf::Log1pfOptions::assume_in_bounds(self) -> Self
+pub const fn log1pf::Log1pfOptions::backend_dependent(self) -> Self
+pub const fn log1pf::Log1pfOptions::bit_exact(self) -> Self
+pub const fn log1pf::Log1pfOptions::bits(&self) -> u128
+pub const fn log1pf::Log1pfOptions::caller(self) -> Self
+pub const fn log1pf::Log1pfOptions::checked(self) -> Self
+pub const fn log1pf::Log1pfOptions::clamp_out_of_bounds(self) -> Self
+pub const fn log1pf::Log1pfOptions::domain(self, log1pf::Log1pfDomain) -> Self
+pub const fn log1pf::Log1pfOptions::elides_reduction(&self) -> bool
+pub const fn log1pf::Log1pfOptions::error_on_out_of_bounds(self) -> Self
+pub const fn log1pf::Log1pfOptions::execution(self, Execution) -> Self
+pub const fn log1pf::Log1pfOptions::flush_or_clamp_subnormals(self) -> Self
+pub const fn log1pf::Log1pfOptions::from_bits(u128) -> core::option::Option<Self>
+pub const fn log1pf::Log1pfOptions::full_domain(self) -> Self
+pub const fn log1pf::Log1pfOptions::input_range(self, f32, f32) -> Self
+pub const fn log1pf::Log1pfOptions::is_infallible(&self) -> bool
+pub const fn log1pf::Log1pfOptions::is_valid(&self) -> bool
+pub const fn log1pf::Log1pfOptions::lowp(self) -> Self
+pub const fn log1pf::Log1pfOptions::midp(self) -> Self
+pub const fn log1pf::Log1pfOptions::new() -> Self
+pub const fn log1pf::Log1pfOptions::portability(self, Portability) -> Self
+pub const fn log1pf::Log1pfOptions::precision(self, log1pf::Log1pfPrecision) -> Self
+pub const fn log1pf::Log1pfOptions::reject_subnormals(self) -> Self
+pub const fn log1pf::Log1pfOptions::runtime(self) -> log1pf::Log1pfRuntime
+pub const fn log1pf::Log1pfOptions::selected_domain(&self) -> log1pf::Log1pfDomain
+pub const fn log1pf::Log1pfOptions::shove_subnormals(self) -> Self
+pub const fn log1pf::Log1pfOptions::small_range(self) -> Self
+pub const fn log1pf::Log1pfOptions::subnormals(self, Subnormals) -> Self
+pub const fn log1pf::Log1pfOptions::subnormals_policy(&self) -> Subnormals
+pub const fn log1pf::Log1pfOptions::unchecked(self) -> Self
+pub const fn log1pf::Log1pfOptions::upgrade(self) -> Self
+pub const fn log1pf::Log1pfOptions::validate(&self)
+pub const fn log1pf::Log1pfOptions::validation(self, Validation) -> Self
+pub struct log1pf::Log1pfRuntime
+pub fn log1pf::Log1pfRuntime::array<const N: usize>(self, [f32; N]) -> core::result::Result<[f32; N], log1pf::Log1pfError>
+pub const fn log1pf::Log1pfRuntime::options(self) -> log1pf::Log1pfOptions
+pub fn log1pf::Log1pfRuntime::scalar(self, f32) -> core::result::Result<f32, log1pf::Log1pfError>
+pub fn log1pf::Log1pfRuntime::scalar_with_token<T: magetypes::simd::backends::convert::F32x4Convert>(self, T, f32) -> core::result::Result<f32, log1pf::Log1pfError>
+pub fn log1pf::Log1pfRuntime::simd<V: SimdVector>(self, V) -> core::result::Result<V, log1pf::Log1pfError>
+pub fn log1pf::Log1pfRuntime::slice(self, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<log1pf::Log1pfErrorKind>>
+pub fn log1pf::Log1pfRuntime::slice_with_token(self, impl archmage::tokens::IntoConcreteToken, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<log1pf::Log1pfErrorKind>>
+pub fn log1pf::try_log1p(f32) -> core::result::Result<f32, log1pf::Log1pfError>
+pub fn log1pf::try_log1p_slice(&[f32], &mut [f32]) -> core::result::Result<(), SliceError<log1pf::Log1pfErrorKind>>
 pub mod logf
+#[non_exhaustive] pub enum logf::LogfDomain
+pub logf::LogfDomain::AllFloats
+pub logf::LogfDomain::Hdr
+pub logf::LogfDomain::NonNegative
+pub logf::LogfDomain::PositiveHdr
+pub logf::LogfDomain::PositiveNormals
+pub logf::LogfDomain::PositiveUnit
+pub logf::LogfDomain::SingleOctave
+pub logf::LogfDomain::Unit
 #[non_exhaustive] pub enum logf::LogfErrorKind
 pub logf::LogfErrorKind::InvalidInput
 pub logf::LogfErrorKind::UnsupportedOptions
@@ -190,13 +306,6 @@ pub fn logf::Logf<CFG>::log10_simd<V: SimdVector>(V) -> core::result::Result<V, 
 pub fn logf::Logf<CFG>::log10_slice(&[f32], &mut [f32]) -> core::result::Result<(), SliceError<logf::LogfErrorKind>>
 pub fn logf::Logf<CFG>::log10_slice_with_token(impl archmage::tokens::IntoConcreteToken, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<logf::LogfErrorKind>>
 pub fn logf::Logf<CFG>::log10_with_token<T: magetypes::simd::backends::convert::F32x4Convert>(T, f32) -> core::result::Result<f32, logf::LogfError>
-pub fn logf::Logf<CFG>::log1p(f32) -> core::result::Result<f32, logf::LogfError>
-pub fn logf::Logf<CFG>::log1p_array<const N: usize>([f32; N]) -> core::result::Result<[f32; N], logf::LogfError>
-pub fn logf::Logf<CFG>::log1p_infallible(f32) -> f32
-pub fn logf::Logf<CFG>::log1p_simd<V: SimdVector>(V) -> core::result::Result<V, logf::LogfError>
-pub fn logf::Logf<CFG>::log1p_slice(&[f32], &mut [f32]) -> core::result::Result<(), SliceError<logf::LogfErrorKind>>
-pub fn logf::Logf<CFG>::log1p_slice_with_token(impl archmage::tokens::IntoConcreteToken, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<logf::LogfErrorKind>>
-pub fn logf::Logf<CFG>::log1p_with_token<T: magetypes::simd::backends::convert::F32x4Convert>(T, f32) -> core::result::Result<f32, logf::LogfError>
 pub fn logf::Logf<CFG>::log2(f32) -> core::result::Result<f32, logf::LogfError>
 pub fn logf::Logf<CFG>::log2_array<const N: usize>([f32; N]) -> core::result::Result<[f32; N], logf::LogfError>
 pub fn logf::Logf<CFG>::log2_infallible(f32) -> f32
@@ -214,14 +323,15 @@ pub const fn logf::LogfOptions::admit_zero(self) -> Self
 pub const fn logf::LogfOptions::assume_in_bounds(self) -> Self
 pub const fn logf::LogfOptions::backend_dependent(self) -> Self
 pub const fn logf::LogfOptions::bit_exact(self) -> Self
-pub const fn logf::LogfOptions::bits(self) -> u128
+pub const fn logf::LogfOptions::bits(&self) -> u128
 pub const fn logf::LogfOptions::caller(self) -> Self
 pub const fn logf::LogfOptions::checked(self) -> Self
 pub const fn logf::LogfOptions::clamp_out_of_bounds(self) -> Self
-pub const fn logf::LogfOptions::elides_log1p_reduction(&self) -> bool
+pub const fn logf::LogfOptions::domain(self, logf::LogfDomain) -> Self
 pub const fn logf::LogfOptions::elides_reduction(&self) -> bool
 pub const fn logf::LogfOptions::error_on_out_of_bounds(self) -> Self
 pub const fn logf::LogfOptions::execution(self, Execution) -> Self
+pub const fn logf::LogfOptions::flush_or_clamp_subnormals(self) -> Self
 pub const fn logf::LogfOptions::from_bits(u128) -> core::option::Option<Self>
 pub const fn logf::LogfOptions::full_domain(self) -> Self
 pub const fn logf::LogfOptions::input_range(self, f32, f32) -> Self
@@ -233,8 +343,12 @@ pub const fn logf::LogfOptions::near_one_range(self) -> Self
 pub const fn logf::LogfOptions::new() -> Self
 pub const fn logf::LogfOptions::portability(self, Portability) -> Self
 pub const fn logf::LogfOptions::precision(self, logf::LogfPrecision) -> Self
+pub const fn logf::LogfOptions::reject_subnormals(self) -> Self
 pub const fn logf::LogfOptions::runtime(self) -> logf::LogfRuntime
-pub const fn logf::LogfOptions::small_log1p_range(self) -> Self
+pub const fn logf::LogfOptions::selected_domain(&self) -> logf::LogfDomain
+pub const fn logf::LogfOptions::shove_subnormals(self) -> Self
+pub const fn logf::LogfOptions::subnormals(self, Subnormals) -> Self
+pub const fn logf::LogfOptions::subnormals_policy(&self) -> Subnormals
 pub const fn logf::LogfOptions::unchecked(self) -> Self
 pub const fn logf::LogfOptions::upgrade(self) -> Self
 pub const fn logf::LogfOptions::validate(&self)
@@ -252,12 +366,6 @@ pub fn logf::LogfRuntime::log10_simd<V: SimdVector>(self, V) -> core::result::Re
 pub fn logf::LogfRuntime::log10_slice(self, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<logf::LogfErrorKind>>
 pub fn logf::LogfRuntime::log10_slice_with_token(self, impl archmage::tokens::IntoConcreteToken, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<logf::LogfErrorKind>>
 pub fn logf::LogfRuntime::log10_with_token<T: magetypes::simd::backends::convert::F32x4Convert>(self, T, f32) -> core::result::Result<f32, logf::LogfError>
-pub fn logf::LogfRuntime::log1p(self, f32) -> core::result::Result<f32, logf::LogfError>
-pub fn logf::LogfRuntime::log1p_array<const N: usize>(self, [f32; N]) -> core::result::Result<[f32; N], logf::LogfError>
-pub fn logf::LogfRuntime::log1p_simd<V: SimdVector>(self, V) -> core::result::Result<V, logf::LogfError>
-pub fn logf::LogfRuntime::log1p_slice(self, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<logf::LogfErrorKind>>
-pub fn logf::LogfRuntime::log1p_slice_with_token(self, impl archmage::tokens::IntoConcreteToken, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<logf::LogfErrorKind>>
-pub fn logf::LogfRuntime::log1p_with_token<T: magetypes::simd::backends::convert::F32x4Convert>(self, T, f32) -> core::result::Result<f32, logf::LogfError>
 pub fn logf::LogfRuntime::log2(self, f32) -> core::result::Result<f32, logf::LogfError>
 pub fn logf::LogfRuntime::log2_array<const N: usize>(self, [f32; N]) -> core::result::Result<[f32; N], logf::LogfError>
 pub fn logf::LogfRuntime::log2_simd<V: SimdVector>(self, V) -> core::result::Result<V, logf::LogfError>
@@ -269,11 +377,20 @@ pub fn logf::try_ln(f32) -> core::result::Result<f32, logf::LogfError>
 pub fn logf::try_ln_slice(&[f32], &mut [f32]) -> core::result::Result<(), SliceError<logf::LogfErrorKind>>
 pub fn logf::try_log10(f32) -> core::result::Result<f32, logf::LogfError>
 pub fn logf::try_log10_slice(&[f32], &mut [f32]) -> core::result::Result<(), SliceError<logf::LogfErrorKind>>
-pub fn logf::try_log1p(f32) -> core::result::Result<f32, logf::LogfError>
-pub fn logf::try_log1p_slice(&[f32], &mut [f32]) -> core::result::Result<(), SliceError<logf::LogfErrorKind>>
 pub fn logf::try_log2(f32) -> core::result::Result<f32, logf::LogfError>
 pub fn logf::try_log2_slice(&[f32], &mut [f32]) -> core::result::Result<(), SliceError<logf::LogfErrorKind>>
 pub mod powf
+#[non_exhaustive] pub enum powf::PowfDomain
+pub powf::PowfDomain::AllFloats
+pub powf::PowfDomain::HdrGamma
+pub powf::PowfDomain::NonNegative
+pub powf::PowfDomain::PositiveGamma
+pub powf::PowfDomain::PositiveNormals
+pub powf::PowfDomain::PositiveUnit
+pub powf::PowfDomain::PqRatio
+pub powf::PowfDomain::SdrGamma
+pub powf::PowfDomain::Unit
+pub powf::PowfDomain::UnitEncode
 #[non_exhaustive] pub enum powf::PowfErrorKind
 pub powf::PowfErrorKind::InvalidBase
 pub powf::PowfErrorKind::InvalidExponent
@@ -286,11 +403,18 @@ pub powf::PowfPrecision::Lowp
 pub powf::PowfPrecision::Midp
 pub struct powf::Powf<const CFG: u128>
 pub fn powf::Powf<CFG>::array<const N: usize>([f32; N], f32) -> core::result::Result<[f32; N], powf::PowfError>
+pub fn powf::Powf<CFG>::array_const<const N: usize>([f32; N]) -> core::result::Result<[f32; N], powf::PowfError>
 pub fn powf::Powf<CFG>::scalar(f32, f32) -> core::result::Result<f32, powf::PowfError>
+pub fn powf::Powf<CFG>::scalar_const(f32) -> core::result::Result<f32, powf::PowfError>
+pub fn powf::Powf<CFG>::scalar_const_infallible(f32) -> f32
+pub fn powf::Powf<CFG>::scalar_const_with_token<T: magetypes::simd::backends::convert::F32x4Convert>(T, f32) -> core::result::Result<f32, powf::PowfError>
 pub fn powf::Powf<CFG>::scalar_infallible(f32, f32) -> f32
 pub fn powf::Powf<CFG>::scalar_with_token<T: magetypes::simd::backends::convert::F32x4Convert>(T, f32, f32) -> core::result::Result<f32, powf::PowfError>
 pub fn powf::Powf<CFG>::simd<V: SimdVector>(V, f32) -> core::result::Result<V, powf::PowfError>
+pub fn powf::Powf<CFG>::simd_const<V: SimdVector>(V) -> core::result::Result<V, powf::PowfError>
 pub fn powf::Powf<CFG>::slice(&[f32], &mut [f32], f32) -> core::result::Result<(), SliceError<powf::PowfErrorKind>>
+pub fn powf::Powf<CFG>::slice_const(&[f32], &mut [f32]) -> core::result::Result<(), SliceError<powf::PowfErrorKind>>
+pub fn powf::Powf<CFG>::slice_const_with_token(impl archmage::tokens::IntoConcreteToken, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<powf::PowfErrorKind>>
 pub fn powf::Powf<CFG>::slice_with_token(impl archmage::tokens::IntoConcreteToken, &[f32], &mut [f32], f32) -> core::result::Result<(), SliceError<powf::PowfErrorKind>>
 pub struct powf::PowfError
 pub powf::PowfError::kind: powf::PowfErrorKind
@@ -304,19 +428,24 @@ pub const fn powf::PowfOptions::assume_in_bounds(self) -> Self
 pub const fn powf::PowfOptions::backend_dependent(self) -> Self
 pub const fn powf::PowfOptions::base_range(self, f32, f32) -> Self
 pub const fn powf::PowfOptions::bit_exact(self) -> Self
-pub const fn powf::PowfOptions::bits(self) -> u128
+pub const fn powf::PowfOptions::bits(&self) -> u128
 pub const fn powf::PowfOptions::caller(self) -> Self
 pub const fn powf::PowfOptions::checked(self) -> Self
 pub const fn powf::PowfOptions::clamp_out_of_bounds(self) -> Self
 pub const fn powf::PowfOptions::clamp_output(self) -> Self
+pub const fn powf::PowfOptions::const_exponent(self, f32) -> Self
+pub const fn powf::PowfOptions::const_exponent_value(&self) -> core::option::Option<f32>
+pub const fn powf::PowfOptions::domain(self, powf::PowfDomain) -> Self
 pub const fn powf::PowfOptions::elides_range_check(&self) -> bool
 pub const fn powf::PowfOptions::error_on_out_of_bounds(self) -> Self
 pub const fn powf::PowfOptions::execution(self, Execution) -> Self
 pub const fn powf::PowfOptions::exponent_range(self, f32, f32) -> Self
+pub const fn powf::PowfOptions::flush_or_clamp_subnormals(self) -> Self
 pub const fn powf::PowfOptions::from_bits(u128) -> core::option::Option<Self>
 pub const fn powf::PowfOptions::full_domain(self) -> Self
 pub const fn powf::PowfOptions::gamma(self) -> Self
 pub const fn powf::PowfOptions::gamma_domain(self) -> Self
+pub const fn powf::PowfOptions::has_const_exponent(&self) -> bool
 pub const fn powf::PowfOptions::highp(self) -> Self
 pub const fn powf::PowfOptions::is_infallible(&self) -> bool
 pub const fn powf::PowfOptions::is_valid(&self) -> bool
@@ -327,9 +456,14 @@ pub const fn powf::PowfOptions::portability(self, Portability) -> Self
 pub const fn powf::PowfOptions::positive_gamma(self) -> Self
 pub const fn powf::PowfOptions::positive_gamma_domain(self) -> Self
 pub const fn powf::PowfOptions::precision(self, powf::PowfPrecision) -> Self
+pub const fn powf::PowfOptions::reject_subnormals(self) -> Self
 pub const fn powf::PowfOptions::runtime(self) -> powf::PowfRuntime
 pub const fn powf::PowfOptions::saturate_output(self) -> Self
+pub const fn powf::PowfOptions::selected_domain(&self) -> powf::PowfDomain
+pub const fn powf::PowfOptions::shove_subnormals(self) -> Self
 pub const fn powf::PowfOptions::srgb_encode_domain(self) -> Self
+pub const fn powf::PowfOptions::subnormals(self, Subnormals) -> Self
+pub const fn powf::PowfOptions::subnormals_policy(&self) -> Subnormals
 pub const fn powf::PowfOptions::unchecked(self) -> Self
 pub const fn powf::PowfOptions::unit_gamma_domain(self) -> Self
 pub const fn powf::PowfOptions::upgrade(self) -> Self
@@ -337,11 +471,17 @@ pub const fn powf::PowfOptions::validate(&self)
 pub const fn powf::PowfOptions::validation(self, Validation) -> Self
 pub struct powf::PowfRuntime
 pub fn powf::PowfRuntime::array<const N: usize>(self, [f32; N], f32) -> core::result::Result<[f32; N], powf::PowfError>
+pub fn powf::PowfRuntime::array_const<const N: usize>(self, [f32; N]) -> core::result::Result<[f32; N], powf::PowfError>
 pub const fn powf::PowfRuntime::options(self) -> powf::PowfOptions
 pub fn powf::PowfRuntime::scalar(self, f32, f32) -> core::result::Result<f32, powf::PowfError>
+pub fn powf::PowfRuntime::scalar_const(self, f32) -> core::result::Result<f32, powf::PowfError>
+pub fn powf::PowfRuntime::scalar_const_with_token<T: magetypes::simd::backends::convert::F32x4Convert>(self, T, f32) -> core::result::Result<f32, powf::PowfError>
 pub fn powf::PowfRuntime::scalar_with_token<T: magetypes::simd::backends::convert::F32x4Convert>(self, T, f32, f32) -> core::result::Result<f32, powf::PowfError>
 pub fn powf::PowfRuntime::simd<V: SimdVector>(self, V, f32) -> core::result::Result<V, powf::PowfError>
+pub fn powf::PowfRuntime::simd_const<V: SimdVector>(self, V) -> core::result::Result<V, powf::PowfError>
 pub fn powf::PowfRuntime::slice(self, &[f32], &mut [f32], f32) -> core::result::Result<(), SliceError<powf::PowfErrorKind>>
+pub fn powf::PowfRuntime::slice_const(self, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<powf::PowfErrorKind>>
+pub fn powf::PowfRuntime::slice_const_with_token(self, impl archmage::tokens::IntoConcreteToken, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<powf::PowfErrorKind>>
 pub fn powf::PowfRuntime::slice_with_token(self, impl archmage::tokens::IntoConcreteToken, &[f32], &mut [f32], f32) -> core::result::Result<(), SliceError<powf::PowfErrorKind>>
 pub const powf::MAX_EXP_BOUND: f32
 pub fn powf::try_powf(f32, f32) -> core::result::Result<f32, powf::PowfError>
@@ -352,6 +492,10 @@ pub Execution::Upgrade
 #[non_exhaustive] pub enum Portability
 pub Portability::BackendDependent
 pub Portability::BitExact
+#[non_exhaustive] pub enum Subnormals
+pub Subnormals::FlushOrClamp
+pub Subnormals::Normalize
+pub Subnormals::Reject
 #[non_exhaustive] pub enum Validation
 pub Validation::AssumeValid
 pub Validation::Checked
@@ -359,6 +503,8 @@ pub Validation::ClampOutOfBounds
 pub struct SliceError<K>
 pub SliceError::index: usize
 pub SliceError::kind: K
+pub const MAX_BF16: f32 [also: bf16]
+pub const MAX_CBRT_BF16: f32 [also: bf16]
 pub trait SimdMath: SimdVector
 pub fn SimdMath::cbrt<const CFG: u128>(self) -> Self
 pub fn SimdMath::exp<const CFG: u128>(self) -> Self
@@ -368,6 +514,7 @@ pub fn SimdMath::log10<const CFG: u128>(self) -> Self
 pub fn SimdMath::log1p<const CFG: u128>(self) -> Self
 pub fn SimdMath::log2<const CFG: u128>(self) -> Self
 pub fn SimdMath::powf<const CFG: u128>(self, f32) -> Self
+pub fn SimdMath::powf_const<const CFG: u128>(self) -> Self
 pub fn SimdMath::try_cbrt(self) -> core::result::Result<Self, cbrtf::CbrtfError>
 pub fn SimdMath::try_cbrt_with<const CFG: u128>(self) -> core::result::Result<Self, cbrtf::CbrtfError>
 pub fn SimdMath::try_exp(self) -> core::result::Result<Self, expf::ExpfError>
@@ -378,33 +525,45 @@ pub fn SimdMath::try_ln(self) -> core::result::Result<Self, logf::LogfError>
 pub fn SimdMath::try_ln_with<const CFG: u128>(self) -> core::result::Result<Self, logf::LogfError>
 pub fn SimdMath::try_log10(self) -> core::result::Result<Self, logf::LogfError>
 pub fn SimdMath::try_log10_with<const CFG: u128>(self) -> core::result::Result<Self, logf::LogfError>
-pub fn SimdMath::try_log1p(self) -> core::result::Result<Self, logf::LogfError>
-pub fn SimdMath::try_log1p_with<const CFG: u128>(self) -> core::result::Result<Self, logf::LogfError>
+pub fn SimdMath::try_log1p(self) -> core::result::Result<Self, log1pf::Log1pfError>
+pub fn SimdMath::try_log1p_with<const CFG: u128>(self) -> core::result::Result<Self, log1pf::Log1pfError>
 pub fn SimdMath::try_log2(self) -> core::result::Result<Self, logf::LogfError>
 pub fn SimdMath::try_log2_with<const CFG: u128>(self) -> core::result::Result<Self, logf::LogfError>
 pub fn SimdMath::try_powf(self, f32) -> core::result::Result<Self, powf::PowfError>
+pub fn SimdMath::try_powf_const<const CFG: u128>(self) -> core::result::Result<Self, powf::PowfError>
 pub fn SimdMath::try_powf_with<const CFG: u128>(self, f32) -> core::result::Result<Self, powf::PowfError>
 pub trait SimdVector: private::Sealed
 
-## trait impls (30 types)
+## trait impls (42 types)
 
 Execution: Clone, Copy, Debug, Default, Eq, PartialEq
 Portability: Clone, Copy, Debug, Default, Eq, PartialEq
 SliceError<K>: Clone, Copy, Debug, Display, Eq, PartialEq
+Subnormals: Clone, Copy, Debug, Default, Eq, PartialEq
 Validation: Clone, Copy, Debug, Default, Eq, PartialEq
 cbrtf::Cbrtf<CFG>: Clone, Copy, Debug, Default
+cbrtf::CbrtfDomain: Clone, Copy, Debug, Default, Eq, PartialEq
 cbrtf::CbrtfError: Clone, Copy, Debug, Display, Eq, PartialEq
 cbrtf::CbrtfErrorKind: Clone, Copy, Debug, Eq, PartialEq
 cbrtf::CbrtfOptions: Clone, Copy, Debug, Default, Eq, PartialEq
 cbrtf::CbrtfPrecision: Clone, Copy, Debug, Default, Eq, PartialEq
 cbrtf::CbrtfRuntime: Clone, Copy, Debug
 expf::Expf<CFG>: Clone, Copy, Debug, Default
+expf::ExpfDomain: Clone, Copy, Debug, Default, Eq, PartialEq
 expf::ExpfError: Clone, Copy, Debug, Display, Eq, PartialEq
 expf::ExpfErrorKind: Clone, Copy, Debug, Eq, PartialEq
 expf::ExpfOptions: Clone, Copy, Debug, Default, Eq, PartialEq
 expf::ExpfPrecision: Clone, Copy, Debug, Default, Eq, PartialEq
 expf::ExpfRuntime: Clone, Copy, Debug
+log1pf::Log1pf<CFG>: Clone, Copy, Debug, Default
+log1pf::Log1pfDomain: Clone, Copy, Debug, Default, Eq, PartialEq
+log1pf::Log1pfError: Clone, Copy, Debug, Display, Eq, PartialEq
+log1pf::Log1pfErrorKind: Clone, Copy, Debug, Eq, PartialEq
+log1pf::Log1pfOptions: Clone, Copy, Debug, Default, Eq, PartialEq
+log1pf::Log1pfPrecision: Clone, Copy, Debug, Default, Eq, PartialEq
+log1pf::Log1pfRuntime: Clone, Copy, Debug
 logf::Logf<CFG>: Clone, Copy, Debug, Default
+logf::LogfDomain: Clone, Copy, Debug, Default, Eq, PartialEq
 logf::LogfError: Clone, Copy, Debug, Display, Eq, PartialEq
 logf::LogfErrorKind: Clone, Copy, Debug, Eq, PartialEq
 logf::LogfOptions: Clone, Copy, Debug, Default, Eq, PartialEq
@@ -413,6 +572,7 @@ logf::LogfRuntime: Clone, Copy, Debug
 magetypes::simd::generic::generated::f32x4_impl::f32x4<T>: SimdMath, SimdVector
 magetypes::simd::generic::generated::f32x8_impl::f32x8<T>: SimdMath, SimdVector
 powf::Powf<CFG>: Clone, Copy, Debug, Default
+powf::PowfDomain: Clone, Copy, Debug, Default, Eq, PartialEq
 powf::PowfError: Clone, Copy, Debug, Display, Eq, PartialEq
 powf::PowfErrorKind: Clone, Copy, Debug, Eq, PartialEq
 powf::PowfOptions: Clone, Copy, Debug, Default, Eq, PartialEq
@@ -421,5 +581,5 @@ powf::PowfRuntime: Clone, Copy, Debug
 
 ## auto traits
 
-27 types implement all of: Freeze, RefUnwindSafe, Send, Sync, Unpin, UnwindSafe
+39 types implement all of: Freeze, RefUnwindSafe, Send, Sync, Unpin, UnwindSafe
 SliceError<K>: !Freeze !RefUnwindSafe !Send !Sync !Unpin !UnwindSafe

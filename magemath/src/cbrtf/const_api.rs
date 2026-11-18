@@ -10,6 +10,8 @@ impl<const CFG: u128> graph::Kernel for Cfg<CFG> {
         graph::KernelCfg::from_options(CbrtfOptions::decode_const(CFG)).denorm_possible;
     const SCALE_SUBNORM: bool =
         graph::KernelCfg::from_options(CbrtfOptions::decode_const(CFG)).scale_subnorm;
+    const FLUSH_SUB: bool =
+        graph::KernelCfg::from_options(CbrtfOptions::decode_const(CFG)).flush_sub;
     const FULL: bool = graph::KernelCfg::from_options(CbrtfOptions::decode_const(CFG)).full;
     const CLAMP_OOB: bool =
         graph::KernelCfg::from_options(CbrtfOptions::decode_const(CFG)).clamp_oob;

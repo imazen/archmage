@@ -1,19 +1,20 @@
-//! Configured logarithm graphs (`log2`, `ln`, `log10`, `log1p`), instantiated
-//! per width, kernel configuration, op, and arithmetic mode.
+//! Configured logarithm graphs (`log2`, `ln`, `log10`, and shared `log1p`),
+//! instantiated per width, kernel configuration, op, and arithmetic mode.
 #![allow(clippy::excessive_precision)] // Preserve the fitted f32 coefficient spellings.
 use super::{LogfError, LogfErrorKind};
 
-pub(super) const NATIVE: usize = 0;
-pub(super) const SOFTWARE: usize = 1;
+pub(crate) const NATIVE: usize = 0;
+pub(crate) const SOFTWARE: usize = 1;
 #[cfg(target_arch = "wasm32")]
-pub(super) const WASM_SOFTWARE: usize = 2;
+pub(crate) const WASM_SOFTWARE: usize = 2;
 
-pub(super) trait Kernel: 'static {
+pub(crate) trait Kernel: 'static {
     const RANGED: bool;
     const IN_LO: f32;
     const IN_HI: f32;
     const ZERO: bool;
     const SUBNORM: bool;
+    const FLUSH_SUB: bool;
     const SPECIALS: bool;
     const CLAMP_OOB: bool;
     const LOWP: bool;
@@ -23,22 +24,23 @@ pub(super) trait Kernel: 'static {
 }
 
 #[derive(Clone, Copy)]
-pub(super) struct KernelCfg {
-    pub(super) ranged: bool,
-    pub(super) in_lo: f32,
-    pub(super) in_hi: f32,
-    pub(super) zero: bool,
-    pub(super) subnorm: bool,
-    pub(super) specials: bool,
-    pub(super) clamp_oob: bool,
-    pub(super) lowp: bool,
-    pub(super) assume: bool,
-    pub(super) elide_red: bool,
-    pub(super) elide_red_log1p: bool,
+pub(crate) struct KernelCfg {
+    pub(crate) ranged: bool,
+    pub(crate) in_lo: f32,
+    pub(crate) in_hi: f32,
+    pub(crate) zero: bool,
+    pub(crate) subnorm: bool,
+    pub(crate) flush_sub: bool,
+    pub(crate) specials: bool,
+    pub(crate) clamp_oob: bool,
+    pub(crate) lowp: bool,
+    pub(crate) assume: bool,
+    pub(crate) elide_red: bool,
+    pub(crate) elide_red_log1p: bool,
 }
 
 impl KernelCfg {
-    pub(super) const fn from_options(opts: super::LogfOptions) -> Self {
+    pub(crate) const fn from_options(opts: super::LogfOptions) -> Self {
         let (in_lo, in_hi) = match opts.input_bounds() {
             Some(bounds) => bounds,
             None => (0.0, 0.0),
@@ -49,25 +51,27 @@ impl KernelCfg {
             in_hi,
             zero: opts.admits_zero(),
             subnorm: opts.admits_subnormals(),
+            flush_sub: opts.flushes_subnormals(),
             specials: opts.is_specials(),
             clamp_oob: opts.clamp_oob(),
             lowp: opts.is_lowp(),
             assume: opts.assume_valid(),
             elide_red: opts.elides_reduction(),
-            elide_red_log1p: opts.elides_log1p_reduction(),
+            elide_red_log1p: false,
         }
     }
 }
 
 #[cfg(debug_assertions)]
 #[inline(always)]
-pub(super) const fn cfg_of<K: Kernel>() -> KernelCfg {
+pub(crate) const fn cfg_of<K: Kernel>() -> KernelCfg {
     KernelCfg {
         ranged: K::RANGED,
         in_lo: K::IN_LO,
         in_hi: K::IN_HI,
         zero: K::ZERO,
         subnorm: K::SUBNORM,
+        flush_sub: K::FLUSH_SUB,
         specials: K::SPECIALS,
         clamp_oob: K::CLAMP_OOB,
         lowp: K::LOWP,
@@ -115,6 +119,7 @@ macro_rules! eval_log2 {
         $in_hi:expr,
         $zero:expr,
         $subnorm:expr,
+        $flush_sub:expr,
         $specials:expr,
         $clamp_oob:expr,
         $skip_clamp:expr,
@@ -132,12 +137,32 @@ macro_rules! eval_log2 {
                 .fold(0_u16, |m, (i, &v)| m | (u16::from(v != 0) << i));
             LogfError { kind, lane_mask }
         };
+        let lo_bound = if $ranged {
+            $in_lo
+        } else if $subnorm {
+            f32::from_bits(1)
+        } else {
+            f32::MIN_POSITIVE
+        };
+        let hi_bound = if $ranged { $in_hi } else { f32::MAX };
+        let pre_in = if !$assume && !$clamp_oob && !$specials && !$skip_clamp && $flush_sub {
+            let in_bits = $input.bitcast_to_i32();
+            let pos_sub = in_bits.simd_gt(ip(0)) & in_bits.simd_lt(ip(0x0080_0000));
+            let target = if $zero {
+                0.0
+            } else {
+                lo_bound.max(f32::MIN_POSITIVE)
+            };
+            $V::blend(pos_sub.bitcast_to_f32(), sp(target), $input)
+        } else {
+            $input
+        };
         if !$assume && !$clamp_oob {
             if $ranged {
                 let within =
-                    ($input.simd_ge(sp($in_lo)) & $input.simd_le(sp($in_hi))).bitcast_to_i32();
+                    (pre_in.simd_ge(sp($in_lo)) & pre_in.simd_le(sp($in_hi))).bitcast_to_i32();
                 let valid = if $zero {
-                    within | $input.simd_eq(sp(0.0)).bitcast_to_i32()
+                    within | pre_in.simd_eq(sp(0.0)).bitcast_to_i32()
                 } else {
                     within
                 };
@@ -146,9 +171,9 @@ macro_rules! eval_log2 {
                     return Err(reject(invalid, LogfErrorKind::InvalidInput));
                 }
             } else if !$specials {
-                let bits0 = $input.bitcast_to_i32();
+                let bits0 = pre_in.bitcast_to_i32();
                 let exp_bits = bits0 & ip(0x7f80_0000);
-                let is_zero_f = $input.simd_eq(sp(0.0)).bitcast_to_i32();
+                let is_zero_f = pre_in.simd_eq(sp(0.0)).bitcast_to_i32();
                 let neg = if $zero {
                     bits0.simd_lt(ip(0)) & (is_zero_f ^ ip(-1))
                 } else {
@@ -174,37 +199,43 @@ macro_rules! eval_log2 {
             ip(0).bitcast_to_f32()
         };
         let work_in = if $clamp_oob && !$specials && !$skip_clamp {
-            let lo_bound = if $ranged {
-                $in_lo
-            } else if $subnorm {
-                f32::from_bits(1)
-            } else {
+            let eff_lo = if !$subnorm && lo_bound > 0.0 && lo_bound < f32::MIN_POSITIVE {
                 f32::MIN_POSITIVE
+            } else {
+                lo_bound
             };
-            let hi_bound = if $ranged { $in_hi } else { f32::MAX };
             let c = if $zero {
-                let nonpos = $input.simd_le(sp(0.0));
-                let lo_c = $V::blend(
-                    nonpos,
-                    sp(0.0),
-                    $V::blend($input.simd_lt(sp(lo_bound)), sp(lo_bound), $input),
-                );
-                $V::blend($input.simd_gt(sp(hi_bound)), sp(hi_bound), lo_c)
+                if $subnorm {
+                    let nonpos = $input.simd_le(sp(0.0));
+                    let lo_c = $V::blend(
+                        nonpos,
+                        sp(0.0),
+                        $V::blend($input.simd_lt(sp(eff_lo)), sp(eff_lo), $input),
+                    );
+                    $V::blend($input.simd_gt(sp(hi_bound)), sp(hi_bound), lo_c)
+                } else if eff_lo <= f32::MIN_POSITIVE {
+                    let lo_c = $V::blend($input.simd_lt(sp(f32::MIN_POSITIVE)), sp(0.0), $input);
+                    $V::blend($input.simd_gt(sp(hi_bound)), sp(hi_bound), lo_c)
+                } else {
+                    let zero_or_sub = $input.simd_lt(sp(f32::MIN_POSITIVE));
+                    let lo_c = $V::blend(
+                        zero_or_sub,
+                        sp(0.0),
+                        $V::blend($input.simd_lt(sp(eff_lo)), sp(eff_lo), $input),
+                    );
+                    $V::blend($input.simd_gt(sp(hi_bound)), sp(hi_bound), lo_c)
+                }
             } else {
                 $V::blend(
-                    $input.simd_lt(sp(lo_bound)),
-                    sp(lo_bound),
+                    $input.simd_lt(sp(eff_lo)),
+                    sp(eff_lo),
                     $V::blend($input.simd_gt(sp(hi_bound)), sp(hi_bound), $input),
                 )
             };
-            let safe = if $ranged && lo_bound > 0.0 {
-                lo_bound
-            } else {
-                1.0
-            };
+            let safe = if $ranged && eff_lo > 0.0 { eff_lo } else { 1.0 };
             $V::blend(is_nan, sp(safe), c)
         } else {
-            $input
+            pre_in
         };
 
         let raw_bits = work_in.bitcast_to_i32();
@@ -309,6 +340,8 @@ macro_rules! eval_log_op {
         $in_lo:expr,
         $in_hi:expr,
         $zero:expr,
+        $subnorm:expr,
+        $flush_sub:expr,
         $specials:expr,
         $clamp_oob:expr,
         $assume:expr,
@@ -318,15 +351,69 @@ macro_rules! eval_log_op {
         let sp = |x| $V::splat_t($token, x);
         let ip = |x| $I::splat_t($token, x);
         if $op == 3 {
-            if !$assume && !$clamp_oob && $ranged {
-                let within =
-                    ($input.simd_ge(sp($in_lo)) & $input.simd_le(sp($in_hi))).bitcast_to_i32();
-                let valid = if $zero {
-                    within | $input.simd_eq(sp(-1.0)).bitcast_to_i32()
+            let lo_bound = if $ranged {
+                $in_lo
+            } else if $zero {
+                -1.0
+            } else {
+                f32::from_bits(0xbf7f_ffff)
+            };
+            let hi_bound = if $ranged { $in_hi } else { f32::MAX };
+            let pre_x = if !$assume && !$clamp_oob && !$specials && $flush_sub {
+                let in_bits = $input.bitcast_to_i32();
+                let abs_bits = in_bits & ip(0x7fff_ffff_u32 as i32);
+                let is_sub = abs_bits.simd_gt(ip(0)) & abs_bits.simd_lt(ip(0x0080_0000));
+                if lo_bound < 0.0 && hi_bound > 0.0 {
+                    let signed_zero = (in_bits & ip(0x8000_0000_u32 as i32)).bitcast_to_f32();
+                    $V::blend(is_sub.bitcast_to_f32(), signed_zero, $input)
+                } else if lo_bound == 0.0 && hi_bound >= 0.0 {
+                    let pos_sub = in_bits.simd_gt(ip(0)) & in_bits.simd_lt(ip(0x0080_0000));
+                    $V::blend(pos_sub.bitcast_to_f32(), sp(0.0), $input)
+                } else if hi_bound == 0.0 && lo_bound <= 0.0 {
+                    let neg_sub = in_bits.simd_lt(ip(0)) & abs_bits.simd_lt(ip(0x0080_0000));
+                    $V::blend(neg_sub.bitcast_to_f32(), sp(-0.0), $input)
+                } else if lo_bound > 0.0 {
+                    let pos_sub = in_bits.simd_gt(ip(0)) & in_bits.simd_lt(ip(0x0080_0000));
+                    $V::blend(
+                        pos_sub.bitcast_to_f32(),
+                        sp(lo_bound.max(f32::MIN_POSITIVE)),
+                        $input,
+                    )
                 } else {
-                    within
+                    let neg_sub = in_bits.simd_lt(ip(0)) & abs_bits.simd_lt(ip(0x0080_0000));
+                    $V::blend(
+                        neg_sub.bitcast_to_f32(),
+                        sp(hi_bound.min(-f32::MIN_POSITIVE)),
+                        $input,
+                    )
+                }
+            } else {
+                $input
+            };
+            if !$assume && !$clamp_oob && !$specials {
+                let range_ok = if $ranged {
+                    let within =
+                        (pre_x.simd_ge(sp($in_lo)) & pre_x.simd_le(sp($in_hi))).bitcast_to_i32();
+                    if $zero {
+                        within | pre_x.simd_eq(sp(-1.0)).bitcast_to_i32()
+                    } else {
+                        within
+                    }
+                } else {
+                    let lo_ok = if $zero {
+                        pre_x.simd_ge(sp(-1.0))
+                    } else {
+                        pre_x.simd_gt(sp(-1.0))
+                    };
+                    (lo_ok & pre_x.simd_le(sp(f32::MAX))).bitcast_to_i32()
                 };
-                let invalid = valid ^ ip(-1);
+                let sub_bad = if !$subnorm && !$flush_sub {
+                    let abs_b = pre_x.bitcast_to_i32() & ip(0x7fff_ffff_u32 as i32);
+                    abs_b.simd_gt(ip(0)) & abs_b.simd_lt(ip(0x0080_0000))
+                } else {
+                    ip(0)
+                };
+                let invalid = (range_ok ^ ip(-1)) | sub_bad;
                 if invalid.any_true() {
                     let lane_mask = invalid
                         .to_array()
@@ -345,37 +432,52 @@ macro_rules! eval_log_op {
                 ip(0).bitcast_to_f32()
             };
             let work_x = if $clamp_oob && !$specials {
-                let lo_bound = if $ranged {
-                    $in_lo
-                } else if $zero {
-                    -1.0
+                let eff_lo = if !$subnorm && lo_bound > 0.0 && lo_bound < f32::MIN_POSITIVE {
+                    f32::MIN_POSITIVE
                 } else {
-                    f32::from_bits(0xbf7f_ffff)
+                    lo_bound
                 };
-                let hi_bound = if $ranged { $in_hi } else { f32::MAX };
+                let eff_hi = if !$subnorm && hi_bound < 0.0 && hi_bound > -f32::MIN_POSITIVE {
+                    -f32::MIN_POSITIVE
+                } else {
+                    hi_bound
+                };
                 let c = if $zero {
                     let le_neg_one = $input.simd_le(sp(-1.0));
                     let lo_c = $V::blend(
                         le_neg_one,
                         sp(-1.0),
-                        $V::blend($input.simd_lt(sp(lo_bound)), sp(lo_bound), $input),
+                        $V::blend($input.simd_lt(sp(eff_lo)), sp(eff_lo), $input),
                     );
-                    $V::blend($input.simd_gt(sp(hi_bound)), sp(hi_bound), lo_c)
+                    $V::blend($input.simd_gt(sp(eff_hi)), sp(eff_hi), lo_c)
                 } else {
                     $V::blend(
-                        $input.simd_lt(sp(lo_bound)),
-                        sp(lo_bound),
-                        $V::blend($input.simd_gt(sp(hi_bound)), sp(hi_bound), $input),
+                        $input.simd_lt(sp(eff_lo)),
+                        sp(eff_lo),
+                        $V::blend($input.simd_gt(sp(eff_hi)), sp(eff_hi), $input),
                     )
                 };
-                let safe = if $ranged && lo_bound > -1.0 {
-                    lo_bound
+                let c = if !$subnorm {
+                    let cb = c.bitcast_to_i32();
+                    let abs_c = cb & ip(0x7fff_ffff_u32 as i32);
+                    let is_sub = abs_c.simd_gt(ip(0)) & abs_c.simd_lt(ip(0x0080_0000));
+                    let z = if eff_lo == 0.0 {
+                        sp(0.0)
+                    } else {
+                        (cb & ip(0x8000_0000_u32 as i32)).bitcast_to_f32()
+                    };
+                    $V::blend(is_sub.bitcast_to_f32(), z, c)
+                } else {
+                    c
+                };
+                let safe = if $ranged && eff_lo > -1.0 {
+                    eff_lo
                 } else {
                     0.0
                 };
                 $V::blend(is_nan, sp(safe), c)
             } else {
-                $input
+                pre_x
             };
             let one = sp(1.0);
             let u = work_x + one;
@@ -434,6 +536,7 @@ macro_rules! graph {
                 cfg.in_hi,
                 cfg.zero,
                 cfg.subnorm,
+                cfg.flush_sub,
                 cfg.specials,
                 cfg.clamp_oob,
                 skip_clamp,
@@ -465,16 +568,13 @@ macro_rules! graph {
                 K::IN_LO,
                 K::IN_HI,
                 K::ZERO,
-                K::SUBNORM,
+                if FOR_LOG1P { false } else { K::SUBNORM },
+                if FOR_LOG1P { false } else { K::FLUSH_SUB },
                 K::SPECIALS,
                 if FOR_LOG1P { false } else { K::CLAMP_OOB },
                 FOR_LOG1P,
                 K::LOWP,
-                if FOR_LOG1P {
-                    K::ASSUME || K::RANGED || K::CLAMP_OOB
-                } else {
-                    K::ASSUME
-                },
+                if FOR_LOG1P { !K::SPECIALS } else { K::ASSUME },
                 if FOR_LOG1P {
                     K::ELIDE_RED_LOG1P
                 } else {
@@ -495,8 +595,10 @@ macro_rules! graph {
             let u_cfg = if op == 3 {
                 KernelCfg {
                     ranged: false,
+                    subnorm: false,
+                    flush_sub: false,
                     clamp_oob: false,
-                    assume: cfg.assume || cfg.ranged || cfg.clamp_oob,
+                    assume: !cfg.specials,
                     elide_red: cfg.elide_red_log1p,
                     ..cfg
                 }
@@ -514,6 +616,8 @@ macro_rules! graph {
                 cfg.in_lo,
                 cfg.in_hi,
                 cfg.zero,
+                cfg.subnorm,
+                cfg.flush_sub,
                 cfg.specials,
                 cfg.clamp_oob,
                 cfg.assume,
@@ -545,6 +649,8 @@ macro_rules! graph {
                 K::IN_LO,
                 K::IN_HI,
                 K::ZERO,
+                K::SUBNORM,
+                K::FLUSH_SUB,
                 K::SPECIALS,
                 K::CLAMP_OOB,
                 K::ASSUME,
@@ -558,7 +664,7 @@ macro_rules! graph {
         }
 
         #[inline(always)]
-        pub(super) fn $profile<
+        pub(crate) fn $profile<
             T: magetypes::simd::backends::$bound,
             K: Kernel,
             const OP: u8,

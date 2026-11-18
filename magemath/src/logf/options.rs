@@ -1,37 +1,71 @@
-//! Fluent `const` configuration builder for the logarithm family
-//! (`log2`, `ln`, `log10`, `log1p`).
+//! Fluent `const` configuration builder, discrete [`LogfDomain`] enum,
+//! [`Subnormals`] policy, and `bf16` custom range bounds for `log2`, `ln`, and `log10`.
 
-use crate::{Execution, Portability, Validation};
+use crate::{
+    Execution, Portability, Subnormals, Validation,
+    bf16::{MAX_BF16, ceil_bf16, decode_bf16_finite, expand_bf16, floor_bf16},
+};
 
-const MAGIC: u128 = 0x4C;
-const HAS_RANGE: u128 = 1 << 8;
-const FULL: u128 = 1 << 9;
-const LOWP: u128 = 1 << 10;
-const BACKEND: u128 = 1 << 11;
-const ASSUME: u128 = 1 << 12;
-const CALLER: u128 = 1 << 13;
-const ZERO: u128 = 1 << 14;
-const SUBNORM: u128 = 1 << 15;
-const CLAMP_OOB: u128 = 1 << 16;
-const RESERVED_MASK: u128 = ((1_u128 << 47) - 1) << 17;
+// Uniform u128 layout:
+//   [0..4]   = MAGIC (0xC)
+//   [4..9]   = LogfDomain (0..=7)
+//   [9..12]  = Subnormals (0..=2)
+//   [12..15] = Validation (0..=2)
+//   [15..18] = LogfPrecision (0..=1)
+//   [18..20] = Portability (0..=1)
+//   [20..22] = Execution (0..=1)
+//   [22]     = HAS_CUSTOM_RANGE
+//   [23]     = EXTRA_ZERO
+//   [24..64] = RESERVED_LO (40 bits, must be 0)
+//   [64..80] = in_lo_bf16 (u16, 0 when !HAS_CUSTOM_RANGE)
+//   [80..96] = in_hi_bf16 (u16, 0 when !HAS_CUSTOM_RANGE)
+//   [96..128]= RESERVED_HI (32 bits, must be 0)
+const MAGIC: u128 = 0xC;
+const DOMAIN_SHIFT: u32 = 4;
+const SUBNORM_SHIFT: u32 = 9;
+const VALIDATION_SHIFT: u32 = 12;
+const PREC_SHIFT: u32 = 15;
+const PORTABILITY_SHIFT: u32 = 18;
+const EXECUTION_SHIFT: u32 = 20;
+const HAS_CUSTOM_RANGE: u128 = 1 << 22;
+const EXTRA_ZERO: u128 = 1 << 23;
+const RESERVED_LO_MASK: u128 = ((1_u128 << 40) - 1) << 24;
+const IN_LO_SHIFT: u32 = 64;
+const IN_HI_SHIFT: u32 = 80;
+const RESERVED_HI_MASK: u128 = 0xffff_ffff_u128 << 96;
 
-/// Fundamental single-octave lower bound for `Midp` (`sqrt(0.5)` rounded up,
-/// `0.70710677`).
-const MIDP_OCTAVE_LO_BITS: u32 = 0x3f35_04f3;
-/// Fundamental single-octave upper bound for `Midp` (`sqrt(2.0)` minus 1 ULP,
-/// `1.4142134`).
-const MIDP_OCTAVE_HI_BITS: u32 = 0x3fb5_04f2;
+/// Fundamental single-octave lower bound for `Midp` (`sqrt(0.5)` rounded up, `0.70710677`).
+pub(crate) const MIDP_OCTAVE_LO_BITS: u32 = 0x3f35_04f3;
+/// Fundamental single-octave upper bound for `Midp` (`sqrt(2.0)` minus 1 ULP, `1.4142134`).
+pub(crate) const MIDP_OCTAVE_HI_BITS: u32 = 0x3fb5_04f2;
 /// Fundamental single-octave lower bound for `Lowp` (`2/3` rounded up).
-const LOWP_OCTAVE_LO_BITS: u32 = 0x3f2a_aaab;
+pub(crate) const LOWP_OCTAVE_LO_BITS: u32 = 0x3f2a_aaab;
 /// Fundamental single-octave upper bound for `Lowp` (`4/3` minus 1 ULP).
-const LOWP_OCTAVE_HI_BITS: u32 = 0x3faa_aaaa;
+pub(crate) const LOWP_OCTAVE_HI_BITS: u32 = 0x3faa_aaaa;
 
-const fn abs(x: f32) -> f32 {
-    if x < 0.0 { -x } else { x }
-}
-
-const fn canon_zero(x: f32) -> f32 {
-    if x == 0.0 { 0.0 } else { x }
+/// Discrete input domain for [`LogfOptions`] (`log2`, `ln`, `log10`).
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[non_exhaustive]
+pub enum LogfDomain {
+    /// Positive normal inputs `[f32::MIN_POSITIVE, f32::MAX]`.
+    #[default]
+    PositiveNormals,
+    /// Non-negative inputs `{±0.0} ∪ [f32::MIN_POSITIVE, f32::MAX]` (`±0.0 -> -inf`).
+    NonNegative,
+    /// SDR unit domain `{±0.0} ∪ [f32::MIN_POSITIVE, 1.0]` (`±0.0 -> -inf`).
+    Unit,
+    /// Strictly positive unit domain `[f32::MIN_POSITIVE, 1.0]` (finite outputs only).
+    PositiveUnit,
+    /// HDR luminance domain `{±0.0} ∪ [2^-16, 2^16]` (`±0.0 -> -inf`).
+    Hdr,
+    /// Strictly positive HDR domain `[2^-16, 2^16]` (finite outputs only).
+    PositiveHdr,
+    /// Fundamental single octave around `1.0` (`[0.70710677, 1.4142134]` on `Midp`,
+    /// `[0.6666667, 1.3333333]` on `Lowp`), eliding integer exponent extraction (`n = 0`).
+    SingleOctave,
+    /// Every `f32` input (`±0 -> -inf`, subnormals normalized, `< 0 -> NaN`,
+    /// `+inf -> +inf`, `NaN -> NaN`).
+    AllFloats,
 }
 
 /// Approximation family, not a global mathematical error bound.
@@ -39,7 +73,7 @@ const fn canon_zero(x: f32) -> f32 {
 #[non_exhaustive]
 pub enum LogfPrecision {
     /// Refitted `Midp` polynomial (`<= 4.5 ULP` on positive normals and
-    /// normalized subnormals; `<= 2.9 ULP` on [`LogfOptions::near_one_range`]).
+    /// normalized subnormals; `<= 2.9 ULP` on [`LogfDomain::SingleOctave`]).
     #[default]
     Midp,
     /// Rational `P2/Q2` `Lowp` approximation (`~6e-6` absolute error).
@@ -47,32 +81,12 @@ pub enum LogfPrecision {
 }
 
 /// Fluent `const` configuration builder for [`super::Logf`] and [`crate::SimdMath`].
-///
-/// Options separate **what inputs are supported** ([`input_range`](Self::input_range),
-/// [`near_one_range`](Self::near_one_range), [`small_log1p_range`](Self::small_log1p_range),
-/// [`admit_zero`](Self::admit_zero), [`admit_subnormals`](Self::admit_subnormals),
-/// and [`admit_all_floats`](Self::admit_all_floats)) from **how out-of-bounds
-/// inputs are handled**:
-///
-/// - [`error_on_out_of_bounds`](Self::error_on_out_of_bounds) (default, alias
-///   [`checked`](Self::checked)): return `Err` on out-of-domain inputs.
-/// - [`clamp_out_of_bounds`](Self::clamp_out_of_bounds): clamp non-NaN inputs
-///   into the configured domain and propagate `NaN` as `NaN` (infallible).
-/// - [`assume_in_bounds`](Self::assume_in_bounds) (alias [`unchecked`](Self::unchecked)):
-///   omit runtime checks and clamps when the caller already guarantees bounds
-///   (infallible).
-///
-/// Domain granularity keeps hot loops fast: [`admit_zero`](Self::admit_zero)
-/// adds `±0.0 -> -inf` (`log1p(-1.0) -> -inf`) with one off-critical-path blend,
-/// whereas [`admit_subnormals`](Self::admit_subnormals) and
-/// [`admit_all_floats`](Self::admit_all_floats) add `* 2^23` pre-normalization
-/// before the rational reduction.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct LogfOptions {
-    input: Option<(u32, u32)>,
-    zero: bool,
-    subnormals: bool,
-    full: bool,
+    domain: LogfDomain,
+    custom_range: Option<(u16, u16)>,
+    extra_zero: bool,
+    subnormals: Subnormals,
     precision: LogfPrecision,
     portability: Portability,
     validation: Validation,
@@ -87,14 +101,14 @@ impl Default for LogfOptions {
 }
 
 impl LogfOptions {
-    /// Positive normal domain (`1 + x` positive normal for `log1p`), `Midp`,
-    /// `BitExact`, `Checked` (`error_on_out_of_bounds`), `Execution::Upgrade`.
+    /// `LogfDomain::PositiveNormals`, `Subnormals::Reject`, `Midp`, `BitExact`,
+    /// `Validation::Checked` (`error_on_out_of_bounds`), `Execution::Upgrade`.
     pub const fn new() -> Self {
         Self {
-            input: None,
-            zero: false,
-            subnormals: false,
-            full: false,
+            domain: LogfDomain::PositiveNormals,
+            custom_range: None,
+            extra_zero: false,
+            subnormals: Subnormals::Reject,
             precision: LogfPrecision::Midp,
             portability: Portability::BitExact,
             validation: Validation::Checked,
@@ -102,65 +116,77 @@ impl LogfOptions {
         }
     }
 
-    /// Accept inputs in `[lo, hi]`.
-    ///
-    /// - For `log2`, `ln`, and `log10`, `lo` must be at least `f32::MIN_POSITIVE`
-    ///   by default, positive subnormal when [`admit_subnormals`](Self::admit_subnormals)
-    ///   is set, or `0.0` when both [`admit_zero`](Self::admit_zero) and
-    ///   [`admit_subnormals`](Self::admit_subnormals) are set (`lo == hi == 0.0`
-    ///   only requires [`admit_zero`](Self::admit_zero)).
-    /// - For `log1p`, `lo > -1.0` by default, or `lo >= -1.0` when
-    ///   [`admit_zero`](Self::admit_zero) is set.
-    pub const fn input_range(mut self, lo: f32, hi: f32) -> Self {
-        assert!(
-            lo >= -1.0 && lo <= hi && abs(lo) <= f32::MAX && abs(hi) <= f32::MAX,
-            "input range must be finite with -1 <= lo <= hi"
-        );
-        self.input = Some((canon_zero(lo).to_bits(), canon_zero(hi).to_bits()));
-        self
-    }
-
-    /// Single-octave range around `1.0` (`[0.70710677, 1.4142134]`), eliding
-    /// integer exponent extraction on `Midp` `log2` / `ln` / `log10` (`<= 2.9 ULP`).
-    pub const fn near_one_range(self) -> Self {
-        self.input_range(
-            f32::from_bits(MIDP_OCTAVE_LO_BITS),
-            f32::from_bits(MIDP_OCTAVE_HI_BITS),
-        )
-    }
-
-    /// Single-octave `log1p` range `[-0.25, 0.25]` (`1 + x` in `[0.75, 1.25]`),
-    /// eliding integer exponent extraction on both `Midp` and `Lowp` `log1p`.
-    pub const fn small_log1p_range(self) -> Self {
-        self.input_range(-0.25, 0.25)
-    }
-
-    /// Also accept `±0.0 -> -inf` (`-1.0 -> -inf` for `log1p`) without paying
-    /// the subnormal pre-normalization cost.
-    pub const fn admit_zero(mut self) -> Self {
-        if !self.full {
-            self.zero = true;
+    /// Select the discrete [`LogfDomain`], clearing any custom [`input_range`](Self::input_range).
+    pub const fn domain(mut self, domain: LogfDomain) -> Self {
+        self.domain = domain;
+        self.custom_range = None;
+        self.extra_zero = false;
+        if matches!(domain, LogfDomain::AllFloats) {
+            self.subnormals = Subnormals::Reject;
         }
         self
+    }
+
+    /// Override input bounds with outward-rounded `bf16` `[lo, hi]` (`0.0 <= lo <= hi <= MAX_BF16`).
+    pub const fn input_range(mut self, lo: f32, hi: f32) -> Self {
+        assert!(
+            lo >= 0.0 && lo <= hi && hi <= MAX_BF16,
+            "log input range must be non-negative finite within MAX_BF16 (0x7f7f_0000) with lo <= hi"
+        );
+        self.custom_range = Some((floor_bf16(lo), ceil_bf16(hi)));
+        self
+    }
+
+    /// Single-octave domain around `1.0` (`LogfDomain::SingleOctave`), eliding
+    /// integer exponent extraction (`<= 2.9 ULP` on `Midp`).
+    pub const fn near_one_range(self) -> Self {
+        self.domain(LogfDomain::SingleOctave)
+    }
+
+    /// Configure how nonzero positive subnormal inputs (`0 < x < f32::MIN_POSITIVE`) are handled.
+    pub const fn subnormals(mut self, policy: Subnormals) -> Self {
+        self.subnormals = policy;
+        self
+    }
+
+    /// Treat positive subnormals as out-of-bounds (`Subnormals::Reject`, default).
+    pub const fn reject_subnormals(self) -> Self {
+        self.subnormals(Subnormals::Reject)
+    }
+
+    /// Shove positive subnormals out to `0.0` (`-> -inf`, when zero is admitted)
+    /// or the lower positive normal bound (when zero is excluded), even under
+    /// [`Validation::Checked`].
+    pub const fn flush_or_clamp_subnormals(self) -> Self {
+        self.subnormals(Subnormals::FlushOrClamp)
+    }
+
+    /// Alias for [`flush_or_clamp_subnormals`](Self::flush_or_clamp_subnormals).
+    pub const fn shove_subnormals(self) -> Self {
+        self.flush_or_clamp_subnormals()
     }
 
     /// Also accept positive subnormals (`0 < x < f32::MIN_POSITIVE`), normalizing
     /// them accurately (`* 2^23` with `-23` exponent adjustment) before reduction.
-    pub const fn admit_subnormals(mut self) -> Self {
-        if !self.full {
-            self.subnormals = true;
+    pub const fn admit_subnormals(self) -> Self {
+        self.subnormals(Subnormals::Normalize)
+    }
+
+    /// Also accept `±0.0 -> -inf` without paying subnormal pre-normalization cost.
+    pub const fn admit_zero(mut self) -> Self {
+        match self.domain {
+            LogfDomain::PositiveNormals => self.domain = LogfDomain::NonNegative,
+            LogfDomain::PositiveUnit => self.domain = LogfDomain::Unit,
+            LogfDomain::PositiveHdr => self.domain = LogfDomain::Hdr,
+            LogfDomain::SingleOctave => self.extra_zero = true,
+            _ => {}
         }
         self
     }
 
-    /// Accept every `f32` input, normalizing positive subnormals and propagating
-    /// IEEE specials (`±0 -> -inf`, `< 0 -> NaN`, `NaN -> NaN`, `+inf -> +inf`;
-    /// shifted by `-1` for `log1p`).
-    pub const fn admit_all_floats(mut self) -> Self {
-        self.full = true;
-        self.zero = false;
-        self.subnormals = false;
-        self
+    /// Accept every `f32` input (`LogfDomain::AllFloats`).
+    pub const fn admit_all_floats(self) -> Self {
+        self.domain(LogfDomain::AllFloats)
     }
 
     /// Alias for [`admit_all_floats`](Self::admit_all_floats).
@@ -206,8 +232,7 @@ impl LogfOptions {
         self
     }
 
-    /// Return `Err` when any input falls outside the configured domain
-    /// (`Validation::Checked`, default).
+    /// Return `Err` when any input falls outside the configured domain (`Validation::Checked`, default).
     pub const fn error_on_out_of_bounds(self) -> Self {
         self.validation(Validation::Checked)
     }
@@ -223,8 +248,7 @@ impl LogfOptions {
         self.validation(Validation::ClampOutOfBounds)
     }
 
-    /// Omit numerical input checks and clamps; caller guarantees all inputs lie
-    /// within the configured domain (`Validation::AssumeValid`, infallible).
+    /// Omit numerical input checks and clamps (`Validation::AssumeValid`, infallible).
     pub const fn assume_in_bounds(self) -> Self {
         self.validation(Validation::AssumeValid)
     }
@@ -250,115 +274,169 @@ impl LogfOptions {
         self.execution(Execution::Caller)
     }
 
-    /// Whether domain-level invariants common to all log variants hold.
+    /// Active discrete [`LogfDomain`].
+    pub const fn selected_domain(&self) -> LogfDomain {
+        self.domain
+    }
+
+    /// Active [`Subnormals`] policy (`Normalize` when `LogfDomain::AllFloats`).
+    pub const fn subnormals_policy(&self) -> Subnormals {
+        if self.is_specials() {
+            Subnormals::Normalize
+        } else {
+            self.subnormals
+        }
+    }
+
+    pub(crate) const fn is_specials(&self) -> bool {
+        matches!(self.domain, LogfDomain::AllFloats)
+    }
+
+    pub(crate) const fn admits_zero(&self) -> bool {
+        self.is_specials()
+            || self.extra_zero
+            || matches!(
+                self.domain,
+                LogfDomain::NonNegative | LogfDomain::Unit | LogfDomain::Hdr
+            )
+    }
+
+    pub(crate) const fn admits_subnormals(&self) -> bool {
+        self.is_specials() || matches!(self.subnormals, Subnormals::Normalize)
+    }
+
+    pub(crate) const fn flushes_subnormals(&self) -> bool {
+        !self.is_specials() && matches!(self.subnormals, Subnormals::FlushOrClamp)
+    }
+
+    pub(crate) const fn input_bounds(&self) -> Option<(f32, f32)> {
+        if self.is_specials() {
+            return None;
+        }
+        if let Some((lo, hi)) = self.custom_range {
+            return Some((expand_bf16(lo), expand_bf16(hi)));
+        }
+        match self.domain {
+            LogfDomain::PositiveNormals | LogfDomain::NonNegative | LogfDomain::AllFloats => None,
+            LogfDomain::Unit | LogfDomain::PositiveUnit => Some((
+                if self.admits_subnormals() {
+                    f32::from_bits(1)
+                } else {
+                    f32::MIN_POSITIVE
+                },
+                1.0,
+            )),
+            LogfDomain::Hdr | LogfDomain::PositiveHdr => Some((1.0 / 65_536.0, 65_536.0)),
+            LogfDomain::SingleOctave => {
+                if matches!(self.precision, LogfPrecision::Lowp) {
+                    Some((
+                        f32::from_bits(LOWP_OCTAVE_LO_BITS),
+                        f32::from_bits(LOWP_OCTAVE_HI_BITS),
+                    ))
+                } else {
+                    Some((
+                        f32::from_bits(MIDP_OCTAVE_LO_BITS),
+                        f32::from_bits(MIDP_OCTAVE_HI_BITS),
+                    ))
+                }
+            }
+        }
+    }
+
+    /// Whether this configuration is self-consistent.
     pub const fn is_valid(&self) -> bool {
-        if self.full && self.input.is_some() {
+        if self.is_specials() {
+            return self.custom_range.is_none()
+                && !self.extra_zero
+                && matches!(self.subnormals, Subnormals::Reject);
+        }
+        if self.extra_zero && !matches!(self.domain, LogfDomain::SingleOctave) {
             return false;
         }
-        if let Some((lo_b, _)) = self.input {
-            let lo = f32::from_bits(lo_b);
-            if lo == -1.0 && !self.admits_zero() {
+        if let Some((lo, hi)) = self.input_bounds() {
+            if lo == 0.0 {
+                if !self.admits_zero() {
+                    return false;
+                }
+                if hi > 0.0 && matches!(self.subnormals, Subnormals::Reject) {
+                    return false;
+                }
+                if hi == 0.0 && matches!(self.subnormals, Subnormals::Normalize) {
+                    return false;
+                }
+            } else if lo < f32::MIN_POSITIVE {
+                if matches!(self.subnormals, Subnormals::Reject) {
+                    return false;
+                }
+                if hi < f32::MIN_POSITIVE && !self.admits_subnormals() {
+                    return false;
+                }
+            }
+            if matches!(self.subnormals, Subnormals::Normalize) && lo >= f32::MIN_POSITIVE {
                 return false;
             }
         }
         true
     }
 
-    pub(crate) const fn is_valid_op(&self, op: u8) -> bool {
-        if !self.is_valid() {
-            return false;
-        }
-        if let Some((lo_b, hi_b)) = self.input {
-            let lo = f32::from_bits(lo_b);
-            let hi = f32::from_bits(hi_b);
-            if lo.is_nan() || hi.is_nan() {
-                return false;
-            }
-            if op == 3 {
-                if lo == -1.0 {
-                    if !self.admits_zero() {
-                        return false;
-                    }
-                } else if 1.0 + lo < f32::MIN_POSITIVE && !self.admits_subnormals() {
-                    return false;
-                }
-            } else if lo < 0.0 {
-                return false;
-            } else if lo == 0.0 {
-                if !self.admits_zero() || (hi > 0.0 && !self.admits_subnormals()) {
-                    return false;
-                }
-            } else if lo < f32::MIN_POSITIVE && !self.admits_subnormals() {
-                return false;
-            }
-        }
-        true
-    }
-
-    /// Assert domain-level invariants common to all log variants.
+    /// Assert that this configuration is self-consistent.
     pub const fn validate(&self) {
-        assert!(
-            !(self.full && self.input.is_some()),
-            "full_domain cannot be combined with input_range"
-        );
-        if let Some((lo_b, _)) = self.input {
-            let lo = f32::from_bits(lo_b);
+        if self.is_specials() {
             assert!(
-                lo > -1.0 || self.admits_zero(),
-                "log1p input_range lower bound of -1.0 requires .admit_zero()"
+                self.custom_range.is_none()
+                    && !self.extra_zero
+                    && matches!(self.subnormals, Subnormals::Reject),
+                "LogfDomain::AllFloats / full_domain cannot be combined with custom input_range or subnormal overrides"
+            );
+            return;
+        }
+        assert!(
+            !(self.extra_zero && !matches!(self.domain, LogfDomain::SingleOctave)),
+            "internal extra_zero flag only valid with LogfDomain::SingleOctave"
+        );
+        if let Some((lo, hi)) = self.input_bounds() {
+            if lo == 0.0 {
+                assert!(
+                    self.admits_zero(),
+                    "log input_range starting at 0.0 requires .admit_zero() (or LogfDomain::Unit / NonNegative)"
+                );
+                assert!(
+                    hi == 0.0 || !matches!(self.subnormals, Subnormals::Reject),
+                    "log input_range starting at 0.0 with hi > 0 requires .admit_subnormals() or .flush_or_clamp_subnormals() (or use f32::MIN_POSITIVE / LogfDomain::Unit)"
+                );
+                assert!(
+                    !(hi == 0.0 && matches!(self.subnormals, Subnormals::Normalize)),
+                    "log input_range [0.0, 0.0] contains no nonzero subnormals"
+                );
+            } else {
+                assert!(
+                    lo >= f32::MIN_POSITIVE || !matches!(self.subnormals, Subnormals::Reject),
+                    "log input_range lower bound below f32::MIN_POSITIVE requires .admit_subnormals() or .flush_or_clamp_subnormals()"
+                );
+                assert!(
+                    !(lo < f32::MIN_POSITIVE
+                        && hi < f32::MIN_POSITIVE
+                        && !self.admits_subnormals()),
+                    "log input_range containing only nonzero subnormals requires .admit_subnormals()"
+                );
+            }
+            assert!(
+                !(matches!(self.subnormals, Subnormals::Normalize) && lo >= f32::MIN_POSITIVE),
+                "admit_subnormals requires input lower bound < f32::MIN_POSITIVE (or LogfDomain::Unit / PositiveNormals); use .flush_or_clamp_subnormals() on normal-only domains"
             );
         }
     }
 
-    pub(crate) const fn validate_op(&self, op: u8) {
-        self.validate();
-        if let Some((lo_b, hi_b)) = self.input {
-            let lo = f32::from_bits(lo_b);
-            let hi = f32::from_bits(hi_b);
-            if op == 3 {
-                if lo == -1.0 {
-                    assert!(
-                        self.admits_zero(),
-                        "log1p input_range lower bound of -1.0 requires .admit_zero()"
-                    );
-                } else {
-                    assert!(
-                        1.0 + lo >= f32::MIN_POSITIVE || self.admits_subnormals(),
-                        "log1p input_range lower bound must keep 1 + lo positive normal (or enable .admit_subnormals())"
-                    );
-                }
-            } else {
-                assert!(
-                    lo >= 0.0,
-                    "log input_range lower bound must be non-negative"
-                );
-                if lo == 0.0 {
-                    assert!(
-                        self.admits_zero() && (hi == 0.0 || self.admits_subnormals()),
-                        "log input_range starting at 0.0 requires .admit_zero().admit_subnormals() (or use f32::MIN_POSITIVE)"
-                    );
-                } else {
-                    assert!(
-                        lo >= f32::MIN_POSITIVE || self.admits_subnormals(),
-                        "log input_range lower bound below f32::MIN_POSITIVE requires .admit_subnormals()"
-                    );
-                }
-            }
-        }
-    }
-
     /// Whether `log2`/`ln`/`log10` stays inside the fundamental single octave
-    /// (`[0.70710677, 1.4142134]` on `Midp` or `[0.6666667, 1.3333333]` on
-    /// `Lowp`) without admitted zero or specials, eliding integer exponent
+    /// without admitted zero or subnormal rescaling, eliding integer exponent
     /// extraction (`n = 0`).
     pub const fn elides_reduction(&self) -> bool {
-        if self.full || self.zero || self.subnormals {
+        if self.is_specials() || self.admits_zero() || self.admits_subnormals() {
             return false;
         }
-        let Some((lo_b, hi_b)) = self.input else {
+        let Some((lo, hi)) = self.input_bounds() else {
             return false;
         };
-        let (lo, hi) = (f32::from_bits(lo_b), f32::from_bits(hi_b));
         if matches!(self.precision, LogfPrecision::Lowp) {
             lo >= f32::from_bits(LOWP_OCTAVE_LO_BITS) && hi <= f32::from_bits(LOWP_OCTAVE_HI_BITS)
         } else {
@@ -366,124 +444,132 @@ impl LogfOptions {
         }
     }
 
-    /// Whether `log1p(x)` keeps `1 + x` inside the fundamental single octave,
-    /// eliding integer exponent extraction and the `1 + x >= 2` Kahan branch.
-    pub const fn elides_log1p_reduction(&self) -> bool {
-        if self.full || self.zero || self.subnormals {
-            return false;
-        }
-        let Some((lo_b, hi_b)) = self.input else {
-            return false;
-        };
-        let u_lo = 1.0 + f32::from_bits(lo_b);
-        let u_hi = 1.0 + f32::from_bits(hi_b);
-        if matches!(self.precision, LogfPrecision::Lowp) {
-            u_lo >= f32::from_bits(LOWP_OCTAVE_LO_BITS)
-                && u_hi <= f32::from_bits(LOWP_OCTAVE_HI_BITS)
-        } else {
-            u_lo >= f32::from_bits(MIDP_OCTAVE_LO_BITS)
-                && u_hi <= f32::from_bits(MIDP_OCTAVE_HI_BITS)
-        }
-    }
-
-    /// Whether this configuration can never return an input error
-    /// (`.clamp_out_of_bounds()`, `.assume_in_bounds()` / `.unchecked()`, or
-    /// `.admit_all_floats()` / `.full_domain()`).
+    /// Whether this configuration can never return an input error.
     pub const fn is_infallible(&self) -> bool {
-        self.assume_valid() || self.clamp_oob() || self.full
+        self.is_valid() && (self.assume_valid() || self.clamp_oob() || self.is_specials())
     }
 
     /// Pack this configuration into a `u128` const-generic argument.
-    pub const fn bits(self) -> u128 {
-        let mut out = MAGIC;
-        if let Some((lo, hi)) = self.input {
-            out |= HAS_RANGE | ((lo as u128) << 64) | ((hi as u128) << 96);
+    pub const fn bits(&self) -> u128 {
+        let dom: u128 = match self.domain {
+            LogfDomain::PositiveNormals => 0,
+            LogfDomain::NonNegative => 1,
+            LogfDomain::Unit => 2,
+            LogfDomain::PositiveUnit => 3,
+            LogfDomain::Hdr => 4,
+            LogfDomain::PositiveHdr => 5,
+            LogfDomain::SingleOctave => 6,
+            LogfDomain::AllFloats => 7,
+        };
+        let sub: u128 = match self.subnormals {
+            Subnormals::Reject => 0,
+            Subnormals::FlushOrClamp => 1,
+            Subnormals::Normalize => 2,
+        };
+        let val: u128 = match self.validation {
+            Validation::Checked => 0,
+            Validation::ClampOutOfBounds => 1,
+            Validation::AssumeValid => 2,
+        };
+        let prec: u128 = match self.precision {
+            LogfPrecision::Midp => 0,
+            LogfPrecision::Lowp => 1,
+        };
+        let port: u128 = match self.portability {
+            Portability::BitExact => 0,
+            Portability::BackendDependent => 1,
+        };
+        let exec: u128 = match self.execution {
+            Execution::Upgrade => 0,
+            Execution::Caller => 1,
+        };
+        let mut out = MAGIC
+            | (dom << DOMAIN_SHIFT)
+            | (sub << SUBNORM_SHIFT)
+            | (val << VALIDATION_SHIFT)
+            | (prec << PREC_SHIFT)
+            | (port << PORTABILITY_SHIFT)
+            | (exec << EXECUTION_SHIFT);
+        if self.extra_zero {
+            out |= EXTRA_ZERO;
         }
-        if self.zero {
-            out |= ZERO;
-        }
-        if self.subnormals {
-            out |= SUBNORM;
-        }
-        if self.full {
-            out |= FULL;
-        }
-        if matches!(self.precision, LogfPrecision::Lowp) {
-            out |= LOWP;
-        }
-        if matches!(self.portability, Portability::BackendDependent) {
-            out |= BACKEND;
-        }
-        match self.validation {
-            Validation::Checked => {}
-            Validation::ClampOutOfBounds => out |= CLAMP_OOB,
-            Validation::AssumeValid => out |= ASSUME,
-        }
-        if matches!(self.execution, Execution::Caller) {
-            out |= CALLER;
+        if let Some((lo, hi)) = self.custom_range {
+            out |= HAS_CUSTOM_RANGE | ((lo as u128) << IN_LO_SHIFT) | ((hi as u128) << IN_HI_SHIFT);
         }
         out
     }
 
     const fn from_bits_raw(bits: u128) -> Option<Self> {
-        if (bits & 0xff) != MAGIC || (bits & RESERVED_MASK) != 0 {
+        if (bits & 0xf) != MAGIC || (bits & RESERVED_LO_MASK) != 0 || (bits & RESERVED_HI_MASK) != 0
+        {
             return None;
         }
-        if (bits & ASSUME) != 0 && (bits & CLAMP_OOB) != 0 {
-            return None;
-        }
-        let full = (bits & FULL) != 0;
-        let zero = (bits & ZERO) != 0;
-        let subnormals = (bits & SUBNORM) != 0;
-        if full && (zero || subnormals) {
-            return None;
-        }
-        let lo_b = ((bits >> 64) & 0xffff_ffff) as u32;
-        let hi_b = ((bits >> 96) & 0xffff_ffff) as u32;
-        let input = if (bits & HAS_RANGE) != 0 {
-            if lo_b == 0x8000_0000 || hi_b == 0x8000_0000 {
+        let domain = match (bits >> DOMAIN_SHIFT) & 0x1f {
+            0 => LogfDomain::PositiveNormals,
+            1 => LogfDomain::NonNegative,
+            2 => LogfDomain::Unit,
+            3 => LogfDomain::PositiveUnit,
+            4 => LogfDomain::Hdr,
+            5 => LogfDomain::PositiveHdr,
+            6 => LogfDomain::SingleOctave,
+            7 => LogfDomain::AllFloats,
+            _ => return None,
+        };
+        let subnormals = match (bits >> SUBNORM_SHIFT) & 0x7 {
+            0 => Subnormals::Reject,
+            1 => Subnormals::FlushOrClamp,
+            2 => Subnormals::Normalize,
+            _ => return None,
+        };
+        let validation = match (bits >> VALIDATION_SHIFT) & 0x7 {
+            0 => Validation::Checked,
+            1 => Validation::ClampOutOfBounds,
+            2 => Validation::AssumeValid,
+            _ => return None,
+        };
+        let precision = match (bits >> PREC_SHIFT) & 0x7 {
+            0 => LogfPrecision::Midp,
+            1 => LogfPrecision::Lowp,
+            _ => return None,
+        };
+        let portability = match (bits >> PORTABILITY_SHIFT) & 0x3 {
+            0 => Portability::BitExact,
+            1 => Portability::BackendDependent,
+            _ => return None,
+        };
+        let execution = match (bits >> EXECUTION_SHIFT) & 0x3 {
+            0 => Execution::Upgrade,
+            1 => Execution::Caller,
+            _ => return None,
+        };
+        let lo_u16 = ((bits >> IN_LO_SHIFT) & 0xffff) as u16;
+        let hi_u16 = ((bits >> IN_HI_SHIFT) & 0xffff) as u16;
+        let custom_range = if (bits & HAS_CUSTOM_RANGE) != 0 {
+            let Some(lo) = decode_bf16_finite(lo_u16) else {
+                return None;
+            };
+            let Some(hi) = decode_bf16_finite(hi_u16) else {
+                return None;
+            };
+            if !(lo >= 0.0 && lo <= hi && hi <= MAX_BF16) {
                 return None;
             }
-            let lo = f32::from_bits(lo_b);
-            let hi = f32::from_bits(hi_b);
-            if !(lo >= -1.0 && lo <= hi && abs(lo) <= f32::MAX && abs(hi) <= f32::MAX) {
-                return None;
-            }
-            Some((lo_b, hi_b))
+            Some((lo_u16, hi_u16))
         } else {
-            if lo_b != 0 || hi_b != 0 {
+            if lo_u16 != 0 || hi_u16 != 0 {
                 return None;
             }
             None
         };
-        let validation = if (bits & ASSUME) != 0 {
-            Validation::AssumeValid
-        } else if (bits & CLAMP_OOB) != 0 {
-            Validation::ClampOutOfBounds
-        } else {
-            Validation::Checked
-        };
         Some(Self {
-            input,
-            zero,
+            domain,
+            custom_range,
+            extra_zero: (bits & EXTRA_ZERO) != 0,
             subnormals,
-            full,
-            precision: if (bits & LOWP) != 0 {
-                LogfPrecision::Lowp
-            } else {
-                LogfPrecision::Midp
-            },
-            portability: if (bits & BACKEND) != 0 {
-                Portability::BackendDependent
-            } else {
-                Portability::BitExact
-            },
+            precision,
+            portability,
             validation,
-            execution: if (bits & CALLER) != 0 {
-                Execution::Caller
-            } else {
-                Execution::Upgrade
-            },
+            execution,
         })
     }
 
@@ -509,21 +595,6 @@ impl LogfOptions {
         super::LogfRuntime::new(self)
     }
 
-    pub(crate) const fn input_bounds(&self) -> Option<(f32, f32)> {
-        match self.input {
-            Some((lo, hi)) => Some((f32::from_bits(lo), f32::from_bits(hi))),
-            None => None,
-        }
-    }
-    pub(crate) const fn admits_zero(&self) -> bool {
-        self.zero || self.full
-    }
-    pub(crate) const fn admits_subnormals(&self) -> bool {
-        self.subnormals || self.full
-    }
-    pub(crate) const fn is_specials(&self) -> bool {
-        self.full
-    }
     pub(crate) const fn is_lowp(&self) -> bool {
         matches!(self.precision, LogfPrecision::Lowp)
     }

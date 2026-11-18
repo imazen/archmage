@@ -28,7 +28,7 @@ mod options;
 mod tests;
 
 pub use const_api::{Cbrtf, CbrtfRuntime};
-pub use options::{CbrtfOptions, CbrtfPrecision};
+pub use options::{CbrtfDomain, CbrtfOptions, CbrtfPrecision};
 
 /// Reason a complete vector was rejected.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

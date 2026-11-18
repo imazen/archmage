@@ -9,63 +9,86 @@
 
 ## summary
 #
-#   inherent methods                           20
-#   trait roster entries (type × trait)        27
+#   inherent methods                           30
+#   trait roster entries (type × trait)        39
 #
 # per-module pub lines:
-#   (root)                            4
-#   cbrtf                             4
-#   expf                              4
-#   logf                              4
-#   powf                              4
+#   (root)                            5
+#   cbrtf                             5
+#   expf                              5
+#   log1pf                            5
+#   logf                              5
+#   powf                              5
 
-## items (20 lines)
+## items (30 lines)
 
 pub fn Execution::assert_fields_are_eq(&self)
 pub fn Portability::assert_fields_are_eq(&self)
 pub fn SliceError<K>::assert_fields_are_eq(&self)
+pub fn Subnormals::assert_fields_are_eq(&self)
 pub fn Validation::assert_fields_are_eq(&self)
+pub fn cbrtf::CbrtfDomain::assert_fields_are_eq(&self)
 pub fn cbrtf::CbrtfError::assert_fields_are_eq(&self)
 pub fn cbrtf::CbrtfErrorKind::assert_fields_are_eq(&self)
 pub fn cbrtf::CbrtfOptions::assert_fields_are_eq(&self)
 pub fn cbrtf::CbrtfPrecision::assert_fields_are_eq(&self)
+pub fn expf::ExpfDomain::assert_fields_are_eq(&self)
 pub fn expf::ExpfError::assert_fields_are_eq(&self)
 pub fn expf::ExpfErrorKind::assert_fields_are_eq(&self)
 pub fn expf::ExpfOptions::assert_fields_are_eq(&self)
 pub fn expf::ExpfPrecision::assert_fields_are_eq(&self)
+pub fn log1pf::Log1pfDomain::assert_fields_are_eq(&self)
+pub fn log1pf::Log1pfError::assert_fields_are_eq(&self)
+pub fn log1pf::Log1pfErrorKind::assert_fields_are_eq(&self)
+pub fn log1pf::Log1pfOptions::assert_fields_are_eq(&self)
+pub fn log1pf::Log1pfPrecision::assert_fields_are_eq(&self)
+pub fn logf::LogfDomain::assert_fields_are_eq(&self)
 pub fn logf::LogfError::assert_fields_are_eq(&self)
 pub fn logf::LogfErrorKind::assert_fields_are_eq(&self)
 pub fn logf::LogfOptions::assert_fields_are_eq(&self)
 pub fn logf::LogfPrecision::assert_fields_are_eq(&self)
+pub fn powf::PowfDomain::assert_fields_are_eq(&self)
 pub fn powf::PowfError::assert_fields_are_eq(&self)
 pub fn powf::PowfErrorKind::assert_fields_are_eq(&self)
 pub fn powf::PowfOptions::assert_fields_are_eq(&self)
 pub fn powf::PowfPrecision::assert_fields_are_eq(&self)
 
-## trait impls (27 types)
+## trait impls (39 types)
 
 Execution: TrivialClone
 Portability: TrivialClone
+Subnormals: TrivialClone
 Validation: TrivialClone
 cbrtf::Cbrtf<CFG>: TrivialClone
+cbrtf::CbrtfDomain: TrivialClone
 cbrtf::CbrtfError: TrivialClone
 cbrtf::CbrtfErrorKind: TrivialClone
 cbrtf::CbrtfOptions: TrivialClone
 cbrtf::CbrtfPrecision: TrivialClone
 cbrtf::CbrtfRuntime: TrivialClone
 expf::Expf<CFG>: TrivialClone
+expf::ExpfDomain: TrivialClone
 expf::ExpfError: TrivialClone
 expf::ExpfErrorKind: TrivialClone
 expf::ExpfOptions: TrivialClone
 expf::ExpfPrecision: TrivialClone
 expf::ExpfRuntime: TrivialClone
+log1pf::Log1pf<CFG>: TrivialClone
+log1pf::Log1pfDomain: TrivialClone
+log1pf::Log1pfError: TrivialClone
+log1pf::Log1pfErrorKind: TrivialClone
+log1pf::Log1pfOptions: TrivialClone
+log1pf::Log1pfPrecision: TrivialClone
+log1pf::Log1pfRuntime: TrivialClone
 logf::Logf<CFG>: TrivialClone
+logf::LogfDomain: TrivialClone
 logf::LogfError: TrivialClone
 logf::LogfErrorKind: TrivialClone
 logf::LogfOptions: TrivialClone
 logf::LogfPrecision: TrivialClone
 logf::LogfRuntime: TrivialClone
 powf::Powf<CFG>: TrivialClone
+powf::PowfDomain: TrivialClone
 powf::PowfError: TrivialClone
 powf::PowfErrorKind: TrivialClone
 powf::PowfOptions: TrivialClone

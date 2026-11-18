@@ -14,6 +14,7 @@ pub(super) trait Kernel: 'static {
     const IN_HI: f32;
     const DENORM_POSSIBLE: bool;
     const SCALE_SUBNORM: bool;
+    const FLUSH_SUB: bool;
     const FULL: bool;
     const CLAMP_OOB: bool;
     const LOWP: bool;
@@ -27,6 +28,7 @@ pub(super) struct KernelCfg {
     pub(super) in_hi: f32,
     pub(super) denorm_possible: bool,
     pub(super) scale_subnorm: bool,
+    pub(super) flush_sub: bool,
     pub(super) full: bool,
     pub(super) clamp_oob: bool,
     pub(super) lowp: bool,
@@ -45,6 +47,7 @@ impl KernelCfg {
             in_hi,
             denorm_possible: opts.denorm_possible(),
             scale_subnorm: opts.scale_subnormals(),
+            flush_sub: opts.flushes_subnormals(),
             full: opts.is_full(),
             clamp_oob: opts.clamp_oob(),
             lowp: opts.is_lowp(),
@@ -62,6 +65,7 @@ pub(super) const fn cfg_of<K: Kernel>() -> KernelCfg {
         in_hi: K::IN_HI,
         denorm_possible: K::DENORM_POSSIBLE,
         scale_subnorm: K::SCALE_SUBNORM,
+        flush_sub: K::FLUSH_SUB,
         full: K::FULL,
         clamp_oob: K::CLAMP_OOB,
         lowp: K::LOWP,
@@ -81,6 +85,7 @@ macro_rules! eval_cbrtf {
         $in_hi:expr,
         $denorm_possible:expr,
         $scale_subnorm:expr,
+        $flush_sub:expr,
         $full:expr,
         $clamp_oob:expr,
         $lowp:expr,
@@ -97,11 +102,47 @@ macro_rules! eval_cbrtf {
             CbrtfError { kind, lane_mask }
         };
 
+        let (lo_b, hi_b) = if $ranged {
+            ($in_lo, $in_hi)
+        } else {
+            (-MAX_BOUNDED_INCLUSIVE, MAX_BOUNDED_INCLUSIVE)
+        };
+        let pre_in = if !$assume && !$clamp_oob && !$full && $flush_sub {
+            let in_bits = $input.bitcast_to_i32();
+            let in_abs = in_bits & ip(0x7fff_ffff_u32 as i32);
+            let is_denorm = in_abs.simd_gt(ip(0)) & in_abs.simd_lt(ip(MIN_NORMAL_BITS));
+            if lo_b < 0.0 && hi_b > 0.0 {
+                $V::blend(is_denorm.bitcast_to_f32(), $input & sp(-0.0), $input)
+            } else if lo_b == 0.0 && hi_b >= 0.0 {
+                let pos_sub = in_bits.simd_gt(ip(0)) & in_bits.simd_lt(ip(MIN_NORMAL_BITS));
+                $V::blend(pos_sub.bitcast_to_f32(), sp(0.0), $input)
+            } else if hi_b == 0.0 && lo_b <= 0.0 {
+                let neg_sub = in_bits.simd_lt(ip(0)) & in_abs.simd_lt(ip(MIN_NORMAL_BITS));
+                $V::blend(neg_sub.bitcast_to_f32(), sp(-0.0), $input)
+            } else if lo_b > 0.0 {
+                let pos_sub = in_bits.simd_gt(ip(0)) & in_bits.simd_lt(ip(MIN_NORMAL_BITS));
+                $V::blend(
+                    pos_sub.bitcast_to_f32(),
+                    sp(lo_b.max(f32::MIN_POSITIVE)),
+                    $input,
+                )
+            } else {
+                let neg_sub = in_bits.simd_lt(ip(0)) & in_abs.simd_lt(ip(MIN_NORMAL_BITS));
+                $V::blend(
+                    neg_sub.bitcast_to_f32(),
+                    sp(hi_b.min(-f32::MIN_POSITIVE)),
+                    $input,
+                )
+            }
+        } else {
+            $input
+        };
+
         if !$assume && !$clamp_oob {
-            let bits = $input.bitcast_to_i32();
+            let bits = pre_in.bitcast_to_i32();
             let abs_bits = bits & ip(0x7fff_ffff_u32 as i32);
             if $ranged {
-                let outside = ($input.simd_ge(sp($in_lo)) & $input.simd_le(sp($in_hi)))
+                let outside = (pre_in.simd_ge(sp($in_lo)) & pre_in.simd_le(sp($in_hi)))
                     .bitcast_to_i32()
                     ^ ip(-1);
                 let invalid = if $denorm_possible {
@@ -132,11 +173,6 @@ macro_rules! eval_cbrtf {
             ip(0).bitcast_to_f32()
         };
         let base_in = if $clamp_oob && !$full {
-            let (lo_b, hi_b) = if $ranged {
-                ($in_lo, $in_hi)
-            } else {
-                (-MAX_BOUNDED_INCLUSIVE, MAX_BOUNDED_INCLUSIVE)
-            };
             let mut c = $V::blend(
                 $input.simd_lt(sp(lo_b)),
                 sp(lo_b),
@@ -168,7 +204,7 @@ macro_rules! eval_cbrtf {
             };
             $V::blend(is_nan, sp(safe), c)
         } else {
-            $input
+            pre_in
         };
 
         let bits = base_in.bitcast_to_i32();
@@ -235,7 +271,7 @@ macro_rules! eval_cbrtf {
                 let is_zero = abs_bits.simd_eq(ip(0)).bitcast_to_f32();
                 result = $V::blend(is_zero, base_in, result);
             }
-        } else {
+        } else if !$ranged || ($in_lo <= 0.0 && $in_hi >= 0.0) {
             let is_zero = abs_bits.simd_eq(ip(0)).bitcast_to_f32();
             result = $V::blend(is_zero, base_in, result);
         }
@@ -269,6 +305,7 @@ macro_rules! graph {
                 cfg.in_hi,
                 cfg.denorm_possible,
                 cfg.scale_subnorm,
+                cfg.flush_sub,
                 cfg.full,
                 cfg.clamp_oob,
                 cfg.lowp,
@@ -294,6 +331,7 @@ macro_rules! graph {
                 K::IN_HI,
                 K::DENORM_POSSIBLE,
                 K::SCALE_SUBNORM,
+                K::FLUSH_SUB,
                 K::FULL,
                 K::CLAMP_OOB,
                 K::LOWP,
