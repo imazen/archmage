@@ -104,6 +104,7 @@ fn gen_arcane_tests(files: &mut Vec<TestFile>) {
         ("token_v4", "X64V4Token", "X64V4Token"),
         ("token_neon", "NeonToken", "NeonToken"),
         ("token_wasm", "Wasm128Token", "Wasm128Token"),
+        ("token_scalar", "ScalarToken", "ScalarToken"),
         ("token_trait_bound", "impl HasX64V2", "HasX64V2"),
         ("token_generic", "T", "HasX64V2"),
     ] {
@@ -1442,6 +1443,99 @@ fn gen_shape_tests(files: &mut Vec<TestFile>) {
             "#},
         ));
     }
+
+    // `_self = Type` on scalar and wasm32: safe-callee nested boundary enforces
+    // receiver type-checking and `Self` substitution without `unsafe`.
+    files.push(shape(
+        "arcane",
+        "nested_self_scalar",
+        indoc::indoc! {r#"
+            use archmage::{ScalarToken, arcane};
+            struct Processor { val: f32 }
+            impl Processor {
+                #[arcane(_self = Processor)]
+                fn process(&self, token: ScalarToken, a: f32) -> Self {
+                    let _ = token;
+                    Self { val: _self.val + a }
+                }
+            }
+            fn main() {}
+        "#}
+        .to_string(),
+    ));
+    files.push(shape(
+        "arcane",
+        "nested_self_wasm",
+        indoc::indoc! {r#"
+            use archmage::{Wasm128Token, arcane};
+            struct Processor { val: f32 }
+            impl Processor {
+                #[arcane(_self = Processor)]
+                fn process(&self, token: Wasm128Token, a: f32) -> Self {
+                    let _ = token;
+                    Self { val: _self.val + a }
+                }
+            }
+            fn main() {}
+        "#}
+        .to_string(),
+    ));
+
+    // Trait-bounded `_self` token receivers across `self`, `&self`, and `&mut self`.
+    files.push(shape(
+        "arcane",
+        "self_trait_receiver",
+        indoc::indoc! {r#"
+            use archmage::{HasX64V2, arcane};
+            trait V2Op {
+                fn by_val(self, x: u32) -> u32;
+                fn by_ref(&self, x: u32) -> u32;
+                fn by_mut(&mut self, x: u32) -> u32;
+            }
+            impl<T: HasX64V2> V2Op for T {
+                #[arcane(_self = impl HasX64V2)]
+                fn by_val(self, x: u32) -> u32 { let _ = _self; x + 1 }
+                #[arcane(_self = impl HasX64V2)]
+                fn by_ref(&self, x: u32) -> u32 { let _ = _self; x + 2 }
+                #[arcane(_self = impl HasX64V2)]
+                fn by_mut(&mut self, x: u32) -> u32 { let _ = _self; x + 3 }
+            }
+            fn main() {}
+        "#}
+        .to_string(),
+    ));
+
+    // Borrowed concrete and trait-bounded token parameters.
+    files.push(shape(
+        "arcane",
+        "borrowed_tokens",
+        indoc::indoc! {r#"
+            use archmage::{HasX64V2, X64V3Token, arcane};
+            #[arcane]
+            fn borrowed_concrete(_token: &X64V3Token, x: u32) -> u32 { x + 1 }
+            #[arcane]
+            fn borrowed_trait(_token: &impl HasX64V2, x: u32) -> u32 { x + 2 }
+            fn main() {}
+        "#}
+        .to_string(),
+    ));
+
+    // `#[attune]` on `unsafe fn`: scalar/wasm32 proof entries and the dispatcher
+    // wrap forwarding calls in `unsafe { ... }` so `unsafe_op_in_unsafe_fn` holds.
+    files.push(shape(
+        "attune",
+        "unsafe_family",
+        indoc::indoc! {r#"
+            #![deny(unsafe_op_in_unsafe_fn)]
+            use archmage::attune;
+            #[attune(dispatch, _*_t)]
+            pub unsafe fn load_word(ptr: *const u32) -> u32 {
+                unsafe { *ptr }
+            }
+            fn main() {}
+        "#}
+        .to_string(),
+    ));
 }
 
 /// A shape test goes to `shapes/` or, while its expansion is wrong, to `should-fail/`.

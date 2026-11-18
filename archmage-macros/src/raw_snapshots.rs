@@ -34,6 +34,7 @@ const ATTRIBUTE_MACROS: &[&str] = &[
     "token_target_features_boundary",
     "rite",
     "token_target_features",
+    "attune",
     "autoversion",
     "magetypes",
 ];

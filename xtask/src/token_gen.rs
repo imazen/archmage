@@ -329,24 +329,24 @@ fn gen_from_context(token: &TokenDef) -> String {
     let features = token.features.join(",");
     let display = token.display_name.as_deref().unwrap_or(name);
     let context_docs = if token.arch == "wasm" {
-        "/// Rust permits safe calls to `#[target_feature]` functions from any\n    /// WASM context: the engine validates the required instructions when the\n    /// module is loaded, so a module that runs at all has the features."
+        "/// On WASM, this requires the tier's `target_feature`s to be enabled at\n    /// compile time (where WebAssembly module validation guarantees them). In\n    /// builds compiled without those target features ([`SimdToken::summon`](crate::SimdToken::summon)\n    /// returns `None`), calling `from_context()` panics at runtime rather than\n    /// fabricating an unvalidated proof or emitting SIMD opcodes into dead\n    /// branches of unoptimized builds."
     } else {
         "/// A safe call requires a caller whose `#[target_feature]` attribute\n    /// enables every feature of this tier; a superset is sufficient. Outside\n    /// such a context rustc requires an `unsafe` block at the call site.\n    ///\n    /// Features enabled globally (`-C target-feature`, `-C target-cpu`) do\n    /// not satisfy this — rustc requires them on the caller's own attribute."
     };
-    let wasm_anchor = if token.arch == "wasm" {
+    let body = if token.arch == "wasm" {
         match name.as_str() {
             "Wasm128Token" => {
-                "\n                #[cfg(not(target_feature = \"simd128\"))]\n                {\n                    // Anchor a simd128 opcode on an opaque lane so LLVM cannot fold\n                    // the vector to scalar stores and WASM module validation enforces\n                    // `simd128` even when the caller drops the zero-sized proof.\n                    let z = core::arch::wasm32::i32x4_splat(core::hint::black_box(0));\n                    let _ = core::hint::black_box(core::arch::wasm32::v128_any_true(z));\n                }"
+                "#[cfg(target_feature = \"simd128\")]\n                {\n                    Self { _private: () }\n                }\n                #[cfg(not(target_feature = \"simd128\"))]\n                {\n                    panic!(\"Wasm128Token::from_context() requires compiling with -Ctarget-feature=+simd128\")\n                }"
             }
             "Wasm128RelaxedToken" => {
-                "\n                #[cfg(not(all(target_feature = \"simd128\", target_feature = \"relaxed-simd\")))]\n                {\n                    // Anchor a relaxed-simd opcode on an opaque lane so LLVM cannot\n                    // fold it away and WASM module validation enforces both features\n                    // even when the caller drops the zero-sized proof.\n                    let z = core::arch::wasm32::i32x4_splat(core::hint::black_box(0));\n                    let _ = core::hint::black_box(core::arch::wasm32::i32x4_relaxed_laneselect(z, z, z));\n                }"
+                "#[cfg(all(target_feature = \"simd128\", target_feature = \"relaxed-simd\"))]\n                {\n                    Self { _private: () }\n                }\n                #[cfg(not(all(target_feature = \"simd128\", target_feature = \"relaxed-simd\")))]\n                {\n                    panic!(\"Wasm128RelaxedToken::from_context() requires compiling with -Ctarget-feature=+simd128,+relaxed-simd\")\n                }"
             }
             other => panic!(
-                "unhandled wasm token `{other}` in gen_from_context: add load-time validation anchor"
+                "unhandled wasm token `{other}` in gen_from_context: add target_feature runtime guard"
             ),
         }
     } else {
-        ""
+        "Self { _private: () }"
     };
     formatdoc! {r#"
 
@@ -373,8 +373,8 @@ fn gen_from_context(token: &TokenDef) -> String {
             /// Safe calls have that obligation discharged by the compiler.
             #[inline]
             #[target_feature(enable = "{features}")]
-            pub fn from_context() -> Self {{{wasm_anchor}
-                Self {{ _private: () }}
+            pub fn from_context() -> Self {{
+                {body}
             }}
 
             /// Deprecated alias for [`{name}::from_context`].
@@ -775,8 +775,10 @@ fn gen_extraction_methods(out: &mut String, reg: &Registry, token: &TokenDef) {
             formatdoc! {"
                 {INDENT}pub fn {short}(self) -> {anc_name} {{
                 {INDENT}    // Holding `self` proves {token_display}'s feature set, a superset
-                {INDENT}    // of {anc_display}'s; wasm32 target-feature calls are safe.
-                {INDENT}    {anc_name}::from_context()
+                {INDENT}    // of {anc_display}'s; construct the sibling proof directly so
+                {INDENT}    // unoptimized dead branches never route through `from_context()`.
+                {INDENT}    let _ = self;
+                {INDENT}    {anc_name} {{ _private: () }}
                 {INDENT}}}
             "}
         } else {
@@ -1637,20 +1639,26 @@ mod tests {
     }
 
     #[test]
-    fn wasm_from_context_anchors_load_time_validation_opcodes() {
+    fn wasm_from_context_panics_when_target_features_disabled_without_simd_opcodes() {
         let reg = load_test_registry();
         let files = generate_token_files(&reg, 0);
         let wasm_code = &files.iter().find(|(n, _)| n == "wasm.rs").unwrap().1;
 
         assert!(
-            wasm_code.contains("core::hint::black_box(core::arch::wasm32::v128_any_true(z))"),
-            "Wasm128Token::from_context must anchor a simd128 opcode via black_box"
+            wasm_code.contains(
+                "panic!(\"Wasm128Token::from_context() requires compiling with -Ctarget-feature=+simd128\")"
+            ),
+            "Wasm128Token::from_context must panic when simd128 is not enabled"
         );
         assert!(
             wasm_code.contains(
-                "core::hint::black_box(core::arch::wasm32::i32x4_relaxed_laneselect(z, z, z))"
+                "panic!(\"Wasm128RelaxedToken::from_context() requires compiling with -Ctarget-feature=+simd128,+relaxed-simd\")"
             ),
-            "Wasm128RelaxedToken::from_context must anchor a relaxed-simd opcode via black_box"
+            "Wasm128RelaxedToken::from_context must panic when relaxed-simd is not enabled"
+        );
+        assert!(
+            !wasm_code.contains("core::arch::wasm32"),
+            "wasm.rs must not emit SIMD/relaxed-SIMD opcodes that poison dead debug branches"
         );
     }
 }

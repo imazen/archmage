@@ -37,6 +37,7 @@ fn check_item(item: Tokens, count: &mut usize) {
                 s.ident.to_string().as_str(),
                 "arcane"
                     | "rite"
+                    | "attune"
                     | "magetypes"
                     | "autoversion"
                     | "simd_fn"

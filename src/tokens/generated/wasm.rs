@@ -53,9 +53,12 @@ impl Wasm128Token {
     /// Construct a WASM SIMD128 proof from the caller's statically proven
     /// feature context.
     ///
-    /// Rust permits safe calls to `#[target_feature]` functions from any
-    /// WASM context: the engine validates the required instructions when the
-    /// module is loaded, so a module that runs at all has the features.
+    /// On WASM, this requires the tier's `target_feature`s to be enabled at
+    /// compile time (where WebAssembly module validation guarantees them). In
+    /// builds compiled without those target features ([`SimdToken::summon`](crate::SimdToken::summon)
+    /// returns `None`), calling `from_context()` panics at runtime rather than
+    /// fabricating an unvalidated proof or emitting SIMD opcodes into dead
+    /// branches of unoptimized builds.
     ///
     /// No runtime detection happens here, so this also bypasses
     /// process-wide token disabling (including `testable_dispatch`):
@@ -75,15 +78,14 @@ impl Wasm128Token {
     #[inline]
     #[target_feature(enable = "simd128")]
     pub fn from_context() -> Self {
+        #[cfg(target_feature = "simd128")]
+        {
+            Self { _private: () }
+        }
         #[cfg(not(target_feature = "simd128"))]
         {
-            // Anchor a simd128 opcode on an opaque lane so LLVM cannot fold
-            // the vector to scalar stores and WASM module validation enforces
-            // `simd128` even when the caller drops the zero-sized proof.
-            let z = core::arch::wasm32::i32x4_splat(core::hint::black_box(0));
-            let _ = core::hint::black_box(core::arch::wasm32::v128_any_true(z));
+            panic!("Wasm128Token::from_context() requires compiling with -Ctarget-feature=+simd128")
         }
-        Self { _private: () }
     }
 
     /// Deprecated alias for [`Wasm128Token::from_context`].
@@ -183,9 +185,12 @@ impl Wasm128RelaxedToken {
     /// Construct a WASM Relaxed SIMD proof from the caller's statically proven
     /// feature context.
     ///
-    /// Rust permits safe calls to `#[target_feature]` functions from any
-    /// WASM context: the engine validates the required instructions when the
-    /// module is loaded, so a module that runs at all has the features.
+    /// On WASM, this requires the tier's `target_feature`s to be enabled at
+    /// compile time (where WebAssembly module validation guarantees them). In
+    /// builds compiled without those target features ([`SimdToken::summon`](crate::SimdToken::summon)
+    /// returns `None`), calling `from_context()` panics at runtime rather than
+    /// fabricating an unvalidated proof or emitting SIMD opcodes into dead
+    /// branches of unoptimized builds.
     ///
     /// No runtime detection happens here, so this also bypasses
     /// process-wide token disabling (including `testable_dispatch`):
@@ -205,15 +210,16 @@ impl Wasm128RelaxedToken {
     #[inline]
     #[target_feature(enable = "simd128,relaxed-simd")]
     pub fn from_context() -> Self {
+        #[cfg(all(target_feature = "simd128", target_feature = "relaxed-simd"))]
+        {
+            Self { _private: () }
+        }
         #[cfg(not(all(target_feature = "simd128", target_feature = "relaxed-simd")))]
         {
-            // Anchor a relaxed-simd opcode on an opaque lane so LLVM cannot
-            // fold it away and WASM module validation enforces both features
-            // even when the caller drops the zero-sized proof.
-            let z = core::arch::wasm32::i32x4_splat(core::hint::black_box(0));
-            let _ = core::hint::black_box(core::arch::wasm32::i32x4_relaxed_laneselect(z, z, z));
+            panic!(
+                "Wasm128RelaxedToken::from_context() requires compiling with -Ctarget-feature=+simd128,+relaxed-simd"
+            )
         }
-        Self { _private: () }
     }
 
     /// Deprecated alias for [`Wasm128RelaxedToken::from_context`].
@@ -247,8 +253,10 @@ impl Wasm128RelaxedToken {
     #[inline(always)]
     pub fn wasm128(self) -> Wasm128Token {
         // Holding `self` proves WASM Relaxed SIMD's feature set, a superset
-        // of WASM SIMD128's; wasm32 target-feature calls are safe.
-        Wasm128Token::from_context()
+        // of WASM SIMD128's; construct the sibling proof directly so
+        // unoptimized dead branches never route through `from_context()`.
+        let _ = self;
+        Wasm128Token { _private: () }
     }
 }
 

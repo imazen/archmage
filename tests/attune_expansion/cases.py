@@ -360,6 +360,18 @@ def extra_syntax(arch, enabled):
     }
     for name, (args, error) in rejections.items():
         yield Case(f"reject_{name}", "rejection", f"{attribute(args)} pub fn kernel(x: u32) -> u32 {{ x }}", error)
+    yield Case("reject_underscore_param_shadow", "rejection",
+               f"{attribute('_v3, _v3_t, names(_v3 = __archmage_evil)')} pub fn kernel(_evil: u32) -> u32 {{ 0 }}",
+               "shadows the function")
+    yield Case("reject_reserved_attune_token", "rejection",
+               f"{attribute('_v3_t')} pub fn kernel(__attune_token: u32) -> u32 {{ 0 }}",
+               "shadows the function")
+    yield Case("reject_reserved_attune_proof", "rejection",
+               f"{attribute('dispatch')} pub fn kernel(__attune_proof: u32) -> u32 {{ 0 }}",
+               "shadows the function")
+    yield Case("reject_mixed_arch_traits", "rejection",
+               f"{attribute('wrap')} pub fn kernel<T: archmage::HasX64V2 + archmage::HasNeon>(proof: T, x: u32) -> u32 {{ x }}",
+               "cannot combine token bounds from different architectures")
     yield Case("reject_method_invocation", "unsupported-invocation",
                "pub struct Kernel; pub fn caller(k: Kernel) { archmage::attuned!(k.run()); }", "expected parentheses")
 
@@ -472,6 +484,10 @@ pub trait Apply {{
 """
             yield Case(f"nesting_{frontend}_{spelling}_missing_type", "nesting", source,
                        "requires `_self = Type`")
+    for frontend, options in (("arcane", ""), ("attune", "wrap, ")):
+        yield Case(f"nesting_{frontend}_scalar_impostor", "nesting",
+                   f"pub struct Impostor; impl Impostor {{ #[archmage::{frontend}({options}_self = archmage::ScalarToken)] pub fn bad(&self) -> u32 {{ 0 }} }}",
+                   "mismatched types")
     yield Case("inference_token_alone", "inference",
                f"#[archmage::attune] pub fn caller(proof: {token}, x: u32) -> u32 {{ x }}",
                "attune needs a tier")
