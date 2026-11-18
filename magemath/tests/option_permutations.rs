@@ -1329,4 +1329,121 @@ fn const_generic_specializations_match_runtime_across_new_constraints() {
     for i in 0..4 {
         assert_bits_or_nan(c_sub[i], r_sub[i], "const vs runtime cbrt subnorm");
     }
+
+    // Exp, log1p, and failing-slice const vs runtime checks.
+    const EXP_SMALL_CLAMP: ExpfOptions = ExpfOptions::new().small_exp_range().clamp_out_of_bounds();
+    let e_probe = [-5.0_f32, -0.0, 0.2, f32::NAN];
+    let ce = Expf::<{ EXP_SMALL_CLAMP.bits() }>::exp_array(e_probe).unwrap();
+    let re = EXP_SMALL_CLAMP.runtime().exp_array(e_probe).unwrap();
+    for i in 0..4 {
+        assert_bits_or_nan(ce[i], re[i], "const vs runtime exp small clamp");
+    }
+
+    const LOG1P_SMALL_CLAMP: LogfOptions =
+        LogfOptions::new().small_log1p_range().clamp_out_of_bounds();
+    let l1p_probe = [-2.0_f32, -0.0, 0.1, f32::NAN];
+    let cl1p = Logf::<{ LOG1P_SMALL_CLAMP.bits() }>::log1p_array(l1p_probe).unwrap();
+    let rl1p = LOG1P_SMALL_CLAMP.runtime().log1p_array(l1p_probe).unwrap();
+    for i in 0..4 {
+        assert_bits_or_nan(cl1p[i], rl1p[i], "const vs runtime log1p small clamp");
+    }
+
+    const POW_CHECKED_GAMMA: PowfOptions = PowfOptions::new().gamma_domain();
+    let bad_slice = [0.5_f32, 0.25, -1.0, 0.75, f32::NAN, 0.5, 0.5, 0.5, -2.0];
+    let (mut cs_bad, mut rs_bad) = ([0.0; 9], [0.0; 9]);
+    assert_eq!(
+        Powf::<{ POW_CHECKED_GAMMA.bits() }>::slice(&bad_slice, &mut cs_bad, 2.2).unwrap_err(),
+        POW_CHECKED_GAMMA
+            .runtime()
+            .slice(&bad_slice, &mut rs_bad, 2.2)
+            .unwrap_err()
+    );
+}
+
+#[test]
+fn powf_subnormal_straddling_exponent_intervals_clamp_to_admitted_endpoints() {
+    // Positive-only interval starting in excluded subnormals: only `MIN_POSITIVE` is admitted.
+    // Clamping a subnormal/zero/negative exponent with zero base must evaluate `0^MIN_POSITIVE = 0.0`,
+    // never `0^0 = 1.0`.
+    const POS_OPTS: PowfOptions = PowfOptions::new()
+        .admit_zero_base()
+        .exponent_range(f32::MIN_POSITIVE / 2.0, f32::MIN_POSITIVE)
+        .clamp_out_of_bounds()
+        .caller();
+    const POS_CFG: u128 = POS_OPTS.bits();
+    const POS_HIGHP_CFG: u128 = POS_OPTS.highp().bits();
+    #[cfg(feature = "std")]
+    const POS_HIGHP_STD_CFG: u128 = POS_OPTS.highp().backend_dependent().bits();
+
+    for exp_in in [
+        f32::NEG_INFINITY,
+        -1.0_f32,
+        -0.0,
+        0.0,
+        f32::from_bits(1),
+        f32::MIN_POSITIVE / 2.0,
+    ] {
+        assert_eq!(Powf::<POS_CFG>::scalar(0.0, exp_in).unwrap(), 0.0);
+        assert_eq!(POS_OPTS.runtime().scalar(0.0, exp_in).unwrap(), 0.0);
+        assert_eq!(Powf::<POS_HIGHP_CFG>::scalar(0.0, exp_in).unwrap(), 0.0);
+        assert_eq!(POS_OPTS.highp().runtime().scalar(0.0, exp_in).unwrap(), 0.0);
+        #[cfg(feature = "std")]
+        {
+            assert_eq!(Powf::<POS_HIGHP_STD_CFG>::scalar(0.0, exp_in).unwrap(), 0.0);
+            assert_eq!(
+                POS_OPTS
+                    .highp()
+                    .backend_dependent()
+                    .runtime()
+                    .scalar(0.0, exp_in)
+                    .unwrap(),
+                0.0
+            );
+        }
+
+        let src = [0.0_f32, -0.0, 0.25, 0.0, 0.5, 0.0, 1.0, 0.0, 0.0];
+        let (mut c_dst, mut r_dst) = ([1.0_f32; 9], [1.0_f32; 9]);
+        Powf::<POS_CFG>::slice(&src, &mut c_dst, exp_in).unwrap();
+        POS_OPTS.runtime().slice(&src, &mut r_dst, exp_in).unwrap();
+        assert_eq!(c_dst[0], 0.0);
+        assert_eq!(c_dst[1], 0.0);
+        assert_eq!(c_dst[8], 0.0);
+        assert_eq!(c_dst, r_dst);
+
+        let v4 = f32x4::from_array_t(ScalarToken, [0.0, -0.0, 0.5, 1.0]);
+        let s4 = v4.powf::<POS_CFG>(exp_in).to_array();
+        assert_eq!(s4[0], 0.0);
+        assert_eq!(s4[1], 0.0);
+
+        #[cfg(target_arch = "x86_64")]
+        if let Some(tok) = archmage::X64V3Token::summon() {
+            let v8 = magetypes::simd::generic::f32x8::from_array_t(
+                tok,
+                [0.0, -0.0, 0.25, 0.5, 0.0, 1.0, 2.0, 0.0],
+            );
+            let s8 = v8.powf::<POS_CFG>(exp_in).to_array();
+            assert_eq!(s8[0], 0.0);
+            assert_eq!(s8[1], 0.0);
+            assert_eq!(s8[4], 0.0);
+            assert_eq!(s8[7], 0.0);
+        }
+    }
+
+    // Symmetric negative-only interval ending in excluded negative subnormals:
+    // effective upper bound is `-MIN_POSITIVE`, never `0.0`.
+    const NEG_OPTS: PowfOptions = PowfOptions::new()
+        .exponent_range(-f32::MIN_POSITIVE, -f32::MIN_POSITIVE / 2.0)
+        .clamp_out_of_bounds();
+    const NEG_CFG: u128 = NEG_OPTS.bits();
+    let ref_at_neg_min = Powf::<NEG_CFG>::scalar(4.0, -f32::MIN_POSITIVE).unwrap();
+    for exp_in in [-f32::from_bits(1), -0.0_f32, 0.0, 1.0, f32::INFINITY] {
+        assert_eq!(
+            Powf::<NEG_CFG>::scalar(4.0, exp_in).unwrap().to_bits(),
+            ref_at_neg_min.to_bits()
+        );
+        assert_eq!(
+            NEG_OPTS.runtime().scalar(4.0, exp_in).unwrap().to_bits(),
+            ref_at_neg_min.to_bits()
+        );
+    }
 }

@@ -27,11 +27,26 @@ fn prepare_exponent<const N: usize>(opts: PowfOptions, n: f32) -> Result<Option<
         if n.is_nan() {
             return Ok(None);
         }
-        let (lo, hi) = opts.exponent_bounds().unwrap_or((-f32::MAX, f32::MAX));
-        let mut c = if n < lo {
-            lo
-        } else if n > hi {
-            hi
+        let (raw_lo, raw_hi) = opts.exponent_bounds().unwrap_or((-f32::MAX, f32::MAX));
+        let (eff_lo, eff_hi) = if !opts.admits_subnormals() {
+            let eff_lo = if raw_lo > 0.0 && raw_lo < f32::MIN_POSITIVE {
+                f32::MIN_POSITIVE
+            } else {
+                raw_lo
+            };
+            let eff_hi = if raw_hi < 0.0 && raw_hi > -f32::MIN_POSITIVE {
+                -f32::MIN_POSITIVE
+            } else {
+                raw_hi
+            };
+            (eff_lo, eff_hi)
+        } else {
+            (raw_lo, raw_hi)
+        };
+        let mut c = if n < eff_lo {
+            eff_lo
+        } else if n > eff_hi {
+            eff_hi
         } else {
             n
         };

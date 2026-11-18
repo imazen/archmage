@@ -28,11 +28,12 @@ entry and a hand-written kernel are within 3% of each other.
 
 # 16-lane AVX-512 slice widening and option granularity (`2026-11-17`, Zen 5)
 
-Host `dev` (Ryzen 9 9950X3D, Zen 5, single core pinned to CCD1 core 8), no `-C target-cpu`,
-`magemath` `avx512` enabled (`Execution::Upgrade` selects 16-lane AVX-512 `zmm` loops),
-`n = 30` (`CV = 0.2%–1.4%`), run via `run-heavy --mem 24G`.
+Host `dev` (Ryzen 9 9950X3D, Zen 5, single core pinned to CCD1 core 8), source `d538e9bd06f2`
+(`feat/0.9.32-magemath-profiles`), no `-C target-cpu`, `magemath` `avx512` enabled
+(`Execution::Upgrade` selects 16-lane AVX-512 `zmm` loops), `n = 30` (`CV = 0.2%–1.4%`),
+run via `run-heavy --mem 24G`.
 
-## `slices` (`len = 4096`, `run-heavy` peak-RSS `0.14 GiB`)
+## `slices` (`len = 4096`, inputs uniform in `[0.01, 3.91)`, `run-heavy` peak-RSS `0.14 GiB`)
 
 | function | `array8` per chunk | caller 8-lane `#[attune]` | 16-lane `slice` entry | speedup vs `array8` | speedup vs 8-lane `attune` |
 |---|---|---|---|---|---|
@@ -46,20 +47,25 @@ Host `dev` (Ryzen 9 9950X3D, Zen 5, single core pinned to CCD1 core 8), no `-C t
 taskset -c 8 cargo bench --bench options_granularity -- --cpu-policy=unrestricted
 ```
 
+Sampled benchmark inputs (all strictly valid across every configuration in their group):
+- `log2_4096`: `near_one` (`4096` normals in `[0.75, 1.25)`)
+- `exp2_4096`: `small_sym` (`4096` normals in `[-0.45, 0.45)`)
+- `cbrt_4096` and `powf_4096`: `unit_pos` (`4096` normals in `[0.01, 0.99)`)
+
 ### `log2_4096`
-| configuration | mean ± std | vs `default_normals` | notes |
+| configuration | mean ± std | vs `default_normals` | profile domain / notes |
 |---|---|---|---|
-| `default_normals` (`LogfOptions::new()`) | `492.8 ns ± 1.8 ns` | `1.00x` | positive normal inputs |
-| `admit_zero` (`.admit_zero()`) | `534.3 ns ± 2.9 ns` | `+8.4%` | off-critical-path `±0 -> -inf` blend |
+| `default_normals` (`LogfOptions::new()`) | `492.8 ns ± 1.8 ns` | `1.00x` | checked positive normals (`[MIN_POSITIVE, MAX]`) |
+| `admit_zero` (`.admit_zero()`) | `534.3 ns ± 2.9 ns` | `+8.4%` | adds off-critical-path `±0 -> -inf` blend |
 | `admit_subnormals` (`.admit_subnormals()`) | `647.8 ns ± 3.0 ns` | `+31.5%` | `* 2^23` pre-scale + blend on critical latency path before division + range check |
 | `admit_all_floats` (`.admit_all_floats()`) | `572.2 ns ± 2.9 ns` | `+16.1%` | subnormal scale + IEEE blends (`+inf`, `<0`, `NaN`), infallible (no `any_true()` branch) |
 | `near_one_range` (`.near_one_range()`) | `381.1 ns ± 0.9 ns` | `-22.7%` (`1.29x` faster) | `[0.70710677, 1.4142134]` single-octave zero-reduction (`e = 0`), checked, bit-exact |
 | `near_one_assume` (`.near_one_range().assume_in_bounds()`) | `231.6 ns ± 0.9 ns` | `-53.0%` (`2.13x` faster) | zero-reduction + unchecked |
 
 ### `exp2_4096`
-| configuration | mean ± std | vs `default_finite` | notes |
+| configuration | mean ± std | vs `default_finite` | profile domain / notes |
 |---|---|---|---|
-| `default_finite` (`ExpfOptions::new()`) | `532.5 ns ± 0.8 ns` | `1.00x` | finite inputs, output clamped at `[-126, 128]` |
+| `default_finite` (`ExpfOptions::new()`) | `532.5 ns ± 0.8 ns` | `1.00x` | checked finite inputs, internal `[-126, 128]` output clamp |
 | `range_at_127_5_clamped` (`.input_range(-126.0, 127.5)`) | `667.6 ns ± 1.5 ns` | `+25.4%` (`+64.3%` vs unclamped) | `127.5` upper endpoint retains output clamp so `round_ties_even(127.5) = 128` stays finite |
 | `unclamped_exp2_range` (`.unclamped_exp2_range()`) | `406.4 ns ± 1.9 ns` | `-23.7%` (`1.31x` faster) | `[-126.0, 127.0]`, elides internal `[-126, 128]` clamp |
 | `small_exp2_range` (`.small_exp2_range()`) | `309.3 ns ± 4.6 ns` | `-41.9%` (`1.72x` faster) | `[-0.5, 0.5]` single-octave zero-reduction (`n = 0`), checked, bit-exact (`<= 0.78 ULP`) |
@@ -67,20 +73,20 @@ taskset -c 8 cargo bench --bench options_granularity -- --cpu-policy=unrestricte
 | `small_exp2_assume` (`.small_exp2_range().assume_in_bounds()`) | `191.8 ns ± 5.1 ns` | `-64.0%` (`2.78x` faster) | zero-reduction + unchecked |
 
 ### `cbrt_4096`
-| configuration | mean ± std | vs `default_bounded` | notes |
+| configuration | mean ± std | vs `default_bounded` | profile domain / notes |
 |---|---|---|---|
-| `default_bounded` (`CbrtfOptions::new()`) | `791.0 ns ± 3.2 ns` | `1.00x` | bounded normal inputs (`\|x\| < 1e38`, subnormals flush to `±0.0`) |
-| `strict_normal_range` (`.input_range(0.01, 4.0)`) | `806.8 ns ± 3.4 ns` | `+2.0%` | checked normal sub-interval, elides denorm scale |
+| `default_bounded` (`CbrtfOptions::new()`) | `791.0 ns ± 3.2 ns` | `1.00x` | checked `±0` and normals strictly below `f32::MAX / 3` (rejects nonzero subnormals; elides denorm scale) |
+| `strict_normal_range` (`.input_range(0.01, 4.0)`) | `806.8 ns ± 3.4 ns` | `+2.0%` | checked `[0.01, 4.0]` normal sub-interval, elides denorm scale |
 | `subnormals_assume_in_bounds` (`.admit_subnormals().assume_in_bounds()`) | `1.04 µs ± 2.1 ns` | `+31.5%` (`15%` faster than full) | `* 2^24` / `* 2^-8` subnormal normalization without `>= 1e36` / `±inf` / `NaN` path |
 | `unit_range_subnormals` (`.unit_range()`) | `1.13 µs ± 1.9 ns` | `+42.9%` | checked `[-1.0, 1.0]` including subnormals |
 | `admit_all_floats` (`.admit_all_floats()`) | `1.22 µs ± 3.1 ns` | `+54.2%` | full IEEE `f32` domain |
 
 ### `powf_4096` (`n = 1.0 / 2.4`)
-| configuration | mean ± std | vs `gamma_error_on_oob` | notes |
+| configuration | mean ± std | vs `gamma_error_on_oob` | profile domain / notes |
 |---|---|---|---|
-| `gamma_assume_in_bounds` (`.gamma_domain().assume_in_bounds()`) | `753.5 ns ± 2.4 ns` | `-21.1%` | unchecked `[0.01, 4.0]` |
-| `srgb_encode_domain` (`.srgb_encode_domain()`) | `947.7 ns ± 4.0 ns` | `-0.8%` (`1.53x` faster than unranged) | `[MIN_POSITIVE, 1.0]` with `exp [0.0, 0.99]`; sign-aware 4-corner range elision |
-| `gamma_error_on_oob` (`.gamma_domain()`) | `955.5 ns ± 2.2 ns` | `1.00x` | checked `[0.01, 4.0]`, elides internal `y*log2(x)` clamp |
-| `gamma_clamp_oob` (`.gamma_domain().clamp_out_of_bounds()`) | `1.13 µs ± 2.8 ns` | `+18.3%` | infallible input clamp + `NaN` propagation, still elides internal `y*log2(x)` clamp |
-| `unranged_admit_zero` (`.admit_zero_base()`) | `1.45 µs ± 4.3 ns` | `+51.8%` | unranged positive normals + `±0.0` |
-| `unranged_zero_and_subnormals` (`.admit_zero_base().admit_subnormals()`) | `1.64 µs ± 6.7 ns` | `+71.6%` (`+13.1%` vs zero-only) | adds subnormal base normalization |
+| `gamma_assume_in_bounds` (`.gamma_domain().assume_in_bounds()`) | `753.5 ns ± 2.4 ns` | `-21.1%` | unchecked `[2^-16, 2^16]` + `+0.0` (exp `[0.0, 8.0]`), elides internal `y*log2(x)` clamp |
+| `srgb_encode_domain` (`.srgb_encode_domain()`) | `947.7 ns ± 4.0 ns` | `-0.8%` (`1.53x` faster than unranged) | checked `[MIN_POSITIVE, 1.0]` + `+0.0` (exp `[0.0, 0.99]`); sign-aware 4-corner range elision |
+| `gamma_error_on_oob` (`.gamma_domain()`) | `955.5 ns ± 2.2 ns` | `1.00x` | checked `[2^-16, 2^16]` + `+0.0` (exp `[0.0, 8.0]`), elides internal `y*log2(x)` clamp |
+| `gamma_clamp_oob` (`.gamma_domain().clamp_out_of_bounds()`) | `1.13 µs ± 2.8 ns` | `+18.3%` | infallible input clamp into `[0.0, 2^16]` + `NaN` propagation, still elides internal `y*log2(x)` clamp |
+| `unranged_admit_zero` (`.admit_zero_base()`) | `1.45 µs ± 4.3 ns` | `+51.8%` | checked positive normals + `+0.0` (for `n >= 0`), retains internal `y*log2(x)` clamp |
+| `unranged_zero_and_subnormals` (`.admit_zero_base().admit_subnormals()`) | `1.64 µs ± 6.7 ns` | `+71.6%` (`+13.1%` vs zero-only) | adds subnormal base normalization (`[f32::from_bits(1), MAX]` + `+0.0`) |

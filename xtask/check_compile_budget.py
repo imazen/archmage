@@ -221,6 +221,7 @@ def inspect_rlib_symbols(
     crate_stem: str,
     nm_bin: str,
     forbidden_fragments: tuple[str, ...],
+    required_fragments: tuple[str, ...] = (),
 ) -> tuple[int, list[tuple[str, int]], list[str]]:
     candidates = [
         p
@@ -253,6 +254,7 @@ def inspect_rlib_symbols(
     raw_v0_mangled = 0
     stems: collections.Counter[str] = collections.Counter()
     forbidden: list[str] = []
+    seen_syms: list[str] = []
     for line in proc.stdout.splitlines():
         parts = line.strip().split(None, 2)
         if len(parts) < 3:
@@ -261,6 +263,7 @@ def inspect_rlib_symbols(
         if kind not in ("T", "t", "W", "w"):
             continue
         count += 1
+        seen_syms.append(sym)
         if "::" in sym:
             demangled_seen += 1
         if sym.startswith("_RNv") or sym.startswith("__RNv"):
@@ -269,11 +272,20 @@ def inspect_rlib_symbols(
         for bad in forbidden_fragments:
             if bad in sym:
                 forbidden.append(sym)
-    if count > 0 and (demangled_seen == 0 or raw_v0_mangled > 0):
+    if count == 0:
+        raise RuntimeError(
+            f"{nm_bin} -C recognized 0 text/weak symbols in {rlibs[0]}"
+        )
+    if demangled_seen == 0 or raw_v0_mangled > 0:
         raise RuntimeError(
             f"{nm_bin} -C did not demangle Rust symbols in {rlibs[0]} "
             f"(count={count}, demangled={demangled_seen}, raw_v0={raw_v0_mangled})"
         )
+    for req in required_fragments:
+        if not any(req in s for s in seen_syms):
+            raise RuntimeError(
+                f"expected demangled symbol containing {req!r} in {rlibs[0]}"
+            )
     return count, stems.most_common(10), sorted(set(forbidden))
 
 
@@ -427,8 +439,11 @@ def main() -> int:
             top10: list[tuple[str, int]] = []
             forbidden: list[str] = []
             if profile_dir is not None and sym_limit is not None:
+                req_frags = (
+                    ("run_consumer_pipeline",) if name == "release-consumer" else ()
+                )
                 sym_count, top10, forbidden = inspect_rlib_symbols(
-                    profile_dir, crate_stem, nm_bin, forbidden_frags
+                    profile_dir, crate_stem, nm_bin, forbidden_frags, req_frags
                 )
                 sym_str = f"{sym_count} / {sym_limit}"
                 if sym_count > sym_limit:
