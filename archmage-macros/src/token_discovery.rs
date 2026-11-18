@@ -5,12 +5,22 @@
 
 use std::borrow::Cow;
 
-use syn::{FnArg, GenericParam, Ident, PatType, Signature, Token, Type, TypeParamBound};
+use syn::{
+    FnArg, GenericParam, Ident, PatType, Signature, Token, Type, TypeParamBound, ext::IdentExt as _,
+};
 
 use crate::generated::{
     token_to_arch, token_to_features, token_to_magetypes_namespace, trait_to_arch,
     trait_to_features, trait_to_magetypes_namespace,
 };
+
+/// Cross-architecture width marker traits implemented on non-x86 tokens too.
+/// When paired with an explicit architecture bound (e.g. `HasNeon + Has128BitSimd`),
+/// the explicit bound determines the architecture and feature set; when used alone,
+/// the registry's `0.9.x` x86-64 default applies.
+fn is_cross_arch_width_trait(name: &str) -> bool {
+    name == "Has128BitSimd"
+}
 
 pub(crate) enum TokenTypeInfo {
     /// Concrete token type (e.g., `Avx2Token`)
@@ -27,7 +37,7 @@ pub(crate) fn extract_token_type_info(ty: &Type) -> Option<TokenTypeInfo> {
         Type::Path(type_path) => {
             // Get the last segment of the path (e.g., "Avx2Token" from "archmage::Avx2Token")
             type_path.path.segments.last().map(|seg| {
-                let name = seg.ident.to_string();
+                let name = seg.ident.unraw().to_string();
                 // Check if it's a known concrete token type
                 if token_to_features(&name).is_some() {
                     TokenTypeInfo::Concrete(name)
@@ -66,7 +76,7 @@ pub(crate) fn extract_trait_names_from_bounds(
                     .path
                     .segments
                     .last()
-                    .map(|seg| seg.ident.to_string())
+                    .map(|seg| seg.ident.unraw().to_string())
             } else {
                 None
             }
@@ -86,7 +96,7 @@ pub(crate) fn find_generic_bounds(sig: &Signature, type_name: &str) -> Option<Ve
     let mut traits = Vec::new();
     for param in &sig.generics.params {
         if let GenericParam::Type(type_param) = param
-            && type_param.ident == type_name
+            && type_param.ident.unraw() == type_name
         {
             traits.extend(extract_trait_names_from_bounds(&type_param.bounds));
         }
@@ -97,7 +107,7 @@ pub(crate) fn find_generic_bounds(sig: &Signature, type_name: &str) -> Option<Ve
                 && let Type::Path(type_path) = &pred_type.bounded_ty
                 && type_path.path.segments.len() == 1
                 && let Some(seg) = type_path.path.segments.last()
-                && seg.ident == type_name
+                && seg.ident.unraw() == type_name
             {
                 traits.extend(extract_trait_names_from_bounds(&pred_type.bounds));
             }
@@ -111,12 +121,16 @@ pub(crate) fn find_generic_bounds(sig: &Signature, type_name: &str) -> Option<Ve
 }
 
 /// Return the first pair of trait names with conflicting target architectures,
-/// if any exist in `trait_names`.
+/// if any exist in `trait_names`. Cross-arch width markers (`Has128BitSimd`)
+/// adapt to any explicit architecture bound in the same list.
 pub(crate) fn find_mixed_arch_traits(
     trait_names: &[String],
 ) -> Option<(String, &'static str, String, &'static str)> {
     let mut first: Option<(&str, &'static str)> = None;
     for trait_name in trait_names {
+        if is_cross_arch_width_trait(trait_name) {
+            continue;
+        }
         if let Some(arch) = trait_to_arch(trait_name) {
             match first {
                 Some((prev_name, prev_arch)) if prev_arch != arch => {
@@ -139,11 +153,18 @@ pub(crate) fn traits_to_features(trait_names: &[String]) -> Option<Cow<'static, 
         return None;
     }
 
+    let resolved_arch = traits_to_arch(trait_names);
+
     // Registry lists are unique (tested); only a union that adds features
     // needs owned storage. Preserve first-seen order for generated attributes.
     let mut all_features: Cow<'static, [&'static str]> = Cow::Borrowed(&[]);
 
     for trait_name in trait_names {
+        // Cross-arch width markers only contribute their x86 fallback features
+        // when the resolved architecture is x86_64.
+        if is_cross_arch_width_trait(trait_name) && resolved_arch != Some("x86_64") {
+            continue;
+        }
         if let Some(features) = trait_to_features(trait_name) {
             if all_features.is_empty() {
                 all_features = Cow::Borrowed(features);
@@ -299,8 +320,15 @@ pub(crate) struct TokenParamInfo {
 }
 
 /// Resolve magetypes namespace from a list of trait names.
-/// Returns the first matching namespace found.
+/// Prefers architecture-specific traits before cross-arch width markers.
 pub(crate) fn traits_to_magetypes_namespace(trait_names: &[String]) -> Option<&'static str> {
+    for name in trait_names {
+        if !is_cross_arch_width_trait(name)
+            && let Some(ns) = trait_to_magetypes_namespace(name)
+        {
+            return Some(ns);
+        }
+    }
     for name in trait_names {
         if let Some(ns) = trait_to_magetypes_namespace(name) {
             return Some(ns);
@@ -309,8 +337,16 @@ pub(crate) fn traits_to_magetypes_namespace(trait_names: &[String]) -> Option<&'
     None
 }
 
-/// Given trait bound names, return the first matching target architecture.
+/// Given trait bound names, return the target architecture.
+/// Prefers architecture-specific traits before cross-arch width markers.
 pub(crate) fn traits_to_arch(trait_names: &[String]) -> Option<&'static str> {
+    for name in trait_names {
+        if !is_cross_arch_width_trait(name)
+            && let Some(arch) = trait_to_arch(name)
+        {
+            return Some(arch);
+        }
+    }
     for name in trait_names {
         if let Some(arch) = trait_to_arch(name) {
             return Some(arch);
@@ -379,18 +415,23 @@ pub(crate) fn find_token_param(sig: &Signature) -> Option<TokenParamInfo> {
                     };
 
                     if let Some(features) = features {
-                        // Extract parameter name (or synthesize one for wildcard `_`)
-                        let ident = match pat.as_ref() {
-                            syn::Pat::Ident(pat_ident) => Some(pat_ident.ident.clone()),
-                            syn::Pat::Wild(w) => {
-                                Some(Ident::new("__archmage_token", w.underscore_token.span))
-                            }
-                            _ => None,
+                        // Extract parameter name (or synthesize one for wildcard `_`).
+                        // `ref token` adds a reference layer on the binding itself.
+                        let (ident, pat_ref) = match pat.as_ref() {
+                            syn::Pat::Ident(pat_ident) => (
+                                Some(pat_ident.ident.clone()),
+                                usize::from(pat_ident.by_ref.is_some()),
+                            ),
+                            syn::Pat::Wild(w) => (
+                                Some(Ident::new("__archmage_token", w.underscore_token.span)),
+                                0,
+                            ),
+                            _ => (None, 0),
                         };
                         if let Some(ident) = ident {
                             return Some(TokenParamInfo {
                                 ident,
-                                ref_depth,
+                                ref_depth: ref_depth + pat_ref,
                                 features,
                                 target_arch: arch,
                                 token_type_name: token_name,

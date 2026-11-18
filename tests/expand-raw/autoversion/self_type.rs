@@ -83,20 +83,13 @@ impl P {
         unsafe { __simd_inner_apply_neon(self, __archmage_token, x) }
     }
     #[cfg(target_arch = "wasm32")]
+    #[target_feature(enable = "simd128")]
+    #[inline]
     #[allow(dead_code)]
-    #[inline(always)]
-    fn apply_wasm128(&self, __archmage_token: archmage::Wasm128Token, x: f32) -> f32 {
-        #[target_feature(enable = "simd128")]
-        #[inline]
-        fn __simd_inner_apply_wasm128(
-            _self: &P,
-            _token: archmage::Wasm128Token,
-            x: f32,
-        ) -> f32 {
-            x * _self.f
-        }
+    fn apply_wasm128(&self, _token: archmage::Wasm128Token, x: f32) -> f32 {
+        let _self: &P = self;
         let _: () = <archmage::Wasm128Token>::__ARCHMAGE_ASSERT_TIER_1E0DF26B;
-        __simd_inner_apply_wasm128(self, __archmage_token, x)
+        x * _self.f
     }
     #[allow(dead_code)]
     fn apply_scalar(&self, _token: archmage::ScalarToken, x: f32) -> f32 {

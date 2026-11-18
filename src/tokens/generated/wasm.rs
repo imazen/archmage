@@ -53,12 +53,16 @@ impl Wasm128Token {
     /// Construct a WASM SIMD128 proof from the caller's statically proven
     /// feature context.
     ///
-    /// On WASM, this requires the tier's `target_feature`s to be enabled at
-    /// compile time (where WebAssembly module validation guarantees them). In
+    /// On WASM, safe construction requires compiling `archmage` with this
+    /// tier's `target_feature`s enabled (`-Ctarget-feature=+simd128`, plus
+    /// `+relaxed-simd` for [`Wasm128RelaxedToken`](crate::Wasm128RelaxedToken)).
+    /// When compiled with those features enabled, `from_context()` compiles to
+    /// a zero-cost ZST value (and any retained SIMD/relaxed-SIMD instructions
+    /// in the module are validated by the WebAssembly engine at load time). In
     /// builds compiled without those target features ([`SimdToken::summon`](crate::SimdToken::summon)
     /// returns `None`), calling `from_context()` panics at runtime rather than
-    /// fabricating an unvalidated proof or emitting SIMD opcodes into dead
-    /// branches of unoptimized builds.
+    /// returning an unbacked proof or emitting SIMD opcodes into untaken debug
+    /// branches.
     ///
     /// No runtime detection happens here, so this also bypasses
     /// process-wide token disabling (including `testable_dispatch`):
@@ -185,12 +189,16 @@ impl Wasm128RelaxedToken {
     /// Construct a WASM Relaxed SIMD proof from the caller's statically proven
     /// feature context.
     ///
-    /// On WASM, this requires the tier's `target_feature`s to be enabled at
-    /// compile time (where WebAssembly module validation guarantees them). In
+    /// On WASM, safe construction requires compiling `archmage` with this
+    /// tier's `target_feature`s enabled (`-Ctarget-feature=+simd128`, plus
+    /// `+relaxed-simd` for [`Wasm128RelaxedToken`](crate::Wasm128RelaxedToken)).
+    /// When compiled with those features enabled, `from_context()` compiles to
+    /// a zero-cost ZST value (and any retained SIMD/relaxed-SIMD instructions
+    /// in the module are validated by the WebAssembly engine at load time). In
     /// builds compiled without those target features ([`SimdToken::summon`](crate::SimdToken::summon)
     /// returns `None`), calling `from_context()` panics at runtime rather than
-    /// fabricating an unvalidated proof or emitting SIMD opcodes into dead
-    /// branches of unoptimized builds.
+    /// returning an unbacked proof or emitting SIMD opcodes into untaken debug
+    /// branches.
     ///
     /// No runtime detection happens here, so this also bypasses
     /// process-wide token disabling (including `testable_dispatch`):

@@ -92,6 +92,10 @@ pub(crate) fn expand(
         return syn::Error::new_spanned(&input_fn.sig, msg).to_compile_error();
     }
 
+    if let Some(err) = mixed_arch_error(&input_fn.sig, args.self_type.as_ref(), macro_name) {
+        return err;
+    }
+
     // Find the token parameter, its features, target arch, and token type name
     let mut from_self_receiver = false;
     let mut receiver_ref_depth = 0usize;
@@ -116,8 +120,7 @@ pub(crate) fn expand(
         receiver_sig.inputs.push(syn::parse_quote!(_self: #self_ty));
         let found = find_token_param(&receiver_sig)?;
         from_self_receiver = true;
-        receiver_ref_depth =
-            usize::from(!matches!(receiver.kind, syn::ReceiverKind::Value)) + found.ref_depth;
+        receiver_ref_depth = receiver_deref_depth(receiver) + found.ref_depth;
         Some(found)
     }) {
         Some(result) => result,
@@ -173,19 +176,15 @@ pub(crate) fn expand(
         let mut sig = input_fn.sig.clone();
         rename_non_ident_params(&mut sig);
         crate::common::rename_underscore_params(&mut sig);
+        strip_forwarding_mutability(&mut sig);
         sig
     };
-    let wrapper_token_ident = if from_self_receiver {
-        format_ident!("self")
+    let (wrapper_token_ident, wrapper_ref_depth) = if from_self_receiver {
+        (format_ident!("self"), receiver_ref_depth)
+    } else if let Some(info) = find_token_param(&wrapper_sig) {
+        (info.ident, info.ref_depth)
     } else {
-        find_token_param(&wrapper_sig)
-            .map(|info| info.ident)
-            .unwrap_or_else(|| _token_ident.clone())
-    };
-    let wrapper_ref_depth = if from_self_receiver {
-        receiver_ref_depth
-    } else {
-        ref_depth
+        (_token_ident.clone(), ref_depth)
     };
     if let Some(ident) = rename_wildcard_token(&mut input_fn.sig) {
         _token_ident = ident;
@@ -201,6 +200,7 @@ pub(crate) fn expand(
             tier_suffix,
             target_arch: tier.target_arch,
             token_ident: _token_ident.clone(),
+            token_ref_depth: ref_depth,
             has_token: true,
             derive_token: false,
         };
@@ -241,13 +241,19 @@ pub(crate) fn expand(
     let token_assertion =
         gen_token_assertion(&token_type_name, &token_type, args.suppress_const_test);
 
-    // Scalar has no instruction-set boundary. Preserve its signature and body
-    // without emitting the invalid #[target_feature(enable = "")] — except when
-    // `_self = Type` is used, where nested boundary emission enforces that the
-    // receiver actually has `Type` and performs `Self` substitution.
-    if features_csv.is_empty() && args.self_type.is_none() {
+    // Scalar has no instruction-set boundary. Keep it directly in `impl`/item
+    // scope (even when `_self = Type` is given), preserving outer `impl<T>`
+    // generics, receiver lifetime elision, `const`/`async`, and `Self` while
+    // binding `_self` with an explicit type annotation to enforce `Self == Type`.
+    if features_csv.is_empty() {
+        let self_binding = prepare_in_scope_self(&mut input_fn, args.self_type.as_ref());
+        let (assert_ident, assert_depth) = if from_self_receiver {
+            (format_ident!("_self"), receiver_ref_depth)
+        } else {
+            (_token_ident, ref_depth)
+        };
         let direct_tier_trait_assertion =
-            gen_tier_trait_assertion(&tier_traits, &_token_ident, ref_depth);
+            gen_tier_trait_assertion(&tier_traits, &assert_ident, assert_depth);
         mark_emitted_fn_header(&mut input_fn.vis, &mut input_fn.sig);
         let vis = &input_fn.vis;
         let sig = &input_fn.sig;
@@ -256,7 +262,7 @@ pub(crate) fn expand(
         let cfg = gen_cfg_guard(None, args.shared.cfg_feature.as_deref());
         let body = braced_body(
             &input_fn.brace_token,
-            quote! { #token_assertion #direct_tier_trait_assertion #body },
+            quote! { #self_binding #token_assertion #direct_tier_trait_assertion #body },
         );
         return quote! { #cfg #(#attrs)* #inline_attr #vis #sig #body };
     }
@@ -266,18 +272,24 @@ pub(crate) fn expand(
         vec![parse_quote!(#[target_feature(enable = #features_csv)])]
     };
 
-    // On wasm32, #[target_feature(enable = "simd128")] functions are safe (Rust 1.54+).
-    // The wasm validation model guarantees unsupported instructions trap deterministically,
-    // so there's no UB from feature mismatch. Skip the wrapper when `_self = Type` is absent.
-    if target_arch == Some("wasm32") && args.self_type.is_none() {
+    // On wasm32, #[target_feature(enable = "simd128")] is safe even on trait
+    // methods, so keep single-function emission in `impl`/item scope and bind
+    // `_self` with a type check when `_self = Type` is present.
+    if target_arch == Some("wasm32") {
+        let self_binding = prepare_in_scope_self(&mut input_fn, args.self_type.as_ref());
+        let (assert_ident, assert_depth) = if from_self_receiver {
+            (format_ident!("_self"), receiver_ref_depth)
+        } else {
+            (_token_ident, ref_depth)
+        };
         let direct_tier_trait_assertion =
-            gen_tier_trait_assertion(&tier_traits, &_token_ident, ref_depth);
+            gen_tier_trait_assertion(&tier_traits, &assert_ident, assert_depth);
         return arcane_impl_wasm_safe(
             input_fn,
             &args,
             target_feature_attrs,
             inline_attr,
-            quote! { #token_assertion #direct_tier_trait_assertion },
+            quote! { #self_binding #token_assertion #direct_tier_trait_assertion },
         );
     }
 
@@ -311,28 +323,49 @@ pub(crate) fn expand(
     emit_boundary(input_fn, &args, parts)
 }
 
-/// Reject a parameter named like the generated callee, so nothing a caller
+fn prepare_in_scope_self(input_fn: &mut LightFn, self_type: Option<&Type>) -> TokenStream {
+    let Some(self_ty) = self_type else {
+        return quote! {};
+    };
+    let Some(FnArg::Receiver(receiver)) = input_fn.sig.inputs.first_mut() else {
+        return quote! {};
+    };
+    let binding = inline_self_binding(receiver, self_ty);
+    receiver.mutability = None;
+    input_fn.body =
+        replace_self_value_in_tokens(std::mem::take(&mut input_fn.body), &format_ident!("_self"));
+    binding
+}
+
+/// Reject any parameter binding (including `@` subpatterns, destructuring, and
+/// `r#` raw identifiers) named like the generated callee, so nothing a caller
 /// writes can stand between the wrapper's `unsafe` call and that function.
 pub(crate) fn reserved_param_error(
     sig: &syn::Signature,
     callee: &str,
     macro_name: &str,
 ) -> Option<TokenStream> {
+    use syn::ext::IdentExt as _;
+    let target = callee.strip_prefix("r#").unwrap_or(callee);
     sig.inputs.iter().find_map(|arg| match arg {
-        FnArg::Typed(pat_type) => match pat_type.pat.as_ref() {
-            syn::Pat::Ident(pat) if pat.ident == callee => Some(
-                syn::Error::new_spanned(
-                    &pat.ident,
-                    format!(
-                        "parameter `{callee}` shadows the function #[{macro_name}] generates for \
-                         `{}` and would receive its `unsafe` call; rename the parameter",
-                        sig.ident
-                    ),
-                )
-                .to_compile_error(),
-            ),
-            _ => None,
-        },
+        FnArg::Typed(pat_type) => {
+            let mut bound = Vec::new();
+            collect_pat_idents(&pat_type.pat, &mut bound);
+            bound
+                .into_iter()
+                .find(|ident| ident.unraw() == target)
+                .map(|ident| {
+                    syn::Error::new_spanned(
+                        ident,
+                        format!(
+                            "parameter `{target}` shadows the function #[{macro_name}] generates for \
+                             `{}` and would receive its `unsafe` call; rename the parameter",
+                            sig.ident
+                        ),
+                    )
+                    .to_compile_error()
+                })
+        }
         FnArg::Receiver(_) => None,
     })
 }
@@ -446,6 +479,11 @@ fn emit_boundary(input: LightFn, options: &BoundaryOptions, parts: BoundaryParts
             },
         })
         .collect();
+    let (override_recv_lt, inner_generics_syn, resolved_output_syn) = if options.nested {
+        resolve_nested_receiver_lifetime(sig)
+    } else {
+        (None, generics.clone(), sig.output.clone())
+    };
     let params = if options.nested {
         let params: Vec<_> = sig
             .inputs
@@ -456,7 +494,8 @@ fn emit_boundary(input: LightFn, options: &BoundaryOptions, parts: BoundaryParts
                         .self_type
                         .as_ref()
                         .expect("nested receiver validated before emission");
-                    nested_self_param(receiver, ty).to_token_stream()
+                    nested_self_param_with_lifetime(receiver, ty, override_recv_lt.as_ref())
+                        .to_token_stream()
                 }
                 FnArg::Typed(param) => options.self_type.as_ref().map_or_else(
                     || quote!(#param),
@@ -468,12 +507,14 @@ fn emit_boundary(input: LightFn, options: &BoundaryOptions, parts: BoundaryParts
     } else {
         sig.inputs.to_token_stream()
     };
-    let mut output = sig.output.to_token_stream();
-    let mut where_clause = generics.where_clause.to_token_stream();
+    let mut inner_generics = inner_generics_syn.to_token_stream();
+    let mut output = resolved_output_syn.to_token_stream();
+    let mut where_clause = inner_generics_syn.where_clause.to_token_stream();
     let mut body = input.body;
     if options.nested
         && let Some(ty) = &options.self_type
     {
+        inner_generics = replace_self_in_tokens(inner_generics, ty);
         output = replace_self_in_tokens(output, ty);
         where_clause = replace_self_in_tokens(where_clause, ty);
         body =
@@ -503,7 +544,7 @@ fn emit_boundary(input: LightFn, options: &BoundaryOptions, parts: BoundaryParts
     let body = braced_body(&input.brace_token, body);
     let inner = quote! {
         #before #(#target_feature_attrs)* #inline_attr #after
-        #unsafety fn #name #generics (#params) #output #where_clause #body
+        #unsafety fn #name #inner_generics (#params) #output #where_clause #body
     };
     let proof_call = if safe_callee && matches!(unsafety, syn::Safety::Default) {
         call
@@ -534,6 +575,147 @@ fn emit_boundary(input: LightFn, options: &BoundaryOptions, parts: BoundaryParts
 pub(crate) fn proof_call(call: TokenStream) -> TokenStream {
     // SAFETY: the enclosing proof entry establishes the callee's feature set.
     quote!(unsafe { #call })
+}
+
+/// Preserve Rust's receiver lifetime elision rule when lowering `&self` / `&mut self`
+/// into an ordinary `_self: &Type` parameter on a nested inner function.
+///
+/// Only activates when a reference receiver coexists with at least one other
+/// reference-bearing parameter AND an elided lifetime in the return type — the
+/// exact configuration where Rust's single-input function lifetime elision no
+/// longer assigns `_self`'s lifetime to the return type.
+fn resolve_nested_receiver_lifetime(
+    sig: &syn::Signature,
+) -> (Option<syn::Lifetime>, syn::Generics, syn::ReturnType) {
+    let mut generics = sig.generics.clone();
+    let mut output = sig.output.clone();
+    let Some(FnArg::Receiver(recv)) = sig.inputs.first() else {
+        return (None, generics, output);
+    };
+    let syn::ReceiverKind::Reference(_, recv_lt, _) = &recv.kind else {
+        return (None, generics, output);
+    };
+    if !output_has_elided_lifetime(&output) {
+        return (None, generics, output);
+    }
+    let other_input_has_ref = sig.inputs.iter().skip(1).any(arg_has_reference_or_lifetime);
+    if !other_input_has_ref {
+        return (None, generics, output);
+    }
+    let (override_lt, target_lt) = match recv_lt {
+        Some(lt) => (None, lt.clone()),
+        None => {
+            let lt = syn::Lifetime::new("'__archmage_self", proc_macro2::Span::call_site());
+            generics.params.insert(
+                0,
+                syn::GenericParam::Lifetime(syn::LifetimeParam::new(lt.clone())),
+            );
+            (Some(lt.clone()), lt)
+        }
+    };
+    fill_elided_output_lifetimes(&mut output, &target_lt);
+    (override_lt, generics, output)
+}
+
+fn output_has_elided_lifetime(output: &syn::ReturnType) -> bool {
+    match output {
+        syn::ReturnType::Default => false,
+        syn::ReturnType::Type(_, ty) => type_has_elided_lifetime(ty),
+    }
+}
+
+fn arg_has_reference_or_lifetime(arg: &FnArg) -> bool {
+    match arg {
+        FnArg::Receiver(r) => matches!(r.kind, syn::ReceiverKind::Reference(..)),
+        FnArg::Typed(pt) => type_has_reference_or_lifetime(&pt.ty),
+    }
+}
+
+fn type_has_reference_or_lifetime(ty: &Type) -> bool {
+    match ty {
+        Type::Reference(_) => true,
+        Type::Paren(p) => type_has_reference_or_lifetime(&p.elem),
+        Type::Group(g) => type_has_reference_or_lifetime(&g.elem),
+        Type::Tuple(t) => t.elems.iter().any(type_has_reference_or_lifetime),
+        Type::Slice(s) => type_has_reference_or_lifetime(&s.elem),
+        Type::Array(a) => type_has_reference_or_lifetime(&a.elem),
+        Type::Path(tp) => tp.path.segments.iter().any(|seg| match &seg.arguments {
+            syn::PathArguments::AngleBracketed(ab) => ab.args.iter().any(|ga| match ga {
+                syn::GenericArgument::Lifetime(_) => true,
+                syn::GenericArgument::Type(inner) => type_has_reference_or_lifetime(inner),
+                _ => false,
+            }),
+            _ => false,
+        }),
+        _ => false,
+    }
+}
+
+fn type_has_elided_lifetime(ty: &Type) -> bool {
+    match ty {
+        Type::Reference(r) => {
+            r.lifetime.as_ref().is_none_or(|lt| lt.ident == "_")
+                || type_has_elided_lifetime(&r.elem)
+        }
+        Type::Paren(p) => type_has_elided_lifetime(&p.elem),
+        Type::Group(g) => type_has_elided_lifetime(&g.elem),
+        Type::Tuple(t) => t.elems.iter().any(type_has_elided_lifetime),
+        Type::Slice(s) => type_has_elided_lifetime(&s.elem),
+        Type::Array(a) => type_has_elided_lifetime(&a.elem),
+        Type::Path(tp) => tp.path.segments.iter().any(|seg| match &seg.arguments {
+            syn::PathArguments::AngleBracketed(ab) => ab.args.iter().any(|ga| match ga {
+                syn::GenericArgument::Lifetime(lt) => lt.ident == "_",
+                syn::GenericArgument::Type(inner) => type_has_elided_lifetime(inner),
+                _ => false,
+            }),
+            _ => false,
+        }),
+        _ => false,
+    }
+}
+
+fn fill_elided_output_lifetimes(output: &mut syn::ReturnType, target: &syn::Lifetime) {
+    if let syn::ReturnType::Type(_, ty) = output {
+        fill_elided_type_lifetimes(ty, target);
+    }
+}
+
+fn fill_elided_type_lifetimes(ty: &mut Type, target: &syn::Lifetime) {
+    match ty {
+        Type::Reference(r) => {
+            if r.lifetime.as_ref().is_none_or(|lt| lt.ident == "_") {
+                r.lifetime = Some(target.clone());
+            }
+            fill_elided_type_lifetimes(&mut r.elem, target);
+        }
+        Type::Paren(p) => fill_elided_type_lifetimes(&mut p.elem, target),
+        Type::Group(g) => fill_elided_type_lifetimes(&mut g.elem, target),
+        Type::Tuple(t) => {
+            for elem in &mut t.elems {
+                fill_elided_type_lifetimes(elem, target);
+            }
+        }
+        Type::Slice(s) => fill_elided_type_lifetimes(&mut s.elem, target),
+        Type::Array(a) => fill_elided_type_lifetimes(&mut a.elem, target),
+        Type::Path(tp) => {
+            for seg in &mut tp.path.segments {
+                if let syn::PathArguments::AngleBracketed(ab) = &mut seg.arguments {
+                    for ga in &mut ab.args {
+                        match ga {
+                            syn::GenericArgument::Lifetime(lt) if lt.ident == "_" => {
+                                *lt = target.clone();
+                            }
+                            syn::GenericArgument::Type(inner) => {
+                                fill_elided_type_lifetimes(inner, target);
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+            }
+        }
+        _ => {}
+    }
 }
 
 #[cfg(test)]

@@ -488,6 +488,72 @@ pub trait Apply {{
         yield Case(f"nesting_{frontend}_scalar_impostor", "nesting",
                    f"pub struct Impostor; impl Impostor {{ #[archmage::{frontend}({options}_self = archmage::ScalarToken)] pub fn bad(&self) -> u32 {{ 0 }} }}",
                    "mismatched types")
+    yield Case(
+        "nesting_wasm_or_scalar_generic_and_elided_lifetime",
+        "nesting",
+        f"""
+pub struct GenericKernel<T> {{ tag: &'static str, item: T }}
+impl<T: Copy> GenericKernel<T> {{
+    #[archmage::arcane(_self = GenericKernel<T>)]
+    pub const fn pick_scalar(&self, _t: archmage::ScalarToken, _other: &str) -> &str {{ self.tag }}
+}}
+pub struct NativeLifetime {{ tag: &'static str }}
+impl NativeLifetime {{
+    #[archmage::arcane(_self = NativeLifetime)]
+    pub fn pick_native(&self, _t: {token}, _other: &str) -> &str {{ self.tag }}
+    #[archmage::arcane(_self = NativeLifetime)]
+    pub fn consume_mut(mut self, _t: {token}, repl: &'static str) -> &'static str {{ self.tag = repl; self.tag }}
+}}
+""",
+    )
+    if arch == "wasm32":
+        yield Case(
+            "nesting_wasm_generic_and_elided_lifetime",
+            "nesting",
+            """
+pub struct WasmGeneric<T> { tag: &'static str, item: T }
+pub trait WasmApply {
+    fn pick(&self, _t: archmage::Wasm128Token, _other: &str) -> &str;
+    fn replace(self, _t: archmage::Wasm128Token) -> Self;
+}
+impl<T: Copy> WasmApply for WasmGeneric<T> {
+    #[archmage::arcane(_self = WasmGeneric<T>)]
+    fn pick(&self, _t: archmage::Wasm128Token, _other: &str) -> &str { self.tag }
+    #[archmage::arcane(_self = WasmGeneric<T>)]
+    fn replace(mut self, _t: archmage::Wasm128Token) -> Self { self.tag = "ok"; self }
+}
+""",
+        )
+    yield Case(
+        "attune_reserved_output_token",
+        "rejection",
+        "#[archmage::attune(make(_v3, _v3_t), names(_v3 = __attune_token))] pub fn f(x: u32) -> u32 { x }",
+        "collides with #[attune]'s internal proof binding",
+    )
+    yield Case(
+        "attune_reserved_output_proof",
+        "rejection",
+        "#[archmage::attune(make(_v3_t, dispatch), names(_v3_t = __attune_proof))] pub fn f(x: u32) -> u32 { x }",
+        "collides with #[attune]'s internal proof binding",
+    )
+    yield Case(
+        "attune_raw_ident_shadow",
+        "rejection",
+        "#[archmage::attune(make(_v1, _v1_t), names(_v1 = victim_v1))] pub fn victim(r#victim_v1: u32) -> u32 { r#victim_v1 }",
+        "shadows the function",
+    )
+    yield Case(
+        "attune_subpat_hygienic",
+        "signature",
+        f"#[archmage::attune(make(_{native}, _{native}_t), names(_{native} = victim_{native}))] pub fn victim(_outer @ victim_{native}: u32) -> u32 {{ victim_{native} }}",
+        present=("__archmage_arg_0",),
+    )
+    yield Case(
+        "arcane_subpat_shadow",
+        "rejection" if arch in ("x86_64", "aarch64") else "signature",
+        f"#[archmage::arcane] pub fn victim(_t: {token}, _outer @ __arcane_victim: u32) -> u32 {{ __arcane_victim }}",
+        "shadows the function" if arch in ("x86_64", "aarch64") else None,
+    )
     yield Case("inference_token_alone", "inference",
                f"#[archmage::attune] pub fn caller(proof: {token}, x: u32) -> u32 {{ x }}",
                "attune needs a tier")

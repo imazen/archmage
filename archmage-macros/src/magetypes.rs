@@ -108,6 +108,7 @@ pub(crate) fn magetypes_impl(
                 tier_suffix: tier.suffix,
                 target_arch: tier.target_arch,
                 token_ident: quote::format_ident!("_"),
+                token_ref_depth: 0,
                 has_token: false,
                 derive_token: tokenless_rite && tier.target_arch.is_none(),
             };

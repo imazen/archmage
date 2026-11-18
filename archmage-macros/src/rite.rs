@@ -183,6 +183,9 @@ pub(crate) fn rite_single_impl(mut input_fn: LightFn, args: RiteArgs) -> TokenSt
         FeatureContext::from_tier_token(tier_token)
             .expect("tier_to_canonical_token returned invalid token name")
     } else {
+        if let Some(err) = mixed_arch_error(&input_fn.sig, None, "rite") {
+            return err;
+        }
         // Only wildcard proof parameters need names for assertions and calls.
         rename_wildcard_token(&mut input_fn.sig);
         match find_token_param(&input_fn.sig) {

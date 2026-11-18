@@ -354,6 +354,7 @@ pub(crate) fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> 
             tier_suffix: tier.suffix,
             target_arch: tier.target_arch,
             token_ident,
+            token_ref_depth: 0,
             has_token,
             derive_token: false,
         };

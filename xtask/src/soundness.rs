@@ -180,7 +180,6 @@ pub struct Scanner<'r> {
     tf_re: Regex,
     quoted_re: Regex,
     fn_re: Regex,
-    token_name_re: Regex,
     shape_x86_re: Regex,
     shape_wasm_re: Regex,
     shape_arm_re: Regex,
@@ -190,7 +189,6 @@ pub struct Scanner<'r> {
 impl<'r> Scanner<'r> {
     pub fn new(reg: &'r Registry) -> Result<Self> {
         let db = crate::load_intrinsic_database()?;
-        let token_names = reg.all_token_names();
         Ok(Scanner {
             reg,
             db,
@@ -205,9 +203,7 @@ impl<'r> Scanner<'r> {
             .expect("impl regex"),
             tf_re: Regex::new(r"#\[target_feature\(([^)]*)\)\]").expect("target_feature regex"),
             quoted_re: Regex::new(r#""([^"]*)""#).expect("quoted regex"),
-            fn_re: Regex::new(r"\bfn\s+[A-Za-z_]\w*").expect("fn regex"),
-            token_name_re: Regex::new(&format!(r"\b({})\b", token_names.join("|")))
-                .expect("token name regex"),
+            fn_re: Regex::new(r"\bfn\s+(?:r#)?[A-Za-z_]\w*").expect("fn regex"),
             shape_x86_re: Regex::new(r"^_(?:_)?mm\w*$").expect("x86 shape regex"),
             shape_wasm_re: Regex::new(r"^(?:[iuf](?:8x16|16x8|32x4|64x2)|v128)_[a-z0-9_]+$")
                 .expect("wasm shape"),
@@ -401,29 +397,20 @@ impl<'r> Scanner<'r> {
             });
         }
 
-        // (3) fn signatures mentioning token types (parameters or generics).
+        // (3) fn signatures taking inhabited token parameters (or SIMD vector<Token>).
+        // Parsed via `syn::Signature` so return types, callbacks (`Fn() -> Token`),
+        // associated types (`Iterator<Item = Token>`), `Option<Token>`, and const
+        // expressions (`[u8; 1 << 2]`) cannot spoof a feature proof.
         for m in self.fn_re.find_iter(text) {
-            let sig_start = m.end();
-            let Some((sig_end, has_body)) = find_signature_end(text, sig_start) else {
+            let Some((sig, open)) = parse_fn_signature_from(text, m.start()) else {
                 continue;
             };
-            if !has_body {
-                continue;
-            }
-            let signature = strip_return_type(&text[sig_start..sig_end]);
             let mut features: HashSet<String> = HashSet::new();
             let mut names: Vec<&str> = Vec::new();
-            for cap in self.token_name_re.captures_iter(&signature) {
-                let name = cap.get(1).unwrap().as_str();
-                if let Some(token) = self.reg.find_token(name) {
-                    features.extend(token.features.iter().cloned());
-                    names.push(&token.name);
-                }
-            }
+            collect_signature_token_proofs(self.reg, &sig, &mut features, &mut names);
             if features.is_empty() {
                 continue;
             }
-            let open = sig_end; // index of `{`
             let Some(close) = find_matching_brace(text, open) else {
                 continue;
             };
@@ -993,90 +980,192 @@ fn find_matching_brace(text: &str, open: usize) -> Option<usize> {
     None
 }
 
-/// Blank out the top-level `-> ReturnType` segment of a `fn` signature while
-/// preserving its generics, parameter list, and any trailing `where` clause.
-///
-/// Without this, a function returning a token (`fn bad() -> Option<X64V4Token>`)
-/// would appear to be gated by that token's feature set.
-fn strip_return_type(sig: &str) -> std::borrow::Cow<'_, str> {
-    let bytes = sig.as_bytes();
-    let mut i = 0usize;
-    let mut paren = 0i32;
-    let mut bracket = 0i32;
-    let mut angle = 0i32;
-    let mut seen_params = false;
-    let mut ret_start: Option<usize> = None;
-    let mut ret_end = bytes.len();
-
-    while i < bytes.len() {
-        if i + 1 < bytes.len() && bytes[i] == b'-' && bytes[i + 1] == b'>' {
-            if seen_params && paren == 0 && bracket == 0 && angle == 0 && ret_start.is_none() {
-                ret_start = Some(i);
-            }
-            i += 2;
-            continue;
-        }
-        match bytes[i] {
-            b'(' => {
-                paren += 1;
-                seen_params = true;
-            }
-            b')' => paren = (paren - 1).max(0),
-            b'[' => bracket += 1,
-            b']' => bracket = (bracket - 1).max(0),
-            b'<' => angle += 1,
-            b'>' => angle = (angle - 1).max(0),
-            b'w' if ret_start.is_some()
-                && paren == 0
-                && bracket == 0
-                && angle == 0
-                && bytes[i..].starts_with(b"where")
-                && (i == 0 || !bytes[i - 1].is_ascii_alphanumeric() && bytes[i - 1] != b'_')
-                && (i + 5 == bytes.len()
-                    || !bytes[i + 5].is_ascii_alphanumeric() && bytes[i + 5] != b'_') =>
-            {
-                ret_end = i;
-                break;
-            }
-            _ => {}
-        }
-        i += 1;
-    }
-
-    let Some(start) = ret_start else {
-        return std::borrow::Cow::Borrowed(sig);
-    };
-    let mut owned = bytes.to_vec();
-    for b in &mut owned[start..ret_end] {
-        if *b != b'\n' {
-            *b = b' ';
-        }
-    }
-    std::borrow::Cow::Owned(String::from_utf8(owned).expect("ASCII spaces preserve UTF-8"))
-}
-
-/// Scan forward from a fn name to the end of its signature. Returns
-/// `(index, has_body)` where index points at the body `{` or the trailing
-/// `;` of a bodyless declaration. Bracket depth is tracked so the `;` in
-/// array types like `&[f32; 8]` doesn't terminate the signature early.
-fn find_signature_end(text: &str, from: usize) -> Option<(usize, bool)> {
+/// Parse a `syn::Signature` starting at `fn_start` (`fn name...`) up to its
+/// body `{`, skipping const-expression brace blocks (`Foo<{ 1 + 2 }>`) and
+/// returning `None` for bodyless `;` declarations.
+fn parse_fn_signature_from(text: &str, fn_start: usize) -> Option<(syn::Signature, usize)> {
     let bytes = text.as_bytes();
-    let mut i = from;
+    let mut i = fn_start;
+    let mut paren_depth = 0i32;
     let mut bracket_depth = 0i32;
-    // Hard cap: no real signature in this codebase approaches this length;
-    // prevents quadratic blowup on malformed input.
-    let cap = (from + 4096).min(bytes.len());
+    let cap = (fn_start + 4096).min(bytes.len());
     while i < cap {
         match bytes[i] {
-            b'[' | b'(' => bracket_depth += 1,
-            b']' | b')' => bracket_depth -= 1,
-            b'{' => return Some((i, true)),
-            b';' if bracket_depth == 0 => return Some((i, false)),
+            b'(' => paren_depth += 1,
+            b')' => paren_depth = (paren_depth - 1).max(0),
+            b'[' => bracket_depth += 1,
+            b']' => bracket_depth = (bracket_depth - 1).max(0),
+            b';' if paren_depth == 0 && bracket_depth == 0 => return None,
+            b'{' if paren_depth == 0 && bracket_depth == 0 => {
+                if let Ok(sig) = syn::parse_str::<syn::Signature>(&text[fn_start..i]) {
+                    return Some((sig, i));
+                }
+                // Const-expression block inside generic/return type (e.g. `Foo<{ 1 + 2 }>`):
+                // skip the balanced brace group and keep scanning for the body `{`.
+                i = find_matching_brace(text, i)?;
+            }
             _ => {}
         }
         i += 1;
     }
     None
+}
+
+/// Extract proven token features solely from inhabited value/reference parameters
+/// in `sig.inputs` (direct `Token` / `&Token`, generic `T: Token`, or a SIMD
+/// vector `f32x8<Token>`), never from return types, `Option<Token>`, `PhantomData<Token>`,
+/// raw pointers, callback bounds (`Fn() -> Token`), or associated types.
+fn collect_signature_token_proofs<'r>(
+    reg: &'r Registry,
+    sig: &syn::Signature,
+    features: &mut HashSet<String>,
+    names: &mut Vec<&'r str>,
+) {
+    use syn::ext::IdentExt as _;
+
+    fn record_token<'r>(
+        reg: &'r Registry,
+        name: &str,
+        features: &mut HashSet<String>,
+        names: &mut Vec<&'r str>,
+    ) -> bool {
+        let Some(token) = reg.find_token(name) else {
+            return false;
+        };
+        features.extend(token.features.iter().cloned());
+        if !names.contains(&token.name.as_str()) {
+            names.push(&token.name);
+        }
+        true
+    }
+
+    fn inspect_param_type<'r>(
+        reg: &'r Registry,
+        sig: &syn::Signature,
+        ty: &syn::Type,
+        features: &mut HashSet<String>,
+        names: &mut Vec<&'r str>,
+    ) {
+        match ty {
+            syn::Type::Reference(r) => inspect_param_type(reg, sig, &r.elem, features, names),
+            syn::Type::Paren(p) => inspect_param_type(reg, sig, &p.elem, features, names),
+            syn::Type::Group(g) => inspect_param_type(reg, sig, &g.elem, features, names),
+            syn::Type::Tuple(t) => {
+                for elem in &t.elems {
+                    inspect_param_type(reg, sig, elem, features, names);
+                }
+            }
+            syn::Type::Path(tp) if tp.qself.is_none() => {
+                let Some(seg) = tp.path.segments.last() else {
+                    return;
+                };
+                let ident = seg.ident.unraw().to_string();
+                match &seg.arguments {
+                    syn::PathArguments::None => {
+                        if record_token(reg, &ident, features, names) {
+                            return;
+                        }
+                        // Check direct generic parameter bounds (`T: X64V3Token` or `where T: ...`),
+                        // ignoring parenthesized `Fn() -> Token` or `Assoc = Token` args.
+                        for param in &sig.generics.params {
+                            if let syn::GenericParam::Type(gp) = param
+                                && gp.ident.unraw() == ident
+                            {
+                                for bound in &gp.bounds {
+                                    if let syn::TypeParamBound::Trait(tb) = bound
+                                        && let Some(bseg) = tb.path.segments.last()
+                                        && matches!(bseg.arguments, syn::PathArguments::None)
+                                    {
+                                        record_token(
+                                            reg,
+                                            &bseg.ident.unraw().to_string(),
+                                            features,
+                                            names,
+                                        );
+                                    }
+                                }
+                            }
+                        }
+                        if let Some(wc) = &sig.generics.where_clause {
+                            for pred in &wc.predicates {
+                                if let syn::WherePredicate::Type(pt) = pred
+                                    && let syn::Type::Path(btp) = &pt.bounded_ty
+                                    && btp.qself.is_none()
+                                    && btp.path.segments.len() == 1
+                                    && btp.path.segments[0].ident.unraw() == ident
+                                {
+                                    for bound in &pt.bounds {
+                                        if let syn::TypeParamBound::Trait(tb) = bound
+                                            && let Some(bseg) = tb.path.segments.last()
+                                            && matches!(bseg.arguments, syn::PathArguments::None)
+                                        {
+                                            record_token(
+                                                reg,
+                                                &bseg.ident.unraw().to_string(),
+                                                features,
+                                                names,
+                                            );
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    syn::PathArguments::AngleBracketed(ab) => {
+                        // Allow magetypes SIMD vector types (`f32x8<X64V3Token>`, etc.) which
+                        // physically store the token by value, while rejecting `Option<Token>`,
+                        // `Result<Token, _>`, `PhantomData<Token>`, `Vec<Token>`, etc.
+                        let is_simd_vec = matches!(
+                            ident.as_str(),
+                            "f32x4"
+                                | "f32x8"
+                                | "f32x16"
+                                | "f64x2"
+                                | "f64x4"
+                                | "f64x8"
+                                | "i8x16"
+                                | "i8x32"
+                                | "i8x64"
+                                | "u8x16"
+                                | "u8x32"
+                                | "u8x64"
+                                | "i16x8"
+                                | "i16x16"
+                                | "i16x32"
+                                | "u16x8"
+                                | "u16x16"
+                                | "u16x32"
+                                | "i32x4"
+                                | "i32x8"
+                                | "i32x16"
+                                | "u32x4"
+                                | "u32x8"
+                                | "u32x16"
+                                | "i64x2"
+                                | "i64x4"
+                                | "i64x8"
+                                | "u64x2"
+                                | "u64x4"
+                                | "u64x8"
+                        );
+                        if is_simd_vec
+                            && let Some(syn::GenericArgument::Type(inner)) = ab.args.first()
+                        {
+                            inspect_param_type(reg, sig, inner, features, names);
+                        }
+                    }
+                    syn::PathArguments::Parenthesized(_) => {}
+                }
+            }
+            _ => {}
+        }
+    }
+
+    for arg in &sig.inputs {
+        if let syn::FnArg::Typed(pat_type) = arg {
+            inspect_param_type(reg, sig, &pat_type.ty, features, names);
+        }
+    }
 }
 
 /// What immediately precedes an identifier, for call-site classification.
@@ -1764,15 +1853,20 @@ mod tests {
 
     #[test]
     fn return_type_token_does_not_gate_body() {
-        let bad = scan_at(
-            "src/test_ret.rs",
+        for source in [
             "fn forge() -> Option<archmage::X64V4Token> { _mm512_setzero_ps(); None }\n",
-        );
-        assert!(
-            bad.errors.iter().any(|e| e.contains("UNGATED")),
-            "expected UNGATED error when token only appears in return type: {:?}",
-            bad.errors
-        );
+            "fn cb(f: impl Fn() -> archmage::X64V4Token) { let _ = f; _mm512_setzero_ps(); }\n",
+            "fn assoc<I: Iterator<Item = archmage::X64V4Token>>(it: I) { let _ = it; _mm512_setzero_ps(); }\n",
+            "fn shifted(_buf: [u8; 1 << 2]) -> Option<archmage::X64V4Token> { _mm512_setzero_ps(); None }\n",
+            "fn opt(t: Option<archmage::X64V4Token>) { let _ = t; _mm512_setzero_ps(); }\n",
+        ] {
+            let bad = scan_at("src/test_ret.rs", source);
+            assert!(
+                bad.errors.iter().any(|e| e.contains("UNGATED")),
+                "expected UNGATED error for `{source}`: {:?}",
+                bad.errors
+            );
+        }
 
         let good = scan_at(
             "src/test_ret.rs",

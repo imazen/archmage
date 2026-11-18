@@ -468,6 +468,32 @@ jobs:
           CARGO_TARGET_WASM32_WASIP1_RUNNER: "wasmtime"
         run: cargo test -p magetypes --no-default-features --features w512 --target wasm32-wasip1 --test fma_contract
 
+      - name: Verify opt-level=0 WASM untaken branches and fail-closed from_context (simd=n)
+        env:
+          RUSTFLAGS: ""
+          CARGO_ENCODED_RUSTFLAGS: ""
+          CARGO_TARGET_WASM32_WASIP1_RUSTFLAGS: "-C target-feature=-simd128,-relaxed-simd"
+        run: |
+          BIN=$(cargo test -p archmage --test wasm_baseline_dispatch --target wasm32-wasip1 --no-run --message-format=json | jq -r 'select(.executable != null) | .executable' | tail -n1)
+          test -n "$BIN"
+          wasmtime -W simd=n -W relaxed-simd=n --env ARCHMAGE_WASM_BASELINE_MODE=expect_no_simd "$BIN"
+          if OUT=$(wasmtime -W simd=n -W relaxed-simd=n --env ARCHMAGE_WASM_BASELINE_MODE=panic_strict "$BIN" --nocapture 2>&1); then
+            echo "ERROR: unflagged Wasm128Token::from_context() did not trap: $OUT" >&2
+            exit 1
+          fi
+          printf '%s\n' "$OUT" | grep -F "Wasm128Token::from_context() requires compiling with -Ctarget-feature=+simd128"
+          if OUT=$(wasmtime -W simd=n -W relaxed-simd=n --env ARCHMAGE_WASM_BASELINE_MODE=panic_relaxed "$BIN" --nocapture 2>&1); then
+            echo "ERROR: unflagged Wasm128RelaxedToken::from_context() did not trap: $OUT" >&2
+            exit 1
+          fi
+          printf '%s\n' "$OUT" | grep -F "Wasm128RelaxedToken::from_context() requires compiling with -Ctarget-feature=+simd128,+relaxed-simd"
+
+      - name: Test WASM unsafe attune forwarding and simd128 dispatch
+        env:
+          RUSTFLAGS: "-C target-feature=+simd128"
+          CARGO_TARGET_WASM32_WASIP1_RUNNER: "wasmtime --env ARCHMAGE_WASM_BASELINE_MODE=expect_simd128"
+        run: cargo test -p archmage --test wasm_baseline_dispatch --target wasm32-wasip1
+
       - name: Test relaxed WASM arithmetic
         env:
           RUSTFLAGS: "-C target-feature=+simd128,+relaxed-simd"

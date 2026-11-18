@@ -304,12 +304,52 @@ pub(crate) fn replace_ident_in_tokens(
     result
 }
 
-/// Replace all `Self` identifier tokens with a concrete type in a token stream.
+/// Replace all `Self` identifier tokens with a concrete type in a token stream,
+/// skipping the `{ ... }` bodies of nested `impl` and `trait` items (which introduce
+/// their own `Self` binding).
 pub(crate) fn replace_self_in_tokens(
     tokens: proc_macro2::TokenStream,
     replacement: &Type,
 ) -> proc_macro2::TokenStream {
-    replace_ident_in_tokens(tokens, "Self", &replacement.to_token_stream())
+    replace_self_type_tokens(tokens, &replacement.to_token_stream())
+}
+
+fn replace_self_type_tokens(
+    tokens: proc_macro2::TokenStream,
+    replacement: &proc_macro2::TokenStream,
+) -> proc_macro2::TokenStream {
+    let mut result = proc_macro2::TokenStream::new();
+    let mut in_item_header = false;
+    for tt in tokens {
+        match tt {
+            proc_macro2::TokenTree::Ident(ref ident) if *ident == "impl" || *ident == "trait" => {
+                in_item_header = true;
+                result.extend([tt]);
+            }
+            proc_macro2::TokenTree::Ident(ref ident) if *ident == "Self" => {
+                result.extend(replacement.clone());
+            }
+            proc_macro2::TokenTree::Group(group)
+                if in_item_header && group.delimiter() == proc_macro2::Delimiter::Brace =>
+            {
+                in_item_header = false;
+                result.extend([proc_macro2::TokenTree::Group(group)]);
+            }
+            proc_macro2::TokenTree::Group(group) => {
+                let stream = group.stream();
+                if !tokens_contain_ident(&stream, &["Self"]) {
+                    result.extend([proc_macro2::TokenTree::Group(group)]);
+                    continue;
+                }
+                let inner = replace_self_type_tokens(stream, replacement);
+                let mut new_group = proc_macro2::Group::new(group.delimiter(), inner);
+                new_group.set_span(group.span());
+                result.extend([proc_macro2::TokenTree::Group(new_group)]);
+            }
+            other => result.extend([other]),
+        }
+    }
+    result
 }
 
 /// Generate import statements for intrinsics and/or magetypes.
@@ -605,6 +645,25 @@ pub(crate) fn avx512_import_error(
     None
 }
 
+/// Check every parameter (and optional `_self = Type`) for conflicting
+/// multi-architecture bounds, even if an earlier parameter already matched.
+pub(crate) fn mixed_arch_error(
+    sig: &Signature,
+    self_type: Option<&Type>,
+    macro_name: &str,
+) -> Option<proc_macro2::TokenStream> {
+    let (t1, a1, t2, a2) = crate::token_discovery::diagnose_mixed_arch_traits(sig, self_type)?;
+    let msg = format!(
+        "cannot combine token bounds from different architectures (`{t1}` for `{a1}` \
+         and `{t2}` for `{a2}`) in #[{macro_name}]: a single `#[target_feature]` \
+         function can only target one CPU architecture.\n\
+         \n\
+         Write separate functions per architecture, or use `#[attune]` / `#[magetypes]` \
+         to generate per-tier variants."
+    );
+    Some(syn::Error::new_spanned(sig, msg).to_compile_error())
+}
+
 /// The error when a signature has no usable token parameter. A featureless
 /// bound such as `SimdToken` or a conflicting multi-architecture bound gets its
 /// own explanation; `forms` lists the macro's accepted spellings.
@@ -614,18 +673,8 @@ pub(crate) fn missing_token_error(
     macro_name: &str,
     forms: &str,
 ) -> proc_macro2::TokenStream {
-    if let Some((t1, a1, t2, a2)) =
-        crate::token_discovery::diagnose_mixed_arch_traits(sig, self_type)
-    {
-        let msg = format!(
-            "cannot combine token bounds from different architectures (`{t1}` for `{a1}` \
-             and `{t2}` for `{a2}`) in #[{macro_name}]: a single `#[target_feature]` \
-             function can only target one CPU architecture.\n\
-             \n\
-             Write separate functions per architecture, or use `#[attune]` / `#[magetypes]` \
-             to generate per-tier variants."
-        );
-        return syn::Error::new_spanned(sig, msg).to_compile_error();
+    if let Some(err) = mixed_arch_error(sig, self_type, macro_name) {
+        return err;
     }
     if let Some(trait_name) = crate::token_discovery::diagnose_featureless_token(sig) {
         let msg = format!(
@@ -664,7 +713,10 @@ pub(crate) fn rename_non_ident_params(sig: &mut Signature) -> Vec<proc_macro2::T
         let syn::FnArg::Typed(pat_type) = arg else {
             continue;
         };
-        if matches!(pat_type.pat.as_ref(), syn::Pat::Ident(_)) {
+        if let syn::Pat::Ident(pat) = pat_type.pat.as_ref()
+            && pat.subpat.is_none()
+            && pat.by_ref.is_none()
+        {
             continue;
         }
         let generated = format_ident!("__archmage_arg_{}", counter);
@@ -672,7 +724,7 @@ pub(crate) fn rename_non_ident_params(sig: &mut Signature) -> Vec<proc_macro2::T
         let original_pat = pat_type.pat.clone();
         let ty = &pat_type.ty;
         if !matches!(original_pat.as_ref(), syn::Pat::Wild(_)) {
-            rebinds.push(if matches!(ty.as_ref(), Type::ImplTrait(_)) {
+            rebinds.push(if type_contains_impl_trait(ty) {
                 quote! { let #original_pat = #generated; }
             } else {
                 quote! { let #original_pat: #ty = #generated; }
@@ -689,6 +741,104 @@ pub(crate) fn rename_non_ident_params(sig: &mut Signature) -> Vec<proc_macro2::T
     rebinds
 }
 
+/// Strip `mut` from receiver and simple identifier parameters on a pure
+/// forwarding wrapper signature so forwarding by value never warns on unused `mut`.
+pub(crate) fn strip_forwarding_mutability(sig: &mut Signature) {
+    for arg in &mut sig.inputs {
+        match arg {
+            syn::FnArg::Receiver(recv) => {
+                recv.mutability = None;
+            }
+            syn::FnArg::Typed(pat_type) => {
+                if let syn::Pat::Ident(pat) = pat_type.pat.as_mut() {
+                    pat.mutability = None;
+                }
+            }
+        }
+    }
+}
+
+/// Collect every bound identifier anywhere inside `pat` (including `@` subpatterns,
+/// tuples, structs, slices, and or-patterns).
+pub(crate) fn collect_pat_idents<'a>(pat: &'a syn::Pat, out: &mut Vec<&'a Ident>) {
+    match pat {
+        syn::Pat::Ident(p) => {
+            out.push(&p.ident);
+            if let Some((_, sub)) = &p.subpat {
+                collect_pat_idents(sub, out);
+            }
+        }
+        syn::Pat::Or(p) => {
+            for case in &p.cases {
+                collect_pat_idents(case, out);
+            }
+        }
+        syn::Pat::Paren(p) => collect_pat_idents(&p.pat, out),
+        syn::Pat::Reference(p) => collect_pat_idents(&p.pat, out),
+        syn::Pat::Slice(p) => {
+            for elem in &p.elems {
+                collect_pat_idents(elem, out);
+            }
+        }
+        syn::Pat::Struct(p) => {
+            for field in &p.fields {
+                collect_pat_idents(&field.pat, out);
+            }
+        }
+        syn::Pat::Tuple(p) => {
+            for elem in &p.elems {
+                collect_pat_idents(elem, out);
+            }
+        }
+        syn::Pat::TupleStruct(p) => {
+            for elem in &p.elems {
+                collect_pat_idents(elem, out);
+            }
+        }
+        syn::Pat::Type(p) => collect_pat_idents(&p.pat, out),
+        _ => {}
+    }
+}
+
+pub(crate) fn type_contains_impl_trait(ty: &Type) -> bool {
+    tokens_contain_ident(&ty.to_token_stream(), &["impl"])
+}
+
+/// Count how many `*` dereferences reach `Self` from a receiver (`0` for `self`
+/// or `self: Self`, `1` for `&self` or `self: Box<Self>`, `2` for `self: &Box<Self>`).
+pub(crate) fn receiver_deref_depth(receiver: &syn::Receiver) -> usize {
+    match &receiver.kind {
+        syn::ReceiverKind::Value => 0,
+        syn::ReceiverKind::Reference(..) => 1,
+        syn::ReceiverKind::Typed(_, ty) => typed_receiver_derefs(ty),
+        _ => 0,
+    }
+}
+
+fn typed_receiver_derefs(ty: &Type) -> usize {
+    match ty {
+        Type::Reference(r) => 1 + typed_receiver_derefs(&r.elem),
+        Type::Paren(p) => typed_receiver_derefs(&p.elem),
+        Type::Group(g) => typed_receiver_derefs(&g.elem),
+        Type::Path(tp) if tp.qself.is_none() => {
+            let Some(seg) = tp.path.segments.last() else {
+                return 0;
+            };
+            if seg.ident == "Self" {
+                return 0;
+            }
+            if matches!(seg.ident.to_string().as_str(), "Box" | "Rc" | "Arc" | "Pin")
+                && let syn::PathArguments::AngleBracketed(args) = &seg.arguments
+                && let Some(syn::GenericArgument::Type(inner)) = args.args.first()
+            {
+                return 1 + typed_receiver_derefs(inner);
+            }
+            0
+        }
+        _ => 0,
+    }
+}
+
 /// Forwarding layers (wrappers, proof wrappers, dispatchers) use every
 /// parameter, so an author's `_name` (conventionally "unused") would trip
 /// `clippy::used_underscore_binding` in them. Their bodies are generated, so
@@ -696,11 +846,12 @@ pub(crate) fn rename_non_ident_params(sig: &mut Signature) -> Vec<proc_macro2::T
 /// `__archmage_t`; clippy exempts `__`-prefixed names). No rebinding: only
 /// the forwarding call reads it. Feature bodies keep the author's names.
 pub(crate) fn rename_underscore_params(sig: &mut Signature) {
+    use syn::ext::IdentExt as _;
     for arg in &mut sig.inputs {
         if let syn::FnArg::Typed(pat_type) = arg
             && let syn::Pat::Ident(pat) = pat_type.pat.as_mut()
         {
-            let name = pat.ident.to_string();
+            let name = pat.ident.unraw().to_string();
             if name.starts_with('_') && !name.starts_with("__") && name.len() > 1 {
                 pat.ident = format_ident!("__archmage{}", name, span = pat.ident.span());
             }
@@ -797,20 +948,57 @@ pub(crate) fn prepend_to_body(
 }
 
 /// The `_self` parameter a nested function takes in place of a receiver,
-/// with the receiver's own shape kept: `&'a self` becomes `_self: &'a Type`,
-/// `&mut self` becomes `_self: &mut Type`, `self: Box<Self>` becomes
-/// `_self: Box<Type>`, and `self` / `mut self` become `_self: Type`.
+/// with the receiver's own shape and mutability kept: `&'a self` becomes
+/// `_self: &'a Type`, `&mut self` becomes `_self: &mut Type`, `self: Box<Self>`
+/// becomes `_self: Box<Type>`, and `mut self` becomes `mut _self: Type`.
 pub(crate) fn nested_self_param(receiver: &syn::Receiver, self_ty: &Type) -> syn::FnArg {
+    nested_self_param_with_lifetime(receiver, self_ty, None)
+}
+
+pub(crate) fn nested_self_param_with_lifetime(
+    receiver: &syn::Receiver,
+    self_ty: &Type,
+    override_ref_lifetime: Option<&syn::Lifetime>,
+) -> syn::FnArg {
+    let binding_mut = &receiver.mutability;
+    let ty: proc_macro2::TokenStream = match &receiver.kind {
+        syn::ReceiverKind::Value => quote!(#self_ty),
+        syn::ReceiverKind::Reference(_, lifetime, mutability) => {
+            let lt = override_ref_lifetime.or(lifetime.as_ref());
+            if matches!(self_ty, Type::ImplTrait(it) if it.bounds.len() > 1) {
+                quote!(& #lt #mutability (#self_ty))
+            } else {
+                quote!(& #lt #mutability #self_ty)
+            }
+        }
+        syn::ReceiverKind::Typed(_, ty) => replace_self_in_tokens(ty.to_token_stream(), self_ty),
+        // `#[non_exhaustive]`: a receiver shape syn adds later is passed by value.
+        _ => quote!(#self_ty),
+    };
+    syn::parse_quote!(#binding_mut _self: #ty)
+}
+
+/// Bind `_self` inside an in-scope single-function method (scalar or wasm32)
+/// while enforcing `Self == self_ty` when `self_ty` is a concrete/named type.
+/// Keeping the method in `impl` scope preserves outer `impl<T>` generics,
+/// receiver lifetime elision, `const`/`async`, and `Self` in nested items.
+pub(crate) fn inline_self_binding(
+    receiver: &syn::Receiver,
+    self_ty: &Type,
+) -> proc_macro2::TokenStream {
+    let binding_mut = &receiver.mutability;
+    if type_contains_impl_trait(self_ty) {
+        return quote! { let #binding_mut _self = self; };
+    }
     let ty: proc_macro2::TokenStream = match &receiver.kind {
         syn::ReceiverKind::Value => quote!(#self_ty),
         syn::ReceiverKind::Reference(_, lifetime, mutability) => {
             quote!(& #lifetime #mutability #self_ty)
         }
         syn::ReceiverKind::Typed(_, ty) => replace_self_in_tokens(ty.to_token_stream(), self_ty),
-        // `#[non_exhaustive]`: a receiver shape syn adds later is passed by value.
         _ => quote!(#self_ty),
     };
-    syn::parse_quote!(_self: #ty)
+    quote! { let #binding_mut _self: #ty = self; }
 }
 
 /// Replace the value `self` with another identifier, leaving `self::` paths

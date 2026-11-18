@@ -1,6 +1,11 @@
 //! Check context-created tokens against function attributes, not runtime proofs.
 use std::collections::HashSet;
-use syn::visit::{self, Visit};
+use syn::{
+    Token,
+    buffer::Cursor,
+    ext::IdentExt as _,
+    visit::{self, Visit},
+};
 
 use crate::registry::Registry;
 
@@ -48,9 +53,18 @@ impl ContextVisitor<'_> {
         self.frame.name = sig.ident.to_string();
         self.frame.unsafe_code = matches!(sig.safety, syn::Safety::Unsafe(_));
         for attr in attrs {
-            if attr.path().is_ident("target_feature") {
+            let segs: Vec<String> = attr
+                .path()
+                .segments
+                .iter()
+                .map(|s| s.ident.unraw().to_string())
+                .collect();
+            if attr.path().leading_colon.is_none() && segs.as_slice() == ["target_feature"] {
                 let result = attr.parse_nested_meta(|meta| {
-                    if meta.path.is_ident("enable") {
+                    if meta.path.leading_colon.is_none()
+                        && meta.path.segments.len() == 1
+                        && meta.path.segments[0].ident.unraw() == "enable"
+                    {
                         let value: syn::LitStr = meta.value()?.parse()?;
                         self.frame
                             .features
@@ -63,24 +77,19 @@ impl ContextVisitor<'_> {
                 if result.is_err() {
                     self.frame.features.clear();
                 }
-            } else if matches!(
-                attr.path()
-                    .segments
-                    .last()
-                    .map(|s| s.ident.to_string())
-                    .as_deref(),
-                Some("rite" | "token_target_features" | "attune")
-            ) {
-                // Explicit single-tier form only. Unknown/compound forms fail closed.
-                if let Ok(tier) = attr.parse_args::<syn::Ident>() {
-                    let tier = tier.to_string();
-                    let tier = tier.trim_start_matches('_');
-                    if let Some(token) = self.reg.token.iter().find(|t| {
-                        t.short_name.as_deref() == Some(tier)
-                            || t.extraction_aliases.iter().any(|a| a == tier)
-                    }) {
-                        self.frame.features.extend(token.features.iter().cloned());
-                    }
+            } else {
+                let macro_kind = match segs.as_slice() {
+                    [name] if attr.path().leading_colon.is_none() => Some(name.as_str()),
+                    [pkg, name] if pkg == "archmage" => Some(name.as_str()),
+                    _ => None,
+                };
+                if matches!(
+                    macro_kind,
+                    Some("rite" | "token_target_features" | "attune")
+                ) && let syn::Meta::List(list) = &attr.meta
+                    && let Some(proved) = parse_macro_tier_features(self.reg, list)
+                {
+                    self.frame.features.extend(proved);
                 }
             }
         }
@@ -121,16 +130,17 @@ impl<'ast> Visit<'ast> for ContextVisitor<'_> {
             .path
             .segments
             .last()
-            .is_some_and(|s| s.ident == "from_context")
+            .is_some_and(|s| s.ident.unraw() == "from_context")
         {
             self.frame.constructions += 1;
             let parts: Vec<_> = item
                 .path
                 .segments
                 .iter()
-                .map(|s| s.ident.to_string())
+                .map(|s| s.ident.unraw().to_string())
                 .collect();
-            // Require the explicit archmage path so aliases cannot change the proof.
+            // Require `archmage::Token::from_context` or `::archmage::Token::from_context`
+            // (paired with rejecting local `mod archmage` / `as archmage` in audited files).
             let token = if parts.len() == 3 && parts[0] == "archmage" && item.qself.is_none() {
                 self.reg.find_token(&parts[1])
             } else {
@@ -147,8 +157,18 @@ impl<'ast> Visit<'ast> for ContextVisitor<'_> {
         visit::visit_expr_path(self, item);
     }
 
+    fn visit_item_mod(&mut self, item: &'ast syn::ItemMod) {
+        if item.ident.unraw() == "archmage" {
+            self.errors.push(format!(
+                "{}: local `mod archmage` shadows the explicit crate path required for from_context",
+                self.rel
+            ));
+        }
+        visit::visit_item_mod(self, item);
+    }
+
     fn visit_use_name(&mut self, item: &'ast syn::UseName) {
-        if item.ident == "from_context" {
+        if item.ident.unraw() == "from_context" {
             self.errors.push(format!(
                 "{}: import of from_context hides the explicit token path",
                 self.rel
@@ -157,9 +177,15 @@ impl<'ast> Visit<'ast> for ContextVisitor<'_> {
     }
 
     fn visit_use_rename(&mut self, item: &'ast syn::UseRename) {
-        if item.ident == "from_context" {
+        if item.ident.unraw() == "from_context" || item.rename.unraw() == "from_context" {
             self.errors.push(format!(
                 "{}: alias of from_context hides the explicit token path",
+                self.rel
+            ));
+        }
+        if item.rename.unraw() == "archmage" {
+            self.errors.push(format!(
+                "{}: alias `as archmage` shadows the explicit crate path required for from_context",
                 self.rel
             ));
         }
@@ -185,20 +211,148 @@ impl<'ast> Visit<'ast> for ContextVisitor<'_> {
 
     fn visit_macro(&mut self, item: &'ast syn::Macro) {
         // Unexpanded macros must not hide a construction or an unsafe block.
-        let tokens = item.tokens.to_string();
-        if tokens
-            .split(|c: char| !c.is_alphanumeric() && c != '_')
-            .any(|t| t == "unsafe")
-        {
+        let mut saw_unsafe = false;
+        let mut saw_from_context = false;
+        let _ = item.parse_body_with(|input: syn::parse::ParseStream<'_>| {
+            saw_unsafe = cursor_has_ident(input.cursor(), "unsafe");
+            saw_from_context = cursor_has_ident(input.cursor(), "from_context");
+            input.step(|step| {
+                let mut c: Cursor<'_> = *step;
+                while let Some((_, next)) = c.token_tree() {
+                    c = next;
+                }
+                Ok(((), c))
+            })
+        });
+        if saw_unsafe {
             self.frame.unsafe_code = true;
         }
-        if tokens.contains("from_context") {
+        if saw_from_context {
             self.errors.push(format!(
                 "{}: from_context inside an unexpanded macro cannot be audited",
                 self.rel
             ));
         }
     }
+}
+
+fn cursor_has_ident(mut cursor: Cursor<'_>, target: &str) -> bool {
+    while !cursor.eof() {
+        if let Some((ident, next)) = cursor.ident() {
+            if ident.unraw() == target {
+                return true;
+            }
+            cursor = next;
+            continue;
+        }
+        if let Some((inner, _, _, next)) = cursor.any_group() {
+            if cursor_has_ident(inner, target) {
+                return true;
+            }
+            cursor = next;
+            continue;
+        }
+        if let Some((_, next)) = cursor.token_tree() {
+            cursor = next;
+        } else {
+            break;
+        }
+    }
+    false
+}
+
+/// Parse `#[rite(...)]` / `#[attune(...)]` arguments and return the intersection
+/// of features guaranteed across every generated variant. Unknown directives
+/// (such as `dispatch`, `wrap`, or wildcard `_*_t`) fail closed (`None`).
+fn parse_macro_tier_features(reg: &Registry, list: &syn::MetaList) -> Option<HashSet<String>> {
+    let resolve = |raw: &str| -> Option<HashSet<String>> {
+        let stripped = raw.strip_prefix('_').unwrap_or(raw);
+        if stripped == "scalar" || stripped == "default" {
+            return Some(HashSet::new());
+        }
+        let token = reg.token.iter().find(|t| {
+            t.short_name.as_deref() == Some(stripped)
+                || t.extraction_aliases.iter().any(|a| a == stripped)
+        })?;
+        Some(token.features.iter().cloned().collect())
+    };
+
+    list.parse_args_with(
+        |input: syn::parse::ParseStream<'_>| -> syn::Result<Option<HashSet<String>>> {
+            let mut additions: Vec<(String, HashSet<String>)> = Vec::new();
+            let mut removals: HashSet<String> = HashSet::new();
+
+            while !input.is_empty() {
+                if input.peek(Token![+]) || input.peek(Token![-]) {
+                    let is_remove = input.peek(Token![-]);
+                    if is_remove {
+                        let _: Token![-] = input.parse()?;
+                    } else {
+                        let _: Token![+] = input.parse()?;
+                    }
+                    let ident: syn::Ident = input.parse()?;
+                    let name = ident.unraw().to_string();
+                    let key = name.strip_prefix('_').unwrap_or(&name).to_owned();
+                    let Some(feats) = resolve(&name) else {
+                        return Ok(None);
+                    };
+                    if is_remove {
+                        removals.insert(key);
+                    } else {
+                        additions.push((key, feats));
+                    }
+                } else {
+                    let ident: syn::Ident = input.parse()?;
+                    let name = ident.unraw().to_string();
+                    match name.as_str() {
+                        "import_intrinsics" | "import_magetypes" | "suppress_const_test" => {}
+                        "cfg" | "inline" | "define" => {
+                            let content;
+                            syn::parenthesized!(content in input);
+                            content.step(|step| {
+                                let mut c: Cursor<'_> = *step;
+                                while let Some((_, next)) = c.token_tree() {
+                                    c = next;
+                                }
+                                Ok(((), c))
+                            })?;
+                        }
+                        _ => {
+                            if name.ends_with("_t") {
+                                return Ok(None);
+                            }
+                            let key = name.strip_prefix('_').unwrap_or(&name).to_owned();
+                            let Some(feats) = resolve(&name) else {
+                                return Ok(None);
+                            };
+                            additions.push((key, feats));
+                        }
+                    }
+                }
+                if input.peek(Token![,]) {
+                    let _: Token![,] = input.parse()?;
+                } else if !input.is_empty() {
+                    return Ok(None);
+                }
+            }
+
+            let kept: Vec<HashSet<String>> = additions
+                .into_iter()
+                .filter(|(k, _)| !removals.contains(k))
+                .map(|(_, f)| f)
+                .collect();
+            let Some((first, rest)) = kept.split_first() else {
+                return Ok(None);
+            };
+            let mut intersection = first.clone();
+            for set in rest {
+                intersection.retain(|f| set.contains(f));
+            }
+            Ok(Some(intersection))
+        },
+    )
+    .ok()
+    .flatten()
 }
 
 #[cfg(test)]
@@ -227,15 +381,20 @@ mod tests {
         for attribute in [
             "archmage::rite(v3)",
             "archmage::rite(v4)",
+            "archmage::rite(v3, import_intrinsics)",
+            "archmage::rite(v3, v4)",
             "archmage::token_target_features(v3)",
             "archmage::attune(v3)",
             "archmage::attune(v4)",
+            "archmage::attune(v3, inline(hint))",
+            "::archmage::attune(v3, inline(never))",
+            "attune(v3, import_magetypes)",
         ] {
             let source =
                 format!("#[{attribute}] fn wrap() {{ archmage::X64V3Token::from_context(); }}");
             assert!(check(&source).is_empty(), "{source}: {:?}", check(&source));
         }
-        assert!(check("#[target_feature(enable = \"neon\")] fn wrap() { archmage::NeonToken::from_context(); }").is_empty());
+        assert!(check("#[target_feature(enable = \"neon\")] fn wrap() { ::archmage::NeonToken::from_context(); }").is_empty());
     }
 
     #[test]
@@ -251,6 +410,12 @@ mod tests {
         for source in [
             "fn wrap() { archmage::X64V3Token::from_context(); }",
             "use archmage::X64V3Token::from_context as make; fn wrap() { make(); }",
+            "use archmage::X64V3Token::r#from_context; fn wrap() { from_context(); }",
+            "mod archmage { pub struct X64V3Token; } #[target_feature(enable = \"avx2\")] fn wrap() { archmage::X64V3Token::from_context(); }",
+            "use local as archmage; #[target_feature(enable = \"avx2\")] fn wrap() { archmage::X64V3Token::from_context(); }",
+            "#[other::attune(v3)] fn wrap() { archmage::X64V3Token::from_context(); }",
+            "#[archmage::rite(v3, v4)] fn wrap() { archmage::X64V4Token::from_context(); }",
+            "#[archmage::attune(dispatch, _*_t)] fn wrap() { archmage::X64V3Token::from_context(); }",
             "#[archmage::rite(v3)] fn wrap() { const { archmage::X64V3Token::from_context(); } }",
             "#[archmage::rite(v2)] fn wrap() { archmage::X64V3Token::from_context(); }",
             "#[archmage::rite(v3)] fn wrap() { fn nested() { archmage::X64V3Token::from_context(); } }",
@@ -259,6 +424,7 @@ mod tests {
             "#[archmage::rite(v3)] fn wrap() { Alias::from_context(); }",
             "#[archmage::rite(neon)] fn wrap() { archmage::X64V3Token::from_context(); }",
             "macro_rules! wrap { () => { archmage::X64V3Token::from_context() } }",
+            "#[archmage::rite(v3)] fn wrap() { archmage::X64V3Token::r#from_context(); r#unsafe { unrelated(); } }",
         ] {
             assert!(!check(source).is_empty(), "accepted {source}");
         }

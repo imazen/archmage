@@ -277,6 +277,7 @@ fn family(mut input: LightFn, args: Args) -> syn::Result<TokenStream> {
     // The dispatcher forwards; it takes reserved names for `_name` params.
     let mut forward_sig = input.sig.clone();
     crate::common::rename_underscore_params(&mut forward_sig);
+    crate::common::strip_forwarding_mutability(&mut forward_sig);
     if args.dispatcher.is_some() {
         for sig in [&input.sig, &forward_sig] {
             if let Some(error) =
@@ -312,7 +313,9 @@ fn family(mut input: LightFn, args: Args) -> syn::Result<TokenStream> {
         });
         let gate = implementation.and_then(|s| s.gate.as_deref());
         let direct_name = if direct_selection.is_some() {
-            output_name(&base, tier, Form::Direct, &args)?
+            let named = output_name(&base, tier, Form::Direct, &args)?;
+            reject_reserved_attune_output(&named)?;
+            named
         } else {
             format_ident!("__attune_{}_{}", base, tier.suffix)
         };
@@ -340,7 +343,9 @@ fn family(mut input: LightFn, args: Args) -> syn::Result<TokenStream> {
         output.extend(direct(body, tier, &args, gate, body_inline)?);
         if proof_selection.is_some() || args.dispatcher.is_some() {
             let proof_name = if proof_selection.is_some() {
-                output_name(&base, tier, Form::Proof, &args)?
+                let named = output_name(&base, tier, Form::Proof, &args)?;
+                reject_reserved_attune_output(&named)?;
+                named
             } else {
                 format_ident!("__attune_{}_{}_t", base, tier.suffix)
             };
@@ -451,6 +456,7 @@ fn proof_entry(
         return Ok(error);
     }
     crate::common::rename_underscore_params(&mut wrapper.sig);
+    crate::common::strip_forwarding_mutability(&mut wrapper.sig);
     if let Some(error) =
         crate::engine::boundary::reserved_param_error(&wrapper.sig, &direct_callee, "attune")
     {
@@ -523,4 +529,18 @@ fn wrap(input: LightFn, args: Args) -> syn::Result<TokenStream> {
         ..Default::default()
     };
     Ok(crate::engine::boundary::expand(input, "attune", options))
+}
+
+fn reject_reserved_attune_output(name: &syn::Ident) -> syn::Result<()> {
+    use syn::ext::IdentExt as _;
+    let unraw = name.unraw();
+    if unraw == "__attune_token" || unraw == "__attune_proof" {
+        return Err(syn::Error::new_spanned(
+            name,
+            format!(
+                "output name `{unraw}` collides with #[attune]'s internal proof binding; choose a different name"
+            ),
+        ));
+    }
+    Ok(())
 }

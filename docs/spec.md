@@ -290,11 +290,13 @@ Token detection combines compile-time and runtime checks:
 1. `compiled_with()` — returns `Some(true)` if the features are enabled for the whole crate (`-Ctarget-cpu`, `-Ctarget-feature`) and `testable_dispatch` is off, `Some(false)` on the wrong architecture, and `None` when only runtime detection can tell. A function's own `#[target_feature]` attribute does not change it: `cfg(target_feature)` is evaluated per crate.
 2. `summon()` — returns `Some(token)` if the CPU supports the required features. Uses atomic caching for fast repeated calls (~1.3 ns). When `compiled_with()` returns `Some(true)`, `summon()` compiles away entirely.
 
-Inside an `#[arcane]` function, `summon()` is still a cached runtime check. To get a token for the function's own tier, call `from_context()`, which rustc accepts there and which compiles to nothing.
+Inside an `#[arcane]` function, `summon()` is still a cached runtime check on native targets. On x86-64 and AArch64, call `from_context()` to obtain a token for the function's own tier at zero cost inside a matching `#[target_feature]` region.
 
 ### 4.2 WASM Special Case
 
-WASM SIMD128 uses compile-time detection only (`#[cfg(target_feature = "simd128")]`). There is no runtime detection mechanism.
+WASM SIMD128 and Relaxed SIMD use compile-time detection only (`#[cfg(target_feature = "simd128")]` and `#[cfg(target_feature = "relaxed-simd")]`). There is no runtime CPUID mechanism; WebAssembly engines validate any emitted SIMD/relaxed-SIMD instructions at module load time.
+
+Because Rust allows safe code on `wasm32` to call `#[target_feature(enable = "simd128")]` functions even when compiled without `-Ctarget-feature=+simd128` (and `cfg(target_feature)` inside `archmage` is evaluated per target crate graph, not per downstream `#[rite(wasm128)]` function), `Wasm128Token::from_context()` and `Wasm128RelaxedToken::from_context()` compile to zero-cost ZST construction when `archmage` is built with the corresponding `-Ctarget-feature` flag enabled, and panic at runtime (without emitting SIMD opcodes that would break untaken `summon()` branches in `opt-level=0` builds) when compiled without it.
 
 ### 4.3 AArch64 NEON Detection
 

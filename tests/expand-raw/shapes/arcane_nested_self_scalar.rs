@@ -4,19 +4,12 @@ struct Processor {
     val: f32,
 }
 impl Processor {
-    #[inline(always)]
+    #[inline]
     fn process(&self, token: ScalarToken, a: f32) -> Self {
-        #[inline]
-        fn __simd_inner_process(
-            _self: &Processor,
-            token: ScalarToken,
-            a: f32,
-        ) -> Processor {
-            let _ = token;
-            Processor { val: _self.val + a }
-        }
+        let _self: &Processor = self;
         let _: () = <ScalarToken>::__ARCHMAGE_ASSERT_TIER_D141EACA;
-        __simd_inner_process(self, token, a)
+        let _ = token;
+        Self { val: _self.val + a }
     }
 }
 fn main() {}

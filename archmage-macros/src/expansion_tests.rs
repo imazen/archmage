@@ -646,6 +646,7 @@ fn nested_dispatch_rewrites_have_exact_outputs() {
         tier_suffix: "v3",
         target_arch: Some("x86_64"),
         token_ident: quote::format_ident!("token"),
+        token_ref_depth: 0,
         has_token: true,
         derive_token: false,
     };

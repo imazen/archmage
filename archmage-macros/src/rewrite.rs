@@ -25,6 +25,8 @@ pub(crate) struct CallerContext {
     pub target_arch: Option<&'static str>,
     /// The token ident available in the caller's scope (e.g., `token`, `__token`, `_token`)
     pub token_ident: Ident,
+    /// Number of reference layers on `token_ident` (`0` for value, `1` for `&T`, etc.).
+    pub token_ref_depth: usize,
     /// Whether a real token is in scope. `false` for tokenless tier bodies
     /// (tier-based `#[rite(v3, …)]`). Tokenless callers can construct the
     /// selected callee's proof with `from_context()` for a covered tier.
@@ -293,8 +295,9 @@ fn rewrite_single_incant(input: &IncantInput, ctx: &CallerContext) -> Option<Tok
     for rt in &direct_tiers {
         let fn_suffixed = suffix_path(func_path, rt.suffix);
         let token_expr = if rt.suffix == ctx.tier_suffix {
-            // Exact match — pass token directly
-            quote! { #token_ident }
+            // Exact match — pass value token (dereferencing borrowed concrete tokens).
+            let derefs = std::iter::repeat_n(quote!(*), ctx.token_ref_depth);
+            quote! { #(#derefs)*#token_ident }
         } else {
             // Downgrade — call the tier method on the token
             let downgrade_method = format_ident!("{}", rt.suffix);
@@ -462,6 +465,7 @@ mod tests {
             tier_suffix: tier,
             target_arch: arch,
             token_ident: format_ident!("__token"),
+            token_ref_depth: 0,
             has_token: true,
             derive_token: false,
         }

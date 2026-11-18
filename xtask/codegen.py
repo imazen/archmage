@@ -17,6 +17,7 @@ import json
 import os
 import pathlib
 import re
+import shutil
 import subprocess
 import sys
 import tarfile
@@ -1644,14 +1645,27 @@ def tokenless_context_probes():
     )
     env = dict(os.environ, TMPDIR=str(scratch), CARGO_INCREMENTAL="0")
     for key in ("RUSTFLAGS", "CARGO_ENCODED_RUSTFLAGS", "CARGO_TARGET_DIR",
-                "CARGO_BUILD_TARGET", "RUSTC_WRAPPER", "RUSTC_WORKSPACE_WRAPPER"):
+                "CARGO_BUILD_TARGET", "RUSTC_WRAPPER", "RUSTC_WORKSPACE_WRAPPER",
+                "CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUSTFLAGS",
+                "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_RUSTFLAGS",
+                "CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUSTFLAGS"):
         env.pop(key, None)
     targets = {
         "x86_64-unknown-linux-gnu": [("v3", "v3", "X64V3Token"), ("v3", "v2", "X64V2Token")],
         "aarch64-unknown-linux-gnu": [("neon", "neon", "NeonToken")],
-        "wasm32-unknown-unknown": [("wasm128", "wasm128", "Wasm128Token")],
+        "wasm32-unknown-unknown": [
+            ("wasm128", "wasm128", "Wasm128Token"),
+            ("wasm128_relaxed", "wasm128_relaxed", "Wasm128RelaxedToken"),
+        ],
     }
     for target, cases in targets.items():
+        target_env = dict(env)
+        if target == "wasm32-unknown-unknown":
+            # WASM proof construction requires target features enabled across the
+            # target dependency graph (including archmage itself).
+            target_env["CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUSTFLAGS"] = (
+                "-Ctarget-feature=+simd128,+relaxed-simd"
+            )
         code = ["use archmage::prelude::*;"]
         for i, (caller, callee, token) in enumerate(cases):
             code.append(f'''
@@ -1673,7 +1687,7 @@ pub fn hand_{i}(a: &[u32; 8], out: &mut [u32; 8]) {{
         (root / "src/lib.rs").write_text("\n".join(code))
         run = subprocess.run(["cargo", *toolchain_arg(), "rustc", "--manifest-path", str(root / "Cargo.toml"),
                               "--release", "--lib", "--target", target, "--", "--emit=asm"],
-                             env=env, capture_output=True, text=True)
+                             env=target_env, capture_output=True, text=True)
         (root / f"{target}.log").write_text(run.stdout + run.stderr)
         assert run.returncode == 0, run.stderr
         asm_file = find_emitted_asm(root / "target" / target / "release", "context_probe")
@@ -1684,8 +1698,56 @@ pub fn hand_{i}(a: &[u32; 8], out: &mut [u32; 8]) {{
             api, hand = (expand(f"{name}_{i}", functions) for name in ("api", "hand"))
             assert api == hand, (target, i, api, hand)
             assert not transfers(api) and "INTERNAL_CALL" not in api and "TAIL_CALL" not in api, (target, i, api)
-            assert not any("panic" in line or "cpuid" in line for line in api), (target, api)
+            assert not any("panic" in line or "cpuid" in line or "unreachable" in line for line in api), (target, api)
+            assert any("store" in line or "mov" in line or "stp" in line or "str" in line for line in api), (target, api)
         print(target, len(cases), "identical context bridges; no calls, branches, or bounds panics", flush=True)
+
+    # Negative WASM probe: without -Ctarget-feature=+simd128, from_context() must
+    # fail closed (panic + unreachable, no stores, and zero SIMD opcodes).
+    unflagged_env = dict(
+        env,
+        CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUSTFLAGS="-Ctarget-feature=-simd128,-relaxed-simd",
+    )
+    (root / "src/lib.rs").write_text('''
+use archmage::prelude::*;
+#[rite(wasm128)]
+#[unsafe(no_mangle)]
+pub fn unflagged_strict(out: &mut u32) {
+    let _t = Wasm128Token::from_context();
+    *out = 1;
+}
+#[rite(wasm128_relaxed)]
+#[unsafe(no_mangle)]
+pub fn unflagged_relaxed(out: &mut u32) {
+    let _t = Wasm128RelaxedToken::from_context();
+    *out = 2;
+}
+''')
+    unflagged_target_dir = root / "target-unflagged"
+    run = subprocess.run(
+        [
+            "cargo", *toolchain_arg(), "rustc", "--manifest-path", str(root / "Cargo.toml"),
+            "--target-dir", str(unflagged_target_dir),
+            "--release", "--lib", "--target", "wasm32-unknown-unknown", "--", "--emit=asm",
+        ],
+        env=unflagged_env, capture_output=True, text=True,
+    )
+    (root / "wasm32-unflagged.log").write_text(run.stdout + run.stderr)
+    assert run.returncode == 0, run.stderr
+    unflagged_asm = find_emitted_asm(
+        unflagged_target_dir / "wasm32-unknown-unknown" / "release", "context_probe"
+    ).read_text()
+    (root / "wasm32-unflagged.s").write_text(unflagged_asm)
+    unflagged_fns = parse(unflagged_asm)
+    for fn_name in ("unflagged_strict", "unflagged_relaxed"):
+        lines = unflagged_fns[fn_name]
+        assert any("panic" in line for line in lines), (fn_name, lines)
+        assert any("unreachable" in line for line in lines), (fn_name, lines)
+        assert not any(".store" in line for line in lines), (fn_name, lines)
+        assert not any("v128." in line or "i32x4." in line or "f32x4." in line for line in lines), (fn_name, lines)
+    print("wasm32-unknown-unknown (unflagged): fail-closed panic verified with zero SIMD opcodes", flush=True)
+    shutil.rmtree(root / "target", ignore_errors=True)
+    shutil.rmtree(unflagged_target_dir, ignore_errors=True)
     print("Context codegen artifacts:", root, flush=True)
 
 

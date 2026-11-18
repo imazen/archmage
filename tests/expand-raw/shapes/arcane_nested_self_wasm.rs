@@ -5,20 +5,13 @@ struct Processor {
 }
 impl Processor {
     #[cfg(target_arch = "wasm32")]
-    #[inline(always)]
+    #[target_feature(enable = "simd128")]
+    #[inline]
     fn process(&self, token: Wasm128Token, a: f32) -> Self {
-        #[target_feature(enable = "simd128")]
-        #[inline]
-        fn __simd_inner_process(
-            _self: &Processor,
-            token: Wasm128Token,
-            a: f32,
-        ) -> Processor {
-            let _ = token;
-            Processor { val: _self.val + a }
-        }
+        let _self: &Processor = self;
         let _: () = <Wasm128Token>::__ARCHMAGE_ASSERT_TIER_1E0DF26B;
-        __simd_inner_process(self, token, a)
+        let _ = token;
+        Self { val: _self.val + a }
     }
 }
 fn main() {}
