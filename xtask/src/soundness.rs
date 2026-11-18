@@ -363,7 +363,7 @@ impl<'r> Scanner<'r> {
         }
 
         structural_rules(rel, &text, &mut out.errors);
-        raw_context::verify(self.reg, rel, &text, &mut out.errors);
+        raw_context::verify(self.reg, rel, raw, &mut out.errors);
         safety_comment_rules(rel, raw, &mut out.errors);
         out
     }
@@ -955,13 +955,108 @@ fn collect_rs_files(dir: &Path, out: &mut Vec<PathBuf>) -> Result<()> {
     Ok(())
 }
 
-/// Replace comment bytes with spaces (newlines preserved) so offsets and
-/// line numbers remain valid. Handles `//`-to-EOL and nested `/* */`.
+/// If `src` starts a Rust string, raw string, byte/C string, or character/byte
+/// literal at byte `i` (leaving lifetimes `'a` / `'_` untouched), return
+/// `(end_exclusive, terminated)`.
+fn skip_rust_literal_at(src: &str, i: usize) -> Option<(usize, bool)> {
+    let bytes = src.as_bytes();
+    let b = *bytes.get(i)?;
+    let at_word_start = i == 0 || !(bytes[i - 1].is_ascii_alphanumeric() || bytes[i - 1] == b'_');
+    // Raw string / raw byte string / raw C-string: `r#*"..."#*`, `br#*"..."#*`, `cr#*"..."#*`.
+    if at_word_start && matches!(b, b'r' | b'b' | b'c') {
+        let r_pos = if b == b'r' {
+            Some(i)
+        } else if bytes.get(i + 1) == Some(&b'r') {
+            Some(i + 1)
+        } else {
+            None
+        };
+        if let Some(rp) = r_pos {
+            let mut hashes = 0usize;
+            while bytes.get(rp + 1 + hashes) == Some(&b'#') {
+                hashes += 1;
+            }
+            if bytes.get(rp + 1 + hashes) == Some(&b'"') {
+                let mut j = rp + 2 + hashes;
+                while j < bytes.len() {
+                    if bytes[j] == b'"'
+                        && j + hashes < bytes.len()
+                        && bytes[j + 1..=j + hashes].iter().all(|&c| c == b'#')
+                    {
+                        return Some((j + 1 + hashes, true));
+                    }
+                    j += 1;
+                }
+                return Some((bytes.len(), false));
+            }
+        }
+        // `b"..."` / `c"..."` / `b'...'`
+        if matches!(b, b'b' | b'c') && bytes.get(i + 1) == Some(&b'"') {
+            return skip_quoted_string_at(bytes, i + 1);
+        }
+        if b == b'b' && bytes.get(i + 1) == Some(&b'\'') {
+            return skip_char_literal_at(src, i + 1).map(|end| (end, true));
+        }
+    }
+    match b {
+        b'"' => skip_quoted_string_at(bytes, i),
+        b'\'' => skip_char_literal_at(src, i).map(|end| (end, true)),
+        _ => None,
+    }
+}
+
+fn skip_quoted_string_at(bytes: &[u8], quote_pos: usize) -> Option<(usize, bool)> {
+    let mut j = quote_pos + 1;
+    while j < bytes.len() {
+        if bytes[j] == b'\\' {
+            j = (j + 2).min(bytes.len());
+            continue;
+        }
+        if bytes[j] == b'"' {
+            return Some((j + 1, true));
+        }
+        j += 1;
+    }
+    Some((bytes.len(), false))
+}
+
+fn skip_char_literal_at(src: &str, quote_pos: usize) -> Option<usize> {
+    let bytes = src.as_bytes();
+    if bytes.get(quote_pos + 1) == Some(&b'\\') {
+        // Escaped char/byte literal: `'\\'`, `'\''`, `'\x7d'`, `'\u{10ffff}'`.
+        let mut j = quote_pos + 2;
+        if matches!(bytes.get(j), Some(b'\'' | b'\\')) && bytes.get(j + 1) == Some(&b'\'') {
+            return Some(j + 2);
+        }
+        while j < bytes.len() && j <= quote_pos + 14 {
+            if bytes[j] == b'\'' {
+                return Some(j + 1);
+            }
+            j += 1;
+        }
+        None
+    } else if src.is_char_boundary(quote_pos + 1)
+        && let Some(ch) = src[quote_pos + 1..].chars().next()
+        && ch != '\''
+        && bytes.get(quote_pos + 1 + ch.len_utf8()) == Some(&b'\'')
+    {
+        Some(quote_pos + 2 + ch.len_utf8())
+    } else {
+        None
+    }
+}
+
+/// Replace comment bytes with spaces (newlines and string/char literals preserved)
+/// so offsets and line numbers remain valid. Handles `//`-to-EOL and nested `/* */`.
 fn strip_comments(src: &str) -> String {
     let bytes = src.as_bytes();
     let mut out = bytes.to_vec();
     let mut i = 0;
     while i < bytes.len() {
+        if let Some((end, _)) = skip_rust_literal_at(src, i) {
+            i = end;
+            continue;
+        }
         if bytes[i] == b'/' && i + 1 < bytes.len() && bytes[i + 1] == b'/' {
             while i < bytes.len() && bytes[i] != b'\n' {
                 out[i] = b' ';
@@ -1012,78 +1107,14 @@ fn find_matching_brace(text: &str, open: usize) -> Option<usize> {
     let mut depth = 0i32;
     let mut i = open;
     while i < bytes.len() {
-        let b = bytes[i];
-        // Raw string / raw byte string / raw C-string: `r#*"..."#*`, `br#*"..."#*`, `cr#*"..."#*`.
-        if matches!(b, b'r' | b'b' | b'c') {
-            let r_pos = if b == b'r' {
-                Some(i)
-            } else if bytes.get(i + 1) == Some(&b'r') {
-                Some(i + 1)
-            } else {
-                None
-            };
-            if let Some(rp) = r_pos {
-                let mut hashes = 0usize;
-                while bytes.get(rp + 1 + hashes) == Some(&b'#') {
-                    hashes += 1;
-                }
-                if bytes.get(rp + 1 + hashes) == Some(&b'"') {
-                    let mut j = rp + 2 + hashes;
-                    while j < bytes.len() {
-                        if bytes[j] == b'"'
-                            && j + hashes < bytes.len()
-                            && bytes[j + 1..=j + hashes].iter().all(|&c| c == b'#')
-                        {
-                            i = j + 1 + hashes;
-                            break;
-                        }
-                        j += 1;
-                    }
-                    if j >= bytes.len() {
-                        return None;
-                    }
-                    continue;
-                }
+        if let Some((end, terminated)) = skip_rust_literal_at(text, i) {
+            if !terminated {
+                return None;
             }
+            i = end;
+            continue;
         }
-        match b {
-            b'"' => {
-                i += 1;
-                while i < bytes.len() {
-                    if bytes[i] == b'\\' {
-                        i += 2;
-                        continue;
-                    }
-                    if bytes[i] == b'"' {
-                        i += 1;
-                        break;
-                    }
-                    i += 1;
-                }
-                continue;
-            }
-            b'\'' => {
-                // Distinguish character/byte literals (`'}'`, `'\''`, `'\u{7d}'`) from lifetimes (`'a`, `'_`).
-                if bytes.get(i + 1) == Some(&b'\\') {
-                    let mut j = i + 3;
-                    while j < bytes.len() && j <= i + 14 {
-                        if bytes[j] == b'\'' {
-                            i = j + 1;
-                            break;
-                        }
-                        j += 1;
-                    }
-                    if i > open && bytes.get(i - 1) == Some(&b'\'') {
-                        continue;
-                    }
-                } else if let Some(ch) = text[i + 1..].chars().next()
-                    && ch != '\''
-                    && bytes.get(i + 1 + ch.len_utf8()) == Some(&b'\'')
-                {
-                    i += 2 + ch.len_utf8();
-                    continue;
-                }
-            }
+        match bytes[i] {
             b'{' => depth += 1,
             b'}' => {
                 depth -= 1;
@@ -2010,11 +2041,17 @@ mod tests {
             );
         }
 
-        // Closures inside a gated function DO inherit the enclosing proof, and
+        // Closures inside a gated function DO inherit the enclosing proof, URL strings
+        // containing `//` or `/*` do not corrupt comment stripping or body spans, and
         // const-expression braces in `#[target_feature]` signatures do not truncate the body.
         let closure_ok = scan_at(
             "src/test_nested.rs",
-            "#[target_feature(enable = \"avx512f\")] unsafe fn outer(_buf: [u8; { 1 + 3 }]) { let f = || _mm512_setzero_ps(); let _ = f; }\n",
+            "#[target_feature(enable = \"avx512f\")] unsafe fn outer(_buf: [u8; { 1 + 3 }]) {\n\
+             let _url = \"https://example.test\";\n\
+             let _blk = \"/* not a comment\";\n\
+             let f = || _mm512_setzero_ps();\n\
+             let _ = f;\n\
+             }\n",
         );
         assert!(closure_ok.errors.is_empty(), "{:?}", closure_ok.errors);
         assert_eq!(closure_ok.verified, 1);

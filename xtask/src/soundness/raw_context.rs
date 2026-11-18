@@ -313,7 +313,6 @@ fn cursor_has_ident(mut cursor: Cursor<'_>, target: &str) -> bool {
 fn use_tree_binds_self(tree: &syn::UseTree) -> bool {
     match tree {
         syn::UseTree::Name(n) => n.ident == "self",
-        syn::UseTree::Rename(r) => r.ident == "self",
         syn::UseTree::Group(g) => g.items.iter().any(use_tree_binds_self),
         _ => false,
     }
@@ -511,9 +510,14 @@ mod tests {
                 "expected `{expected_substr}` in {errs:?} for `{source}`"
             );
         }
-        // Leading `::archmage` resolves unambiguously to extern prelude even with a glob import.
+        // Leading `::archmage` resolves unambiguously to extern prelude even with a glob import,
+        // and `use other::archmage::{self as alternate}` binds `alternate`, not `archmage`.
         assert!(
             check("use other::*; #[archmage::rite(v3)] fn wrap() { ::archmage::X64V3Token::from_context(); }")
+                .is_empty()
+        );
+        assert!(
+            check("use other::archmage::{self as alternate}; #[archmage::rite(v3)] fn wrap() { archmage::X64V3Token::from_context(); }")
                 .is_empty()
         );
     }
