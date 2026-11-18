@@ -1416,7 +1416,7 @@ fn powf_subnormal_straddling_exponent_intervals_clamp_to_admitted_endpoints() {
         assert_eq!(s4[1], 0.0);
 
         #[cfg(target_arch = "x86_64")]
-        if let Some(tok) = archmage::X64V3Token::summon() {
+        if let Some(tok) = <archmage::X64V3Token as archmage::SimdToken>::summon() {
             let v8 = magetypes::simd::generic::f32x8::from_array_t(
                 tok,
                 [0.0, -0.0, 0.25, 0.5, 0.0, 1.0, 2.0, 0.0],
