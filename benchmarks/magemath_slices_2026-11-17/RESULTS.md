@@ -49,7 +49,7 @@ taskset -c 8 cargo bench --bench options_granularity -- --cpu-policy=unrestricte
 
 Sampled benchmark inputs (all strictly valid across every configuration in their group):
 - `log2_4096`: `near_one` (`4096` normals in `[0.75, 1.25)`)
-- `exp2_4096`: `small_sym` (`4096` normals in `[-0.45, 0.45)`)
+- `exp2_4096`: `small_sym` (`4096` finite values in `[-0.45, 0.45)`, including `0.0` at index `2048`)
 - `cbrt_4096` and `powf_4096`: `unit_pos` (`4096` normals in `[0.01, 0.99)`)
 
 ### `log2_4096`
@@ -84,9 +84,9 @@ Sampled benchmark inputs (all strictly valid across every configuration in their
 ### `powf_4096` (`n = 1.0 / 2.4`)
 | configuration | mean ± std | vs `gamma_error_on_oob` | profile domain / notes |
 |---|---|---|---|
-| `gamma_assume_in_bounds` (`.gamma_domain().assume_in_bounds()`) | `753.5 ns ± 2.4 ns` | `-21.1%` | unchecked `[2^-16, 2^16]` + `+0.0` (exp `[0.0, 8.0]`), elides internal `y*log2(x)` clamp |
-| `srgb_encode_domain` (`.srgb_encode_domain()`) | `947.7 ns ± 4.0 ns` | `-0.8%` (`1.53x` faster than unranged) | checked `[MIN_POSITIVE, 1.0]` + `+0.0` (exp `[0.0, 0.99]`); sign-aware 4-corner range elision |
-| `gamma_error_on_oob` (`.gamma_domain()`) | `955.5 ns ± 2.2 ns` | `1.00x` | checked `[2^-16, 2^16]` + `+0.0` (exp `[0.0, 8.0]`), elides internal `y*log2(x)` clamp |
-| `gamma_clamp_oob` (`.gamma_domain().clamp_out_of_bounds()`) | `1.13 µs ± 2.8 ns` | `+18.3%` | infallible input clamp into `[0.0, 2^16]` + `NaN` propagation, still elides internal `y*log2(x)` clamp |
+| `gamma_assume_in_bounds` (`.gamma_domain().assume_in_bounds()`) | `753.5 ns ± 2.4 ns` | `-21.1%` | unchecked `{+0.0} ∪ [2^-16, 2^16]` (exp `[0.0, 4.0]`), elides internal `y*log2(x)` clamp |
+| `srgb_encode_domain` (`.srgb_encode_domain()`) | `947.7 ns ± 4.0 ns` | `-0.8%` (`1.53x` faster than unranged) | checked `{+0.0} ∪ [MIN_POSITIVE, 1.0]` (exp `[0.0, 0.99]`); sign-aware 4-corner range elision |
+| `gamma_error_on_oob` (`.gamma_domain()`) | `955.5 ns ± 2.2 ns` | `1.00x` | checked `{+0.0} ∪ [2^-16, 2^16]` (exp `[0.0, 4.0]`), elides internal `y*log2(x)` clamp |
+| `gamma_clamp_oob` (`.gamma_domain().clamp_out_of_bounds()`) | `1.13 µs ± 2.8 ns` | `+18.3%` | infallible input clamp into `{+0.0} ∪ [2^-16, 2^16]` + `NaN` propagation, still elides internal `y*log2(x)` clamp |
 | `unranged_admit_zero` (`.admit_zero_base()`) | `1.45 µs ± 4.3 ns` | `+51.8%` | checked positive normals + `+0.0` (for `n >= 0`), retains internal `y*log2(x)` clamp |
-| `unranged_zero_and_subnormals` (`.admit_zero_base().admit_subnormals()`) | `1.64 µs ± 6.7 ns` | `+71.6%` (`+13.1%` vs zero-only) | adds subnormal base normalization (`[f32::from_bits(1), MAX]` + `+0.0`) |
+| `unranged_zero_and_subnormals` (`.admit_zero_base().admit_subnormals()`) | `1.64 µs ± 6.7 ns` | `+71.6%` (`+13.1%` vs zero-only) | adds subnormal base normalization (`{+0.0} ∪ [f32::from_bits(1), MAX]`) |

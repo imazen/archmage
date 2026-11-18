@@ -1050,3 +1050,26 @@ fn decode_const_surfaces_specific_validate_message() {
     let bad = PowfOptions::new().full_domain().bits();
     let _ = PowfOptions::decode_const(bad);
 }
+
+#[test]
+fn prepare_exponent_clamps_one_sided_subnormal_bounds_inward() {
+    let pos_opts = PowfOptions::new()
+        .exponent_range(f32::MIN_POSITIVE / 2.0, f32::MIN_POSITIVE)
+        .clamp_out_of_bounds();
+    for exp_in in [f32::NEG_INFINITY, -1.0, -0.0, 0.0, f32::from_bits(1)] {
+        let prepared = super::const_api::prepare_exponent::<1>(pos_opts, exp_in)
+            .unwrap()
+            .unwrap();
+        assert_eq!(prepared.to_bits(), f32::MIN_POSITIVE.to_bits());
+    }
+
+    let neg_opts = PowfOptions::new()
+        .exponent_range(-f32::MIN_POSITIVE, -f32::MIN_POSITIVE / 2.0)
+        .clamp_out_of_bounds();
+    for exp_in in [-f32::from_bits(1), -0.0, 0.0, 1.0, f32::INFINITY] {
+        let prepared = super::const_api::prepare_exponent::<1>(neg_opts, exp_in)
+            .unwrap()
+            .unwrap();
+        assert_eq!(prepared.to_bits(), (-f32::MIN_POSITIVE).to_bits());
+    }
+}

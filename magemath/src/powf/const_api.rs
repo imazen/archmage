@@ -19,7 +19,10 @@ impl<const CFG: u128> graph::Kernel for Cfg<CFG> {
 }
 
 #[inline(always)]
-fn prepare_exponent<const N: usize>(opts: PowfOptions, n: f32) -> Result<Option<f32>, PowfError> {
+pub(super) fn prepare_exponent<const N: usize>(
+    opts: PowfOptions,
+    n: f32,
+) -> Result<Option<f32>, PowfError> {
     if opts.assume_valid() || opts.is_full() {
         return Ok(Some(n));
     }
