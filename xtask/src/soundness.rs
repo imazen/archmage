@@ -1010,8 +1010,80 @@ fn find_matching_brace(text: &str, open: usize) -> Option<usize> {
     let bytes = text.as_bytes();
     debug_assert_eq!(bytes[open], b'{');
     let mut depth = 0i32;
-    for (i, &b) in bytes.iter().enumerate().skip(open) {
+    let mut i = open;
+    while i < bytes.len() {
+        let b = bytes[i];
+        // Raw string / raw byte string / raw C-string: `r#*"..."#*`, `br#*"..."#*`, `cr#*"..."#*`.
+        if matches!(b, b'r' | b'b' | b'c') {
+            let r_pos = if b == b'r' {
+                Some(i)
+            } else if bytes.get(i + 1) == Some(&b'r') {
+                Some(i + 1)
+            } else {
+                None
+            };
+            if let Some(rp) = r_pos {
+                let mut hashes = 0usize;
+                while bytes.get(rp + 1 + hashes) == Some(&b'#') {
+                    hashes += 1;
+                }
+                if bytes.get(rp + 1 + hashes) == Some(&b'"') {
+                    let mut j = rp + 2 + hashes;
+                    while j < bytes.len() {
+                        if bytes[j] == b'"'
+                            && j + hashes < bytes.len()
+                            && bytes[j + 1..=j + hashes].iter().all(|&c| c == b'#')
+                        {
+                            i = j + 1 + hashes;
+                            break;
+                        }
+                        j += 1;
+                    }
+                    if j >= bytes.len() {
+                        return None;
+                    }
+                    continue;
+                }
+            }
+        }
         match b {
+            b'"' => {
+                i += 1;
+                while i < bytes.len() {
+                    if bytes[i] == b'\\' {
+                        i += 2;
+                        continue;
+                    }
+                    if bytes[i] == b'"' {
+                        i += 1;
+                        break;
+                    }
+                    i += 1;
+                }
+                continue;
+            }
+            b'\'' => {
+                // Distinguish character/byte literals (`'}'`, `'\''`, `'\u{7d}'`) from lifetimes (`'a`, `'_`).
+                if bytes.get(i + 1) == Some(&b'\\') {
+                    let mut j = i + 3;
+                    while j < bytes.len() && j <= i + 14 {
+                        if bytes[j] == b'\'' {
+                            i = j + 1;
+                            break;
+                        }
+                        j += 1;
+                    }
+                    if i > open && bytes.get(i - 1) == Some(&b'\'') {
+                        continue;
+                    }
+                } else if let Some(ch) = text[i + 1..].chars().next()
+                    && ch != '\''
+                    && bytes.get(i + 1 + ch.len_utf8()) == Some(&b'\'')
+                {
+                    i += 2 + ch.len_utf8();
+                    continue;
+                }
+            }
             b'{' => depth += 1,
             b'}' => {
                 depth -= 1;
@@ -1021,6 +1093,7 @@ fn find_matching_brace(text: &str, open: usize) -> Option<usize> {
             }
             _ => {}
         }
+        i += 1;
     }
     None
 }
@@ -1925,7 +1998,8 @@ mod tests {
     fn nested_fn_does_not_inherit_outer_function_or_impl_proofs() {
         for source in [
             "fn outer(t: archmage::X64V4Token) { let _ = t; fn inner() { _mm512_setzero_ps(); } }\n",
-            "#[target_feature(enable = \"avx512f\")] unsafe fn outer() { fn inner() { _mm512_setzero_ps(); } }\n",
+            "fn outer(t: archmage::X64V4Token) { let _ = t; fn inner() { let _c = '}'; let _s = \"}\"; let _r = r#\"}\"#; _mm512_setzero_ps(); } }\n",
+            "#[target_feature(enable = \"avx512f\")] unsafe fn outer() { fn inner() { let _u = '\\u{7d}'; _mm512_setzero_ps(); } }\n",
             "impl Foo for archmage::X64V4Token { fn outer(self) { fn inner() { _mm512_setzero_ps(); } } }\n",
         ] {
             let bad = scan_at("src/test_nested.rs", source);

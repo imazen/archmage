@@ -972,7 +972,9 @@ pub(crate) fn nested_self_param_with_lifetime(
     let ty: proc_macro2::TokenStream = match &receiver.kind {
         syn::ReceiverKind::Value => quote!(#self_ty),
         syn::ReceiverKind::Reference(_, lifetime, mutability) => {
-            let lt = override_ref_lifetime.or(lifetime.as_ref());
+            let lt = override_ref_lifetime
+                .or_else(|| lifetime.as_ref().filter(|l| l.ident != "_"))
+                .or(lifetime.as_ref());
             if matches!(self_ty, Type::ImplTrait(it) if it.bounds.len() > 1) {
                 quote!(& #lt #mutability (#self_ty))
             } else {
@@ -981,10 +983,19 @@ pub(crate) fn nested_self_param_with_lifetime(
         }
         syn::ReceiverKind::Typed(_, ty) => {
             let mut ty_copy = (**ty).clone();
-            if let (Some(lt), Type::Reference(tr)) = (override_ref_lifetime, &mut ty_copy)
-                && tr.lifetime.is_none()
-            {
-                tr.lifetime = Some(lt.clone());
+            if let Some(lt) = override_ref_lifetime {
+                let mut cur = &mut ty_copy;
+                while let Type::Paren(p) = cur {
+                    cur = &mut p.elem;
+                }
+                while let Type::Group(g) = cur {
+                    cur = &mut g.elem;
+                }
+                if let Type::Reference(tr) = cur
+                    && tr.lifetime.as_ref().is_none_or(|l| l.ident == "_")
+                {
+                    tr.lifetime = Some(lt.clone());
+                }
             }
             replace_self_in_tokens(ty_copy.to_token_stream(), self_ty)
         }

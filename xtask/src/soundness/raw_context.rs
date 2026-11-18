@@ -23,13 +23,20 @@ pub(super) fn verify(reg: &Registry, rel: &str, text: &str, errors: &mut Vec<Str
             return;
         }
     };
-    ContextVisitor {
+    let mut visitor = ContextVisitor {
         reg,
         rel,
         errors,
         frame: Frame::default(),
+        has_relative_from_context: false,
+        has_glob_import: false,
+    };
+    visitor.visit_file(&file);
+    if visitor.has_relative_from_context && visitor.has_glob_import {
+        visitor.errors.push(format!(
+            "{rel}: glob import `use ...::*` makes relative `archmage::...::from_context` resolution ambiguous; use `::archmage::...::from_context`",
+        ));
     }
-    .visit_file(&file);
 }
 
 #[derive(Default)]
@@ -45,6 +52,8 @@ struct ContextVisitor<'a> {
     rel: &'a str,
     errors: &'a mut Vec<String>,
     frame: Frame,
+    has_relative_from_context: bool,
+    has_glob_import: bool,
 }
 
 impl ContextVisitor<'_> {
@@ -139,8 +148,13 @@ impl<'ast> Visit<'ast> for ContextVisitor<'_> {
                 .iter()
                 .map(|s| s.ident.unraw().to_string())
                 .collect();
-            // Require `archmage::Token::from_context` or `::archmage::Token::from_context`
-            // (paired with rejecting local `mod archmage` / `as archmage` in audited files).
+            // Syntactic path audit paired with `rustc`: accept `::archmage::Token::from_context`
+            // (unambiguous extern-prelude path) or relative `archmage::Token::from_context` when
+            // no local `mod archmage`, `extern crate ... as archmage`, `use ...::archmage`,
+            // `use ...::archmage::{self, ...}`, `as archmage`, or `use ...::*` glob is present.
+            if item.path.leading_colon.is_none() {
+                self.has_relative_from_context = true;
+            }
             let token = if parts.len() == 3 && parts[0] == "archmage" && item.qself.is_none() {
                 self.reg.find_token(&parts[1])
             } else {
@@ -165,6 +179,35 @@ impl<'ast> Visit<'ast> for ContextVisitor<'_> {
             ));
         }
         visit::visit_item_mod(self, item);
+    }
+
+    fn visit_item_extern_crate(&mut self, item: &'ast syn::ItemExternCrate) {
+        let binds_archmage = match &item.rename {
+            Some((_, rename)) => rename.unraw() == "archmage",
+            None => false,
+        };
+        if binds_archmage {
+            self.errors.push(format!(
+                "{}: `extern crate ... as archmage` shadows the external crate path required for from_context",
+                self.rel
+            ));
+        }
+        visit::visit_item_extern_crate(self, item);
+    }
+
+    fn visit_use_path(&mut self, item: &'ast syn::UsePath) {
+        if item.ident.unraw() == "archmage" && use_tree_binds_self(&item.tree) {
+            self.errors.push(format!(
+                "{}: `self` import of `archmage` shadows the external crate path required for from_context",
+                self.rel
+            ));
+        }
+        visit::visit_use_path(self, item);
+    }
+
+    fn visit_use_glob(&mut self, item: &'ast syn::UseGlob) {
+        self.has_glob_import = true;
+        visit::visit_use_glob(self, item);
     }
 
     fn visit_use_name(&mut self, item: &'ast syn::UseName) {
@@ -265,6 +308,15 @@ fn cursor_has_ident(mut cursor: Cursor<'_>, target: &str) -> bool {
         }
     }
     false
+}
+
+fn use_tree_binds_self(tree: &syn::UseTree) -> bool {
+    match tree {
+        syn::UseTree::Name(n) => n.ident == "self",
+        syn::UseTree::Rename(r) => r.ident == "self",
+        syn::UseTree::Group(g) => g.items.iter().any(use_tree_binds_self),
+        _ => false,
+    }
 }
 
 /// Parse `#[rite(...)]` / `#[attune(...)]` arguments and return the intersection
@@ -417,9 +469,8 @@ mod tests {
             "fn wrap() { archmage::X64V3Token::from_context(); }",
             "use archmage::X64V3Token::from_context as make; fn wrap() { make(); }",
             "use archmage::X64V3Token::r#from_context; fn wrap() { from_context(); }",
-            "mod archmage { pub struct X64V3Token; } #[target_feature(enable = \"avx2\")] fn wrap() { archmage::X64V3Token::from_context(); }",
-            "use local as archmage; #[target_feature(enable = \"avx2\")] fn wrap() { archmage::X64V3Token::from_context(); }",
-            "use other::archmage; #[target_feature(enable = \"avx2\")] fn wrap() { archmage::X64V3Token::from_context(); }",
+            "mod archmage { pub struct X64V3Token; } #[archmage::rite(v3)] fn wrap() { archmage::X64V3Token::from_context(); }",
+            "use local as archmage; #[archmage::rite(v3)] fn wrap() { archmage::X64V3Token::from_context(); }",
             "#[other::attune(v3)] fn wrap() { archmage::X64V3Token::from_context(); }",
             "#[archmage::rite(v3, v4)] fn wrap() { archmage::X64V4Token::from_context(); }",
             "#[archmage::attune(dispatch, _*_t)] fn wrap() { archmage::X64V3Token::from_context(); }",
@@ -435,6 +486,36 @@ mod tests {
         ] {
             assert!(!check(source).is_empty(), "accepted {source}");
         }
+
+        for (source, expected_substr) in [
+            (
+                "use other::archmage; #[archmage::rite(v3)] fn wrap() { archmage::X64V3Token::from_context(); }",
+                "shadows",
+            ),
+            (
+                "use other::archmage::{self}; #[archmage::rite(v3)] fn wrap() { archmage::X64V3Token::from_context(); }",
+                "shadows",
+            ),
+            (
+                "extern crate other as archmage; #[archmage::rite(v3)] fn wrap() { archmage::X64V3Token::from_context(); }",
+                "shadows",
+            ),
+            (
+                "use other::*; #[archmage::rite(v3)] fn wrap() { archmage::X64V3Token::from_context(); }",
+                "ambiguous",
+            ),
+        ] {
+            let errs = check(source);
+            assert!(
+                errs.iter().any(|e| e.contains(expected_substr)),
+                "expected `{expected_substr}` in {errs:?} for `{source}`"
+            );
+        }
+        // Leading `::archmage` resolves unambiguously to extern prelude even with a glob import.
+        assert!(
+            check("use other::*; #[archmage::rite(v3)] fn wrap() { ::archmage::X64V3Token::from_context(); }")
+                .is_empty()
+        );
     }
 
     #[test]

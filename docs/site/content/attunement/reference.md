@@ -394,9 +394,13 @@ Call syntax:
   fallback and no AVX-512 tier is ever appended implicitly. `_t` forces the
   proof entry even inside a covered context.
 - `using(expr)` takes one proof expression: a token, `impl IntoConcreteToken`,
-  or `Token::from_context()`. Multiple `using(...)` clauses, multiple callee
-  lists, and definition modifiers used as call lists are errors. `-_neon` is
-  definition syntax, not call-list syntax; spell the remaining tiers.
+  or `Token::from_context()` (on `wasm32`, `Wasm128Token::from_context()`
+  requires `-C target-feature=+simd128` across the target crate graph and
+  `Wasm128RelaxedToken::from_context()` requires
+  `-C target-feature=+simd128,+relaxed-simd`, panicking in unflagged builds).
+  Multiple `using(...)` clauses, multiple callee lists, and definition modifiers
+  used as call lists are errors. `-_neon` is definition syntax, not call-list
+  syntax; spell the remaining tiers.
 - `names(...)` maps tiers to nonconventional paths for external families.
 - A qualified path, turbofish, or associated path such as `Self::work` is
   supported; receiver syntax such as `attuned!(self.work(x))` is rejected
@@ -515,6 +519,13 @@ exist; CPU detection and target-feature contexts still determine which can run.
 Imports do not construct a token or change constructor signatures. Prefer
 `define(f32x8)` when the body needs a specific vector alias; use
 `Token::from_context()` and `_t(token, ...)` to construct vectors in this release.
+On `wasm32`, `Wasm128Token::from_context()` requires `-C target-feature=+simd128`
+across the target crate graph and `Wasm128RelaxedToken::from_context()` requires
+`-C target-feature=+simd128,+relaxed-simd` (and raw WASM vector `from_raw` /
+contextual `incant!` or `attuned!` upgrades that synthesize those tokens inherit
+the same requirement); in unflagged baseline WASM builds they fail closed by
+panicking, so pass an explicit proof token (`_t`) or compile the target graph
+with the matching target features.
 
 ## Migrating from the legacy attributes
 
