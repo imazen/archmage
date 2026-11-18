@@ -592,8 +592,13 @@ fn resolve_nested_receiver_lifetime(
     let Some(FnArg::Receiver(recv)) = sig.inputs.first() else {
         return (None, generics, output);
     };
-    let syn::ReceiverKind::Reference(_, recv_lt, _) = &recv.kind else {
-        return (None, generics, output);
+    let recv_lt = match &recv.kind {
+        syn::ReceiverKind::Reference(_, lt, _) => lt.as_ref(),
+        syn::ReceiverKind::Typed(_, ty) => match &**ty {
+            Type::Reference(tr) => tr.lifetime.as_ref(),
+            _ => return (None, generics, output),
+        },
+        _ => return (None, generics, output),
     };
     if !output_has_elided_lifetime(&output) {
         return (None, generics, output);

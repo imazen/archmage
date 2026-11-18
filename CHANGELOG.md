@@ -20,6 +20,7 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 
 - Support Rust `1.100.0` (Cargo 1.100 build-dir layout compatibility in SDE, codegen, and UI tests).
 - Pin matching `archmage-macros = "=0.9.32"`.
+- On `wasm32`, `Wasm128Token::from_context()` and `Wasm128RelaxedToken::from_context()` (and raw WASM vector `from_raw` / contextual `incant!` / `attuned!` proof synthesis that calls them) require crate-wide `-C target-feature=+simd128` (or `+relaxed-simd`) and fail closed by panicking in unflagged baseline WASM builds, preventing dead-code-eliminated proofs from succeeding on non-SIMD engines (`docs/spec.md`, `docs/ATTUNE.md`).
 
 ### [0.9.31] - 2026-11-07
 
@@ -80,6 +81,7 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 #### Fixed
 
 - Preserve author body brace spans across macro expansion (`#[arcane]`, `#[rite]`) so `cargo llvm-cov` counts annotated function bodies (#154).
+- Harden macro token/boundary soundness and hygiene: verify concrete and generic token arguments (`&Token`, `ref token`, typed receivers including `Pin<&mut Self>` / `Pin<Box<Self>>`), sanitize forwarding parameter patterns (`@` subpatterns, raw idents, `mut`) and `attune` output names against callee shadowing, keep `_self = Type` in `impl` scope on scalar and `wasm32` while preserving receiver lifetime elision (including `self: &Self`) and `mut self` on native nested bodies, and resolve `Has128BitSimd` cleanly alongside architecture-specific bounds.
 
 #### Changed
 

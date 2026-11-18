@@ -159,6 +159,7 @@ const X86_64_BASELINE: &[&str] = &["sse", "sse2"];
 struct GatingSpan {
     start: usize,
     end: usize,
+    is_fn_scoped: bool,
     features: HashSet<String>,
     origin: String,
 }
@@ -219,7 +220,7 @@ impl<'r> Scanner<'r> {
     pub fn scan_source(&self, rel: &str, raw: &str) -> FileScan {
         let text = strip_comments(raw);
         let mut out = FileScan::default();
-        let spans = self.gating_spans(rel, &text, &mut out.errors);
+        let (spans, fn_bodies) = self.gating_spans(rel, &text, &mut out.errors);
 
         for cap in self.candidate_re.captures_iter(&text) {
             let name_match = cap.get(1).unwrap();
@@ -266,9 +267,35 @@ impl<'r> Scanner<'r> {
                 .filter(|s| !s.is_empty())
                 .collect();
 
+            let innermost_fn = fn_bodies
+                .iter()
+                .filter(|&&(fo, fc)| pos > fo && pos < fc)
+                .max_by_key(|&&(fo, _)| fo)
+                .copied();
+
             let enclosing: Vec<&GatingSpan> = spans
                 .iter()
-                .filter(|s| pos > s.start && pos < s.end)
+                .filter(|s| {
+                    if !(pos > s.start && pos < s.end) {
+                        return false;
+                    }
+                    if s.is_fn_scoped {
+                        // Function-level proofs (`#[target_feature]`, token params) apply
+                        // only to their own function body (and closures inside it), never
+                        // leaking into nested `fn` items.
+                        innermost_fn == Some((s.start, s.end))
+                    } else {
+                        // `impl ... for Token` proofs apply to direct methods/assoc-fns of
+                        // the impl block (and closures inside them), not to nested free `fn`
+                        // items defined inside a method body.
+                        match innermost_fn {
+                            Some((inner_o, inner_c)) => !fn_bodies.iter().any(|&(fo, fc)| {
+                                fo > s.start && fc <= s.end && fo < inner_o && fc > inner_c
+                            }),
+                            None => true,
+                        }
+                    }
+                })
                 .collect();
 
             let mut provided: HashSet<&str> = HashSet::new();
@@ -341,9 +368,16 @@ impl<'r> Scanner<'r> {
         out
     }
 
-    /// Collect every byte range of `text` that proves a feature set.
-    fn gating_spans(&self, rel: &str, text: &str, errors: &mut Vec<String>) -> Vec<GatingSpan> {
+    /// Collect every byte range of `text` that proves a feature set, plus all
+    /// function body byte-ranges `(open, close)` so nested `fn` items start fresh frames.
+    fn gating_spans(
+        &self,
+        rel: &str,
+        text: &str,
+        errors: &mut Vec<String>,
+    ) -> (Vec<GatingSpan>, Vec<(usize, usize)>) {
         let mut spans: Vec<GatingSpan> = Vec::new();
+        let mut fn_bodies: Vec<(usize, usize)> = Vec::new();
 
         // (1) impl-for-token blocks.
         for cap in self.impl_re.captures_iter(text) {
@@ -367,6 +401,7 @@ impl<'r> Scanner<'r> {
             spans.push(GatingSpan {
                 start: open,
                 end: close,
+                is_fn_scoped: false,
                 features: token.features.iter().cloned().collect(),
                 origin: format!("impl for {}", token.name),
             });
@@ -381,9 +416,16 @@ impl<'r> Scanner<'r> {
                     features.insert(f.trim().to_string());
                 }
             }
-            // The attribute is followed (possibly after more attributes and
-            // the signature) by the fn body's opening brace.
-            let Some(open) = find_char_from(text, attr_end, b'{') else {
+            // Locate the annotated `fn` signature and its body brace via `parse_fn_signature_from`
+            // so const-generic `{ ... }` blocks in the signature cannot be mistaken for the body.
+            let open = if let Some(fn_m) = self.fn_re.find_at(text, attr_end)
+                && find_char_from(text, attr_end, b';').is_none_or(|semi| semi > fn_m.start())
+                && let Some((_sig, sig_open)) = parse_fn_signature_from(text, fn_m.start())
+            {
+                sig_open
+            } else if let Some(fallback_open) = find_char_from(text, attr_end, b'{') {
+                fallback_open
+            } else {
                 continue;
             };
             let Some(close) = find_matching_brace(text, open) else {
@@ -392,12 +434,13 @@ impl<'r> Scanner<'r> {
             spans.push(GatingSpan {
                 start: open,
                 end: close,
+                is_fn_scoped: true,
                 features,
                 origin: "#[target_feature]".to_string(),
             });
         }
 
-        // (3) fn signatures taking inhabited token parameters (or SIMD vector<Token>).
+        // (3) All `fn` bodies (for frame isolation) + inhabited token parameters.
         // Parsed via `syn::Signature` so return types, callbacks (`Fn() -> Token`),
         // associated types (`Iterator<Item = Token>`), `Option<Token>`, and const
         // expressions (`[u8; 1 << 2]`) cannot spoof a feature proof.
@@ -405,24 +448,26 @@ impl<'r> Scanner<'r> {
             let Some((sig, open)) = parse_fn_signature_from(text, m.start()) else {
                 continue;
             };
+            let Some(close) = find_matching_brace(text, open) else {
+                continue;
+            };
+            fn_bodies.push((open, close));
             let mut features: HashSet<String> = HashSet::new();
             let mut names: Vec<&str> = Vec::new();
             collect_signature_token_proofs(self.reg, &sig, &mut features, &mut names);
             if features.is_empty() {
                 continue;
             }
-            let Some(close) = find_matching_brace(text, open) else {
-                continue;
-            };
             spans.push(GatingSpan {
                 start: open,
                 end: close,
+                is_fn_scoped: true,
                 features,
                 origin: format!("fn param tokens [{}]", names.join(", ")),
             });
         }
 
-        spans
+        (spans, fn_bodies)
     }
 }
 
@@ -1874,6 +1919,31 @@ mod tests {
         );
         assert!(good.errors.is_empty(), "{:?}", good.errors);
         assert_eq!(good.verified, 1);
+    }
+
+    #[test]
+    fn nested_fn_does_not_inherit_outer_function_or_impl_proofs() {
+        for source in [
+            "fn outer(t: archmage::X64V4Token) { let _ = t; fn inner() { _mm512_setzero_ps(); } }\n",
+            "#[target_feature(enable = \"avx512f\")] unsafe fn outer() { fn inner() { _mm512_setzero_ps(); } }\n",
+            "impl Foo for archmage::X64V4Token { fn outer(self) { fn inner() { _mm512_setzero_ps(); } } }\n",
+        ] {
+            let bad = scan_at("src/test_nested.rs", source);
+            assert!(
+                bad.errors.iter().any(|e| e.contains("UNGATED")),
+                "expected UNGATED error for `{source}`: {:?}",
+                bad.errors
+            );
+        }
+
+        // Closures inside a gated function DO inherit the enclosing proof, and
+        // const-expression braces in `#[target_feature]` signatures do not truncate the body.
+        let closure_ok = scan_at(
+            "src/test_nested.rs",
+            "#[target_feature(enable = \"avx512f\")] unsafe fn outer(_buf: [u8; { 1 + 3 }]) { let f = || _mm512_setzero_ps(); let _ = f; }\n",
+        );
+        assert!(closure_ok.errors.is_empty(), "{:?}", closure_ok.errors);
+        assert_eq!(closure_ok.verified, 1);
     }
 
     #[test]

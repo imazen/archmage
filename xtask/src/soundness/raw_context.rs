@@ -174,6 +174,12 @@ impl<'ast> Visit<'ast> for ContextVisitor<'_> {
                 self.rel
             ));
         }
+        if item.ident.unraw() == "archmage" {
+            self.errors.push(format!(
+                "{}: import of `archmage` shadows the external crate path required for from_context",
+                self.rel
+            ));
+        }
     }
 
     fn visit_use_rename(&mut self, item: &'ast syn::UseRename) {
@@ -413,6 +419,7 @@ mod tests {
             "use archmage::X64V3Token::r#from_context; fn wrap() { from_context(); }",
             "mod archmage { pub struct X64V3Token; } #[target_feature(enable = \"avx2\")] fn wrap() { archmage::X64V3Token::from_context(); }",
             "use local as archmage; #[target_feature(enable = \"avx2\")] fn wrap() { archmage::X64V3Token::from_context(); }",
+            "use other::archmage; #[target_feature(enable = \"avx2\")] fn wrap() { archmage::X64V3Token::from_context(); }",
             "#[other::attune(v3)] fn wrap() { archmage::X64V3Token::from_context(); }",
             "#[archmage::rite(v3, v4)] fn wrap() { archmage::X64V4Token::from_context(); }",
             "#[archmage::attune(dispatch, _*_t)] fn wrap() { archmage::X64V3Token::from_context(); }",

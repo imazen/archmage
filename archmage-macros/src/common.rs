@@ -827,7 +827,15 @@ fn typed_receiver_derefs(ty: &Type) -> usize {
             if seg.ident == "Self" {
                 return 0;
             }
-            if matches!(seg.ident.to_string().as_str(), "Box" | "Rc" | "Arc" | "Pin")
+            if seg.ident == "Pin"
+                && let syn::PathArguments::AngleBracketed(args) = &seg.arguments
+                && let Some(syn::GenericArgument::Type(inner)) = args.args.first()
+            {
+                // `Pin<P>` implements `Deref<Target = P::Target>`, delegating transparently
+                // to `P`'s dereference without adding another `*` layer.
+                return typed_receiver_derefs(inner);
+            }
+            if matches!(seg.ident.to_string().as_str(), "Box" | "Rc" | "Arc")
                 && let syn::PathArguments::AngleBracketed(args) = &seg.arguments
                 && let Some(syn::GenericArgument::Type(inner)) = args.args.first()
             {
@@ -971,7 +979,15 @@ pub(crate) fn nested_self_param_with_lifetime(
                 quote!(& #lt #mutability #self_ty)
             }
         }
-        syn::ReceiverKind::Typed(_, ty) => replace_self_in_tokens(ty.to_token_stream(), self_ty),
+        syn::ReceiverKind::Typed(_, ty) => {
+            let mut ty_copy = (**ty).clone();
+            if let (Some(lt), Type::Reference(tr)) = (override_ref_lifetime, &mut ty_copy)
+                && tr.lifetime.is_none()
+            {
+                tr.lifetime = Some(lt.clone());
+            }
+            replace_self_in_tokens(ty_copy.to_token_stream(), self_ty)
+        }
         // `#[non_exhaustive]`: a receiver shape syn adds later is passed by value.
         _ => quote!(#self_ty),
     };
