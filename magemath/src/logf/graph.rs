@@ -363,13 +363,13 @@ macro_rules! eval_log_op {
                 let in_bits = $input.bitcast_to_i32();
                 let abs_bits = in_bits & ip(0x7fff_ffff_u32 as i32);
                 let is_sub = abs_bits.simd_gt(ip(0)) & abs_bits.simd_lt(ip(0x0080_0000));
-                if lo_bound < 0.0 && hi_bound > 0.0 {
+                if (lo_bound == 0.0 && hi_bound == 0.0) || (lo_bound < 0.0 && hi_bound > 0.0) {
                     let signed_zero = (in_bits & ip(0x8000_0000_u32 as i32)).bitcast_to_f32();
                     $V::blend(is_sub.bitcast_to_f32(), signed_zero, $input)
-                } else if lo_bound == 0.0 && hi_bound >= 0.0 {
+                } else if lo_bound == 0.0 && hi_bound > 0.0 {
                     let pos_sub = in_bits.simd_gt(ip(0)) & in_bits.simd_lt(ip(0x0080_0000));
                     $V::blend(pos_sub.bitcast_to_f32(), sp(0.0), $input)
-                } else if hi_bound == 0.0 && lo_bound <= 0.0 {
+                } else if hi_bound == 0.0 && lo_bound < 0.0 {
                     let neg_sub = in_bits.simd_lt(ip(0)) & abs_bits.simd_lt(ip(0x0080_0000));
                     $V::blend(neg_sub.bitcast_to_f32(), sp(-0.0), $input)
                 } else if lo_bound > 0.0 {
@@ -497,7 +497,12 @@ macro_rules! eval_log_op {
             let ln2 = sp(core::f32::consts::LN_2);
             let madd = make_madd!($V, $token, $arithmetic);
             let res = madd(log2_u, ln2, c);
-            let res = $V::blend(work_x.simd_eq(sp(0.0)), work_x, res);
+            let preserve_x = if $subnorm || $specials {
+                ((work_x.bitcast_to_i32() & ip(0x7f80_0000)).simd_eq(ip(0))).bitcast_to_f32()
+            } else {
+                work_x.simd_eq(sp(0.0))
+            };
+            let res = $V::blend(preserve_x, work_x, res);
             if $clamp_oob && !$specials {
                 Ok($V::blend(is_nan, sp(f32::NAN), res))
             } else {

@@ -72,14 +72,18 @@ even under `Validation::Checked`:
   `bf16` bounds (`MAX_BF16 = 0x7f7f_0000`). `.const_exponent(n: f32)` specializes
   for a compile-time exponent (`v.powf_const::<CFG>()`, `Powf::<CFG>::slice_const`,
   ...), eliminating runtime exponent validation, proving range-check elision at
-  compile time, and lowering `0, 0.25, ±0.5, ±1, 1.5, ±2, 3, 4` to exact IEEE
-  hardware multiply/sqrt/divide sequences (`f64`-promoted on `Highp`).
-- **expf (`ExpfOptions`, `ExpfDomain`):** `Finite` by default (subnormals map
-  naturally to `1.0`), plus `NormalOutput` (`.unclamped_exp2_range()` /
-  `.unclamped_exp_range()`), `NonPositive` (`[-MAX, 0.0]`, elides upper overflow
-  clamp), `SignedUnit`, `SingleOctave` (`.small_exp2_range()` / `.small_exp_range()`,
-  elides integer `2^k` reduction), `PositiveOctave`, `AllFloats`, and custom
-  `bf16` `.input_range(lo, hi)`.
+  compile time when the configured domain bounds keep outputs normal, and lowering
+  `0, 0.25, ±0.5, ±1, 1.5, ±2, 3, 4` to exact IEEE hardware multiply/sqrt/divide
+  sequences (`f64`-promoted on `Highp`; checked `Midp`/`Lowp`/`Highp` still report
+  `OutsideApproximationRange` when a result leaves the normal output range and
+  `elides_range_check()` is false).
+- **expf (`ExpfOptions`, `ExpfDomain`):** `Finite` by default (accepting `±0.0` and
+  subnormals without extra rescaling: `1.0` on `Midp`, and within `Lowp`'s
+  `<= 0.030%` relative-error envelope on `Lowp`), plus `NormalOutput`
+  (`.unclamped_exp2_range()` / `.unclamped_exp_range()`), `NonPositive`
+  (`[-MAX, 0.0]`, elides upper overflow clamp), `SignedUnit`, `SingleOctave`
+  (`.small_exp2_range()` / `.small_exp_range()`, elides integer `2^k` reduction),
+  `PositiveOctave`, `AllFloats`, and custom `bf16` `.input_range(lo, hi)`.
 - **logf (`LogfOptions`, `LogfDomain`):** `PositiveNormals` by default, plus
   `NonNegative` (`.admit_zero()`), `Unit`, `PositiveUnit`, `Hdr`, `PositiveHdr`,
   `SingleOctave` (`.near_one_range()`, elides exponent extraction), `AllFloats`,
@@ -89,12 +93,14 @@ even under `Validation::Checked`:
   default, plus `FromNegOne` (`.admit_neg_one()`), `NonNegative`, `Unit`,
   `OpenSignedUnit`, `SignedUnit`, `AroundZero` (`[-0.25, 0.25]`, elides exponent
   extraction and `1 + x >= 2` Kahan branch), `SingleOctave`, `AllFloats`, and
-  `bf16` `.input_range(lo, hi)`. LOWP `log1p` has ~`1.3e-6` intercept near `0`;
-  use MIDP when exact small-`x` sign preservation matters.
+  `bf16` `.input_range(lo, hi)`. Both `Midp` and `Lowp` preserve `ln(1 + x) == x`
+  on admitted zeros and subnormals; on tiny positive normal inputs, LOWP `log1p`
+  has ~`1.3e-6` polynomial intercept near `0`, so prefer MIDP when exact small-`x`
+  normal sign preservation matters.
 - **cbrtf (`CbrtfOptions`, `CbrtfDomain`):** `Bounded` (`±0.0` and normal
   `|x| < f32::MAX / 3`) by default, plus `Unit` (`[0, 1]`), `SignedUnit`
   (`.unit_range()`, `[-1, 1]`), `PositiveNormals`, `AllFloats`, and custom `bf16`
-  `.input_range(lo, hi)` (`|bound| <= MAX_CBRT_BF16 = 0x7ed5_0000`). Subnormals
+  `.input_range(lo, hi)` (`|bound| <= MAX_CBRT_BF16 = 0x7eaa_0000`). Subnormals
   remain opt-in on `Unit` and `SignedUnit` unless `.admit_subnormals()` or
   `.flush_or_clamp_subnormals()` is enabled.
 

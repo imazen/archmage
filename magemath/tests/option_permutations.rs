@@ -1518,11 +1518,19 @@ fn log1pf_hold_each_constraint_across_all_other_permutations() {
                                 }
                                 if opts.subnormals_policy() == Subnormals::Normalize {
                                     valid_counts[1] += 1;
-                                    let sub_val = rt.scalar(f32::from_bits(1)).unwrap();
-                                    if pr == Log1pfPrecision::Midp {
-                                        assert_eq!(sub_val.to_bits(), 1);
-                                    } else {
-                                        assert!(sub_val.abs() < 2e-5);
+                                    assert_eq!(
+                                        rt.scalar(f32::from_bits(1)).unwrap().to_bits(),
+                                        1,
+                                        "pos subnormal preservation failed on {opts:?}"
+                                    );
+                                    if dom != Log1pfDomain::Unit
+                                        || r.is_some_and(|(lo, _)| lo < 0.0)
+                                    {
+                                        assert_eq!(
+                                            rt.scalar(-f32::from_bits(1)).unwrap().to_bits(),
+                                            0x8000_0001,
+                                            "neg subnormal preservation failed on {opts:?}"
+                                        );
                                     }
                                 }
                                 if sub == Subnormals::FlushOrClamp {
@@ -2005,4 +2013,185 @@ fn ranged_subnormal_admission_and_flush_clamp_preserve_exact_endpoints() {
         .scalar(f32::from_bits(0x0002_0000))
         .unwrap();
     assert!((c - 2.0_f32.powi(-44)).abs() < 2.0_f32.powi(-60));
+}
+
+#[test]
+fn round2_review_witnesses_cbrt_ceiling_lowp_log1p_subnorm_and_singleton_zero_flush() {
+    let pos_sub = f32::from_bits(1);
+    let neg_sub = -f32::from_bits(1);
+
+    // 1. MAX_CBRT_BF16 (0x7eaa_0000 < f32::MAX / 3.0 = 0x7eaa_aaaa): finite signed results on Midp & Lowp,
+    //    ±inf clamp to finite endpoints, and old oversized 0x7ed5 bf16 bound is rejected by from_bits.
+    assert_eq!(MAX_CBRT_BF16.to_bits(), 0x7eaa_0000);
+    assert!(core::hint::black_box(MAX_CBRT_BF16) < f32::MAX / 3.0);
+    assert!(<Cbrtf>::scalar(f32::from_bits(0x7ed5_0000)).is_err());
+
+    const WIDE_CBRT_MIDP: u128 = CbrtfOptions::new()
+        .input_range(-MAX_CBRT_BF16, MAX_CBRT_BF16)
+        .bits();
+    const WIDE_CBRT_LOWP: u128 = CbrtfOptions::new()
+        .input_range(-MAX_CBRT_BF16, MAX_CBRT_BF16)
+        .lowp()
+        .bits();
+    const WIDE_CBRT_CLAMP: u128 = CbrtfOptions::new()
+        .input_range(-MAX_CBRT_BF16, MAX_CBRT_BF16)
+        .clamp_out_of_bounds()
+        .bits();
+
+    for (pos_v, neg_v) in [
+        (
+            Cbrtf::<WIDE_CBRT_MIDP>::scalar(MAX_CBRT_BF16).unwrap(),
+            Cbrtf::<WIDE_CBRT_MIDP>::scalar(-MAX_CBRT_BF16).unwrap(),
+        ),
+        (
+            Cbrtf::<WIDE_CBRT_LOWP>::scalar(MAX_CBRT_BF16).unwrap(),
+            Cbrtf::<WIDE_CBRT_LOWP>::scalar(-MAX_CBRT_BF16).unwrap(),
+        ),
+        (
+            CbrtfOptions::new()
+                .input_range(-MAX_CBRT_BF16, MAX_CBRT_BF16)
+                .runtime()
+                .scalar(MAX_CBRT_BF16)
+                .unwrap(),
+            CbrtfOptions::new()
+                .input_range(-MAX_CBRT_BF16, MAX_CBRT_BF16)
+                .runtime()
+                .scalar(-MAX_CBRT_BF16)
+                .unwrap(),
+        ),
+    ] {
+        let want = (MAX_CBRT_BF16 as f64).cbrt() as f32;
+        assert!(pos_v.is_finite() && pos_v > 0.0);
+        assert!(neg_v.is_finite() && neg_v < 0.0);
+        assert_close_rel(pos_v, want, 2e-3, "cbrt +MAX_CBRT_BF16");
+        assert_close_rel(neg_v, -want, 2e-3, "cbrt -MAX_CBRT_BF16");
+    }
+    assert_eq!(
+        Cbrtf::<WIDE_CBRT_CLAMP>::scalar_infallible(f32::INFINITY).to_bits(),
+        Cbrtf::<WIDE_CBRT_MIDP>::scalar(MAX_CBRT_BF16)
+            .unwrap()
+            .to_bits()
+    );
+    assert_eq!(
+        Cbrtf::<WIDE_CBRT_CLAMP>::scalar_infallible(f32::NEG_INFINITY).to_bits(),
+        Cbrtf::<WIDE_CBRT_MIDP>::scalar(-MAX_CBRT_BF16)
+            .unwrap()
+            .to_bits()
+    );
+
+    let bad_old_cbrt_word =
+        (WIDE_CBRT_MIDP & !((0xffff_ffff_u128) << 64)) | (0xfed5_u128 << 64) | (0x7ed5_u128 << 80);
+    assert_eq!(CbrtfOptions::from_bits(bad_old_cbrt_word), None);
+
+    // 2. LOWP log1p preserves both signs of subnormals bit-for-bit under Normalize and AllFloats.
+    const L1P_LOWP_NORM: u128 = Log1pfOptions::new().lowp().admit_subnormals().bits();
+    const L1P_LOWP_FULL: u128 = Log1pfOptions::new().lowp().full_domain().bits();
+    assert_eq!(
+        Log1pf::<L1P_LOWP_NORM>::scalar(pos_sub).unwrap().to_bits(),
+        1
+    );
+    assert_eq!(
+        Log1pf::<L1P_LOWP_NORM>::scalar(neg_sub).unwrap().to_bits(),
+        0x8000_0001
+    );
+    assert_eq!(
+        Log1pf::<L1P_LOWP_FULL>::scalar(pos_sub).unwrap().to_bits(),
+        1
+    );
+    assert_eq!(
+        Log1pf::<L1P_LOWP_FULL>::scalar(neg_sub).unwrap().to_bits(),
+        0x8000_0001
+    );
+    assert_eq!(
+        Log1pfOptions::new()
+            .lowp()
+            .admit_subnormals()
+            .runtime()
+            .scalar(neg_sub)
+            .unwrap()
+            .to_bits(),
+        0x8000_0001
+    );
+
+    // 3. Checked FlushOrClamp on singleton [0.0, 0.0] admits both +sub and -sub cleanly.
+    const CBRT_ZERO_FLUSH: u128 = CbrtfOptions::new()
+        .input_range(0.0, 0.0)
+        .flush_or_clamp_subnormals()
+        .bits();
+    assert_eq!(
+        Cbrtf::<CBRT_ZERO_FLUSH>::scalar(pos_sub).unwrap().to_bits(),
+        0
+    );
+    assert_eq!(
+        Cbrtf::<CBRT_ZERO_FLUSH>::scalar(neg_sub).unwrap().to_bits(),
+        0x8000_0000
+    );
+
+    const L1P_ZERO_FLUSH: u128 = Log1pfOptions::new()
+        .input_range(0.0, 0.0)
+        .flush_or_clamp_subnormals()
+        .bits();
+    assert_eq!(
+        Log1pf::<L1P_ZERO_FLUSH>::scalar(pos_sub).unwrap().to_bits(),
+        0
+    );
+    assert_eq!(
+        Log1pf::<L1P_ZERO_FLUSH>::scalar(neg_sub).unwrap().to_bits(),
+        0x8000_0000
+    );
+
+    const POW_ZERO_EXP_FLUSH: u128 = PowfOptions::new()
+        .exponent_range(0.0, 0.0)
+        .flush_or_clamp_subnormals()
+        .bits();
+    assert_eq!(
+        Powf::<POW_ZERO_EXP_FLUSH>::scalar(2.0, pos_sub).unwrap(),
+        1.0
+    );
+    assert_eq!(
+        Powf::<POW_ZERO_EXP_FLUSH>::scalar(2.0, neg_sub).unwrap(),
+        1.0
+    );
+    assert_eq!(
+        PowfOptions::new()
+            .exponent_range(0.0, 0.0)
+            .flush_or_clamp_subnormals()
+            .runtime()
+            .scalar(2.0, neg_sub)
+            .unwrap(),
+        1.0
+    );
+
+    // 4. Log1pfOptions::from_bits rejects redundant EXTRA_NEG_ONE without custom_range on open domains.
+    assert_eq!(Log1pfOptions::from_bits(0x0080_000e), None); // GreaterThanNegOne + EXTRA_NEG_ONE
+    let open_signed = Log1pfOptions::new()
+        .domain(Log1pfDomain::OpenSignedUnit)
+        .bits();
+    assert_eq!(Log1pfOptions::from_bits(open_signed | (1 << 23)), None);
+
+    // 5. All 33 algebraic (precision x exponent) pairs (11 exponents x {Midp, Lowp, Highp}).
+    let alg_exps = [
+        0.0_f32, 1.0, -1.0, 2.0, -2.0, 3.0, 4.0, 0.5, -0.5, 1.5, 0.25,
+    ];
+    let pos_bases = [0.0625_f32, 0.25, 0.5, 1.0, 2.0, 4.0, 9.0, 16.0];
+    for &e in &alg_exps {
+        for prec in [
+            PowfPrecision::Midp,
+            PowfPrecision::Lowp,
+            PowfPrecision::Highp,
+        ] {
+            let opts = PowfOptions::new().precision(prec).const_exponent(e);
+            assert!(opts.is_valid());
+            let got = opts.runtime().array_const(pos_bases).unwrap();
+            for (i, &b) in pos_bases.iter().enumerate() {
+                let want = (b as f64).powf(e as f64) as f32;
+                assert_close_rel(
+                    got[i],
+                    want,
+                    3e-7,
+                    "33 algebraic precision x exponent matrix",
+                );
+            }
+        }
+    }
 }

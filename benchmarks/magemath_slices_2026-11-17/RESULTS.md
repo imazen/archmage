@@ -96,8 +96,21 @@ Sampled benchmark inputs (all strictly valid across every configuration in their
 # Discrete `*Domain` enums, opt-in `Subnormals`, `const_exponent`, and `Log1pf` (`2026-11-18`, Zen 5)
 
 Host `dev` (Ryzen 9 9950X3D, Zen 5, single core pinned to CCD1 core 8 via `taskset -c 8`),
-no `-C target-cpu`, `magemath` `avx512` enabled (`Execution::Upgrade` 16-lane AVX-512 `zmm`
-slice loops), `len = 4096`, run via `run-heavy --mem 24G` (`peak-RSS 0.43 GiB`, `min-avail 39391 MiB`).
+source `cb7c9580ca62` (`feat/0.9.32-magemath-profiles`), no `-C target-cpu`, `magemath` `avx512`
+enabled (`Execution::Upgrade` 16-lane AVX-512 `zmm` slice loops), `len = 4096`, run via
+`run-heavy --mem 24G` (`peak-RSS 0.43 GiB`, `min-avail 39391 MiB`):
+
+```
+TMPDIR="$HOME/tmp" taskset -c 8 ~/work/claudehints/scripts/run-heavy --mem 24G -- cargo bench --manifest-path benchmarks/magemath_slices_2026-11-17/Cargo.toml --bench options_granularity -- --cpu-policy=unrestricted
+```
+
+Sampled benchmark inputs (all normal or exact `0.0` so every configuration in a group accepts
+the same slice; `Subnormals` rows therefore measure steady-state kernel overhead on normal/zero
+lanes rather than nonzero-subnormal frequency):
+- `log2_4096`: `near_one` (`4096` normals in `[0.75, 1.25)`)
+- `log1p_4096`: `around_zero` (`4096` values in `[-0.20, 0.20)`, including `0.0` at index `2048`)
+- `exp2_4096`: `small_sym` (`4096` values in `[-0.45, 0.45)`, including `0.0` at index `2048`)
+- `cbrt_4096` and `powf_4096`: `unit_pos` (`4096` normals in `[0.01, 0.99)`)
 
 ### `powf_4096` (`const_exponent` algebraic & general fast-paths + `Subnormals::FlushOrClamp`)
 | configuration | mean ± mad | vs `gamma_error_on_oob` | domain / notes |
@@ -106,7 +119,7 @@ slice loops), `len = 4096`, run via `run-heavy --mem 24G` (`peak-RSS 0.43 GiB`, 
 | `unit_const_exp_2_0_mul` (`PowfDomain::Unit + const_exponent(2.0)`) | `365.6 ns ± 2 ns` | `-56.0%` (`2.27x` faster) | checked `{+0.0} ∪ [MIN_POSITIVE, 1.0]`, IEEE hardware `vmulps` fast-path |
 | `unit_const_exp_inv_24_assume` (`PowfDomain::Unit + const_exponent(1.0 / 2.4) + assume_in_bounds()`) | `666.5 ns ± 2 ns` | `-19.7%` | unchecked `{+0.0} ∪ [MIN_POSITIVE, 1.0]`, constant `1/2.4` (`0` exponent prep + range check elided) |
 | `gamma_assume_in_bounds` (`PowfDomain::HdrGamma + assume_in_bounds()`) | `686.7 ns ± 2 ns` | `-17.3%` | unchecked `{+0.0} ∪ [2^-16, 2^16]` (runtime `n = 1/2.4`, exp `[0.0, 4.0]`) |
-| `unit_const_exp_inv_24` (`PowfDomain::Unit + const_exponent(1.0 / 2.4)`) | `827.1 ns ± 3 ns` | `-0.4%` (`1.60x` faster than unranged) | checked `{+0.0} ∪ [MIN_POSITIVE, 1.0]`, compile-time `1/2.4 * [-126, 1]` range-check elision |
+| `unit_const_exp_inv_24` (`PowfDomain::Unit + const_exponent(1.0 / 2.4)`) | `827.1 ns ± 3 ns` | `-0.4%` (`-0.5%` vs `UnitEncode`; `1.60x` faster than `unranged_admit_zero`) | checked `{+0.0} ∪ [MIN_POSITIVE, 1.0]`, compile-time `1/2.4` range-check elision (`0` runtime exp prep) |
 | `gamma_error_on_oob` (`PowfDomain::HdrGamma`) | `830.4 ns ± 4 ns` | `1.00x` | checked `{+0.0} ∪ [2^-16, 2^16]` (runtime `n = 1/2.4`, exp `[0.0, 4.0]`) |
 | `srgb_encode_runtime_exp` (`PowfDomain::UnitEncode`) | `831.5 ns ± 3 ns` | `+0.1%` | checked `{+0.0} ∪ [MIN_POSITIVE, 1.0]` (runtime `n = 1/2.4`, exp `[0.0, 0.99]`) |
 | `gamma_flush_subnormals` (`PowfDomain::HdrGamma + flush_or_clamp_subnormals()`) | `1.00 µs ± 9 ns` | `+20.7%` | shoves nonzero subnormals to `+0.0` while still rejecting `< 0`, `> 2^16`, `±inf`, `NaN` |
@@ -114,13 +127,13 @@ slice loops), `len = 4096`, run via `run-heavy --mem 24G` (`peak-RSS 0.43 GiB`, 
 | `unranged_admit_zero` (`PowfDomain::NonNegative`) | `1.33 µs ± 4 ns` | `+59.6%` | checked positive normals + `+0.0` (`n >= 0`), retains internal `y*log2(x)` clamp |
 | `unranged_zero_and_subnormals` (`PowfDomain::NonNegative + admit_subnormals()`) | `1.52 µs ± 2 ns` | `+82.6%` | adds `* 2^23` subnormal base normalization |
 
-### `cbrt_4096` (opt-in `Subnormals` on `CbrtfDomain::SignedUnit` vs `FlushOrClamp` vs `Normalize`)
+### `cbrt_4096` (`Subnormals` on `CbrtfDomain::SignedUnit`: default `Reject` vs `FlushOrClamp` vs opt-in `Normalize`)
 | configuration | mean ± mad | vs `default_bounded` | domain / notes |
 |---|---|---|---|
 | `signed_unit_assume_in_bounds` (`CbrtfDomain::SignedUnit + assume_in_bounds()`) | `640.3 ns ± 5 ns` | `-9.9%` (`1.57x` faster than subnorm) | unchecked `[-1.0, 1.0]`, elides both range check and subnormal rescaling |
-| `strict_normal_range` (`.input_range(0.01, 4.0)`) | `688.6 ns ± 5 ns` | `-3.1%` | checked `[0.01, 4.0]` `bf16`-bounded normal interval, elides subnormal check |
+| `strict_normal_range` (`.input_range(0.01, 4.0)`) | `688.6 ns ± 5 ns` | `-3.1%` | checked outward-rounded `bf16` `[0.0099487305, 4.0]` normal interval, elides subnormal check |
 | `default_bounded` (`CbrtfDomain::Bounded`) | `710.4 ns ± 4 ns` | `1.00x` | checked `±0.0` and normal `|x| < f32::MAX / 3` (`Subnormals::Reject` default) |
-| `signed_unit_reject_subnormals` (`CbrtfDomain::SignedUnit` / `.unit_range()`) | `796.8 ns ± 2 ns` | `+12.2%` (`-20.7%` vs `admit_subnormals`) | checked `[-1.0, 1.0]` with opt-in `Subnormals::Reject` default (no `* 2^24` rescale) |
+| `signed_unit_reject_subnormals` (`CbrtfDomain::SignedUnit` / `.unit_range()`) | `796.8 ns ± 2 ns` | `+12.2%` (`-20.7%` vs `admit_subnormals`) | checked `[-1.0, 1.0]` with `Subnormals::Reject` default (rescaling is opt-in; no `* 2^24` rescale) |
 | `signed_unit_flush_subnormals` (`CbrtfDomain::SignedUnit + flush_or_clamp_subnormals()`) | `969.9 ns ± 2 ns` | `+36.5%` | shoves `(-MIN_POSITIVE, +MIN_POSITIVE)` subnormals to `±0.0`, rejects `|x| > 1` / `NaN` |
 | `signed_unit_admit_subnormals` (`CbrtfDomain::SignedUnit + admit_subnormals()`) | `1.01 µs ± 2 ns` | `+41.5%` | checked `[-1.0, 1.0]` with exact `* 2^24` / `* 2^-8` subnormal normalization |
 | `admit_all_floats` (`CbrtfDomain::AllFloats`) | `1.10 µs ± 2 ns` | `+54.8%` | full IEEE `f32` domain |

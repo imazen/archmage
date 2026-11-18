@@ -375,10 +375,14 @@ impl Log1pfOptions {
                 && matches!(self.subnormals, Subnormals::Reject);
         }
         if self.extra_neg_one
-            && matches!(
+            && (matches!(
                 self.domain,
                 Log1pfDomain::FromNegOne | Log1pfDomain::SignedUnit
-            )
+            ) || (self.custom_range.is_none()
+                && matches!(
+                    self.domain,
+                    Log1pfDomain::GreaterThanNegOne | Log1pfDomain::OpenSignedUnit
+                )))
         {
             return false;
         }
@@ -411,10 +415,14 @@ impl Log1pfOptions {
         }
         assert!(
             !(self.extra_neg_one
-                && matches!(
+                && (matches!(
                     self.domain,
                     Log1pfDomain::FromNegOne | Log1pfDomain::SignedUnit
-                )),
+                ) || (self.custom_range.is_none()
+                    && matches!(
+                        self.domain,
+                        Log1pfDomain::GreaterThanNegOne | Log1pfDomain::OpenSignedUnit
+                    )))),
             "redundant extra_neg_one flag"
         );
         if let Some((lo, hi)) = self.input_bounds() {

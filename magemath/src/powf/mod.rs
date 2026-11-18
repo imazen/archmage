@@ -75,7 +75,8 @@ pub enum PowfErrorKind {
     /// A base is outside the configured input domain.
     InvalidBase,
     /// The approximation's computed `n * log2(x)` is outside `[-126, 127.5]`,
-    /// or a restricted `Highp` result is outside its normal-output domain.
+    /// or a restricted `Highp` or algebraic `const_exponent` result is outside
+    /// its normal-output domain (`{+0.0} ∪ [f32::MIN_POSITIVE, f32::MAX]`).
     OutsideApproximationRange,
     /// The array width is not `1`, `4`, `8`, or enabled width `16`.
     UnsupportedWidth,

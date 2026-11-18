@@ -111,12 +111,12 @@ macro_rules! eval_cbrtf {
             let in_bits = $input.bitcast_to_i32();
             let in_abs = in_bits & ip(0x7fff_ffff_u32 as i32);
             let is_denorm = in_abs.simd_gt(ip(0)) & in_abs.simd_lt(ip(MIN_NORMAL_BITS));
-            if lo_b < 0.0 && hi_b > 0.0 {
+            if (lo_b == 0.0 && hi_b == 0.0) || (lo_b < 0.0 && hi_b > 0.0) {
                 $V::blend(is_denorm.bitcast_to_f32(), $input & sp(-0.0), $input)
-            } else if lo_b == 0.0 && hi_b >= 0.0 {
+            } else if lo_b == 0.0 && hi_b > 0.0 {
                 let pos_sub = in_bits.simd_gt(ip(0)) & in_bits.simd_lt(ip(MIN_NORMAL_BITS));
                 $V::blend(pos_sub.bitcast_to_f32(), sp(0.0), $input)
-            } else if hi_b == 0.0 && lo_b <= 0.0 {
+            } else if hi_b == 0.0 && lo_b < 0.0 {
                 let neg_sub = in_bits.simd_lt(ip(0)) & in_abs.simd_lt(ip(MIN_NORMAL_BITS));
                 $V::blend(neg_sub.bitcast_to_f32(), sp(-0.0), $input)
             } else if lo_b > 0.0 {

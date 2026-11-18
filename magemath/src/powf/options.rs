@@ -106,7 +106,9 @@ pub enum PowfPrecision {
     /// Shorter LOWP coefficients; prefer a bounded gamma or unit domain.
     Lowp,
     /// Table-based binary64 graph for [`Portability::BitExact`]; `std` `f32::powf`
-    /// for [`Portability::BackendDependent`] (requires the `std` feature).
+    /// for [`Portability::BackendDependent`] (requires the `std` feature;
+    /// specialized algebraic [`PowfOptions::const_exponent`] values use the exact
+    /// binary64 algebraic evaluator in both portability modes).
     Highp,
 }
 

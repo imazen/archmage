@@ -4,9 +4,15 @@
 /// Largest finite `f32` magnitude representable in `bf16` (`0x7f7f_0000`, `~3.3895314e38`).
 pub const MAX_BF16: f32 = f32::from_bits(0x7f7f_0000);
 
-/// Largest finite `bf16` magnitude strictly below `f32::MAX / 3.0` (`0x7ed5_0000`, `~1.1338714e38`),
-/// used as the upper magnitude limit for custom [`crate::cbrtf::CbrtfOptions::input_range`] bounds.
-pub const MAX_CBRT_BF16: f32 = f32::from_bits(0x7ed5_0000);
+/// Largest finite `bf16` magnitude strictly below `f32::MAX / 3.0` (`0x7eaa_0000`, `~1.129842e38`,
+/// below `f32::MAX / 3.0 = 0x7eaa_aaaa`), used as the upper magnitude limit for custom
+/// [`crate::cbrtf::CbrtfOptions::input_range`] bounds so bounded Halley `2y³ + |x|` never overflows.
+pub const MAX_CBRT_BF16: f32 = f32::from_bits(0x7eaa_0000);
+
+const _: () = {
+    assert!(MAX_CBRT_BF16 < f32::MAX / 3.0);
+    assert!(expand_bf16(floor_bf16(MAX_CBRT_BF16) + 1) > f32::MAX / 3.0);
+};
 
 /// Expand a `bf16` bit pattern (`u16`) to an exact `f32` in `const` context (`1` bit-shift).
 #[inline(always)]
@@ -95,6 +101,8 @@ mod tests {
         assert_eq!(decode_bf16_finite(0x7f80), None);
         assert_eq!(decode_bf16_finite(0xff80), None);
         assert_eq!(decode_bf16_finite(0x7fc0), None);
+        assert!(core::hint::black_box(MAX_CBRT_BF16) < f32::MAX / 3.0);
+        assert!(expand_bf16(floor_bf16(MAX_CBRT_BF16) + 1) > f32::MAX / 3.0);
     }
 
     #[test]

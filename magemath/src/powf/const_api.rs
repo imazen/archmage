@@ -81,7 +81,9 @@ pub(super) fn prepare_exponent<const N: usize>(
             match opts.exponent_bounds() {
                 None => eff_n = 0.0,
                 Some((lo, hi)) => {
-                    if lo <= 0.0 && hi >= 0.0 {
+                    if lo == 0.0 && hi == 0.0 {
+                        eff_n = 0.0;
+                    } else if lo <= 0.0 && hi >= 0.0 {
                         if !((lo == 0.0 && n < 0.0) || (hi == 0.0 && n > 0.0)) {
                             eff_n = 0.0;
                         }
