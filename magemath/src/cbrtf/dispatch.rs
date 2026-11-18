@@ -4,7 +4,7 @@ use crate::Execution;
 use archmage::{IntoConcreteToken, ScalarToken};
 
 #[derive(Clone, Copy, Debug)]
-pub(super) enum Plan {
+pub(crate) enum Plan {
     #[cfg(target_arch = "x86_64")]
     V3(archmage::X64V3Token),
     #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
@@ -41,7 +41,7 @@ fn reattune_plan() -> Plan {
 }
 
 #[inline(always)]
-pub(super) fn select<T: IntoConcreteToken>(token: T, execution: Execution, widen_v3: bool) -> Plan {
+pub(crate) fn select<T: IntoConcreteToken>(token: T, execution: Execution, widen_v3: bool) -> Plan {
     let _ = (token, widen_v3);
     #[cfg(target_arch = "x86_64")]
     {

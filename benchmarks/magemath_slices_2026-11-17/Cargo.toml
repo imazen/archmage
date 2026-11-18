@@ -16,5 +16,9 @@ zenbench = { version = "0.1.10", features = ["criterion-compat"] }
 name = "slices"
 harness = false
 
+[[bench]]
+name = "options_granularity"
+harness = false
+
 [profile.bench]
 lto = "thin"

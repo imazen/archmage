@@ -6,31 +6,56 @@ pub(crate) struct Cfg<const CFG: u128>;
 
 impl<const CFG: u128> graph::Kernel for Cfg<CFG> {
     const ZERO: bool = graph::KernelCfg::from_options(PowfOptions::decode_const(CFG)).zero;
+    const SUBNORM: bool = graph::KernelCfg::from_options(PowfOptions::decode_const(CFG)).subnorm;
     const RANGED: bool = graph::KernelCfg::from_options(PowfOptions::decode_const(CFG)).ranged;
     const ELIDE: bool = graph::KernelCfg::from_options(PowfOptions::decode_const(CFG)).elide;
     const CLAMP: bool = graph::KernelCfg::from_options(PowfOptions::decode_const(CFG)).clamp;
+    const CLAMP_OOB: bool =
+        graph::KernelCfg::from_options(PowfOptions::decode_const(CFG)).clamp_oob;
     const LOWP: bool = graph::KernelCfg::from_options(PowfOptions::decode_const(CFG)).lowp;
     const ASSUME: bool = graph::KernelCfg::from_options(PowfOptions::decode_const(CFG)).assume;
     const BASE_LO: f32 = graph::KernelCfg::from_options(PowfOptions::decode_const(CFG)).base_lo;
     const BASE_HI: f32 = graph::KernelCfg::from_options(PowfOptions::decode_const(CFG)).base_hi;
 }
 
-pub(super) fn check_exponent<const N: usize>(opts: PowfOptions, n: f32) -> Result<(), PowfError> {
+#[inline(always)]
+fn prepare_exponent<const N: usize>(opts: PowfOptions, n: f32) -> Result<Option<f32>, PowfError> {
     if opts.assume_valid() || opts.is_full() {
-        return Ok(());
+        return Ok(Some(n));
+    }
+    if opts.clamp_oob() {
+        if n.is_nan() {
+            return Ok(None);
+        }
+        let (lo, hi) = opts.exponent_bounds().unwrap_or((-f32::MAX, f32::MAX));
+        let mut c = if n < lo {
+            lo
+        } else if n > hi {
+            hi
+        } else {
+            n
+        };
+        if !opts.admits_subnormals() {
+            let abs_b = c.to_bits() & 0x7fff_ffff;
+            if abs_b != 0 && abs_b < 0x0080_0000 {
+                c = 0.0;
+            }
+        }
+        return Ok(Some(c));
     }
     let bits = n.to_bits() & 0x7fff_ffff;
     let in_range = match opts.exponent_bounds() {
         Some((lo, hi)) => n >= lo && n <= hi,
         None => true,
     };
-    if bits >= 0x7f80_0000 || (bits != 0 && bits < 0x0080_0000) || !in_range {
+    let subnorm_bad = !opts.admits_subnormals() && bits != 0 && bits < 0x0080_0000;
+    if bits >= 0x7f80_0000 || subnorm_bad || !in_range {
         return Err(PowfError {
             kind: PowfErrorKind::InvalidExponent,
             lane_mask: ((1_u32 << N.min(16)) - 1) as u16,
         });
     }
-    Ok(())
+    Ok(Some(n))
 }
 
 #[inline(always)]
@@ -79,6 +104,31 @@ fn refine_slice_error(
     }
 }
 
+#[cold]
+#[inline(never)]
+fn refine_highp_slice_error<T: archmage::IntoConcreteToken>(
+    token: T,
+    opts: PowfOptions,
+    src: &[f32],
+    base: usize,
+    fallback: PowfError,
+    n: f32,
+) -> SliceError<PowfErrorKind> {
+    let end = (base + 8).min(src.len());
+    for (offset, &x) in src[base..end].iter().enumerate() {
+        if let Err(err) = super::highp_dispatch::for_token_cfg::<T, 1>(token, opts, [x], n) {
+            return SliceError {
+                kind: err.kind,
+                index: base + offset,
+            };
+        }
+    }
+    SliceError {
+        kind: fallback.kind,
+        index: base + fallback.lane_mask.trailing_zeros().min(7) as usize,
+    }
+}
+
 macro_rules! vector {
     ($run:ident, $profile:ident, $dispatch:ident, $float:ident, $bound:ident, $n:literal) => {
         #[inline(always)]
@@ -92,7 +142,9 @@ macro_rules! vector {
                 o.validate();
                 o
             };
-            check_exponent::<$n>(opts, n)?;
+            let Some(n) = prepare_exponent::<$n>(opts, n)? else {
+                return Ok(magetypes::simd::generic::$float::splat_t(token, f32::NAN));
+            };
             if opts.is_highp() {
                 let result = super::highp_dispatch::for_token_cfg::<T, $n>(
                     token,
@@ -159,7 +211,9 @@ pub(crate) fn runtime<T: archmage::IntoConcreteToken, const N: usize>(
             lane_mask: 0,
         });
     }
-    check_exponent::<N>(options, n)?;
+    let Some(n) = prepare_exponent::<N>(options, n)? else {
+        return Ok([f32::NAN; N]);
+    };
     if options.is_highp() {
         return super::highp_dispatch::for_token_cfg::<T, N>(token, options, bases, n);
     }
@@ -223,16 +277,17 @@ fn slice_runtime<T: archmage::IntoConcreteToken>(
             index: 0,
         });
     }
-    check_exponent::<1>(options, n).map_err(|e| SliceError {
+    let Some(n) = prepare_exponent::<1>(options, n).map_err(|e| SliceError {
         kind: e.kind,
         index: 0,
-    })?;
+    })?
+    else {
+        dst.fill(f32::NAN);
+        return Ok(());
+    };
     if options.is_highp() {
         return super::highp_dispatch::for_token_slice_cfg::<T>(token, options, src, dst, n)
-            .map_err(|(base, e)| SliceError {
-                kind: e.kind,
-                index: base + e.lane_mask.trailing_zeros().min(7) as usize,
-            });
+            .map_err(|(base, e)| refine_highp_slice_error(token, options, src, base, e, n));
     }
     let exec = if options.is_caller() {
         Execution::Caller
@@ -249,9 +304,14 @@ fn slice_runtime<T: archmage::IntoConcreteToken>(
 /// Compile-time specialized `powf` operator configured by `const CFG: u128`
 /// (produced via [`PowfOptions::bits()`]).
 ///
+/// Use `<Powf>::scalar(base, n)` for default [`PowfOptions::new()`] options or
+/// `Powf::<CFG>::scalar(base, n)` for a custom `const CFG: u128`:
+///
 /// ```
 /// use magemath::powf::{Powf, PowfOptions};
-/// const GAMMA: u128 = PowfOptions::new().gamma().caller().bits();
+/// assert_eq!(<Powf>::scalar(4.0, 0.5).unwrap(), 2.0);
+///
+/// const GAMMA: u128 = PowfOptions::new().gamma_domain().caller().bits();
 /// assert_eq!(Powf::<GAMMA>::scalar(4.0, 0.5).unwrap(), 2.0);
 /// ```
 ///
@@ -281,7 +341,8 @@ impl<const CFG: u128> Powf<CFG> {
 
     /// Infallible scalar `base^n`.
     ///
-    /// Fails to compile unless `CFG` sets `.unchecked()` or `.full_domain().highp()`.
+    /// Fails to compile unless `CFG` sets `.clamp_out_of_bounds()`,
+    /// `.assume_in_bounds()` / `.unchecked()`, or `.admit_all_floats().highp()`.
     #[inline(always)]
     pub fn scalar_infallible(base: f32, n: f32) -> f32 {
         const {
@@ -289,12 +350,12 @@ impl<const CFG: u128> Powf<CFG> {
             opts.validate();
             assert!(
                 opts.is_infallible(),
-                "Powf::<CFG>::scalar_infallible requires `.unchecked()` or `.full_domain().highp()`; use `Powf::<CFG>::scalar` for checked options"
+                "Powf::<CFG>::scalar_infallible requires `.clamp_out_of_bounds()`, `.assume_in_bounds()` / `.unchecked()`, or `.admit_all_floats().highp()`; use `Powf::<CFG>::scalar` for checked options"
             );
         }
         match Self::scalar(base, n) {
             Ok(v) => v,
-            Err(_) => base,
+            Err(_) => unreachable!("infallible configuration returned Err"),
         }
     }
 
@@ -311,7 +372,9 @@ impl<const CFG: u128> Powf<CFG> {
             o
         };
         if opts.is_highp() {
-            check_exponent::<1>(opts, n)?;
+            let Some(n) = prepare_exponent::<1>(opts, n)? else {
+                return Ok(f32::NAN);
+            };
             return super::highp_dispatch::for_token_cfg::<T, 1>(token, opts, [base], n)
                 .map(|v| v[0]);
         }
@@ -344,7 +407,9 @@ impl<const CFG: u128> Powf<CFG> {
             });
         }
         if opts.is_highp() {
-            check_exponent::<N>(opts, n)?;
+            let Some(n) = prepare_exponent::<N>(opts, n)? else {
+                return Ok([f32::NAN; N]);
+            };
             return super::highp_dispatch::for_token_cfg::<_, N>(ScalarToken, opts, bases, n);
         }
         let mut output = [0.0; N];
@@ -420,17 +485,17 @@ impl<const CFG: u128> Powf<CFG> {
             o
         };
         assert_eq!(src.len(), dst.len(), "powf slice lengths differ");
-        check_exponent::<1>(opts, n).map_err(|e| SliceError {
+        let Some(n) = prepare_exponent::<1>(opts, n).map_err(|e| SliceError {
             kind: e.kind,
             index: 0,
-        })?;
+        })?
+        else {
+            dst.fill(f32::NAN);
+            return Ok(());
+        };
         if opts.is_highp() {
-            return super::highp_dispatch::for_token_slice_cfg(token, opts, src, dst, n).map_err(
-                |(base, e)| SliceError {
-                    kind: e.kind,
-                    index: base + e.lane_mask.trailing_zeros().min(7) as usize,
-                },
-            );
+            return super::highp_dispatch::for_token_slice_cfg(token, opts, src, dst, n)
+                .map_err(|(base, e)| refine_highp_slice_error(token, opts, src, base, e, n));
         }
         let exec = if opts.is_caller() {
             Execution::Caller

@@ -18,16 +18,20 @@ pub(super) const STD: usize = 2;
 pub(super) trait Kernel: 'static {
     /// `+0` is admitted and restored after the graph.
     const ZERO: bool;
+    /// Positive subnormal bases (`0 < x < MIN_POSITIVE`) are normalized.
+    const SUBNORM: bool;
     /// Bases are validated against `[BASE_LO, BASE_HI]`; otherwise against
-    /// the positive-normal bit pattern.
+    /// the positive-normal (or positive-finite) bit pattern.
     const RANGED: bool;
     const BASE_LO: f32;
     const BASE_HI: f32;
     /// Declared base and exponent ranges keep `n * log2(x)` inside the
     /// approximation's range, so no per-lane range check is emitted.
     const ELIDE: bool;
-    /// Explicit output range clamp in MIDP/LOWP paths.
+    /// Explicit output range saturation in MIDP/LOWP paths.
     const CLAMP: bool;
+    /// Out-of-bounds inputs are clamped into domain (`NaN -> NaN`).
+    const CLAMP_OOB: bool;
     const LOWP: bool;
     const ASSUME: bool;
 }
@@ -35,11 +39,13 @@ pub(super) trait Kernel: 'static {
 #[derive(Clone, Copy)]
 pub(super) struct KernelCfg {
     pub(super) zero: bool,
+    pub(super) subnorm: bool,
     pub(super) ranged: bool,
     pub(super) base_lo: f32,
     pub(super) base_hi: f32,
     pub(super) elide: bool,
     pub(super) clamp: bool,
+    pub(super) clamp_oob: bool,
     pub(super) lowp: bool,
     pub(super) assume: bool,
 }
@@ -52,11 +58,13 @@ impl KernelCfg {
         };
         Self {
             zero: opts.admits_zero(),
+            subnorm: opts.admits_subnormals(),
             ranged: opts.base_bounds().is_some(),
             base_lo,
             base_hi,
             elide: opts.elides_range_check(),
             clamp: opts.should_clamp(),
+            clamp_oob: opts.clamp_oob(),
             lowp: opts.is_lowp(),
             assume: opts.assume_valid(),
         }
@@ -68,11 +76,13 @@ impl KernelCfg {
 pub(super) const fn cfg_of<K: Kernel>() -> KernelCfg {
     KernelCfg {
         zero: K::ZERO,
+        subnorm: K::SUBNORM,
         ranged: K::RANGED,
         base_lo: K::BASE_LO,
         base_hi: K::BASE_HI,
         elide: K::ELIDE,
         clamp: K::CLAMP,
+        clamp_oob: K::CLAMP_OOB,
         lowp: K::LOWP,
         assume: K::ASSUME,
     }
@@ -87,37 +97,53 @@ macro_rules! eval_powf {
         $exponent:ident,
         $arithmetic:expr,
         $zero:expr,
+        $subnorm:expr,
         $ranged:expr,
         $base_lo:expr,
         $base_hi:expr,
         $elide:expr,
         $clamp:expr,
+        $clamp_oob:expr,
         $lowp:expr,
         $assume:expr
     ) => {{
         let sp = |x| $V::splat_t($token, x);
         let ip = |x| $I::splat_t($token, x);
-        let bits = $input.bitcast_to_i32();
-        let zero_mask = bits.simd_eq(ip(0));
-        let invalid = if $ranged {
-            let within = $input.simd_ge(sp($base_lo)) & $input.simd_le(sp($base_hi));
-            let valid = if $zero && ($elide || $exponent >= 0.0) {
-                within.bitcast_to_i32() | zero_mask
-            } else {
-                within.bitcast_to_i32()
-            };
-            valid ^ ip(-1)
+        let is_nan = if $clamp_oob {
+            $input.simd_ne($input)
         } else {
-            let exp_bits = bits & ip(0x7f80_0000);
-            let invalid = bits.simd_lt(ip(0)) | exp_bits.simd_eq(ip(0x7f80_0000));
-            let tiny = exp_bits.simd_eq(ip(0));
-            invalid
-                | if $zero && $exponent >= 0.0 {
-                    tiny & (zero_mask ^ ip(-1))
-                } else {
-                    tiny
-                }
+            ip(0).bitcast_to_f32()
         };
+        let work_in = if $clamp_oob {
+            let lo_bound = if $ranged {
+                $base_lo
+            } else if $subnorm {
+                f32::from_bits(1)
+            } else {
+                f32::MIN_POSITIVE
+            };
+            let hi_bound = if $ranged { $base_hi } else { f32::MAX };
+            let c = if $zero && ($elide || $exponent >= 0.0) {
+                let nonpos = $input.simd_le(sp(0.0));
+                let lo_clamped = $V::blend(
+                    nonpos,
+                    sp(0.0),
+                    $V::blend($input.simd_lt(sp(lo_bound)), sp(lo_bound), $input),
+                );
+                $V::blend($input.simd_gt(sp(hi_bound)), sp(hi_bound), lo_clamped)
+            } else {
+                $V::blend(
+                    $input.simd_lt(sp(lo_bound)),
+                    sp(lo_bound),
+                    $V::blend($input.simd_gt(sp(hi_bound)), sp(hi_bound), $input),
+                )
+            };
+            $V::blend(is_nan, sp(1.0), c)
+        } else {
+            $input
+        };
+        let bits = work_in.bitcast_to_i32();
+        let zero_mask = bits.simd_eq(ip(0));
         let reject = |mask: $I<T>, kind| {
             let lane_mask = mask
                 .to_array()
@@ -126,17 +152,66 @@ macro_rules! eval_powf {
                 .fold(0_u16, |m, (i, &v)| m | (u16::from(v != 0) << i));
             PowfError { kind, lane_mask }
         };
-        if !$assume && invalid.any_true() {
-            return Err(reject(invalid, PowfErrorKind::InvalidBase));
+        if !$assume && !$clamp_oob {
+            let invalid = if $ranged {
+                if $subnorm {
+                    let le_hi = work_in.simd_le(sp($base_hi)).bitcast_to_i32();
+                    let pos_ok = if $zero && ($elide || $exponent >= 0.0) {
+                        bits.simd_ge(ip(0))
+                    } else {
+                        bits.simd_gt(ip(0))
+                    };
+                    (pos_ok & le_hi) ^ ip(-1)
+                } else {
+                    let within = work_in.simd_ge(sp($base_lo)) & work_in.simd_le(sp($base_hi));
+                    let valid = if $zero && ($elide || $exponent >= 0.0) {
+                        within.bitcast_to_i32() | zero_mask
+                    } else {
+                        within.bitcast_to_i32()
+                    };
+                    valid ^ ip(-1)
+                }
+            } else if $subnorm {
+                if $zero && $exponent >= 0.0 {
+                    bits.simd_lt(ip(0)) | bits.simd_ge(ip(0x7f80_0000))
+                } else {
+                    bits.simd_le(ip(0)) | bits.simd_ge(ip(0x7f80_0000))
+                }
+            } else {
+                let exp_bits = bits & ip(0x7f80_0000);
+                let invalid = bits.simd_lt(ip(0)) | exp_bits.simd_eq(ip(0x7f80_0000));
+                let tiny = exp_bits.simd_eq(ip(0));
+                invalid
+                    | if $zero && $exponent >= 0.0 {
+                        tiny & (zero_mask ^ ip(-1))
+                    } else {
+                        tiny
+                    }
+            };
+            if invalid.any_true() {
+                return Err(reject(invalid, PowfErrorKind::InvalidBase));
+            }
         }
         // Admitted zero uses a safe 1.0 sentinel on checking paths where an
         // arbitrary exponent could otherwise amplify log2(0) or bias outside
         // [-126, 127.5]; elided-range paths keep 0 directly and overwrite below.
         let x = if $zero && !$elide {
-            $V::blend(zero_mask.bitcast_to_f32(), sp(1.0), $input)
+            $V::blend(zero_mask.bitcast_to_f32(), sp(1.0), work_in)
         } else {
-            $input
+            work_in
         };
+        let is_subnorm = if $subnorm {
+            let x_bits = x.bitcast_to_i32();
+            x_bits.simd_gt(ip(0)) & x_bits.simd_lt(ip(0x0080_0000))
+        } else {
+            ip(0)
+        };
+        let x = if $subnorm {
+            $V::blend(is_subnorm.bitcast_to_f32(), x * sp(8_388_608.0), x)
+        } else {
+            x
+        };
+        let clamp_eff = $clamp || ($clamp_oob && !$elide);
         let madd = |a: $V<T>, b: $V<T>, c: $V<T>| -> $V<T> {
             if $arithmetic == NATIVE || $arithmetic == RELAXED {
                 a.mul_add_relaxed(b, c)
@@ -171,10 +246,15 @@ macro_rules! eval_powf {
                 let yp = madd(yp, m, sp(-1.850_383_3e-6));
                 let yq = madd(sp(0.174_093_43), m, sp(1.009_671_8));
                 let yq = madd(yq, m, sp(0.990_328_14));
-                yp / yq + shifted.to_f32()
+                let exp_adj = if $subnorm {
+                    shifted - (is_subnorm & ip(23))
+                } else {
+                    shifted
+                };
+                yp / yq + exp_adj.to_f32()
             };
             let t = log * sp($exponent);
-            if !$assume && !$elide && !$clamp {
+            if !$assume && !$elide && !clamp_eff {
                 let outside = (t.simd_lt(sp(-126.0)) | t.simd_gt(sp(127.5))).bitcast_to_i32();
                 let outside = if $zero {
                     outside & (zero_mask ^ ip(-1))
@@ -185,7 +265,7 @@ macro_rules! eval_powf {
                     return Err(reject(outside, PowfErrorKind::OutsideApproximationRange));
                 }
             }
-            let t = if ($zero && !$elide) || $clamp {
+            let t = if ($zero && !$elide) || clamp_eff {
                 t.max(sp(-126.0)).min(sp(127.99))
             } else {
                 t
@@ -204,7 +284,13 @@ macro_rules! eval_powf {
         } else {
             let log = {
                 let adjusted = x.bitcast_to_i32() + ip((0x3f80_0000_u32 - 0x3f35_04f3) as i32);
-                let n = (adjusted.shr_arithmetic_const::<23>() - ip(127)).to_f32();
+                let raw_exp = adjusted.shr_arithmetic_const::<23>() - ip(127);
+                let n = (if $subnorm {
+                    raw_exp - (is_subnorm & ip(23))
+                } else {
+                    raw_exp
+                })
+                .to_f32();
                 let a = ((adjusted & ip(0x007f_ffff)) + ip(0x3f35_04f3)).bitcast_to_f32();
                 let y = (a - sp(1.0)) / (a + sp(1.0));
                 let y2 = y * y;
@@ -214,7 +300,7 @@ macro_rules! eval_powf {
                 madd(p, y, n)
             };
             let t = log * sp($exponent);
-            if !$assume && !$elide && !$clamp {
+            if !$assume && !$elide && !clamp_eff {
                 let outside = t.simd_lt(sp(-126.0)) | t.simd_gt(sp(127.5));
                 if outside.bitcast_to_i32().any_true() {
                     return Err(reject(
@@ -225,7 +311,7 @@ macro_rules! eval_powf {
             }
             let underflow_limit = sp(-126.0);
             let overflow_limit = sp(128.0);
-            let reduced = if $clamp {
+            let reduced = if clamp_eff {
                 t.max(underflow_limit).min(overflow_limit)
             } else {
                 t
@@ -249,7 +335,7 @@ macro_rules! eval_powf {
             };
             let scale = (integer + ip(127)).shl_const::<23>().bitcast_to_f32();
             let result = p * scale;
-            if $clamp {
+            if clamp_eff {
                 let is_underflow = t.simd_lt(underflow_limit);
                 let is_overflow = t.simd_ge(overflow_limit);
                 let zero = sp(0.0);
@@ -260,12 +346,17 @@ macro_rules! eval_powf {
                 result
             }
         };
-        let result = if $zero {
+        let result = if $zero && ($elide || $exponent >= 0.0 || !$clamp_oob) {
             $V::blend(
                 zero_mask.bitcast_to_f32(),
                 sp(if $exponent == 0.0 { 1.0 } else { 0.0 }),
                 result,
             )
+        } else {
+            result
+        };
+        let result = if $clamp_oob {
+            $V::blend(is_nan, sp(f32::NAN), result)
         } else {
             result
         };
@@ -292,11 +383,13 @@ macro_rules! graph {
                 exponent,
                 ARITHMETIC,
                 cfg.zero,
+                cfg.subnorm,
                 cfg.ranged,
                 cfg.base_lo,
                 cfg.base_hi,
                 cfg.elide,
                 cfg.clamp,
+                cfg.clamp_oob,
                 cfg.lowp,
                 cfg.assume
             )
@@ -318,11 +411,13 @@ macro_rules! graph {
                 exponent,
                 ARITHMETIC,
                 K::ZERO,
+                K::SUBNORM,
                 K::RANGED,
                 K::BASE_LO,
                 K::BASE_HI,
                 K::ELIDE,
                 K::CLAMP,
+                K::CLAMP_OOB,
                 K::LOWP,
                 K::ASSUME
             )

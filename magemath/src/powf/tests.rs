@@ -767,3 +767,286 @@ fn positive_gamma_preserves_nonzero_graph_and_rejects_zero() {
     #[cfg(feature = "std")]
     sweep_exec_val!(highp, backend_dependent);
 }
+
+#[cfg(all(target_arch = "x86_64", feature = "avx512", feature = "std"))]
+#[test]
+fn avx512_selector_upgrades_and_falls_back_across_all_families() {
+    use archmage::{SimdToken, X64V3Token, X64V4Token, X64V4xToken};
+
+    struct RestoreV4;
+    impl Drop for RestoreV4 {
+        fn drop(&mut self) {
+            let _ = X64V4xToken::dangerously_disable_token_process_wide(false);
+            let _ = X64V4Token::dangerously_disable_token_process_wide(false);
+        }
+    }
+
+    let _lock = archmage::testing::lock_token_testing();
+    let _restore = RestoreV4;
+    let _ = X64V4xToken::dangerously_disable_token_process_wide(false);
+    let _ = X64V4Token::dangerously_disable_token_process_wide(false);
+
+    let Some(v3) = X64V3Token::summon() else {
+        return;
+    };
+
+    // Execution::Caller and narrow (widen_v3 = false) calls always retain V3.
+    assert!(matches!(
+        super::dispatch::select(v3, Execution::Caller, true),
+        super::dispatch::Plan::V3(_)
+    ));
+    assert!(matches!(
+        super::dispatch::select(v3, Execution::Upgrade, false),
+        super::dispatch::Plan::V3(_)
+    ));
+    assert!(matches!(
+        super::dispatch::select_highp(v3, Execution::Caller, true),
+        super::dispatch::Plan::V3(_)
+    ));
+    assert!(matches!(
+        crate::expf::dispatch::select(v3, Execution::Caller, false, true),
+        crate::expf::dispatch::Plan::V3(_)
+    ));
+    assert!(matches!(
+        crate::logf::dispatch::select(v3, Execution::Caller, false, true),
+        crate::logf::dispatch::Plan::V3(_)
+    ));
+    assert!(matches!(
+        crate::cbrtf::dispatch::select(v3, Execution::Caller, true),
+        crate::cbrtf::dispatch::Plan::V3(_)
+    ));
+
+    // When V4x is available on the host, Execution::Upgrade + widen_v3 = true selects V4x.
+    if X64V4xToken::summon().is_some() {
+        assert!(matches!(
+            super::dispatch::select(v3, Execution::Upgrade, true),
+            super::dispatch::Plan::V4x(_)
+        ));
+        assert!(matches!(
+            super::dispatch::select_relaxed(v3, Execution::Upgrade, true),
+            super::dispatch::Plan::V4x(_)
+        ));
+        assert!(matches!(
+            super::dispatch::select_highp(v3, Execution::Upgrade, true),
+            super::dispatch::Plan::V4x(_)
+        ));
+        assert!(matches!(
+            crate::expf::dispatch::select(v3, Execution::Upgrade, false, true),
+            crate::expf::dispatch::Plan::V4x(_)
+        ));
+        assert!(matches!(
+            crate::logf::dispatch::select(v3, Execution::Upgrade, false, true),
+            crate::logf::dispatch::Plan::V4x(_)
+        ));
+        assert!(matches!(
+            crate::cbrtf::dispatch::select(v3, Execution::Upgrade, true),
+            crate::cbrtf::dispatch::Plan::V4x(_)
+        ));
+    }
+
+    // Disabling V4x while keeping V4 active selects Plan::V4.
+    if X64V4xToken::dangerously_disable_token_process_wide(true).is_ok()
+        && X64V4Token::summon().is_some()
+    {
+        assert!(matches!(
+            super::dispatch::select(v3, Execution::Upgrade, true),
+            super::dispatch::Plan::V4(_)
+        ));
+        assert!(matches!(
+            super::dispatch::select_highp(v3, Execution::Upgrade, true),
+            super::dispatch::Plan::V4(_)
+        ));
+        assert!(matches!(
+            crate::expf::dispatch::select(v3, Execution::Upgrade, false, true),
+            crate::expf::dispatch::Plan::V4(_)
+        ));
+        assert!(matches!(
+            crate::logf::dispatch::select(v3, Execution::Upgrade, false, true),
+            crate::logf::dispatch::Plan::V4(_)
+        ));
+        assert!(matches!(
+            crate::cbrtf::dispatch::select(v3, Execution::Upgrade, true),
+            crate::cbrtf::dispatch::Plan::V4(_)
+        ));
+    }
+
+    // Disabling V4 as well falls back cleanly to Plan::V3.
+    if X64V4xToken::dangerously_disable_token_process_wide(true).is_ok()
+        && X64V4Token::dangerously_disable_token_process_wide(true).is_ok()
+    {
+        assert!(matches!(
+            super::dispatch::select(v3, Execution::Upgrade, true),
+            super::dispatch::Plan::V3(_)
+        ));
+        assert!(matches!(
+            super::dispatch::select_highp(v3, Execution::Upgrade, true),
+            super::dispatch::Plan::V3(_)
+        ));
+        assert!(matches!(
+            crate::expf::dispatch::select(v3, Execution::Upgrade, false, true),
+            crate::expf::dispatch::Plan::V3(_)
+        ));
+        assert!(matches!(
+            crate::logf::dispatch::select(v3, Execution::Upgrade, false, true),
+            crate::logf::dispatch::Plan::V3(_)
+        ));
+        assert!(matches!(
+            crate::cbrtf::dispatch::select(v3, Execution::Upgrade, true),
+            crate::cbrtf::dispatch::Plan::V3(_)
+        ));
+    }
+}
+
+#[test]
+fn malformed_u128_words_are_rejected_across_all_families() {
+    use crate::{cbrtf::CbrtfOptions, expf::ExpfOptions, logf::LogfOptions};
+
+    let p_base = PowfOptions::new().bits();
+    // Precision = 3 (reserved).
+    assert_eq!(PowfOptions::from_bits(p_base | (0b11 << 9)), None);
+    // ASSUME and CLAMP_OOB simultaneously set.
+    assert_eq!(PowfOptions::from_bits(p_base | (1 << 12) | (1 << 15)), None);
+    // FULL combined with ZERO or SUBNORM.
+    let p_full = PowfOptions::new().full_domain().highp().bits();
+    assert_eq!(PowfOptions::from_bits(p_full | (1 << 6)), None);
+    assert_eq!(PowfOptions::from_bits(p_full | (1 << 14)), None);
+    // Base payload present without HAS_BASE, or inverted / subnormal / Inf / NaN with HAS_BASE.
+    let one_b = 1.0_f32.to_bits() as u128;
+    let two_b = 2.0_f32.to_bits() as u128;
+    assert_eq!(PowfOptions::from_bits(p_base | (one_b << 16)), None);
+    assert_eq!(
+        PowfOptions::from_bits(p_base | (1 << 4) | (two_b << 16) | (one_b << 47)),
+        None
+    );
+    assert_eq!(
+        PowfOptions::from_bits(p_base | (1 << 4) | (1_u128 << 16) | (one_b << 47)),
+        None
+    );
+    assert_eq!(
+        PowfOptions::from_bits(
+            p_base
+                | (1 << 4)
+                | (one_b << 16)
+                | (((f32::INFINITY.to_bits() & 0x7fff_ffff) as u128) << 47)
+        ),
+        None
+    );
+    assert_eq!(
+        PowfOptions::from_bits(
+            p_base
+                | (1 << 4)
+                | (one_b << 16)
+                | (((f32::NAN.to_bits() & 0x7fff_ffff) as u128) << 47)
+        ),
+        None
+    );
+    // Exponent payload without HAS_EXP, encoded -0.0, NaN, Inf, inverted, or subnormal-only.
+    let exp_neg_zero_25: u128 = (0x8000_0000_u32 >> 7) as u128;
+    let exp_inf_25: u128 = (f32::INFINITY.to_bits() >> 7) as u128;
+    let exp_nan_25: u128 = (f32::NAN.to_bits() >> 7) as u128;
+    let exp_sub_25: u128 = 1; // 0x80 when shifted << 7 (nonzero subnormal)
+    assert_eq!(PowfOptions::from_bits(p_base | (1_u128 << 78)), None);
+    assert_eq!(
+        PowfOptions::from_bits(p_base | (1 << 5) | (exp_neg_zero_25 << 78)),
+        None
+    );
+    assert_eq!(
+        PowfOptions::from_bits(p_base | (1 << 5) | (exp_inf_25 << 103)),
+        None
+    );
+    assert_eq!(
+        PowfOptions::from_bits(p_base | (1 << 5) | (exp_nan_25 << 103)),
+        None
+    );
+    assert_eq!(
+        PowfOptions::from_bits(p_base | (1 << 5) | (exp_sub_25 << 78) | (exp_sub_25 << 103)),
+        None
+    );
+
+    // Expf, Logf, Cbrtf: reserved bits, ASSUME|CLAMP_OOB, absent HAS_RANGE payloads, -0.0, NaN, Inf, inverted.
+    let neg_zero_b = (-0.0_f32).to_bits() as u128;
+    let nan_b = f32::NAN.to_bits() as u128;
+    let inf_b = f32::INFINITY.to_bits() as u128;
+
+    let e_base = ExpfOptions::new().bits();
+    assert_eq!(ExpfOptions::from_bits(e_base | (1_u128 << 15)), None);
+    assert_eq!(ExpfOptions::from_bits(e_base | (1_u128 << 63)), None);
+    assert_eq!(ExpfOptions::from_bits(e_base | (1 << 12) | (1 << 14)), None);
+    assert_eq!(ExpfOptions::from_bits(e_base | (one_b << 64)), None);
+    assert_eq!(
+        ExpfOptions::from_bits(e_base | (1 << 8) | (neg_zero_b << 64) | (one_b << 96)),
+        None
+    );
+    assert_eq!(
+        ExpfOptions::from_bits(e_base | (1 << 8) | (nan_b << 64) | (one_b << 96)),
+        None
+    );
+    assert_eq!(
+        ExpfOptions::from_bits(e_base | (1 << 8) | (one_b << 64) | (inf_b << 96)),
+        None
+    );
+    assert_eq!(
+        ExpfOptions::from_bits(e_base | (1 << 8) | (two_b << 64) | (one_b << 96)),
+        None
+    );
+
+    let l_base = LogfOptions::new().bits();
+    assert_eq!(LogfOptions::from_bits(l_base | (1_u128 << 17)), None);
+    assert_eq!(LogfOptions::from_bits(l_base | (1_u128 << 63)), None);
+    assert_eq!(LogfOptions::from_bits(l_base | (1 << 12) | (1 << 16)), None);
+    assert_eq!(LogfOptions::from_bits(l_base | (1 << 9) | (1 << 14)), None);
+    assert_eq!(LogfOptions::from_bits(l_base | (one_b << 64)), None);
+    assert_eq!(
+        LogfOptions::from_bits(l_base | (1 << 8) | (neg_zero_b << 64) | (one_b << 96)),
+        None
+    );
+    assert_eq!(
+        LogfOptions::from_bits(l_base | (1 << 8) | (nan_b << 64) | (one_b << 96)),
+        None
+    );
+    assert_eq!(
+        LogfOptions::from_bits(l_base | (1 << 8) | (one_b << 64) | (inf_b << 96)),
+        None
+    );
+    assert_eq!(
+        LogfOptions::from_bits(l_base | (1 << 8) | (two_b << 64) | (one_b << 96)),
+        None
+    );
+
+    let c_base = CbrtfOptions::new().bits();
+    assert_eq!(CbrtfOptions::from_bits(c_base | (1_u128 << 16)), None);
+    assert_eq!(CbrtfOptions::from_bits(c_base | (1_u128 << 63)), None);
+    assert_eq!(
+        CbrtfOptions::from_bits(c_base | (1 << 12) | (1 << 15)),
+        None
+    );
+    assert_eq!(CbrtfOptions::from_bits(c_base | (1 << 9) | (1 << 14)), None);
+    assert_eq!(CbrtfOptions::from_bits(c_base | (one_b << 64)), None);
+    assert_eq!(
+        CbrtfOptions::from_bits(c_base | (1 << 8) | (neg_zero_b << 64) | (one_b << 96)),
+        None
+    );
+    assert_eq!(
+        CbrtfOptions::from_bits(c_base | (1 << 8) | (nan_b << 64) | (one_b << 96)),
+        None
+    );
+    assert_eq!(
+        CbrtfOptions::from_bits(c_base | (1 << 8) | (one_b << 64) | (inf_b << 96)),
+        None
+    );
+    assert_eq!(
+        CbrtfOptions::from_bits(c_base | (1 << 8) | (two_b << 64) | (one_b << 96)),
+        None
+    );
+    assert_eq!(
+        CbrtfOptions::from_bits(c_base | (1 << 8) | (1_u128 << 64) | (1_u128 << 96)),
+        None
+    );
+}
+
+#[test]
+#[should_panic(expected = "full_domain requires PowfPrecision::Highp")]
+fn decode_const_surfaces_specific_validate_message() {
+    let bad = PowfOptions::new().full_domain().bits();
+    let _ = PowfOptions::decode_const(bad);
+}

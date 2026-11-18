@@ -42,31 +42,46 @@ the matching dynamic runtime adapter. Default-option free helpers (`try_powf`,
 without defining a `const`.
 
 An infallible `SimdMath` method (`v.powf::<CFG>(n)`, `v.exp2::<CFG>()`, ...) or
-`*_infallible` scalar method fails to compile unless `CFG` sets `.unchecked()`
-or `.full_domain()`. Removing checks via `.unchecked()` (`Validation::AssumeValid`)
-is safe Rust, but inputs outside the stated domain give unspecified numbers.
+`*_infallible` scalar method fails to compile unless `CFG` is infallible
+(`.clamp_out_of_bounds()`, `.assume_in_bounds()` / `.unchecked()`, or
+`.admit_all_floats()` / `.full_domain()`). Removing checks via
+`.assume_in_bounds()` / `.unchecked()` (`Validation::AssumeValid`) is safe Rust,
+but inputs outside the stated domain give unspecified numbers; use
+`.clamp_out_of_bounds()` (`Validation::ClampOutOfBounds`) when out-of-range
+lanes should clamp safely into the configured domain (`NaN -> NaN`).
 
 ## Options builders in brief
 
-- **powf (`PowfOptions`):** positive normal bases by default; `.admit_zero()`,
-  `.gamma()` (`0` or `[2^-16, 2^16]`, exponent `[0, 4]`), `.positive_gamma()`,
+Every builder separates **what inputs are supported** from **what happens out of
+bounds** (`.error_on_out_of_bounds()` / `.checked()`, `.clamp_out_of_bounds()`,
+`.assume_in_bounds()` / `.unchecked()`):
+
+- **powf (`PowfOptions`):** positive normal bases by default; `.admit_zero()` /
+  `.admit_zero_base()`, `.admit_subnormals()`, `.gamma_domain()` / `.gamma()`
+  (`0` or `[2^-16, 2^16]`, exponent `[0, 4]`), `.positive_gamma_domain()` /
+  `.positive_gamma()`, `.unit_gamma_domain()`, `.srgb_encode_domain()`
+  (elides range checks across all positive normals `(0, 1]` for `exp <= 0.99`),
   custom `.base_range(lo, hi)` and `.exponent_range(lo, hi)` (outward-rounded
-  to 25-bit `f32` boundaries; elides range checks when `(E + 1) * N <= 120`),
-  `.clamp_output()`, `.lowp()` / `.midp()` / `.highp()`, and `.full_domain().highp()`.
+  to 25-bit `f32` boundaries up to `MAX_EXP_BOUND = 0x7f7f_ff80`),
+  `.saturate_output()` / `.clamp_output()`, `.lowp()` / `.midp()` / `.highp()`,
+  and `.admit_all_floats().highp()`.
 - **expf (`ExpfOptions`):** checked finite inputs reject NaN and infinity by
-  default; `.full_domain()` propagates IEEE specials, and `.input_range(lo, hi)`
-  elides underflow/overflow clamps when `[lo, hi]` stays inside `[-126, 127.5]`
-  (or scaled by `LOG2_E` for `exp`).
+  default; `.admit_all_floats()` / `.full_domain()` propagates IEEE specials,
+  `.unclamped_exp2_range()` / `.unclamped_exp_range()` elides overflow/underflow
+  clamps inside `[-126, 127.5)`, and `.small_exp2_range()` (`[-0.5, 0.5]`) /
+  `.small_exp_range()` also elides integer `2^k` reduction.
 - **logf (`LogfOptions`):** accepts positive normal finite inputs (`> -1` for
-  `log1p`) by default; `.full_domain()` propagates IEEE specials (`0 -> -inf`,
-  `< 0 -> NaN`, `+inf -> +inf`), and `.input_range(lo, hi)` validates `[lo, hi]`
-  in one SIMD comparison pair. LOWP `log1p` can return a negative value for tiny
-  positive arguments; use MIDP there.
+  `log1p`) by default; `.admit_zero()` cheaply maps `±0 -> -inf`
+  (`log1p(-1) -> -inf`), `.admit_subnormals()` normalizes positive subnormals
+  (`* 2^23`, `- 23` exponent), `.admit_all_floats()` / `.full_domain()` enables
+  both plus `< 0 -> NaN` and `+inf -> +inf`, and `.near_one_range()` /
+  `.small_log1p_range()` elides single-octave exponent extraction. LOWP `log1p`
+  can return a negative value for tiny positive arguments; use MIDP there.
 - **cbrtf (`CbrtfOptions`):** handles `±0.0` and normal finite `|x| < f32::MAX / 3`
-  by default, rejecting subnormals, larger magnitudes, infinities and NaN;
-  `.full_domain()` rescales subnormals and large normals and propagates `±0.0`,
-  `±inf` and NaN, while `.input_range(lo, hi)` elides the denormal check when the
-  interval stays strictly normal away from zero.
+  by default; `.admit_subnormals()` and `.unit_range()` (`[-1, 1]` with
+  subnormals) rescale subnormals without full-domain `>= 1e36` / `±inf` overhead,
+  `.admit_all_floats()` / `.full_domain()` covers every `f32`, and
+  `.input_range(lo, hi)` elides denormal handling when strictly normal.
 
 All guarantees assume round-to-nearest with gradual underflow. NaN payloads and
 floating-point exception flags are not part of any contract.

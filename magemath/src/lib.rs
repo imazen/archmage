@@ -64,14 +64,21 @@ pub enum Portability {
     BackendDependent,
 }
 
-/// Whether to enforce the selected numerical domain at runtime.
+/// How out-of-bounds inputs and intermediate ranges are handled at runtime.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 #[non_exhaustive]
 pub enum Validation {
-    /// Reject the whole vector/slice, returning the exact mask or first failing index.
+    /// Reject the whole vector/slice on out-of-bounds inputs, returning the
+    /// exact failing lane mask or first failing slice index
+    /// (`.error_on_out_of_bounds()` / `.checked()`).
     #[default]
     Checked,
-    /// Omit numerical input/output checks. The caller promises the same domain.
+    /// Clamp finite out-of-bounds inputs into the configured domain/range (and
+    /// saturate out-of-range outputs on `Midp`/`Lowp`), propagating `NaN` as
+    /// `NaN` without returning a numerical error (`.clamp_out_of_bounds()`).
+    ClampOutOfBounds,
+    /// Omit numerical input/output checks and clamps. The caller promises all
+    /// inputs satisfy the configured domain (`.assume_in_bounds()` / `.unchecked()`).
     /// Violations have unspecified numerical results, never memory unsoundness.
     /// Supported widths and valid option encodings are still enforced.
     AssumeValid,
@@ -149,8 +156,9 @@ pub trait SimdVector: private::Sealed {}
 /// - `try_*_with::<CFG>` specializes at compile time from `*Options::bits()`.
 /// - Infallible `powf::<CFG>`, `exp2::<CFG>`, `exp::<CFG>`, `log2::<CFG>`,
 ///   `ln::<CFG>`, `log10::<CFG>`, `log1p::<CFG>`, and `cbrt::<CFG>` return `Self`
-///   directly and fail at compile time unless `CFG` sets `.unchecked()` or
-///   `.full_domain()`.
+///   directly and fail at compile time unless `CFG` is infallible
+///   (`.clamp_out_of_bounds()`, `.assume_in_bounds()` / `.unchecked()`, or
+///   `.admit_all_floats()` / `.full_domain()`).
 pub trait SimdMath: SimdVector {
     /// Checked `self^exponent` with default [`powf::PowfOptions::new()`].
     #[inline(always)]
@@ -166,7 +174,8 @@ pub trait SimdMath: SimdVector {
 
     /// Infallible `self^exponent` specialized for `const CFG: u128`.
     ///
-    /// Fails to compile unless `CFG` sets `.unchecked()` or `.full_domain().highp()`:
+    /// Fails to compile unless `CFG` sets `.clamp_out_of_bounds()`,
+    /// `.assume_in_bounds()` / `.unchecked()`, or `.admit_all_floats().highp()`:
     ///
     /// ```compile_fail
     /// use archmage::ScalarToken;
@@ -183,12 +192,12 @@ pub trait SimdMath: SimdVector {
             opts.validate();
             assert!(
                 opts.is_infallible(),
-                "SimdMath::powf::<CFG> requires `.unchecked()` or `.full_domain().highp()`; use `try_powf_with::<CFG>` for checked options"
+                "SimdMath::powf::<CFG> requires `.clamp_out_of_bounds()`, `.assume_in_bounds()` / `.unchecked()`, or `.admit_all_floats().highp()`; use `try_powf_with::<CFG>` for checked options"
             );
         }
         match self.eval_powf_const::<CFG>(exponent) {
             Ok(v) => v,
-            Err(_) => self,
+            Err(_) => unreachable!("infallible configuration returned Err"),
         }
     }
 
@@ -206,7 +215,8 @@ pub trait SimdMath: SimdVector {
 
     /// Infallible `2^self` specialized for `const CFG: u128`.
     ///
-    /// Fails to compile unless `CFG` sets `.unchecked()` or `.full_domain()`.
+    /// Fails to compile unless `CFG` sets `.clamp_out_of_bounds()`,
+    /// `.assume_in_bounds()` / `.unchecked()`, or `.admit_all_floats()` / `.full_domain()`.
     #[inline(always)]
     fn exp2<const CFG: u128>(self) -> Self {
         const {
@@ -214,12 +224,12 @@ pub trait SimdMath: SimdVector {
             opts.validate();
             assert!(
                 opts.is_infallible(),
-                "SimdMath::exp2::<CFG> requires `.unchecked()` or `.full_domain()`; use `try_exp2_with::<CFG>` for checked options"
+                "SimdMath::exp2::<CFG> requires `.clamp_out_of_bounds()`, `.assume_in_bounds()` / `.unchecked()`, or `.admit_all_floats()`; use `try_exp2_with::<CFG>` for checked options"
             );
         }
         match self.eval_expf_const::<CFG, 0>() {
             Ok(v) => v,
-            Err(_) => self,
+            Err(_) => unreachable!("infallible configuration returned Err"),
         }
     }
 
@@ -237,7 +247,8 @@ pub trait SimdMath: SimdVector {
 
     /// Infallible `e^self` specialized for `const CFG: u128`.
     ///
-    /// Fails to compile unless `CFG` sets `.unchecked()` or `.full_domain()`.
+    /// Fails to compile unless `CFG` sets `.clamp_out_of_bounds()`,
+    /// `.assume_in_bounds()` / `.unchecked()`, or `.admit_all_floats()` / `.full_domain()`.
     #[inline(always)]
     fn exp<const CFG: u128>(self) -> Self {
         const {
@@ -245,12 +256,12 @@ pub trait SimdMath: SimdVector {
             opts.validate();
             assert!(
                 opts.is_infallible(),
-                "SimdMath::exp::<CFG> requires `.unchecked()` or `.full_domain()`; use `try_exp_with::<CFG>` for checked options"
+                "SimdMath::exp::<CFG> requires `.clamp_out_of_bounds()`, `.assume_in_bounds()` / `.unchecked()`, or `.admit_all_floats()`; use `try_exp_with::<CFG>` for checked options"
             );
         }
         match self.eval_expf_const::<CFG, 1>() {
             Ok(v) => v,
-            Err(_) => self,
+            Err(_) => unreachable!("infallible configuration returned Err"),
         }
     }
 
@@ -268,7 +279,8 @@ pub trait SimdMath: SimdVector {
 
     /// Infallible `log2(self)` specialized for `const CFG: u128`.
     ///
-    /// Fails to compile unless `CFG` sets `.unchecked()` or `.full_domain()`.
+    /// Fails to compile unless `CFG` sets `.clamp_out_of_bounds()`,
+    /// `.assume_in_bounds()` / `.unchecked()`, or `.admit_all_floats()` / `.full_domain()`.
     #[inline(always)]
     fn log2<const CFG: u128>(self) -> Self {
         const {
@@ -276,12 +288,12 @@ pub trait SimdMath: SimdVector {
             opts.validate_op(0);
             assert!(
                 opts.is_infallible(),
-                "SimdMath::log2::<CFG> requires `.unchecked()` or `.full_domain()`; use `try_log2_with::<CFG>` for checked options"
+                "SimdMath::log2::<CFG> requires `.clamp_out_of_bounds()`, `.assume_in_bounds()` / `.unchecked()`, or `.admit_all_floats()`; use `try_log2_with::<CFG>` for checked options"
             );
         }
         match self.eval_logf_const::<CFG, 0>() {
             Ok(v) => v,
-            Err(_) => self,
+            Err(_) => unreachable!("infallible configuration returned Err"),
         }
     }
 
@@ -299,7 +311,8 @@ pub trait SimdMath: SimdVector {
 
     /// Infallible `ln(self)` specialized for `const CFG: u128`.
     ///
-    /// Fails to compile unless `CFG` sets `.unchecked()` or `.full_domain()`.
+    /// Fails to compile unless `CFG` sets `.clamp_out_of_bounds()`,
+    /// `.assume_in_bounds()` / `.unchecked()`, or `.admit_all_floats()` / `.full_domain()`.
     #[inline(always)]
     fn ln<const CFG: u128>(self) -> Self {
         const {
@@ -307,12 +320,12 @@ pub trait SimdMath: SimdVector {
             opts.validate_op(1);
             assert!(
                 opts.is_infallible(),
-                "SimdMath::ln::<CFG> requires `.unchecked()` or `.full_domain()`; use `try_ln_with::<CFG>` for checked options"
+                "SimdMath::ln::<CFG> requires `.clamp_out_of_bounds()`, `.assume_in_bounds()` / `.unchecked()`, or `.admit_all_floats()`; use `try_ln_with::<CFG>` for checked options"
             );
         }
         match self.eval_logf_const::<CFG, 1>() {
             Ok(v) => v,
-            Err(_) => self,
+            Err(_) => unreachable!("infallible configuration returned Err"),
         }
     }
 
@@ -330,7 +343,8 @@ pub trait SimdMath: SimdVector {
 
     /// Infallible `log10(self)` specialized for `const CFG: u128`.
     ///
-    /// Fails to compile unless `CFG` sets `.unchecked()` or `.full_domain()`.
+    /// Fails to compile unless `CFG` sets `.clamp_out_of_bounds()`,
+    /// `.assume_in_bounds()` / `.unchecked()`, or `.admit_all_floats()` / `.full_domain()`.
     #[inline(always)]
     fn log10<const CFG: u128>(self) -> Self {
         const {
@@ -338,12 +352,12 @@ pub trait SimdMath: SimdVector {
             opts.validate_op(2);
             assert!(
                 opts.is_infallible(),
-                "SimdMath::log10::<CFG> requires `.unchecked()` or `.full_domain()`; use `try_log10_with::<CFG>` for checked options"
+                "SimdMath::log10::<CFG> requires `.clamp_out_of_bounds()`, `.assume_in_bounds()` / `.unchecked()`, or `.admit_all_floats()`; use `try_log10_with::<CFG>` for checked options"
             );
         }
         match self.eval_logf_const::<CFG, 2>() {
             Ok(v) => v,
-            Err(_) => self,
+            Err(_) => unreachable!("infallible configuration returned Err"),
         }
     }
 
@@ -361,7 +375,8 @@ pub trait SimdMath: SimdVector {
 
     /// Infallible `ln(1 + self)` specialized for `const CFG: u128`.
     ///
-    /// Fails to compile unless `CFG` sets `.unchecked()` or `.full_domain()`.
+    /// Fails to compile unless `CFG` sets `.clamp_out_of_bounds()`,
+    /// `.assume_in_bounds()` / `.unchecked()`, or `.admit_all_floats()` / `.full_domain()`.
     #[inline(always)]
     fn log1p<const CFG: u128>(self) -> Self {
         const {
@@ -369,12 +384,12 @@ pub trait SimdMath: SimdVector {
             opts.validate_op(3);
             assert!(
                 opts.is_infallible(),
-                "SimdMath::log1p::<CFG> requires `.unchecked()` or `.full_domain()`; use `try_log1p_with::<CFG>` for checked options"
+                "SimdMath::log1p::<CFG> requires `.clamp_out_of_bounds()`, `.assume_in_bounds()` / `.unchecked()`, or `.admit_all_floats()`; use `try_log1p_with::<CFG>` for checked options"
             );
         }
         match self.eval_logf_const::<CFG, 3>() {
             Ok(v) => v,
-            Err(_) => self,
+            Err(_) => unreachable!("infallible configuration returned Err"),
         }
     }
 
@@ -392,7 +407,8 @@ pub trait SimdMath: SimdVector {
 
     /// Infallible `cbrt(self)` specialized for `const CFG: u128`.
     ///
-    /// Fails to compile unless `CFG` sets `.unchecked()` or `.full_domain()`.
+    /// Fails to compile unless `CFG` sets `.clamp_out_of_bounds()`,
+    /// `.assume_in_bounds()` / `.unchecked()`, or `.admit_all_floats()` / `.full_domain()`.
     #[inline(always)]
     fn cbrt<const CFG: u128>(self) -> Self {
         const {
@@ -400,12 +416,12 @@ pub trait SimdMath: SimdVector {
             opts.validate();
             assert!(
                 opts.is_infallible(),
-                "SimdMath::cbrt::<CFG> requires `.unchecked()` or `.full_domain()`; use `try_cbrt_with::<CFG>` for checked options"
+                "SimdMath::cbrt::<CFG> requires `.clamp_out_of_bounds()`, `.assume_in_bounds()` / `.unchecked()`, or `.admit_all_floats()`; use `try_cbrt_with::<CFG>` for checked options"
             );
         }
         match self.eval_cbrtf_const::<CFG>() {
             Ok(v) => v,
-            Err(_) => self,
+            Err(_) => unreachable!("infallible configuration returned Err"),
         }
     }
 }

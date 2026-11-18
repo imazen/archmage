@@ -40,6 +40,7 @@ const EXP2_FULL_EXTRA: [f32; 4] = [
 ];
 
 const EXP_BOUNDED_VALID: [f32; 16] = [
+    -f32::MAX,
     -150.0,
     -87.3,
     -20.5,
@@ -50,20 +51,18 @@ const EXP_BOUNDED_VALID: [f32; 16] = [
     f32::from_bits(1),
     f32::from_bits(0x8000_0001),
     0.25,
-    0.99,
     1.0,
     2.5,
-    30.125,
     88.0,
     150.0,
+    f32::MAX,
 ];
 
-const EXP_FULL_EXTRA: [f32; 5] = [
+const EXP_FULL_EXTRA: [f32; 4] = [
     f32::NEG_INFINITY,
     f32::INFINITY,
     f32::NAN,
-    f32::MAX,
-    -f32::MAX,
+    f32::from_bits(0x7fc0_1234),
 ];
 
 const CBRT_BOUNDED_VALID: [f32; 16] = [
@@ -378,7 +377,7 @@ check_standalone_family!(
     ExpfErrorKind::UnsupportedWidth,
     EXP_BOUNDED_VALID,
     EXP_FULL_EXTRA,
-    [f32::NAN, f32::INFINITY, f32::NEG_INFINITY, f32::MAX]
+    [f32::NAN, f32::INFINITY, f32::NEG_INFINITY]
 );
 
 check_standalone_family!(
@@ -546,13 +545,8 @@ fn check_token(token: Token) {
         exp_with_token,
         exp,
         EXP_BOUNDED_VALID,
-        [
-            EXP_FULL_EXTRA[0],
-            EXP_FULL_EXTRA[1],
-            EXP_FULL_EXTRA[2],
-            EXP_FULL_EXTRA[3]
-        ],
-        f32::MAX,
+        EXP_FULL_EXTRA,
+        f32::INFINITY,
         f32::NAN,
         yes
     );
@@ -609,13 +603,8 @@ fn check_token_fp16(token: archmage::Avx512Fp16Token) {
         exp_with_token,
         exp,
         EXP_BOUNDED_VALID,
-        [
-            EXP_FULL_EXTRA[0],
-            EXP_FULL_EXTRA[1],
-            EXP_FULL_EXTRA[2],
-            EXP_FULL_EXTRA[3]
-        ],
-        f32::MAX,
+        EXP_FULL_EXTRA,
+        f32::INFINITY,
         f32::NAN,
         no
     );

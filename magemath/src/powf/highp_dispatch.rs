@@ -16,8 +16,9 @@ fn run<const IN_CONTEXT: bool, const ELIDE: bool, const ZERO: bool, const N: usi
     bases: [f32; N],
     n: f32,
 ) -> Result<[f32; N], PowfError> {
+    let (bases, nan_mask) = highp::sanitize_bases_cfg::<N>(cfg, bases, n);
     highp::check_bases_cfg(cfg, &bases, n)?;
-    let out = match plan {
+    let mut out = match plan {
         #[cfg(target_arch = "x86_64")]
         Plan::V3(t) => {
             if IN_CONTEXT {
@@ -61,6 +62,7 @@ fn run<const IN_CONTEXT: bool, const ELIDE: bool, const ZERO: bool, const N: usi
         _ => scalar::<ScalarToken, { graph::SOFTWARE }, ELIDE, N>(ScalarToken, bases, n),
     };
     highp::check_results_cfg(cfg, &bases, &out, n)?;
+    highp::restore_nans(&mut out, nan_mask);
     Ok(out)
 }
 
@@ -129,19 +131,23 @@ fn eval_slice_loop<
     let (chunks, tail) = src.as_chunks::<8>();
     let (out_chunks, out_tail) = dst.as_chunks_mut::<8>();
     for (i, (s, d)) in chunks.iter().zip(out_chunks.iter_mut()).enumerate() {
-        highp::check_bases_cfg(cfg, s, n).map_err(|e| (i * 8, e))?;
-        let out = eval8(t, *s, n);
-        highp::check_results_cfg(cfg, s, &out, n).map_err(|e| (i * 8, e))?;
+        let (bases, nan_mask) = highp::sanitize_bases_cfg::<8>(cfg, *s, n);
+        highp::check_bases_cfg(cfg, &bases, n).map_err(|e| (i * 8, e))?;
+        let mut out = eval8(t, bases, n);
+        highp::check_results_cfg(cfg, &bases, &out, n).map_err(|e| (i * 8, e))?;
+        highp::restore_nans(&mut out, nan_mask);
         *d = out;
     }
     let tail_base = chunks.len() * 8;
     for (i, (&x, d)) in tail.iter().zip(out_tail.iter_mut()).enumerate() {
-        highp::check_bases_cfg(cfg, &[x], n)
+        let ([bx], nan_mask) = highp::sanitize_bases_cfg::<1>(cfg, [x], n);
+        highp::check_bases_cfg(cfg, &[bx], n)
             .map_err(|e| (tail_base + i, PowfError { lane_mask: 1, ..e }))?;
-        let out = highp_scalar::pow::<T, MODE, ELIDE>(t, x, n);
-        highp::check_results_cfg(cfg, &[x], &[out], n)
+        let mut out = [highp_scalar::pow::<T, MODE, ELIDE>(t, bx, n)];
+        highp::check_results_cfg(cfg, &[bx], &out, n)
             .map_err(|e| (tail_base + i, PowfError { lane_mask: 1, ..e }))?;
-        *d = out;
+        highp::restore_nans(&mut out, nan_mask);
+        *d = out[0];
     }
     Ok(())
 }
@@ -300,7 +306,8 @@ pub(super) fn for_token_cfg<T: archmage::IntoConcreteToken, const N: usize>(
         super::dispatch::select_highp(t, Execution::Upgrade, N >= 8)
     };
     let in_context = !matches!(caller, Plan::Software) && plan.same_tier(caller);
-    match (in_context, opts.elides_range_check(), opts.admits_zero()) {
+    let elide = opts.elides_range_check() && !opts.admits_subnormals();
+    match (in_context, elide, opts.admits_zero()) {
         (true, true, true) => run::<true, true, true, N>(plan, cfg, bases, n),
         (true, true, false) => run::<true, true, false, N>(plan, cfg, bases, n),
         (true, false, _) => run::<true, false, false, N>(plan, cfg, bases, n),
@@ -341,7 +348,8 @@ pub(super) fn for_token_slice_cfg<T: archmage::IntoConcreteToken>(
         super::dispatch::select_highp(t, Execution::Upgrade, true)
     };
     let in_context = !matches!(caller, Plan::Software) && plan.same_tier(caller);
-    match (in_context, opts.elides_range_check(), opts.admits_zero()) {
+    let elide = opts.elides_range_check() && !opts.admits_subnormals();
+    match (in_context, elide, opts.admits_zero()) {
         (true, true, true) => run_slice::<true, true, true>(plan, cfg, src, dst, n),
         (true, true, false) => run_slice::<true, true, false>(plan, cfg, src, dst, n),
         (true, false, _) => run_slice::<true, false, false>(plan, cfg, src, dst, n),

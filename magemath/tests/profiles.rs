@@ -415,10 +415,6 @@ fn v3_token_upgrades_to_avx512_for_slices_w512_and_highp_while_caller_stays_v3()
     use archmage::SimdToken;
     use magetypes::simd::generic::f32x16;
 
-    let Some(v3) = archmage::X64V3Token::summon() else {
-        return;
-    };
-
     const UP_GAMMA: u128 = PowfOptions::new().gamma().upgrade().bits();
     const CALL_GAMMA: u128 = PowfOptions::new().gamma().caller().bits();
     const UP_HIGHP: u128 = PowfOptions::new().gamma().highp().upgrade().bits();
@@ -431,84 +427,104 @@ fn v3_token_upgrades_to_avx512_for_slices_w512_and_highp_while_caller_stays_v3()
     const CALL_CBRT: u128 = CbrtfOptions::new().caller().bits();
 
     let src = log_uniform(35, 0.01, 100.0, 0x1234);
-    let (mut p_up, mut p_ca) = (vec![0.0; 35], vec![0.0; 35]);
-    Powf::<UP_GAMMA>::slice_with_token(v3, &src, &mut p_up, 2.2).unwrap();
-    Powf::<CALL_GAMMA>::slice_with_token(v3, &src, &mut p_ca, 2.2).unwrap();
-    assert_eq!(bits(&p_up), bits(&p_ca));
 
-    let (mut h_up, mut h_ca) = (vec![0.0; 35], vec![0.0; 35]);
-    Powf::<UP_HIGHP>::slice_with_token(v3, &src, &mut h_up, 2.2).unwrap();
-    Powf::<CALL_HIGHP>::slice_with_token(v3, &src, &mut h_ca, 2.2).unwrap();
-    assert_eq!(bits(&h_up), bits(&h_ca));
+    let check_for_v3 = |v3: archmage::X64V3Token| {
+        let (mut p_up, mut p_ca) = (vec![0.0; 35], vec![0.0; 35]);
+        Powf::<UP_GAMMA>::slice_with_token(v3, &src, &mut p_up, 2.2).unwrap();
+        Powf::<CALL_GAMMA>::slice_with_token(v3, &src, &mut p_ca, 2.2).unwrap();
+        assert_eq!(bits(&p_up), bits(&p_ca));
 
-    let (mut e_up, mut e_ca) = (vec![0.0; 35], vec![0.0; 35]);
-    Expf::<UP_EXP>::exp2_slice_with_token(v3, &src, &mut e_up).unwrap();
-    Expf::<CALL_EXP>::exp2_slice_with_token(v3, &src, &mut e_ca).unwrap();
-    assert_eq!(bits(&e_up), bits(&e_ca));
+        let (mut h_up, mut h_ca) = (vec![0.0; 35], vec![0.0; 35]);
+        Powf::<UP_HIGHP>::slice_with_token(v3, &src, &mut h_up, 2.2).unwrap();
+        Powf::<CALL_HIGHP>::slice_with_token(v3, &src, &mut h_ca, 2.2).unwrap();
+        assert_eq!(bits(&h_up), bits(&h_ca));
 
-    let (mut l_up, mut l_ca) = (vec![0.0; 35], vec![0.0; 35]);
-    Logf::<UP_LOG>::ln_slice_with_token(v3, &src, &mut l_up).unwrap();
-    Logf::<CALL_LOG>::ln_slice_with_token(v3, &src, &mut l_ca).unwrap();
-    assert_eq!(bits(&l_up), bits(&l_ca));
+        let (mut e_up, mut e_ca) = (vec![0.0; 35], vec![0.0; 35]);
+        Expf::<UP_EXP>::exp2_slice_with_token(v3, &src, &mut e_up).unwrap();
+        Expf::<CALL_EXP>::exp2_slice_with_token(v3, &src, &mut e_ca).unwrap();
+        assert_eq!(bits(&e_up), bits(&e_ca));
 
-    let (mut c_up, mut c_ca) = (vec![0.0; 35], vec![0.0; 35]);
-    Cbrtf::<UP_CBRT>::slice_with_token(v3, &src, &mut c_up).unwrap();
-    Cbrtf::<CALL_CBRT>::slice_with_token(v3, &src, &mut c_ca).unwrap();
-    assert_eq!(bits(&c_up), bits(&c_ca));
+        let (mut l_up, mut l_ca) = (vec![0.0; 35], vec![0.0; 35]);
+        Logf::<UP_LOG>::ln_slice_with_token(v3, &src, &mut l_up).unwrap();
+        Logf::<CALL_LOG>::ln_slice_with_token(v3, &src, &mut l_ca).unwrap();
+        assert_eq!(bits(&l_up), bits(&l_ca));
 
-    let arr16: [f32; 16] = core::array::from_fn(|i| src[i]);
-    let v16 = f32x16::from_array_t(v3, arr16);
-    assert_eq!(
-        v16.try_powf_with::<UP_GAMMA>(2.2)
-            .unwrap()
-            .to_array()
-            .map(f32::to_bits),
-        v16.try_powf_with::<CALL_GAMMA>(2.2)
-            .unwrap()
-            .to_array()
-            .map(f32::to_bits),
-    );
-    assert_eq!(
-        v16.try_exp2_with::<UP_EXP>()
-            .unwrap()
-            .to_array()
-            .map(f32::to_bits),
-        v16.try_exp2_with::<CALL_EXP>()
-            .unwrap()
-            .to_array()
-            .map(f32::to_bits),
-    );
-    assert_eq!(
-        v16.try_ln_with::<UP_LOG>()
-            .unwrap()
-            .to_array()
-            .map(f32::to_bits),
-        v16.try_ln_with::<CALL_LOG>()
-            .unwrap()
-            .to_array()
-            .map(f32::to_bits),
-    );
-    assert_eq!(
-        v16.try_cbrt_with::<UP_CBRT>()
-            .unwrap()
-            .to_array()
-            .map(f32::to_bits),
-        v16.try_cbrt_with::<CALL_CBRT>()
-            .unwrap()
-            .to_array()
-            .map(f32::to_bits),
-    );
+        let (mut c_up, mut c_ca) = (vec![0.0; 35], vec![0.0; 35]);
+        Cbrtf::<UP_CBRT>::slice_with_token(v3, &src, &mut c_up).unwrap();
+        Cbrtf::<CALL_CBRT>::slice_with_token(v3, &src, &mut c_ca).unwrap();
+        assert_eq!(bits(&c_up), bits(&c_ca));
 
-    let arr8: [f32; 8] = core::array::from_fn(|i| src[i]);
-    let v8 = f32x8::from_array_t(v3, arr8);
-    assert_eq!(
-        v8.try_powf_with::<UP_HIGHP>(2.2)
-            .unwrap()
-            .to_array()
-            .map(f32::to_bits),
-        v8.try_powf_with::<CALL_HIGHP>(2.2)
-            .unwrap()
-            .to_array()
-            .map(f32::to_bits),
-    );
+        let arr16: [f32; 16] = core::array::from_fn(|i| src[i]);
+        let v16 = f32x16::from_array_t(v3, arr16);
+        assert_eq!(
+            v16.try_powf_with::<UP_GAMMA>(2.2)
+                .unwrap()
+                .to_array()
+                .map(f32::to_bits),
+            v16.try_powf_with::<CALL_GAMMA>(2.2)
+                .unwrap()
+                .to_array()
+                .map(f32::to_bits),
+        );
+        assert_eq!(
+            v16.try_exp2_with::<UP_EXP>()
+                .unwrap()
+                .to_array()
+                .map(f32::to_bits),
+            v16.try_exp2_with::<CALL_EXP>()
+                .unwrap()
+                .to_array()
+                .map(f32::to_bits),
+        );
+        assert_eq!(
+            v16.try_ln_with::<UP_LOG>()
+                .unwrap()
+                .to_array()
+                .map(f32::to_bits),
+            v16.try_ln_with::<CALL_LOG>()
+                .unwrap()
+                .to_array()
+                .map(f32::to_bits),
+        );
+        assert_eq!(
+            v16.try_cbrt_with::<UP_CBRT>()
+                .unwrap()
+                .to_array()
+                .map(f32::to_bits),
+            v16.try_cbrt_with::<CALL_CBRT>()
+                .unwrap()
+                .to_array()
+                .map(f32::to_bits),
+        );
+
+        let arr8: [f32; 8] = core::array::from_fn(|i| src[i]);
+        let v8 = f32x8::from_array_t(v3, arr8);
+        assert_eq!(
+            v8.try_powf_with::<UP_HIGHP>(2.2)
+                .unwrap()
+                .to_array()
+                .map(f32::to_bits),
+            v8.try_powf_with::<CALL_HIGHP>(2.2)
+                .unwrap()
+                .to_array()
+                .map(f32::to_bits),
+        );
+    };
+
+    #[cfg(feature = "std")]
+    {
+        // Sweep across V4x, V4-only (V4x disabled), and V3-fallback (V4/V4x disabled) permutations.
+        let _ = archmage::testing::for_each_token_permutation(
+            archmage::testing::CompileTimePolicy::Warn,
+            |_| {
+                if let Some(v3) = archmage::X64V3Token::summon() {
+                    check_for_v3(v3);
+                }
+            },
+        );
+    }
+    #[cfg(not(feature = "std"))]
+    if let Some(v3) = archmage::X64V3Token::summon() {
+        check_for_v3(v3);
+    }
 }

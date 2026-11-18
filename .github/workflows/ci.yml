@@ -479,7 +479,9 @@ jobs:
         env:
           RUSTFLAGS: "-C target-feature=+simd128,+relaxed-simd"
           CARGO_TARGET_WASM32_WASIP1_RUNNER: "wasmtime --env ARCHMAGE_EXPECT_RELAXED_FUSION=yes"
-        run: cargo test -p magetypes --features "${{ env.FEATURES }}" --target wasm32-wasip1 --lib --test fma_contract --test fused_arithmetic --test doc_examples --test scalar_parity
+        run: |
+          cargo test -p magetypes --features "${{ env.FEATURES }}" --target wasm32-wasip1 --lib --test fma_contract --test fused_arithmetic --test doc_examples --test scalar_parity
+          cargo test -p magemath --features "${{ env.FEATURES }}" --target wasm32-wasip1 --lib --test portable_hashes --test profiles --test slices --test option_permutations
 
       - name: Test no_std WASM arithmetic
         env:
@@ -491,13 +493,17 @@ jobs:
         env:
           RUSTFLAGS: "-C target-feature=+simd128,+relaxed-simd"
           CARGO_TARGET_WASM32_WASIP1_RUNNER: "wasmtime"
-        run: cargo test -p magetypes --no-default-features --features w512 --target wasm32-wasip1 --test fma_contract
+        run: |
+          cargo test -p magetypes --no-default-features --features w512 --target wasm32-wasip1 --test fma_contract
+          cargo test -p magemath --no-default-features --features w512 --target wasm32-wasip1 --lib --test profiles --test option_permutations
 
       - name: Test relaxed WASM arithmetic without host FMA
         env:
           RUSTFLAGS: "-C target-feature=+simd128,+relaxed-simd"
           CARGO_TARGET_WASM32_WASIP1_RUNNER: "wasmtime -W relaxed-simd-deterministic=n -C cranelift-has-fma=false --env ARCHMAGE_EXPECT_RELAXED_FUSION=no"
-        run: cargo test -p magetypes --features "${{ env.FEATURES }}" --target wasm32-wasip1 --lib --test fma_contract --test fused_arithmetic --test doc_examples --test scalar_parity
+        run: |
+          cargo test -p magetypes --features "${{ env.FEATURES }}" --target wasm32-wasip1 --lib --test fma_contract --test fused_arithmetic --test doc_examples --test scalar_parity
+          cargo test -p magemath --features "${{ env.FEATURES }}" --target wasm32-wasip1 --lib --test portable_hashes --test profiles --test slices --test option_permutations
 
       - name: Run arch exercise (WASM)
         if: always()
@@ -928,7 +934,10 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Test with testable_dispatch + CompileTimePolicy::Fail
-        run: cargo test --features "std avx512 testable_dispatch" --test token_permutations -- --test-threads=1
+        run: |
+          cargo test --features "std avx512 testable_dispatch" --test token_permutations -- --test-threads=1
+          cargo test -p magemath -p archmage --lib --features "magemath/std magemath/avx512 archmage/testable_dispatch" -- --test-threads=1
+          cargo test -p magemath -p archmage --release --features "magemath/std magemath/avx512 archmage/testable_dispatch" --test profiles --test option_permutations -- --test-threads=1
 
       - name: Detect features (default)
         shell: bash

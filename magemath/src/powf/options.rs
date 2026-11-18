@@ -3,12 +3,14 @@
 use crate::{Execution, Portability, Validation};
 
 /// Largest `|n * log2(x)|` a configuration may reach before the kernel keeps
-/// its range check. The approximation needs the argument in `[-126, 127.5]`.
-const ELIDE_LIMIT: f32 = 120.0;
+/// its range check. Keeping all four interval corners within `[-125.0, 125.0]`
+/// stays strictly inside `Midp`/`Lowp`'s `[-126, 127.5)` domain and `Highp`'s
+/// `|y * log2(x)| < 126` fast-pack domain.
+const ELIDE_LIMIT: f32 = 125.0;
 
 /// Largest finite magnitude representable without overflow in the 25-bit
 /// outward-rounded exponent bound encoding (`~3.4028073e38`).
-const MAX_EXP_BOUND: f32 = f32::from_bits(0x7f7f_ff80);
+pub const MAX_EXP_BOUND: f32 = f32::from_bits(0x7f7f_ff80);
 
 const MAGIC: u128 = 0xA;
 const HAS_BASE: u128 = 1 << 4;
@@ -20,10 +22,13 @@ const PREC_SHIFT: u32 = 9;
 const BACKEND: u128 = 1 << 11;
 const ASSUME: u128 = 1 << 12;
 const CALLER: u128 = 1 << 13;
-const BASE_LO_SHIFT: u32 = 14;
-const BASE_HI_SHIFT: u32 = 46;
+const SUBNORM: u128 = 1 << 14;
+const CLAMP_OOB: u128 = 1 << 15;
+const BASE_LO_SHIFT: u32 = 16;
+const BASE_HI_SHIFT: u32 = 47;
 const EXP_LO_SHIFT: u32 = 78;
 const EXP_HI_SHIFT: u32 = 103;
+const MASK_31: u128 = (1 << 31) - 1;
 const MASK_25: u128 = (1 << 25) - 1;
 
 const fn abs(x: f32) -> f32 {
@@ -37,6 +42,12 @@ const fn canon_zero(x: f32) -> f32 {
 /// Unbiased binary exponent of a positive normal value.
 const fn exponent_of(x: f32) -> i32 {
     ((x.to_bits() >> 23) & 0xff) as i32 - 127
+}
+
+/// Whether `[lo, hi]` contains exclusively nonzero subnormals (excluding `0.0`
+/// and every normal `f32`).
+const fn is_nonzero_subnormal_only_interval(lo: f32, hi: f32) -> bool {
+    (lo > 0.0 && hi < f32::MIN_POSITIVE) || (lo > -f32::MIN_POSITIVE && hi < 0.0)
 }
 
 /// Largest 25-bit float (`sign + 8-bit exp + top 16 mantissa bits`) `<= x`.
@@ -67,7 +78,7 @@ pub enum PowfPrecision {
     /// Existing MIDP coefficients and graph; no whole-domain ULP guarantee.
     #[default]
     Midp,
-    /// Shorter LOWP coefficients; prefer a bounded `.gamma()` or custom range.
+    /// Shorter LOWP coefficients; prefer a bounded `.gamma_domain()` or custom range.
     Lowp,
     /// Table-based binary64 graph for [`Portability::BitExact`]; `std` `f32::powf`
     /// for [`Portability::BackendDependent`] (requires the `std` feature).
@@ -76,10 +87,25 @@ pub enum PowfPrecision {
 
 /// Fluent `const` configuration builder for [`super::Powf`] and [`crate::SimdMath`].
 ///
+/// Options separate **what inputs are supported** (domain & range methods such as
+/// [`base_range`](Self::base_range), [`exponent_range`](Self::exponent_range),
+/// [`admit_zero`](Self::admit_zero), [`admit_subnormals`](Self::admit_subnormals),
+/// [`gamma_domain`](Self::gamma_domain), [`srgb_encode_domain`](Self::srgb_encode_domain),
+/// and [`admit_all_floats`](Self::admit_all_floats)) from **how out-of-bounds
+/// inputs are handled**:
+///
+/// - [`error_on_out_of_bounds`](Self::error_on_out_of_bounds) (default, alias
+///   [`checked`](Self::checked)): return `Err` on out-of-domain inputs or
+///   out-of-range outputs.
+/// - [`clamp_out_of_bounds`](Self::clamp_out_of_bounds): clamp finite out-of-bounds
+///   bases/exponents into the configured domain, saturate overflow/underflow
+///   outputs, and propagate `NaN` as `NaN` (infallible).
+/// - [`assume_in_bounds`](Self::assume_in_bounds) (alias [`unchecked`](Self::unchecked)):
+///   omit runtime checks and clamps when the caller already guarantees bounds
+///   (infallible).
+///
 /// Call `.bits()` to pass as a `const CFG: u128` parameter for compile-time
-/// specialization (eliding per-lane range checks and clamps when the declared
-/// ranges stay inside `[-126, 127.5]`), or `.runtime()` to evaluate with
-/// dynamic runtime options.
+/// specialization, or `.runtime()` to evaluate with dynamic runtime options.
 ///
 /// ```
 /// use magemath::powf::{Powf, PowfOptions};
@@ -102,6 +128,7 @@ pub struct PowfOptions {
     base: Option<(u32, u32)>,
     exponent: Option<(u32, u32)>,
     zero: bool,
+    subnormals: bool,
     full: bool,
     clamp: bool,
     precision: PowfPrecision,
@@ -119,12 +146,13 @@ impl Default for PowfOptions {
 
 impl PowfOptions {
     /// Positive normal bases, any finite normal-or-zero exponent, `Midp`,
-    /// `BitExact`, `Checked`, `Execution::Upgrade`.
+    /// `BitExact`, `Checked` (`error_on_out_of_bounds`), `Execution::Upgrade`.
     pub const fn new() -> Self {
         Self {
             base: None,
             exponent: None,
             zero: false,
+            subnormals: false,
             full: false,
             clamp: false,
             precision: PowfPrecision::Midp,
@@ -144,16 +172,20 @@ impl PowfOptions {
         self
     }
 
-    /// Accept exponents in `[lo, hi]`.
+    /// Restrict exponents to `[lo, hi]` within the active exponent domain
+    /// (normal-or-zero unless [`admit_subnormals`](Self::admit_subnormals) is enabled).
     ///
-    /// Bounds are canonicalized outward to 25-bit floats (`sign + 8-bit exp +
-    /// 16-bit mantissa`, exact for dyadic rationals such as `0.0`, `0.25`,
-    /// `0.5`, `1.0`, `2.0`, `4.0`, `±8.0`) so `Powf::<{ opts.bits() }>` and
-    /// `opts.runtime()` enforce the exact same bounds and always admit `lo` and `hi`.
+    /// Both bounds must satisfy `|bound| <= MAX_EXP_BOUND` (`0x7f7f_ff80`,
+    /// `~3.4028073e38`). Bounds are canonicalized outward to 25-bit floats
+    /// (`sign + 8-bit exp + 16-bit mantissa`, exact for dyadic rationals such
+    /// as `0.0`, `0.25`, `0.5`, `1.0`, `2.0`, `4.0`, `±8.0`) so
+    /// `Powf::<{ opts.bits() }>` and `opts.runtime()` enforce the exact same
+    /// interval. Intervals containing only nonzero subnormals require
+    /// [`admit_subnormals`](Self::admit_subnormals).
     pub const fn exponent_range(mut self, lo: f32, hi: f32) -> Self {
         assert!(
             lo <= hi && abs(lo) <= MAX_EXP_BOUND && abs(hi) <= MAX_EXP_BOUND,
-            "exponent range must be finite with lo <= hi"
+            "exponent range must be finite within ±MAX_EXP_BOUND (0x7f7f_ff80) with lo <= hi"
         );
         let lo_c = floor_25(lo);
         let hi_c = ceil_25(hi);
@@ -161,38 +193,119 @@ impl PowfOptions {
         self
     }
 
-    /// Also accept `+0`: `0^0 = 1`, `0^positive = +0`. Negative exponents
-    /// with a zero base remain rejected under [`Validation::Checked`].
+    /// Also accept `+0.0` bases when `exponent >= 0`: `0^0 = 1`, `0^positive = +0`.
+    /// Negative exponents with a zero base remain rejected under [`Validation::Checked`].
     pub const fn admit_zero(mut self) -> Self {
-        self.zero = true;
+        if !self.full {
+            self.zero = true;
+        }
         self
     }
 
-    /// Shorthand for the standard transfer-function gamma domain:
-    /// `.base_range(1.0 / 65_536.0, 65_536.0).exponent_range(0.0, 4.0).admit_zero()`.
-    pub const fn gamma(self) -> Self {
-        self.base_range(1.0 / 65_536.0, 65_536.0)
-            .exponent_range(0.0, 4.0)
-            .admit_zero()
+    /// Alias for [`admit_zero`](Self::admit_zero) clarifying that `+0.0` is
+    /// added to the base domain (`0.0` exponents are already accepted by default).
+    pub const fn admit_zero_base(self) -> Self {
+        self.admit_zero()
     }
 
-    /// Shorthand for the strictly positive gamma domain (excludes `+0` and its
-    /// zero masks): `.base_range(1.0 / 65_536.0, 65_536.0).exponent_range(0.0, 4.0)`.
+    /// Also accept positive subnormal bases (`0 < x < f32::MIN_POSITIVE`,
+    /// normalized by `* 2^23` with `-23` exponent adjustment) and nonzero
+    /// subnormal exponents.
+    ///
+    /// When combined with [`base_range`](Self::base_range), `lo` must be
+    /// `f32::MIN_POSITIVE` so the accepted base domain has no normal gap.
+    pub const fn admit_subnormals(mut self) -> Self {
+        if !self.full {
+            self.subnormals = true;
+        }
+        self
+    }
+
+    /// Standard transfer-function gamma domain:
+    /// `.base_range(1.0 / 65_536.0, 65_536.0).exponent_range(0.0, 4.0).admit_zero()`.
+    pub const fn gamma_domain(self) -> Self {
+        let mut s = self
+            .base_range(1.0 / 65_536.0, 65_536.0)
+            .exponent_range(0.0, 4.0);
+        if !s.full {
+            s.zero = true;
+            s.subnormals = false;
+        }
+        s
+    }
+
+    /// Shorthand alias for [`gamma_domain`](Self::gamma_domain).
+    pub const fn gamma(self) -> Self {
+        self.gamma_domain()
+    }
+
+    /// Strictly positive gamma domain (excludes `+0` and subnormals and their
+    /// masks): `.base_range(1.0 / 65_536.0, 65_536.0).exponent_range(0.0, 4.0)`.
+    pub const fn positive_gamma_domain(self) -> Self {
+        let mut s = self
+            .base_range(1.0 / 65_536.0, 65_536.0)
+            .exponent_range(0.0, 4.0);
+        s.zero = false;
+        s.subnormals = false;
+        s
+    }
+
+    /// Shorthand alias for [`positive_gamma_domain`](Self::positive_gamma_domain).
     pub const fn positive_gamma(self) -> Self {
-        self.base_range(1.0 / 65_536.0, 65_536.0)
-            .exponent_range(0.0, 4.0)
+        self.positive_gamma_domain()
+    }
+
+    /// Unit-normalized SDR transfer-function domain:
+    /// `.base_range(1.0 / 65_536.0, 1.0).exponent_range(0.0, 4.0).admit_zero()`.
+    pub const fn unit_gamma_domain(self) -> Self {
+        let mut s = self
+            .base_range(1.0 / 65_536.0, 1.0)
+            .exponent_range(0.0, 4.0);
+        if !s.full {
+            s.zero = true;
+            s.subnormals = false;
+        }
+        s
+    }
+
+    /// Encoding gamma domain (`1/2.4`, `1/2.2`, `sqrt`) across all positive
+    /// normals in `(0, 1]` plus `+0.0`, eliding per-lane output range checks:
+    /// `.base_range(f32::MIN_POSITIVE, 1.0).exponent_range(0.0, 0.99).admit_zero()`.
+    pub const fn srgb_encode_domain(self) -> Self {
+        let mut s = self
+            .base_range(f32::MIN_POSITIVE, 1.0)
+            .exponent_range(0.0, 0.99);
+        if !s.full {
+            s.zero = true;
+            s.subnormals = false;
+        }
+        s
     }
 
     /// Accept every `f32` input and output (requires [`PowfPrecision::Highp`]).
-    pub const fn full_domain(mut self) -> Self {
+    pub const fn admit_all_floats(mut self) -> Self {
         self.full = true;
+        self.zero = false;
+        self.subnormals = false;
         self
     }
 
-    /// Clamp out-of-range `Midp`/`Lowp` `exp2` arguments instead of rejecting.
-    pub const fn clamp_output(mut self) -> Self {
+    /// Alias for [`admit_all_floats`](Self::admit_all_floats) (requires [`PowfPrecision::Highp`]).
+    pub const fn full_domain(self) -> Self {
+        self.admit_all_floats()
+    }
+
+    /// Saturate out-of-range `Midp`/`Lowp` `exp2(n * log2(x))` outputs instead
+    /// of returning `OutsideApproximationRange`, while preserving configured
+    /// input validation.
+    pub const fn saturate_output(mut self) -> Self {
         self.clamp = true;
         self
+    }
+
+    /// Alias for [`saturate_output`](Self::saturate_output).
+    pub const fn clamp_output(self) -> Self {
+        self.saturate_output()
     }
 
     /// Select the approximation family (`Midp`, `Lowp`, or `Highp`).
@@ -232,20 +345,39 @@ impl PowfOptions {
         self.portability(Portability::BackendDependent)
     }
 
-    /// Select numerical precondition enforcement.
+    /// Select how out-of-bounds inputs and intermediate ranges are handled.
     pub const fn validation(mut self, value: Validation) -> Self {
         self.validation = value;
         self
     }
 
-    /// Shorthand for `.validation(Validation::Checked)`.
-    pub const fn checked(self) -> Self {
+    /// Return `Err` when any input or un-clamped output falls outside the
+    /// configured domain (`Validation::Checked`, default).
+    pub const fn error_on_out_of_bounds(self) -> Self {
         self.validation(Validation::Checked)
     }
 
-    /// Shorthand for `.validation(Validation::AssumeValid)`.
-    pub const fn unchecked(self) -> Self {
+    /// Alias for [`error_on_out_of_bounds`](Self::error_on_out_of_bounds).
+    pub const fn checked(self) -> Self {
+        self.error_on_out_of_bounds()
+    }
+
+    /// Clamp finite out-of-bounds bases and exponents into the configured
+    /// domain, saturate out-of-range outputs, and propagate `NaN` as `NaN`
+    /// (`Validation::ClampOutOfBounds`, infallible).
+    pub const fn clamp_out_of_bounds(self) -> Self {
+        self.validation(Validation::ClampOutOfBounds)
+    }
+
+    /// Omit numerical input/output checks and clamps; caller guarantees all
+    /// inputs lie within the configured domain (`Validation::AssumeValid`, infallible).
+    pub const fn assume_in_bounds(self) -> Self {
         self.validation(Validation::AssumeValid)
+    }
+
+    /// Alias for [`assume_in_bounds`](Self::assume_in_bounds).
+    pub const fn unchecked(self) -> Self {
+        self.assume_in_bounds()
     }
 
     /// Select whole-operation backend dispatch.
@@ -281,6 +413,19 @@ impl PowfOptions {
         if self.clamp && matches!(self.precision, PowfPrecision::Highp) {
             return false;
         }
+        if self.subnormals
+            && let Some((lo_b, _)) = self.base
+            && lo_b != f32::MIN_POSITIVE.to_bits()
+        {
+            return false;
+        }
+        if !self.subnormals
+            && !self.full
+            && let Some((nlo_b, nhi_b)) = self.exponent
+            && is_nonzero_subnormal_only_interval(f32::from_bits(nlo_b), f32::from_bits(nhi_b))
+        {
+            return false;
+        }
         true
     }
 
@@ -302,12 +447,29 @@ impl PowfOptions {
         );
         assert!(
             !(self.clamp && matches!(self.precision, PowfPrecision::Highp)),
-            "clamp_output applies to Midp and Lowp, not Highp"
+            "clamp_output / saturate_output applies to Midp and Lowp, not Highp"
         );
+        if self.subnormals
+            && let Some((lo_b, _)) = self.base
+        {
+            assert!(
+                lo_b == f32::MIN_POSITIVE.to_bits(),
+                "admit_subnormals with base_range requires lo == f32::MIN_POSITIVE so the domain has no normal gap"
+            );
+        }
+        if !self.subnormals
+            && !self.full
+            && let Some((nlo_b, nhi_b)) = self.exponent
+        {
+            assert!(
+                !is_nonzero_subnormal_only_interval(f32::from_bits(nlo_b), f32::from_bits(nhi_b)),
+                "exponent_range contains only nonzero subnormals; add .admit_subnormals() or include 0.0 / normal bounds"
+            );
+        }
     }
 
     /// Whether the declared ranges prove the computed `n * log2(x)` stays in
-    /// range, so the kernel emits no range check or clamp.
+    /// `[-125, 125]`, so the kernel emits no output range check or clamp.
     pub const fn elides_range_check(&self) -> bool {
         if self.full {
             return false;
@@ -317,21 +479,32 @@ impl PowfOptions {
         };
         let (lo, hi) = (f32::from_bits(lo_b), f32::from_bits(hi_b));
         let (nlo, nhi) = (f32::from_bits(nlo_b), f32::from_bits(nhi_b));
-        let (elo, ehi) = (exponent_of(lo), exponent_of(hi) + 1);
-        let e = (if -elo > ehi { -elo } else { ehi }) + 1;
-        let e = if e < 1 { 1 } else { e };
-        let n = if abs(nlo) > abs(nhi) {
-            abs(nlo)
+        if self.zero && nlo < 0.0 {
+            return false;
+        }
+        let l_lo = if self.subnormals {
+            -149.01
         } else {
-            abs(nhi)
+            exponent_of(lo) as f32 - 0.01
         };
-        (e as f32) * n <= ELIDE_LIMIT && !(self.zero && nlo < 0.0)
+        let l_hi = (exponent_of(hi) + 1) as f32 + 0.01;
+        let c0 = l_lo * nlo;
+        let c1 = l_lo * nhi;
+        let c2 = l_hi * nlo;
+        let c3 = l_hi * nhi;
+        abs(c0) <= ELIDE_LIMIT
+            && abs(c1) <= ELIDE_LIMIT
+            && abs(c2) <= ELIDE_LIMIT
+            && abs(c3) <= ELIDE_LIMIT
     }
 
     /// Whether this configuration can never return an input/range error
-    /// (`.unchecked()` or `.full_domain().highp()`).
+    /// (`.clamp_out_of_bounds()`, `.assume_in_bounds()` / `.unchecked()`, or
+    /// `.admit_all_floats().highp()`).
     pub const fn is_infallible(&self) -> bool {
-        self.assume_valid() || (self.full && matches!(self.precision, PowfPrecision::Highp))
+        self.assume_valid()
+            || self.clamp_oob()
+            || (self.full && matches!(self.precision, PowfPrecision::Highp))
     }
 
     /// Pack this configuration into a `u128` const-generic argument for [`super::Powf`]
@@ -339,7 +512,9 @@ impl PowfOptions {
     pub const fn bits(self) -> u128 {
         let mut out = MAGIC;
         if let Some((lo, hi)) = self.base {
-            out |= HAS_BASE | ((lo as u128) << BASE_LO_SHIFT) | ((hi as u128) << BASE_HI_SHIFT);
+            let lo_31 = (lo as u128) & MASK_31;
+            let hi_31 = (hi as u128) & MASK_31;
+            out |= HAS_BASE | (lo_31 << BASE_LO_SHIFT) | (hi_31 << BASE_HI_SHIFT);
         }
         if let Some((nlo, nhi)) = self.exponent {
             let nlo_25 = ((nlo >> 7) as u128) & MASK_25;
@@ -348,6 +523,9 @@ impl PowfOptions {
         }
         if self.zero {
             out |= ZERO;
+        }
+        if self.subnormals {
+            out |= SUBNORM;
         }
         if self.full {
             out |= FULL;
@@ -364,8 +542,10 @@ impl PowfOptions {
         if matches!(self.portability, Portability::BackendDependent) {
             out |= BACKEND;
         }
-        if matches!(self.validation, Validation::AssumeValid) {
-            out |= ASSUME;
+        match self.validation {
+            Validation::Checked => {}
+            Validation::ClampOutOfBounds => out |= CLAMP_OOB,
+            Validation::AssumeValid => out |= ASSUME,
         }
         if matches!(self.execution, Execution::Caller) {
             out |= CALLER;
@@ -373,10 +553,17 @@ impl PowfOptions {
         out
     }
 
-    /// Decode a `u128` option word back into [`PowfOptions`], returning `None`
-    /// if the tag, bounds, or feature combination is invalid.
-    pub const fn from_bits(bits: u128) -> Option<Self> {
+    const fn from_bits_raw(bits: u128) -> Option<Self> {
         if (bits & 0xf) != MAGIC {
+            return None;
+        }
+        if (bits & ASSUME) != 0 && (bits & CLAMP_OOB) != 0 {
+            return None;
+        }
+        let full = (bits & FULL) != 0;
+        let zero = (bits & ZERO) != 0;
+        let subnormals = (bits & SUBNORM) != 0;
+        if full && (zero || subnormals) {
             return None;
         }
         let precision = match (bits >> PREC_SHIFT) & 0b11 {
@@ -386,8 +573,8 @@ impl PowfOptions {
             _ => return None,
         };
         let has_base = (bits & HAS_BASE) != 0;
-        let base_lo_b = ((bits >> BASE_LO_SHIFT) & 0xffff_ffff) as u32;
-        let base_hi_b = ((bits >> BASE_HI_SHIFT) & 0xffff_ffff) as u32;
+        let base_lo_b = ((bits >> BASE_LO_SHIFT) & MASK_31) as u32;
+        let base_hi_b = ((bits >> BASE_HI_SHIFT) & MASK_31) as u32;
         let base = if has_base {
             let lo = f32::from_bits(base_lo_b);
             let hi = f32::from_bits(base_hi_b);
@@ -425,11 +612,20 @@ impl PowfOptions {
             None
         };
 
-        let opts = Self {
+        let validation = if (bits & ASSUME) != 0 {
+            Validation::AssumeValid
+        } else if (bits & CLAMP_OOB) != 0 {
+            Validation::ClampOutOfBounds
+        } else {
+            Validation::Checked
+        };
+
+        Some(Self {
             base,
             exponent,
-            zero: (bits & ZERO) != 0,
-            full: (bits & FULL) != 0,
+            zero,
+            subnormals,
+            full,
             clamp: (bits & CLAMP) != 0,
             precision,
             portability: if (bits & BACKEND) != 0 {
@@ -437,24 +633,29 @@ impl PowfOptions {
             } else {
                 Portability::BitExact
             },
-            validation: if (bits & ASSUME) != 0 {
-                Validation::AssumeValid
-            } else {
-                Validation::Checked
-            },
+            validation,
             execution: if (bits & CALLER) != 0 {
                 Execution::Caller
             } else {
                 Execution::Upgrade
             },
+        })
+    }
+
+    /// Decode a `u128` option word back into [`PowfOptions`], returning `None`
+    /// if the tag, bounds, or feature combination is invalid.
+    pub const fn from_bits(bits: u128) -> Option<Self> {
+        let Some(opts) = Self::from_bits_raw(bits) else {
+            return None;
         };
         if opts.is_valid() { Some(opts) } else { None }
     }
 
     pub(crate) const fn decode_const(bits: u128) -> Self {
-        let Some(opts) = Self::from_bits(bits) else {
-            panic!("invalid powf const options");
+        let Some(opts) = Self::from_bits_raw(bits) else {
+            panic!("invalid powf const options bit pattern");
         };
+        opts.validate();
         opts
     }
 
@@ -477,7 +678,10 @@ impl PowfOptions {
         }
     }
     pub(crate) const fn admits_zero(&self) -> bool {
-        self.zero
+        self.zero || self.full
+    }
+    pub(crate) const fn admits_subnormals(&self) -> bool {
+        self.subnormals || self.full
     }
     pub(crate) const fn is_full(&self) -> bool {
         self.full
@@ -493,6 +697,9 @@ impl PowfOptions {
     }
     pub(crate) const fn is_backend(&self) -> bool {
         matches!(self.portability, Portability::BackendDependent)
+    }
+    pub(crate) const fn clamp_oob(&self) -> bool {
+        matches!(self.validation, Validation::ClampOutOfBounds)
     }
     pub(crate) const fn assume_valid(&self) -> bool {
         matches!(self.validation, Validation::AssumeValid)

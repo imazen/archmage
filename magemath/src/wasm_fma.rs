@@ -220,6 +220,44 @@ fn soft_f64x2_inline(a: v128, b: v128, c: v128) -> v128 {
     w::f64x2(lo, hi)
 }
 
+/// Packed probe-free software `f32` FMA for whole-operation `WASM_SOFTWARE`
+/// kernels (`powf`, `expf`, `logf`) when the WASM engine does not fuse
+/// `f32x4.relaxed_madd`.
+#[archmage::rite]
+pub(crate) fn software_lanes<const N: usize>(
+    token: Wasm128Token,
+    a: [f32; N],
+    b: [f32; N],
+    c: [f32; N],
+) -> [f32; N] {
+    assert_eq!(
+        N % 4,
+        0,
+        "private packed software adapter requires whole vectors"
+    );
+    let mut output = [0.0; N];
+    for (((a, b), c), out) in a
+        .as_chunks::<4>()
+        .0
+        .iter()
+        .zip(b.as_chunks::<4>().0)
+        .zip(c.as_chunks::<4>().0)
+        .zip(output.as_chunks_mut::<4>().0)
+    {
+        let a = w::f32x4(a[0], a[1], a[2], a[3]);
+        let b = w::f32x4(b[0], b[1], b[2], b[3]);
+        let c = w::f32x4(c[0], c[1], c[2], c[3]);
+        let r = powf_soft_f32x4(token, a, b, c);
+        *out = [
+            w::f32x4_extract_lane::<0>(r),
+            w::f32x4_extract_lane::<1>(r),
+            w::f32x4_extract_lane::<2>(r),
+            w::f32x4_extract_lane::<3>(r),
+        ];
+    }
+    output
+}
+
 /// The cached answer must match the engine. CI sets
 /// `ARCHMAGE_EXPECT_RELAXED_FUSION` per runner (`yes` with host FMA, `no` with
 /// `cranelift-has-fma=false`); fused and software results are bit-identical,

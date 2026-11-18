@@ -42,6 +42,7 @@ const GAMMA_CALLER: u128 = PowfOptions::new().gamma().midp().caller().bits();
 
 #[attune(_*_t, define(f32x8))]
 fn powf_slice_impl(token: Token, src: &[f32], dst: &mut [f32], exp: f32) -> Result<(), PowfError> {
+    assert_eq!(src.len(), dst.len(), "powf slice lengths differ");
     let (sc, st) = f32x8::partition_slice_t(token, src);
     let (dc, dt) = f32x8::partition_slice_mut_t(token, dst);
     for (s, d) in sc.iter().zip(dc.iter_mut()) {

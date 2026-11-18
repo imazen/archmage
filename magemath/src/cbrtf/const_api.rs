@@ -8,7 +8,11 @@ impl<const CFG: u128> graph::Kernel for Cfg<CFG> {
     const RANGED: bool = graph::KernelCfg::from_options(CbrtfOptions::decode_const(CFG)).ranged;
     const DENORM_POSSIBLE: bool =
         graph::KernelCfg::from_options(CbrtfOptions::decode_const(CFG)).denorm_possible;
+    const SCALE_SUBNORM: bool =
+        graph::KernelCfg::from_options(CbrtfOptions::decode_const(CFG)).scale_subnorm;
     const FULL: bool = graph::KernelCfg::from_options(CbrtfOptions::decode_const(CFG)).full;
+    const CLAMP_OOB: bool =
+        graph::KernelCfg::from_options(CbrtfOptions::decode_const(CFG)).clamp_oob;
     const LOWP: bool = graph::KernelCfg::from_options(CbrtfOptions::decode_const(CFG)).lowp;
     const ASSUME: bool = graph::KernelCfg::from_options(CbrtfOptions::decode_const(CFG)).assume;
     const IN_LO: f32 = graph::KernelCfg::from_options(CbrtfOptions::decode_const(CFG)).in_lo;
@@ -246,6 +250,17 @@ fn slice_runtime<T: archmage::IntoConcreteToken>(
 
 /// Compile-time specialized cube-root (`cbrt`) operator configured by
 /// `const CFG: u128` (produced via [`CbrtfOptions::bits()`]).
+///
+/// Use `<Cbrtf>::scalar(x)` for default [`CbrtfOptions::new()`] options or
+/// `Cbrtf::<CFG>::scalar(x)` for a custom `const CFG: u128`:
+///
+/// ```
+/// use magemath::cbrtf::{Cbrtf, CbrtfOptions};
+/// assert!((<Cbrtf>::scalar(8.0).unwrap() - 2.0).abs() < 1e-6);
+///
+/// const UNIT: u128 = CbrtfOptions::new().unit_range().bits();
+/// assert!((Cbrtf::<UNIT>::scalar(-0.125).unwrap() + 0.5).abs() < 1e-6);
+/// ```
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Cbrtf<const CFG: u128 = { CbrtfOptions::new().bits() }>;
 
@@ -256,7 +271,8 @@ impl<const CFG: u128> Cbrtf<CFG> {
         array_const::<CFG, 1>([x]).map(|r| r[0])
     }
 
-    /// Infallible scalar `cbrt(x)` (requires `.unchecked()` or `.full_domain()`).
+    /// Infallible scalar `cbrt(x)` (requires `.clamp_out_of_bounds()`,
+    /// `.assume_in_bounds()` / `.unchecked()`, or `.admit_all_floats()`).
     #[inline(always)]
     pub fn scalar_infallible(x: f32) -> f32 {
         const {
@@ -264,12 +280,12 @@ impl<const CFG: u128> Cbrtf<CFG> {
             opts.validate();
             assert!(
                 opts.is_infallible(),
-                "Cbrtf::<CFG>::scalar_infallible requires `.unchecked()` or `.full_domain()`"
+                "Cbrtf::<CFG>::scalar_infallible requires `.clamp_out_of_bounds()`, `.assume_in_bounds()` / `.unchecked()`, or `.admit_all_floats()`"
             );
         }
         match Self::scalar(x) {
             Ok(v) => v,
-            Err(_) => x,
+            Err(_) => unreachable!("infallible configuration returned Err"),
         }
     }
 
@@ -289,12 +305,20 @@ impl<const CFG: u128> Cbrtf<CFG> {
     }
 
     /// Whole-slice `cbrt(src[i]) -> dst[i]`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `src.len() != dst.len()`.
     #[inline]
     pub fn slice(src: &[f32], dst: &mut [f32]) -> Result<(), SliceError<CbrtfErrorKind>> {
         slice_const::<CFG, _>(archmage::ScalarToken, src, dst)
     }
 
     /// Whole-slice `cbrt(src[i]) -> dst[i]` starting from `token`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `src.len() != dst.len()`.
     #[inline(always)]
     pub fn slice_with_token(
         token: impl archmage::IntoConcreteToken,
@@ -352,12 +376,20 @@ impl CbrtfRuntime {
     }
 
     /// Whole-slice `cbrt(src[i]) -> dst[i]` with runtime options.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `src.len() != dst.len()`.
     #[inline]
     pub fn slice(self, src: &[f32], dst: &mut [f32]) -> Result<(), SliceError<CbrtfErrorKind>> {
         slice_runtime(archmage::ScalarToken, src, dst, self.options)
     }
 
     /// Whole-slice `cbrt(src[i]) -> dst[i]` starting from `token` with runtime options.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `src.len() != dst.len()`.
     #[inline]
     pub fn slice_with_token(
         self,

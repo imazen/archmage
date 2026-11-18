@@ -22,7 +22,7 @@
 //! ```
 
 pub(crate) mod const_api;
-mod dispatch;
+pub(crate) mod dispatch;
 mod graph;
 mod options;
 #[cfg(test)]
@@ -68,6 +68,10 @@ pub fn try_log2(x: f32) -> Result<f32, LogfError> {
 }
 
 /// Whole-slice `log2(src[i]) -> dst[i]` using [`LogfOptions::new()`].
+///
+/// # Panics
+///
+/// Panics if `src.len() != dst.len()`.
 #[inline(always)]
 pub fn try_log2_slice(
     src: &[f32],
@@ -83,6 +87,10 @@ pub fn try_ln(x: f32) -> Result<f32, LogfError> {
 }
 
 /// Whole-slice `ln(src[i]) -> dst[i]` using [`LogfOptions::new()`].
+///
+/// # Panics
+///
+/// Panics if `src.len() != dst.len()`.
 #[inline(always)]
 pub fn try_ln_slice(src: &[f32], dst: &mut [f32]) -> Result<(), crate::SliceError<LogfErrorKind>> {
     <Logf>::ln_slice(src, dst)
@@ -95,6 +103,10 @@ pub fn try_log10(x: f32) -> Result<f32, LogfError> {
 }
 
 /// Whole-slice `log10(src[i]) -> dst[i]` using [`LogfOptions::new()`].
+///
+/// # Panics
+///
+/// Panics if `src.len() != dst.len()`.
 #[inline(always)]
 pub fn try_log10_slice(
     src: &[f32],
@@ -110,6 +122,10 @@ pub fn try_log1p(x: f32) -> Result<f32, LogfError> {
 }
 
 /// Whole-slice `ln(1 + src[i]) -> dst[i]` using [`LogfOptions::new()`].
+///
+/// # Panics
+///
+/// Panics if `src.len() != dst.len()`.
 #[inline(always)]
 pub fn try_log1p_slice(
     src: &[f32],

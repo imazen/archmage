@@ -6,29 +6,29 @@
 # impls omitted; re-export duplicates annotated `[also: path]`.
 # DO NOT EDIT BY HAND — commit regenerated changes with the code.
 #
-# files: magemath.txt 348 lines (supported surface) | magemath.features.txt 6 added (features: avx512,std,w512) | magemath.internal.txt 47 lines (47 hidden + 0 excluded-feature)
+# files: magemath.txt 387 lines (supported surface) | magemath.features.txt 6 added (features: avx512,std,w512) | magemath.internal.txt 47 lines (47 hidden + 0 excluded-feature)
 
 ## summary
 #
 #   pub modules                                 5
 #   pub types (struct/enum/trait/alias)        30
-#   pub consts/statics                         98
+#   pub consts/statics                        136
 #   free functions                             16
 #   inherent methods                          128
 #   struct fields                              10
-#   enum variants                              29
+#   enum variants                              30
 #   trait roster entries (type × trait)       148
 #   auto-trait-complete types                  27
 #   auto-trait exceptions                       1
 #
 # per-module pub lines:
-#   (root)                          141
+#   (root)                          179
 #   cbrtf                            28
 #   expf                             43
 #   logf                             73
-#   powf                             31
+#   powf                             32
 
-## items (316 lines)
+## items (355 lines)
 
 pub mod magemath
 pub mod cbrtf
@@ -51,12 +51,17 @@ pub struct cbrtf::CbrtfError
 pub cbrtf::CbrtfError::kind: cbrtf::CbrtfErrorKind
 pub cbrtf::CbrtfError::lane_mask: u16
 pub struct cbrtf::CbrtfOptions
+pub const fn cbrtf::CbrtfOptions::admit_all_floats(self) -> Self
+pub const fn cbrtf::CbrtfOptions::admit_subnormals(self) -> Self
+pub const fn cbrtf::CbrtfOptions::assume_in_bounds(self) -> Self
 pub const fn cbrtf::CbrtfOptions::backend_dependent(self) -> Self
 pub const fn cbrtf::CbrtfOptions::bit_exact(self) -> Self
 pub const fn cbrtf::CbrtfOptions::bits(self) -> u128
 pub const fn cbrtf::CbrtfOptions::caller(self) -> Self
 pub const fn cbrtf::CbrtfOptions::checked(self) -> Self
+pub const fn cbrtf::CbrtfOptions::clamp_out_of_bounds(self) -> Self
 pub const fn cbrtf::CbrtfOptions::elides_denorm_check(&self) -> bool
+pub const fn cbrtf::CbrtfOptions::error_on_out_of_bounds(self) -> Self
 pub const fn cbrtf::CbrtfOptions::execution(self, Execution) -> Self
 pub const fn cbrtf::CbrtfOptions::from_bits(u128) -> core::option::Option<Self>
 pub const fn cbrtf::CbrtfOptions::full_domain(self) -> Self
@@ -70,6 +75,7 @@ pub const fn cbrtf::CbrtfOptions::portability(self, Portability) -> Self
 pub const fn cbrtf::CbrtfOptions::precision(self, cbrtf::CbrtfPrecision) -> Self
 pub const fn cbrtf::CbrtfOptions::runtime(self) -> cbrtf::CbrtfRuntime
 pub const fn cbrtf::CbrtfOptions::unchecked(self) -> Self
+pub const fn cbrtf::CbrtfOptions::unit_range(self) -> Self
 pub const fn cbrtf::CbrtfOptions::upgrade(self) -> Self
 pub const fn cbrtf::CbrtfOptions::validate(&self)
 pub const fn cbrtf::CbrtfOptions::validation(self, Validation) -> Self
@@ -110,13 +116,19 @@ pub struct expf::ExpfError
 pub expf::ExpfError::kind: expf::ExpfErrorKind
 pub expf::ExpfError::lane_mask: u16
 pub struct expf::ExpfOptions
+pub const fn expf::ExpfOptions::admit_all_floats(self) -> Self
+pub const fn expf::ExpfOptions::assume_in_bounds(self) -> Self
 pub const fn expf::ExpfOptions::backend_dependent(self) -> Self
 pub const fn expf::ExpfOptions::bit_exact(self) -> Self
 pub const fn expf::ExpfOptions::bits(self) -> u128
 pub const fn expf::ExpfOptions::caller(self) -> Self
 pub const fn expf::ExpfOptions::checked(self) -> Self
+pub const fn expf::ExpfOptions::clamp_out_of_bounds(self) -> Self
 pub const fn expf::ExpfOptions::elides_clamp(&self) -> bool
 pub const fn expf::ExpfOptions::elides_exp_clamp(&self) -> bool
+pub const fn expf::ExpfOptions::elides_exp_reduction(&self) -> bool
+pub const fn expf::ExpfOptions::elides_reduction(&self) -> bool
+pub const fn expf::ExpfOptions::error_on_out_of_bounds(self) -> Self
 pub const fn expf::ExpfOptions::execution(self, Execution) -> Self
 pub const fn expf::ExpfOptions::from_bits(u128) -> core::option::Option<Self>
 pub const fn expf::ExpfOptions::full_domain(self) -> Self
@@ -129,7 +141,11 @@ pub const fn expf::ExpfOptions::new() -> Self
 pub const fn expf::ExpfOptions::portability(self, Portability) -> Self
 pub const fn expf::ExpfOptions::precision(self, expf::ExpfPrecision) -> Self
 pub const fn expf::ExpfOptions::runtime(self) -> expf::ExpfRuntime
+pub const fn expf::ExpfOptions::small_exp2_range(self) -> Self
+pub const fn expf::ExpfOptions::small_exp_range(self) -> Self
 pub const fn expf::ExpfOptions::unchecked(self) -> Self
+pub const fn expf::ExpfOptions::unclamped_exp2_range(self) -> Self
+pub const fn expf::ExpfOptions::unclamped_exp_range(self) -> Self
 pub const fn expf::ExpfOptions::upgrade(self) -> Self
 pub const fn expf::ExpfOptions::validate(&self)
 pub const fn expf::ExpfOptions::validation(self, Validation) -> Self
@@ -192,11 +208,19 @@ pub struct logf::LogfError
 pub logf::LogfError::kind: logf::LogfErrorKind
 pub logf::LogfError::lane_mask: u16
 pub struct logf::LogfOptions
+pub const fn logf::LogfOptions::admit_all_floats(self) -> Self
+pub const fn logf::LogfOptions::admit_subnormals(self) -> Self
+pub const fn logf::LogfOptions::admit_zero(self) -> Self
+pub const fn logf::LogfOptions::assume_in_bounds(self) -> Self
 pub const fn logf::LogfOptions::backend_dependent(self) -> Self
 pub const fn logf::LogfOptions::bit_exact(self) -> Self
 pub const fn logf::LogfOptions::bits(self) -> u128
 pub const fn logf::LogfOptions::caller(self) -> Self
 pub const fn logf::LogfOptions::checked(self) -> Self
+pub const fn logf::LogfOptions::clamp_out_of_bounds(self) -> Self
+pub const fn logf::LogfOptions::elides_log1p_reduction(&self) -> bool
+pub const fn logf::LogfOptions::elides_reduction(&self) -> bool
+pub const fn logf::LogfOptions::error_on_out_of_bounds(self) -> Self
 pub const fn logf::LogfOptions::execution(self, Execution) -> Self
 pub const fn logf::LogfOptions::from_bits(u128) -> core::option::Option<Self>
 pub const fn logf::LogfOptions::full_domain(self) -> Self
@@ -205,10 +229,12 @@ pub const fn logf::LogfOptions::is_infallible(&self) -> bool
 pub const fn logf::LogfOptions::is_valid(&self) -> bool
 pub const fn logf::LogfOptions::lowp(self) -> Self
 pub const fn logf::LogfOptions::midp(self) -> Self
+pub const fn logf::LogfOptions::near_one_range(self) -> Self
 pub const fn logf::LogfOptions::new() -> Self
 pub const fn logf::LogfOptions::portability(self, Portability) -> Self
 pub const fn logf::LogfOptions::precision(self, logf::LogfPrecision) -> Self
 pub const fn logf::LogfOptions::runtime(self) -> logf::LogfRuntime
+pub const fn logf::LogfOptions::small_log1p_range(self) -> Self
 pub const fn logf::LogfOptions::unchecked(self) -> Self
 pub const fn logf::LogfOptions::upgrade(self) -> Self
 pub const fn logf::LogfOptions::validate(&self)
@@ -270,20 +296,27 @@ pub struct powf::PowfError
 pub powf::PowfError::kind: powf::PowfErrorKind
 pub powf::PowfError::lane_mask: u16
 pub struct powf::PowfOptions
+pub const fn powf::PowfOptions::admit_all_floats(self) -> Self
+pub const fn powf::PowfOptions::admit_subnormals(self) -> Self
 pub const fn powf::PowfOptions::admit_zero(self) -> Self
+pub const fn powf::PowfOptions::admit_zero_base(self) -> Self
+pub const fn powf::PowfOptions::assume_in_bounds(self) -> Self
 pub const fn powf::PowfOptions::backend_dependent(self) -> Self
 pub const fn powf::PowfOptions::base_range(self, f32, f32) -> Self
 pub const fn powf::PowfOptions::bit_exact(self) -> Self
 pub const fn powf::PowfOptions::bits(self) -> u128
 pub const fn powf::PowfOptions::caller(self) -> Self
 pub const fn powf::PowfOptions::checked(self) -> Self
+pub const fn powf::PowfOptions::clamp_out_of_bounds(self) -> Self
 pub const fn powf::PowfOptions::clamp_output(self) -> Self
 pub const fn powf::PowfOptions::elides_range_check(&self) -> bool
+pub const fn powf::PowfOptions::error_on_out_of_bounds(self) -> Self
 pub const fn powf::PowfOptions::execution(self, Execution) -> Self
 pub const fn powf::PowfOptions::exponent_range(self, f32, f32) -> Self
 pub const fn powf::PowfOptions::from_bits(u128) -> core::option::Option<Self>
 pub const fn powf::PowfOptions::full_domain(self) -> Self
 pub const fn powf::PowfOptions::gamma(self) -> Self
+pub const fn powf::PowfOptions::gamma_domain(self) -> Self
 pub const fn powf::PowfOptions::highp(self) -> Self
 pub const fn powf::PowfOptions::is_infallible(&self) -> bool
 pub const fn powf::PowfOptions::is_valid(&self) -> bool
@@ -292,9 +325,13 @@ pub const fn powf::PowfOptions::midp(self) -> Self
 pub const fn powf::PowfOptions::new() -> Self
 pub const fn powf::PowfOptions::portability(self, Portability) -> Self
 pub const fn powf::PowfOptions::positive_gamma(self) -> Self
+pub const fn powf::PowfOptions::positive_gamma_domain(self) -> Self
 pub const fn powf::PowfOptions::precision(self, powf::PowfPrecision) -> Self
 pub const fn powf::PowfOptions::runtime(self) -> powf::PowfRuntime
+pub const fn powf::PowfOptions::saturate_output(self) -> Self
+pub const fn powf::PowfOptions::srgb_encode_domain(self) -> Self
 pub const fn powf::PowfOptions::unchecked(self) -> Self
+pub const fn powf::PowfOptions::unit_gamma_domain(self) -> Self
 pub const fn powf::PowfOptions::upgrade(self) -> Self
 pub const fn powf::PowfOptions::validate(&self)
 pub const fn powf::PowfOptions::validation(self, Validation) -> Self
@@ -306,6 +343,7 @@ pub fn powf::PowfRuntime::scalar_with_token<T: magetypes::simd::backends::conver
 pub fn powf::PowfRuntime::simd<V: SimdVector>(self, V, f32) -> core::result::Result<V, powf::PowfError>
 pub fn powf::PowfRuntime::slice(self, &[f32], &mut [f32], f32) -> core::result::Result<(), SliceError<powf::PowfErrorKind>>
 pub fn powf::PowfRuntime::slice_with_token(self, impl archmage::tokens::IntoConcreteToken, &[f32], &mut [f32], f32) -> core::result::Result<(), SliceError<powf::PowfErrorKind>>
+pub const powf::MAX_EXP_BOUND: f32
 pub fn powf::try_powf(f32, f32) -> core::result::Result<f32, powf::PowfError>
 pub fn powf::try_powf_slice(&[f32], &mut [f32], f32) -> core::result::Result<(), SliceError<powf::PowfErrorKind>>
 #[non_exhaustive] pub enum Execution
@@ -317,6 +355,7 @@ pub Portability::BitExact
 #[non_exhaustive] pub enum Validation
 pub Validation::AssumeValid
 pub Validation::Checked
+pub Validation::ClampOutOfBounds
 pub struct SliceError<K>
 pub SliceError::index: usize
 pub SliceError::kind: K

@@ -7,12 +7,18 @@ pub(crate) struct Cfg<const CFG: u128>;
 impl<const CFG: u128> graph::Kernel for Cfg<CFG> {
     const RANGED: bool = graph::KernelCfg::from_options(ExpfOptions::decode_const(CFG)).ranged;
     const FULL: bool = graph::KernelCfg::from_options(ExpfOptions::decode_const(CFG)).full;
+    const CLAMP_OOB: bool =
+        graph::KernelCfg::from_options(ExpfOptions::decode_const(CFG)).clamp_oob;
     const LOWP: bool = graph::KernelCfg::from_options(ExpfOptions::decode_const(CFG)).lowp;
     const ASSUME: bool = graph::KernelCfg::from_options(ExpfOptions::decode_const(CFG)).assume;
     const ELIDE_EXP2: bool =
         graph::KernelCfg::from_options(ExpfOptions::decode_const(CFG)).elide_exp2;
     const ELIDE_EXP: bool =
         graph::KernelCfg::from_options(ExpfOptions::decode_const(CFG)).elide_exp;
+    const ELIDE_RED_EXP2: bool =
+        graph::KernelCfg::from_options(ExpfOptions::decode_const(CFG)).elide_red_exp2;
+    const ELIDE_RED_EXP: bool =
+        graph::KernelCfg::from_options(ExpfOptions::decode_const(CFG)).elide_red_exp;
     const IN_LO: f32 = graph::KernelCfg::from_options(ExpfOptions::decode_const(CFG)).in_lo;
     const IN_HI: f32 = graph::KernelCfg::from_options(ExpfOptions::decode_const(CFG)).in_hi;
 }
@@ -35,9 +41,9 @@ macro_rules! vector {
             if matches!(caller, dispatch::Plan::Software) || (widen_v3 && !opts.is_caller()) {
                 if opts.is_caller() {
                     return if backend {
-                        graph::$profile::<T, Cfg<CFG>, OP, true>(token, input)
+                        graph::$profile::<T, Cfg<CFG>, OP, { graph::NATIVE }>(token, input)
                     } else {
-                        graph::$profile::<T, Cfg<CFG>, OP, false>(token, input)
+                        graph::$profile::<T, Cfg<CFG>, OP, { graph::SOFTWARE }>(token, input)
                     };
                 }
                 let plan = dispatch::select(token, Execution::Upgrade, backend, widen_v3);
@@ -54,16 +60,10 @@ macro_rules! vector {
                 }
             }
             #[cfg(target_arch = "wasm32")]
-            {
-                let use_relaxed = matches!(caller, dispatch::Plan::Wasm(_, true));
-                return if use_relaxed {
-                    graph::$profile::<T, Cfg<CFG>, OP, true>(token, input)
-                } else {
-                    graph::$profile::<T, Cfg<CFG>, OP, false>(token, input)
-                };
+            if matches!(caller, dispatch::Plan::Wasm(_, false)) {
+                return graph::$profile::<T, Cfg<CFG>, OP, { graph::WASM_SOFTWARE }>(token, input);
             }
-            #[cfg(not(target_arch = "wasm32"))]
-            graph::$profile::<T, Cfg<CFG>, OP, true>(token, input)
+            graph::$profile::<T, Cfg<CFG>, OP, { graph::NATIVE }>(token, input)
         }
     };
 }
@@ -258,6 +258,17 @@ fn slice_runtime<T: archmage::IntoConcreteToken, const OP: u8>(
 
 /// Compile-time specialized exponential (`exp2`, `exp`) operator configured by
 /// `const CFG: u128` (produced via [`ExpfOptions::bits()`]).
+///
+/// Use `<Expf>::exp2(x)` / `<Expf>::exp(x)` for default [`ExpfOptions::new()`]
+/// options or `Expf::<CFG>::exp2(x)` for a custom `const CFG: u128`:
+///
+/// ```
+/// use magemath::expf::{Expf, ExpfOptions};
+/// assert_eq!(<Expf>::exp2(3.0).unwrap(), 8.0);
+///
+/// const SMALL: u128 = ExpfOptions::new().small_exp2_range().bits();
+/// assert_eq!(Expf::<SMALL>::exp2(0.0).unwrap(), 1.0);
+/// ```
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Expf<const CFG: u128 = { ExpfOptions::new().bits() }>;
 
@@ -268,7 +279,8 @@ impl<const CFG: u128> Expf<CFG> {
         array_const::<CFG, 0, 1>([x]).map(|r| r[0])
     }
 
-    /// Infallible scalar `2^x` (requires `.unchecked()` or `.full_domain()`).
+    /// Infallible scalar `2^x` (requires `.clamp_out_of_bounds()`,
+    /// `.assume_in_bounds()` / `.unchecked()`, or `.admit_all_floats()`).
     #[inline(always)]
     pub fn exp2_infallible(x: f32) -> f32 {
         const {
@@ -276,12 +288,12 @@ impl<const CFG: u128> Expf<CFG> {
             opts.validate();
             assert!(
                 opts.is_infallible(),
-                "Expf::<CFG>::exp2_infallible requires `.unchecked()` or `.full_domain()`"
+                "Expf::<CFG>::exp2_infallible requires `.clamp_out_of_bounds()`, `.assume_in_bounds()` / `.unchecked()`, or `.admit_all_floats()`"
             );
         }
         match Self::exp2(x) {
             Ok(v) => v,
-            Err(_) => x,
+            Err(_) => unreachable!("infallible configuration returned Err"),
         }
     }
 
@@ -301,12 +313,20 @@ impl<const CFG: u128> Expf<CFG> {
     }
 
     /// Whole-slice `2^src[i] -> dst[i]`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `src.len() != dst.len()`.
     #[inline]
     pub fn exp2_slice(src: &[f32], dst: &mut [f32]) -> Result<(), SliceError<ExpfErrorKind>> {
         slice_const::<CFG, 0, _>(archmage::ScalarToken, src, dst)
     }
 
     /// Whole-slice `2^src[i] -> dst[i]` starting from `token`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `src.len() != dst.len()`.
     #[inline(always)]
     pub fn exp2_slice_with_token(
         token: impl archmage::IntoConcreteToken,
@@ -328,7 +348,8 @@ impl<const CFG: u128> Expf<CFG> {
         array_const::<CFG, 1, 1>([x]).map(|r| r[0])
     }
 
-    /// Infallible scalar `e^x` (requires `.unchecked()` or `.full_domain()`).
+    /// Infallible scalar `e^x` (requires `.clamp_out_of_bounds()`,
+    /// `.assume_in_bounds()` / `.unchecked()`, or `.admit_all_floats()`).
     #[inline(always)]
     pub fn exp_infallible(x: f32) -> f32 {
         const {
@@ -336,12 +357,12 @@ impl<const CFG: u128> Expf<CFG> {
             opts.validate();
             assert!(
                 opts.is_infallible(),
-                "Expf::<CFG>::exp_infallible requires `.unchecked()` or `.full_domain()`"
+                "Expf::<CFG>::exp_infallible requires `.clamp_out_of_bounds()`, `.assume_in_bounds()` / `.unchecked()`, or `.admit_all_floats()`"
             );
         }
         match Self::exp(x) {
             Ok(v) => v,
-            Err(_) => x,
+            Err(_) => unreachable!("infallible configuration returned Err"),
         }
     }
 
@@ -361,12 +382,20 @@ impl<const CFG: u128> Expf<CFG> {
     }
 
     /// Whole-slice `e^src[i] -> dst[i]`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `src.len() != dst.len()`.
     #[inline]
     pub fn exp_slice(src: &[f32], dst: &mut [f32]) -> Result<(), SliceError<ExpfErrorKind>> {
         slice_const::<CFG, 1, _>(archmage::ScalarToken, src, dst)
     }
 
     /// Whole-slice `e^src[i] -> dst[i]` starting from `token`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `src.len() != dst.len()`.
     #[inline(always)]
     pub fn exp_slice_with_token(
         token: impl archmage::IntoConcreteToken,
@@ -424,12 +453,20 @@ impl ExpfRuntime {
     }
 
     /// Whole-slice `2^src[i] -> dst[i]` with runtime options.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `src.len() != dst.len()`.
     #[inline]
     pub fn exp2_slice(self, src: &[f32], dst: &mut [f32]) -> Result<(), SliceError<ExpfErrorKind>> {
         slice_runtime::<_, 0>(archmage::ScalarToken, src, dst, self.options)
     }
 
     /// Whole-slice `2^src[i] -> dst[i]` starting from `token` with runtime options.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `src.len() != dst.len()`.
     #[inline]
     pub fn exp2_slice_with_token(
         self,
@@ -469,12 +506,20 @@ impl ExpfRuntime {
     }
 
     /// Whole-slice `e^src[i] -> dst[i]` with runtime options.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `src.len() != dst.len()`.
     #[inline]
     pub fn exp_slice(self, src: &[f32], dst: &mut [f32]) -> Result<(), SliceError<ExpfErrorKind>> {
         slice_runtime::<_, 1>(archmage::ScalarToken, src, dst, self.options)
     }
 
     /// Whole-slice `e^src[i] -> dst[i]` starting from `token` with runtime options.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `src.len() != dst.len()`.
     #[inline]
     pub fn exp_slice_with_token(
         self,

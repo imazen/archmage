@@ -21,7 +21,7 @@
 //! ```
 
 pub(crate) mod const_api;
-mod dispatch;
+pub(crate) mod dispatch;
 mod graph;
 mod options;
 #[cfg(test)]

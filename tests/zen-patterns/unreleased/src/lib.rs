@@ -78,6 +78,7 @@ pub mod magemath_tails {
         dst: &mut [f32],
         exp: f32,
     ) -> Result<(), PowfError> {
+        assert_eq!(src.len(), dst.len(), "powf slice lengths differ");
         let (sc, st) = f32x8::partition_slice_t(token, src);
         let (dc, dt) = f32x8::partition_slice_mut_t(token, dst);
         for (i, o) in sc.iter().zip(dc.iter_mut()) {
@@ -100,6 +101,7 @@ pub mod magemath_tails {
 
     #[archmage::attune(_*_t, +v4x(cfg(avx512)), define(f32x8))]
     fn exp2_slice_inner(token: Token, src: &[f32], dst: &mut [f32]) -> Result<(), ExpfError> {
+        assert_eq!(src.len(), dst.len(), "exp2 slice lengths differ");
         let (sc, st) = f32x8::partition_slice_t(token, src);
         let (dc, dt) = f32x8::partition_slice_mut_t(token, dst);
         for (i, o) in sc.iter().zip(dc.iter_mut()) {
@@ -122,6 +124,7 @@ pub mod magemath_tails {
 
     #[archmage::attune(_*_t, +v4x(cfg(avx512)), define(f32x8))]
     fn log2_slice_inner(token: Token, src: &[f32], dst: &mut [f32]) -> Result<(), LogfError> {
+        assert_eq!(src.len(), dst.len(), "log2 slice lengths differ");
         let (sc, st) = f32x8::partition_slice_t(token, src);
         let (dc, dt) = f32x8::partition_slice_mut_t(token, dst);
         for (i, o) in sc.iter().zip(dc.iter_mut()) {
@@ -144,6 +147,7 @@ pub mod magemath_tails {
 
     #[archmage::attune(_*_t, +v4x(cfg(avx512)), define(f32x8))]
     fn cbrt_slice_inner(token: Token, src: &[f32], dst: &mut [f32]) -> Result<(), CbrtfError> {
+        assert_eq!(src.len(), dst.len(), "cbrt slice lengths differ");
         let (sc, st) = f32x8::partition_slice_t(token, src);
         let (dc, dt) = f32x8::partition_slice_mut_t(token, dst);
         for (i, o) in sc.iter().zip(dc.iter_mut()) {

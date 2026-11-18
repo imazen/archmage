@@ -9,7 +9,8 @@ const LOWP: u128 = 1 << 10;
 const BACKEND: u128 = 1 << 11;
 const ASSUME: u128 = 1 << 12;
 const CALLER: u128 = 1 << 13;
-const RESERVED_MASK: u128 = ((1_u128 << 50) - 1) << 14;
+const CLAMP_OOB: u128 = 1 << 14;
+const RESERVED_MASK: u128 = ((1_u128 << 49) - 1) << 15;
 
 const fn abs(x: f32) -> f32 {
     if x < 0.0 { -x } else { x }
@@ -23,18 +24,38 @@ const fn canon_zero(x: f32) -> f32 {
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 #[non_exhaustive]
 pub enum ExpfPrecision {
-    /// MIDP graph with refitted coefficients (`<= 1.9 ULP` on `[-126, 127.5)`).
+    /// MIDP graph with refitted degree-6 coefficients (`<= 1.9 ULP` on
+    /// `[-126, 127.5)`, `<= 0.78 ULP` on `[-0.5, 0.5]`).
     #[default]
     Midp,
-    /// Shorter LOWP graph with refitted coefficients (`<= 0.56%` relative error).
+    /// Shorter LOWP degree-3 graph with refitted coefficients (`<= 0.030%`
+    /// relative error on `[-126, 127.99]`; up to `1.23%` when clamped at `127.99`).
     Lowp,
 }
 
 /// Fluent `const` configuration builder for [`super::Expf`] and [`crate::SimdMath`].
 ///
-/// Declaring an [`ExpfOptions::input_range`] inside `[-126, 127.5]` (`127.99`
-/// for `Lowp`) proves no overflow/underflow clamping is needed and elides the
-/// clamp sequence at compile time.
+/// Options separate **what inputs are supported** ([`input_range`](Self::input_range),
+/// [`small_exp2_range`](Self::small_exp2_range), [`small_exp_range`](Self::small_exp_range),
+/// [`unclamped_exp2_range`](Self::unclamped_exp2_range),
+/// [`unclamped_exp_range`](Self::unclamped_exp_range), and
+/// [`admit_all_floats`](Self::admit_all_floats)) from **how out-of-bounds
+/// inputs are handled**:
+///
+/// - [`error_on_out_of_bounds`](Self::error_on_out_of_bounds) (default, alias
+///   [`checked`](Self::checked)): return `Err` on `NaN`, `±inf`, or inputs
+///   outside `input_range`.
+/// - [`clamp_out_of_bounds`](Self::clamp_out_of_bounds): clamp non-NaN inputs
+///   into `[lo, hi]` (or `[-f32::MAX, f32::MAX]` when unranged) and propagate
+///   `NaN` as `NaN` (infallible).
+/// - [`assume_in_bounds`](Self::assume_in_bounds) (alias [`unchecked`](Self::unchecked)):
+///   omit runtime checks and clamps when the caller already guarantees bounds
+///   (infallible).
+///
+/// Declaring an [`input_range`](Self::input_range) inside `[-126, 127.5)`
+/// (`[-126, 127.99]` for `Lowp`) elides overflow/underflow clamping, and
+/// declaring one inside `[-0.5, 0.5]` (`[0, 1)` for `Lowp`) also elides integer
+/// `2^k` range reduction at compile time.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct ExpfOptions {
     input: Option<(u32, u32)>,
@@ -53,7 +74,8 @@ impl Default for ExpfOptions {
 }
 
 impl ExpfOptions {
-    /// Bounded finite domain, `Midp`, `BitExact`, `Checked`, `Execution::Upgrade`.
+    /// Bounded finite domain, `Midp`, `BitExact`, `Checked`
+    /// (`error_on_out_of_bounds`), `Execution::Upgrade`.
     pub const fn new() -> Self {
         Self {
             input: None,
@@ -75,10 +97,40 @@ impl ExpfOptions {
         self
     }
 
+    /// Single-octave `exp2` range `[-0.5, 0.5]`, eliding both output clamping
+    /// and integer `2^k` reduction on `Midp` (`<= 0.78 ULP`).
+    pub const fn small_exp2_range(self) -> Self {
+        self.input_range(-0.5, 0.5)
+    }
+
+    /// Single-octave `exp` range `[-0.346_573_56, 0.346_573_56]` (`|x * log2(e)| <= 0.5`),
+    /// eliding both output clamping and integer `2^k` reduction on `Midp`.
+    pub const fn small_exp_range(self) -> Self {
+        self.input_range(-0.346_573_56, 0.346_573_56)
+    }
+
+    /// Wide normal-output `exp2` range `[-126.0, 127.0]`, eliding overflow and
+    /// underflow clamping on both `Midp` and `Lowp`.
+    pub const fn unclamped_exp2_range(self) -> Self {
+        self.input_range(-126.0, 127.0)
+    }
+
+    /// Wide normal-output `exp` range `[-87.0, 88.0]` (`x * log2(e)` in
+    /// `[-125.52, 126.96]`), eliding overflow and underflow clamping on both
+    /// `Midp` and `Lowp`.
+    pub const fn unclamped_exp_range(self) -> Self {
+        self.input_range(-87.0, 88.0)
+    }
+
     /// Accept every `f32` input (`NaN -> NaN`, `+inf -> +inf`, `-inf -> +0`).
-    pub const fn full_domain(mut self) -> Self {
+    pub const fn admit_all_floats(mut self) -> Self {
         self.full = true;
         self
+    }
+
+    /// Alias for [`admit_all_floats`](Self::admit_all_floats).
+    pub const fn full_domain(self) -> Self {
+        self.admit_all_floats()
     }
 
     /// Select the approximation family (`Midp` or `Lowp`).
@@ -113,20 +165,39 @@ impl ExpfOptions {
         self.portability(Portability::BackendDependent)
     }
 
-    /// Select numerical precondition enforcement.
+    /// Select how out-of-bounds inputs are handled.
     pub const fn validation(mut self, value: Validation) -> Self {
         self.validation = value;
         self
     }
 
-    /// Shorthand for `.validation(Validation::Checked)`.
-    pub const fn checked(self) -> Self {
+    /// Return `Err` when any input falls outside the configured domain
+    /// (`Validation::Checked`, default).
+    pub const fn error_on_out_of_bounds(self) -> Self {
         self.validation(Validation::Checked)
     }
 
-    /// Shorthand for `.validation(Validation::AssumeValid)`.
-    pub const fn unchecked(self) -> Self {
+    /// Alias for [`error_on_out_of_bounds`](Self::error_on_out_of_bounds).
+    pub const fn checked(self) -> Self {
+        self.error_on_out_of_bounds()
+    }
+
+    /// Clamp finite/infinite out-of-bounds inputs into `[lo, hi]` (or
+    /// `[-f32::MAX, f32::MAX]` when unranged) and propagate `NaN` as `NaN`
+    /// (`Validation::ClampOutOfBounds`, infallible).
+    pub const fn clamp_out_of_bounds(self) -> Self {
+        self.validation(Validation::ClampOutOfBounds)
+    }
+
+    /// Omit numerical input checks and clamps; caller guarantees all inputs lie
+    /// within the configured domain (`Validation::AssumeValid`, infallible).
+    pub const fn assume_in_bounds(self) -> Self {
         self.validation(Validation::AssumeValid)
+    }
+
+    /// Alias for [`assume_in_bounds`](Self::assume_in_bounds).
+    pub const fn unchecked(self) -> Self {
+        self.assume_in_bounds()
     }
 
     /// Select whole-operation backend dispatch.
@@ -158,7 +229,7 @@ impl ExpfOptions {
         );
     }
 
-    /// Whether `exp2(x)` keeps `x` in the un-clamped range (`[-126, 127.5]`
+    /// Whether `exp2(x)` keeps `x` in the un-clamped range (`[-126, 127.5)`
     /// `Midp` or `[-126, 127.99]` `Lowp`), allowing clamp elision.
     pub const fn elides_clamp(&self) -> bool {
         if self.full {
@@ -168,16 +239,15 @@ impl ExpfOptions {
             return false;
         };
         let (lo, hi) = (f32::from_bits(lo_b), f32::from_bits(hi_b));
-        let hi_limit = if matches!(self.precision, ExpfPrecision::Lowp) {
-            127.99
+        if matches!(self.precision, ExpfPrecision::Lowp) {
+            lo >= -126.0 && hi <= 127.99
         } else {
-            127.5
-        };
-        lo >= -126.0 && hi <= hi_limit
+            lo >= -126.0 && hi < 127.5
+        }
     }
 
-    /// Whether `exp(x)` keeps `x * log2(e)` in the un-clamped range, allowing
-    /// clamp elision.
+    /// Whether `exp(x)` keeps `x * log2(e)` in the un-clamped range (`[-126, 127.5)`
+    /// `Midp` or `[-126, 127.99]` `Lowp`), allowing clamp elision.
     pub const fn elides_exp_clamp(&self) -> bool {
         if self.full {
             return false;
@@ -186,20 +256,57 @@ impl ExpfOptions {
             return false;
         };
         let (lo, hi) = (f32::from_bits(lo_b), f32::from_bits(hi_b));
-        let hi_limit = if matches!(self.precision, ExpfPrecision::Lowp) {
-            127.99
-        } else {
-            127.5
-        };
         let s_lo = lo * core::f32::consts::LOG2_E;
         let s_hi = hi * core::f32::consts::LOG2_E;
-        s_lo >= -126.0 && s_hi <= hi_limit
+        if matches!(self.precision, ExpfPrecision::Lowp) {
+            s_lo >= -126.0 && s_hi <= 127.99
+        } else {
+            s_lo >= -126.0 && s_hi < 127.5
+        }
+    }
+
+    /// Whether `exp2(x)` stays in the fundamental single octave (`[-0.5, 0.5]`
+    /// on `Midp` or `[0.0, 1.0)` on `Lowp`), eliding integer `2^k` reduction.
+    pub const fn elides_reduction(&self) -> bool {
+        if self.full {
+            return false;
+        }
+        let Some((lo_b, hi_b)) = self.input else {
+            return false;
+        };
+        let (lo, hi) = (f32::from_bits(lo_b), f32::from_bits(hi_b));
+        if matches!(self.precision, ExpfPrecision::Lowp) {
+            lo >= 0.0 && hi < 1.0
+        } else {
+            lo >= -0.5 && hi <= 0.5
+        }
+    }
+
+    /// Whether `exp(x)` keeps `x * log2(e)` in the fundamental single octave
+    /// (`[-0.5, 0.5]` on `Midp` or `[0.0, 1.0)` on `Lowp`), eliding integer
+    /// `2^k` reduction.
+    pub const fn elides_exp_reduction(&self) -> bool {
+        if self.full {
+            return false;
+        }
+        let Some((lo_b, hi_b)) = self.input else {
+            return false;
+        };
+        let (lo, hi) = (f32::from_bits(lo_b), f32::from_bits(hi_b));
+        let s_lo = lo * core::f32::consts::LOG2_E;
+        let s_hi = hi * core::f32::consts::LOG2_E;
+        if matches!(self.precision, ExpfPrecision::Lowp) {
+            s_lo >= 0.0 && s_hi < 1.0
+        } else {
+            s_lo >= -0.5 && s_hi <= 0.5
+        }
     }
 
     /// Whether this configuration can never return an input error
-    /// (`.unchecked()` or `.full_domain()`).
+    /// (`.clamp_out_of_bounds()`, `.assume_in_bounds()` / `.unchecked()`, or
+    /// `.admit_all_floats()` / `.full_domain()`).
     pub const fn is_infallible(&self) -> bool {
-        self.assume_valid() || self.full
+        self.assume_valid() || self.clamp_oob() || self.full
     }
 
     /// Pack this configuration into a `u128` const-generic argument.
@@ -217,8 +324,10 @@ impl ExpfOptions {
         if matches!(self.portability, Portability::BackendDependent) {
             out |= BACKEND;
         }
-        if matches!(self.validation, Validation::AssumeValid) {
-            out |= ASSUME;
+        match self.validation {
+            Validation::Checked => {}
+            Validation::ClampOutOfBounds => out |= CLAMP_OOB,
+            Validation::AssumeValid => out |= ASSUME,
         }
         if matches!(self.execution, Execution::Caller) {
             out |= CALLER;
@@ -226,9 +335,11 @@ impl ExpfOptions {
         out
     }
 
-    /// Decode a `u128` option word back into [`ExpfOptions`].
-    pub const fn from_bits(bits: u128) -> Option<Self> {
+    const fn from_bits_raw(bits: u128) -> Option<Self> {
         if (bits & 0xff) != MAGIC || (bits & RESERVED_MASK) != 0 {
+            return None;
+        }
+        if (bits & ASSUME) != 0 && (bits & CLAMP_OOB) != 0 {
             return None;
         }
         let lo_b = ((bits >> 64) & 0xffff_ffff) as u32;
@@ -249,7 +360,14 @@ impl ExpfOptions {
             }
             None
         };
-        let opts = Self {
+        let validation = if (bits & ASSUME) != 0 {
+            Validation::AssumeValid
+        } else if (bits & CLAMP_OOB) != 0 {
+            Validation::ClampOutOfBounds
+        } else {
+            Validation::Checked
+        };
+        Some(Self {
             input,
             full: (bits & FULL) != 0,
             precision: if (bits & LOWP) != 0 {
@@ -262,24 +380,28 @@ impl ExpfOptions {
             } else {
                 Portability::BitExact
             },
-            validation: if (bits & ASSUME) != 0 {
-                Validation::AssumeValid
-            } else {
-                Validation::Checked
-            },
+            validation,
             execution: if (bits & CALLER) != 0 {
                 Execution::Caller
             } else {
                 Execution::Upgrade
             },
+        })
+    }
+
+    /// Decode a `u128` option word back into [`ExpfOptions`].
+    pub const fn from_bits(bits: u128) -> Option<Self> {
+        let Some(opts) = Self::from_bits_raw(bits) else {
+            return None;
         };
         if opts.is_valid() { Some(opts) } else { None }
     }
 
     pub(crate) const fn decode_const(bits: u128) -> Self {
-        let Some(opts) = Self::from_bits(bits) else {
-            panic!("invalid expf const options");
+        let Some(opts) = Self::from_bits_raw(bits) else {
+            panic!("invalid expf const options bit pattern");
         };
+        opts.validate();
         opts
     }
 
@@ -303,6 +425,9 @@ impl ExpfOptions {
     }
     pub(crate) const fn is_backend(&self) -> bool {
         matches!(self.portability, Portability::BackendDependent)
+    }
+    pub(crate) const fn clamp_oob(&self) -> bool {
+        matches!(self.validation, Validation::ClampOutOfBounds)
     }
     pub(crate) const fn assume_valid(&self) -> bool {
         matches!(self.validation, Validation::AssumeValid)
