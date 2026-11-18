@@ -73,10 +73,11 @@ even under `Validation::Checked`:
   for a compile-time exponent (`v.powf_const::<CFG>()`, `Powf::<CFG>::slice_const`,
   ...), eliminating runtime exponent validation, proving range-check elision at
   compile time when the configured domain bounds keep outputs normal, and lowering
-  `0, 0.25, ±0.5, ±1, 1.5, ±2, 3, 4` to exact IEEE hardware multiply/sqrt/divide
-  sequences (`f64`-promoted on `Highp`; checked `Midp`/`Lowp`/`Highp` still report
-  `OutsideApproximationRange` when a result leaves the normal output range and
-  `elides_range_check()` is false).
+  `0, 0.25, ±0.5, ±1, 1.5, ±2, 3, 4` to IEEE hardware multiply/sqrt/divide
+  sequences (using `f64` intermediates for compound steps on `Highp`; checked
+  `Midp`/`Lowp`/`Highp` still report `OutsideApproximationRange` when a positive
+  base underflows or overflows `[MIN_POSITIVE, MAX]` and `elides_range_check()`
+  is false, while preserving `+0.0` from an admitted `+0.0` base with `n > 0`).
 - **expf (`ExpfOptions`, `ExpfDomain`):** `Finite` by default (accepting `±0.0` and
   subnormals without extra rescaling: `1.0` on `Midp`, and within `Lowp`'s
   `<= 0.030%` relative-error envelope on `Lowp`), plus `NormalOutput`

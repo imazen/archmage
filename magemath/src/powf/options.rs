@@ -107,8 +107,9 @@ pub enum PowfPrecision {
     Lowp,
     /// Table-based binary64 graph for [`Portability::BitExact`]; `std` `f32::powf`
     /// for [`Portability::BackendDependent`] (requires the `std` feature;
-    /// specialized algebraic [`PowfOptions::const_exponent`] values use the exact
-    /// binary64 algebraic evaluator in both portability modes).
+    /// specialized algebraic [`PowfOptions::const_exponent`] values use the shared
+    /// algebraic evaluator — with binary64 intermediates for compound steps — in
+    /// both portability modes).
     Highp,
 }
 
