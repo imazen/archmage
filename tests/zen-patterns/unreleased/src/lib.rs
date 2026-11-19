@@ -69,7 +69,11 @@ pub mod magemath_tails {
     pub const POWF_CFG: u128 = PowfOptions::new().gamma().midp().caller().bits();
     pub const EXPF_CFG: u128 = ExpfOptions::new().midp().caller().bits();
     pub const LOGF_CFG: u128 = LogfOptions::new().midp().caller().bits();
-    pub const CBRTF_CFG: u128 = CbrtfOptions::new().midp().caller().bits();
+    pub const CBRTF_CFG: u128 = CbrtfOptions::new()
+        .reject_subnormals()
+        .midp()
+        .caller()
+        .bits();
 
     #[archmage::attune(_*_t, +v4x(cfg(avx512)), define(f32x8))]
     fn powf_slice_inner(
@@ -262,7 +266,7 @@ pub mod magemath_tails {
             );
 
             let mut cbrt_bad = [1.0; 9];
-            cbrt_bad[2] = 1e-42; // subnormal rejected by Bounded
+            cbrt_bad[2] = 1e-42; // subnormal rejected by the explicit profile
             assert_eq!(
                 cbrt_slice(&cbrt_bad, &mut out),
                 Err(CbrtfError {
