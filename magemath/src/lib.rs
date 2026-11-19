@@ -42,7 +42,6 @@ extern crate alloc;
 extern crate std;
 
 pub mod bf16;
-pub use bf16::{MAX_BF16, MAX_CBRT_BF16};
 
 /// Whole-operation feature selection, independent of numerical policy.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]

@@ -263,6 +263,7 @@ impl ExpfOptions {
     }
 
     /// Assert that this configuration is self-consistent.
+    #[doc(hidden)]
     pub const fn validate(&self) {
         assert!(
             !(self.is_full() && self.custom_range.is_some()),
@@ -307,6 +308,7 @@ impl ExpfOptions {
 
     /// Whether `exp2(x)` keeps `x` in the un-clamped range (`[-126, 127.5)`
     /// `Midp` or `[-126, 127.99]` `Lowp`), allowing clamp elision.
+    #[doc(hidden)]
     pub const fn elides_clamp(&self) -> bool {
         let Some((lo, hi)) = self.exp2_bounds() else {
             return false;
@@ -320,6 +322,7 @@ impl ExpfOptions {
 
     /// Whether `exp(x)` keeps `x * log2(e)` in the un-clamped range (`[-126, 127.5)`
     /// `Midp` or `[-126, 127.99]` `Lowp`), allowing clamp elision.
+    #[doc(hidden)]
     pub const fn elides_exp_clamp(&self) -> bool {
         let Some((lo, hi)) = self.exp_bounds() else {
             return false;
@@ -358,6 +361,7 @@ impl ExpfOptions {
 
     /// Whether `exp2(x)` stays in the fundamental single octave (`[-0.5, 0.5]`
     /// on `Midp` or `[0.0, 1.0)` on `Lowp`), eliding integer `2^k` reduction.
+    #[doc(hidden)]
     pub const fn elides_reduction(&self) -> bool {
         let Some((lo, hi)) = self.exp2_bounds() else {
             return false;
@@ -372,6 +376,7 @@ impl ExpfOptions {
     /// Whether `exp(x)` keeps `x * log2(e)` in the fundamental single octave
     /// (`[-0.5, 0.5]` on `Midp` or `[0.0, 1.0)` on `Lowp`), eliding integer
     /// `2^k` reduction.
+    #[doc(hidden)]
     pub const fn elides_exp_reduction(&self) -> bool {
         let Some((lo, hi)) = self.exp_bounds() else {
             return false;

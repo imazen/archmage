@@ -161,11 +161,6 @@ impl LogfOptions {
         self.subnormals(Subnormals::FlushOrClamp)
     }
 
-    /// Alias for [`flush_or_clamp_subnormals`](Self::flush_or_clamp_subnormals).
-    pub const fn shove_subnormals(self) -> Self {
-        self.flush_or_clamp_subnormals()
-    }
-
     /// Also accept positive subnormals (`0 < x < f32::MIN_POSITIVE`), normalizing
     /// them accurately (`* 2^23` with `-23` exponent adjustment) before reduction.
     pub const fn admit_subnormals(self) -> Self {
@@ -386,6 +381,7 @@ impl LogfOptions {
     }
 
     /// Assert that this configuration is self-consistent.
+    #[doc(hidden)]
     pub const fn validate(&self) {
         if self.is_specials() {
             assert!(
@@ -436,6 +432,7 @@ impl LogfOptions {
     /// Whether `log2`/`ln`/`log10` stays inside the fundamental single octave
     /// without admitted zero or subnormal rescaling, eliding integer exponent
     /// extraction (`n = 0`).
+    #[doc(hidden)]
     pub const fn elides_reduction(&self) -> bool {
         if self.is_specials() || self.admits_zero() || self.admits_subnormals() {
             return false;

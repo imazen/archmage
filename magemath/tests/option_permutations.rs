@@ -6,7 +6,8 @@
 
 use archmage::ScalarToken;
 use magemath::{
-    Execution, MAX_BF16, MAX_CBRT_BF16, Portability, SimdMath, SliceError, Subnormals, Validation,
+    Execution, Portability, SimdMath, SliceError, Subnormals, Validation,
+    bf16::{MAX_BF16, MAX_CBRT_BF16},
     cbrtf::{Cbrtf, CbrtfDomain, CbrtfErrorKind, CbrtfOptions, CbrtfPrecision},
     expf::{Expf, ExpfDomain, ExpfErrorKind, ExpfOptions, ExpfPrecision, try_exp},
     log1pf::{Log1pf, Log1pfDomain, Log1pfErrorKind, Log1pfOptions, Log1pfPrecision},

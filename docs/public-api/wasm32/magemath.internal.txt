@@ -9,19 +9,33 @@
 
 ## summary
 #
+#   pub consts/statics                         13
 #   inherent methods                           30
 #   trait roster entries (type × trait)        39
 #
 # per-module pub lines:
-#   (root)                            5
+#   (root)                           18
 #   cbrtf                             5
 #   expf                              5
 #   log1pf                            5
 #   logf                              5
 #   powf                              5
 
-## items (30 lines)
+## items (43 lines)
 
+pub const fn cbrtf::CbrtfOptions::elides_denorm_check(&self) -> bool
+pub const fn cbrtf::CbrtfOptions::validate(&self)
+pub const fn expf::ExpfOptions::elides_clamp(&self) -> bool
+pub const fn expf::ExpfOptions::elides_exp_clamp(&self) -> bool
+pub const fn expf::ExpfOptions::elides_exp_reduction(&self) -> bool
+pub const fn expf::ExpfOptions::elides_reduction(&self) -> bool
+pub const fn expf::ExpfOptions::validate(&self)
+pub const fn log1pf::Log1pfOptions::elides_reduction(&self) -> bool
+pub const fn log1pf::Log1pfOptions::validate(&self)
+pub const fn logf::LogfOptions::elides_reduction(&self) -> bool
+pub const fn logf::LogfOptions::validate(&self)
+pub const fn powf::PowfOptions::elides_range_check(&self) -> bool
+pub const fn powf::PowfOptions::validate(&self)
 pub fn Execution::assert_fields_are_eq(&self)
 pub fn Portability::assert_fields_are_eq(&self)
 pub fn SliceError<K>::assert_fields_are_eq(&self)

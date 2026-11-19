@@ -199,11 +199,6 @@ impl Log1pfOptions {
         self.subnormals(Subnormals::FlushOrClamp)
     }
 
-    /// Alias for [`flush_or_clamp_subnormals`](Self::flush_or_clamp_subnormals).
-    pub const fn shove_subnormals(self) -> Self {
-        self.flush_or_clamp_subnormals()
-    }
-
     /// Admit nonzero subnormals (`0 < |x| < f32::MIN_POSITIVE`), preserving
     /// `ln(1 + x) == x` (`Subnormals::Normalize`).
     pub const fn admit_subnormals(self) -> Self {
@@ -409,6 +404,7 @@ impl Log1pfOptions {
     }
 
     /// Assert that this configuration is self-consistent.
+    #[doc(hidden)]
     pub const fn validate(&self) {
         if self.is_specials() {
             assert!(
@@ -453,6 +449,7 @@ impl Log1pfOptions {
     /// Whether `log1p(x)` keeps `1 + x` inside the fundamental single octave
     /// without `-1.0 -> -inf`, eliding integer exponent extraction and the
     /// `1 + x >= 2` Kahan branch.
+    #[doc(hidden)]
     pub const fn elides_reduction(&self) -> bool {
         if self.is_specials() || self.admits_neg_one() {
             return false;
