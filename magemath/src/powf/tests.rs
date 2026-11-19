@@ -741,9 +741,9 @@ fn positive_gamma_preserves_nonzero_graph_and_rejects_zero() {
             }
             compare(got, rt.array(input, n).unwrap());
             if is_checked {
-                assert_eq!(
-                    rt.scalar(f32::from_bits(1), n).unwrap().to_bits(),
-                    rt.scalar(input[0], n).unwrap().to_bits()
+                compare(
+                    [rt.scalar(f32::from_bits(1), n).unwrap(); 4],
+                    [rt.scalar(input[0], n).unwrap(); 4],
                 );
                 for x in [0., -0., f32::NAN, f32::INFINITY] {
                     assert_eq!(
