@@ -57,7 +57,7 @@ const _: () = {
     );
 };
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 const _: () = {
     assert!(
         size_of::<f64x2<archmage::X64V3Token>>()
@@ -766,7 +766,7 @@ impl f64x2<archmage::ScalarToken> {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl f64x2<archmage::X64V3Token> {
     /// Implementation identifier for this backend.
     pub const fn implementation_name() -> &'static str {
@@ -804,7 +804,7 @@ impl f64x2<archmage::Wasm128Token> {
         "wasm::wasm128::f64x2"
     }
 }
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl f64x2<archmage::X64V3Token> {
     /// Wrap a raw `__m128d` using an explicit CPU capability token.
     ///

@@ -1693,8 +1693,13 @@ fn generate_intrinsics_module(arch: &str, functions: &[SafeSimdFn]) -> String {
 
     "#};
 
+    let x86 = matches!(arch, "x86_64" | "x86");
+
     // Ungated imports
     if !ungated.is_empty() {
+        if x86 {
+            code.push_str("#[cfg(target_feature = \"sse2\")]\n");
+        }
         let imports = ungated
             .iter()
             .map(|n| format!("    {},", n))
@@ -1716,8 +1721,13 @@ fn generate_intrinsics_module(arch: &str, functions: &[SafeSimdFn]) -> String {
             .map(|n| format!("    {},", n))
             .collect::<Vec<_>>()
             .join("\n");
+        let cfg = if x86 {
+            format!(r#"all(target_feature = "sse2", feature = "{feature}")"#)
+        } else {
+            format!(r#"feature = "{feature}""#)
+        };
         code.push_str(&formatdoc! {r#"
-            #[cfg(feature = "{feature}")]
+            #[cfg({cfg})]
             #[allow(unused_imports)]
             pub use safe_unaligned_simd::{arch}::{{
             {imports}

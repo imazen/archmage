@@ -8,7 +8,7 @@
 //! use archmage::prelude::*;
 //! use magetypes::prelude::*;
 //!
-//! # #[cfg(target_arch = "x86_64")]
+//! # #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 //! # fn example() {
 //! if let Some(token) = X64V3Token::summon() {
 //!     let a = f32x8::<X64V3Token>::splat_t(token, 1.0);

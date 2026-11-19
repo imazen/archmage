@@ -8,7 +8,7 @@ trait Work {
 }
 impl Work for S {
     fn consume(self: Box<Self>) -> f32 {
-        #[cfg(target_arch = "x86_64")]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
         #[doc(hidden)]
         #[target_feature(
             enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
@@ -17,7 +17,7 @@ impl Work for S {
         fn __arcane_consume_v3(_self: Box<S>, _token: archmage::X64V3Token) -> f32 {
             _self.k
         }
-        #[cfg(target_arch = "x86_64")]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
         #[allow(dead_code)]
         #[inline(always)]
         fn consume_v3(
@@ -33,7 +33,7 @@ impl Work for S {
         }
         #[allow(unused_imports)]
         use archmage::SimdToken;
-        #[cfg(target_arch = "x86_64")]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
         {
             if let Some(__t) = archmage::X64V3Token::summon() {
                 return consume_v3(self, __t);

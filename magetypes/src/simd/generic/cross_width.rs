@@ -116,7 +116,7 @@ pub trait F32x8FromHalves:
 // the token guarantees. `_mm256_castps128_ps256` is a no-op cast.
 // `_mm256_extractf128_ps` requires AVX (EXTRACTF128). All operate on stack
 // register state with no aliasing concerns.
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl F32x8FromHalves for archmage::X64V3Token {
     #[archmage::arcane(suppress_const_test, _self = archmage::X64V3Token)]
     fn from_halves(
@@ -150,7 +150,7 @@ impl F32x8FromHalves for archmage::X64V3Token {
 // installed in impls/x86_v4_f32_delegated.rs). Soundness inherited from V3
 // by the V3 ⊊ V4 subset relation (proved in that file's module doc).
 // Each impl downcasts via the guaranteed `.v3()` extractor and forwards.
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
 impl F32x8FromHalves for archmage::X64V4Token {
     #[inline(always)]
     fn from_halves(
@@ -169,7 +169,7 @@ impl F32x8FromHalves for archmage::X64V4Token {
         <archmage::X64V3Token as F32x8FromHalves>::high(self.v3(), wide)
     }
 }
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
 impl F32x8FromHalves for archmage::X64V4xToken {
     #[inline(always)]
     fn from_halves(
@@ -188,7 +188,7 @@ impl F32x8FromHalves for archmage::X64V4xToken {
         <archmage::X64V3Token as F32x8FromHalves>::high(self.v3(), wide)
     }
 }
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
 impl F32x8FromHalves for archmage::Avx512Fp16Token {
     #[inline(always)]
     fn from_halves(
@@ -343,7 +343,7 @@ pub trait F32x16FromHalves:
 
 // X64V3Token — f32x16 polyfills to `[__m256; 2]`. Sound: array construction;
 // no AVX-512 needed (the polyfill repr stays in V3 territory).
-#[cfg(all(target_arch = "x86_64", feature = "w512"))]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "w512"))]
 impl F32x16FromHalves for archmage::X64V3Token {
     #[inline(always)]
     fn from_halves(
@@ -376,7 +376,7 @@ impl F32x16FromHalves for archmage::X64V3Token {
 // overwritten by the insert). For low/high: `_mm512_castps512_ps256`
 // truncates; `_mm512_extractf32x8_ps` (AVX-512DQ) returns the high 256-bit
 // lane.
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
 impl F32x16FromHalves for archmage::X64V4Token {
     #[archmage::arcane(suppress_const_test, _self = archmage::X64V4Token)]
     fn from_halves(
@@ -405,7 +405,7 @@ impl F32x16FromHalves for archmage::X64V4Token {
 
 // X64V4xToken — same as V4 (DQ available, additional extensions don't
 // change f32x16's representation). Forwarded via `.v4()` extractor.
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
 impl F32x16FromHalves for archmage::X64V4xToken {
     #[inline(always)]
     fn from_halves(

@@ -341,11 +341,11 @@ fn automatic_plan_matches_requested_runtime_context() {
             "software" => matches!(plan, dispatch::Plan::Software),
             #[cfg(all(feature = "std", not(miri)))]
             "std" => matches!(plan, dispatch::Plan::Std),
-            #[cfg(target_arch = "x86_64")]
+            #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
             "v3" => matches!(plan, dispatch::Plan::V3(_)),
-            #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+            #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
             "v4" => matches!(plan, dispatch::Plan::V4(_)),
-            #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+            #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
             "v4x" => matches!(plan, dispatch::Plan::V4x(_)),
             #[cfg(target_arch = "aarch64")]
             "neon" => matches!(plan, dispatch::Plan::Neon(_)),
@@ -462,11 +462,11 @@ macro_rules! require_tier {
         let tier = std::env::var("ARCHMAGE_POWF_TIER").unwrap_or_else(|_| "scalar".into());
         match tier.as_str() {
             "scalar" => archmage::attuned!($family(archmage::ScalarToken::NAME $(, $argument)*), [_scalar_t]),
-            #[cfg(target_arch = "x86_64")]
+            #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
             "v3" => archmage::attuned!($family(archmage::X64V3Token::NAME $(, $argument)*), [_v3_t, _scalar_t]),
-            #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+            #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
             "v4" => archmage::attuned!($family(archmage::X64V4Token::NAME $(, $argument)*), [_v4_t, _scalar_t]),
-            #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+            #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
             "v4x" => archmage::attuned!($family(archmage::X64V4xToken::NAME $(, $argument)*), [_v4x_t, _scalar_t]),
             #[cfg(target_arch = "aarch64")]
             "neon" => archmage::attuned!($family(archmage::NeonToken::NAME $(, $argument)*), [_neon_t, _scalar_t]),
@@ -796,7 +796,12 @@ fn positive_gamma_preserves_nonzero_graph_and_rejects_zero() {
     sweep_exec_val!(highp, backend_dependent);
 }
 
-#[cfg(all(target_arch = "x86_64", feature = "avx512", feature = "std"))]
+#[cfg(all(
+    target_arch = "x86_64",
+    target_feature = "sse2",
+    feature = "avx512",
+    feature = "std"
+))]
 #[test]
 fn avx512_selector_upgrades_and_falls_back_across_all_families() {
     use archmage::{SimdToken, X64V3Token, X64V4Token, X64V4xToken};

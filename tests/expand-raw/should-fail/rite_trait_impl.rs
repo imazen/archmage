@@ -7,7 +7,7 @@ trait Compute {
     fn compute(&self, token: X64V3Token, x: f32) -> f32;
 }
 impl Compute for Engine {
-    #[cfg(target_arch = "x86_64")]
+    #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
     #[target_feature(
         enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
     )]

@@ -6,7 +6,7 @@ use archmage::autoversion;
 fn process(unused: f32) -> f32 {
     #[allow(unused_imports)]
     use archmage::SimdToken;
-    #[cfg(target_arch = "x86_64")]
+    #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
     {
         if let Some(__t) = archmage::X64V3Token::summon() {
             return process_v3(__t, unused);
@@ -14,7 +14,7 @@ fn process(unused: f32) -> f32 {
     }
     process_scalar(archmage::ScalarToken, unused)
 }
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[doc(hidden)]
 #[track_caller]
 #[expect(unused_variables)]
@@ -25,7 +25,7 @@ fn process(unused: f32) -> f32 {
 fn __arcane_process_v3(_token: archmage::X64V3Token, unused: f32) -> f32 {
     1.0
 }
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[track_caller]
 #[allow(unused_variables)]
 #[allow(dead_code)]

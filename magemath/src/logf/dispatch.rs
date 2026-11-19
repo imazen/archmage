@@ -6,11 +6,11 @@ use archmage::{IntoConcreteToken, ScalarToken};
 
 #[derive(Clone, Copy, Debug)]
 pub(crate) enum Plan {
-    #[cfg(target_arch = "x86_64")]
+    #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
     V3(archmage::X64V3Token),
-    #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+    #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
     V4(archmage::X64V4Token),
-    #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+    #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
     V4x(archmage::X64V4xToken),
     #[cfg(target_arch = "aarch64")]
     Neon(archmage::NeonToken),
@@ -62,7 +62,7 @@ fn select_impl<T: IntoConcreteToken, const BACKEND: bool>(
     widen_v3: bool,
 ) -> Plan {
     let _ = (token, widen_v3);
-    #[cfg(target_arch = "x86_64")]
+    #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
     {
         #[cfg(feature = "avx512")]
         {
@@ -175,11 +175,11 @@ macro_rules! run_cfg {
             cfg: graph::KernelCfg,
         ) -> Result<[f32; $n], LogfError> {
             match plan {
-                #[cfg(target_arch = "x86_64")]
+                #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
                 Plan::V3(t) => graph::$v3::<{ graph::NATIVE }>(t, input, op, cfg),
-                #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+                #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
                 Plan::V4(t) => graph::$v4::<{ graph::NATIVE }>(t, input, op, cfg),
-                #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+                #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
                 Plan::V4x(t) => graph::$v4x::<{ graph::NATIVE }>(t, input, op, cfg),
                 #[cfg(target_arch = "aarch64")]
                 Plan::Neon(t) => graph::$neon::<{ graph::NATIVE }>(t, input, op, cfg),
@@ -243,11 +243,11 @@ macro_rules! run_const {
             }
             #[cfg(not(debug_assertions))]
             match plan {
-                #[cfg(target_arch = "x86_64")]
+                #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
                 Plan::V3(t) => graph::$v3::<K, OP, { graph::NATIVE }>(t, input),
-                #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+                #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
                 Plan::V4(t) => graph::$v4::<K, OP, { graph::NATIVE }>(t, input),
-                #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+                #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
                 Plan::V4x(t) => graph::$v4x::<K, OP, { graph::NATIVE }>(t, input),
                 #[cfg(target_arch = "aarch64")]
                 Plan::Neon(t) => graph::$neon::<K, OP, { graph::NATIVE }>(t, input),
@@ -312,11 +312,11 @@ pub(crate) fn run_slice_cfg(
     cfg: graph::KernelCfg,
 ) -> Result<(), (usize, LogfError)> {
     match plan {
-        #[cfg(target_arch = "x86_64")]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
         Plan::V3(t) => graph::slice8_cfg_v3::<{ graph::NATIVE }>(t, src, dst, op, cfg),
-        #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
         Plan::V4(t) => graph::slice16_cfg_v4::<{ graph::NATIVE }>(t, src, dst, op, cfg),
-        #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
         Plan::V4x(t) => graph::slice16_cfg_v4x::<{ graph::NATIVE }>(t, src, dst, op, cfg),
         #[cfg(target_arch = "aarch64")]
         Plan::Neon(t) => graph::slice8_cfg_neon::<{ graph::NATIVE }>(t, src, dst, op, cfg),
@@ -348,11 +348,11 @@ pub(crate) fn run_slice_const<K: graph::Kernel, const OP: u8, const BACKEND: boo
     }
     #[cfg(not(debug_assertions))]
     match plan {
-        #[cfg(target_arch = "x86_64")]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
         Plan::V3(t) => graph::slice8_with_v3::<K, OP, { graph::NATIVE }>(t, src, dst),
-        #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
         Plan::V4(t) => graph::slice16_with_v4::<K, OP, { graph::NATIVE }>(t, src, dst),
-        #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
         Plan::V4x(t) => graph::slice16_with_v4x::<K, OP, { graph::NATIVE }>(t, src, dst),
         #[cfg(target_arch = "aarch64")]
         Plan::Neon(t) => graph::slice8_with_neon::<K, OP, { graph::NATIVE }>(t, src, dst),

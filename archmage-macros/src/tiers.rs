@@ -121,9 +121,7 @@ impl ResolvedTier {
     /// architecture, then its feature gate (preceded by
     /// `#[allow(unexpected_cfgs)]` when the gate is an implied default).
     pub(crate) fn variant_cfg_guard(&self) -> proc_macro2::TokenStream {
-        let arch = self
-            .target_arch
-            .map(|arch| quote::quote! { #[cfg(target_arch = #arch)] });
+        let arch = crate::common::gen_cfg_guard(self.target_arch, None);
         let gate = self.feature_gate.as_ref().map(|feat| {
             let allow_attr = if self.allow_unexpected_cfg {
                 quote::quote! { #[allow(unexpected_cfgs)] }
@@ -179,9 +177,10 @@ pub(crate) fn gen_dispatch_arms(
         }
 
         let inner = quote::quote! { #(#tier_checks)* };
-        if let Some(arch) = target_arch {
+        if target_arch.is_some() {
+            let guard = crate::common::gen_cfg_guard(*target_arch, None);
             dispatch_arms.push(quote::quote! {
-                #[cfg(target_arch = #arch)]
+                #guard
                 { #inner }
             });
         } else {

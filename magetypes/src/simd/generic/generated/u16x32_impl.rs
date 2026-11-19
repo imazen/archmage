@@ -57,7 +57,7 @@ const _: () = {
     );
 };
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 const _: () = {
     assert!(
         size_of::<u16x32<archmage::X64V3Token>>()
@@ -72,7 +72,7 @@ const _: () = {
 // Native AVX-512 (`__m512`/`__m512d`/`__m512i`) — gated on the
 // `avx512` feature, which is how archmage exposes X64V4Token's
 // 512-bit backend impls.
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
 const _: () = {
     assert!(
         size_of::<u16x32<archmage::X64V4Token>>()
@@ -654,7 +654,7 @@ impl u16x32<archmage::ScalarToken> {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl u16x32<archmage::X64V3Token> {
     /// Implementation identifier for this backend.
     pub const fn implementation_name() -> &'static str {
@@ -662,7 +662,7 @@ impl u16x32<archmage::X64V3Token> {
     }
 }
 
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
 impl u16x32<archmage::X64V4Token> {
     /// Implementation identifier for this backend.
     pub const fn implementation_name() -> &'static str {
@@ -670,7 +670,7 @@ impl u16x32<archmage::X64V4Token> {
     }
 }
 
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
 impl u16x32<archmage::X64V4xToken> {
     /// Implementation identifier for this backend.
     pub const fn implementation_name() -> &'static str {
@@ -711,7 +711,7 @@ impl<T: crate::simd::backends::u16x32PopcntBackend> u16x32<T> {
         Self(T::popcnt(self.1, self.0), self.1)
     }
 }
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
 impl u16x32<archmage::X64V4Token> {
     /// Get the raw `__m512i` value.
     #[inline(always)]
@@ -744,7 +744,7 @@ impl u16x32<archmage::X64V4Token> {
         Self(value, archmage::X64V4Token::from_context())
     }
 }
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
 impl u16x32<archmage::X64V4xToken> {
     /// Get the raw `__m512i` value.
     #[inline(always)]

@@ -12,7 +12,7 @@ trait Work {
     fn run(&self, token: X64V3Token, x: f32) -> f32;
 }
 impl Work for S {
-    #[cfg(target_arch = "x86_64")]
+    #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
     #[inline(always)]
     fn run(&self, token: X64V3Token, x: f32) -> f32 {
         #[target_feature(

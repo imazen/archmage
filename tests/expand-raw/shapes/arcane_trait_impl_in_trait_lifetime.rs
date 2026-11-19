@@ -7,7 +7,7 @@ trait Work {
     fn pick<'a>(&'a self, token: X64V3Token, other: &'a f32) -> &'a f32;
 }
 impl Work for S {
-    #[cfg(target_arch = "x86_64")]
+    #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
     #[inline(always)]
     fn pick<'a>(&'a self, token: X64V3Token, other: &'a f32) -> &'a f32 {
         #[target_feature(

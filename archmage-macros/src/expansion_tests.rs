@@ -1292,3 +1292,94 @@ fn author_body_braces_keep_their_source_span() {
         }
     }
 }
+
+#[test]
+fn x86_variants_and_dispatch_arms_require_baseline_sse2() {
+    let token_body = quote!(
+        fn kernel(_token: X64V3Token, x: f32) -> f32 {
+            x
+        }
+    );
+    let default_body = quote!(
+        fn kernel(x: f32) -> f32 {
+            x
+        }
+    );
+    let generic_body = quote!(
+        fn kernel(_token: Token, x: f32) -> f32 {
+            x
+        }
+    );
+    let expansions = [
+        ("arcane", expand("arcane", quote!(), token_body).unwrap()),
+        (
+            "rite",
+            expand("rite", quote!(v3), default_body.clone()).unwrap(),
+        ),
+        (
+            "attune",
+            expand(
+                "attune",
+                quote!(make(_v3_t, _scalar_t)),
+                default_body.clone(),
+            )
+            .unwrap(),
+        ),
+        (
+            "magetypes",
+            expand("magetypes", quote!(v3, scalar), generic_body).unwrap(),
+        ),
+        (
+            "autoversion",
+            expand("autoversion", quote!(v3), default_body).unwrap(),
+        ),
+        (
+            "incant",
+            incant_impl(syn::parse_quote!(kernel(x), [v3, scalar])),
+        ),
+        (
+            "attuned",
+            syn::parse_quote!(kernel(x), [_v4_t(cfg(avx512)), _v3_t, _scalar_t]),
+        ),
+    ];
+    for (name, tokens) in expansions {
+        let tokens = if name == "attuned" {
+            let call: crate::attune::call::Call = syn::parse2(tokens).unwrap();
+            call.expand(None, false)
+        } else {
+            tokens
+        };
+        let output = tokens.to_string();
+        let x86 = quote!(target_arch = "x86_64").to_string();
+        let guard = quote!(all(target_arch = "x86_64", target_feature = "sse2")).to_string();
+        let guarded = guard.strip_suffix(')').unwrap();
+        let x86_count = output.matches(&x86).count();
+        assert!(
+            x86_count > 0,
+            "{name} did not emit an x86 variant or arm\n{output}"
+        );
+        assert_eq!(
+            output.matches(guarded).count(),
+            x86_count,
+            "{name}\n{output}"
+        );
+    }
+}
+
+#[test]
+fn x86_cfg_stripping_keeps_independent_user_gates() {
+    let legacy_arch: syn::Attribute = syn::parse_quote!(#[cfg(target_arch = "x86_64")]);
+    let same_feature: syn::Attribute =
+        syn::parse_quote!(#[cfg(all(target_arch = "x86_64", feature = "avx512"))]);
+    let other_feature: syn::Attribute =
+        syn::parse_quote!(#[cfg(all(target_arch = "x86_64", feature = "other"))]);
+    let mut attrs = vec![legacy_arch, same_feature, other_feature.clone()];
+
+    let _ = drop_attrs_equal_to(&mut attrs, Some("x86_64"), Some("avx512"));
+
+    assert_eq!(attrs.len(), 1);
+    assert_eq!(
+        attrs[0].to_token_stream().to_string(),
+        other_feature.to_token_stream().to_string()
+    );
+}

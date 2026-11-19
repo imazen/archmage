@@ -1248,15 +1248,15 @@ fn gen_mod_rs() -> String {
         mod traits;
         pub use traits::*;
 
-        // x86_64: real implementations on x86_64, stubs elsewhere (including 32-bit x86)
-        #[cfg(target_arch = "x86_64")]
+        // x86_64: real tokens require baseline SSE2; other targets use stubs.
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
         mod x86;
-        #[cfg(target_arch = "x86_64")]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
         pub use x86::*;
 
-        #[cfg(not(target_arch = "x86_64"))]
+        #[cfg(not(all(target_arch = "x86_64", target_feature = "sse2")))]
         mod x86_stubs;
-        #[cfg(not(target_arch = "x86_64"))]
+        #[cfg(not(all(target_arch = "x86_64", target_feature = "sse2")))]
         pub use x86_stubs::*;
 
         // aarch64: real implementations on aarch64, stubs elsewhere

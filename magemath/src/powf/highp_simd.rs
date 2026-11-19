@@ -112,14 +112,14 @@ macro_rules! packed {
 }
 #[cfg(any(target_arch = "aarch64", target_arch = "wasm32"))]
 packed!(packed2, f64x2, F64x2Backend, 2);
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 packed!(packed4, f64x4, F64x4Backend, 4);
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
 packed!(packed8, f64x8, F64x8Backend, 8);
 
 // A stronger token must still choose a pack that fits the requested shape.
 // Four f32 lanes need four binary64 lanes, even in a 512-bit feature context.
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
 #[inline(always)]
 pub(super) fn wide<
     T: magetypes::simd::backends::F64x8Backend

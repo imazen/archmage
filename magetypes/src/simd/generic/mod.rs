@@ -32,7 +32,7 @@ mod rgb_block_ops;
 mod cross_width;
 
 // Architecture-specific gathers
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
 mod gather;
 
 pub use convert_f16::F16Convert;

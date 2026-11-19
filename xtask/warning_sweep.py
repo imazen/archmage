@@ -76,7 +76,10 @@ CONFIGS = [
     ("wasm32-scalar", "wasm32-unknown-unknown", LIBS, ""),
     ("armv7", "armv7-unknown-linux-gnueabihf", LIBS, ""),
     ("thumbv7em-nostd", "thumbv7em-none-eabihf", LIBS + ["--no-default-features"], ""),
+    ("x86_64-none", "x86_64-unknown-none", LIBS + ["--no-default-features"], ""),
+    ("x86_64-none-avx512", "x86_64-unknown-none", LIBS + ["--no-default-features"] + AVX512, ""),
     # The library crates under the opt-in rustc lints above.
+    ("optin-x86_64-none", "x86_64-unknown-none", CRATES + ["--no-default-features"] + AVX512, OPT_IN),
     ("optin-x86_64", "x86_64-unknown-linux-gnu", CRATES + AVX512, OPT_IN),
     ("optin-aarch64", "aarch64-unknown-linux-gnu", CRATES, OPT_IN),
     ("optin-wasm32", "wasm32-wasip1", CRATES, OPT_IN + " " + SIMD128),

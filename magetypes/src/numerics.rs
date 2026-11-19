@@ -134,14 +134,14 @@ impl IntConvert {
         matches!(self.bounds, IntBounds::SaturateAll)
     }
     #[cfg(any(
-        target_arch = "x86_64",
+        all(target_arch = "x86_64", target_feature = "sse2"),
         target_arch = "aarch64",
         target_arch = "wasm32"
     ))]
     pub(crate) const fn is_in_range(self) -> bool {
         matches!(self.bounds, IntBounds::InRange)
     }
-    #[cfg(target_arch = "x86_64")]
+    #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
     pub(crate) const fn nonnegative(self) -> bool {
         matches!(
             self.bounds,

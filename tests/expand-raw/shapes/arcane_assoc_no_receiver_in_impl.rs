@@ -4,7 +4,7 @@ struct S {
     k: f32,
 }
 impl S {
-    #[cfg(target_arch = "x86_64")]
+    #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
     #[doc(hidden)]
     #[target_feature(
         enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
@@ -14,7 +14,7 @@ impl S {
         let _ = token;
         Self::offset() + x
     }
-    #[cfg(target_arch = "x86_64")]
+    #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
     #[inline(always)]
     fn probe(token: X64V3Token, x: f32) -> f32 {
         let _: () = <X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;

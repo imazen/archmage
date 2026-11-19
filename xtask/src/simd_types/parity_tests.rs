@@ -48,7 +48,7 @@ fn generate_cross_arch_parity() -> String {
         /// - aarch64: NeonToken
         /// - wasm32: Wasm128Token
         #[cfg(any(
-            target_arch = "x86_64",
+            all(target_arch = "x86_64", target_feature = "sse2"),
             target_arch = "aarch64",
             target_arch = "wasm32"
         ))]
@@ -361,7 +361,7 @@ fn generate_cross_arch_parity() -> String {
                 }}
 
                 // Bitwise operator tests (x86 only - ARM uses method calls instead)
-                #[cfg(target_arch = "x86_64")]
+                #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
                 #[test]
                 fn test_i32x4_bitwise() {{
                     if let Some(token) = <$token_ty>::summon() {{
@@ -595,7 +595,7 @@ fn generate_cross_arch_parity() -> String {
         // Architecture-specific modules
         // ============================================================================
 
-        #[cfg(target_arch = "x86_64")]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
         mod x86 {{
             w128_parity_suite!(archmage::X64V3Token);
         }}

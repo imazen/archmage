@@ -312,7 +312,7 @@ impl F64ScalarBackend for archmage::ScalarToken {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 mod x86_hw {
     use core::arch::x86_64::*;
 
@@ -362,7 +362,7 @@ mod x86_hw {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl F32ScalarBackend for archmage::X64V3Token {
     #[inline(always)]
     fn min_fast_f32(self, a: f32, b: f32) -> f32 {
@@ -395,7 +395,7 @@ impl F32ScalarBackend for archmage::X64V3Token {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl F64ScalarBackend for archmage::X64V3Token {
     #[inline(always)]
     fn min_fast_f64(self, a: f64, b: f64) -> f64 {
@@ -418,7 +418,7 @@ impl F64ScalarBackend for archmage::X64V3Token {
     }
 }
 
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
 macro_rules! impl_x86_v3_scalar_delegate {
     ($($token:ty),+ $(,)?) => {
         $(
@@ -479,7 +479,7 @@ macro_rules! impl_x86_v3_scalar_delegate {
     };
 }
 
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
 impl_x86_v3_scalar_delegate!(
     archmage::X64V4Token,
     archmage::X64V4xToken,

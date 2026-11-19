@@ -1,6 +1,6 @@
 //! One whole-operation feature selection for the canonical HIGHP graph.
 #[cfg(any(
-    target_arch = "x86_64",
+    all(target_arch = "x86_64", target_feature = "sse2"),
     target_arch = "aarch64",
     target_arch = "wasm32"
 ))]
@@ -20,7 +20,7 @@ fn run<const IN_CONTEXT: bool, const ELIDE: bool, const ZERO: bool, const N: usi
     highp::check_bases_cfg(cfg, &bases, n)?;
     let mut out = if cfg.alg_kind != 0 {
         match plan {
-            #[cfg(target_arch = "x86_64")]
+            #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
             Plan::V3(t) => {
                 if IN_CONTEXT {
                     highp::eval_alg_token::<_, N>(t, cfg.alg_kind, bases)
@@ -28,7 +28,7 @@ fn run<const IN_CONTEXT: bool, const ELIDE: bool, const ZERO: bool, const N: usi
                     v3_alg::<N>(t, cfg.alg_kind, bases)
                 }
             }
-            #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+            #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
             Plan::V4(t) => {
                 if IN_CONTEXT {
                     highp::eval_alg_token::<_, N>(t, cfg.alg_kind, bases)
@@ -36,7 +36,7 @@ fn run<const IN_CONTEXT: bool, const ELIDE: bool, const ZERO: bool, const N: usi
                     v4_alg::<N>(t, cfg.alg_kind, bases)
                 }
             }
-            #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+            #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
             Plan::V4x(t) => {
                 if IN_CONTEXT {
                     highp::eval_alg_token::<_, N>(t, cfg.alg_kind, bases)
@@ -64,7 +64,7 @@ fn run<const IN_CONTEXT: bool, const ELIDE: bool, const ZERO: bool, const N: usi
         }
     } else {
         match plan {
-            #[cfg(target_arch = "x86_64")]
+            #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
             Plan::V3(t) => {
                 if IN_CONTEXT {
                     highp_simd::packed4::<archmage::X64V3Token, ELIDE, ZERO, N>(t, bases, n)
@@ -72,7 +72,7 @@ fn run<const IN_CONTEXT: bool, const ELIDE: bool, const ZERO: bool, const N: usi
                     v3::<ELIDE, ZERO, N>(t, bases, n)
                 }
             }
-            #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+            #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
             Plan::V4(t) => {
                 if IN_CONTEXT {
                     highp_simd::wide::<archmage::X64V4Token, ELIDE, ZERO, N>(t, bases, n)
@@ -80,7 +80,7 @@ fn run<const IN_CONTEXT: bool, const ELIDE: bool, const ZERO: bool, const N: usi
                     v4::<ELIDE, ZERO, N>(t, bases, n)
                 }
             }
-            #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+            #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
             Plan::V4x(t) => {
                 if IN_CONTEXT {
                     highp_simd::wide::<archmage::X64V4xToken, ELIDE, ZERO, N>(t, bases, n)
@@ -133,7 +133,7 @@ fn scalar<
 }
 
 #[cfg(any(
-    target_arch = "x86_64",
+    all(target_arch = "x86_64", target_feature = "sse2"),
     target_arch = "aarch64",
     target_arch = "wasm32"
 ))]
@@ -154,11 +154,11 @@ macro_rules! entry {
         }
     };
 }
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 entry!(v3, v3_alg, X64V3Token, packed4);
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
 entry!(v4, v4_alg, X64V4Token, wide);
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
 entry!(v4x, v4x_alg, X64V4xToken, wide);
 #[cfg(target_arch = "aarch64")]
 entry!(neon, neon_alg, NeonToken, packed2);
@@ -256,7 +256,7 @@ fn scalar_slice<const ELIDE: bool>(
 }
 
 #[cfg(any(
-    target_arch = "x86_64",
+    all(target_arch = "x86_64", target_feature = "sse2"),
     target_arch = "aarch64",
     target_arch = "wasm32"
 ))]
@@ -281,11 +281,11 @@ macro_rules! slice_entry {
         }
     };
 }
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 slice_entry!(v3_slice, X64V3Token, packed4);
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
 slice_entry!(v4_slice, X64V4Token, wide);
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
 slice_entry!(v4x_slice, X64V4xToken, wide);
 #[cfg(target_arch = "aarch64")]
 slice_entry!(neon_slice, NeonToken, packed2);
@@ -301,7 +301,7 @@ fn run_slice<const IN_CONTEXT: bool, const ELIDE: bool, const ZERO: bool>(
     n: f32,
 ) -> Result<(), (usize, PowfError)> {
     match plan {
-        #[cfg(target_arch = "x86_64")]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
         Plan::V3(t) => {
             if IN_CONTEXT {
                 eval_slice_loop::<_, { graph::NATIVE }, ELIDE, _>(
@@ -316,7 +316,7 @@ fn run_slice<const IN_CONTEXT: bool, const ELIDE: bool, const ZERO: bool>(
                 v3_slice::<ELIDE, ZERO>(t, cfg, src, dst, n)
             }
         }
-        #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
         Plan::V4(t) => {
             if IN_CONTEXT {
                 eval_slice_loop::<_, { graph::NATIVE }, ELIDE, _>(
@@ -331,7 +331,7 @@ fn run_slice<const IN_CONTEXT: bool, const ELIDE: bool, const ZERO: bool>(
                 v4_slice::<ELIDE, ZERO>(t, cfg, src, dst, n)
             }
         }
-        #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
         Plan::V4x(t) => {
             if IN_CONTEXT {
                 eval_slice_loop::<_, { graph::NATIVE }, ELIDE, _>(

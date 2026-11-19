@@ -247,8 +247,11 @@ pub(crate) fn expand(
         return arcane_impl_wasm_safe(input_fn, &args, target_feature_attrs, inline_attr);
     }
 
-    let cfg_guard = gen_cfg_guard(target_arch, args.shared.cfg_feature.as_deref());
-    drop_attrs_equal_to(&mut input_fn.attrs, &cfg_guard);
+    let cfg_guard = drop_attrs_equal_to(
+        &mut input_fn.attrs,
+        target_arch,
+        args.shared.cfg_feature.as_deref(),
+    );
     let parts = BoundaryParts {
         cfg_guard,
         target_feature_attrs,
@@ -324,9 +327,10 @@ pub(crate) fn arcane_impl_wasm_safe(
     target_feature_attrs: Vec<Attribute>,
     inline_attr: Option<Attribute>,
 ) -> TokenStream {
-    drop_attrs_equal_to(
+    let cfg_guard = drop_attrs_equal_to(
         &mut input_fn.attrs,
-        &gen_cfg_guard(Some("wasm32"), args.shared.cfg_feature.as_deref()),
+        Some("wasm32"),
+        args.shared.cfg_feature.as_deref(),
     );
     mark_emitted_fn_header(&mut input_fn.vis, &mut input_fn.sig);
     let vis = &input_fn.vis;
@@ -355,7 +359,6 @@ pub(crate) fn arcane_impl_wasm_safe(
         new_attrs.push(attr.clone());
     }
 
-    let cfg_guard = gen_cfg_guard(Some("wasm32"), args.shared.cfg_feature.as_deref());
     let body = braced_body(&input_fn.brace_token, body);
     quote! {
         #cfg_guard

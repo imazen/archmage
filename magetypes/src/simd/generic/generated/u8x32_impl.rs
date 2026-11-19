@@ -57,7 +57,7 @@ const _: () = {
     );
 };
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 const _: () = {
     assert!(
         size_of::<u8x32<archmage::X64V3Token>>()
@@ -630,7 +630,7 @@ impl u8x32<archmage::ScalarToken> {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl u8x32<archmage::X64V3Token> {
     /// Implementation identifier for this backend.
     pub const fn implementation_name() -> &'static str {
@@ -668,7 +668,7 @@ impl u8x32<archmage::Wasm128Token> {
         "polyfill::wasm128::u8x32"
     }
 }
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl u8x32<archmage::X64V3Token> {
     /// Wrap a raw `__m256i` using an explicit CPU capability token.
     ///

@@ -1238,22 +1238,22 @@ fn generate_impls_mod() -> String {
         //!
         //! **Auto-generated** by `cargo xtask generate` - do not edit manually.
 
-        #[cfg(target_arch = "x86_64")]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
         mod x86_v3;
 
-        #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
         mod x86_v4;
 
         // The AVX-512 tokens' W128 / W256 f32 backends, forwarded to V3's
         // (generated from the trait definitions; V4 ⊃ V3, so delegating is
         // sound), plus the hand-written AVX-512VL pixel-packing overrides.
-        #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
         mod x86_v4_f32_delegated;
-        #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
         mod x86_v4_f32_overrides;
         // The remaining W128 / W256 backends (f64 + int families) and the
         // float↔int convert/bitcast traits, forwarded to V3's the same way.
-        #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
         mod x86_v4_narrow_delegated;
 
         #[cfg(target_arch = "aarch64")]
@@ -1321,10 +1321,10 @@ fn generate_x86_v4_impls_file(w512_types: &[super::backend_gen_w512::W512Type]) 
         //! **Auto-generated** by `cargo xtask generate` - do not edit manually.
         //!
         {safety}
-        #[cfg(target_arch = "x86_64")]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
         use core::arch::x86_64::*;
 
-        #[cfg(target_arch = "x86_64")]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
         use archmage::{{arcane, X64V4Token, X64V4xToken}};
 
         use crate::simd::backends::*;
@@ -1379,7 +1379,7 @@ fn generate_x86_v4_impls_file(w512_types: &[super::backend_gen_w512::W512Type]) 
 fn generate_x86_v4_f32x16_convert(token: &str) -> String {
     let arcane = super::backend_syntax::arcane(token);
     formatdoc! {r#"
-        #[cfg(all(target_arch = "x86_64", feature = "w512"))]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "w512"))]
         impl F32x16Convert for archmage::{token} {{
             {arcane}
             fn bitcast_f32_to_i32(self, a: __m512) -> __m512i {{
@@ -1433,10 +1433,10 @@ fn generate_x86_impls(types: &[FloatVecType], token: &str, max_width: usize) -> 
         //! **Auto-generated** by `cargo xtask generate` - do not edit manually.
         //!
         {safety}
-        #[cfg(target_arch = "x86_64")]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
         use core::arch::x86_64::*;
 
-        #[cfg(target_arch = "x86_64")]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
         use archmage::{{arcane, {token}}};
 
         use crate::simd::backends::*;
@@ -1449,7 +1449,7 @@ fn generate_x86_impls(types: &[FloatVecType], token: &str, max_width: usize) -> 
         if ty.width_bits > max_width {
             continue;
         }
-        code.push_str("#[cfg(target_arch = \"x86_64\")]\n");
+        code.push_str("#[cfg(all(target_arch = \"x86_64\", target_feature = \"sse2\"))]\n");
         code.push_str(&generate_x86_float_impl(ty, token));
         code.push('\n');
     }
@@ -5188,7 +5188,7 @@ fn generate_x86_i32_impls(types: &[I32VecType], token: &str, max_width: usize) -
         if ty.width_bits > max_width {
             continue;
         }
-        code.push_str("\n#[cfg(target_arch = \"x86_64\")]\n");
+        code.push_str("\n#[cfg(all(target_arch = \"x86_64\", target_feature = \"sse2\"))]\n");
         code.push_str(&generate_x86_i32_impl(ty, token));
         code.push('\n');
     }
@@ -5454,7 +5454,7 @@ fn generate_x86_convert_impls(token: &str) -> String {
     let arcane = super::backend_syntax::arcane(token);
     formatdoc! {r#"
 
-        #[cfg(target_arch = "x86_64")]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
         impl F32x4Convert for archmage::{token} {{
             {arcane}
             fn bitcast_f32_to_i32(self, a: __m128) -> __m128i {{
@@ -5493,7 +5493,7 @@ fn generate_x86_convert_impls(token: &str) -> String {
             }}
         }}
 
-        #[cfg(target_arch = "x86_64")]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
         impl F32x8Convert for archmage::{token} {{
             {arcane}
             fn bitcast_f32_to_i32(self, a: __m256) -> __m256i {{
@@ -5531,7 +5531,7 @@ fn generate_x86_convert_impls(token: &str) -> String {
             }}
         }}
 
-        #[cfg(all(target_arch = "x86_64", feature = "w512"))]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "w512"))]
         impl F32x16Convert for archmage::{token} {{
             {arcane}
             fn bitcast_f32_to_i32(self, a: [__m256; 2]) -> [__m256i; 2] {{
@@ -5572,7 +5572,7 @@ fn generate_x86_convert_impls(token: &str) -> String {
             }}
         }}
 
-        #[cfg(target_arch = "x86_64")]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
         impl U32x4Bitcast for archmage::{token} {{
             {arcane}
             fn bitcast_u32_to_i32(self, a: __m128i) -> __m128i {{
@@ -5585,7 +5585,7 @@ fn generate_x86_convert_impls(token: &str) -> String {
             }}
         }}
 
-        #[cfg(target_arch = "x86_64")]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
         impl U32x8Bitcast for archmage::{token} {{
             {arcane}
             fn bitcast_u32_to_i32(self, a: __m256i) -> __m256i {{
@@ -5598,7 +5598,7 @@ fn generate_x86_convert_impls(token: &str) -> String {
             }}
         }}
 
-        #[cfg(target_arch = "x86_64")]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
         impl I64x2Bitcast for archmage::{token} {{
             {arcane}
             fn bitcast_i64_to_f64(self, a: __m128i) -> __m128d {{
@@ -5611,7 +5611,7 @@ fn generate_x86_convert_impls(token: &str) -> String {
             }}
         }}
 
-        #[cfg(target_arch = "x86_64")]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
         impl I64x4Bitcast for archmage::{token} {{
             {arcane}
             fn bitcast_i64_to_f64(self, a: __m256i) -> __m256d {{
@@ -7446,7 +7446,7 @@ fn generate_x86_u32_impls(types: &[U32VecType], token: &str, max_width: usize) -
         if ty.width_bits > max_width {
             continue;
         }
-        code.push_str("\n#[cfg(target_arch = \"x86_64\")]\n");
+        code.push_str("\n#[cfg(all(target_arch = \"x86_64\", target_feature = \"sse2\"))]\n");
         code.push_str(&generate_x86_u32_impl(ty, token));
         code.push('\n');
     }

@@ -14,7 +14,7 @@
 // Other architectures have no native backend to compare against.
 #![cfg_attr(
     not(any(
-        target_arch = "x86_64",
+        all(target_arch = "x86_64", target_feature = "sse2"),
         target_arch = "aarch64",
         target_arch = "wasm32"
     )),
@@ -3196,7 +3196,7 @@ mod convert_f32x8_parity {
 // Architecture-specific invocations
 // ============================================================================
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 mod x86 {
     scalar_vs_native!(archmage::X64V3Token);
 }

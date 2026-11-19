@@ -287,7 +287,7 @@ fn gen_layout_asserts(ty: &SimdType) -> String {
         SimdWidth::W128 | SimdWidth::W256 => {
             native_blocks.push_str(&formatdoc! {r#"
 
-                #[cfg(target_arch = "x86_64")]
+                #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
                 const _: () = {{
                     assert!(
                         size_of::<{name}<archmage::X64V3Token>>()
@@ -306,7 +306,7 @@ fn gen_layout_asserts(ty: &SimdType) -> String {
             // so we don't need an extra feature gate here.
             native_blocks.push_str(&formatdoc! {r#"
 
-                #[cfg(target_arch = "x86_64")]
+                #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
                 const _: () = {{
                     assert!(
                         size_of::<{name}<archmage::X64V3Token>>()
@@ -321,7 +321,7 @@ fn gen_layout_asserts(ty: &SimdType) -> String {
                 // Native AVX-512 (`__m512`/`__m512d`/`__m512i`) — gated on the
                 // `avx512` feature, which is how archmage exposes X64V4Token's
                 // 512-bit backend impls.
-                #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+                #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
                 const _: () = {{
                     assert!(
                         size_of::<{name}<archmage::X64V4Token>>()
@@ -1703,7 +1703,7 @@ fn gen_platform(ty: &SimdType) -> String {
 
             formatdoc! {"
                 {scalar_block}
-                #[cfg(target_arch = \"x86_64\")]
+                #[cfg(all(target_arch = \"x86_64\", target_feature = \"sse2\"))]
                 impl {name}<archmage::X64V3Token> {{
                     /// Implementation identifier for this backend.
                     pub const fn implementation_name() -> &'static str {{
@@ -1747,7 +1747,7 @@ fn gen_platform(ty: &SimdType) -> String {
 
             formatdoc! {"
                 {scalar_block}
-                #[cfg(target_arch = \"x86_64\")]
+                #[cfg(all(target_arch = \"x86_64\", target_feature = \"sse2\"))]
                 impl {name}<archmage::X64V3Token> {{
                     /// Implementation identifier for this backend.
                     pub const fn implementation_name() -> &'static str {{
@@ -1796,7 +1796,7 @@ fn gen_platform(ty: &SimdType) -> String {
                     }}
                 }}
 
-                #[cfg(target_arch = \"x86_64\")]
+                #[cfg(all(target_arch = \"x86_64\", target_feature = \"sse2\"))]
                 impl {name}<archmage::X64V3Token> {{
                     /// Implementation identifier for this backend.
                     pub const fn implementation_name() -> &'static str {{
@@ -1804,7 +1804,7 @@ fn gen_platform(ty: &SimdType) -> String {
                     }}
                 }}
 
-                #[cfg(all(target_arch = \"x86_64\", feature = \"avx512\"))]
+                #[cfg(all(target_arch = \"x86_64\", target_feature = \"sse2\", feature = \"avx512\"))]
                 impl {name}<archmage::X64V4Token> {{
                     /// Implementation identifier for this backend.
                     pub const fn implementation_name() -> &'static str {{
@@ -1812,7 +1812,7 @@ fn gen_platform(ty: &SimdType) -> String {
                     }}
                 }}
 
-                #[cfg(all(target_arch = \"x86_64\", feature = \"avx512\"))]
+                #[cfg(all(target_arch = \"x86_64\", target_feature = \"sse2\", feature = \"avx512\"))]
                 impl {name}<archmage::X64V4xToken> {{
                     /// Implementation identifier for this backend.
                     pub const fn implementation_name() -> &'static str {{
@@ -1894,7 +1894,9 @@ pub(super) fn gen_raw_interop(ty: &SimdType, registry: &crate::registry::Registr
             .expect("registered raw backend")
             .features
             .join(",");
-        let cfg = if feature.is_empty() {
+        let cfg = if arch == "x86_64" {
+            format!(r#"all(target_arch = "x86_64", target_feature = "sse2"{feature})"#)
+        } else if feature.is_empty() {
             format!("target_arch = \"{arch}\"")
         } else {
             format!("all(target_arch = \"{arch}\"{feature})")

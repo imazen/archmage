@@ -4,7 +4,7 @@ struct S {
     k: f32,
 }
 impl S {
-    #[cfg(target_arch = "x86_64")]
+    #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
     #[inline(always)]
     fn probe(token: X64V3Token, x: f32) -> f32 {
         #[target_feature(

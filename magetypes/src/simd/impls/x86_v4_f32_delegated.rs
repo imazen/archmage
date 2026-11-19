@@ -29,7 +29,7 @@
 //! call the hand-written AVX-512VL helpers in `x86_v4_f32_overrides.rs`, which
 //! take a concrete `X64V4Token` (`self` for V4, `self.v4()` for V4x and FP16).
 
-#![cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#![cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
 
 use super::x86_v4_f32_overrides as overrides;
 use crate::simd::backends::{F32x4Backend, F32x8Backend};

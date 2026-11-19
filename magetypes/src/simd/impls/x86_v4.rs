@@ -18,12 +18,10 @@
 //! which require POD storage and enforce equal sizes at compile time.
 //! Token-bearing wrappers never implement the storage POD trait.
 
-#[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 use core::arch::x86_64::*;
 
-#[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 use archmage::{X64V4Token, X64V4xToken, arcane};
 
 use crate::simd::backends::*;
@@ -32,8 +30,8 @@ use crate::simd::backends::*;
 // X64V4Token — base AVX-512 (F/BW/CD/DQ/VL)
 // ============================================================================
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl F32x16Backend for X64V4Token {
     type Repr = __m512;
 
@@ -512,8 +510,8 @@ impl F32x16Backend for X64V4Token {
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl F64x8Backend for X64V4Token {
     type Repr = __m512d;
 
@@ -780,8 +778,8 @@ impl F64x8Backend for X64V4Token {
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl I8x64Backend for X64V4Token {
     type Repr = __m512i;
 
@@ -985,8 +983,8 @@ impl I8x64Backend for X64V4Token {
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl U8x64Backend for X64V4Token {
     type Repr = __m512i;
 
@@ -1213,8 +1211,8 @@ impl U8x64Backend for X64V4Token {
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl I16x32Backend for X64V4Token {
     type Repr = __m512i;
 
@@ -1453,8 +1451,8 @@ impl I16x32Backend for X64V4Token {
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl U16x32Backend for X64V4Token {
     type Repr = __m512i;
 
@@ -1666,8 +1664,8 @@ impl U16x32Backend for X64V4Token {
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl I32x16Backend for X64V4Token {
     type Repr = __m512i;
 
@@ -1910,8 +1908,8 @@ impl I32x16Backend for X64V4Token {
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl U32x16Backend for X64V4Token {
     type Repr = __m512i;
 
@@ -2130,8 +2128,8 @@ impl U32x16Backend for X64V4Token {
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl I64x8Backend for X64V4Token {
     type Repr = __m512i;
 
@@ -2301,8 +2299,8 @@ impl I64x8Backend for X64V4Token {
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl U64x8Backend for X64V4Token {
     type Repr = __m512i;
 
@@ -2471,8 +2469,8 @@ impl U64x8Backend for X64V4Token {
 // X64V4xToken — base AVX-512 (same intrinsics as V4)
 // ============================================================================
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl F32x16Backend for X64V4xToken {
     type Repr = __m512;
 
@@ -2951,8 +2949,8 @@ impl F32x16Backend for X64V4xToken {
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl F64x8Backend for X64V4xToken {
     type Repr = __m512d;
 
@@ -3219,8 +3217,8 @@ impl F64x8Backend for X64V4xToken {
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl I8x64Backend for X64V4xToken {
     type Repr = __m512i;
 
@@ -3424,8 +3422,8 @@ impl I8x64Backend for X64V4xToken {
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl U8x64Backend for X64V4xToken {
     type Repr = __m512i;
 
@@ -3652,8 +3650,8 @@ impl U8x64Backend for X64V4xToken {
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl I16x32Backend for X64V4xToken {
     type Repr = __m512i;
 
@@ -3892,8 +3890,8 @@ impl I16x32Backend for X64V4xToken {
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl U16x32Backend for X64V4xToken {
     type Repr = __m512i;
 
@@ -4105,8 +4103,8 @@ impl U16x32Backend for X64V4xToken {
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl I32x16Backend for X64V4xToken {
     type Repr = __m512i;
 
@@ -4349,8 +4347,8 @@ impl I32x16Backend for X64V4xToken {
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl U32x16Backend for X64V4xToken {
     type Repr = __m512i;
 
@@ -4569,8 +4567,8 @@ impl U32x16Backend for X64V4xToken {
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl I64x8Backend for X64V4xToken {
     type Repr = __m512i;
 
@@ -4740,8 +4738,8 @@ impl I64x8Backend for X64V4xToken {
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl U64x8Backend for X64V4xToken {
     type Repr = __m512i;
 
@@ -4910,8 +4908,8 @@ impl U64x8Backend for X64V4xToken {
 // X64V4xToken — extension: popcnt (VPOPCNTDQ + BITALG)
 // ============================================================================
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl i8x64PopcntBackend for X64V4xToken {
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn popcnt(self, a: __m512i) -> __m512i {
@@ -4919,8 +4917,8 @@ impl i8x64PopcntBackend for X64V4xToken {
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl u8x64PopcntBackend for X64V4xToken {
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn popcnt(self, a: __m512i) -> __m512i {
@@ -4928,8 +4926,8 @@ impl u8x64PopcntBackend for X64V4xToken {
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl i16x32PopcntBackend for X64V4xToken {
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn popcnt(self, a: __m512i) -> __m512i {
@@ -4937,8 +4935,8 @@ impl i16x32PopcntBackend for X64V4xToken {
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl u16x32PopcntBackend for X64V4xToken {
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn popcnt(self, a: __m512i) -> __m512i {
@@ -4946,8 +4944,8 @@ impl u16x32PopcntBackend for X64V4xToken {
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl i32x16PopcntBackend for X64V4xToken {
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn popcnt(self, a: __m512i) -> __m512i {
@@ -4955,8 +4953,8 @@ impl i32x16PopcntBackend for X64V4xToken {
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl u32x16PopcntBackend for X64V4xToken {
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn popcnt(self, a: __m512i) -> __m512i {
@@ -4964,8 +4962,8 @@ impl u32x16PopcntBackend for X64V4xToken {
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl i64x8PopcntBackend for X64V4xToken {
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn popcnt(self, a: __m512i) -> __m512i {
@@ -4973,8 +4971,8 @@ impl i64x8PopcntBackend for X64V4xToken {
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl u64x8PopcntBackend for X64V4xToken {
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn popcnt(self, a: __m512i) -> __m512i {
@@ -4986,7 +4984,7 @@ impl u64x8PopcntBackend for X64V4xToken {
 // F32x16Convert — native AVX-512 conversions
 // ============================================================================
 
-#[cfg(all(target_arch = "x86_64", feature = "w512"))]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "w512"))]
 #[cfg(feature = "w512")]
 impl F32x16Convert for X64V4Token {
     #[arcane(suppress_const_test, _self = X64V4Token)]
@@ -5025,7 +5023,7 @@ impl F32x16Convert for X64V4Token {
     }
 }
 
-#[cfg(all(target_arch = "x86_64", feature = "w512"))]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "w512"))]
 #[cfg(feature = "w512")]
 impl F32x16Convert for X64V4xToken {
     #[arcane(suppress_const_test, _self = X64V4xToken)]

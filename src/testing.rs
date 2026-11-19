@@ -213,7 +213,7 @@ fn build_token_slots() -> Vec<TokenSlot> {
     //                              → V4(6) → V4x(7)
     //                                      → Fp16(8)
     //           Crypto(2)          → V4(6)
-    #[cfg(target_arch = "x86_64")]
+    #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
     {
         slots.push(token_slot!(crate::X64V1Token, &[1, 2, 3, 4, 5, 6, 7, 8]));
         slots.push(token_slot!(crate::X64V2Token, &[2, 3, 4, 5, 6, 7, 8]));

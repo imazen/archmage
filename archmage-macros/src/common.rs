@@ -132,33 +132,63 @@ pub(crate) fn expect_as_allow<'a>(
         .collect()
 }
 
-/// Generate a cfg guard combining target_arch and an optional feature gate.
+/// The target predicate for a tier, with its optional Cargo feature gate.
+pub(crate) fn cfg_condition(
+    target_arch: Option<&str>,
+    cfg_feature: Option<&str>,
+) -> Option<proc_macro2::TokenStream> {
+    match (target_arch, cfg_feature) {
+        // Soft-float x86_64 cannot enable SSE in a per-function feature context.
+        (Some("x86_64"), Some(feat)) => Some(quote! {
+            all(target_arch = "x86_64", target_feature = "sse2", feature = #feat)
+        }),
+        (Some("x86_64"), None) => Some(quote! {
+            all(target_arch = "x86_64", target_feature = "sse2")
+        }),
+        (Some(arch), Some(feat)) => Some(quote! { all(target_arch = #arch, feature = #feat) }),
+        (Some(arch), None) => Some(quote! { target_arch = #arch }),
+        (None, Some(feat)) => Some(quote! { feature = #feat }),
+        (None, None) => None,
+    }
+}
+
+/// Generate the cfg attribute for a SIMD variant or dispatch arm.
 pub(crate) fn gen_cfg_guard(
     target_arch: Option<&str>,
     cfg_feature: Option<&str>,
 ) -> proc_macro2::TokenStream {
-    match (target_arch, cfg_feature) {
-        (Some(arch), Some(feat)) => {
-            quote! { #[cfg(all(target_arch = #arch, feature = #feat))] }
-        }
-        (Some(arch), None) => quote! { #[cfg(target_arch = #arch)] },
-        (None, Some(feat)) => quote! { #[cfg(feature = #feat)] },
-        (None, None) => quote! {},
-    }
+    cfg_condition(target_arch, cfg_feature)
+        .map(|condition| quote! { #[cfg(#condition)] })
+        .unwrap_or_default()
 }
 
-/// Drop from `attrs` any `#[cfg]` equal to the guard the macro emits on both
-/// halves of its output (a `#[magetypes]` variant arrives with its
-/// `#[cfg(target_arch = ...)]` already on it), so the wrapper, which copies
-/// the input's attributes, is not gated twice.
-pub(crate) fn drop_attrs_equal_to(attrs: &mut Vec<Attribute>, guard: &proc_macro2::TokenStream) {
-    // The guard is always empty or a single `#[cfg(...)]` (gen_cfg_guard), so
-    // only `cfg` attributes can match; skip stringifying doc comments and the rest.
+/// Generate a tier guard and remove identical or weaker x86 guards from
+/// attributes that would otherwise be copied to both halves of the expansion.
+pub(crate) fn drop_attrs_equal_to(
+    attrs: &mut Vec<Attribute>,
+    target_arch: Option<&str>,
+    cfg_feature: Option<&str>,
+) -> proc_macro2::TokenStream {
+    let guard = gen_cfg_guard(target_arch, cfg_feature);
     if guard.is_empty() || !attrs.iter().any(|a| a.path().is_ident("cfg")) {
-        return;
+        return guard;
     }
     let wanted = guard.to_string();
-    attrs.retain(|a| !a.path().is_ident("cfg") || a.to_token_stream().to_string() != wanted);
+    let legacy_arch = (target_arch == Some("x86_64"))
+        .then(|| quote! { #[cfg(target_arch = "x86_64")] }.to_string());
+    let legacy_gated = cfg_feature
+        .filter(|_| legacy_arch.is_some())
+        .map(|feat| quote! { #[cfg(all(target_arch = "x86_64", feature = #feat))] }.to_string());
+    attrs.retain(|attr| {
+        if !attr.path().is_ident("cfg") {
+            return true;
+        }
+        let cfg = attr.to_token_stream().to_string();
+        cfg != wanted
+            && legacy_arch.as_deref() != Some(cfg.as_str())
+            && legacy_gated.as_deref() != Some(cfg.as_str())
+    });
+    guard
 }
 
 /// Build a turbofish token stream from a function's generics.

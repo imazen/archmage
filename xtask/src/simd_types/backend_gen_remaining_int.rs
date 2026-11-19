@@ -645,7 +645,7 @@ pub(super) fn generate_x86_int_impls(
         if ty.width_bits > max_width {
             continue;
         }
-        code.push_str("\n#[cfg(target_arch = \"x86_64\")]\n");
+        code.push_str("\n#[cfg(all(target_arch = \"x86_64\", target_feature = \"sse2\"))]\n");
         code.push_str(&generate_x86_int_impl(ty, token));
         code.push('\n');
     }
@@ -3258,7 +3258,7 @@ pub(super) fn generate_x86_additional_convert_impls(token: &str) -> String {
     let arcane = super::backend_syntax::arcane(token);
     formatdoc! {r#"
 
-        #[cfg(target_arch = "x86_64")]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
         impl I8x16Bitcast for archmage::{token} {{
             {arcane}
             fn bitcast_i8_to_u8(self, a: __m128i) -> __m128i {{ a }}
@@ -3266,7 +3266,7 @@ pub(super) fn generate_x86_additional_convert_impls(token: &str) -> String {
             fn bitcast_u8_to_i8(self, a: __m128i) -> __m128i {{ a }}
         }}
 
-        #[cfg(target_arch = "x86_64")]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
         impl I8x32Bitcast for archmage::{token} {{
             {arcane}
             fn bitcast_i8_to_u8(self, a: __m256i) -> __m256i {{ a }}
@@ -3274,7 +3274,7 @@ pub(super) fn generate_x86_additional_convert_impls(token: &str) -> String {
             fn bitcast_u8_to_i8(self, a: __m256i) -> __m256i {{ a }}
         }}
 
-        #[cfg(target_arch = "x86_64")]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
         impl I16x8Bitcast for archmage::{token} {{
             {arcane}
             fn bitcast_i16_to_u16(self, a: __m128i) -> __m128i {{ a }}
@@ -3282,7 +3282,7 @@ pub(super) fn generate_x86_additional_convert_impls(token: &str) -> String {
             fn bitcast_u16_to_i16(self, a: __m128i) -> __m128i {{ a }}
         }}
 
-        #[cfg(target_arch = "x86_64")]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
         impl I16x16Bitcast for archmage::{token} {{
             {arcane}
             fn bitcast_i16_to_u16(self, a: __m256i) -> __m256i {{ a }}
@@ -3290,7 +3290,7 @@ pub(super) fn generate_x86_additional_convert_impls(token: &str) -> String {
             fn bitcast_u16_to_i16(self, a: __m256i) -> __m256i {{ a }}
         }}
 
-        #[cfg(target_arch = "x86_64")]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
         impl U64x2Bitcast for archmage::{token} {{
             {arcane}
             fn bitcast_u64_to_i64(self, a: __m128i) -> __m128i {{ a }}
@@ -3298,7 +3298,7 @@ pub(super) fn generate_x86_additional_convert_impls(token: &str) -> String {
             fn bitcast_i64_to_u64(self, a: __m128i) -> __m128i {{ a }}
         }}
 
-        #[cfg(target_arch = "x86_64")]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
         impl U64x4Bitcast for archmage::{token} {{
             {arcane}
             fn bitcast_u64_to_i64(self, a: __m256i) -> __m256i {{ a }}

@@ -390,13 +390,16 @@ pub trait F16Convert: F32x4Convert {
 // gated to exclude the arches that want a hardware path, and on those arches
 // each token gets an explicit impl. This keeps every `impl` block free of
 // `unsafe` — the hardware intrinsics live behind `#[arcane]` boundaries below.
-#[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
+#[cfg(not(any(
+    all(target_arch = "x86_64", target_feature = "sse2"),
+    target_arch = "aarch64"
+)))]
 impl<T: F32x4Convert> F16Convert for T {}
 
 // On x86-64, give the software default to every token *except* the F16C tiers,
 // then implement the F16C tiers with the hardware override. This split keeps
 // the blanket and the per-tier impls coherent without specialization.
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 mod x86_dispatch {
     use super::*;
 
@@ -697,7 +700,7 @@ fn neon_f16_encode_hw(token: archmage::Arm64V2Token, input: &[f32], output: &mut
 
 /// `avx512` build: summon the best tier (16-wide AVX-512F when the CPU proves a
 /// V4 token, else 8-wide F16C). The summon is once-per-slice (amortized).
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
 #[inline]
 fn f16c_decode_select(token: archmage::X64V3Token, input: &[u16], output: &mut [f32]) {
     use archmage::SimdToken;
@@ -709,7 +712,11 @@ fn f16c_decode_select(token: archmage::X64V3Token, input: &[u16], output: &mut [
 }
 
 /// Non-`avx512` build: only the 8-wide F16C decode is compiled.
-#[cfg(all(target_arch = "x86_64", not(feature = "avx512")))]
+#[cfg(all(
+    target_arch = "x86_64",
+    target_feature = "sse2",
+    not(feature = "avx512")
+))]
 #[inline]
 fn f16c_decode_select(token: archmage::X64V3Token, input: &[u16], output: &mut [f32]) {
     f16c_decode_v3(token, input, output);
@@ -717,7 +724,7 @@ fn f16c_decode_select(token: archmage::X64V3Token, input: &[u16], output: &mut [
 
 /// `avx512` build: summon the best tier for encode (16-wide AVX-512F, else
 /// 8-wide F16C). Once-per-slice summon (amortized).
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
 #[inline]
 fn f16c_encode_select(token: archmage::X64V3Token, input: &[f32], output: &mut [u16]) {
     use archmage::SimdToken;
@@ -729,7 +736,11 @@ fn f16c_encode_select(token: archmage::X64V3Token, input: &[f32], output: &mut [
 }
 
 /// Non-`avx512` build: only the 8-wide F16C encode is compiled.
-#[cfg(all(target_arch = "x86_64", not(feature = "avx512")))]
+#[cfg(all(
+    target_arch = "x86_64",
+    target_feature = "sse2",
+    not(feature = "avx512")
+))]
 #[inline]
 fn f16c_encode_select(token: archmage::X64V3Token, input: &[f32], output: &mut [u16]) {
     f16c_encode_v3(token, input, output);
@@ -746,7 +757,7 @@ fn f16c_encode_select(token: archmage::X64V3Token, input: &[f32], output: &mut [
 /// branchless software kernel — for every finite, subnormal, and infinite
 /// f16; NaN inputs take the same hardware quieting `vcvtph2ps` already
 /// documents. Compiled only with the `avx512` cargo feature.
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
 #[archmage::arcane(import_intrinsics)]
 fn f16c_decode_v4(token: archmage::X64V4Token, input: &[u16], output: &mut [f32]) {
     let (in16, in_rest) = input.as_chunks::<16>();
@@ -766,7 +777,7 @@ fn f16c_decode_v4(token: archmage::X64V4Token, input: &[u16], output: &mut [f32]
 /// 512 bits (`_mm512_cvtps_ph`, round-to-nearest-even, 16 f32 → 16 f16 per
 /// instruction). See [`f16c_decode_v4`] for the `#[arcane]` / gating rationale.
 /// The remainder drops to the V3 F16C path for bit-identity.
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
 #[archmage::arcane(import_intrinsics)]
 fn f16c_encode_v4(token: archmage::X64V4Token, input: &[f32], output: &mut [u16]) {
     let (in16, in_rest) = input.as_chunks::<16>();
@@ -790,7 +801,7 @@ fn f16c_encode_v4(token: archmage::X64V4Token, input: &[f32], output: &mut [u16]
 /// cold code while still emitting the F16C instruction inside a
 /// feature-enabled codegen region. Processes 8 lanes per `_mm256_cvtph_ps`,
 /// then 4 per `_mm_cvtph_ps`, then a scalar tail through the software kernel.
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[archmage::arcane(import_intrinsics)]
 fn f16c_decode_v3(token: archmage::X64V3Token, input: &[u16], output: &mut [f32]) {
     // Memory ops use archmage's safe `safe_unaligned_simd` re-exports (loads
@@ -822,7 +833,7 @@ fn f16c_decode_v3(token: archmage::X64V3Token, input: &[u16], output: &mut [f32]
 
 /// F16C encode kernel: `&[f32]` → `&mut [u16]` using `vcvtps2ph` with
 /// round-to-nearest-even. See [`f16c_decode_v3`] for the `#[arcane]` rationale.
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[archmage::arcane(import_intrinsics)]
 fn f16c_encode_v3(token: archmage::X64V3Token, input: &[f32], output: &mut [u16]) {
     let (in8, in_rest) = input.as_chunks::<8>();

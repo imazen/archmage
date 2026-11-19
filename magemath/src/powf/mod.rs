@@ -36,7 +36,7 @@ mod highp_data;
 mod highp_dispatch;
 mod highp_scalar;
 #[cfg(any(
-    target_arch = "x86_64",
+    all(target_arch = "x86_64", target_feature = "sse2"),
     target_arch = "aarch64",
     target_arch = "wasm32"
 ))]

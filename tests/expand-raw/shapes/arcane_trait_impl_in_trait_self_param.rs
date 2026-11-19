@@ -7,7 +7,7 @@ trait Work {
     fn merge(&self, token: X64V3Token, other: &Self) -> f32;
 }
 impl Work for S {
-    #[cfg(target_arch = "x86_64")]
+    #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
     #[inline(always)]
     fn merge(&self, token: X64V3Token, other: &Self) -> f32 {
         #[target_feature(

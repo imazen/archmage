@@ -11,10 +11,10 @@
 //! which require POD storage and enforce equal sizes at compile time.
 //! Token-bearing wrappers never implement the storage POD trait.
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 use core::arch::x86_64::*;
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 use archmage::{X64V3Token, arcane};
 
 use crate::simd::backends::*;
@@ -30,7 +30,7 @@ macro_rules! sse2_baseline {
     };
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl F32x4Backend for X64V3Token {
     type Repr = __m128;
 
@@ -631,7 +631,7 @@ impl F32x4Backend for X64V3Token {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl F32x8Backend for X64V3Token {
     type Repr = __m256;
 
@@ -1266,7 +1266,7 @@ impl F32x8Backend for X64V3Token {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl F64x2Backend for X64V3Token {
     type Repr = __m128d;
 
@@ -1551,7 +1551,7 @@ impl F64x2Backend for X64V3Token {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl F64x4Backend for X64V3Token {
     type Repr = __m256d;
 
@@ -1838,7 +1838,7 @@ impl F64x4Backend for X64V3Token {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl I32x4Backend for X64V3Token {
     type Repr = __m128i;
 
@@ -2059,7 +2059,7 @@ impl I32x4Backend for X64V3Token {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl I32x8Backend for X64V3Token {
     type Repr = __m256i;
 
@@ -2277,7 +2277,7 @@ impl I32x8Backend for X64V3Token {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl U32x4Backend for X64V3Token {
     type Repr = __m128i;
 
@@ -2473,7 +2473,7 @@ impl U32x4Backend for X64V3Token {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl U32x8Backend for X64V3Token {
     type Repr = __m256i;
 
@@ -2666,7 +2666,7 @@ impl U32x8Backend for X64V3Token {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl I64x2Backend for X64V3Token {
     type Repr = __m128i;
 
@@ -2875,7 +2875,7 @@ impl I64x2Backend for X64V3Token {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl I64x4Backend for X64V3Token {
     type Repr = __m256i;
 
@@ -3080,7 +3080,7 @@ impl I64x4Backend for X64V3Token {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl I8x16Backend for X64V3Token {
     type Repr = __m128i;
 
@@ -3294,7 +3294,7 @@ impl I8x16Backend for X64V3Token {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl I8x32Backend for X64V3Token {
     type Repr = __m256i;
 
@@ -3503,7 +3503,7 @@ impl I8x32Backend for X64V3Token {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl U8x16Backend for X64V3Token {
     type Repr = __m128i;
 
@@ -3711,7 +3711,7 @@ impl U8x16Backend for X64V3Token {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl U8x32Backend for X64V3Token {
     type Repr = __m256i;
 
@@ -3935,7 +3935,7 @@ impl U8x32Backend for X64V3Token {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl I16x8Backend for X64V3Token {
     type Repr = __m128i;
 
@@ -4176,7 +4176,7 @@ impl I16x8Backend for X64V3Token {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl I16x16Backend for X64V3Token {
     type Repr = __m256i;
 
@@ -4417,7 +4417,7 @@ impl I16x16Backend for X64V3Token {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl U16x8Backend for X64V3Token {
     type Repr = __m128i;
 
@@ -4630,7 +4630,7 @@ impl U16x8Backend for X64V3Token {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl U16x16Backend for X64V3Token {
     type Repr = __m256i;
 
@@ -4844,7 +4844,7 @@ impl U16x16Backend for X64V3Token {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl U64x2Backend for X64V3Token {
     type Repr = __m128i;
 
@@ -5021,7 +5021,7 @@ impl U64x2Backend for X64V3Token {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl U64x4Backend for X64V3Token {
     type Repr = __m256i;
 
@@ -5192,7 +5192,7 @@ impl U64x4Backend for X64V3Token {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl F32x4Convert for X64V3Token {
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn bitcast_f32_to_i32(self, a: __m128) -> __m128i {
@@ -5231,7 +5231,7 @@ impl F32x4Convert for X64V3Token {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl F32x8Convert for X64V3Token {
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn bitcast_f32_to_i32(self, a: __m256) -> __m256i {
@@ -5269,7 +5269,7 @@ impl F32x8Convert for X64V3Token {
     }
 }
 
-#[cfg(all(target_arch = "x86_64", feature = "w512"))]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "w512"))]
 impl F32x16Convert for X64V3Token {
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn bitcast_f32_to_i32(self, a: [__m256; 2]) -> [__m256i; 2] {
@@ -5308,7 +5308,7 @@ impl F32x16Convert for X64V3Token {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl U32x4Bitcast for X64V3Token {
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn bitcast_u32_to_i32(self, a: __m128i) -> __m128i {
@@ -5321,7 +5321,7 @@ impl U32x4Bitcast for X64V3Token {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl U32x8Bitcast for X64V3Token {
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn bitcast_u32_to_i32(self, a: __m256i) -> __m256i {
@@ -5334,7 +5334,7 @@ impl U32x8Bitcast for X64V3Token {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl I64x2Bitcast for X64V3Token {
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn bitcast_i64_to_f64(self, a: __m128i) -> __m128d {
@@ -5347,7 +5347,7 @@ impl I64x2Bitcast for X64V3Token {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl I64x4Bitcast for X64V3Token {
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn bitcast_i64_to_f64(self, a: __m256i) -> __m256d {
@@ -5360,7 +5360,7 @@ impl I64x4Bitcast for X64V3Token {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl I8x16Bitcast for X64V3Token {
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn bitcast_i8_to_u8(self, a: __m128i) -> __m128i {
@@ -5372,7 +5372,7 @@ impl I8x16Bitcast for X64V3Token {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl I8x32Bitcast for X64V3Token {
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn bitcast_i8_to_u8(self, a: __m256i) -> __m256i {
@@ -5384,7 +5384,7 @@ impl I8x32Bitcast for X64V3Token {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl I16x8Bitcast for X64V3Token {
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn bitcast_i16_to_u16(self, a: __m128i) -> __m128i {
@@ -5396,7 +5396,7 @@ impl I16x8Bitcast for X64V3Token {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl I16x16Bitcast for X64V3Token {
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn bitcast_i16_to_u16(self, a: __m256i) -> __m256i {
@@ -5408,7 +5408,7 @@ impl I16x16Bitcast for X64V3Token {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl U64x2Bitcast for X64V3Token {
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn bitcast_u64_to_i64(self, a: __m128i) -> __m128i {
@@ -5420,7 +5420,7 @@ impl U64x2Bitcast for X64V3Token {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl U64x4Bitcast for X64V3Token {
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn bitcast_u64_to_i64(self, a: __m256i) -> __m256i {
@@ -5431,8 +5431,8 @@ impl U64x4Bitcast for X64V3Token {
         a
     }
 }
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl F32x16Backend for X64V3Token {
     type Repr = [__m256; 2];
 
@@ -5915,8 +5915,8 @@ impl F32x16Backend for X64V3Token {
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl F64x8Backend for X64V3Token {
     type Repr = [__m256d; 2];
 
@@ -6298,8 +6298,8 @@ impl F64x8Backend for X64V3Token {
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl I8x64Backend for X64V3Token {
     type Repr = [__m256i; 2];
 
@@ -6572,8 +6572,8 @@ impl I8x64Backend for X64V3Token {
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl U8x64Backend for X64V3Token {
     type Repr = [__m256i; 2];
 
@@ -6895,8 +6895,8 @@ impl U8x64Backend for X64V3Token {
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl I16x32Backend for X64V3Token {
     type Repr = [__m256i; 2];
 
@@ -7225,8 +7225,8 @@ impl I16x32Backend for X64V3Token {
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl U16x32Backend for X64V3Token {
     type Repr = [__m256i; 2];
 
@@ -7533,8 +7533,8 @@ impl U16x32Backend for X64V3Token {
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl I32x16Backend for X64V3Token {
     type Repr = [__m256i; 2];
 
@@ -7824,8 +7824,8 @@ impl I32x16Backend for X64V3Token {
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl U32x16Backend for X64V3Token {
     type Repr = [__m256i; 2];
 
@@ -8093,8 +8093,8 @@ impl U32x16Backend for X64V3Token {
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl I64x8Backend for X64V3Token {
     type Repr = [__m256i; 2];
 
@@ -8342,8 +8342,8 @@ impl I64x8Backend for X64V3Token {
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl U64x8Backend for X64V3Token {
     type Repr = [__m256i; 2];
 

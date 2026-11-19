@@ -15,7 +15,7 @@
 //! so the soundness scanner verifies their AVX-512VL intrinsics; the
 //! generated impls pass `self` (V4) or `self.v4()` (V4x, FP16).
 
-#![cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#![cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
 
 use crate::numerics::IntConvert;
 use core::arch::x86_64::{__m128, __m128d, __m256, __m256d};

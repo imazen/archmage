@@ -456,7 +456,7 @@ pub(super) fn slice8_cfg(
     Ok(())
 }
 
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
 #[inline(always)]
 fn slice16_cfg_impl<T: magetypes::simd::backends::F32x16Convert>(
     token: T,
@@ -482,7 +482,7 @@ fn slice16_cfg_impl<T: magetypes::simd::backends::F32x16Convert>(
 }
 
 /// 16-lane AVX-512 (`V4`) whole-slice kernel parameterized on `KernelCfg`.
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
 #[archmage::arcane]
 pub(super) fn slice16_cfg_v4(
     token: archmage::X64V4Token,
@@ -495,7 +495,7 @@ pub(super) fn slice16_cfg_v4(
 }
 
 /// 16-lane AVX-512 (`V4x`) whole-slice kernel parameterized on `KernelCfg`.
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
 #[archmage::arcane]
 pub(super) fn slice16_cfg_v4x(
     token: archmage::X64V4xToken,
@@ -532,7 +532,11 @@ pub(super) fn slice8_with<K: Kernel, const BACKEND: bool>(
     Ok(())
 }
 
-#[cfg(all(not(debug_assertions), target_arch = "x86_64", feature = "avx512"))]
+#[cfg(all(
+    not(debug_assertions),
+    all(target_arch = "x86_64", target_feature = "sse2"),
+    feature = "avx512"
+))]
 #[inline(always)]
 fn slice16_with_impl<
     T: magetypes::simd::backends::F32x16Convert,
@@ -560,7 +564,11 @@ fn slice16_with_impl<
 }
 
 /// 16-lane AVX-512 (`V4`) whole-slice kernel (`zmm`).
-#[cfg(all(not(debug_assertions), target_arch = "x86_64", feature = "avx512"))]
+#[cfg(all(
+    not(debug_assertions),
+    all(target_arch = "x86_64", target_feature = "sse2"),
+    feature = "avx512"
+))]
 #[archmage::arcane]
 pub(super) fn slice16_with_v4<K: Kernel, const BACKEND: bool>(
     token: archmage::X64V4Token,
@@ -571,7 +579,11 @@ pub(super) fn slice16_with_v4<K: Kernel, const BACKEND: bool>(
 }
 
 /// 16-lane AVX-512 (`V4x`) whole-slice kernel (`zmm`).
-#[cfg(all(not(debug_assertions), target_arch = "x86_64", feature = "avx512"))]
+#[cfg(all(
+    not(debug_assertions),
+    all(target_arch = "x86_64", target_feature = "sse2"),
+    feature = "avx512"
+))]
 #[archmage::arcane]
 pub(super) fn slice16_with_v4x<K: Kernel, const BACKEND: bool>(
     token: archmage::X64V4xToken,

@@ -17,6 +17,10 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 
 ### [0.9.32] - 2026-11-16
 
+#### Fixed
+
+- Support soft-float `x86_64-unknown-none` and `x86_64-unknown-uefi`. Archmage token detection and macro-generated x86 SIMD require baseline SSE2. Magetypes and Magemath use their scalar backends when the target lacks it.
+
 #### Changed
 
 - Support Rust `1.100.0` (Cargo 1.100 build-dir layout compatibility in SDE, codegen, and UI tests).

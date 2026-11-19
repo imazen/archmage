@@ -11,6 +11,7 @@
 #[allow(unused_imports)]
 pub use core::arch::x86::*;
 
+#[cfg(target_feature = "sse2")]
 #[allow(unused_imports)]
 pub use safe_unaligned_simd::x86::{
     _mm_broadcast_ss, _mm_load_pd1, _mm_load_ps1, _mm_load_sd, _mm_load_ss, _mm_load1_pd,
@@ -24,7 +25,7 @@ pub use safe_unaligned_simd::x86::{
     _mm256_storeu2_m128i,
 };
 
-#[cfg(feature = "avx512")]
+#[cfg(all(target_feature = "sse2", feature = "avx512"))]
 #[allow(unused_imports)]
 pub use safe_unaligned_simd::x86::{
     _mm_loadu_epi8, _mm_loadu_epi16, _mm_loadu_epi32, _mm_loadu_epi64,

@@ -150,7 +150,7 @@ fn cbrt_domain_validation_and_cross_tier_bit_exactness() {
         ]
     );
 
-    #[cfg(target_arch = "x86_64")]
+    #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
     if let Some(t) = archmage::X64V3Token::summon() {
         let v3_out = f32x8::from_array_t(t, sample)
             .try_cbrt_with::<CALLER_MIDP>()

@@ -4,11 +4,11 @@ use archmage::{IntoConcreteToken, ScalarToken};
 
 #[derive(Clone, Copy, Debug)]
 pub(super) enum Plan {
-    #[cfg(target_arch = "x86_64")]
+    #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
     V3(archmage::X64V3Token),
-    #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+    #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
     V4(archmage::X64V4Token),
-    #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+    #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
     V4x(archmage::X64V4xToken),
     #[cfg(target_arch = "aarch64")]
     Neon(archmage::NeonToken),
@@ -74,7 +74,7 @@ fn select_impl<T: IntoConcreteToken, const EXACT: bool, const DOUBLE: bool>(
     widen_v3: bool,
 ) -> Plan {
     let _ = (token, widen_v3);
-    #[cfg(target_arch = "x86_64")]
+    #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
     {
         #[cfg(feature = "avx512")]
         {
@@ -205,11 +205,11 @@ macro_rules! run_cfg {
             cfg: graph::KernelCfg,
         ) -> Result<[f32; $n], PowfError> {
             match plan {
-                #[cfg(target_arch = "x86_64")]
+                #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
                 Plan::V3(t) => graph::$v3::<{ graph::NATIVE }>(t, bases, exponent, cfg),
-                #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+                #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
                 Plan::V4(t) => graph::$v4::<{ graph::NATIVE }>(t, bases, exponent, cfg),
-                #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+                #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
                 Plan::V4x(t) => graph::$v4x::<{ graph::NATIVE }>(t, bases, exponent, cfg),
                 #[cfg(target_arch = "aarch64")]
                 Plan::Neon(t) => graph::$neon::<{ graph::NATIVE }>(t, bases, exponent, cfg),
@@ -278,11 +278,11 @@ macro_rules! run_const {
             }
             #[cfg(not(debug_assertions))]
             match plan {
-                #[cfg(target_arch = "x86_64")]
+                #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
                 Plan::V3(t) => graph::$v3::<K, { graph::NATIVE }>(t, bases, exponent),
-                #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+                #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
                 Plan::V4(t) => graph::$v4::<K, { graph::NATIVE }>(t, bases, exponent),
-                #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+                #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
                 Plan::V4x(t) => graph::$v4x::<K, { graph::NATIVE }>(t, bases, exponent),
                 #[cfg(target_arch = "aarch64")]
                 Plan::Neon(t) => graph::$neon::<K, { graph::NATIVE }>(t, bases, exponent),
@@ -365,11 +365,11 @@ pub(super) fn run_slice_cfg(
     cfg: graph::KernelCfg,
 ) -> Result<(), (usize, PowfError)> {
     match plan {
-        #[cfg(target_arch = "x86_64")]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
         Plan::V3(t) => graph::slice8_cfg_v3::<{ graph::NATIVE }>(t, src, dst, exponent, cfg),
-        #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
         Plan::V4(t) => graph::slice16_cfg_v4::<{ graph::NATIVE }>(t, src, dst, exponent, cfg),
-        #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
         Plan::V4x(t) => graph::slice16_cfg_v4x::<{ graph::NATIVE }>(t, src, dst, exponent, cfg),
         #[cfg(target_arch = "aarch64")]
         Plan::Neon(t) => graph::slice8_cfg_neon::<{ graph::NATIVE }>(t, src, dst, exponent, cfg),
@@ -414,11 +414,11 @@ pub(super) fn run_slice<K: graph::Kernel, const BACKEND: bool>(
     }
     #[cfg(not(debug_assertions))]
     match plan {
-        #[cfg(target_arch = "x86_64")]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
         Plan::V3(t) => graph::slice8_with_v3::<K, { graph::NATIVE }>(t, src, dst, exponent),
-        #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
         Plan::V4(t) => graph::slice16_with_v4::<K, { graph::NATIVE }>(t, src, dst, exponent),
-        #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
         Plan::V4x(t) => graph::slice16_with_v4x::<K, { graph::NATIVE }>(t, src, dst, exponent),
         #[cfg(target_arch = "aarch64")]
         Plan::Neon(t) => graph::slice8_with_neon::<K, { graph::NATIVE }>(t, src, dst, exponent),

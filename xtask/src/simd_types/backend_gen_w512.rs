@@ -1516,7 +1516,7 @@ fn generate_v3_polyfill_impl(ty: &W512Type) -> String {
     let zero_lit = ty.zero_lit();
 
     let mut code = formatdoc! {r#"
-        #[cfg(target_arch = "x86_64")]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
         impl {trait_name} for archmage::X64V3Token {{
             type Repr = {v3_repr};
 
@@ -2626,7 +2626,7 @@ fn generate_x86_v4_float_impl_for_token(ty: &W512Type, token: &str) -> String {
         "#}
     };
     formatdoc! {r#"
-        #[cfg(target_arch = "x86_64")]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
         impl {trait_name} for archmage::{token} {{
             type Repr = {inner};
 
@@ -3015,7 +3015,7 @@ fn generate_x86_v4_int_impl_for_token(ty: &W512Type, token: &str) -> String {
     };
 
     formatdoc! {r#"
-        #[cfg(target_arch = "x86_64")]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
         impl {trait_name} for archmage::{token} {{
             type Repr = __m512i;
 
@@ -3307,7 +3307,7 @@ fn generate_popcnt_impl(ty: &W512Type) -> String {
     let epi = ty.x86_arith_suffix();
 
     formatdoc! {r#"
-        #[cfg(target_arch = "x86_64")]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
         impl {name}PopcntBackend for archmage::X64V4xToken {{
             {arcane}
             fn popcnt(self, a: __m512i) -> __m512i {{

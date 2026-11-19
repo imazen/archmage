@@ -389,7 +389,7 @@ pub fn dangerously_disable_tokens_except_wasm(
     let mut errors = Vec::new();
 
     // x86_64: disable V2 (cascades to Crypto, V3, V3Crypto, V4, V4x, Fp16)
-    #[cfg(target_arch = "x86_64")]
+    #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
     if let Err(e) = X64V2Token::dangerously_disable_token_process_wide(disabled) {
         errors.push(e);
     }

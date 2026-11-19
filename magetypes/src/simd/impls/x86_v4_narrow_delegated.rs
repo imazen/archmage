@@ -25,7 +25,7 @@
 //! for `X64V4xToken` (native AVX-512 VPOPCNTDQ) and have no V3
 //! impls to forward to.
 
-#![cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#![cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
 
 // Wildcard: the impls' signatures name supertraits of the
 // implemented traits (`<Self as F32x8Backend>::Repr` inside a

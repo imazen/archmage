@@ -51,8 +51,9 @@ pub(super) static AVX512_FP16_DISABLED: AtomicBool = AtomicBool::new(false);
 /// still requires #[target_feature(enable = "sse2")] for SSE2 intrinsics to
 /// be safe. This token provides that via `#[arcane]`.
 ///
-/// On x86_64, summon() always returns Some. On 32-bit x86, returns None
-/// (x86_64 tokens are not available on 32-bit).
+/// On x86_64 with baseline SSE2, summon() returns Some. Soft-float x86_64 targets
+/// (including x86_64-unknown-none and x86_64-unknown-uefi) and 32-bit x86 use stub
+/// tokens whose summon() returns None.
 #[derive(Clone, Copy, Debug)]
 pub struct X64V1Token {
     _private: (),

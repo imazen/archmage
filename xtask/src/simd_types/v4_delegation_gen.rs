@@ -95,7 +95,7 @@ pub(crate) fn generate(f32x4_trait_src: &str, f32x8_trait_src: &str) -> String {
         //! call the hand-written AVX-512VL helpers in `x86_v4_f32_overrides.rs`, which
         //! take a concrete `X64V4Token` (`self` for V4, `self.v4()` for V4x and FP16).
 
-        #![cfg(all(target_arch = "x86_64", feature = "avx512"))]
+        #![cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
 
         use crate::simd::backends::{{F32x4Backend, F32x8Backend}};
         use super::x86_v4_f32_overrides as overrides;
@@ -151,7 +151,7 @@ pub(crate) fn generate_narrow(specs: &[(String, String)]) -> String {
         //! for `X64V4xToken` (native AVX-512 VPOPCNTDQ) and have no V3
         //! impls to forward to.
 
-        #![cfg(all(target_arch = "x86_64", feature = "avx512"))]
+        #![cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
 
         // Wildcard: the impls' signatures name supertraits of the
         // implemented traits (`<Self as F32x8Backend>::Repr` inside a

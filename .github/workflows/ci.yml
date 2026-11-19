@@ -785,13 +785,16 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
-          targets: i686-unknown-linux-gnu,aarch64-unknown-linux-gnu,aarch64-apple-darwin,aarch64-pc-windows-msvc,wasm32-wasip1,wasm32-unknown-unknown,armv7-unknown-linux-gnueabihf,thumbv7em-none-eabihf
+          targets: i686-unknown-linux-gnu,aarch64-unknown-linux-gnu,aarch64-apple-darwin,aarch64-pc-windows-msvc,wasm32-wasip1,wasm32-unknown-unknown,armv7-unknown-linux-gnueabihf,thumbv7em-none-eabihf,x86_64-unknown-none
 
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
 
       - name: Sweep
         run: python3 -B xtask/warning_sweep.py
+
+      - name: Build a soft-float x86_64 consumer
+        run: cargo build --locked --manifest-path tests/no-features-crate/Cargo.toml --target x86_64-unknown-none
 
   # ==========================================================================
   # Format check

@@ -4,7 +4,7 @@ struct Processor {
     val: f32,
 }
 impl Processor {
-    #[cfg(target_arch = "x86_64")]
+    #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
     #[inline(always)]
     fn process(&self, token: X64V3Token, a: f32) -> f32 {
         #[target_feature(

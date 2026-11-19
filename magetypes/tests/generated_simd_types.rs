@@ -2,7 +2,7 @@
 //!
 //! **Auto-generated** by `cargo xtask generate` - do not edit manually.
 
-#![cfg(target_arch = "x86_64")]
+#![cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #![allow(clippy::needless_range_loop)]
 
 use magetypes::simd::*;
@@ -217,7 +217,7 @@ fn test_f32x8_load_store_rgba_u8() {
 // 512-bit Tests (V3 polyfill: 2×256-bit)
 // ============================================================================
 
-#[cfg(all(target_arch = "x86_64", feature = "w512"))]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "w512"))]
 mod w512_tests {
     use archmage::{SimdToken, X64V3Token};
     use magetypes::simd::*;
