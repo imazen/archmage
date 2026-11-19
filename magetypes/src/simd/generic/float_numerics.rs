@@ -103,6 +103,8 @@ macro_rules! float_numerics {
                 match const { ExtremaOptions::decode(CFG) } {
                     ExtremaDomain::DropNan => self.min(rhs),
                     ExtremaDomain::PropagateNan => self.minimum(rhs),
+                    #[cfg(all(target_arch = "wasm32", target_feature = "relaxed-simd"))]
+                    ExtremaDomain::NonNanRhs => self.min(rhs),
                     _ => self.min_fast(rhs),
                 }
             }
@@ -114,6 +116,8 @@ macro_rules! float_numerics {
                 match const { ExtremaOptions::decode(CFG) } {
                     ExtremaDomain::DropNan => self.max(rhs),
                     ExtremaDomain::PropagateNan => self.maximum(rhs),
+                    #[cfg(all(target_arch = "wasm32", target_feature = "relaxed-simd"))]
+                    ExtremaDomain::NonNanRhs => self.max(rhs),
                     _ => self.max_fast(rhs),
                 }
             }
@@ -129,15 +133,23 @@ macro_rules! float_numerics {
             /// `NonNanRhs` requires every lane to be non-NaN for a reduction.
             #[inline(always)]
             pub fn reduce_min_with<const CFG: u32>(self) -> $elem {
-                if matches!(
-                    const { ExtremaOptions::decode(CFG) },
-                    ExtremaDomain::PropagateNan
-                ) {
-                    self.to_array()
+                match const { ExtremaOptions::decode(CFG) } {
+                    ExtremaDomain::PropagateNan => self
+                        .to_array()
                         .into_iter()
-                        .fold(<$elem>::INFINITY, crate::scalar::$min)
-                } else {
-                    self.reduce_min()
+                        .fold(<$elem>::INFINITY, crate::scalar::$min),
+                    ExtremaDomain::DropNan => {
+                        let nan = self.simd_ne(self);
+                        let identity = <$elem>::INFINITY;
+                        let number =
+                            Self::blend(nan, Self::splat_t(self.1, identity), self).reduce_min();
+                        if number == identity && self.to_array().into_iter().all(<$elem>::is_nan) {
+                            <$elem>::NAN
+                        } else {
+                            number
+                        }
+                    }
+                    _ => self.reduce_min(),
                 }
             }
 
@@ -145,15 +157,23 @@ macro_rules! float_numerics {
             /// `NonNanRhs` requires every lane to be non-NaN for a reduction.
             #[inline(always)]
             pub fn reduce_max_with<const CFG: u32>(self) -> $elem {
-                if matches!(
-                    const { ExtremaOptions::decode(CFG) },
-                    ExtremaDomain::PropagateNan
-                ) {
-                    self.to_array()
+                match const { ExtremaOptions::decode(CFG) } {
+                    ExtremaDomain::PropagateNan => self
+                        .to_array()
                         .into_iter()
-                        .fold(<$elem>::NEG_INFINITY, crate::scalar::$max)
-                } else {
-                    self.reduce_max()
+                        .fold(<$elem>::NEG_INFINITY, crate::scalar::$max),
+                    ExtremaDomain::DropNan => {
+                        let nan = self.simd_ne(self);
+                        let identity = <$elem>::NEG_INFINITY;
+                        let number =
+                            Self::blend(nan, Self::splat_t(self.1, identity), self).reduce_max();
+                        if number == identity && self.to_array().into_iter().all(<$elem>::is_nan) {
+                            <$elem>::NAN
+                        } else {
+                            number
+                        }
+                    }
+                    _ => self.reduce_max(),
                 }
             }
         }

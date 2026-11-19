@@ -168,10 +168,12 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 #### Added
 
 - Add const-configured `IntConvert`, `HalfConvert`, `RecipOptions`, and `ExtremaOptions` for register operations and scalar tails. The new u16 conversion accepts nearest-even or truncating policies with explicit saturation bounds. Add binary16 and bfloat16 register conversions, unsigned u32 widening and narrowing, `trunc`, and fused and relaxed multiply-negate-add.
-
-
-- Add exact raw `u16` loads and saturating truncation for generic `f32x4`, `f32x8` and `f32x16`, packed RGB16 loads at widths 4 and 8, and bit-preserving RGBA alpha operations at all three widths.
+- Add exact raw `u16` loads for generic `f32x4`, `f32x8` and `f32x16`, packed RGB16 loads at widths 4 and 8, and bit-preserving RGBA alpha operations at all three widths.
 - Add `f32x16` RGBA block operations and use native SIMD shuffles for `f32x4` transpose and WASM128 RGB deinterleave.
+
+#### Queued for after 0.9.32
+
+- Share generated AVX-512 float implementations through the V4 proof for V4x wide floats and narrow AVX-512 subtokens. Verify the shared paths with the consumer codegen comparison.
 
 ### [0.9.32] - 2026-11-16
 

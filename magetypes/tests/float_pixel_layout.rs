@@ -70,11 +70,14 @@ macro_rules! check_lanes {
         }
 
         const SAT: u32 = IntConvert::new().saturate_all().bits();
+        const NONNEGATIVE: u32 = IntConvert::new().non_negative_finite().bits();
         const FULL: u32 = HalfConvert::new().all_floats().normalize().bits();
         const FLUSH: u32 = HalfConvert::new().all_floats().bits();
         const TRUNC_HALF: u32 = HalfConvert::new().all_floats().normalize().trunc().bits();
         const EXACT: u32 = RecipOptions::new().exact().bits();
         const PROPAGATE: u32 = ExtremaOptions::new().propagate_nan().bits();
+        const DROP_NAN: u32 = ExtremaOptions::new().drop_nan().bits();
+        const NON_NAN_RHS: u32 = ExtremaOptions::new().non_nan_rhs().bits();
         for start in 0..FLOATS.len() {
             let x = core::array::from_fn(|i| FLOATS[(start + i) % FLOATS.len()]);
             let v = $vec::from_array_t($token, x);
@@ -109,6 +112,13 @@ macro_rules! check_lanes {
                 }
             }
         }
+        let nonnegative = [0.0, 0.5, 1.5, 254.5, 255.0, 255.5, 256.0, 16777216.0];
+        let lanes = core::array::from_fn(|i| nonnegative[i % nonnegative.len()]);
+        let v = $vec::from_array_t($token, lanes);
+        assert_eq!(
+            v.to_u8_with::<NONNEGATIVE>(),
+            lanes.map(scalar::to_u8_with::<NONNEGATIVE>)
+        );
         // Carry into the first half normal when rounded to nearest.
         let just_normal = f32::from_bits(0x387f_e000);
         let halves = [
@@ -130,6 +140,16 @@ macro_rules! check_lanes {
             [f32::from_bits(81 << 23); $n]
         );
         let nan = $vec::splat_t($token, f32::NAN);
+        assert_eq!(nan.min_with::<NON_NAN_RHS>(c).to_array(), [1.0; $n]);
+        assert_eq!(nan.max_with::<NON_NAN_RHS>(c).to_array(), [1.0; $n]);
+        assert!(nan.reduce_min_with::<DROP_NAN>().is_nan());
+        assert!(nan.reduce_max_with::<DROP_NAN>().is_nan());
+        let mixed = $vec::from_array_t(
+            $token,
+            core::array::from_fn(|i| [f32::NAN, 2.0, -3.0, f32::NAN][i % 4]),
+        );
+        assert_eq!(mixed.reduce_min_with::<DROP_NAN>(), -3.0);
+        assert_eq!(mixed.reduce_max_with::<DROP_NAN>(), 2.0);
         assert!(
             a.min_with::<PROPAGATE>(nan)
                 .reduce_max_with::<PROPAGATE>()

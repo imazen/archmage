@@ -375,7 +375,8 @@ pub enum ExtremaDomain {
     /// Both operands finite. Zero ties may select either operand.
     #[default]
     Finite,
-    /// Only the right operand is known non-NaN.
+    /// The right operand is non-NaN and replaces a quiet NaN on the left.
+    /// Signalling NaNs and zero ties may vary by backend.
     NonNanRhs,
     /// Prefer a number to a NaN. Signalling NaNs and zero ties may vary by backend.
     DropNan,

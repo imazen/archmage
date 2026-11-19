@@ -301,6 +301,14 @@ impl F32x16Backend for X64V4Token {
         } else {
             value
         };
+        if opts.nonnegative() {
+            let i = if opts.rounds() {
+                _mm512_cvtps_epu32(value)
+            } else {
+                _mm512_cvttps_epu32(value)
+            };
+            return crate::simd_storage::cast(_mm512_cvtusepi32_epi8(i));
+        }
         let i = if opts.rounds() {
             _mm512_cvtps_epi32(value)
         } else {
@@ -2732,6 +2740,14 @@ impl F32x16Backend for X64V4xToken {
         } else {
             value
         };
+        if opts.nonnegative() {
+            let i = if opts.rounds() {
+                _mm512_cvtps_epu32(value)
+            } else {
+                _mm512_cvttps_epu32(value)
+            };
+            return crate::simd_storage::cast(_mm512_cvtusepi32_epi8(i));
+        }
         let i = if opts.rounds() {
             _mm512_cvtps_epi32(value)
         } else {

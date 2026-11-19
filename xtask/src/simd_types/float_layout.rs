@@ -226,6 +226,16 @@ pub(super) fn x86(lanes: usize, repr: &str, attr: &str) -> String {
     } else {
         String::new()
     };
+    let wide_unsigned_bytes = if lanes == 16 {
+        formatdoc! {r#"
+            if opts.nonnegative() {{
+                let i = if opts.rounds() {{ _mm512_cvtps_epu32(value) }} else {{ _mm512_cvttps_epu32(value) }};
+                return crate::simd_storage::cast(_mm512_cvtusepi32_epi8(i));
+            }}
+        "#}
+    } else {
+        String::new()
+    };
     formatdoc! {r#"
         {attr}
         fn from_u16_lanes(self, lanes: &[u16; {lanes}]) -> {repr} {{
@@ -253,7 +263,7 @@ pub(super) fn x86(lanes: usize, repr: &str, attr: &str) -> String {
             }} else {{
                 value
             }};
-            let i = if opts.rounds() {{ {prefix}_cvtps_epi32(value) }} else {{ {prefix}_cvttps_epi32(value) }};
+            {wide_unsigned_bytes}let i = if opts.rounds() {{ {prefix}_cvtps_epi32(value) }} else {{ {prefix}_cvttps_epi32(value) }};
             crate::simd_storage::cast({byte_pack})
         }}
 
