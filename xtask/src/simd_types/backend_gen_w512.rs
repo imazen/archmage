@@ -386,6 +386,7 @@ fn generate_float_backend_trait(ty: &W512Type) -> String {
     let elem = ty.elem;
     let lanes = ty.lanes;
     let array = ty.array_type();
+    let float_layout = super::float_layout::trait_methods(elem, lanes, &trait_name);
     let min_max_fast_trait = formatdoc! {r#"
 
         /// IEEE 754-2019 minimum (`NaN`-propagating, `-0.0 < +0.0`).
@@ -610,6 +611,7 @@ fn generate_float_backend_trait(ty: &W512Type) -> String {
             #[inline(always)]
             fn rsqrt(self, a: Self::Repr) -> Self::Repr {{ Self::rsqrt_approx(self, a) }}
 
+            {float_layout}
         }}
     "#,
         name = ty.name(),
@@ -1645,6 +1647,10 @@ fn generate_v3_polyfill_impl(ty: &W512Type) -> String {
             }}
     "#});
 
+    if ty.elem == "f32" {
+        code.push_str(&super::float_layout::polyfill(16, 8, &v3_repr));
+    }
+
     // Float math ops
     if ty.is_float() {
         code.push_str(&formatdoc! {r#"
@@ -2127,6 +2133,10 @@ fn generate_4way_polyfill_impl(
         q3_val = q_lanes * 3,
     };
 
+    if ty.elem == "f32" {
+        code.push_str(&super::float_layout::polyfill(16, 4, &repr));
+    }
+
     // Float: mul, div
     if ty.is_float() {
         code.push_str(&formatdoc! {r#"
@@ -2493,6 +2503,11 @@ fn generate_x86_v4_float_impl_for_token(ty: &W512Type, token: &str) -> String {
     let inner = ty.x86_v4_inner();
     let s = ty.x86_float_suffix();
     let elem = ty.elem;
+    let float_layout = if elem == "f32" {
+        super::float_layout::x86(16, inner, &arcane)
+    } else {
+        String::new()
+    };
     let array = ty.array_type();
     let epi = if elem == "f32" { "epi32" } else { "epi64" };
     let abs_mask = if elem == "f32" {
@@ -2772,6 +2787,7 @@ fn generate_x86_v4_float_impl_for_token(ty: &W512Type, token: &str) -> String {
                 _mm512_rsqrt14_{s}(a)
             }}
 
+            {float_layout}
             {working_recip_512}
 
             {arcane}

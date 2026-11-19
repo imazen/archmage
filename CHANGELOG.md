@@ -165,6 +165,11 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 - Planned: make `w512` non-default in magetypes; users who need 512-bit types would add `features = ["w512"]`. This patch keeps the existing default features.
 - Remove `cast::Upcast` and `cast::Downcast`, and with them the `cast` module, which holds nothing else. Both are deprecated in 0.9.30 and were never implemented (b1b2ff67).
 
+#### Added
+
+- Add exact raw `u16` loads and saturating truncation for generic `f32x4`, `f32x8` and `f32x16`, packed RGB16 loads at widths 4 and 8, and bit-preserving RGBA alpha operations at all three widths.
+- Add `f32x16` RGBA block operations and use native SIMD shuffles for `f32x4` transpose and WASM128 RGB deinterleave.
+
 ### [0.9.32] - 2026-11-16
 
 #### Added

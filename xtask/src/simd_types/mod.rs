@@ -23,6 +23,7 @@ pub mod backend_gen_remaining_int;
 pub mod backend_gen_w512;
 pub mod backend_gen_widen_narrow;
 mod backend_syntax;
+mod float_layout;
 pub mod generic_gen;
 pub mod import_paths;
 pub mod parity_tests;

@@ -187,23 +187,15 @@ impl<T: F32x4Backend> f32x4<T> {
     /// After transpose, `rows[i][j]` becomes `rows[j][i]`.
     #[inline(always)]
     pub fn transpose_4x4(rows: &mut [Self; 4]) {
-        let token = rows[0].1;
-        let a = rows[0].to_array();
-        let b = rows[1].to_array();
-        let c = rows[2].to_array();
-        let d = rows[3].to_array();
-        rows[0] = Self::from_repr_unchecked(token, T::from_array(token, [a[0], b[0], c[0], d[0]]));
-        rows[1] = Self::from_repr_unchecked(token, T::from_array(token, [a[1], b[1], c[1], d[1]]));
-        rows[2] = Self::from_repr_unchecked(token, T::from_array(token, [a[2], b[2], c[2], d[2]]));
-        rows[3] = Self::from_repr_unchecked(token, T::from_array(token, [a[3], b[3], c[3], d[3]]));
+        *rows = Self::transpose_4x4_copy(*rows);
     }
 
     /// Transpose a 4x4 matrix, returning the transposed rows.
     #[inline(always)]
     pub fn transpose_4x4_copy(rows: [Self; 4]) -> [Self; 4] {
-        let mut result = rows;
-        Self::transpose_4x4(&mut result);
-        result
+        let token = rows[0].1;
+        T::transpose_4x4_repr(token, rows.map(|row| row.0))
+            .map(|row| Self::from_repr_unchecked(token, row))
     }
 }
 

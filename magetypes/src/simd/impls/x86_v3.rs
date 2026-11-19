@@ -358,6 +358,49 @@ impl F32x4Backend for X64V3Token {
     }
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn from_u16_lanes(self, lanes: &[u16; 4]) -> __m128 {
+        _mm_cvtepi32_ps(_mm_cvtepu16_epi32(_mm_cvtsi64_si128(
+            crate::simd_storage::cast(*lanes),
+        )))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn to_u16_lanes(self, value: __m128) -> [u16; 4] {
+        // Treat positive overflow as 65535 before cvtt can produce its
+        // integer-indefinite sentinel. NaN and negative overflow become zero in the pack.
+        let i = _mm_cvttps_epi32(_mm_min_ps(_mm_set1_ps(65535.0), value));
+        crate::simd_storage::cast::<_, [u16; 8]>(_mm_packus_epi32(i, i))
+            .first_chunk::<4>()
+            .copied()
+            .unwrap()
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn broadcast_rgba_alpha_repr(self, value: __m128) -> __m128 {
+        _mm_shuffle_ps::<255>(value, value)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn with_rgba_alpha_repr(self, value: __m128, src: __m128) -> __m128 {
+        _mm_blend_ps::<8>(value, src)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn transpose_4x4_repr(self, rows: [__m128; 4]) -> [__m128; 4] {
+        let [a, b, c, d] = rows;
+        let ab_lo = _mm_unpacklo_ps(a, b);
+        let ab_hi = _mm_unpackhi_ps(a, b);
+        let cd_lo = _mm_unpacklo_ps(c, d);
+        let cd_hi = _mm_unpackhi_ps(c, d);
+        [
+            _mm_movelh_ps(ab_lo, cd_lo),
+            _mm_movehl_ps(cd_lo, ab_lo),
+            _mm_movelh_ps(ab_hi, cd_hi),
+            _mm_movehl_ps(cd_hi, ab_hi),
+        ]
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
     fn deinterleave_3ch_repr(self, rgb: [__m128; 3]) -> [__m128; 3] {
         let [v0, v1, v2] = rgb;
         let t_r = _mm_shuffle_ps::<0b01_01_10_10>(v1, v2);
@@ -762,6 +805,32 @@ impl F32x8Backend for X64V3Token {
             10, 14, 3, 7, 11, 15,
         );
         crate::simd_storage::cast(_mm256_shuffle_epi8(packed, shuf))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn from_u16_lanes(self, lanes: &[u16; 8]) -> __m256 {
+        _mm256_cvtepi32_ps(_mm256_cvtepu16_epi32(crate::simd_storage::cast(*lanes)))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn to_u16_lanes(self, value: __m256) -> [u16; 8] {
+        // Treat positive overflow as 65535 before cvtt can produce its
+        // integer-indefinite sentinel. NaN and negative overflow become zero in the pack.
+        let i = _mm256_cvttps_epi32(_mm256_min_ps(_mm256_set1_ps(65535.0), value));
+        crate::simd_storage::cast(_mm_packus_epi32(
+            _mm256_castsi256_si128(i),
+            _mm256_extracti128_si256::<1>(i),
+        ))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn broadcast_rgba_alpha_repr(self, value: __m256) -> __m256 {
+        _mm256_permute_ps::<255>(value)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn with_rgba_alpha_repr(self, value: __m256, src: __m256) -> __m256 {
+        _mm256_blend_ps::<136>(value, src)
     }
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
@@ -5132,6 +5201,29 @@ impl F32x16Backend for X64V3Token {
             <X64V3Token as F32x8Backend>::max(self, a[0], b[0]),
             <X64V3Token as F32x8Backend>::max(self, a[1], b[1]),
         ]
+    }
+    #[inline(always)]
+    fn from_u16_lanes(self, lanes: &[u16; 16]) -> [__m256; 2] {
+        let (chunks, _) = lanes.as_chunks::<8>();
+        core::array::from_fn(|i| <Self as F32x8Backend>::from_u16_lanes(self, &chunks[i]))
+    }
+
+    #[inline(always)]
+    fn to_u16_lanes(self, value: [__m256; 2]) -> [u16; 16] {
+        let parts = value.map(|v| <Self as F32x8Backend>::to_u16_lanes(self, v));
+        core::array::from_fn(|i| parts[i / 8][i % 8])
+    }
+
+    #[inline(always)]
+    fn broadcast_rgba_alpha_repr(self, value: [__m256; 2]) -> [__m256; 2] {
+        value.map(|v| <Self as F32x8Backend>::broadcast_rgba_alpha_repr(self, v))
+    }
+
+    #[inline(always)]
+    fn with_rgba_alpha_repr(self, value: [__m256; 2], src: [__m256; 2]) -> [__m256; 2] {
+        core::array::from_fn(|i| {
+            <Self as F32x8Backend>::with_rgba_alpha_repr(self, value[i], src[i])
+        })
     }
 
     #[inline(always)]

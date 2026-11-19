@@ -50,6 +50,18 @@ impl<T: F32x4Backend> f32x4<T> {
         (Self(r, token), Self(g, token), Self(b, token))
     }
 
+    /// Load 4 packed RGB16 pixels as exact, unnormalized R, G and B planes.
+    ///
+    /// Reads exactly the 12 words in the input block.
+    #[inline(always)]
+    pub fn load_4_rgb_u16_t(token: T, rgb: &[u16; 12]) -> (Self, Self, Self) {
+        let (chunks, _) = rgb.as_chunks::<4>();
+        let [r, g, b] = Self::deinterleave_3ch(core::array::from_fn(|i| {
+            Self::from_u16_t(token, &chunks[i])
+        }));
+        (r, g, b)
+    }
+
     /// Round, clamp to `[0, 255]`, and interleave 3 planar [`f32x4`] channel
     /// vectors into 4 packed RGB `u8` pixels (`12` bytes).
     ///
@@ -100,6 +112,18 @@ impl<T: F32x8Backend> f32x8<T> {
     pub fn load_8_rgb_u8_t(token: T, rgb: &[u8; 24]) -> (Self, Self, Self) {
         let (r, g, b) = T::load_rgb_bytes(token, rgb);
         (Self(r, token), Self(g, token), Self(b, token))
+    }
+
+    /// Load 8 packed RGB16 pixels as exact, unnormalized R, G and B planes.
+    ///
+    /// Reads exactly the 24 words in the input block.
+    #[inline(always)]
+    pub fn load_8_rgb_u16_t(token: T, rgb: &[u16; 24]) -> (Self, Self, Self) {
+        let (chunks, _) = rgb.as_chunks::<8>();
+        let [r, g, b] = Self::deinterleave_3ch(core::array::from_fn(|i| {
+            Self::from_u16_t(token, &chunks[i])
+        }));
+        (r, g, b)
     }
 
     /// Round, clamp to `[0, 255]`, and interleave 3 planar [`f32x8`] channel

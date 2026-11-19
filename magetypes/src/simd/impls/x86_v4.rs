@@ -254,6 +254,32 @@ impl F32x16Backend for X64V4Token {
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn from_u16_lanes(self, lanes: &[u16; 16]) -> __m512 {
+        _mm512_cvtepi32_ps(_mm512_cvtepu16_epi32(crate::simd_storage::cast(*lanes)))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn to_u16_lanes(self, value: __m512) -> [u16; 16] {
+        // Treat positive overflow as 65535 before cvtt can produce its
+        // integer-indefinite sentinel. NaN and negative overflow become zero in the pack.
+        let i = _mm512_cvttps_epi32(_mm512_min_ps(_mm512_set1_ps(65535.0), value));
+        crate::simd_storage::cast(_mm512_cvtusepi32_epi16(_mm512_max_epi32(
+            i,
+            _mm512_setzero_si512(),
+        )))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn broadcast_rgba_alpha_repr(self, value: __m512) -> __m512 {
+        _mm512_permute_ps::<255>(value)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn with_rgba_alpha_repr(self, value: __m512, src: __m512) -> __m512 {
+        _mm512_mask_blend_ps(0x8888, value, src)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
     fn recip(self, a: __m512) -> __m512 {
         // token nibbles: QNAN->2 SNAN->2 ZERO->6 ONE->0 -INF->7 +INF->8 NEG->0 POS->0
         const RECIP_FIXUP_TBL: i32 = 0x0087_0622u32 as i32;
@@ -2431,6 +2457,32 @@ impl F32x16Backend for X64V4xToken {
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn rsqrt_approx(self, a: __m512) -> __m512 {
         _mm512_rsqrt14_ps(a)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn from_u16_lanes(self, lanes: &[u16; 16]) -> __m512 {
+        _mm512_cvtepi32_ps(_mm512_cvtepu16_epi32(crate::simd_storage::cast(*lanes)))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn to_u16_lanes(self, value: __m512) -> [u16; 16] {
+        // Treat positive overflow as 65535 before cvtt can produce its
+        // integer-indefinite sentinel. NaN and negative overflow become zero in the pack.
+        let i = _mm512_cvttps_epi32(_mm512_min_ps(_mm512_set1_ps(65535.0), value));
+        crate::simd_storage::cast(_mm512_cvtusepi32_epi16(_mm512_max_epi32(
+            i,
+            _mm512_setzero_si512(),
+        )))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn broadcast_rgba_alpha_repr(self, value: __m512) -> __m512 {
+        _mm512_permute_ps::<255>(value)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn with_rgba_alpha_repr(self, value: __m512, src: __m512) -> __m512 {
+        _mm512_mask_blend_ps(0x8888, value, src)
     }
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]

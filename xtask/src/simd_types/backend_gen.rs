@@ -690,6 +690,7 @@ fn generate_float_backend_trait(ty: &FloatVecType) -> String {
     let elem = ty.elem;
     let lanes = ty.lanes;
     let array = ty.array_type();
+    let float_layout = super::float_layout::trait_methods(elem, lanes, &trait_name);
 
     // Pixel-pack default (f32 only): round-to-nearest + saturate each lane to u8.
     // Scalar fallback; x86/ARM backends override with native cvt+pack. Restores the
@@ -1073,6 +1074,7 @@ fn generate_float_backend_trait(ty: &FloatVecType) -> String {
             #[inline(always)]
             fn rsqrt(self, a: Self::Repr) -> Self::Repr {{ Self::rsqrt_approx(self, a) }}
             {to_u8_trait}
+            {float_layout}
             {rgb_3ch_trait}
             {transpose_trait}
         }}
@@ -1677,6 +1679,11 @@ fn generate_x86_float_impl(ty: &FloatVecType, token: &str) -> String {
     };
 
     // Native 3-channel RGB AoS<->SoA shuffles and wide u8 loads/stores (issue #169).
+    let float_layout = if elem == "f32" {
+        super::float_layout::x86(ty.lanes, inner, &arcane)
+    } else {
+        String::new()
+    };
     let rgb_3ch_x86 = if elem == "f32" && bits == 128 {
         formatdoc! {r#"
 
@@ -2122,6 +2129,7 @@ fn generate_x86_float_impl(ty: &FloatVecType, token: &str) -> String {
             {baseline_end}
             {to_u8_x86}
             {store_rgba_x86}
+            {float_layout}
             {rgb_3ch_x86}
             {transpose_8x8_x86}
         }}
@@ -3037,6 +3045,11 @@ fn generate_neon_float_impl(ty: &FloatVecType) -> String {
         String::new()
     };
 
+    let float_layout = if elem == "f32" {
+        super::float_layout::polyfill(lanes, 4, &repr)
+    } else {
+        String::new()
+    };
     let rgb_3ch_arm_poly = if elem == "f32" && lanes == 8 {
         formatdoc! {r#"
 
@@ -3429,6 +3442,7 @@ fn generate_neon_float_impl(ty: &FloatVecType) -> String {
             }}
             {to_u8_arm_poly}
             {store_rgba_arm_poly}
+            {float_layout}
             {rgb_3ch_arm_poly}
         }}
     "#,
@@ -3631,6 +3645,11 @@ fn generate_neon_native_impl(ty: &FloatVecType) -> String {
         String::new()
     };
 
+    let float_layout = if elem == "f32" {
+        super::float_layout::neon(&arcane)
+    } else {
+        String::new()
+    };
     let rgb_3ch_arm = if elem == "f32" && lanes == 4 {
         formatdoc! {r#"
 
@@ -3928,6 +3947,7 @@ fn generate_neon_native_impl(ty: &FloatVecType) -> String {
             }}
             {to_u8_arm}
             {store_rgba_arm}
+            {float_layout}
             {rgb_3ch_arm}
         }}
     "#,
@@ -4042,8 +4062,21 @@ fn generate_wasm_float_impl(ty: &FloatVecType) -> String {
     // Native pixel pack + 3-channel RGB helpers for the wasm f32x8 polyfill ([v128; 2]).
     // Note: deinterleave_3ch_repr uses the trait default on Wasm128Token because LLVM
     // already lowers it to the optimal 12 i8x16.shuffle sequence.
+    let float_layout = if elem == "f32" {
+        super::float_layout::polyfill(lanes, 4, &repr)
+    } else {
+        String::new()
+    };
     let pixel_pack_wasm_poly = if elem == "f32" && lanes == 8 {
         formatdoc! {r#"
+
+            #[inline(always)]
+            fn deinterleave_3ch_repr(self, rgb: [[v128; 2]; 3]) -> [[v128; 2]; 3] {{
+                let [[v0, v1], [v2, v3], [v4, v5]] = rgb;
+                let [r0, g0, b0] = <Self as F32x4Backend>::deinterleave_3ch_repr(self, [v0, v1, v2]);
+                let [r1, g1, b1] = <Self as F32x4Backend>::deinterleave_3ch_repr(self, [v3, v4, v5]);
+                [[r0, r1], [g0, g1], [b0, b1]]
+            }}
 
             #[inline(always)]
             fn to_u8_bytes(self, a: [v128; 2]) -> [u8; 8] {{
@@ -4315,7 +4348,8 @@ fn generate_wasm_float_impl(ty: &FloatVecType) -> String {
             fn bitor(self, a: {repr}, b: {repr}) -> {repr} {{ {or} }}
             #[inline(always)]
             fn bitxor(self, a: {repr}, b: {repr}) -> {repr} {{ {xor} }}
-        {pixel_pack}
+        {float_layout}
+            {pixel_pack}
         }}
     "#,
         v4_copies = (0..sub_count).map(|_| "v4").collect::<Vec<_>>().join(", "),
@@ -4390,10 +4424,27 @@ fn generate_wasm_native_impl(ty: &FloatVecType) -> String {
     // Native pixel pack + 3-channel RGB helpers for wasm f32x4. `f32x4_nearest`
     // is round-half-to-even, matching the scalar default's `roundevenf`;
     // `i32x4_trunc_sat_f32x4` then truncates an already-integral value exactly,
-    // and the two saturating narrows clamp into 0..=255. `deinterleave_3ch_repr`
-    // uses the trait default on Wasm128Token (LLVM recovers 6 i8x16.shuffles).
+    // and the two saturating narrows clamp into 0..=255.
+    let float_layout = if elem == "f32" {
+        super::float_layout::wasm()
+    } else {
+        String::new()
+    };
     let pixel_pack_wasm_native = if elem == "f32" && lanes == 4 {
         formatdoc! {r#"
+
+            #[inline(always)]
+            fn deinterleave_3ch_repr(self, rgb: [v128; 3]) -> [v128; 3] {{
+                let [v0, v1, v2] = rgb;
+                let r = i32x4_shuffle::<0, 3, 6, 0>(v0, v1);
+                let g = i32x4_shuffle::<1, 4, 7, 0>(v0, v1);
+                let b = i32x4_shuffle::<2, 5, 0, 0>(v0, v1);
+                [
+                    i32x4_shuffle::<0, 1, 2, 5>(r, v2),
+                    i32x4_shuffle::<0, 1, 2, 6>(g, v2),
+                    i32x4_shuffle::<0, 1, 4, 7>(b, v2),
+                ]
+            }}
 
             #[inline(always)]
             fn to_u8_bytes(self, a: v128) -> [u8; 4] {{
@@ -4650,7 +4701,8 @@ fn generate_wasm_native_impl(ty: &FloatVecType) -> String {
             fn bitor(self, a: v128, b: v128) -> v128 {{ v128_or(a, b) }}
             #[inline(always)]
             fn bitxor(self, a: v128, b: v128) -> v128 {{ v128_xor(a, b) }}
-        {pixel_pack}
+        {float_layout}
+            {pixel_pack}
         }}
     "#,
         reduce_add = reduce_add_body(),

@@ -277,6 +277,36 @@ pub trait F32x8Backend:
         out
     }
 
+    /// Load unsigned lanes and convert them exactly, without normalization.
+    #[inline(always)]
+    fn from_u16_lanes(self, lanes: &[u16; 8]) -> Self::Repr {
+        <Self as F32x8Backend>::from_array(self, lanes.map(f32::from))
+    }
+
+    /// Truncate and saturate exactly as Rust's `as u16` on each lane.
+    #[inline(always)]
+    fn to_u16_lanes(self, value: Self::Repr) -> [u16; 8] {
+        <Self as F32x8Backend>::to_array(self, value).map(|x| x as u16)
+    }
+
+    /// Broadcast lane 3 in each consecutive group of four lanes.
+    #[inline(always)]
+    fn broadcast_rgba_alpha_repr(self, value: Self::Repr) -> Self::Repr {
+        let value = <Self as F32x8Backend>::to_array(self, value);
+        <Self as F32x8Backend>::from_array(self, core::array::from_fn(|i| value[i | 3]))
+    }
+
+    /// Replace lane 3 in each consecutive group of four lanes.
+    #[inline(always)]
+    fn with_rgba_alpha_repr(self, value: Self::Repr, src: Self::Repr) -> Self::Repr {
+        let mut value = <Self as F32x8Backend>::to_array(self, value);
+        let src = <Self as F32x8Backend>::to_array(self, src);
+        for i in (3..8).step_by(4) {
+            value[i] = src[i];
+        }
+        <Self as F32x8Backend>::from_array(self, value)
+    }
+
     /// Deinterleave 8 packed RGB pixels (24 floats) from AoS into planar `[R, G, B]`.
     #[inline(always)]
     fn deinterleave_3ch_repr(self, rgb: [Self::Repr; 3]) -> [Self::Repr; 3] {

@@ -307,6 +307,41 @@ impl F32x4Backend for NeonToken {
     }
 
     #[arcane(suppress_const_test, _self = NeonToken)]
+    fn from_u16_lanes(self, lanes: &[u16; 4]) -> float32x4_t {
+        vcvtq_f32_u32(vmovl_u16(crate::simd_storage::cast(*lanes)))
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn to_u16_lanes(self, value: float32x4_t) -> [u16; 4] {
+        crate::simd_storage::cast(vqmovn_u32(vcvtq_u32_f32(value)))
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn broadcast_rgba_alpha_repr(self, value: float32x4_t) -> float32x4_t {
+        vdupq_laneq_f32::<3>(value)
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn with_rgba_alpha_repr(self, value: float32x4_t, src: float32x4_t) -> float32x4_t {
+        vcopyq_laneq_f32::<3, 3>(value, src)
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn transpose_4x4_repr(self, rows: [float32x4_t; 4]) -> [float32x4_t; 4] {
+        let [a, b, c, d] = rows;
+        let ab_lo = vzip1q_f32(a, b);
+        let ab_hi = vzip2q_f32(a, b);
+        let cd_lo = vzip1q_f32(c, d);
+        let cd_hi = vzip2q_f32(c, d);
+        [
+            vcombine_f32(vget_low_f32(ab_lo), vget_low_f32(cd_lo)),
+            vcombine_f32(vget_high_f32(ab_lo), vget_high_f32(cd_lo)),
+            vcombine_f32(vget_low_f32(ab_hi), vget_low_f32(cd_hi)),
+            vcombine_f32(vget_high_f32(ab_hi), vget_high_f32(cd_hi)),
+        ]
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn deinterleave_3ch_repr(self, rgb: [float32x4_t; 3]) -> [float32x4_t; 3] {
         let idx_r: uint8x16_t = crate::simd_storage::cast([
             0u8, 1, 2, 3, 12, 13, 14, 15, 24, 25, 26, 27, 36, 37, 38, 39,
@@ -770,6 +805,34 @@ impl F32x8Backend for NeonToken {
             vorrq_u32(vshlq_n_u32::<16>(b1), vshlq_n_u32::<24>(a1)),
         );
         crate::simd_storage::cast([vreinterpretq_u8_u32(p0), vreinterpretq_u8_u32(p1)])
+    }
+
+    #[inline(always)]
+    fn from_u16_lanes(self, lanes: &[u16; 8]) -> [float32x4_t; 2] {
+        let (chunks, _) = lanes.as_chunks::<4>();
+        core::array::from_fn(|i| <Self as F32x4Backend>::from_u16_lanes(self, &chunks[i]))
+    }
+
+    #[inline(always)]
+    fn to_u16_lanes(self, value: [float32x4_t; 2]) -> [u16; 8] {
+        let parts = value.map(|v| <Self as F32x4Backend>::to_u16_lanes(self, v));
+        core::array::from_fn(|i| parts[i / 4][i % 4])
+    }
+
+    #[inline(always)]
+    fn broadcast_rgba_alpha_repr(self, value: [float32x4_t; 2]) -> [float32x4_t; 2] {
+        value.map(|v| <Self as F32x4Backend>::broadcast_rgba_alpha_repr(self, v))
+    }
+
+    #[inline(always)]
+    fn with_rgba_alpha_repr(
+        self,
+        value: [float32x4_t; 2],
+        src: [float32x4_t; 2],
+    ) -> [float32x4_t; 2] {
+        core::array::from_fn(|i| {
+            <Self as F32x4Backend>::with_rgba_alpha_repr(self, value[i], src[i])
+        })
     }
 
     #[arcane(suppress_const_test, _self = NeonToken)]
@@ -4894,6 +4957,33 @@ impl F32x16Backend for NeonToken {
     #[inline(always)]
     fn sub(self, a: [float32x4_t; 4], b: [float32x4_t; 4]) -> [float32x4_t; 4] {
         core::array::from_fn(|i| <NeonToken as F32x4Backend>::sub(self, a[i], b[i]))
+    }
+    #[inline(always)]
+    fn from_u16_lanes(self, lanes: &[u16; 16]) -> [float32x4_t; 4] {
+        let (chunks, _) = lanes.as_chunks::<4>();
+        core::array::from_fn(|i| <Self as F32x4Backend>::from_u16_lanes(self, &chunks[i]))
+    }
+
+    #[inline(always)]
+    fn to_u16_lanes(self, value: [float32x4_t; 4]) -> [u16; 16] {
+        let parts = value.map(|v| <Self as F32x4Backend>::to_u16_lanes(self, v));
+        core::array::from_fn(|i| parts[i / 4][i % 4])
+    }
+
+    #[inline(always)]
+    fn broadcast_rgba_alpha_repr(self, value: [float32x4_t; 4]) -> [float32x4_t; 4] {
+        value.map(|v| <Self as F32x4Backend>::broadcast_rgba_alpha_repr(self, v))
+    }
+
+    #[inline(always)]
+    fn with_rgba_alpha_repr(
+        self,
+        value: [float32x4_t; 4],
+        src: [float32x4_t; 4],
+    ) -> [float32x4_t; 4] {
+        core::array::from_fn(|i| {
+            <Self as F32x4Backend>::with_rgba_alpha_repr(self, value[i], src[i])
+        })
     }
 
     #[inline(always)]

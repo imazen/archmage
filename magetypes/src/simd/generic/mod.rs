@@ -11,6 +11,7 @@
 mod convert_f16;
 mod cross_width;
 mod fast_ops;
+mod float_layout;
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 mod gather;
 mod generated;

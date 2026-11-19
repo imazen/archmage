@@ -218,6 +218,55 @@ impl F32x4Backend for archmage::Wasm128Token {
     fn bitxor(self, a: v128, b: v128) -> v128 {
         v128_xor(a, b)
     }
+    #[inline(always)]
+    fn from_u16_lanes(self, lanes: &[u16; 4]) -> v128 {
+        let words = u64x2(crate::simd_storage::cast(*lanes), 0);
+        f32x4_convert_u32x4(u32x4_extend_low_u16x8(words))
+    }
+
+    #[inline(always)]
+    fn to_u16_lanes(self, value: v128) -> [u16; 4] {
+        let i = i32x4_trunc_sat_f32x4(value);
+        crate::simd_storage::cast(u64x2_extract_lane::<0>(u16x8_narrow_i32x4(i, i)))
+    }
+
+    #[inline(always)]
+    fn broadcast_rgba_alpha_repr(self, value: v128) -> v128 {
+        i32x4_shuffle::<3, 3, 3, 3>(value, value)
+    }
+
+    #[inline(always)]
+    fn with_rgba_alpha_repr(self, value: v128, src: v128) -> v128 {
+        i32x4_shuffle::<0, 1, 2, 7>(value, src)
+    }
+
+    #[inline(always)]
+    fn transpose_4x4_repr(self, rows: [v128; 4]) -> [v128; 4] {
+        let [a, b, c, d] = rows;
+        let ab_lo = i32x4_shuffle::<0, 4, 1, 5>(a, b);
+        let ab_hi = i32x4_shuffle::<2, 6, 3, 7>(a, b);
+        let cd_lo = i32x4_shuffle::<0, 4, 1, 5>(c, d);
+        let cd_hi = i32x4_shuffle::<2, 6, 3, 7>(c, d);
+        [
+            i64x2_shuffle::<0, 2>(ab_lo, cd_lo),
+            i64x2_shuffle::<1, 3>(ab_lo, cd_lo),
+            i64x2_shuffle::<0, 2>(ab_hi, cd_hi),
+            i64x2_shuffle::<1, 3>(ab_hi, cd_hi),
+        ]
+    }
+
+    #[inline(always)]
+    fn deinterleave_3ch_repr(self, rgb: [v128; 3]) -> [v128; 3] {
+        let [v0, v1, v2] = rgb;
+        let r = i32x4_shuffle::<0, 3, 6, 0>(v0, v1);
+        let g = i32x4_shuffle::<1, 4, 7, 0>(v0, v1);
+        let b = i32x4_shuffle::<2, 5, 0, 0>(v0, v1);
+        [
+            i32x4_shuffle::<0, 1, 2, 5>(r, v2),
+            i32x4_shuffle::<0, 1, 2, 6>(g, v2),
+            i32x4_shuffle::<0, 1, 4, 7>(b, v2),
+        ]
+    }
 
     #[inline(always)]
     fn to_u8_bytes(self, a: v128) -> [u8; 4] {
@@ -547,6 +596,37 @@ impl F32x8Backend for archmage::Wasm128Token {
     #[inline(always)]
     fn bitxor(self, a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
         [v128_xor(a[0], b[0]), v128_xor(a[1], b[1])]
+    }
+    #[inline(always)]
+    fn from_u16_lanes(self, lanes: &[u16; 8]) -> [v128; 2] {
+        let (chunks, _) = lanes.as_chunks::<4>();
+        core::array::from_fn(|i| <Self as F32x4Backend>::from_u16_lanes(self, &chunks[i]))
+    }
+
+    #[inline(always)]
+    fn to_u16_lanes(self, value: [v128; 2]) -> [u16; 8] {
+        let parts = value.map(|v| <Self as F32x4Backend>::to_u16_lanes(self, v));
+        core::array::from_fn(|i| parts[i / 4][i % 4])
+    }
+
+    #[inline(always)]
+    fn broadcast_rgba_alpha_repr(self, value: [v128; 2]) -> [v128; 2] {
+        value.map(|v| <Self as F32x4Backend>::broadcast_rgba_alpha_repr(self, v))
+    }
+
+    #[inline(always)]
+    fn with_rgba_alpha_repr(self, value: [v128; 2], src: [v128; 2]) -> [v128; 2] {
+        core::array::from_fn(|i| {
+            <Self as F32x4Backend>::with_rgba_alpha_repr(self, value[i], src[i])
+        })
+    }
+
+    #[inline(always)]
+    fn deinterleave_3ch_repr(self, rgb: [[v128; 2]; 3]) -> [[v128; 2]; 3] {
+        let [[v0, v1], [v2, v3], [v4, v5]] = rgb;
+        let [r0, g0, b0] = <Self as F32x4Backend>::deinterleave_3ch_repr(self, [v0, v1, v2]);
+        let [r1, g1, b1] = <Self as F32x4Backend>::deinterleave_3ch_repr(self, [v3, v4, v5]);
+        [[r0, r1], [g0, g1], [b0, b1]]
     }
 
     #[inline(always)]
@@ -4286,6 +4366,29 @@ impl F32x16Backend for archmage::Wasm128Token {
     #[inline(always)]
     fn sub(self, a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
         core::array::from_fn(|i| <archmage::Wasm128Token as F32x4Backend>::sub(self, a[i], b[i]))
+    }
+    #[inline(always)]
+    fn from_u16_lanes(self, lanes: &[u16; 16]) -> [v128; 4] {
+        let (chunks, _) = lanes.as_chunks::<4>();
+        core::array::from_fn(|i| <Self as F32x4Backend>::from_u16_lanes(self, &chunks[i]))
+    }
+
+    #[inline(always)]
+    fn to_u16_lanes(self, value: [v128; 4]) -> [u16; 16] {
+        let parts = value.map(|v| <Self as F32x4Backend>::to_u16_lanes(self, v));
+        core::array::from_fn(|i| parts[i / 4][i % 4])
+    }
+
+    #[inline(always)]
+    fn broadcast_rgba_alpha_repr(self, value: [v128; 4]) -> [v128; 4] {
+        value.map(|v| <Self as F32x4Backend>::broadcast_rgba_alpha_repr(self, v))
+    }
+
+    #[inline(always)]
+    fn with_rgba_alpha_repr(self, value: [v128; 4], src: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| {
+            <Self as F32x4Backend>::with_rgba_alpha_repr(self, value[i], src[i])
+        })
     }
 
     #[inline(always)]

@@ -231,6 +231,26 @@ impl F32x4Backend for archmage::X64V4Token {
         overrides::store_rgba_bytes_x4_v4(self, r, g, b, a)
     }
     #[inline(always)]
+    fn from_u16_lanes(self, lanes: &[u16; 4]) -> Self::Repr {
+        <archmage::X64V3Token as F32x4Backend>::from_u16_lanes(self.v3(), lanes)
+    }
+    #[inline(always)]
+    fn to_u16_lanes(self, value: Self::Repr) -> [u16; 4] {
+        <archmage::X64V3Token as F32x4Backend>::to_u16_lanes(self.v3(), value)
+    }
+    #[inline(always)]
+    fn broadcast_rgba_alpha_repr(self, value: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F32x4Backend>::broadcast_rgba_alpha_repr(self.v3(), value)
+    }
+    #[inline(always)]
+    fn with_rgba_alpha_repr(self, value: Self::Repr, src: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F32x4Backend>::with_rgba_alpha_repr(self.v3(), value, src)
+    }
+    #[inline(always)]
+    fn transpose_4x4_repr(self, rows: [Self::Repr; 4]) -> [Self::Repr; 4] {
+        <archmage::X64V3Token as F32x4Backend>::transpose_4x4_repr(self.v3(), rows)
+    }
+    #[inline(always)]
     fn deinterleave_3ch_repr(self, rgb: [Self::Repr; 3]) -> [Self::Repr; 3] {
         <archmage::X64V3Token as F32x4Backend>::deinterleave_3ch_repr(self.v3(), rgb)
     }
@@ -443,6 +463,26 @@ impl F32x4Backend for archmage::X64V4xToken {
         a: Self::Repr,
     ) -> [u8; 16] {
         overrides::store_rgba_bytes_x4_v4(self.v4(), r, g, b, a)
+    }
+    #[inline(always)]
+    fn from_u16_lanes(self, lanes: &[u16; 4]) -> Self::Repr {
+        <archmage::X64V3Token as F32x4Backend>::from_u16_lanes(self.v3(), lanes)
+    }
+    #[inline(always)]
+    fn to_u16_lanes(self, value: Self::Repr) -> [u16; 4] {
+        <archmage::X64V3Token as F32x4Backend>::to_u16_lanes(self.v3(), value)
+    }
+    #[inline(always)]
+    fn broadcast_rgba_alpha_repr(self, value: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F32x4Backend>::broadcast_rgba_alpha_repr(self.v3(), value)
+    }
+    #[inline(always)]
+    fn with_rgba_alpha_repr(self, value: Self::Repr, src: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F32x4Backend>::with_rgba_alpha_repr(self.v3(), value, src)
+    }
+    #[inline(always)]
+    fn transpose_4x4_repr(self, rows: [Self::Repr; 4]) -> [Self::Repr; 4] {
+        <archmage::X64V3Token as F32x4Backend>::transpose_4x4_repr(self.v3(), rows)
     }
     #[inline(always)]
     fn deinterleave_3ch_repr(self, rgb: [Self::Repr; 3]) -> [Self::Repr; 3] {
@@ -659,6 +699,26 @@ impl F32x4Backend for archmage::Avx512Fp16Token {
         overrides::store_rgba_bytes_x4_v4(self.v4(), r, g, b, a)
     }
     #[inline(always)]
+    fn from_u16_lanes(self, lanes: &[u16; 4]) -> Self::Repr {
+        <archmage::X64V3Token as F32x4Backend>::from_u16_lanes(self.v3(), lanes)
+    }
+    #[inline(always)]
+    fn to_u16_lanes(self, value: Self::Repr) -> [u16; 4] {
+        <archmage::X64V3Token as F32x4Backend>::to_u16_lanes(self.v3(), value)
+    }
+    #[inline(always)]
+    fn broadcast_rgba_alpha_repr(self, value: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F32x4Backend>::broadcast_rgba_alpha_repr(self.v3(), value)
+    }
+    #[inline(always)]
+    fn with_rgba_alpha_repr(self, value: Self::Repr, src: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F32x4Backend>::with_rgba_alpha_repr(self.v3(), value, src)
+    }
+    #[inline(always)]
+    fn transpose_4x4_repr(self, rows: [Self::Repr; 4]) -> [Self::Repr; 4] {
+        <archmage::X64V3Token as F32x4Backend>::transpose_4x4_repr(self.v3(), rows)
+    }
+    #[inline(always)]
     fn deinterleave_3ch_repr(self, rgb: [Self::Repr; 3]) -> [Self::Repr; 3] {
         <archmage::X64V3Token as F32x4Backend>::deinterleave_3ch_repr(self.v3(), rgb)
     }
@@ -871,6 +931,22 @@ impl F32x8Backend for archmage::X64V4Token {
         a: Self::Repr,
     ) -> [u8; 32] {
         <archmage::X64V3Token as F32x8Backend>::store_rgba_bytes(self.v3(), r, g, b, a)
+    }
+    #[inline(always)]
+    fn from_u16_lanes(self, lanes: &[u16; 8]) -> Self::Repr {
+        <archmage::X64V3Token as F32x8Backend>::from_u16_lanes(self.v3(), lanes)
+    }
+    #[inline(always)]
+    fn to_u16_lanes(self, value: Self::Repr) -> [u16; 8] {
+        <archmage::X64V3Token as F32x8Backend>::to_u16_lanes(self.v3(), value)
+    }
+    #[inline(always)]
+    fn broadcast_rgba_alpha_repr(self, value: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F32x8Backend>::broadcast_rgba_alpha_repr(self.v3(), value)
+    }
+    #[inline(always)]
+    fn with_rgba_alpha_repr(self, value: Self::Repr, src: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F32x8Backend>::with_rgba_alpha_repr(self.v3(), value, src)
     }
     #[inline(always)]
     fn deinterleave_3ch_repr(self, rgb: [Self::Repr; 3]) -> [Self::Repr; 3] {
@@ -1091,6 +1167,22 @@ impl F32x8Backend for archmage::X64V4xToken {
         <archmage::X64V3Token as F32x8Backend>::store_rgba_bytes(self.v3(), r, g, b, a)
     }
     #[inline(always)]
+    fn from_u16_lanes(self, lanes: &[u16; 8]) -> Self::Repr {
+        <archmage::X64V3Token as F32x8Backend>::from_u16_lanes(self.v3(), lanes)
+    }
+    #[inline(always)]
+    fn to_u16_lanes(self, value: Self::Repr) -> [u16; 8] {
+        <archmage::X64V3Token as F32x8Backend>::to_u16_lanes(self.v3(), value)
+    }
+    #[inline(always)]
+    fn broadcast_rgba_alpha_repr(self, value: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F32x8Backend>::broadcast_rgba_alpha_repr(self.v3(), value)
+    }
+    #[inline(always)]
+    fn with_rgba_alpha_repr(self, value: Self::Repr, src: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F32x8Backend>::with_rgba_alpha_repr(self.v3(), value, src)
+    }
+    #[inline(always)]
     fn deinterleave_3ch_repr(self, rgb: [Self::Repr; 3]) -> [Self::Repr; 3] {
         <archmage::X64V3Token as F32x8Backend>::deinterleave_3ch_repr(self.v3(), rgb)
     }
@@ -1307,6 +1399,22 @@ impl F32x8Backend for archmage::Avx512Fp16Token {
         a: Self::Repr,
     ) -> [u8; 32] {
         <archmage::X64V3Token as F32x8Backend>::store_rgba_bytes(self.v3(), r, g, b, a)
+    }
+    #[inline(always)]
+    fn from_u16_lanes(self, lanes: &[u16; 8]) -> Self::Repr {
+        <archmage::X64V3Token as F32x8Backend>::from_u16_lanes(self.v3(), lanes)
+    }
+    #[inline(always)]
+    fn to_u16_lanes(self, value: Self::Repr) -> [u16; 8] {
+        <archmage::X64V3Token as F32x8Backend>::to_u16_lanes(self.v3(), value)
+    }
+    #[inline(always)]
+    fn broadcast_rgba_alpha_repr(self, value: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F32x8Backend>::broadcast_rgba_alpha_repr(self.v3(), value)
+    }
+    #[inline(always)]
+    fn with_rgba_alpha_repr(self, value: Self::Repr, src: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F32x8Backend>::with_rgba_alpha_repr(self.v3(), value, src)
     }
     #[inline(always)]
     fn deinterleave_3ch_repr(self, rgb: [Self::Repr; 3]) -> [Self::Repr; 3] {
