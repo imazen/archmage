@@ -97,6 +97,25 @@ pub trait F32x4Backend:
     /// Absolute value.
     fn abs(self, a: Self::Repr) -> Self::Repr;
 
+    /// Truncate toward zero without changing the sign of zero.
+    #[inline(always)]
+    fn trunc(self, a: Self::Repr) -> Self::Repr {
+        let lanes = <Self as F32x4Backend>::to_array(self, a);
+        <Self as F32x4Backend>::from_array(self, lanes.map(crate::scalar::trunc_f32))
+    }
+
+    /// Multiply-negate-add with backend-dependent rounding.
+    #[inline(always)]
+    fn mul_neg_add_relaxed(self, a: Self::Repr, b: Self::Repr, c: Self::Repr) -> Self::Repr {
+        <Self as F32x4Backend>::mul_add(self, <Self as F32x4Backend>::neg(self, a), b, c)
+    }
+
+    /// Multiply-negate-add with one rounding.
+    #[inline(always)]
+    fn mul_neg_add_fused(self, a: Self::Repr, b: Self::Repr, c: Self::Repr) -> Self::Repr {
+        <Self as F32x4Backend>::mul_add_portable(self, <Self as F32x4Backend>::neg(self, a), b, c)
+    }
+
     /// Round toward negative infinity.
     fn floor(self, a: Self::Repr) -> Self::Repr;
 
@@ -283,10 +302,57 @@ pub trait F32x4Backend:
         <Self as F32x4Backend>::from_array(self, lanes.map(f32::from))
     }
 
-    /// Truncate and saturate exactly as Rust's `as u16` on each lane.
+    /// Convert lanes to u16 using the encoded policy.
     #[inline(always)]
-    fn to_u16_lanes(self, value: Self::Repr) -> [u16; 4] {
-        <Self as F32x4Backend>::to_array(self, value).map(|x| x as u16)
+    fn to_u16_lanes<const CFG: u32>(self, value: Self::Repr) -> [u16; 4] {
+        <Self as F32x4Backend>::to_array(self, value).map(crate::scalar::to_u16_with::<CFG>)
+    }
+
+    /// Convert lanes to u8 using the encoded policy.
+    #[inline(always)]
+    fn to_u8_lanes<const CFG: u32>(self, value: Self::Repr) -> [u8; 4] {
+        <Self as F32x4Backend>::to_array(self, value).map(crate::scalar::to_u8_with::<CFG>)
+    }
+
+    /// Convert f32 lanes to unsigned u32 stored in the float representation.
+    #[inline(always)]
+    fn to_u32_lanes<const CFG: u32>(self, value: Self::Repr) -> Self::Repr {
+        let lanes = <Self as F32x4Backend>::to_array(self, value);
+        <Self as F32x4Backend>::from_array(
+            self,
+            lanes.map(|x| f32::from_bits(crate::scalar::to_u32_with::<CFG>(x))),
+        )
+    }
+
+    /// Widen unsigned u32 bit patterns stored in the float representation.
+    #[inline(always)]
+    fn from_u32_lanes(self, value: Self::Repr) -> Self::Repr {
+        let lanes = <Self as F32x4Backend>::to_array(self, value);
+        <Self as F32x4Backend>::from_array(self, lanes.map(|x| x.to_bits() as f32))
+    }
+
+    /// Decode binary16 using the encoded policy.
+    #[inline(always)]
+    fn from_f16_lanes<const CFG: u32>(self, lanes: &[u16; 4]) -> Self::Repr {
+        <Self as F32x4Backend>::from_array(self, lanes.map(crate::scalar::from_f16_with::<CFG>))
+    }
+
+    /// Encode binary16 using the encoded policy.
+    #[inline(always)]
+    fn to_f16_lanes<const CFG: u32>(self, value: Self::Repr) -> [u16; 4] {
+        <Self as F32x4Backend>::to_array(self, value).map(crate::scalar::to_f16_bits_with::<CFG>)
+    }
+
+    /// Widen bfloat16 bit patterns.
+    #[inline(always)]
+    fn from_bf16_lanes(self, lanes: &[u16; 4]) -> Self::Repr {
+        <Self as F32x4Backend>::from_array(self, lanes.map(crate::scalar::from_bf16))
+    }
+
+    /// Encode bfloat16 using the encoded policy.
+    #[inline(always)]
+    fn to_bf16_lanes<const CFG: u32>(self, value: Self::Repr) -> [u16; 4] {
+        <Self as F32x4Backend>::to_array(self, value).map(crate::scalar::to_bf16_with::<CFG>)
     }
 
     /// Broadcast lane 3 in each consecutive group of four lanes.
@@ -312,6 +378,19 @@ pub trait F32x4Backend:
     fn transpose_4x4_repr(self, rows: [Self::Repr; 4]) -> [Self::Repr; 4] {
         let rows = rows.map(|r| <Self as F32x4Backend>::to_array(self, r));
         core::array::from_fn(|col| <Self as F32x4Backend>::from_array(self, rows.map(|r| r[col])))
+    }
+
+    /// Quantize and pack planar RGBA with the encoded integer policy.
+    #[inline(always)]
+    fn store_rgba_bytes_with<const CFG: u32>(
+        self,
+        r: Self::Repr,
+        g: Self::Repr,
+        b: Self::Repr,
+        a: Self::Repr,
+    ) -> [u8; 16] {
+        let channels = [r, g, b, a].map(|v| <Self as F32x4Backend>::to_u8_lanes::<CFG>(self, v));
+        core::array::from_fn(|i| channels[i % 4][i / 4])
     }
 
     /// Deinterleave 4 packed RGB pixels (12 floats) from AoS into planar `[R, G, B]`.

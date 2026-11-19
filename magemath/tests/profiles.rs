@@ -215,7 +215,9 @@ const LOG1P_SMALL: u128 = Log1pfOptions::new()
     .bits();
 const CBRT_EXCLUDING_ONE_SPEC: CbrtfOptions = CbrtfOptions::new().input_range(2.0, 8.0);
 const CBRT_EXCLUDING_ONE: u128 = CBRT_EXCLUDING_ONE_SPEC.bits();
-const CBRT_NEAR_ZERO_SPEC: CbrtfOptions = CbrtfOptions::new().input_range(-8.0, 8.0);
+const CBRT_NEAR_ZERO_SPEC: CbrtfOptions = CbrtfOptions::new()
+    .input_range(-8.0, 8.0)
+    .reject_subnormals();
 const CBRT_NEAR_ZERO: u128 = CBRT_NEAR_ZERO_SPEC.bits();
 
 #[test]

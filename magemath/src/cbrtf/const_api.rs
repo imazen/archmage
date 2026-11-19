@@ -15,6 +15,7 @@ impl<const CFG: u128> graph::Kernel for Cfg<CFG> {
     const FULL: bool = graph::KernelCfg::from_options(CbrtfOptions::decode_const(CFG)).full;
     const CLAMP_OOB: bool =
         graph::KernelCfg::from_options(CbrtfOptions::decode_const(CFG)).clamp_oob;
+    const PRESERVE_CLAMPED_NAN: bool = CbrtfOptions::decode_const(CFG).preserve_clamped_nan();
     const LOWP: bool = graph::KernelCfg::from_options(CbrtfOptions::decode_const(CFG)).lowp;
     const ASSUME: bool = graph::KernelCfg::from_options(CbrtfOptions::decode_const(CFG)).assume;
     const IN_LO: f32 = graph::KernelCfg::from_options(CbrtfOptions::decode_const(CFG)).in_lo;

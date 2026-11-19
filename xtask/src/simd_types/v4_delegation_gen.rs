@@ -3,8 +3,7 @@
 //!
 //! Derived from the generated trait definitions, so every method the trait
 //! declares is forwarded and a new trait method cannot silently fall back to
-//! its scalar default body for the AVX-512 tokens (issue #60). The three
-//! methods with a cheaper AVX-512VL form call the hand-written helpers in
+//! its scalar default body for the AVX-512 tokens (issue #60). Methods with a cheaper AVX-512VL form call the hand-written helpers in
 //! `impls/x86_v4_f32_overrides.rs` instead.
 
 use indoc::formatdoc;
@@ -25,6 +24,22 @@ const OVERRIDES: &[(&str, &str, &str)] = &[
     ("F32x4Backend", "store_rgba_bytes", "store_rgba_bytes_x4_v4"),
     ("F32x4Backend", "store_rgb_bytes", "store_rgb_bytes_x4_v4"),
     ("F32x8Backend", "to_u8_bytes", "to_u8_bytes_x8_v4"),
+    ("F32x4Backend", "min", "min_x4_v4"),
+    ("F32x4Backend", "max", "max_x4_v4"),
+    ("F32x4Backend", "to_u16_lanes", "to_u16_lanes_x4_v4"),
+    ("F32x4Backend", "to_u8_lanes", "to_u8_lanes_x4_v4"),
+    ("F32x4Backend", "to_u32_lanes", "to_u32_lanes_x4_v4"),
+    ("F32x4Backend", "from_u32_lanes", "from_u32_lanes_x4_v4"),
+    ("F32x8Backend", "min", "min_x8_v4"),
+    ("F32x8Backend", "max", "max_x8_v4"),
+    ("F32x8Backend", "to_u16_lanes", "to_u16_lanes_x8_v4"),
+    ("F32x8Backend", "to_u8_lanes", "to_u8_lanes_x8_v4"),
+    ("F32x8Backend", "to_u32_lanes", "to_u32_lanes_x8_v4"),
+    ("F32x8Backend", "from_u32_lanes", "from_u32_lanes_x8_v4"),
+    ("F64x2Backend", "rcp_approx", "rcp_approx_f64x2_v4"),
+    ("F64x2Backend", "rsqrt_approx", "rsqrt_approx_f64x2_v4"),
+    ("F64x4Backend", "rcp_approx", "rcp_approx_f64x4_v4"),
+    ("F64x4Backend", "rsqrt_approx", "rsqrt_approx_f64x4_v4"),
 ];
 
 /// Generate the delegation file from the two trait sources.
@@ -136,6 +151,7 @@ pub(crate) fn generate_narrow(specs: &[(String, String)]) -> String {
         // `I8x16Bitcast` impl, …) — every sibling backend trait must be
         // in scope, not just the implemented set.
         use crate::simd::backends::*;
+        use super::x86_v4_f32_overrides as overrides;
 
         {body}
     "#}
@@ -220,7 +236,7 @@ fn delegating_impl(
             .find(|(t, m, _)| *t == trait_name && name == m)
             .map(|(_, _, helper)| format_ident!("{helper}"));
         let body = match override_helper {
-            Some(helper) => quote! { overrides::#helper(#v4, #(#args),*) },
+            Some(helper) => quote! { overrides::#helper #turbofish(#v4, #(#args),*) },
             None => {
                 quote! { <archmage::X64V3Token as #trait_ident>::#name #turbofish(self.v3(), #(#args),*) }
             }

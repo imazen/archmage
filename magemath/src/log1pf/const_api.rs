@@ -24,6 +24,7 @@ impl<const CFG: u128> graph::Kernel for Cfg<CFG> {
     const FLUSH_SUB: bool = Log1pfOptions::decode_const(CFG).to_kernel_cfg().flush_sub;
     const SPECIALS: bool = Log1pfOptions::decode_const(CFG).to_kernel_cfg().specials;
     const CLAMP_OOB: bool = Log1pfOptions::decode_const(CFG).to_kernel_cfg().clamp_oob;
+    const PRESERVE_CLAMPED_NAN: bool = Log1pfOptions::decode_const(CFG).preserve_clamped_nan();
     const LOWP: bool = Log1pfOptions::decode_const(CFG).to_kernel_cfg().lowp;
     const ASSUME: bool = Log1pfOptions::decode_const(CFG).to_kernel_cfg().assume;
     const ELIDE_RED: bool = false;

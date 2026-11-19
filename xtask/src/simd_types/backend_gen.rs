@@ -944,6 +944,25 @@ fn generate_float_backend_trait(ty: &FloatVecType) -> String {
             /// Absolute value.
             fn abs(self, a: Self::Repr) -> Self::Repr;
 
+            /// Truncate toward zero without changing the sign of zero.
+            #[inline(always)]
+            fn trunc(self, a: Self::Repr) -> Self::Repr {{
+                let lanes = <Self as {trait_name}>::to_array(self, a);
+                <Self as {trait_name}>::from_array(self, lanes.map(crate::scalar::trunc_{elem}))
+            }}
+
+            /// Multiply-negate-add with backend-dependent rounding.
+            #[inline(always)]
+            fn mul_neg_add_relaxed(self, a: Self::Repr, b: Self::Repr, c: Self::Repr) -> Self::Repr {{
+                <Self as {trait_name}>::mul_add(self, <Self as {trait_name}>::neg(self, a), b, c)
+            }}
+
+            /// Multiply-negate-add with one rounding.
+            #[inline(always)]
+            fn mul_neg_add_fused(self, a: Self::Repr, b: Self::Repr, c: Self::Repr) -> Self::Repr {{
+                <Self as {trait_name}>::mul_add_portable(self, <Self as {trait_name}>::neg(self, a), b, c)
+            }}
+
             /// Round toward negative infinity.
             fn floor(self, a: Self::Repr) -> Self::Repr;
 
@@ -2009,6 +2028,15 @@ fn generate_x86_float_impl(ty: &FloatVecType, token: &str) -> String {
             }}
 
             {arcane}
+            fn trunc(self, a: {inner}) -> {inner} {{ {p}_round_{s}::<0x0b>(a) }}
+
+            {arcane}
+            fn mul_neg_add_relaxed(self, a: {inner}, b: {inner}, c: {inner}) -> {inner} {{ {p}_fnmadd_{s}(a, b, c) }}
+
+            {arcane}
+            fn mul_neg_add_fused(self, a: {inner}, b: {inner}, c: {inner}) -> {inner} {{ {p}_fnmadd_{s}(a, b, c) }}
+
+            {arcane}
             fn floor(self, a: {inner}) -> {inner} {{
                 {floor_intr}(a)
             }}
@@ -2883,6 +2911,11 @@ fn generate_neon_float_impl(ty: &FloatVecType) -> String {
         _ => unreachable!(),
     };
     let native_lanes = if elem == "f32" { 4 } else { 2 };
+    let base_trait = if elem == "f32" {
+        "F32x4Backend"
+    } else {
+        "F64x2Backend"
+    };
 
     // If this is a native 128-bit type, no polyfill needed
     if ty.native_on_neon() {
@@ -3302,6 +3335,15 @@ fn generate_neon_float_impl(ty: &FloatVecType) -> String {
             fn abs(self, a: {repr}) -> {repr} {{
                 {abs_body}
             }}
+
+            #[inline(always)]
+            fn trunc(self, a: {repr}) -> {repr} {{ a.map(|a| <Self as {base_trait}>::trunc(self, a)) }}
+
+            #[inline(always)]
+            fn mul_neg_add_relaxed(self, a: {repr}, b: {repr}, c: {repr}) -> {repr} {{ core::array::from_fn(|i| <Self as {base_trait}>::mul_neg_add_relaxed(self, a[i], b[i], c[i])) }}
+
+            #[inline(always)]
+            fn mul_neg_add_fused(self, a: {repr}, b: {repr}, c: {repr}) -> {repr} {{ core::array::from_fn(|i| <Self as {base_trait}>::mul_neg_add_fused(self, a[i], b[i], c[i])) }}
 
             {arcane}
             fn floor(self, a: {repr}) -> {repr} {{
@@ -3810,6 +3852,15 @@ fn generate_neon_native_impl(ty: &FloatVecType) -> String {
             {arcane}
             fn abs(self, a: {repr}) -> {repr} {{ vabsq_{ns}(a) }}
             {arcane}
+            fn trunc(self, a: {repr}) -> {repr} {{ vrndq_{ns}(a) }}
+
+            {arcane}
+            fn mul_neg_add_relaxed(self, a: {repr}, b: {repr}, c: {repr}) -> {repr} {{ vfmsq_{ns}(c, a, b) }}
+
+            {arcane}
+            fn mul_neg_add_fused(self, a: {repr}, b: {repr}, c: {repr}) -> {repr} {{ vfmsq_{ns}(c, a, b) }}
+
+            {arcane}
             fn floor(self, a: {repr}) -> {repr} {{ vrndmq_{ns}(a) }}
             {arcane}
             fn ceil(self, a: {repr}) -> {repr} {{ vrndpq_{ns}(a) }}
@@ -3952,8 +4003,8 @@ fn generate_neon_native_impl(ty: &FloatVecType) -> String {
         }}
     "#,
         reduce_add = reduce_pairwise(&format!("vpaddq_{ns}")),
-        reduce_min = reduce_pairwise(&format!("vpminq_{ns}")),
-        reduce_max = reduce_pairwise(&format!("vpmaxq_{ns}")),
+        reduce_min = if elem == "f32" { String::from("vminnmvq_f32(a)") } else { reduce_pairwise(&format!("vpminq_{ns}")) },
+        reduce_max = if elem == "f32" { String::from("vmaxnmvq_f32(a)") } else { reduce_pairwise(&format!("vpmaxq_{ns}")) },
     }
 }
 
@@ -3995,6 +4046,11 @@ fn generate_wasm_float_impl(ty: &FloatVecType) -> String {
     let zero_lit = if elem == "f32" { "0.0f32" } else { "0.0f64" };
     let sub_count = ty.sub_count();
     let native_lanes = if elem == "f32" { 4 } else { 2 };
+    let base_trait = if elem == "f32" {
+        "F32x4Backend"
+    } else {
+        "F64x2Backend"
+    };
 
     if ty.native_on_wasm() {
         return generate_wasm_native_impl(ty);
@@ -4259,6 +4315,15 @@ fn generate_wasm_float_impl(ty: &FloatVecType) -> String {
             fn sqrt(self, a: {repr}) -> {repr} {{ {sqrt} }}
             #[inline(always)]
             fn abs(self, a: {repr}) -> {repr} {{ {abs} }}
+            #[inline(always)]
+            fn trunc(self, a: {repr}) -> {repr} {{ a.map(|a| <Self as {base_trait}>::trunc(self, a)) }}
+
+            #[inline(always)]
+            fn mul_neg_add_relaxed(self, a: {repr}, b: {repr}, c: {repr}) -> {repr} {{ core::array::from_fn(|i| <Self as {base_trait}>::mul_neg_add_relaxed(self, a[i], b[i], c[i])) }}
+
+            #[inline(always)]
+            fn mul_neg_add_fused(self, a: {repr}, b: {repr}, c: {repr}) -> {repr} {{ core::array::from_fn(|i| <Self as {base_trait}>::mul_neg_add_fused(self, a[i], b[i], c[i])) }}
+
             #[inline(always)]
             fn floor(self, a: {repr}) -> {repr} {{ {floor} }}
             #[inline(always)]
@@ -4650,6 +4715,15 @@ fn generate_wasm_native_impl(ty: &FloatVecType) -> String {
             fn sqrt(self, a: v128) -> v128 {{ {wp}_sqrt(a) }}
             #[inline(always)]
             fn abs(self, a: v128) -> v128 {{ {wp}_abs(a) }}
+            #[inline(always)]
+            fn trunc(self, a: v128) -> v128 {{ {wp}_trunc(a) }}
+
+            #[inline(always)]
+            fn mul_neg_add_relaxed(self, a: v128, b: v128, c: v128) -> v128 {{ crate::wasm_fma::nmadd_{wp}(self, a, b, c) }}
+
+            #[inline(always)]
+            fn mul_neg_add_fused(self, a: v128, b: v128, c: v128) -> v128 {{ crate::wasm_fma::fused_{wp}(self, {wp}_neg(a), b, c) }}
+
             #[inline(always)]
             fn floor(self, a: v128) -> v128 {{ {wp}_floor(a) }}
             #[inline(always)]
@@ -7489,14 +7563,12 @@ fn generate_x86_u32_impl(ty: &U32VecType, token: &str) -> String {
 
             {arcane}
             fn simd_le(self, a: {inner}, b: {inner}) -> {inner} {{
-                let gt = <Self as {trait_name}>::simd_gt(_self, a, b);
-                {p}_andnot_si{bits}(gt, {p}_set1_epi32(-1))
+                {p}_cmpeq_epi32({p}_min_epu32(a, b), a)
             }}
 
             {arcane}
             fn simd_ge(self, a: {inner}, b: {inner}) -> {inner} {{
-                let lt = <Self as {trait_name}>::simd_gt(_self, b, a);
-                {p}_andnot_si{bits}(lt, {p}_set1_epi32(-1))
+                {p}_cmpeq_epi32({p}_min_epu32(a, b), b)
             }}
 
             {arcane}

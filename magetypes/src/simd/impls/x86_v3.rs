@@ -146,6 +146,21 @@ impl F32x4Backend for X64V3Token {
     }
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn trunc(self, a: __m128) -> __m128 {
+        _mm_round_ps::<0x0b>(a)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn mul_neg_add_relaxed(self, a: __m128, b: __m128, c: __m128) -> __m128 {
+        _mm_fnmadd_ps(a, b, c)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn mul_neg_add_fused(self, a: __m128, b: __m128, c: __m128) -> __m128 {
+        _mm_fnmadd_ps(a, b, c)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
     fn floor(self, a: __m128) -> __m128 {
         _mm_floor_ps(a)
     }
@@ -365,14 +380,156 @@ impl F32x4Backend for X64V3Token {
     }
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
-    fn to_u16_lanes(self, value: __m128) -> [u16; 4] {
-        // Treat positive overflow as 65535 before cvtt can produce its
-        // integer-indefinite sentinel. NaN and negative overflow become zero in the pack.
-        let i = _mm_cvttps_epi32(_mm_min_ps(_mm_set1_ps(65535.0), value));
+    fn to_u16_lanes<const CFG: u32>(self, value: __m128) -> [u16; 4] {
+        let opts = const { crate::IntConvert::decode(CFG) };
+        let value = if opts.saturates_all() {
+            _mm_min_ps(_mm_set1_ps(65535.0), value)
+        } else {
+            value
+        };
+
+        let i = if opts.rounds() {
+            _mm_cvtps_epi32(value)
+        } else {
+            _mm_cvttps_epi32(value)
+        };
         crate::simd_storage::cast::<_, [u16; 8]>(_mm_packus_epi32(i, i))
             .first_chunk::<4>()
             .copied()
             .unwrap()
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn to_u8_lanes<const CFG: u32>(self, value: __m128) -> [u8; 4] {
+        let opts = const { crate::IntConvert::decode(CFG) };
+        let value = if opts.saturates_all() {
+            _mm_min_ps(_mm_set1_ps(255.0), value)
+        } else {
+            value
+        };
+        let i = if opts.rounds() {
+            _mm_cvtps_epi32(value)
+        } else {
+            _mm_cvttps_epi32(value)
+        };
+        crate::simd_storage::cast(_mm_cvtsi128_si32(_mm_packus_epi16(
+            _mm_packs_epi32(i, i),
+            _mm_setzero_si128(),
+        )) as u32)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn to_u32_lanes<const CFG: u32>(self, value: __m128) -> __m128 {
+        let opts = const { crate::IntConvert::decode(CFG) };
+        let value = if opts.nonnegative() {
+            value
+        } else {
+            _mm_max_ps(value, _mm_setzero_ps())
+        };
+        if const {
+            !crate::IntConvert::decode(CFG).is_in_range()
+                && !crate::IntConvert::decode(CFG).saturates_all()
+        } {
+            let i = if opts.rounds() {
+                _mm_cvtps_epi32(value)
+            } else {
+                _mm_cvttps_epi32(value)
+            };
+            return _mm_castsi128_ps(i);
+        }
+        let offset = _mm_set1_ps(2147483648.0);
+        let hi = _mm_cmp_ps::<_CMP_GE_OQ>(value, offset);
+        let adjusted = _mm_sub_ps(value, _mm_and_ps(hi, offset));
+        let i = if opts.rounds() {
+            _mm_cvtps_epi32(adjusted)
+        } else {
+            _mm_cvttps_epi32(adjusted)
+        };
+        let i = _mm_or_ps(_mm_castsi128_ps(i), _mm_and_ps(hi, _mm_set1_ps(-0.0)));
+        if opts.saturates_all() {
+            let overflow = _mm_cmp_ps::<_CMP_GE_OQ>(value, _mm_set1_ps(4294967296.0));
+            _mm_or_ps(i, overflow)
+        } else {
+            i
+        }
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn from_u32_lanes(self, value: __m128) -> __m128 {
+        let i = _mm_castps_si128(value);
+        // Both halves widen exactly. FMA rounds the reconstructed u32 once.
+        let hi = _mm_cvtepi32_ps(_mm_srli_epi32::<16>(i));
+        let lo = _mm_cvtepi32_ps(_mm_and_si128(i, _mm_set1_epi32(65535)));
+        _mm_fmadd_ps(hi, _mm_set1_ps(65536.0), lo)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn from_f16_lanes<const CFG: u32>(self, lanes: &[u16; 4]) -> __m128 {
+        let opts = const { crate::HalfConvert::decode(CFG) };
+        let h = _mm_cvtsi64_si128(crate::simd_storage::cast(*lanes));
+        let h = if opts.flushes() {
+            let mag = _mm_and_si128(h, _mm_set1_epi16(0x7fff));
+            let small = _mm_cmpgt_epi16(_mm_set1_epi16(0x400), mag);
+            _mm_andnot_si128(_mm_and_si128(small, _mm_set1_epi16(0x7fff)), h)
+        } else {
+            h
+        };
+        _mm_cvtph_ps(h)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn to_f16_lanes<const CFG: u32>(self, value: __m128) -> [u16; 4] {
+        let opts = const { crate::HalfConvert::decode(CFG) };
+        let h = if opts.rounds() {
+            _mm_cvtps_ph::<0>(value)
+        } else {
+            _mm_cvtps_ph::<3>(value)
+        };
+        let h = if opts.flushes() {
+            let mag = _mm_and_si128(h, _mm_set1_epi16(0x7fff));
+            let small = _mm_cmpgt_epi16(_mm_set1_epi16(0x400), mag);
+            _mm_andnot_si128(_mm_and_si128(small, _mm_set1_epi16(0x7fff)), h)
+        } else {
+            h
+        };
+        crate::simd_storage::cast(_mm_cvtsi128_si64(h) as u64)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn from_bf16_lanes(self, lanes: &[u16; 4]) -> __m128 {
+        _mm_castsi128_ps(_mm_slli_epi32::<16>(_mm_cvtepu16_epi32(_mm_cvtsi64_si128(
+            crate::simd_storage::cast(*lanes),
+        ))))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn to_bf16_lanes<const CFG: u32>(self, value: __m128) -> [u16; 4] {
+        let opts = const { crate::HalfConvert::decode(CFG) };
+        let raw = _mm_castps_si128(value);
+        let rounded = if opts.rounds() {
+            let lsb = _mm_and_si128(_mm_srli_epi32::<16>(raw), _mm_set1_epi32(1));
+            _mm_add_epi32(raw, _mm_add_epi32(lsb, _mm_set1_epi32(0x7fff)))
+        } else {
+            raw
+        };
+        let i = _mm_srli_epi32::<16>(rounded);
+        let out: [u16; 4] = crate::simd_storage::cast::<_, [u16; 8]>(_mm_packus_epi32(i, i))
+            .first_chunk::<4>()
+            .copied()
+            .unwrap();
+        if opts.is_finite() && !opts.flushes() {
+            out
+        } else {
+            // Special and signed-subnormal handling is shared with scalar.
+            let original: [f32; 4] = crate::simd_storage::cast(value);
+            core::array::from_fn(|i| {
+                if original[i].is_nan() || (opts.flushes() && out[i] & 0x7f80 == 0) {
+                    crate::scalar::to_bf16_with::<CFG>(original[i])
+                } else {
+                    out[i]
+                }
+            })
+        }
     }
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
@@ -586,6 +743,21 @@ impl F32x8Backend for X64V3Token {
     fn abs(self, a: __m256) -> __m256 {
         let mask = _mm256_castsi256_ps(_mm256_set1_epi32(0x7FFF_FFFFi32));
         _mm256_and_ps(a, mask)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn trunc(self, a: __m256) -> __m256 {
+        _mm256_round_ps::<0x0b>(a)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn mul_neg_add_relaxed(self, a: __m256, b: __m256, c: __m256) -> __m256 {
+        _mm256_fnmadd_ps(a, b, c)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn mul_neg_add_fused(self, a: __m256, b: __m256, c: __m256) -> __m256 {
+        _mm256_fnmadd_ps(a, b, c)
     }
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
@@ -813,14 +985,159 @@ impl F32x8Backend for X64V3Token {
     }
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
-    fn to_u16_lanes(self, value: __m256) -> [u16; 8] {
-        // Treat positive overflow as 65535 before cvtt can produce its
-        // integer-indefinite sentinel. NaN and negative overflow become zero in the pack.
-        let i = _mm256_cvttps_epi32(_mm256_min_ps(_mm256_set1_ps(65535.0), value));
+    fn to_u16_lanes<const CFG: u32>(self, value: __m256) -> [u16; 8] {
+        let opts = const { crate::IntConvert::decode(CFG) };
+        let value = if opts.saturates_all() {
+            _mm256_min_ps(_mm256_set1_ps(65535.0), value)
+        } else {
+            value
+        };
+
+        let i = if opts.rounds() {
+            _mm256_cvtps_epi32(value)
+        } else {
+            _mm256_cvttps_epi32(value)
+        };
         crate::simd_storage::cast(_mm_packus_epi32(
             _mm256_castsi256_si128(i),
             _mm256_extracti128_si256::<1>(i),
         ))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn to_u8_lanes<const CFG: u32>(self, value: __m256) -> [u8; 8] {
+        let opts = const { crate::IntConvert::decode(CFG) };
+        let value = if opts.saturates_all() {
+            _mm256_min_ps(_mm256_set1_ps(255.0), value)
+        } else {
+            value
+        };
+        let i = if opts.rounds() {
+            _mm256_cvtps_epi32(value)
+        } else {
+            _mm256_cvttps_epi32(value)
+        };
+        crate::simd_storage::cast(_mm_cvtsi128_si64(_mm_packus_epi16(
+            _mm_packs_epi32(_mm256_castsi256_si128(i), _mm256_extracti128_si256::<1>(i)),
+            _mm_setzero_si128(),
+        )) as u64)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn to_u32_lanes<const CFG: u32>(self, value: __m256) -> __m256 {
+        let opts = const { crate::IntConvert::decode(CFG) };
+        let value = if opts.nonnegative() {
+            value
+        } else {
+            _mm256_max_ps(value, _mm256_setzero_ps())
+        };
+        if const {
+            !crate::IntConvert::decode(CFG).is_in_range()
+                && !crate::IntConvert::decode(CFG).saturates_all()
+        } {
+            let i = if opts.rounds() {
+                _mm256_cvtps_epi32(value)
+            } else {
+                _mm256_cvttps_epi32(value)
+            };
+            return _mm256_castsi256_ps(i);
+        }
+        let offset = _mm256_set1_ps(2147483648.0);
+        let hi = _mm256_cmp_ps::<_CMP_GE_OQ>(value, offset);
+        let adjusted = _mm256_sub_ps(value, _mm256_and_ps(hi, offset));
+        let i = if opts.rounds() {
+            _mm256_cvtps_epi32(adjusted)
+        } else {
+            _mm256_cvttps_epi32(adjusted)
+        };
+        let i = _mm256_or_ps(
+            _mm256_castsi256_ps(i),
+            _mm256_and_ps(hi, _mm256_set1_ps(-0.0)),
+        );
+        if opts.saturates_all() {
+            let overflow = _mm256_cmp_ps::<_CMP_GE_OQ>(value, _mm256_set1_ps(4294967296.0));
+            _mm256_or_ps(i, overflow)
+        } else {
+            i
+        }
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn from_u32_lanes(self, value: __m256) -> __m256 {
+        let i = _mm256_castps_si256(value);
+        // Both halves widen exactly. FMA rounds the reconstructed u32 once.
+        let hi = _mm256_cvtepi32_ps(_mm256_srli_epi32::<16>(i));
+        let lo = _mm256_cvtepi32_ps(_mm256_and_si256(i, _mm256_set1_epi32(65535)));
+        _mm256_fmadd_ps(hi, _mm256_set1_ps(65536.0), lo)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn from_f16_lanes<const CFG: u32>(self, lanes: &[u16; 8]) -> __m256 {
+        let opts = const { crate::HalfConvert::decode(CFG) };
+        let h = crate::simd_storage::cast(*lanes);
+        let h = if opts.flushes() {
+            let mag = _mm_and_si128(h, _mm_set1_epi16(0x7fff));
+            let small = _mm_cmpgt_epi16(_mm_set1_epi16(0x400), mag);
+            _mm_andnot_si128(_mm_and_si128(small, _mm_set1_epi16(0x7fff)), h)
+        } else {
+            h
+        };
+        _mm256_cvtph_ps(h)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn to_f16_lanes<const CFG: u32>(self, value: __m256) -> [u16; 8] {
+        let opts = const { crate::HalfConvert::decode(CFG) };
+        let h = if opts.rounds() {
+            _mm256_cvtps_ph::<0>(value)
+        } else {
+            _mm256_cvtps_ph::<3>(value)
+        };
+        let h = if opts.flushes() {
+            let mag = _mm_and_si128(h, _mm_set1_epi16(0x7fff));
+            let small = _mm_cmpgt_epi16(_mm_set1_epi16(0x400), mag);
+            _mm_andnot_si128(_mm_and_si128(small, _mm_set1_epi16(0x7fff)), h)
+        } else {
+            h
+        };
+        crate::simd_storage::cast(h)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn from_bf16_lanes(self, lanes: &[u16; 8]) -> __m256 {
+        _mm256_castsi256_ps(_mm256_slli_epi32::<16>(_mm256_cvtepu16_epi32(
+            crate::simd_storage::cast(*lanes),
+        )))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn to_bf16_lanes<const CFG: u32>(self, value: __m256) -> [u16; 8] {
+        let opts = const { crate::HalfConvert::decode(CFG) };
+        let raw = _mm256_castps_si256(value);
+        let rounded = if opts.rounds() {
+            let lsb = _mm256_and_si256(_mm256_srli_epi32::<16>(raw), _mm256_set1_epi32(1));
+            _mm256_add_epi32(raw, _mm256_add_epi32(lsb, _mm256_set1_epi32(0x7fff)))
+        } else {
+            raw
+        };
+        let i = _mm256_srli_epi32::<16>(rounded);
+        let out: [u16; 8] = crate::simd_storage::cast(_mm_packus_epi32(
+            _mm256_castsi256_si128(i),
+            _mm256_extracti128_si256::<1>(i),
+        ));
+        if opts.is_finite() && !opts.flushes() {
+            out
+        } else {
+            // Special and signed-subnormal handling is shared with scalar.
+            let original: [f32; 8] = crate::simd_storage::cast(value);
+            core::array::from_fn(|i| {
+                if original[i].is_nan() || (opts.flushes() && out[i] & 0x7f80 == 0) {
+                    crate::scalar::to_bf16_with::<CFG>(original[i])
+                } else {
+                    out[i]
+                }
+            })
+        }
     }
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
@@ -1066,6 +1383,21 @@ impl F64x2Backend for X64V3Token {
     fn abs(self, a: __m128d) -> __m128d {
         let mask = _mm_castsi128_pd(_mm_set1_epi64x(0x7FFF_FFFF_FFFF_FFFFi64));
         _mm_and_pd(a, mask)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn trunc(self, a: __m128d) -> __m128d {
+        _mm_round_pd::<0x0b>(a)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn mul_neg_add_relaxed(self, a: __m128d, b: __m128d, c: __m128d) -> __m128d {
+        _mm_fnmadd_pd(a, b, c)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn mul_neg_add_fused(self, a: __m128d, b: __m128d, c: __m128d) -> __m128d {
+        _mm_fnmadd_pd(a, b, c)
     }
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
@@ -1333,6 +1665,21 @@ impl F64x4Backend for X64V3Token {
     fn abs(self, a: __m256d) -> __m256d {
         let mask = _mm256_castsi256_pd(_mm256_set1_epi64x(0x7FFF_FFFF_FFFF_FFFFi64));
         _mm256_and_pd(a, mask)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn trunc(self, a: __m256d) -> __m256d {
+        _mm256_round_pd::<0x0b>(a)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn mul_neg_add_relaxed(self, a: __m256d, b: __m256d, c: __m256d) -> __m256d {
+        _mm256_fnmadd_pd(a, b, c)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn mul_neg_add_fused(self, a: __m256d, b: __m256d, c: __m256d) -> __m256d {
+        _mm256_fnmadd_pd(a, b, c)
     }
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
@@ -2033,14 +2380,12 @@ impl U32x4Backend for X64V3Token {
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn simd_le(self, a: __m128i, b: __m128i) -> __m128i {
-        let gt = <Self as U32x4Backend>::simd_gt(_self, a, b);
-        _mm_andnot_si128(gt, _mm_set1_epi32(-1))
+        _mm_cmpeq_epi32(_mm_min_epu32(a, b), a)
     }
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn simd_ge(self, a: __m128i, b: __m128i) -> __m128i {
-        let lt = <Self as U32x4Backend>::simd_gt(_self, b, a);
-        _mm_andnot_si128(lt, _mm_set1_epi32(-1))
+        _mm_cmpeq_epi32(_mm_min_epu32(a, b), b)
     }
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
@@ -2229,14 +2574,12 @@ impl U32x8Backend for X64V3Token {
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn simd_le(self, a: __m256i, b: __m256i) -> __m256i {
-        let gt = <Self as U32x8Backend>::simd_gt(_self, a, b);
-        _mm256_andnot_si256(gt, _mm256_set1_epi32(-1))
+        _mm256_cmpeq_epi32(_mm256_min_epu32(a, b), a)
     }
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn simd_ge(self, a: __m256i, b: __m256i) -> __m256i {
-        let lt = <Self as U32x8Backend>::simd_gt(_self, b, a);
-        _mm256_andnot_si256(lt, _mm256_set1_epi32(-1))
+        _mm256_cmpeq_epi32(_mm256_min_epu32(a, b), b)
     }
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
@@ -5208,10 +5551,98 @@ impl F32x16Backend for X64V3Token {
         core::array::from_fn(|i| <Self as F32x8Backend>::from_u16_lanes(self, &chunks[i]))
     }
 
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn to_u16_lanes<const CFG: u32>(self, value: [__m256; 2]) -> [u16; 16] {
+        let opts = const { crate::IntConvert::decode(CFG) };
+        let convert = |v| {
+            let v = if opts.saturates_all() {
+                _mm256_min_ps(_mm256_set1_ps(65535.0), v)
+            } else {
+                v
+            };
+            if opts.rounds() {
+                _mm256_cvtps_epi32(v)
+            } else {
+                _mm256_cvttps_epi32(v)
+            }
+        };
+        let packed = _mm256_packus_epi32(convert(value[0]), convert(value[1]));
+        crate::simd_storage::cast(_mm256_permute4x64_epi64::<0xd8>(packed))
+    }
+
     #[inline(always)]
-    fn to_u16_lanes(self, value: [__m256; 2]) -> [u16; 16] {
-        let parts = value.map(|v| <Self as F32x8Backend>::to_u16_lanes(self, v));
-        core::array::from_fn(|i| parts[i / 8][i % 8])
+    fn to_u8_lanes<const CFG: u32>(self, value: [__m256; 2]) -> [u8; 16] {
+        let parts = value.map(|v| <Self as F32x8Backend>::to_u8_lanes::<CFG>(self, v));
+        crate::simd_storage::cast(parts)
+    }
+
+    #[inline(always)]
+    fn to_u32_lanes<const CFG: u32>(self, value: [__m256; 2]) -> [__m256; 2] {
+        value.map(|part| <Self as F32x8Backend>::to_u32_lanes::<CFG>(self, part))
+    }
+
+    #[inline(always)]
+    fn from_u32_lanes(self, value: [__m256; 2]) -> [__m256; 2] {
+        value.map(|part| <Self as F32x8Backend>::from_u32_lanes(self, part))
+    }
+
+    #[inline(always)]
+    fn from_f16_lanes<const CFG: u32>(self, lanes: &[u16; 16]) -> [__m256; 2] {
+        let (chunks, _) = lanes.as_chunks::<8>();
+        core::array::from_fn(|i| <Self as F32x8Backend>::from_f16_lanes::<CFG>(self, &chunks[i]))
+    }
+
+    #[inline(always)]
+    fn to_f16_lanes<const CFG: u32>(self, value: [__m256; 2]) -> [u16; 16] {
+        crate::simd_storage::cast(
+            value.map(|part| <Self as F32x8Backend>::to_f16_lanes::<CFG>(self, part)),
+        )
+    }
+
+    #[inline(always)]
+    fn from_bf16_lanes(self, lanes: &[u16; 16]) -> [__m256; 2] {
+        let (chunks, _) = lanes.as_chunks::<8>();
+        core::array::from_fn(|i| <Self as F32x8Backend>::from_bf16_lanes(self, &chunks[i]))
+    }
+
+    #[inline(always)]
+    fn to_bf16_lanes<const CFG: u32>(self, value: [__m256; 2]) -> [u16; 16] {
+        crate::simd_storage::cast(
+            value.map(|part| <Self as F32x8Backend>::to_bf16_lanes::<CFG>(self, part)),
+        )
+    }
+
+    #[inline(always)]
+    fn from_u8_lanes_wide(self, lanes: &[u8; 16]) -> [__m256; 2] {
+        use crate::simd::generic::f32x8 as V;
+        let (parts, _) = lanes.as_chunks::<8>();
+        core::array::from_fn(|i| V::from_u8_t(self, &parts[i]).into_repr())
+    }
+
+    #[inline(always)]
+    fn deinterleave_rgba_wide(self, rgba: [[__m256; 2]; 4]) -> [[__m256; 2]; 4] {
+        use crate::simd::generic::f32x8 as V;
+        let groups: [[V<Self>; 4]; 2] = core::array::from_fn(|i| {
+            V::deinterleave_4ch(core::array::from_fn(|j| {
+                let block = 4 * i + j;
+                V::from_repr_unchecked(self, rgba[block / 2][block % 2])
+            }))
+        });
+        core::array::from_fn(|c| core::array::from_fn(|i| groups[i][c].into_repr()))
+    }
+
+    #[inline(always)]
+    fn interleave_rgba_wide(self, channels: [[__m256; 2]; 4]) -> [[__m256; 2]; 4] {
+        use crate::simd::generic::f32x8 as V;
+        let groups: [[V<Self>; 4]; 2] = core::array::from_fn(|i| {
+            V::interleave_4ch(channels.map(|c| V::from_repr_unchecked(self, c[i])))
+        });
+        core::array::from_fn(|i| {
+            core::array::from_fn(|j| {
+                let block = i * 2 + j;
+                groups[block / 4][block % 4].into_repr()
+            })
+        })
     }
 
     #[inline(always)]
@@ -5272,6 +5703,23 @@ impl F32x16Backend for X64V3Token {
             <X64V3Token as F32x8Backend>::abs(self, a[0]),
             <X64V3Token as F32x8Backend>::abs(self, a[1]),
         ]
+    }
+
+    #[inline(always)]
+    fn trunc(self, a: [__m256; 2]) -> [__m256; 2] {
+        a.map(|a| <Self as F32x8Backend>::trunc(self, a))
+    }
+
+    #[inline(always)]
+    fn mul_neg_add_relaxed(self, a: [__m256; 2], b: [__m256; 2], c: [__m256; 2]) -> [__m256; 2] {
+        core::array::from_fn(|i| {
+            <Self as F32x8Backend>::mul_neg_add_relaxed(self, a[i], b[i], c[i])
+        })
+    }
+
+    #[inline(always)]
+    fn mul_neg_add_fused(self, a: [__m256; 2], b: [__m256; 2], c: [__m256; 2]) -> [__m256; 2] {
+        core::array::from_fn(|i| <Self as F32x8Backend>::mul_neg_add_fused(self, a[i], b[i], c[i]))
     }
 
     #[inline(always)]
@@ -5628,6 +6076,28 @@ impl F64x8Backend for X64V3Token {
             <X64V3Token as F64x4Backend>::abs(self, a[0]),
             <X64V3Token as F64x4Backend>::abs(self, a[1]),
         ]
+    }
+
+    #[inline(always)]
+    fn trunc(self, a: [__m256d; 2]) -> [__m256d; 2] {
+        a.map(|a| <Self as F64x4Backend>::trunc(self, a))
+    }
+
+    #[inline(always)]
+    fn mul_neg_add_relaxed(
+        self,
+        a: [__m256d; 2],
+        b: [__m256d; 2],
+        c: [__m256d; 2],
+    ) -> [__m256d; 2] {
+        core::array::from_fn(|i| {
+            <Self as F64x4Backend>::mul_neg_add_relaxed(self, a[i], b[i], c[i])
+        })
+    }
+
+    #[inline(always)]
+    fn mul_neg_add_fused(self, a: [__m256d; 2], b: [__m256d; 2], c: [__m256d; 2]) -> [__m256d; 2] {
+        core::array::from_fn(|i| <Self as F64x4Backend>::mul_neg_add_fused(self, a[i], b[i], c[i]))
     }
 
     #[inline(always)]

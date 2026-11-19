@@ -339,3 +339,33 @@ mod tests {
         }
     }
 }
+
+#[cfg(not(target_feature = "relaxed-simd"))]
+#[archmage::rite]
+pub(crate) fn nmadd_f32x4(_token: Wasm128Token, a: v128, b: v128, c: v128) -> v128 {
+    w::f32x4_add(w::f32x4_mul(w::f32x4_neg(a), b), c)
+}
+
+#[cfg(target_feature = "relaxed-simd")]
+#[archmage::rite]
+pub(crate) fn nmadd_f32x4(_token: Wasm128Token, a: v128, b: v128, c: v128) -> v128 {
+    w::f32x4_relaxed_nmadd(a, b, c)
+}
+
+#[cfg(not(target_feature = "relaxed-simd"))]
+#[archmage::rite]
+pub(crate) fn nmadd_f64x2(_token: Wasm128Token, a: v128, b: v128, c: v128) -> v128 {
+    w::f64x2_add(w::f64x2_mul(w::f64x2_neg(a), b), c)
+}
+
+#[cfg(target_feature = "relaxed-simd")]
+#[archmage::rite]
+pub(crate) fn nmadd_f64x2(_token: Wasm128Token, a: v128, b: v128, c: v128) -> v128 {
+    w::f64x2_relaxed_nmadd(a, b, c)
+}
+
+#[cfg(target_feature = "relaxed-simd")]
+#[archmage::rite]
+pub(crate) fn trunc_u32_f32x4_fast(_token: Wasm128Token, a: v128) -> v128 {
+    w::u32x4_relaxed_trunc_f32x4(a)
+}

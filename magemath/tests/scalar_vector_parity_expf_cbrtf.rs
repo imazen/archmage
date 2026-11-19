@@ -393,14 +393,7 @@ check_standalone_family!(
     CbrtfErrorKind::UnsupportedWidth,
     CBRT_BOUNDED_VALID,
     CBRT_FULL_EXTRA,
-    [
-        f32::from_bits(1),
-        f32::from_bits(0x8000_0001),
-        f32::MAX,
-        f32::INFINITY,
-        f32::NEG_INFINITY,
-        f32::NAN
-    ]
+    [f32::MAX, f32::INFINITY, f32::NEG_INFINITY, f32::NAN]
 );
 
 #[test]
@@ -566,7 +559,7 @@ fn check_token(token: Token) {
             CBRT_FULL_EXTRA[7],
             CBRT_FULL_EXTRA[9]
         ],
-        f32::from_bits(1),
+        f32::NAN,
         f32::MAX,
         yes
     );

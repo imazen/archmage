@@ -34,7 +34,7 @@ impl<T: F32x4Convert> f32x4<T> {
     /// Scalar tail equivalent: [`to_i32_fast`](crate::scalar::to_i32_fast).
     #[inline(always)]
     pub fn to_i32_fast(self) -> i32x4<T> {
-        i32x4::from_repr_unchecked(self.1, T::convert_f32_to_i32_fast(self.1, self.0))
+        self.to_i32_with::<{ crate::IntConvert::new().trunc().in_range().bits() }>()
     }
 }
 
@@ -43,7 +43,7 @@ impl<T: F32x8Convert> f32x8<T> {
     /// See [`f32x4::to_i32_fast`].
     #[inline(always)]
     pub fn to_i32_fast(self) -> i32x8<T> {
-        i32x8::from_repr_unchecked(self.1, T::convert_f32_to_i32_fast(self.1, self.0))
+        self.to_i32_with::<{ crate::IntConvert::new().trunc().in_range().bits() }>()
     }
 }
 
@@ -53,6 +53,6 @@ impl<T: F32x16Convert> f32x16<T> {
     /// See [`f32x4::to_i32_fast`].
     #[inline(always)]
     pub fn to_i32_fast(self) -> i32x16<T> {
-        i32x16::from_repr_unchecked(self.1, T::convert_f32_to_i32_fast(self.1, self.0))
+        self.to_i32_with::<{ crate::IntConvert::new().trunc().in_range().bits() }>()
     }
 }

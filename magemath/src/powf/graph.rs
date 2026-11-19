@@ -35,6 +35,7 @@ pub(super) trait Kernel: 'static {
     const CLAMP: bool;
     /// Out-of-bounds inputs are clamped into domain (`NaN -> NaN`).
     const CLAMP_OOB: bool;
+    const PRESERVE_CLAMPED_NAN: bool;
     const LOWP: bool;
     const ASSUME: bool;
     /// Algebraic hardware fast-path (`0` = log2/exp2 graph, `1..=11` = IEEE op).
@@ -54,6 +55,7 @@ pub(super) struct KernelCfg {
     pub(super) elide: bool,
     pub(super) clamp: bool,
     pub(super) clamp_oob: bool,
+    pub(crate) preserve_clamped_nan: bool,
     pub(super) lowp: bool,
     pub(super) assume: bool,
     pub(super) alg_kind: u8,
@@ -81,6 +83,7 @@ impl KernelCfg {
             elide: opts.elides_range_check(),
             clamp: opts.should_clamp(),
             clamp_oob: opts.clamp_oob(),
+            preserve_clamped_nan: opts.preserve_clamped_nan(),
             lowp: opts.is_lowp(),
             assume: opts.assume_valid(),
             alg_kind: opts.alg_kind(),
@@ -103,6 +106,7 @@ pub(super) const fn cfg_of<K: Kernel>() -> KernelCfg {
         elide: K::ELIDE,
         clamp: K::CLAMP,
         clamp_oob: K::CLAMP_OOB,
+        preserve_clamped_nan: K::PRESERVE_CLAMPED_NAN,
         lowp: K::LOWP,
         assume: K::ASSUME,
         alg_kind: K::ALG_KIND,
@@ -128,6 +132,7 @@ macro_rules! eval_powf {
         $elide:expr,
         $clamp:expr,
         $clamp_oob:expr,
+        $preserve_clamped_nan:expr,
         $lowp:expr,
         $assume:expr,
         $alg_kind:expr,
@@ -150,21 +155,28 @@ macro_rules! eval_powf {
         };
         let hi_bound = if $ranged { $base_hi } else { f32::MAX };
         let zero_ok = $zero && ($elide || eff_exp >= 0.0);
-        let is_nan = if $clamp_oob {
+        let is_nan = if $preserve_clamped_nan {
             $input.simd_ne($input)
         } else {
             ip(0).bitcast_to_f32()
         };
         let work_in = if $clamp_oob {
-            let c = if zero_ok {
+            let c = if !$preserve_clamped_nan && !zero_ok {
+                $input.max_fast(sp(lo_bound)).min_fast(sp(hi_bound))
+            } else if zero_ok {
                 if $subnorm {
                     let nonpos = $input.simd_le(sp(0.0));
                     let lo_clamped = $V::blend(nonpos, sp(0.0), $input);
                     $V::blend($input.simd_gt(sp(hi_bound)), sp(hi_bound), lo_clamped)
                 } else if !$ranged || $base_lo == f32::MIN_POSITIVE {
-                    let lo_clamped =
-                        $V::blend($input.simd_lt(sp(f32::MIN_POSITIVE)), sp(0.0), $input);
-                    $V::blend($input.simd_gt(sp(hi_bound)), sp(hi_bound), lo_clamped)
+                    if !$preserve_clamped_nan {
+                        let normal = $input & $input.simd_ge(sp(f32::MIN_POSITIVE));
+                        normal.min_fast(sp(hi_bound))
+                    } else {
+                        let lo_clamped =
+                            $V::blend($input.simd_lt(sp(f32::MIN_POSITIVE)), sp(0.0), $input);
+                        $V::blend($input.simd_gt(sp(hi_bound)), sp(hi_bound), lo_clamped)
+                    }
                 } else {
                     let zero_or_sub = $input.simd_lt(sp(f32::MIN_POSITIVE));
                     let lo_clamped = $V::blend(
@@ -181,7 +193,11 @@ macro_rules! eval_powf {
                     $V::blend($input.simd_gt(sp(hi_bound)), sp(hi_bound), $input),
                 )
             };
-            $V::blend(is_nan, sp(1.0), c)
+            if $preserve_clamped_nan {
+                $V::blend(is_nan, sp(1.0), c)
+            } else {
+                c
+            }
         } else if $flush_sub && !$assume {
             let in_bits = $input.bitcast_to_i32();
             let pos_sub = in_bits.simd_gt(ip(0)) & in_bits.simd_lt(ip(0x0080_0000));
@@ -446,7 +462,7 @@ macro_rules! eval_powf {
             } else {
                 result
             };
-        let result = if $clamp_oob {
+        let result = if $preserve_clamped_nan {
             $V::blend(is_nan, sp(f32::NAN), result)
         } else {
             result
@@ -482,6 +498,7 @@ macro_rules! graph {
                 cfg.elide,
                 cfg.clamp,
                 cfg.clamp_oob,
+                cfg.preserve_clamped_nan,
                 cfg.lowp,
                 cfg.assume,
                 cfg.alg_kind,
@@ -514,6 +531,7 @@ macro_rules! graph {
                 K::ELIDE,
                 K::CLAMP,
                 K::CLAMP_OOB,
+                K::PRESERVE_CLAMPED_NAN,
                 K::LOWP,
                 K::ASSUME,
                 K::ALG_KIND,

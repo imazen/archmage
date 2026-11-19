@@ -104,7 +104,7 @@ fn cbrt_midp_and_lowp_accuracy_and_signs() {
 
 #[test]
 fn cbrt_domain_validation_and_cross_tier_bit_exactness() {
-    const CHECKED: u128 = CbrtfOptions::new().bits();
+    const CHECKED: u128 = CbrtfOptions::new().reject_subnormals().bits();
     const CALLER_MIDP: u128 = CbrtfOptions::new().caller().bits();
 
     // Reject subnormal, >= f32::MAX / 3, inf, NaN in Bounded Checked mode

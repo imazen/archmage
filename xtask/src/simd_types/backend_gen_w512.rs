@@ -495,6 +495,25 @@ fn generate_float_backend_trait(ty: &W512Type) -> String {
             /// Absolute value.
             fn abs(self, a: Self::Repr) -> Self::Repr;
 
+            /// Truncate toward zero without changing the sign of zero.
+            #[inline(always)]
+            fn trunc(self, a: Self::Repr) -> Self::Repr {{
+                let lanes = <Self as {trait_name}>::to_array(self, a);
+                <Self as {trait_name}>::from_array(self, lanes.map(crate::scalar::trunc_{elem}))
+            }}
+
+            /// Multiply-negate-add with backend-dependent rounding.
+            #[inline(always)]
+            fn mul_neg_add_relaxed(self, a: Self::Repr, b: Self::Repr, c: Self::Repr) -> Self::Repr {{
+                <Self as {trait_name}>::mul_add(self, <Self as {trait_name}>::neg(self, a), b, c)
+            }}
+
+            /// Multiply-negate-add with one rounding.
+            #[inline(always)]
+            fn mul_neg_add_fused(self, a: Self::Repr, b: Self::Repr, c: Self::Repr) -> Self::Repr {{
+                <Self as {trait_name}>::mul_add_portable(self, <Self as {trait_name}>::neg(self, a), b, c)
+            }}
+
             /// Round toward negative infinity.
             fn floor(self, a: Self::Repr) -> Self::Repr;
 
@@ -1704,6 +1723,15 @@ fn generate_v3_polyfill_impl(ty: &W512Type) -> String {
             }}
 
             #[inline(always)]
+            fn trunc(self, a: {v3_repr}) -> {v3_repr} {{ a.map(|a| <Self as {half_trait}>::trunc(self, a)) }}
+
+            #[inline(always)]
+            fn mul_neg_add_relaxed(self, a: {v3_repr}, b: {v3_repr}, c: {v3_repr}) -> {v3_repr} {{ core::array::from_fn(|i| <Self as {half_trait}>::mul_neg_add_relaxed(self, a[i], b[i], c[i])) }}
+
+            #[inline(always)]
+            fn mul_neg_add_fused(self, a: {v3_repr}, b: {v3_repr}, c: {v3_repr}) -> {v3_repr} {{ core::array::from_fn(|i| <Self as {half_trait}>::mul_neg_add_fused(self, a[i], b[i], c[i])) }}
+
+            #[inline(always)]
             fn floor(self, a: {v3_repr}) -> {v3_repr} {{
                 [
                     <archmage::X64V3Token as {half_trait}>::floor(self, a[0]),
@@ -2256,6 +2284,15 @@ fn generate_4way_polyfill_impl(
             }}
 
             #[inline(always)]
+            fn trunc(self, a: {repr}) -> {repr} {{ a.map(|a| <Self as {quarter_trait}>::trunc(self, a)) }}
+
+            #[inline(always)]
+            fn mul_neg_add_relaxed(self, a: {repr}, b: {repr}, c: {repr}) -> {repr} {{ core::array::from_fn(|i| <Self as {quarter_trait}>::mul_neg_add_relaxed(self, a[i], b[i], c[i])) }}
+
+            #[inline(always)]
+            fn mul_neg_add_fused(self, a: {repr}, b: {repr}, c: {repr}) -> {repr} {{ core::array::from_fn(|i| <Self as {quarter_trait}>::mul_neg_add_fused(self, a[i], b[i], c[i])) }}
+
+            #[inline(always)]
             fn floor(self, a: {repr}) -> {repr} {{
                 core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::floor(self, a[i]))
             }}
@@ -2523,6 +2560,20 @@ fn generate_x86_v4_float_impl_for_token(ty: &W512Type, token: &str) -> String {
     // exact division — one step from 14 bits is ~28 bits, far short of the
     // contract, and the two-step form was never measured against
     // _mm512_div_pd.
+    let numeric_min = if elem == "f32" {
+        "_mm512_range_ps::<0x04>(a, b)".to_string()
+    } else {
+        format!(
+            "_mm512_mask_blend_{s}(_mm512_cmp_{s}_mask::<_CMP_UNORD_Q>(b, b), _mm512_min_{s}(a, b), a)"
+        )
+    };
+    let numeric_max = if elem == "f32" {
+        "_mm512_range_ps::<0x05>(a, b)".to_string()
+    } else {
+        format!(
+            "_mm512_mask_blend_{s}(_mm512_cmp_{s}_mask::<_CMP_UNORD_Q>(b, b), _mm512_max_{s}(a, b), a)"
+        )
+    };
     let working_recip_512 = if elem == "f32" {
         // rcp14/rsqrt14 + one FMA-Newton step + VFIXUPIMM rail patch. The
         // fixup tables classify the ORIGINAL input and overwrite exactly the
@@ -2636,12 +2687,12 @@ fn generate_x86_v4_float_impl_for_token(ty: &W512Type, token: &str) -> String {
 
             {arcane}
             fn min(self, a: {inner}, b: {inner}) -> {inner} {{
-                _mm512_mask_blend_{s}(_mm512_cmp_{s}_mask::<_CMP_UNORD_Q>(b, b), _mm512_min_{s}(a, b), a)
+                {numeric_min}
             }}
 
             {arcane}
             fn max(self, a: {inner}, b: {inner}) -> {inner} {{
-                _mm512_mask_blend_{s}(_mm512_cmp_{s}_mask::<_CMP_UNORD_Q>(b, b), _mm512_max_{s}(a, b), a)
+                {numeric_max}
             }}
 
             {arcane}
@@ -2682,6 +2733,15 @@ fn generate_x86_v4_float_impl_for_token(ty: &W512Type, token: &str) -> String {
                 let mask = _mm512_castsi512_{s}(_mm512_set1_{epi}({abs_mask}));
                 _mm512_and_{s}(a, mask)
             }}
+
+            {arcane}
+            fn trunc(self, a: {inner}) -> {inner} {{ _mm512_roundscale_{s}::<0x03>(a) }}
+
+            {arcane}
+            fn mul_neg_add_relaxed(self, a: {inner}, b: {inner}, c: {inner}) -> {inner} {{ _mm512_fnmadd_{s}(a, b, c) }}
+
+            {arcane}
+            fn mul_neg_add_fused(self, a: {inner}, b: {inner}, c: {inner}) -> {inner} {{ _mm512_fnmadd_{s}(a, b, c) }}
 
             {arcane}
             fn floor(self, a: {inner}) -> {inner} {{
@@ -2926,10 +2986,24 @@ fn generate_x86_v4_int_impl_for_token(ty: &W512Type, token: &str) -> String {
             "#}
         };
 
+        let shl = if elem_bits == 32 {
+            let cases = (0..32)
+                .map(|shift| format!("    {shift} => _mm512_slli_epi32::<{shift}>(a),"))
+                .collect::<Vec<_>>()
+                .join("\n");
+            formatdoc! {r#"
+                match N {{
+                {cases}
+                    _ => unreachable!("shift count checked by the public API"),
+                }}
+            "#}
+        } else {
+            format!("_mm512_sll_{epi}(a, _mm_cvtsi32_si128(N))")
+        };
         formatdoc! {r#"
             {arcane}
             fn shl_const<const N: i32>(self, a: __m512i) -> __m512i {{
-                _mm512_sll_{epi}(a, _mm_cvtsi32_si128(N))
+                {shl}
             }}
 
             {shr_arith}
@@ -3085,25 +3159,13 @@ fn generate_x86_v4_int_impl_for_token(ty: &W512Type, token: &str) -> String {
 
             {arcane}
             fn bitmask(self, a: __m512i) -> u64 {{
-                // Extract high bit of each lane: compare < 0 for signed interpretation
-                let zero = _mm512_setzero_si512();
-                _mm512_cmpneq_{blend_suffix}_mask(
-                    _mm512_and_si512(a, _mm512_set1_{set1_signed}(1_{sign_type} << ({elem_bits} - 1))),
-                    zero
-                ){mask_as_u64}
+                _mm512_movepi{elem_bits}_mask(a){mask_as_u64}
             }}
         {integer_methods}
         }}
     "#,
         // 8-bit lanes have a 64-bit mask already; narrower masks widen.
         mask_as_u64 = if elem_bits == 8 { "" } else { " as u64" },
-        sign_type = match elem_bits {
-            8 => "i8",
-            16 => "i16",
-            32 => "i32",
-            64 => "i64",
-            _ => unreachable!(),
-        },
     }
 }
 

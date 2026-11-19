@@ -770,3 +770,7 @@ pub fn mul_add_relaxed_f64<T: F64ScalarBackend>(token: T, a: f64, b: f64, c: f64
 pub fn mul_sub_relaxed_f64<T: F64ScalarBackend>(token: T, a: f64, b: f64, c: f64) -> f64 {
     token.mul_sub_relaxed_f64(a, b, c)
 }
+
+#[path = "scalar_numerics.rs"]
+mod numerics;
+pub use numerics::*;

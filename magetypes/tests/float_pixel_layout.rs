@@ -1,6 +1,7 @@
 use archmage::{ScalarToken, SimdToken};
-use magetypes::simd::backends::{F32x4Backend, F32x8Backend};
+use magetypes::simd::backends::{F32x4Convert, F32x8Convert, U32x4Backend, U32x8Backend};
 use magetypes::simd::generic::{f32x4, f32x8};
+use magetypes::{ExtremaOptions, HalfConvert, IntConvert, RecipOptions, scalar};
 
 const FLOATS: [f32; 20] = [
     0.0,
@@ -50,16 +51,134 @@ macro_rules! check_lanes {
             let values = core::array::from_fn(|i| base + u16::try_from(i).unwrap());
             let loaded = $vec::from_u16_t($token, &values);
             assert_eq!(loaded.to_array(), values.map(f32::from));
-            assert_eq!(loaded.to_u16_trunc_saturating(), values);
+            assert_eq!(
+                loaded
+                    .to_u16_with::<{ magetypes::IntConvert::new().trunc().saturate_all().bits() }>(
+                    ),
+                values
+            );
         }
         // Rotate rails and halfway values through all lane positions.
         for start in 0..FLOATS.len() {
             let values = core::array::from_fn(|i| FLOATS[(start + i) % FLOATS.len()]);
             assert_eq!(
-                $vec::from_array_t($token, values).to_u16_trunc_saturating(),
+                $vec::from_array_t($token, values)
+                    .to_u16_with::<{ magetypes::IntConvert::new().trunc().saturate_all().bits() }>(
+                    ),
                 values.map(|x| x as u16)
             );
         }
+
+        const SAT: u32 = IntConvert::new().saturate_all().bits();
+        const FULL: u32 = HalfConvert::new().all_floats().normalize().bits();
+        const FLUSH: u32 = HalfConvert::new().all_floats().bits();
+        const TRUNC_HALF: u32 = HalfConvert::new().all_floats().normalize().trunc().bits();
+        const EXACT: u32 = RecipOptions::new().exact().bits();
+        const PROPAGATE: u32 = ExtremaOptions::new().propagate_nan().bits();
+        for start in 0..FLOATS.len() {
+            let x = core::array::from_fn(|i| FLOATS[(start + i) % FLOATS.len()]);
+            let v = $vec::from_array_t($token, x);
+            assert_eq!(
+                v.to_i32_with::<SAT>().to_array(),
+                x.map(scalar::to_i32_with::<SAT>)
+            );
+            assert_eq!(
+                v.to_u32_with::<SAT>().to_array(),
+                x.map(scalar::to_u32_with::<SAT>)
+            );
+            assert_eq!(v.to_u8_with::<SAT>(), x.map(scalar::to_u8_with::<SAT>));
+            assert_eq!(v.to_u16_with::<SAT>(), x.map(scalar::to_u16_with::<SAT>));
+            let y = v.trunc().to_array();
+            let reciprocal = v.recip_with::<EXACT>().to_array();
+            let half = v.to_f16_bits_with::<FULL>();
+            let trunc_half = v.to_f16_bits_with::<TRUNC_HALF>();
+            for lane in 0..$n {
+                if x[lane].is_nan() {
+                    assert!(y[lane].is_nan());
+                    assert!(reciprocal[lane].is_nan());
+                    assert!(half[lane] & 0x7fff > 0x7c00);
+                    assert!(trunc_half[lane] & 0x7fff > 0x7c00);
+                } else {
+                    assert_eq!(y[lane].to_bits(), x[lane].trunc().to_bits());
+                    assert_eq!(reciprocal[lane].to_bits(), (1.0 / x[lane]).to_bits());
+                    assert_eq!(half[lane], scalar::to_f16_bits_with::<FULL>(x[lane]));
+                    assert_eq!(
+                        trunc_half[lane],
+                        scalar::to_f16_bits_with::<TRUNC_HALF>(x[lane])
+                    );
+                }
+            }
+        }
+        // Carry into the first half normal when rounded to nearest.
+        let just_normal = f32::from_bits(0x387f_e000);
+        let halves = [
+            just_normal,
+            just_normal.next_down(),
+            -just_normal,
+            -just_normal.next_down(),
+        ];
+        let v = $vec::from_array_t($token, core::array::from_fn(|i| halves[i % 4]));
+        assert_eq!(
+            v.to_f16_bits_with::<FLUSH>(),
+            core::array::from_fn(|i| [0x0400, 0, 0x8400, 0x8000][i % 4])
+        );
+        let a = $vec::splat_t($token, 1.0_f32.next_up());
+        let b = $vec::splat_t($token, 1.0 - f32::EPSILON);
+        let c = $vec::splat_t($token, 1.0);
+        assert_eq!(
+            a.mul_neg_add_fused(b, c).to_array(),
+            [f32::from_bits(81 << 23); $n]
+        );
+        let nan = $vec::splat_t($token, f32::NAN);
+        assert!(
+            a.min_with::<PROPAGATE>(nan)
+                .reduce_max_with::<PROPAGATE>()
+                .is_nan()
+        );
+
+        // Widen every half encoding outside Miri. Retain boundary groups in Miri.
+        let step = if cfg!(miri) { $n * 257 } else { $n };
+        for base in (0..=u16::MAX).step_by(step) {
+            let bits = core::array::from_fn(|i| base + i as u16);
+            let normalized = $vec::from_f16_with_t::<FULL>($token, &bits).to_array();
+            let flushed = $vec::from_f16_with_t::<FLUSH>($token, &bits).to_array();
+            let bf16 = $vec::from_bf16_t($token, &bits);
+            assert_eq!(
+                bf16.to_array().map(f32::to_bits),
+                bits.map(|b| u32::from(b) << 16)
+            );
+            let bf16_roundtrip = bf16.to_bf16_with::<FULL>();
+            for lane in 0..$n {
+                let want = scalar::from_f16_with::<FULL>(bits[lane]);
+                if want.is_nan() {
+                    assert!(normalized[lane].is_nan());
+                    assert!(flushed[lane].is_nan());
+                } else {
+                    assert_eq!(normalized[lane].to_bits(), want.to_bits());
+                    assert_eq!(
+                        flushed[lane].to_bits(),
+                        scalar::from_f16_with::<FLUSH>(bits[lane]).to_bits()
+                    );
+                }
+            }
+            assert_eq!(
+                bf16_roundtrip,
+                bits.map(|b| scalar::to_bf16_with::<FULL>(f32::from_bits(u32::from(b) << 16)))
+            );
+        }
+
+        let unsigned = $vec::from_array_t(
+            $token,
+            core::array::from_fn(|i| [0.0, 2147483648.0, 2147483904.0, 4294967040.0][i % 4]),
+        );
+        assert_eq!(
+            $vec::from_u32_t(
+                $token,
+                unsigned.to_u32_with::<{ IntConvert::new().in_range().bits() }>()
+            )
+            .to_array(),
+            unsigned.to_array()
+        );
 
         let a = core::array::from_fn(|i| BITS[i]);
         let b = core::array::from_fn(|i| BITS[(i + 5) % BITS.len()]);
@@ -88,7 +207,7 @@ macro_rules! check_rgb {
     }};
 }
 
-fn check_narrow<T: F32x4Backend + F32x8Backend>(token: T) {
+fn check_narrow<T: F32x4Convert + F32x8Convert + U32x4Backend + U32x8Backend>(token: T) {
     check_lanes!(token, f32x4, 4);
     check_lanes!(token, f32x8, 8);
     check_rgb!(token, f32x4, load_4_rgb_u16_t, 4);
@@ -126,7 +245,11 @@ fn check_narrow<T: F32x4Backend + F32x8Backend>(token: T) {
 }
 
 #[cfg(feature = "w512")]
-fn check_wide<T: magetypes::simd::backends::F32x16Backend>(token: T) {
+fn check_wide<
+    T: magetypes::simd::backends::F32x16Convert + magetypes::simd::backends::U32x16Backend,
+>(
+    token: T,
+) {
     use magetypes::simd::generic::f32x16;
     check_lanes!(token, f32x16, 16);
 

@@ -106,6 +106,21 @@ impl F32x4Backend for NeonToken {
         vabsq_f32(a)
     }
     #[arcane(suppress_const_test, _self = NeonToken)]
+    fn trunc(self, a: float32x4_t) -> float32x4_t {
+        vrndq_f32(a)
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn mul_neg_add_relaxed(self, a: float32x4_t, b: float32x4_t, c: float32x4_t) -> float32x4_t {
+        vfmsq_f32(c, a, b)
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn mul_neg_add_fused(self, a: float32x4_t, b: float32x4_t, c: float32x4_t) -> float32x4_t {
+        vfmsq_f32(c, a, b)
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn floor(self, a: float32x4_t) -> float32x4_t {
         vrndmq_f32(a)
     }
@@ -179,20 +194,12 @@ impl F32x4Backend for NeonToken {
 
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn reduce_min(self, a: float32x4_t) -> f32 {
-        {
-            let pair = vpminq_f32(a, a);
-            let pair = vpminq_f32(pair, pair);
-            vgetq_lane_f32::<0>(pair)
-        }
+        vminnmvq_f32(a)
     }
 
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn reduce_max(self, a: float32x4_t) -> f32 {
-        {
-            let pair = vpmaxq_f32(a, a);
-            let pair = vpmaxq_f32(pair, pair);
-            vgetq_lane_f32::<0>(pair)
-        }
+        vmaxnmvq_f32(a)
     }
 
     // ====== Reciprocals: estimate tier vs working tier ======
@@ -312,8 +319,138 @@ impl F32x4Backend for NeonToken {
     }
 
     #[arcane(suppress_const_test, _self = NeonToken)]
-    fn to_u16_lanes(self, value: float32x4_t) -> [u16; 4] {
-        crate::simd_storage::cast(vqmovn_u32(vcvtq_u32_f32(value)))
+    fn to_u16_lanes<const CFG: u32>(self, value: float32x4_t) -> [u16; 4] {
+        let i = if const { crate::IntConvert::decode(CFG).rounds() } {
+            vcvtnq_u32_f32(value)
+        } else {
+            vcvtq_u32_f32(value)
+        };
+        crate::simd_storage::cast(vqmovn_u32(i))
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn to_u8_lanes<const CFG: u32>(self, value: float32x4_t) -> [u8; 4] {
+        let i = if const { crate::IntConvert::decode(CFG).rounds() } {
+            vcvtnq_u32_f32(value)
+        } else {
+            vcvtq_u32_f32(value)
+        };
+        let words = vqmovn_u32(i);
+        crate::simd_storage::cast(vget_lane_u32::<0>(vreinterpret_u32_u8(vqmovn_u16(
+            vcombine_u16(words, words),
+        ))))
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn store_rgba_bytes_with<const CFG: u32>(
+        self,
+        r: float32x4_t,
+        g: float32x4_t,
+        b: float32x4_t,
+        a: float32x4_t,
+    ) -> [u8; 16] {
+        let opts = const { crate::IntConvert::decode(CFG) };
+        if cfg!(target_endian = "little") && opts.is_in_range() {
+            let convert = |x| {
+                if opts.rounds() {
+                    vcvtnq_u32_f32(x)
+                } else {
+                    vcvtq_u32_f32(x)
+                }
+            };
+            let rg = vsliq_n_u32::<8>(convert(r), convert(g));
+            let rgb = vsliq_n_u32::<16>(rg, convert(b));
+            return crate::simd_storage::cast(vsliq_n_u32::<24>(rgb, convert(a)));
+        }
+        let channels = [r, g, b, a].map(|v| <Self as F32x4Backend>::to_u8_lanes::<CFG>(self, v));
+        core::array::from_fn(|i| channels[i % 4][i / 4])
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn to_u32_lanes<const CFG: u32>(self, value: float32x4_t) -> float32x4_t {
+        vreinterpretq_f32_u32(if const { crate::IntConvert::decode(CFG).rounds() } {
+            vcvtnq_u32_f32(value)
+        } else {
+            vcvtq_u32_f32(value)
+        })
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn from_u32_lanes(self, value: float32x4_t) -> float32x4_t {
+        vcvtq_f32_u32(vreinterpretq_u32_f32(value))
+    }
+
+    #[rustversion::since(1.94)]
+    #[allow(clippy::incompatible_msrv)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn from_f16_lanes<const CFG: u32>(self, lanes: &[u16; 4]) -> float32x4_t {
+        let words: uint16x4_t = crate::simd_storage::cast(*lanes);
+        let words = if const { crate::HalfConvert::decode(CFG).flushes() } {
+            let mag = vand_u16(words, vdup_n_u16(0x7fff));
+            vbsl_u16(
+                vclt_u16(mag, vdup_n_u16(0x400)),
+                vand_u16(words, vdup_n_u16(0x8000)),
+                words,
+            )
+        } else {
+            words
+        };
+        vcvt_f32_f16(vreinterpret_f16_u16(words))
+    }
+
+    #[rustversion::before(1.94)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn from_f16_lanes<const CFG: u32>(self, lanes: &[u16; 4]) -> float32x4_t {
+        let words = vreinterpretq_s32_u32(vmovl_u16(crate::simd_storage::cast(*lanes)));
+        crate::simd::generic::half4::widen_f16::<CFG, _>(
+            crate::simd::generic::i32x4::from_repr_unchecked(self, words),
+        )
+        .into_repr()
+    }
+
+    #[rustversion::since(1.94)]
+    #[allow(clippy::incompatible_msrv)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn to_f16_lanes<const CFG: u32>(self, value: float32x4_t) -> [u16; 4] {
+        let opts = const { crate::HalfConvert::decode(CFG) };
+        if opts.rounds() {
+            let h = vreinterpret_u16_f16(vcvt_f16_f32(value));
+            let words = if opts.flushes() {
+                let mag = vand_u16(h, vdup_n_u16(0x7fff));
+                vbsl_u16(
+                    vclt_u16(mag, vdup_n_u16(0x400)),
+                    vand_u16(h, vdup_n_u16(0x8000)),
+                    h,
+                )
+            } else {
+                h
+            };
+            crate::simd_storage::cast(words)
+        } else {
+            let v = crate::simd::generic::f32x4::from_repr_unchecked(self, value);
+            let i = crate::simd::generic::half4::narrow_f16::<CFG, _>(v).into_repr();
+            crate::simd_storage::cast(vmovn_u32(vreinterpretq_u32_s32(i)))
+        }
+    }
+
+    #[rustversion::before(1.94)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn to_f16_lanes<const CFG: u32>(self, value: float32x4_t) -> [u16; 4] {
+        let v = crate::simd::generic::f32x4::from_repr_unchecked(self, value);
+        let i = crate::simd::generic::half4::narrow_f16::<CFG, _>(v).into_repr();
+        crate::simd_storage::cast(vmovn_u32(vreinterpretq_u32_s32(i)))
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn to_bf16_lanes<const CFG: u32>(self, value: float32x4_t) -> [u16; 4] {
+        let v = crate::simd::generic::f32x4::from_repr_unchecked(self, value);
+        let i = crate::simd::generic::half4::narrow_bf16::<CFG, _>(v).into_repr();
+        crate::simd_storage::cast(vmovn_u32(vreinterpretq_u32_s32(i)))
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn from_bf16_lanes(self, lanes: &[u16; 4]) -> float32x4_t {
+        vreinterpretq_f32_u32(vshll_n_u16::<16>(crate::simd_storage::cast(*lanes)))
     }
 
     #[arcane(suppress_const_test, _self = NeonToken)]
@@ -533,6 +670,33 @@ impl F32x8Backend for NeonToken {
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn abs(self, a: [float32x4_t; 2]) -> [float32x4_t; 2] {
         [vabsq_f32(a[0]), vabsq_f32(a[1])]
+    }
+
+    #[inline(always)]
+    fn trunc(self, a: [float32x4_t; 2]) -> [float32x4_t; 2] {
+        a.map(|a| <Self as F32x4Backend>::trunc(self, a))
+    }
+
+    #[inline(always)]
+    fn mul_neg_add_relaxed(
+        self,
+        a: [float32x4_t; 2],
+        b: [float32x4_t; 2],
+        c: [float32x4_t; 2],
+    ) -> [float32x4_t; 2] {
+        core::array::from_fn(|i| {
+            <Self as F32x4Backend>::mul_neg_add_relaxed(self, a[i], b[i], c[i])
+        })
+    }
+
+    #[inline(always)]
+    fn mul_neg_add_fused(
+        self,
+        a: [float32x4_t; 2],
+        b: [float32x4_t; 2],
+        c: [float32x4_t; 2],
+    ) -> [float32x4_t; 2] {
+        core::array::from_fn(|i| <Self as F32x4Backend>::mul_neg_add_fused(self, a[i], b[i], c[i]))
     }
 
     #[arcane(suppress_const_test, _self = NeonToken)]
@@ -814,9 +978,52 @@ impl F32x8Backend for NeonToken {
     }
 
     #[inline(always)]
-    fn to_u16_lanes(self, value: [float32x4_t; 2]) -> [u16; 8] {
-        let parts = value.map(|v| <Self as F32x4Backend>::to_u16_lanes(self, v));
-        core::array::from_fn(|i| parts[i / 4][i % 4])
+    fn to_u16_lanes<const CFG: u32>(self, value: [float32x4_t; 2]) -> [u16; 8] {
+        crate::simd_storage::cast(
+            value.map(|v| <Self as F32x4Backend>::to_u16_lanes::<CFG>(self, v)),
+        )
+    }
+
+    #[inline(always)]
+    fn to_u8_lanes<const CFG: u32>(self, value: [float32x4_t; 2]) -> [u8; 8] {
+        let parts = value.map(|v| <Self as F32x4Backend>::to_u8_lanes::<CFG>(self, v));
+        crate::simd_storage::cast(parts)
+    }
+
+    #[inline(always)]
+    fn to_u32_lanes<const CFG: u32>(self, value: [float32x4_t; 2]) -> [float32x4_t; 2] {
+        value.map(|part| <Self as F32x4Backend>::to_u32_lanes::<CFG>(self, part))
+    }
+
+    #[inline(always)]
+    fn from_u32_lanes(self, value: [float32x4_t; 2]) -> [float32x4_t; 2] {
+        value.map(|part| <Self as F32x4Backend>::from_u32_lanes(self, part))
+    }
+
+    #[inline(always)]
+    fn from_f16_lanes<const CFG: u32>(self, lanes: &[u16; 8]) -> [float32x4_t; 2] {
+        let (chunks, _) = lanes.as_chunks::<4>();
+        core::array::from_fn(|i| <Self as F32x4Backend>::from_f16_lanes::<CFG>(self, &chunks[i]))
+    }
+
+    #[inline(always)]
+    fn to_f16_lanes<const CFG: u32>(self, value: [float32x4_t; 2]) -> [u16; 8] {
+        crate::simd_storage::cast(
+            value.map(|part| <Self as F32x4Backend>::to_f16_lanes::<CFG>(self, part)),
+        )
+    }
+
+    #[inline(always)]
+    fn from_bf16_lanes(self, lanes: &[u16; 8]) -> [float32x4_t; 2] {
+        let (chunks, _) = lanes.as_chunks::<4>();
+        core::array::from_fn(|i| <Self as F32x4Backend>::from_bf16_lanes(self, &chunks[i]))
+    }
+
+    #[inline(always)]
+    fn to_bf16_lanes<const CFG: u32>(self, value: [float32x4_t; 2]) -> [u16; 8] {
+        crate::simd_storage::cast(
+            value.map(|part| <Self as F32x4Backend>::to_bf16_lanes::<CFG>(self, part)),
+        )
     }
 
     #[inline(always)]
@@ -1063,6 +1270,21 @@ impl F64x2Backend for NeonToken {
     fn abs(self, a: float64x2_t) -> float64x2_t {
         vabsq_f64(a)
     }
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn trunc(self, a: float64x2_t) -> float64x2_t {
+        vrndq_f64(a)
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn mul_neg_add_relaxed(self, a: float64x2_t, b: float64x2_t, c: float64x2_t) -> float64x2_t {
+        vfmsq_f64(c, a, b)
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn mul_neg_add_fused(self, a: float64x2_t, b: float64x2_t, c: float64x2_t) -> float64x2_t {
+        vfmsq_f64(c, a, b)
+    }
+
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn floor(self, a: float64x2_t) -> float64x2_t {
         vrndmq_f64(a)
@@ -1337,6 +1559,33 @@ impl F64x4Backend for NeonToken {
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn abs(self, a: [float64x2_t; 2]) -> [float64x2_t; 2] {
         [vabsq_f64(a[0]), vabsq_f64(a[1])]
+    }
+
+    #[inline(always)]
+    fn trunc(self, a: [float64x2_t; 2]) -> [float64x2_t; 2] {
+        a.map(|a| <Self as F64x2Backend>::trunc(self, a))
+    }
+
+    #[inline(always)]
+    fn mul_neg_add_relaxed(
+        self,
+        a: [float64x2_t; 2],
+        b: [float64x2_t; 2],
+        c: [float64x2_t; 2],
+    ) -> [float64x2_t; 2] {
+        core::array::from_fn(|i| {
+            <Self as F64x2Backend>::mul_neg_add_relaxed(self, a[i], b[i], c[i])
+        })
+    }
+
+    #[inline(always)]
+    fn mul_neg_add_fused(
+        self,
+        a: [float64x2_t; 2],
+        b: [float64x2_t; 2],
+        c: [float64x2_t; 2],
+    ) -> [float64x2_t; 2] {
+        core::array::from_fn(|i| <Self as F64x2Backend>::mul_neg_add_fused(self, a[i], b[i], c[i]))
     }
 
     #[arcane(suppress_const_test, _self = NeonToken)]
@@ -4965,9 +5214,85 @@ impl F32x16Backend for NeonToken {
     }
 
     #[inline(always)]
-    fn to_u16_lanes(self, value: [float32x4_t; 4]) -> [u16; 16] {
-        let parts = value.map(|v| <Self as F32x4Backend>::to_u16_lanes(self, v));
-        core::array::from_fn(|i| parts[i / 4][i % 4])
+    fn to_u16_lanes<const CFG: u32>(self, value: [float32x4_t; 4]) -> [u16; 16] {
+        crate::simd_storage::cast(
+            value.map(|v| <Self as F32x4Backend>::to_u16_lanes::<CFG>(self, v)),
+        )
+    }
+
+    #[inline(always)]
+    fn to_u8_lanes<const CFG: u32>(self, value: [float32x4_t; 4]) -> [u8; 16] {
+        let parts = value.map(|v| <Self as F32x4Backend>::to_u8_lanes::<CFG>(self, v));
+        crate::simd_storage::cast(parts)
+    }
+
+    #[inline(always)]
+    fn to_u32_lanes<const CFG: u32>(self, value: [float32x4_t; 4]) -> [float32x4_t; 4] {
+        value.map(|part| <Self as F32x4Backend>::to_u32_lanes::<CFG>(self, part))
+    }
+
+    #[inline(always)]
+    fn from_u32_lanes(self, value: [float32x4_t; 4]) -> [float32x4_t; 4] {
+        value.map(|part| <Self as F32x4Backend>::from_u32_lanes(self, part))
+    }
+
+    #[inline(always)]
+    fn from_f16_lanes<const CFG: u32>(self, lanes: &[u16; 16]) -> [float32x4_t; 4] {
+        let (chunks, _) = lanes.as_chunks::<4>();
+        core::array::from_fn(|i| <Self as F32x4Backend>::from_f16_lanes::<CFG>(self, &chunks[i]))
+    }
+
+    #[inline(always)]
+    fn to_f16_lanes<const CFG: u32>(self, value: [float32x4_t; 4]) -> [u16; 16] {
+        crate::simd_storage::cast(
+            value.map(|part| <Self as F32x4Backend>::to_f16_lanes::<CFG>(self, part)),
+        )
+    }
+
+    #[inline(always)]
+    fn from_bf16_lanes(self, lanes: &[u16; 16]) -> [float32x4_t; 4] {
+        let (chunks, _) = lanes.as_chunks::<4>();
+        core::array::from_fn(|i| <Self as F32x4Backend>::from_bf16_lanes(self, &chunks[i]))
+    }
+
+    #[inline(always)]
+    fn to_bf16_lanes<const CFG: u32>(self, value: [float32x4_t; 4]) -> [u16; 16] {
+        crate::simd_storage::cast(
+            value.map(|part| <Self as F32x4Backend>::to_bf16_lanes::<CFG>(self, part)),
+        )
+    }
+
+    #[inline(always)]
+    fn from_u8_lanes_wide(self, lanes: &[u8; 16]) -> [float32x4_t; 4] {
+        use crate::simd::generic::f32x4 as V;
+        let (parts, _) = lanes.as_chunks::<4>();
+        core::array::from_fn(|i| V::from_u8_t(self, &parts[i]).into_repr())
+    }
+
+    #[inline(always)]
+    fn deinterleave_rgba_wide(self, rgba: [[float32x4_t; 4]; 4]) -> [[float32x4_t; 4]; 4] {
+        use crate::simd::generic::f32x4 as V;
+        let groups: [[V<Self>; 4]; 4] = core::array::from_fn(|i| {
+            V::deinterleave_4ch(core::array::from_fn(|j| {
+                let block = 4 * i + j;
+                V::from_repr_unchecked(self, rgba[block / 4][block % 4])
+            }))
+        });
+        core::array::from_fn(|c| core::array::from_fn(|i| groups[i][c].into_repr()))
+    }
+
+    #[inline(always)]
+    fn interleave_rgba_wide(self, channels: [[float32x4_t; 4]; 4]) -> [[float32x4_t; 4]; 4] {
+        use crate::simd::generic::f32x4 as V;
+        let groups: [[V<Self>; 4]; 4] = core::array::from_fn(|i| {
+            V::interleave_4ch(channels.map(|c| V::from_repr_unchecked(self, c[i])))
+        });
+        core::array::from_fn(|i| {
+            core::array::from_fn(|j| {
+                let block = i * 4 + j;
+                groups[block / 4][block % 4].into_repr()
+            })
+        })
     }
 
     #[inline(always)]
@@ -5062,6 +5387,33 @@ impl F32x16Backend for NeonToken {
     #[inline(always)]
     fn abs(self, a: [float32x4_t; 4]) -> [float32x4_t; 4] {
         core::array::from_fn(|i| <NeonToken as F32x4Backend>::abs(self, a[i]))
+    }
+
+    #[inline(always)]
+    fn trunc(self, a: [float32x4_t; 4]) -> [float32x4_t; 4] {
+        a.map(|a| <Self as F32x4Backend>::trunc(self, a))
+    }
+
+    #[inline(always)]
+    fn mul_neg_add_relaxed(
+        self,
+        a: [float32x4_t; 4],
+        b: [float32x4_t; 4],
+        c: [float32x4_t; 4],
+    ) -> [float32x4_t; 4] {
+        core::array::from_fn(|i| {
+            <Self as F32x4Backend>::mul_neg_add_relaxed(self, a[i], b[i], c[i])
+        })
+    }
+
+    #[inline(always)]
+    fn mul_neg_add_fused(
+        self,
+        a: [float32x4_t; 4],
+        b: [float32x4_t; 4],
+        c: [float32x4_t; 4],
+    ) -> [float32x4_t; 4] {
+        core::array::from_fn(|i| <Self as F32x4Backend>::mul_neg_add_fused(self, a[i], b[i], c[i]))
     }
 
     #[inline(always)]
@@ -5380,6 +5732,33 @@ impl F64x8Backend for NeonToken {
     #[inline(always)]
     fn abs(self, a: [float64x2_t; 4]) -> [float64x2_t; 4] {
         core::array::from_fn(|i| <NeonToken as F64x2Backend>::abs(self, a[i]))
+    }
+
+    #[inline(always)]
+    fn trunc(self, a: [float64x2_t; 4]) -> [float64x2_t; 4] {
+        a.map(|a| <Self as F64x2Backend>::trunc(self, a))
+    }
+
+    #[inline(always)]
+    fn mul_neg_add_relaxed(
+        self,
+        a: [float64x2_t; 4],
+        b: [float64x2_t; 4],
+        c: [float64x2_t; 4],
+    ) -> [float64x2_t; 4] {
+        core::array::from_fn(|i| {
+            <Self as F64x2Backend>::mul_neg_add_relaxed(self, a[i], b[i], c[i])
+        })
+    }
+
+    #[inline(always)]
+    fn mul_neg_add_fused(
+        self,
+        a: [float64x2_t; 4],
+        b: [float64x2_t; 4],
+        c: [float64x2_t; 4],
+    ) -> [float64x2_t; 4] {
+        core::array::from_fn(|i| <Self as F64x2Backend>::mul_neg_add_fused(self, a[i], b[i], c[i]))
     }
 
     #[inline(always)]

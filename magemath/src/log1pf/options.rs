@@ -103,14 +103,14 @@ impl Default for Log1pfOptions {
 }
 
 impl Log1pfOptions {
-    /// `Log1pfDomain::GreaterThanNegOne`, `Subnormals::Reject`, `Midp`,
+    /// `Log1pfDomain::GreaterThanNegOne`, `Subnormals::FlushOrClamp`, `Midp`,
     /// `BitExact`, `Validation::Checked` (`error_on_out_of_bounds`), `Execution::Upgrade`.
     pub const fn new() -> Self {
         Self {
             domain: Log1pfDomain::GreaterThanNegOne,
             custom_range: None,
             extra_neg_one: false,
-            subnormals: Subnormals::Reject,
+            subnormals: Subnormals::FlushOrClamp,
             precision: Log1pfPrecision::Midp,
             portability: Portability::BitExact,
             validation: Validation::Checked,
@@ -187,7 +187,7 @@ impl Log1pfOptions {
     }
 
     /// Treat nonzero subnormals (`0 < |x| < f32::MIN_POSITIVE`) as out-of-bounds
-    /// (`Subnormals::Reject`, default).
+    /// (`Subnormals::Reject`).
     pub const fn reject_subnormals(self) -> Self {
         self.subnormals(Subnormals::Reject)
     }
@@ -272,6 +272,12 @@ impl Log1pfOptions {
     /// and propagate `NaN` as `NaN` (`Validation::ClampOutOfBounds`, infallible).
     pub const fn clamp_out_of_bounds(self) -> Self {
         self.validation(Validation::ClampOutOfBounds)
+    }
+
+    /// Clamp inputs and outputs as applicable. NaN inputs have unspecified
+    /// numerical results (`Validation::ClampFinite`, infallible).
+    pub const fn clamp_finite(self) -> Self {
+        self.validation(Validation::ClampFinite)
     }
 
     /// Omit numerical input checks and clamps (`Validation::AssumeValid`, infallible).
@@ -492,6 +498,7 @@ impl Log1pfOptions {
             Validation::Checked => 0,
             Validation::ClampOutOfBounds => 1,
             Validation::AssumeValid => 2,
+            Validation::ClampFinite => 3,
         };
         let prec: u128 = match self.precision {
             Log1pfPrecision::Midp => 0,
@@ -548,6 +555,7 @@ impl Log1pfOptions {
             0 => Validation::Checked,
             1 => Validation::ClampOutOfBounds,
             2 => Validation::AssumeValid,
+            3 => Validation::ClampFinite,
             _ => return None,
         };
         let precision = match (bits >> PREC_SHIFT) & 0x7 {
@@ -625,6 +633,13 @@ impl Log1pfOptions {
         matches!(self.portability, Portability::BackendDependent)
     }
     pub(crate) const fn clamp_oob(&self) -> bool {
+        matches!(
+            self.validation,
+            Validation::ClampOutOfBounds | Validation::ClampFinite
+        )
+    }
+
+    pub(crate) const fn preserve_clamped_nan(&self) -> bool {
         matches!(self.validation, Validation::ClampOutOfBounds)
     }
     pub(crate) const fn assume_valid(&self) -> bool {
@@ -648,6 +663,7 @@ impl Log1pfOptions {
             flush_sub: self.flushes_subnormals(),
             specials: self.is_specials(),
             clamp_oob: self.clamp_oob(),
+            preserve_clamped_nan: self.preserve_clamped_nan(),
             lowp: self.is_lowp(),
             assume: self.assume_valid(),
             elide_red: false,

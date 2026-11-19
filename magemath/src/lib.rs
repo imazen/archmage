@@ -76,17 +76,13 @@ pub enum Portability {
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 #[non_exhaustive]
 pub enum Subnormals {
-    /// Subnormal normalization is off by default: [`Validation::Checked`]
-    /// rejects nonzero subnormals, [`Validation::ClampOutOfBounds`] shoves them
-    /// out to `±0.0` (when zero is admitted) or `±f32::MIN_POSITIVE` (when zero
-    /// is excluded), and [`Validation::AssumeValid`] emits zero subnormal ops.
-    #[default]
+    /// Reject nonzero subnormals in checked evaluation. Clamping validation
+    /// still moves them to an admitted zero or normal endpoint.
     Reject,
-    /// Shove nonzero subnormals out to `±0.0` (when zero is admitted by the
-    /// domain) or `±f32::MIN_POSITIVE` (when zero is excluded) before kernel
-    /// evaluation — even under [`Validation::Checked`] — avoiding subnormal
-    /// rescaling overhead while still rejecting out-of-range inputs (`< lo`,
-    /// `> hi`, `±inf`, `NaN`).
+    /// Move nonzero subnormals to signed zero when zero is admitted, or to
+    /// the nearest normal endpoint otherwise, including in checked evaluation.
+    /// AssumeValid omits this work and requires the post-flush domain.
+    #[default]
     FlushOrClamp,
     /// Accurately rescale nonzero subnormals (`* 2^23` / `* 2^24` with
     /// exponent adjustment) before evaluation (`.admit_subnormals()`).
@@ -111,6 +107,10 @@ pub enum Validation {
     /// Violations have unspecified numerical results, never memory unsoundness.
     /// Supported widths and valid option encodings are still enforced.
     AssumeValid,
+    /// Clamp out-of-domain inputs and saturate where required, with unspecified
+    /// numerical results for NaN inputs. Finite workloads can avoid saving and
+    /// restoring a NaN mask (`.clamp_finite()`).
+    ClampFinite,
 }
 
 /// Failure of a slice operation: the reason and the first input that caused it.

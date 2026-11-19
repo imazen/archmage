@@ -97,6 +97,25 @@ pub trait F64x4Backend:
     /// Absolute value.
     fn abs(self, a: Self::Repr) -> Self::Repr;
 
+    /// Truncate toward zero without changing the sign of zero.
+    #[inline(always)]
+    fn trunc(self, a: Self::Repr) -> Self::Repr {
+        let lanes = <Self as F64x4Backend>::to_array(self, a);
+        <Self as F64x4Backend>::from_array(self, lanes.map(crate::scalar::trunc_f64))
+    }
+
+    /// Multiply-negate-add with backend-dependent rounding.
+    #[inline(always)]
+    fn mul_neg_add_relaxed(self, a: Self::Repr, b: Self::Repr, c: Self::Repr) -> Self::Repr {
+        <Self as F64x4Backend>::mul_add(self, <Self as F64x4Backend>::neg(self, a), b, c)
+    }
+
+    /// Multiply-negate-add with one rounding.
+    #[inline(always)]
+    fn mul_neg_add_fused(self, a: Self::Repr, b: Self::Repr, c: Self::Repr) -> Self::Repr {
+        <Self as F64x4Backend>::mul_add_portable(self, <Self as F64x4Backend>::neg(self, a), b, c)
+    }
+
     /// Round toward negative infinity.
     fn floor(self, a: Self::Repr) -> Self::Repr;
 

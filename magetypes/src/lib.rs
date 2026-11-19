@@ -116,6 +116,9 @@ pub mod simd;
 // Flat scalar helpers for SIMD remainder loops and non-SIMD fallback paths
 pub mod scalar;
 
+pub mod numerics;
+pub use numerics::*;
+
 // Width dispatch trait for accessing all SIMD sizes from any token
 mod width;
 pub use width::WidthDispatch;

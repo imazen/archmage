@@ -71,6 +71,22 @@ impl<T: F32x4Backend> f32x4<T> {
     pub fn store_4_rgb_u8(r: Self, g: Self, b: Self) -> [u8; 12] {
         T::store_rgb_bytes(r.1, r.0, g.0, b.0)
     }
+
+    /// Store 4 packed RGB pixels with the configured rounding and bounds.
+    #[inline(always)]
+    pub fn store_4_rgb_u8_with<const CFG: u32>(r: Self, g: Self, b: Self) -> [u8; 12] {
+        let [r, g, b] = [r, g, b].map(Self::to_u8_with::<CFG>);
+        core::array::from_fn(|i| [r[i / 3], g[i / 3], b[i / 3]][i % 3])
+    }
+
+    /// Store 4 packed RGBA pixels with the configured rounding and bounds.
+    #[inline(always)]
+    pub fn store_4_rgba_u8_with<const CFG: u32>(r: Self, g: Self, b: Self, a: Self) -> [u8; 16] {
+        const {
+            let _ = crate::IntConvert::decode(CFG);
+        }
+        T::store_rgba_bytes_with::<CFG>(r.1, r.0, g.0, b.0, a.0)
+    }
 }
 
 impl<T: F32x8Backend> f32x8<T> {
@@ -134,5 +150,21 @@ impl<T: F32x8Backend> f32x8<T> {
     #[inline(always)]
     pub fn store_8_rgb_u8(r: Self, g: Self, b: Self) -> [u8; 24] {
         T::store_rgb_bytes(r.1, r.0, g.0, b.0)
+    }
+
+    /// Store 8 packed RGB pixels with the configured rounding and bounds.
+    #[inline(always)]
+    pub fn store_8_rgb_u8_with<const CFG: u32>(r: Self, g: Self, b: Self) -> [u8; 24] {
+        let [r, g, b] = [r, g, b].map(Self::to_u8_with::<CFG>);
+        core::array::from_fn(|i| [r[i / 3], g[i / 3], b[i / 3]][i % 3])
+    }
+
+    /// Store 8 packed RGBA pixels with the configured rounding and bounds.
+    #[inline(always)]
+    pub fn store_8_rgba_u8_with<const CFG: u32>(r: Self, g: Self, b: Self, a: Self) -> [u8; 32] {
+        const {
+            let _ = crate::IntConvert::decode(CFG);
+        }
+        T::store_rgba_bytes_with::<CFG>(r.1, r.0, g.0, b.0, a.0)
     }
 }

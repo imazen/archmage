@@ -13,6 +13,7 @@ impl<const CFG: u128> graph::Kernel for Cfg<CFG> {
     const SPECIALS: bool = graph::KernelCfg::from_options(LogfOptions::decode_const(CFG)).specials;
     const CLAMP_OOB: bool =
         graph::KernelCfg::from_options(LogfOptions::decode_const(CFG)).clamp_oob;
+    const PRESERVE_CLAMPED_NAN: bool = LogfOptions::decode_const(CFG).preserve_clamped_nan();
     const LOWP: bool = graph::KernelCfg::from_options(LogfOptions::decode_const(CFG)).lowp;
     const ASSUME: bool = graph::KernelCfg::from_options(LogfOptions::decode_const(CFG)).assume;
     const ELIDE_RED: bool =

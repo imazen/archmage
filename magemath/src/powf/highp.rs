@@ -8,6 +8,7 @@ pub(super) struct HighpCfg {
     pub(super) flush_sub: bool,
     pub(super) full: bool,
     pub(super) clamp_oob: bool,
+    pub(super) preserve_clamped_nan: bool,
     pub(super) assume: bool,
     pub(super) elide: bool,
     pub(super) alg_kind: u8,
@@ -22,6 +23,7 @@ impl HighpCfg {
             flush_sub: opts.flushes_subnormals(),
             full: opts.is_full(),
             clamp_oob: opts.clamp_oob(),
+            preserve_clamped_nan: opts.preserve_clamped_nan(),
             assume: opts.assume_valid(),
             elide: opts.elides_range_check(),
             alg_kind: opts.alg_kind(),
@@ -64,7 +66,7 @@ pub(super) fn sanitize_bases_cfg<const N: usize>(
         let mut i = 0;
         while i < N {
             let x = bases[i];
-            if x.is_nan() {
+            if cfg.preserve_clamped_nan && x.is_nan() {
                 nan_mask |= 1_u16 << i;
                 out[i] = 1.0;
             } else if zero_ok && ((!cfg.subnormals && x < f32::MIN_POSITIVE) || x <= 0.0) {

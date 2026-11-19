@@ -6,23 +6,23 @@
 # impls omitted; re-export duplicates annotated `[also: path]`.
 # DO NOT EDIT BY HAND — commit regenerated changes with the code.
 #
-# files: magemath.txt 545 lines (supported surface) | magemath.features.txt 7 added (features: avx512,std,w512) | magemath.internal.txt 69 lines (69 hidden + 0 excluded-feature)
+# files: magemath.txt 551 lines (supported surface) | magemath.features.txt 7 added (features: avx512,std,w512) | magemath.internal.txt 69 lines (69 hidden + 0 excluded-feature)
 
 ## summary
 #
 #   pub modules                                 7
 #   pub types (struct/enum/trait/alias)        42
-#   pub consts/statics                        206
+#   pub consts/statics                        211
 #   free functions                             16
 #   inherent methods                          143
 #   struct fields                              12
-#   enum variants                              77
+#   enum variants                              78
 #   trait roster entries (type × trait)       214
 #   auto-trait-complete types                  39
 #   auto-trait exceptions                       1
 #
 # per-module pub lines:
-#   (root)                          255
+#   (root)                          261
 #   bf16                              2
 #   cbrtf                            34
 #   expf                             51
@@ -30,7 +30,7 @@
 #   logf                             67
 #   powf                             56
 
-## items (501 lines)
+## items (507 lines)
 
 pub mod magemath
 pub mod bf16
@@ -71,6 +71,7 @@ pub const fn cbrtf::CbrtfOptions::bit_exact(self) -> Self
 pub const fn cbrtf::CbrtfOptions::bits(&self) -> u128
 pub const fn cbrtf::CbrtfOptions::caller(self) -> Self
 pub const fn cbrtf::CbrtfOptions::checked(self) -> Self
+pub const fn cbrtf::CbrtfOptions::clamp_finite(self) -> Self
 pub const fn cbrtf::CbrtfOptions::clamp_out_of_bounds(self) -> Self
 pub const fn cbrtf::CbrtfOptions::domain(self, cbrtf::CbrtfDomain) -> Self
 pub const fn cbrtf::CbrtfOptions::elides_denorm_check(&self) -> bool
@@ -150,6 +151,7 @@ pub const fn expf::ExpfOptions::bit_exact(self) -> Self
 pub const fn expf::ExpfOptions::bits(&self) -> u128
 pub const fn expf::ExpfOptions::caller(self) -> Self
 pub const fn expf::ExpfOptions::checked(self) -> Self
+pub const fn expf::ExpfOptions::clamp_finite(self) -> Self
 pub const fn expf::ExpfOptions::clamp_out_of_bounds(self) -> Self
 pub const fn expf::ExpfOptions::domain(self, expf::ExpfDomain) -> Self
 pub const fn expf::ExpfOptions::elides_clamp(&self) -> bool
@@ -237,6 +239,7 @@ pub const fn log1pf::Log1pfOptions::bit_exact(self) -> Self
 pub const fn log1pf::Log1pfOptions::bits(&self) -> u128
 pub const fn log1pf::Log1pfOptions::caller(self) -> Self
 pub const fn log1pf::Log1pfOptions::checked(self) -> Self
+pub const fn log1pf::Log1pfOptions::clamp_finite(self) -> Self
 pub const fn log1pf::Log1pfOptions::clamp_out_of_bounds(self) -> Self
 pub const fn log1pf::Log1pfOptions::domain(self, log1pf::Log1pfDomain) -> Self
 pub const fn log1pf::Log1pfOptions::elides_reduction(&self) -> bool
@@ -326,6 +329,7 @@ pub const fn logf::LogfOptions::bit_exact(self) -> Self
 pub const fn logf::LogfOptions::bits(&self) -> u128
 pub const fn logf::LogfOptions::caller(self) -> Self
 pub const fn logf::LogfOptions::checked(self) -> Self
+pub const fn logf::LogfOptions::clamp_finite(self) -> Self
 pub const fn logf::LogfOptions::clamp_out_of_bounds(self) -> Self
 pub const fn logf::LogfOptions::domain(self, logf::LogfDomain) -> Self
 pub const fn logf::LogfOptions::elides_reduction(&self) -> bool
@@ -431,6 +435,7 @@ pub const fn powf::PowfOptions::bit_exact(self) -> Self
 pub const fn powf::PowfOptions::bits(&self) -> u128
 pub const fn powf::PowfOptions::caller(self) -> Self
 pub const fn powf::PowfOptions::checked(self) -> Self
+pub const fn powf::PowfOptions::clamp_finite(self) -> Self
 pub const fn powf::PowfOptions::clamp_out_of_bounds(self) -> Self
 pub const fn powf::PowfOptions::clamp_output(self) -> Self
 pub const fn powf::PowfOptions::const_exponent(self, f32) -> Self
@@ -499,6 +504,7 @@ pub Subnormals::Reject
 #[non_exhaustive] pub enum Validation
 pub Validation::AssumeValid
 pub Validation::Checked
+pub Validation::ClampFinite
 pub Validation::ClampOutOfBounds
 pub struct SliceError<K>
 pub SliceError::index: usize

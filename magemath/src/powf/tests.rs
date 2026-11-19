@@ -26,7 +26,7 @@ fn options(domain: u32) -> PowfOptions {
         2 => PowfOptions::new().gamma(),
         _ => panic!("unknown test domain"),
     };
-    base.caller()
+    base.reject_subnormals().caller()
 }
 
 fn expected_kind(code: u32) -> PowfErrorKind {
@@ -38,12 +38,28 @@ fn expected_kind(code: u32) -> PowfErrorKind {
     }
 }
 
-const POS_UPGRADE: u128 = PowfOptions::new().upgrade().bits();
-const ZERO_UPGRADE: u128 = PowfOptions::new().admit_zero().upgrade().bits();
-const GAMMA_UPGRADE: u128 = PowfOptions::new().gamma().upgrade().bits();
-const POS_CALLER: u128 = PowfOptions::new().caller().bits();
-const ZERO_CALLER: u128 = PowfOptions::new().admit_zero().caller().bits();
-const GAMMA_CALLER: u128 = PowfOptions::new().gamma().caller().bits();
+const POS_UPGRADE: u128 = PowfOptions::new().reject_subnormals().upgrade().bits();
+const ZERO_UPGRADE: u128 = PowfOptions::new()
+    .admit_zero()
+    .reject_subnormals()
+    .upgrade()
+    .bits();
+const GAMMA_UPGRADE: u128 = PowfOptions::new()
+    .gamma()
+    .reject_subnormals()
+    .upgrade()
+    .bits();
+const POS_CALLER: u128 = PowfOptions::new().reject_subnormals().caller().bits();
+const ZERO_CALLER: u128 = PowfOptions::new()
+    .admit_zero()
+    .reject_subnormals()
+    .caller()
+    .bits();
+const GAMMA_CALLER: u128 = PowfOptions::new()
+    .gamma()
+    .reject_subnormals()
+    .caller()
+    .bits();
 
 // Runtime dispatch exists only in the test harness. Every arm instantiates
 // one literal options integer all the way through the public API.
@@ -479,7 +495,7 @@ fn nan_sign_payload_and_subnormal_families_reject_with_exact_masks() {
 #[test]
 fn const_array_width_and_rejection_precedence() {
     const GAMMA_C: u128 = PowfOptions::new().gamma().caller().bits();
-    const CALLER_DEFAULT: u128 = PowfOptions::new().caller().bits();
+    const CALLER_CHECKED_REJECT: u128 = PowfOptions::new().reject_subnormals().caller().bits();
     assert_eq!(
         Powf::<GAMMA_C>::array::<0>([], f32::NAN).unwrap_err(),
         PowfError {
@@ -509,7 +525,7 @@ fn const_array_width_and_rejection_precedence() {
         }
     );
     assert_eq!(
-        Powf::<CALLER_DEFAULT>::array::<4>([2.0, f32::NAN, f32::from_bits(1), -1.0], 2.4)
+        Powf::<CALLER_CHECKED_REJECT>::array::<4>([2.0, f32::NAN, f32::from_bits(1), -1.0], 2.4)
             .unwrap_err(),
         PowfError {
             kind: PowfErrorKind::InvalidBase,
@@ -517,7 +533,7 @@ fn const_array_width_and_rejection_precedence() {
         }
     );
     assert_eq!(
-        Powf::<CALLER_DEFAULT>::array::<4>([2.0, 4.0, f32::MAX, f32::MIN_POSITIVE], 2.0)
+        Powf::<CALLER_CHECKED_REJECT>::array::<4>([2.0, 4.0, f32::MAX, f32::MIN_POSITIVE], 2.0)
             .unwrap_err(),
         PowfError {
             kind: PowfErrorKind::OutsideApproximationRange,
@@ -590,8 +606,12 @@ fn new_policy_presets_and_invalid_runtime_combinations() {
             error,
             PowfError {
                 kind: PowfErrorKind::InvalidBase,
-                lane_mask: 14
+                lane_mask: 6
             }
+        );
+        assert_eq!(
+            rt.scalar(f32::from_bits(1), 2.4).unwrap().to_bits(),
+            0.0_f32.to_bits()
         );
     }
     for opts in [
@@ -661,7 +681,11 @@ fn std_highp_full_domain_and_restricted_masks() {
         Powf::<STD>::array::<3>([1.; 3], 2.).unwrap_err().kind,
         PowfErrorKind::UnsupportedWidth
     );
-    let rt = PowfOptions::new().highp().backend_dependent().runtime();
+    let rt = PowfOptions::new()
+        .reject_subnormals()
+        .highp()
+        .backend_dependent()
+        .runtime();
     assert_eq!(
         rt.array([2., -1., f32::from_bits(1), f32::NAN], 2.)
             .unwrap_err(),
@@ -717,7 +741,11 @@ fn positive_gamma_preserves_nonzero_graph_and_rejects_zero() {
             }
             compare(got, rt.array(input, n).unwrap());
             if is_checked {
-                for x in [0., -0., f32::from_bits(1), f32::NAN, f32::INFINITY] {
+                compare(
+                    [rt.scalar(f32::from_bits(1), n).unwrap(); 4],
+                    [rt.scalar(input[0], n).unwrap(); 4],
+                );
+                for x in [0., -0., f32::NAN, f32::INFINITY] {
                     assert_eq!(
                         Powf::<PG>::scalar_with_token(archmage::ScalarToken, x, n).unwrap_err(),
                         PowfError {
@@ -908,8 +936,8 @@ fn malformed_u128_words_are_rejected_across_all_families() {
     let nan_bf16 = 0x7fc0_u128;
     let sub_bf16 = 0x0001_u128;
 
-    let p_base = PowfOptions::new().bits();
-    // Out-of-range enum discriminants (PowfDomain = 10, Subnormals = 3, Validation = 3, Precision = 3, EXP_MODE = 3).
+    let p_base = PowfOptions::new().reject_subnormals().bits();
+    // Out-of-range enum discriminants (PowfDomain = 10, Subnormals = 3, Validation = 4, Precision = 3, EXP_MODE = 3).
     assert_eq!(
         PowfOptions::from_bits((p_base & !(0x1f << 4)) | (10 << 4)),
         None
@@ -919,7 +947,7 @@ fn malformed_u128_words_are_rejected_across_all_families() {
         None
     );
     assert_eq!(
-        PowfOptions::from_bits((p_base & !(0x7 << 12)) | (3 << 12)),
+        PowfOptions::from_bits((p_base & !(0x7 << 12)) | (4 << 12)),
         None
     );
     assert_eq!(

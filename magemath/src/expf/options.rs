@@ -219,6 +219,12 @@ impl ExpfOptions {
         self.validation(Validation::ClampOutOfBounds)
     }
 
+    /// Clamp inputs and outputs as applicable. NaN inputs have unspecified
+    /// numerical results (`Validation::ClampFinite`, infallible).
+    pub const fn clamp_finite(self) -> Self {
+        self.validation(Validation::ClampFinite)
+    }
+
     /// Omit numerical input checks and clamps; caller guarantees all inputs lie
     /// within the configured domain (`Validation::AssumeValid`, infallible).
     pub const fn assume_in_bounds(self) -> Self {
@@ -399,6 +405,7 @@ impl ExpfOptions {
             Validation::Checked => 0,
             Validation::ClampOutOfBounds => 1,
             Validation::AssumeValid => 2,
+            Validation::ClampFinite => 3,
         };
         let prec: u128 = match self.precision {
             ExpfPrecision::Midp => 0,
@@ -443,6 +450,7 @@ impl ExpfOptions {
             0 => Validation::Checked,
             1 => Validation::ClampOutOfBounds,
             2 => Validation::AssumeValid,
+            3 => Validation::ClampFinite,
             _ => return None,
         };
         let precision = match (bits >> PREC_SHIFT) & 0x7 {
@@ -521,6 +529,13 @@ impl ExpfOptions {
         matches!(self.portability, Portability::BackendDependent)
     }
     pub(crate) const fn clamp_oob(&self) -> bool {
+        matches!(
+            self.validation,
+            Validation::ClampOutOfBounds | Validation::ClampFinite
+        )
+    }
+
+    pub(crate) const fn preserve_clamped_nan(&self) -> bool {
         matches!(self.validation, Validation::ClampOutOfBounds)
     }
     pub(crate) const fn assume_valid(&self) -> bool {

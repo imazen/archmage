@@ -13,21 +13,33 @@
 #   pub types (struct/enum/trait/alias)         1
 #   pub consts/statics                          4
 #   free functions                             29
-#   inherent methods                            2
-#   trait roster entries (type × trait)        14
+#   inherent methods                           14
+#   trait roster entries (type × trait)        26
 #
 # per-module pub lines:
-#   (root)                            6
+#   (root)                           18
 #   bypass_adversarial                3
 #   nostd_math                       21
 #   simd                              8
 
-## items (31 lines)
+## items (43 lines)
 
 pub const fn nostd_math::maximum(f64, f64) -> f64
 pub const fn nostd_math::maximumf(f32, f32) -> f32
 pub const fn nostd_math::minimum(f64, f64) -> f64
 pub const fn nostd_math::minimumf(f32, f32) -> f32
+pub fn ExtremaDomain::assert_fields_are_eq(&self)
+pub fn ExtremaOptions::assert_fields_are_eq(&self)
+pub fn HalfConvert::assert_fields_are_eq(&self)
+pub fn HalfDomain::assert_fields_are_eq(&self)
+pub fn HalfRounding::assert_fields_are_eq(&self)
+pub fn HalfSubnormals::assert_fields_are_eq(&self)
+pub fn IntBounds::assert_fields_are_eq(&self)
+pub fn IntConvert::assert_fields_are_eq(&self)
+pub fn IntRounding::assert_fields_are_eq(&self)
+pub fn RecipDomain::assert_fields_are_eq(&self)
+pub fn RecipOptions::assert_fields_are_eq(&self)
+pub fn RecipPrecision::assert_fields_are_eq(&self)
 pub fn bypass_adversarial::BypassAdversarialProofs::clone(&self) -> bypass_adversarial::BypassAdversarialProofs
 pub fn bypass_adversarial::BypassAdversarialProofs::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn nostd_math::cbrt_lowp_f32(f32) -> f32
@@ -56,8 +68,20 @@ pub mod bypass_adversarial
 pub mod nostd_math
 pub struct bypass_adversarial::BypassAdversarialProofs
 
-## trait impls (11 types)
+## trait impls (23 types)
 
+ExtremaDomain: TrivialClone
+ExtremaOptions: TrivialClone
+HalfConvert: TrivialClone
+HalfDomain: TrivialClone
+HalfRounding: TrivialClone
+HalfSubnormals: TrivialClone
+IntBounds: TrivialClone
+IntConvert: TrivialClone
+IntRounding: TrivialClone
+RecipDomain: TrivialClone
+RecipOptions: TrivialClone
+RecipPrecision: TrivialClone
 bypass_adversarial::BypassAdversarialProofs: Clone, Copy, Debug, TrivialClone
 simd::f32x1: TrivialClone
 simd::f64x1: TrivialClone

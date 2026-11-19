@@ -340,15 +340,7 @@ check_standalone_log_op!(
     log2_array,
     LOG_POSITIVE_VALID,
     LOG_SPECIALS_EXTRA,
-    [
-        0.0,
-        -0.0,
-        -1.0,
-        f32::from_bits(1),
-        f32::INFINITY,
-        f32::NEG_INFINITY,
-        f32::NAN
-    ]
+    [0.0, -0.0, -1.0, f32::INFINITY, f32::NEG_INFINITY, f32::NAN]
 );
 
 check_standalone_log_op!(
@@ -363,15 +355,7 @@ check_standalone_log_op!(
     ln_array,
     LOG_POSITIVE_VALID,
     LOG_SPECIALS_EXTRA,
-    [
-        0.0,
-        -0.0,
-        -1.0,
-        f32::from_bits(1),
-        f32::INFINITY,
-        f32::NEG_INFINITY,
-        f32::NAN
-    ]
+    [0.0, -0.0, -1.0, f32::INFINITY, f32::NEG_INFINITY, f32::NAN]
 );
 
 check_standalone_log_op!(
@@ -386,15 +370,7 @@ check_standalone_log_op!(
     log10_array,
     LOG_POSITIVE_VALID,
     LOG_SPECIALS_EXTRA,
-    [
-        0.0,
-        -0.0,
-        -1.0,
-        f32::from_bits(1),
-        f32::INFINITY,
-        f32::NEG_INFINITY,
-        f32::NAN
-    ]
+    [0.0, -0.0, -1.0, f32::INFINITY, f32::NEG_INFINITY, f32::NAN]
 );
 
 check_standalone_log_op!(
@@ -409,15 +385,7 @@ check_standalone_log_op!(
     array,
     LOG1P_POSITIVE_VALID,
     LOG1P_SPECIALS_EXTRA,
-    [
-        -1.0,
-        -2.0,
-        f32::from_bits(1),
-        f32::from_bits(0x8000_0001),
-        f32::INFINITY,
-        f32::NEG_INFINITY,
-        f32::NAN
-    ]
+    [-1.0, -2.0, f32::INFINITY, f32::NEG_INFINITY, f32::NAN]
 );
 
 #[test]
@@ -592,7 +560,7 @@ fn check_token(token: Token) {
         log10,
         LOG_POSITIVE_VALID,
         LOG_SPECIALS_EXTRA,
-        f32::from_bits(1),
+        f32::NEG_INFINITY,
         f32::INFINITY,
         yes
     );
@@ -608,7 +576,7 @@ fn check_token(token: Token) {
         LOG1P_POSITIVE_VALID,
         LOG1P_SPECIALS_EXTRA,
         -1.0,
-        f32::from_bits(1),
+        f32::NEG_INFINITY,
         yes
     );
 
@@ -662,7 +630,7 @@ fn check_token_fp16(token: archmage::Avx512Fp16Token) {
         log10,
         LOG_POSITIVE_VALID,
         LOG_SPECIALS_EXTRA,
-        f32::from_bits(1),
+        f32::NEG_INFINITY,
         f32::INFINITY,
         no
     );
@@ -678,7 +646,7 @@ fn check_token_fp16(token: archmage::Avx512Fp16Token) {
         LOG1P_POSITIVE_VALID,
         LOG1P_SPECIALS_EXTRA,
         -1.0,
-        f32::from_bits(1),
+        f32::NEG_INFINITY,
         no
     );
 

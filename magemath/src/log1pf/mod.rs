@@ -83,10 +83,7 @@ mod tests {
     #[test]
     fn log1p_basics_and_subnormal_policies() {
         const C: u128 = Log1pfOptions::new().caller().bits();
-        const FLUSH: u128 = Log1pfOptions::new()
-            .flush_or_clamp_subnormals()
-            .caller()
-            .bits();
+        const REJECT: u128 = Log1pfOptions::new().reject_subnormals().caller().bits();
         const NORM: u128 = Log1pfOptions::new().admit_subnormals().caller().bits();
         const S: u128 = Log1pfOptions::new().full_domain().caller().bits();
         assert_eq!(Log1pf::<C>::scalar(0.0), Ok(0.0));
@@ -104,21 +101,16 @@ mod tests {
             let r = (x as f64).ln_1p() as f32;
             assert_eq!(got, r, "log1p({x}): {got} vs {r}");
         }
-        // Subnormals: rejected by default, shoved to ±0.0 under FlushOrClamp, exact under Normalize.
+        // Subnormals flush to signed zero by default, with explicit reject and normalize policies.
         assert_eq!(
-            Log1pf::<C>::scalar(f32::from_bits(1)).unwrap_err().kind,
+            Log1pf::<REJECT>::scalar(f32::from_bits(1))
+                .unwrap_err()
+                .kind,
             Log1pfErrorKind::InvalidInput
         );
+        assert_eq!(Log1pf::<C>::scalar(f32::from_bits(1)).unwrap().to_bits(), 0);
         assert_eq!(
-            Log1pf::<FLUSH>::scalar(f32::from_bits(1))
-                .unwrap()
-                .to_bits(),
-            0
-        );
-        assert_eq!(
-            Log1pf::<FLUSH>::scalar(-f32::from_bits(1))
-                .unwrap()
-                .to_bits(),
+            Log1pf::<C>::scalar(-f32::from_bits(1)).unwrap().to_bits(),
             0x8000_0000
         );
         assert_eq!(

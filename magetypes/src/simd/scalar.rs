@@ -882,3 +882,43 @@ impl Sub for u64x1 {
 }
 
 include!("generic/generated/scalar_token_aliases.rs");
+
+impl f32x1 {
+    /// Truncate toward zero, retaining the sign of zero.
+    #[inline(always)]
+    pub fn trunc(self) -> Self {
+        Self(crate::scalar::trunc_f32(self.0))
+    }
+
+    /// Compute `c - self * b` using separate rounding.
+    #[inline(always)]
+    pub fn mul_neg_add_relaxed(self, b: Self, c: Self) -> Self {
+        Self((-self.0) * b.0 + c.0)
+    }
+
+    /// Compute `c - self * b` with one rounding.
+    #[inline(always)]
+    pub fn mul_neg_add_fused(self, b: Self, c: Self) -> Self {
+        Self(crate::scalar::mul_neg_add_fused_f32(self.0, b.0, c.0))
+    }
+}
+
+impl f64x1 {
+    /// Truncate toward zero, retaining the sign of zero.
+    #[inline(always)]
+    pub fn trunc(self) -> Self {
+        Self(crate::scalar::trunc_f64(self.0))
+    }
+
+    /// Compute `c - self * b` using separate rounding.
+    #[inline(always)]
+    pub fn mul_neg_add_relaxed(self, b: Self, c: Self) -> Self {
+        Self((-self.0) * b.0 + c.0)
+    }
+
+    /// Compute `c - self * b` with one rounding.
+    #[inline(always)]
+    pub fn mul_neg_add_fused(self, b: Self, c: Self) -> Self {
+        Self(crate::scalar::mul_neg_add_fused_f64(self.0, b.0, c.0))
+    }
+}
