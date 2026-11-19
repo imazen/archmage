@@ -139,11 +139,12 @@ macro_rules! scalar_float {
             let bits = x.to_bits();
             let exponent = ((bits >> $mantissa) as i32 & $mask) - $bias;
             if exponent < 0 {
-                (0.0 as $f).copysign(x)
+                <$f>::from_bits(0).copysign(x)
             } else if exponent >= $mantissa {
                 x
             } else {
-                let fraction = ((1 as $bits) << ($mantissa - exponent)) - 1;
+                let one: $bits = 1;
+                let fraction = (one << ($mantissa - exponent)) - 1;
                 <$f>::from_bits(bits & !fraction)
             }
         }
