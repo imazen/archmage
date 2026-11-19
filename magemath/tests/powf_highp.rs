@@ -45,7 +45,11 @@ fn canonical_scalar_and_all_array_widths() {
 
 #[test]
 fn canonical_checked_masks_and_const_assumptions() {
-    const G: u128 = PowfOptions::new().gamma().highp().bits();
+    const G: u128 = PowfOptions::new()
+        .gamma()
+        .reject_subnormals()
+        .highp()
+        .bits();
     const A: u128 = PowfOptions::new().gamma().highp().unchecked().bits();
     assert_eq!(
         Powf::<G>::array::<4>([0., 1., 4., 16.], 0.).unwrap(),
@@ -135,7 +139,11 @@ fn canonical_mixed_lanes() {
 }
 
 fn gamma_mixed<const N: usize>() {
-    const G: u128 = PowfOptions::new().gamma().highp().bits();
+    const G: u128 = PowfOptions::new()
+        .gamma()
+        .reject_subnormals()
+        .highp()
+        .bits();
     const A: u128 = PowfOptions::new().gamma().highp().unchecked().bits();
     let mut cases: Vec<_> = fixtures::CASES
         .iter()

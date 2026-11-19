@@ -17,6 +17,7 @@ pub(crate) trait Kernel: 'static {
     const FLUSH_SUB: bool;
     const SPECIALS: bool;
     const CLAMP_OOB: bool;
+    const PRESERVE_CLAMPED_NAN: bool;
     const LOWP: bool;
     const ASSUME: bool;
     const ELIDE_RED: bool;
@@ -33,6 +34,7 @@ pub(crate) struct KernelCfg {
     pub(crate) flush_sub: bool,
     pub(crate) specials: bool,
     pub(crate) clamp_oob: bool,
+    pub(crate) preserve_clamped_nan: bool,
     pub(crate) lowp: bool,
     pub(crate) assume: bool,
     pub(crate) elide_red: bool,
@@ -54,6 +56,7 @@ impl KernelCfg {
             flush_sub: opts.flushes_subnormals(),
             specials: opts.is_specials(),
             clamp_oob: opts.clamp_oob(),
+            preserve_clamped_nan: opts.preserve_clamped_nan(),
             lowp: opts.is_lowp(),
             assume: opts.assume_valid(),
             elide_red: opts.elides_reduction(),
@@ -74,6 +77,7 @@ pub(crate) const fn cfg_of<K: Kernel>() -> KernelCfg {
         flush_sub: K::FLUSH_SUB,
         specials: K::SPECIALS,
         clamp_oob: K::CLAMP_OOB,
+        preserve_clamped_nan: K::PRESERVE_CLAMPED_NAN,
         lowp: K::LOWP,
         assume: K::ASSUME,
         elide_red: K::ELIDE_RED,
@@ -122,6 +126,7 @@ macro_rules! eval_log2 {
         $flush_sub:expr,
         $specials:expr,
         $clamp_oob:expr,
+        $preserve_clamped_nan:expr,
         $skip_clamp:expr,
         $lowp:expr,
         $assume:expr,
@@ -193,7 +198,7 @@ macro_rules! eval_log2 {
                 }
             }
         }
-        let is_nan = if $clamp_oob && !$specials && !$skip_clamp {
+        let is_nan = if $preserve_clamped_nan && !$specials && !$skip_clamp {
             $input.simd_ne($input)
         } else {
             ip(0).bitcast_to_f32()
@@ -204,7 +209,9 @@ macro_rules! eval_log2 {
             } else {
                 lo_bound
             };
-            let c = if $zero {
+            let c = if !$preserve_clamped_nan && !$zero {
+                $input.max_fast(sp(eff_lo)).min_fast(sp(hi_bound))
+            } else if $zero {
                 if $subnorm {
                     let nonpos = $input.simd_le(sp(0.0));
                     let lo_c = $V::blend(
@@ -214,8 +221,14 @@ macro_rules! eval_log2 {
                     );
                     $V::blend($input.simd_gt(sp(hi_bound)), sp(hi_bound), lo_c)
                 } else if eff_lo <= f32::MIN_POSITIVE {
-                    let lo_c = $V::blend($input.simd_lt(sp(f32::MIN_POSITIVE)), sp(0.0), $input);
-                    $V::blend($input.simd_gt(sp(hi_bound)), sp(hi_bound), lo_c)
+                    if !$preserve_clamped_nan {
+                        let normal = $input & $input.simd_ge(sp(f32::MIN_POSITIVE));
+                        normal.min_fast(sp(hi_bound))
+                    } else {
+                        let lo_c =
+                            $V::blend($input.simd_lt(sp(f32::MIN_POSITIVE)), sp(0.0), $input);
+                        $V::blend($input.simd_gt(sp(hi_bound)), sp(hi_bound), lo_c)
+                    }
                 } else {
                     let zero_or_sub = $input.simd_lt(sp(f32::MIN_POSITIVE));
                     let lo_c = $V::blend(
@@ -233,7 +246,11 @@ macro_rules! eval_log2 {
                 )
             };
             let safe = if $ranged && eff_lo > 0.0 { eff_lo } else { 1.0 };
-            $V::blend(is_nan, sp(safe), c)
+            if $preserve_clamped_nan {
+                $V::blend(is_nan, sp(safe), c)
+            } else {
+                c
+            }
         } else {
             pre_in
         };
@@ -318,7 +335,7 @@ macro_rules! eval_log2 {
             } else {
                 result
             };
-            if $clamp_oob && !$skip_clamp {
+            if $preserve_clamped_nan && !$skip_clamp {
                 $V::blend(is_nan, sp(f32::NAN), result)
             } else {
                 result
@@ -344,6 +361,7 @@ macro_rules! eval_log_op {
         $flush_sub:expr,
         $specials:expr,
         $clamp_oob:expr,
+        $preserve_clamped_nan:expr,
         $assume:expr,
         $elide_red_log1p:expr,
         $log2_fn:expr
@@ -426,7 +444,7 @@ macro_rules! eval_log_op {
                     });
                 }
             }
-            let is_nan = if $clamp_oob && !$specials {
+            let is_nan = if $preserve_clamped_nan && !$specials {
                 $input.simd_ne($input)
             } else {
                 ip(0).bitcast_to_f32()
@@ -475,7 +493,11 @@ macro_rules! eval_log_op {
                 } else {
                     0.0
                 };
-                $V::blend(is_nan, sp(safe), c)
+                if $preserve_clamped_nan {
+                    $V::blend(is_nan, sp(safe), c)
+                } else {
+                    c
+                }
             } else {
                 pre_x
             };
@@ -503,7 +525,7 @@ macro_rules! eval_log_op {
                 work_x.simd_eq(sp(0.0))
             };
             let res = $V::blend(preserve_x, work_x, res);
-            if $clamp_oob && !$specials {
+            if $preserve_clamped_nan && !$specials {
                 Ok($V::blend(is_nan, sp(f32::NAN), res))
             } else {
                 Ok(res)
@@ -544,6 +566,7 @@ macro_rules! graph {
                 cfg.flush_sub,
                 cfg.specials,
                 cfg.clamp_oob,
+                cfg.preserve_clamped_nan,
                 skip_clamp,
                 cfg.lowp,
                 cfg.assume,
@@ -577,6 +600,7 @@ macro_rules! graph {
                 if FOR_LOG1P { false } else { K::FLUSH_SUB },
                 K::SPECIALS,
                 if FOR_LOG1P { false } else { K::CLAMP_OOB },
+                !FOR_LOG1P && K::PRESERVE_CLAMPED_NAN,
                 FOR_LOG1P,
                 K::LOWP,
                 if FOR_LOG1P { !K::SPECIALS } else { K::ASSUME },
@@ -603,6 +627,7 @@ macro_rules! graph {
                     subnorm: false,
                     flush_sub: false,
                     clamp_oob: false,
+                    preserve_clamped_nan: false,
                     assume: !cfg.specials,
                     elide_red: cfg.elide_red_log1p,
                     ..cfg
@@ -625,6 +650,7 @@ macro_rules! graph {
                 cfg.flush_sub,
                 cfg.specials,
                 cfg.clamp_oob,
+                cfg.preserve_clamped_nan,
                 cfg.assume,
                 cfg.elide_red_log1p,
                 |arg| $vector_dbg::<T, ARITHMETIC>(token, arg, op == 3, u_cfg)
@@ -658,6 +684,7 @@ macro_rules! graph {
                 K::FLUSH_SUB,
                 K::SPECIALS,
                 K::CLAMP_OOB,
+                K::PRESERVE_CLAMPED_NAN,
                 K::ASSUME,
                 K::ELIDE_RED_LOG1P,
                 |arg| if OP == 3 {

@@ -9,6 +9,7 @@ impl<const CFG: u128> graph::Kernel for Cfg<CFG> {
     const FULL: bool = graph::KernelCfg::from_options(ExpfOptions::decode_const(CFG)).full;
     const CLAMP_OOB: bool =
         graph::KernelCfg::from_options(ExpfOptions::decode_const(CFG)).clamp_oob;
+    const PRESERVE_CLAMPED_NAN: bool = ExpfOptions::decode_const(CFG).preserve_clamped_nan();
     const LOWP: bool = graph::KernelCfg::from_options(ExpfOptions::decode_const(CFG)).lowp;
     const ASSUME: bool = graph::KernelCfg::from_options(ExpfOptions::decode_const(CFG)).assume;
     const ELIDE_EXP2: bool =

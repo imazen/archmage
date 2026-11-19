@@ -45,24 +45,27 @@ free helpers (`try_powf`, `try_powf_slice`, `try_exp2`, `try_ln`, `try_log1p`,
 An infallible `SimdMath` method (`v.powf::<CFG>(n)`, `v.powf_const::<CFG>()`,
 `v.exp2::<CFG>()`, ...) or
 `*_infallible` scalar method fails to compile unless `CFG` is infallible
-(`.clamp_out_of_bounds()`, `.assume_in_bounds()` / `.unchecked()`, or
+(`.clamp_out_of_bounds()`, `.clamp_finite()`, `.assume_in_bounds()` / `.unchecked()`, or
 `.admit_all_floats()` / `.full_domain()`). Removing checks via
 `.assume_in_bounds()` / `.unchecked()` (`Validation::AssumeValid`) is safe Rust,
 but inputs outside the stated domain give unspecified numbers; use
 `.clamp_out_of_bounds()` (`Validation::ClampOutOfBounds`) when out-of-range
-lanes should clamp safely into the configured domain (`NaN -> NaN`).
+lanes should clamp into the configured domain and propagate NaN.
+`.clamp_finite()` (`Validation::ClampFinite`) offers the same clamping for
+finite and infinite numbers with unspecified NaN results.
 
 ## Options builders in brief
 
 Every builder separates **what inputs are supported** (via discrete `#[non_exhaustive]`
 per-family `*Domain` enums, custom outward-rounded `bf16` bounds, and `Subnormals`)
 from **what happens out of bounds** (`.error_on_out_of_bounds()` / `.checked()`,
-`.clamp_out_of_bounds()`, `.assume_in_bounds()` / `.unchecked()`). Subnormal
-rescaling (`Subnormals::Normalize`, `.admit_subnormals()`) is opt-in across all
-bounded domains (`Subnormals::Reject` by default); `.flush_or_clamp_subnormals()` /
-`.shove_subnormals()` (`Subnormals::FlushOrClamp`) shoves nonzero subnormals to
+`.clamp_out_of_bounds()`, `.clamp_finite()`, `.assume_in_bounds()` / `.unchecked()`).
+Subnormal rejection and normalization are explicit under bounded domains
+(`.reject_subnormals()` and `.admit_subnormals()`). By default
+`Subnormals::FlushOrClamp` moves nonzero subnormals to
 `±0.0` (when `0` is admitted) or the lower normal bound (when `0` is excluded),
-even under `Validation::Checked`:
+even under `Validation::Checked`. The all-floats domains keep their native
+special-value and subnormal behavior.
 
 - **powf (`PowfOptions`, `PowfDomain`):** `PositiveNormals` by default, plus
   `NonNegative` (`.admit_zero()`), `Unit`, `PositiveUnit`, `UnitEncode`

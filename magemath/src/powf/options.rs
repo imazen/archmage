@@ -125,9 +125,9 @@ enum ExpSpec {
 /// Options separate:
 /// - **Domain & range** ([`domain`](Self::domain), [`base_range`](Self::base_range),
 ///   [`exponent_range`](Self::exponent_range), [`const_exponent`](Self::const_exponent));
-/// - **Subnormal policy** ([`subnormals`](Self::subnormals): [`Subnormals::Reject`]
-///   default, [`flush_or_clamp_subnormals`](Self::flush_or_clamp_subnormals) to
-///   shove subnormals to `0` / `MIN_POSITIVE`, or [`admit_subnormals`](Self::admit_subnormals));
+/// - **Subnormal policy** ([`subnormals`](Self::subnormals): [`Subnormals::FlushOrClamp`]
+///   by default, with [`reject_subnormals`](Self::reject_subnormals) and
+///   [`admit_subnormals`](Self::admit_subnormals) as opt-ins);
 /// - **Out-of-bounds validation** ([`error_on_out_of_bounds`](Self::error_on_out_of_bounds),
 ///   [`clamp_out_of_bounds`](Self::clamp_out_of_bounds), [`assume_in_bounds`](Self::assume_in_bounds)).
 ///
@@ -170,14 +170,14 @@ impl Default for PowfOptions {
 }
 
 impl PowfOptions {
-    /// `PowfDomain::PositiveNormals`, `Subnormals::Reject`, `Midp`, `BitExact`,
+    /// `PowfDomain::PositiveNormals`, `Subnormals::FlushOrClamp`, `Midp`, `BitExact`,
     /// `Validation::Checked` (`error_on_out_of_bounds`), `Execution::Upgrade`.
     pub const fn new() -> Self {
         Self {
             domain: PowfDomain::PositiveNormals,
             custom_base: None,
             exp_spec: ExpSpec::Default,
-            subnormals: Subnormals::Reject,
+            subnormals: Subnormals::FlushOrClamp,
             saturate: false,
             precision: PowfPrecision::Midp,
             portability: Portability::BitExact,
@@ -238,7 +238,7 @@ impl PowfOptions {
         self
     }
 
-    /// Treat nonzero subnormals as out-of-bounds (`Subnormals::Reject`, default).
+    /// Treat nonzero subnormals as out-of-bounds (`Subnormals::Reject`).
     pub const fn reject_subnormals(self) -> Self {
         self.subnormals(Subnormals::Reject)
     }
@@ -278,13 +278,13 @@ impl PowfOptions {
     }
 
     /// Standard HDR/extended transfer-function gamma domain (`PowfDomain::HdrGamma`,
-    /// resetting `subnormals` to `Reject` and clearing `const_exponent` / custom `exponent_range`).
+    /// resetting `subnormals` to `FlushOrClamp` and clearing `const_exponent` / custom `exponent_range`).
     pub const fn gamma_domain(mut self) -> Self {
         if !matches!(self.domain, PowfDomain::AllFloats) {
             self.domain = PowfDomain::HdrGamma;
             self.custom_base = None;
             self.exp_spec = ExpSpec::Default;
-            self.subnormals = Subnormals::Reject;
+            self.subnormals = Subnormals::FlushOrClamp;
         }
         self
     }
@@ -300,7 +300,7 @@ impl PowfOptions {
             self.domain = PowfDomain::PositiveGamma;
             self.custom_base = None;
             self.exp_spec = ExpSpec::Default;
-            self.subnormals = Subnormals::Reject;
+            self.subnormals = Subnormals::FlushOrClamp;
         }
         self
     }
@@ -316,7 +316,7 @@ impl PowfOptions {
             self.domain = PowfDomain::SdrGamma;
             self.custom_base = None;
             self.exp_spec = ExpSpec::Default;
-            self.subnormals = Subnormals::Reject;
+            self.subnormals = Subnormals::FlushOrClamp;
         }
         self
     }
@@ -328,7 +328,7 @@ impl PowfOptions {
             self.domain = PowfDomain::UnitEncode;
             self.custom_base = None;
             self.exp_spec = ExpSpec::Default;
-            self.subnormals = Subnormals::Reject;
+            self.subnormals = Subnormals::FlushOrClamp;
         }
         self
     }
@@ -411,6 +411,12 @@ impl PowfOptions {
     /// and propagate `NaN` as `NaN` (`Validation::ClampOutOfBounds`, infallible).
     pub const fn clamp_out_of_bounds(self) -> Self {
         self.validation(Validation::ClampOutOfBounds)
+    }
+
+    /// Clamp inputs and outputs as applicable. NaN inputs have unspecified
+    /// numerical results (`Validation::ClampFinite`, infallible).
+    pub const fn clamp_finite(self) -> Self {
+        self.validation(Validation::ClampFinite)
     }
 
     /// Omit numerical input/output checks and clamps (`Validation::AssumeValid`, infallible).
@@ -703,7 +709,7 @@ impl PowfOptions {
         self.is_valid()
             && (matches!(
                 self.validation,
-                Validation::AssumeValid | Validation::ClampOutOfBounds
+                Validation::AssumeValid | Validation::ClampOutOfBounds | Validation::ClampFinite
             ) || self.is_full())
     }
 
@@ -765,6 +771,7 @@ impl PowfOptions {
             Validation::Checked => 0,
             Validation::ClampOutOfBounds => 1,
             Validation::AssumeValid => 2,
+            Validation::ClampFinite => 3,
         };
         let prec: u128 = match self.precision {
             PowfPrecision::Midp => 0,
@@ -837,6 +844,7 @@ impl PowfOptions {
             0 => Validation::Checked,
             1 => Validation::ClampOutOfBounds,
             2 => Validation::AssumeValid,
+            3 => Validation::ClampFinite,
             _ => return None,
         };
         let precision = match (bits >> PREC_SHIFT) & 0x7 {
@@ -962,6 +970,13 @@ impl PowfOptions {
     }
 
     pub(crate) const fn clamp_oob(&self) -> bool {
+        matches!(
+            self.validation,
+            Validation::ClampOutOfBounds | Validation::ClampFinite
+        )
+    }
+
+    pub(crate) const fn preserve_clamped_nan(&self) -> bool {
         matches!(self.validation, Validation::ClampOutOfBounds)
     }
 

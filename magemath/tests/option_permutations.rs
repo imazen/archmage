@@ -205,7 +205,7 @@ fn highp_slice_reports_earliest_failing_index_across_mixed_error_stages() {
 
 #[test]
 fn logf_and_log1pf_granular_zero_vs_subnormals_vs_full_domain() {
-    const ZERO_ONLY: u128 = LogfOptions::new().admit_zero().bits();
+    const ZERO_ONLY: u128 = LogfOptions::new().admit_zero().reject_subnormals().bits();
     const SUB_ONLY: u128 = LogfOptions::new().admit_subnormals().bits();
     const FLUSH_ZERO: u128 = LogfOptions::new()
         .admit_zero()
@@ -274,7 +274,10 @@ fn positive_gamma_clears_prior_zero_and_subnormal_flags() {
     );
     const PG: u128 = PowfOptions::new().gamma().positive_gamma().bits();
     assert!(Powf::<PG>::scalar(0.0, 2.2).is_err());
-    assert!(Powf::<PG>::scalar(f32::from_bits(1), 0.5).is_err());
+    assert_eq!(
+        Powf::<PG>::scalar(f32::from_bits(1), 0.5),
+        Powf::<PG>::scalar(1.0 / 65_536.0, 0.5)
+    );
 }
 
 #[test]
@@ -488,19 +491,18 @@ fn polynomial_single_octave_zero_reduction_matches_full_graph_bit_for_bit() {
     const UNIT_GAMMA: PowfOptions = PowfOptions::new().domain(PowfDomain::SdrGamma);
     const PQ_DOM: PowfOptions = PowfOptions::new().domain(PowfDomain::PqRatio);
     const UNIT_CBRT: CbrtfOptions = CbrtfOptions::new().unit_range();
-    const UNIT_CBRT_FLUSH: CbrtfOptions =
-        CbrtfOptions::new().unit_range().flush_or_clamp_subnormals();
+    const UNIT_CBRT_REJECT: CbrtfOptions = CbrtfOptions::new().unit_range().reject_subnormals();
     const UNIT_CBRT_NORM: CbrtfOptions = CbrtfOptions::new().unit_range().admit_subnormals();
 
     assert!(SRGB_ENC.elides_range_check());
     assert!(UNIT_GAMMA.elides_range_check());
     assert!(PQ_DOM.elides_range_check());
-    // Subnormals are off by default on CbrtfDomain::SignedUnit / Unit!
-    assert!(!UNIT_CBRT.elides_denorm_check());
+    // Unit domains flush by default and retain explicit reject and normalize policies.
+    assert!(!UNIT_CBRT_REJECT.elides_denorm_check());
     assert!(UNIT_CBRT_NORM.elides_denorm_check());
-    assert!(Cbrtf::<{ UNIT_CBRT.bits() }>::scalar(f32::from_bits(1)).is_err());
+    assert!(Cbrtf::<{ UNIT_CBRT_REJECT.bits() }>::scalar(f32::from_bits(1)).is_err());
     assert_eq!(
-        Cbrtf::<{ UNIT_CBRT_FLUSH.bits() }>::scalar(-f32::from_bits(1))
+        Cbrtf::<{ UNIT_CBRT.bits() }>::scalar(-f32::from_bits(1))
             .unwrap()
             .to_bits(),
         (-0.0_f32).to_bits()
@@ -869,7 +871,8 @@ fn verify_powf_option_compliance(opts: PowfOptions, in_exp: f32) {
     let is_full = opts.selected_domain() == PowfDomain::AllFloats;
     let is_clamp_oob = opts == opts.clamp_out_of_bounds() && !is_full;
     let is_assume = opts == opts.assume_in_bounds() && !is_full;
-    let is_checked = !is_full && !is_clamp_oob && !is_assume;
+    let is_clamp_finite = opts == opts.clamp_finite() && !is_full;
+    let is_checked = !is_full && !is_clamp_oob && !is_assume && !is_clamp_finite;
 
     let in_bases4 = if opts.selected_domain() == PowfDomain::PqRatio {
         [0.85_f32, 0.9, 0.95, 1.0]
@@ -919,7 +922,16 @@ fn verify_powf_option_compliance(opts: PowfOptions, in_exp: f32) {
         assert_bits_or_nan(slice_out[i], a4[i % 4], "powf slice19 vs array4");
     }
 
-    if is_checked {
+    if is_clamp_finite {
+        let probe = [f32::NEG_INFINITY, f32::from_bits(1), -0.0, f32::INFINITY];
+        let restoring = opts.clamp_out_of_bounds().runtime();
+        for exp in [-10.0, -0.0, f32::from_bits(1), 0.5, f32::INFINITY] {
+            assert_eq!(
+                rt.array(probe, exp).unwrap().map(f32::to_bits),
+                restoring.array(probe, exp).unwrap().map(f32::to_bits)
+            );
+        }
+    } else if is_checked {
         let mut bad = [in_bases4[1]; 9];
         bad[7] = -1.0;
         let mut dst = [0.0; 9];
@@ -1029,6 +1041,7 @@ fn powf_hold_each_constraint_across_all_other_permutations() {
     let vals = [
         Validation::Checked,
         Validation::ClampOutOfBounds,
+        Validation::ClampFinite,
         Validation::AssumeValid,
     ];
     let execs = [Execution::Upgrade, Execution::Caller];
@@ -1178,6 +1191,7 @@ fn expf_hold_each_constraint_across_all_other_permutations() {
     let vals = [
         Validation::Checked,
         Validation::ClampOutOfBounds,
+        Validation::ClampFinite,
         Validation::AssumeValid,
     ];
     let execs = [Execution::Upgrade, Execution::Caller];
@@ -1312,6 +1326,7 @@ fn logf_hold_each_constraint_across_all_other_permutations() {
     let vals = [
         Validation::Checked,
         Validation::ClampOutOfBounds,
+        Validation::ClampFinite,
         Validation::AssumeValid,
     ];
     let execs = [Execution::Upgrade, Execution::Caller];
@@ -1457,6 +1472,7 @@ fn log1pf_hold_each_constraint_across_all_other_permutations() {
     let vals = [
         Validation::Checked,
         Validation::ClampOutOfBounds,
+        Validation::ClampFinite,
         Validation::AssumeValid,
     ];
     let execs = [Execution::Upgrade, Execution::Caller];
@@ -1621,6 +1637,7 @@ fn cbrtf_hold_each_constraint_across_all_other_permutations() {
     let vals = [
         Validation::Checked,
         Validation::ClampOutOfBounds,
+        Validation::ClampFinite,
         Validation::AssumeValid,
     ];
     let execs = [Execution::Upgrade, Execution::Caller];

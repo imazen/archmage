@@ -15,6 +15,7 @@ pub(super) trait Kernel: 'static {
     const IN_HI_EXP: f32;
     const FULL: bool;
     const CLAMP_OOB: bool;
+    const PRESERVE_CLAMPED_NAN: bool;
     const LOWP: bool;
     const ASSUME: bool;
     const ELIDE_EXP2: bool;
@@ -34,6 +35,7 @@ pub(super) struct KernelCfg {
     pub(super) in_hi_exp: f32,
     pub(super) full: bool,
     pub(super) clamp_oob: bool,
+    pub(crate) preserve_clamped_nan: bool,
     pub(super) lowp: bool,
     pub(super) assume: bool,
     pub(super) elide_exp2: bool,
@@ -62,6 +64,7 @@ impl KernelCfg {
             in_hi_exp,
             full: opts.is_full(),
             clamp_oob: opts.clamp_oob(),
+            preserve_clamped_nan: opts.preserve_clamped_nan(),
             lowp: opts.is_lowp(),
             assume: opts.assume_valid(),
             elide_exp2: opts.elides_clamp(),
@@ -85,6 +88,7 @@ pub(super) const fn cfg_of<K: Kernel>() -> KernelCfg {
         in_hi_exp: K::IN_HI_EXP,
         full: K::FULL,
         clamp_oob: K::CLAMP_OOB,
+        preserve_clamped_nan: K::PRESERVE_CLAMPED_NAN,
         lowp: K::LOWP,
         assume: K::ASSUME,
         elide_exp2: K::ELIDE_EXP2,
@@ -111,6 +115,7 @@ macro_rules! eval_expf {
         $in_hi_exp:expr,
         $full:expr,
         $clamp_oob:expr,
+        $preserve_clamped_nan:expr,
         $lowp:expr,
         $assume:expr,
         $elide_exp2:expr,
@@ -149,7 +154,7 @@ macro_rules! eval_expf {
                 }
             }
         }
-        let is_nan = if $clamp_oob && !$full {
+        let is_nan = if $preserve_clamped_nan && !$full {
             $input.simd_ne($input)
         } else {
             ip(0).bitcast_to_f32()
@@ -165,7 +170,11 @@ macro_rules! eval_expf {
                 sp(lo_b),
                 $V::blend($input.simd_gt(sp(hi_b)), sp(hi_b), $input),
             );
-            $V::blend(is_nan, sp(safe), c)
+            if $preserve_clamped_nan {
+                $V::blend(is_nan, sp(safe), c)
+            } else {
+                c
+            }
         } else {
             $input
         };
@@ -304,7 +313,7 @@ macro_rules! eval_expf {
             let result = $V::blend(nan, sp(f32::NAN), result);
             let result = $V::blend(pos_inf, sp(f32::INFINITY), result);
             $V::blend(neg_inf, sp(0.0), result)
-        } else if $clamp_oob {
+        } else if $preserve_clamped_nan {
             $V::blend(is_nan, sp(f32::NAN), result)
         } else {
             result
@@ -338,6 +347,7 @@ macro_rules! graph {
                 cfg.in_hi_exp,
                 cfg.full,
                 cfg.clamp_oob,
+                cfg.preserve_clamped_nan,
                 cfg.lowp,
                 cfg.assume,
                 cfg.elide_exp2,
@@ -375,6 +385,7 @@ macro_rules! graph {
                 K::IN_HI_EXP,
                 K::FULL,
                 K::CLAMP_OOB,
+                K::PRESERVE_CLAMPED_NAN,
                 K::LOWP,
                 K::ASSUME,
                 K::ELIDE_EXP2,

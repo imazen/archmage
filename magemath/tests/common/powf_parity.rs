@@ -250,7 +250,11 @@ pub fn standalone_powf<const F: u32, const CFG: u128>() {
     assert_eq!(rt_powf_arr::<3>([1.0; 3], 2.2, opts).unwrap_err(), bad_w);
 
     if F & 32 == 0 && F & 3 != 3 {
-        for bad_n in [f32::NAN, f32::INFINITY, f32::from_bits(1)] {
+        assert_eq!(
+            c_powf_scalar::<CFG>(2.0, f32::from_bits(1)),
+            c_powf_scalar::<CFG>(2.0, 0.0)
+        );
+        for bad_n in [f32::NAN, f32::INFINITY] {
             let es = c_powf_scalar::<CFG>(2.0, bad_n).unwrap_err();
             assert_eq!(es.kind, PowfErrorKind::InvalidExponent);
             assert_eq!(es.lane_mask, 1);

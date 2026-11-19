@@ -12,9 +12,17 @@ mod fixtures;
 
 #[test]
 fn canonical_power_matches_independent_fixtures() {
-    const D0: u128 = PowfOptions::new().caller().bits();
-    const D1: u128 = PowfOptions::new().admit_zero().caller().bits();
-    const D2: u128 = PowfOptions::new().gamma().caller().bits();
+    const D0: u128 = PowfOptions::new().reject_subnormals().caller().bits();
+    const D1: u128 = PowfOptions::new()
+        .admit_zero()
+        .reject_subnormals()
+        .caller()
+        .bits();
+    const D2: u128 = PowfOptions::new()
+        .gamma()
+        .reject_subnormals()
+        .caller()
+        .bits();
 
     for (index, &[base, n, expected, stage, domain]) in fixtures::POWF.iter().enumerate() {
         // Same directed/default selection as Magetypes; full replay is opt-in.

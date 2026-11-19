@@ -17,6 +17,7 @@ pub(super) trait Kernel: 'static {
     const FLUSH_SUB: bool;
     const FULL: bool;
     const CLAMP_OOB: bool;
+    const PRESERVE_CLAMPED_NAN: bool;
     const LOWP: bool;
     const ASSUME: bool;
 }
@@ -31,6 +32,7 @@ pub(super) struct KernelCfg {
     pub(super) flush_sub: bool,
     pub(super) full: bool,
     pub(super) clamp_oob: bool,
+    pub(crate) preserve_clamped_nan: bool,
     pub(super) lowp: bool,
     pub(super) assume: bool,
 }
@@ -50,6 +52,7 @@ impl KernelCfg {
             flush_sub: opts.flushes_subnormals(),
             full: opts.is_full(),
             clamp_oob: opts.clamp_oob(),
+            preserve_clamped_nan: opts.preserve_clamped_nan(),
             lowp: opts.is_lowp(),
             assume: opts.assume_valid(),
         }
@@ -68,6 +71,7 @@ pub(super) const fn cfg_of<K: Kernel>() -> KernelCfg {
         flush_sub: K::FLUSH_SUB,
         full: K::FULL,
         clamp_oob: K::CLAMP_OOB,
+        preserve_clamped_nan: K::PRESERVE_CLAMPED_NAN,
         lowp: K::LOWP,
         assume: K::ASSUME,
     }
@@ -88,6 +92,7 @@ macro_rules! eval_cbrtf {
         $flush_sub:expr,
         $full:expr,
         $clamp_oob:expr,
+        $preserve_clamped_nan:expr,
         $lowp:expr,
         $assume:expr
     ) => {{
@@ -167,7 +172,7 @@ macro_rules! eval_cbrtf {
             }
         }
 
-        let is_nan = if $clamp_oob && !$full {
+        let is_nan = if $preserve_clamped_nan && !$full {
             $input.simd_ne($input)
         } else {
             ip(0).bitcast_to_f32()
@@ -202,7 +207,11 @@ macro_rules! eval_cbrtf {
             } else {
                 0.0
             };
-            $V::blend(is_nan, sp(safe), c)
+            if $preserve_clamped_nan {
+                $V::blend(is_nan, sp(safe), c)
+            } else {
+                c
+            }
         } else {
             pre_in
         };
@@ -275,7 +284,7 @@ macro_rules! eval_cbrtf {
             let is_zero = abs_bits.simd_eq(ip(0)).bitcast_to_f32();
             result = $V::blend(is_zero, base_in, result);
         }
-        if $clamp_oob && !$full {
+        if $preserve_clamped_nan && !$full {
             result = $V::blend(is_nan, sp(f32::NAN), result);
         }
 
@@ -308,6 +317,7 @@ macro_rules! graph {
                 cfg.flush_sub,
                 cfg.full,
                 cfg.clamp_oob,
+                cfg.preserve_clamped_nan,
                 cfg.lowp,
                 cfg.assume
             )
@@ -334,6 +344,7 @@ macro_rules! graph {
                 K::FLUSH_SUB,
                 K::FULL,
                 K::CLAMP_OOB,
+                K::PRESERVE_CLAMPED_NAN,
                 K::LOWP,
                 K::ASSUME
             )

@@ -2,13 +2,20 @@ use super::*;
 
 #[test]
 fn positive_rejects_invalid() {
-    for x in [0.0, -0.0, -1.0, f32::NAN, f32::INFINITY, 1e-42] {
+    for x in [0.0, -0.0, -1.0, f32::NAN, f32::INFINITY] {
         assert_eq!(
             try_log2(x).unwrap_err().kind,
             LogfErrorKind::InvalidInput,
             "log2({x})"
         );
     }
+    const REJECT: u128 = LogfOptions::new().reject_subnormals().bits();
+    let x = f32::from_bits(1);
+    assert_eq!(
+        Logf::<REJECT>::log2(x).unwrap_err().kind,
+        LogfErrorKind::InvalidInput
+    );
+    assert_eq!(try_log2(x), Ok(-126.0));
 }
 
 #[test]

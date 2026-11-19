@@ -14,6 +14,7 @@ impl<const CFG: u128> graph::Kernel for Cfg<CFG> {
     const CLAMP: bool = graph::KernelCfg::from_options(PowfOptions::decode_const(CFG)).clamp;
     const CLAMP_OOB: bool =
         graph::KernelCfg::from_options(PowfOptions::decode_const(CFG)).clamp_oob;
+    const PRESERVE_CLAMPED_NAN: bool = PowfOptions::decode_const(CFG).preserve_clamped_nan();
     const LOWP: bool = graph::KernelCfg::from_options(PowfOptions::decode_const(CFG)).lowp;
     const ASSUME: bool = graph::KernelCfg::from_options(PowfOptions::decode_const(CFG)).assume;
     const BASE_LO: f32 = graph::KernelCfg::from_options(PowfOptions::decode_const(CFG)).base_lo;
@@ -33,7 +34,7 @@ pub(super) fn prepare_exponent<const N: usize>(
         return Ok(Some(n));
     }
     if opts.clamp_oob() {
-        if n.is_nan() {
+        if opts.preserve_clamped_nan() && n.is_nan() {
             return Ok(None);
         }
         let (raw_lo, raw_hi) = opts.exponent_bounds().unwrap_or((-f32::MAX, f32::MAX));
