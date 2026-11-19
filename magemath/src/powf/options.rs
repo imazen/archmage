@@ -250,11 +250,6 @@ impl PowfOptions {
         self.subnormals(Subnormals::FlushOrClamp)
     }
 
-    /// Alias for [`flush_or_clamp_subnormals`](Self::flush_or_clamp_subnormals).
-    pub const fn shove_subnormals(self) -> Self {
-        self.flush_or_clamp_subnormals()
-    }
-
     /// Opt in to exact subnormal base normalization (`* 2^23` with `-23` exponent
     /// adjustment) and nonzero subnormal exponents (`Subnormals::Normalize`).
     pub const fn admit_subnormals(self) -> Self {
@@ -640,6 +635,7 @@ impl PowfOptions {
     }
 
     /// Assert that this configuration is self-consistent.
+    #[doc(hidden)]
     pub const fn validate(&self) {
         if self.is_full() {
             assert!(
@@ -715,6 +711,7 @@ impl PowfOptions {
 
     /// Whether the configured base and exponent domains statically keep outputs
     /// inside the normal range, eliding per-lane output range checks.
+    #[doc(hidden)]
     pub const fn elides_range_check(&self) -> bool {
         if self.is_full() {
             return false;

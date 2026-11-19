@@ -155,11 +155,6 @@ impl CbrtfOptions {
         self.subnormals(Subnormals::FlushOrClamp)
     }
 
-    /// Alias for [`flush_or_clamp_subnormals`](Self::flush_or_clamp_subnormals).
-    pub const fn shove_subnormals(self) -> Self {
-        self.flush_or_clamp_subnormals()
-    }
-
     /// Opt in to exact subnormal rescaling (`* 2^24` before the Kahan seed and
     /// `* 2^-8` afterward; `Subnormals::Normalize`).
     pub const fn admit_subnormals(self) -> Self {
@@ -321,6 +316,7 @@ impl CbrtfOptions {
     }
 
     /// Assert that this configuration is self-consistent.
+    #[doc(hidden)]
     pub const fn validate(&self) {
         if self.is_full() {
             assert!(
@@ -353,6 +349,7 @@ impl CbrtfOptions {
 
     /// Whether the declared range excludes the subnormal band around zero
     /// (or subnormals are admitted), eliding the per-lane subnormal rejection check.
+    #[doc(hidden)]
     pub const fn elides_denorm_check(&self) -> bool {
         !self.denorm_possible()
     }
