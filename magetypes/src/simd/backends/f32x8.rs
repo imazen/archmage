@@ -200,9 +200,9 @@ pub trait F32x8Backend:
     }
 
     /// Fast reciprocal square root approximation: backend-dependent
-    /// (x86 ~12-bit, ARM ~8-bit, WASM full). [`rsqrt`] is full f32 everywhere.
+    /// (x86 ~12-bit, ARM ~8-bit, WASM full). [`rsqrt`](Self::rsqrt) is full f32 everywhere.
     ///
-    /// See [`rcp_approx`] for default-body rationale.
+    /// See [`rcp_approx`](Self::rcp_approx) for default-body rationale.
     #[inline(always)]
     fn rsqrt_approx(self, a: Self::Repr) -> Self::Repr {
         a
@@ -236,7 +236,7 @@ pub trait F32x8Backend:
     }
 
     /// Working-tier reciprocal — defaults to delegating to
-    /// [`rcp_approx`] (which itself defaults to identity), so every
+    /// [`rcp_approx`](Self::rcp_approx) (which itself defaults to identity), so every
     /// backend MUST override. Contract: <= 4 ULP by the backend's
     /// fastest conforming path (estimate + Newton on x86/NEON f32,
     /// exact division elsewhere); rails are per-backend and may be
@@ -247,7 +247,7 @@ pub trait F32x8Backend:
         Self::rcp_approx(self, a)
     }
 
-    /// Working-tier reciprocal square root — see [`recip`] for the
+    /// Working-tier reciprocal square root — see [`recip`](Self::recip) for the
     /// contract shape.
     #[inline(always)]
     fn rsqrt(self, a: Self::Repr) -> Self::Repr {
@@ -272,6 +272,7 @@ pub trait F32x8Backend:
     /// `roundevenf`); the byte interleave is left to LLVM, which recovers
     /// it to native shuffles. A backend may still override for a tighter
     /// fused sequence.
+    #[deprecated(since = "0.9.32", note = "Use f32x8::store_rgba_u8")]
     #[inline(always)]
     fn store_rgba_bytes(
         self,
@@ -280,11 +281,26 @@ pub trait F32x8Backend:
         b: Self::Repr,
         a: Self::Repr,
     ) -> [u8; 32] {
+        let mut out = [0u8; 32];
+        Self::store_rgba_u8_into(self, r, g, b, a, &mut out);
+        out
+    }
+
+    /// Quantize and store planar channels into packed RGBA bytes.
+    #[doc(hidden)]
+    #[inline(always)]
+    fn store_rgba_u8_into(
+        self,
+        r: Self::Repr,
+        g: Self::Repr,
+        b: Self::Repr,
+        a: Self::Repr,
+        out: &mut [u8; 32],
+    ) {
         let rb = <Self as F32x8Backend>::to_u8_bytes(self, r);
         let gb = <Self as F32x8Backend>::to_u8_bytes(self, g);
         let bb = <Self as F32x8Backend>::to_u8_bytes(self, b);
         let ab = <Self as F32x8Backend>::to_u8_bytes(self, a);
-        let mut out = [0u8; 32];
         let mut i = 0;
         while i < 8 {
             out[i * 4] = rb[i];
@@ -293,28 +309,31 @@ pub trait F32x8Backend:
             out[i * 4 + 3] = ab[i];
             i += 1;
         }
-        out
     }
 
     /// Load unsigned lanes and convert them exactly, without normalization.
+    #[doc(hidden)]
     #[inline(always)]
     fn from_u16_lanes(self, lanes: &[u16; 8]) -> Self::Repr {
         <Self as F32x8Backend>::from_array(self, lanes.map(f32::from))
     }
 
     /// Convert lanes to u16 using the encoded policy.
+    #[doc(hidden)]
     #[inline(always)]
     fn to_u16_lanes<const CFG: u32>(self, value: Self::Repr) -> [u16; 8] {
         <Self as F32x8Backend>::to_array(self, value).map(crate::scalar::to_u16_with::<CFG>)
     }
 
     /// Convert lanes to u8 using the encoded policy.
+    #[doc(hidden)]
     #[inline(always)]
     fn to_u8_lanes<const CFG: u32>(self, value: Self::Repr) -> [u8; 8] {
         <Self as F32x8Backend>::to_array(self, value).map(crate::scalar::to_u8_with::<CFG>)
     }
 
     /// Convert f32 lanes to unsigned u32 stored in the float representation.
+    #[doc(hidden)]
     #[inline(always)]
     fn to_u32_lanes<const CFG: u32>(self, value: Self::Repr) -> Self::Repr {
         let lanes = <Self as F32x8Backend>::to_array(self, value);
@@ -325,6 +344,7 @@ pub trait F32x8Backend:
     }
 
     /// Widen unsigned u32 bit patterns stored in the float representation.
+    #[doc(hidden)]
     #[inline(always)]
     fn from_u32_lanes(self, value: Self::Repr) -> Self::Repr {
         let lanes = <Self as F32x8Backend>::to_array(self, value);
@@ -332,30 +352,35 @@ pub trait F32x8Backend:
     }
 
     /// Decode binary16 using the encoded policy.
+    #[doc(hidden)]
     #[inline(always)]
     fn from_f16_lanes<const CFG: u32>(self, lanes: &[u16; 8]) -> Self::Repr {
         <Self as F32x8Backend>::from_array(self, lanes.map(crate::scalar::from_f16_with::<CFG>))
     }
 
     /// Encode binary16 using the encoded policy.
+    #[doc(hidden)]
     #[inline(always)]
     fn to_f16_lanes<const CFG: u32>(self, value: Self::Repr) -> [u16; 8] {
         <Self as F32x8Backend>::to_array(self, value).map(crate::scalar::to_f16_bits_with::<CFG>)
     }
 
     /// Widen bfloat16 bit patterns.
+    #[doc(hidden)]
     #[inline(always)]
     fn from_bf16_lanes(self, lanes: &[u16; 8]) -> Self::Repr {
         <Self as F32x8Backend>::from_array(self, lanes.map(crate::scalar::from_bf16))
     }
 
     /// Encode bfloat16 using the encoded policy.
+    #[doc(hidden)]
     #[inline(always)]
     fn to_bf16_lanes<const CFG: u32>(self, value: Self::Repr) -> [u16; 8] {
         <Self as F32x8Backend>::to_array(self, value).map(crate::scalar::to_bf16_with::<CFG>)
     }
 
     /// Broadcast lane 3 in each consecutive group of four lanes.
+    #[doc(hidden)]
     #[inline(always)]
     fn broadcast_rgba_alpha_repr(self, value: Self::Repr) -> Self::Repr {
         let value = <Self as F32x8Backend>::to_array(self, value);
@@ -363,6 +388,7 @@ pub trait F32x8Backend:
     }
 
     /// Replace lane 3 in each consecutive group of four lanes.
+    #[doc(hidden)]
     #[inline(always)]
     fn with_rgba_alpha_repr(self, value: Self::Repr, src: Self::Repr) -> Self::Repr {
         let mut value = <Self as F32x8Backend>::to_array(self, value);
@@ -374,19 +400,24 @@ pub trait F32x8Backend:
     }
 
     /// Quantize and pack planar RGBA with the encoded integer policy.
+    #[doc(hidden)]
     #[inline(always)]
-    fn store_rgba_bytes_with<const CFG: u32>(
+    fn store_rgba_u8_with_into<const CFG: u32>(
         self,
         r: Self::Repr,
         g: Self::Repr,
         b: Self::Repr,
         a: Self::Repr,
-    ) -> [u8; 32] {
+        out: &mut [u8; 32],
+    ) {
         let channels = [r, g, b, a].map(|v| <Self as F32x8Backend>::to_u8_lanes::<CFG>(self, v));
-        core::array::from_fn(|i| channels[i % 4][i / 4])
+        for (i, byte) in out.iter_mut().enumerate() {
+            *byte = channels[i % 4][i / 4];
+        }
     }
 
     /// Deinterleave 8 packed RGB pixels (24 floats) from AoS into planar `[R, G, B]`.
+    #[doc(hidden)]
     #[inline(always)]
     fn deinterleave_3ch_repr(self, rgb: [Self::Repr; 3]) -> [Self::Repr; 3] {
         let [v0, v1, v2] = rgb.map(|v| Self::to_array(self, v));
@@ -407,6 +438,7 @@ pub trait F32x8Backend:
     }
 
     /// Interleave 3 planar `[R, G, B]` vectors (8 pixels) into 3 AoS RGB vectors.
+    #[doc(hidden)]
     #[inline(always)]
     fn interleave_3ch_repr(self, channels: [Self::Repr; 3]) -> [Self::Repr; 3] {
         let [r, g, b] = channels.map(|c| Self::to_array(self, c));
@@ -418,6 +450,7 @@ pub trait F32x8Backend:
     }
 
     /// Load 8 packed RGB `u8` pixels (24 bytes) into planar `f32` `(R, G, B)`.
+    #[doc(hidden)]
     #[inline(always)]
     fn load_rgb_bytes(self, rgb: &[u8; 24]) -> (Self::Repr, Self::Repr, Self::Repr) {
         let ch = |c| Self::from_array(self, core::array::from_fn(|i| rgb[i * 3 + c] as f32));
@@ -425,10 +458,18 @@ pub trait F32x8Backend:
     }
 
     /// Round-to-nearest-even, clamp to `0..=255`, and interleave into 8 RGB pixels.
+    #[doc(hidden)]
     #[inline(always)]
-    fn store_rgb_bytes(self, r: Self::Repr, g: Self::Repr, b: Self::Repr) -> [u8; 24] {
+    fn store_rgb_u8_into(self, r: Self::Repr, g: Self::Repr, b: Self::Repr, out: &mut [u8; 24]) {
         let [rb, gb, bb] = [r, g, b].map(|v| Self::to_u8_bytes(self, v));
-        core::array::from_fn(|i| [rb[i / 3], gb[i / 3], bb[i / 3]][i % 3])
+        for (pixel, ((r, g), b)) in out
+            .as_chunks_mut::<3>()
+            .0
+            .iter_mut()
+            .zip(rb.into_iter().zip(gb).zip(bb))
+        {
+            *pixel = [r, g, b];
+        }
     }
 
     // ====== 8x8 transpose (f32x8 only) ======

@@ -1,8 +1,12 @@
-use crate::{ExtremaDomain, ExtremaOptions, HalfConvert, IntConvert, RecipOptions, RecipPrecision};
+use crate::numerics::{
+    ExtremaDomain, ExtremaOptions, HalfConvert, IntConvert, RecipOptions, RecipPrecision,
+};
 
 macro_rules! to_int {
     ($name:ident, $output:ty, $doc:literal) => {
         #[doc = $doc]
+        ///
+        /// Configure with [`IntConvert`](crate::numerics::IntConvert).
         #[inline(always)]
         pub fn $name<const CFG: u32>(x: f32) -> $output {
             let opts = const { IntConvert::decode(CFG) };
@@ -44,6 +48,8 @@ pub fn from_u32(x: u32) -> f32 {
 }
 
 /// Decode an IEEE binary16 bit pattern with the given half policy.
+///
+/// Configure with [`HalfConvert`](crate::numerics::HalfConvert).
 #[inline]
 pub fn from_f16_with<const CFG: u32>(bits: u16) -> f32 {
     let opts = const { HalfConvert::decode(CFG) };
@@ -65,6 +71,8 @@ pub fn from_f16_with<const CFG: u32>(bits: u16) -> f32 {
 }
 
 /// Encode binary16 with the given half policy.
+///
+/// Configure with [`HalfConvert`](crate::numerics::HalfConvert).
 #[inline]
 pub fn to_f16_bits_with<const CFG: u32>(x: f32) -> u16 {
     let opts = const { HalfConvert::decode(CFG) };
@@ -109,6 +117,8 @@ pub fn from_bf16(bits: u16) -> f32 {
 }
 
 /// Encode bfloat16 with the given half policy.
+///
+/// Configure with [`HalfConvert`](crate::numerics::HalfConvert).
 #[inline(always)]
 pub fn to_bf16_with<const CFG: u32>(x: f32) -> u16 {
     let opts = const { HalfConvert::decode(CFG) };
@@ -162,6 +172,8 @@ macro_rules! scalar_float {
         }
 
         /// Scalar reciprocal with the selected policy. Scalar has an exact seed.
+        ///
+        /// Configure with [`RecipOptions`](crate::numerics::RecipOptions).
         #[inline(always)]
         pub fn $recip<const CFG: u32>(x: $f) -> $f {
             let opts = const { RecipOptions::decode(CFG) };
@@ -177,6 +189,8 @@ macro_rules! scalar_float {
         }
 
         /// Scalar reciprocal square root. Scalar has an exact seed.
+        ///
+        /// Configure with [`RecipOptions`](crate::numerics::RecipOptions).
         #[inline(always)]
         pub fn $rsqrt<const CFG: u32>(x: $f) -> $f {
             const {
@@ -186,6 +200,8 @@ macro_rules! scalar_float {
         }
 
         /// Scalar minimum with the selected NaN policy.
+        ///
+        /// Configure with [`ExtremaOptions`](crate::numerics::ExtremaOptions).
         #[inline(always)]
         pub fn $min<const CFG: u32>(a: $f, b: $f) -> $f {
             match const { ExtremaOptions::decode(CFG) } {
@@ -202,6 +218,8 @@ macro_rules! scalar_float {
         }
 
         /// Scalar maximum with the selected NaN policy.
+        ///
+        /// Configure with [`ExtremaOptions`](crate::numerics::ExtremaOptions).
         #[inline(always)]
         pub fn $max<const CFG: u32>(a: $f, b: $f) -> $f {
             match const { ExtremaOptions::decode(CFG) } {
@@ -218,6 +236,8 @@ macro_rules! scalar_float {
         }
 
         /// Clamp a scalar with the selected NaN policy.
+        ///
+        /// Configure with [`ExtremaOptions`](crate::numerics::ExtremaOptions).
         #[inline(always)]
         pub fn $clamp<const CFG: u32>(x: $f, lo: $f, hi: $f) -> $f {
             $min::<CFG>($max::<CFG>(x, lo), hi)

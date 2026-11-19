@@ -158,6 +158,8 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 
 #### QUEUED BREAKING CHANGES
 
+- Remove the numbered `load_{4,8}_rgba_u8[_t]` and `store_{4,8}_rgba_u8` wrappers and `F32x{4,8}Backend::store_rgba_bytes` in 0.10. Use `load_rgba_u8_t` and `store_rgba_u8(..., out)`.
+
 - Planned: `mul_add`/`mul_sub` become the fused, single-rounding operations, matching `f32::mul_add`. Step one is in this release: `mul_add_relaxed`/`mul_sub_relaxed` (the previous `mul_add`: fused where the hardware fuses, multiply then add on the scalar backend and strict WASM, the engine's madd with relaxed SIMD) and `mul_add_fused`/`mul_sub_fused` (the same operation as `mul_add_portable`/`mul_sub_portable`, which stay), with `mul_add`/`mul_sub` deprecated pointing at both (#138). After the deprecation has shipped through a full release (0.10), `mul_add`/`mul_sub` return undeprecated as the fused forms (0.11). Calls still on `mul_add` then round once everywhere, at software-FMA cost on the scalar backend without FMA hardware and on strict WASM. Neither form is fastest everywhere: separate multiply-add is faster for single-accumulator reductions, fused for Horner chains (`benchmarks/fused_vs_separate_2026-10-25.md`).
 - Planned magetypes 0.10: deprecate the one-lane wrappers `f32x1`, `f64x1`, `i8x1`, `u8x1`, `i16x1`, `u16x1`, `i32x1`, `u32x1`, `i64x1`, `u64x1` (no production users across the zen checkouts; the scalar tier uses the generic `*<ScalarToken>` types and tails use plain Rust or `magetypes::scalar`), the comparison traits `SimdEq`, `SimdNe`, `SimdLt`, `SimdLe`, `SimdGt`, `SimdGe` (never implemented; the vector types have inherent `simd_*` methods), and `SimdTypes` and `WidthDispatch` (no users, tests or docs). Removal follows in a later breaking release.
 - Planned magetypes 0.10: reserve short constructor names for matching feature contexts; `_t(token, ...)` provides the preparatory migration spelling in 0.9. No constructor signatures change in this patch (772ef504).
@@ -167,9 +169,9 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 
 #### Added
 
-- Add const-configured `IntConvert`, `HalfConvert`, `RecipOptions`, and `ExtremaOptions` for register operations and scalar tails. The new u16 conversion accepts nearest-even or truncating policies with explicit saturation bounds. Add binary16 and bfloat16 register conversions, unsigned u32 widening and narrowing, `trunc`, and fused and relaxed multiply-negate-add.
-- Add exact raw `u16` loads for generic `f32x4`, `f32x8` and `f32x16`, packed RGB16 loads at widths 4 and 8, and bit-preserving RGBA alpha operations at all three widths.
-- Add `f32x16` RGBA block operations and use native SIMD shuffles for `f32x4` transpose and WASM128 RGB deinterleave.
+- Add const-configured `magetypes::numerics::{IntConvert, HalfConvert, RecipOptions, ExtremaOptions}` for register operations and scalar tails. The new u16 conversion accepts nearest-even or truncating policies with explicit saturation bounds. Add binary16 and bfloat16 register conversions, unsigned u32 widening and narrowing, `trunc`, and fused and relaxed multiply-negate-add.
+- Add exact raw `u16` loads for generic `f32x4`, `f32x8` and `f32x16`, `load_rgb_u16_t` at widths 4 and 8, and bit-preserving RGBA alpha operations at all three widths.
+- Add width-polymorphic `load_rgba_u8_t` and `store_rgba_u8[_with](..., out)` for `f32x4`, `f32x8` and `f32x16`. Add `f32x16` RGBA block operations and use native SIMD shuffles for `f32x4` transpose and WASM128 RGB deinterleave.
 
 #### Queued for after 0.9.32
 
@@ -185,7 +187,7 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
   - `min_fast` / `max_fast`: fastest single-instruction lane-wise operation per platform ignoring `NaN` and signed-zero ordering (`vminps`/`vminpd` on x86, `vminnmq` on NEON, `f32x4.pmin`/`f64x2.pmin` or `relaxed_min` with `relaxed-simd` on WASM, compare+select on `ScalarToken`); scalar tails use `magetypes::scalar::{min_fast_f32, max_fast_f32, min_fast_f64, max_fast_f64}`.
 - Add a flat `magetypes::scalar` module with `#![no_std]` portable helpers (`minimum_f{32,64}`, `maximum_f{32,64}`, ties-to-even `round_f{32,64}`, `floor_f{32,64}`, `ceil_f{32,64}`, `sqrt_f{32,64}`, `mul_add_fused_f{32,64}`, `mul_sub_fused_f{32,64}`) and token-matched 1-instruction helpers (`F32ScalarBackend` / `F64ScalarBackend` supertraits: `min_fast_f{32,64}`, `max_fast_f{32,64}`, `clamp_f{32,64}`, `mul_add_relaxed_f{32,64}`, `mul_sub_relaxed_f{32,64}`, `to_i32`, `to_i32_fast`), with `archmage::IntoConcreteToken` as a supertrait on the sealed scalar backend traits.
 - Add unchecked in-range truncation `to_i32_fast` on `f32x4`, `f32x8`, and `f32x16` (plus `f32x1::to_i32_fast`, `magetypes::scalar::to_i32_fast`, and `convert_f32_to_i32_fast` on `F32x4Convert`, `F32x8Convert`, and `F32x16Convert`), omitting x86 saturation fixups and using `i32x4.relaxed_trunc_f32x4_s` on `Wasm128Token` when compiled with `relaxed-simd` (#158).
-- Add native 3-channel RGB helpers on `f32x4` and `f32x8` (`deinterleave_3ch`, `interleave_3ch`, `load_4_rgb_u8_t`, `store_4_rgb_u8`, `load_8_rgb_u8_t`, `store_8_rgb_u8`, and corresponding backend trait methods on `F32x4Backend` / `F32x8Backend`) across x86 (`X64V3Token` and AVX-512 tokens, with a V4 override for `f32x4::store_4_rgb_u8`), AArch64 `NeonToken`, `Wasm128Token`, and `ScalarToken` (#169).
+- Add `deinterleave_3ch`, `interleave_3ch`, `load_rgb_u8_t` and destination-buffer `store_rgb_u8[_with]` for `f32x4` and `f32x8` across x86, NEON, WASM SIMD128 and scalar (#169).
 - Add `load_padded_t(token, slice, pad)` and `store_prefix(out)` across all 30 generic vector types (`f32x4`..`u64x8`) for branchless single-vector remainder handling paired with `partition_slice_t` / `partition_slice_mut_t`.
 - Add `pub fn token(self) -> T` across all 30 generic vector types (`f32x4`..`u64x8`) to recover the capability token proof carried inside a vector without passing a separate token argument.
 

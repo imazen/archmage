@@ -19,6 +19,49 @@
 
 #![allow(non_camel_case_types)]
 
+// Core vector types and methods
+#[cfg(feature = "w512")]
+mod f32x16_impl;
+mod f32x4_impl;
+mod f32x8_impl;
+mod f64x2_impl;
+mod f64x4_impl;
+#[cfg(feature = "w512")]
+mod f64x8_impl;
+mod i16x16_impl;
+#[cfg(feature = "w512")]
+mod i16x32_impl;
+mod i16x8_impl;
+#[cfg(feature = "w512")]
+mod i32x16_impl;
+mod i32x4_impl;
+mod i32x8_impl;
+mod i64x2_impl;
+mod i64x4_impl;
+#[cfg(feature = "w512")]
+mod i64x8_impl;
+mod i8x16_impl;
+mod i8x32_impl;
+#[cfg(feature = "w512")]
+mod i8x64_impl;
+mod u16x16_impl;
+#[cfg(feature = "w512")]
+mod u16x32_impl;
+mod u16x8_impl;
+#[cfg(feature = "w512")]
+mod u32x16_impl;
+mod u32x4_impl;
+mod u32x8_impl;
+mod u64x2_impl;
+mod u64x4_impl;
+#[cfg(feature = "w512")]
+mod u64x8_impl;
+mod u8x16_impl;
+mod u8x32_impl;
+#[cfg(feature = "w512")]
+mod u8x64_impl;
+
+// Block layout operations
 mod block_ops_f32x4;
 mod block_ops_f32x8;
 mod block_ops_f64x2;
@@ -27,28 +70,12 @@ mod block_ops_i32x4;
 mod block_ops_i32x8;
 mod block_ops_i8x16;
 mod block_ops_u32x4;
-mod f32x4_impl;
-mod f32x8_impl;
-mod f64x2_impl;
-mod f64x4_impl;
-mod i16x16_impl;
-mod i16x8_impl;
-mod i32x4_impl;
-mod i32x8_impl;
-mod i64x2_impl;
-mod i64x4_impl;
-mod i8x16_impl;
-mod i8x32_impl;
+
+// Transcendental approximations
+#[cfg(feature = "w512")]
+mod transcendentals_f32x16;
 mod transcendentals_f32x4;
 mod transcendentals_f32x8;
-mod u16x16_impl;
-mod u16x8_impl;
-mod u32x4_impl;
-mod u32x8_impl;
-mod u64x2_impl;
-mod u64x4_impl;
-mod u8x16_impl;
-mod u8x32_impl;
 
 pub use f32x4_impl::f32x4;
 pub use f32x8_impl::f32x8;
@@ -72,28 +99,6 @@ pub use u64x2_impl::u64x2;
 pub use u64x4_impl::u64x4;
 
 // 512-bit generic wrapper types (gated behind `w512` feature)
-#[cfg(feature = "w512")]
-mod f32x16_impl;
-#[cfg(feature = "w512")]
-mod f64x8_impl;
-#[cfg(feature = "w512")]
-mod i16x32_impl;
-#[cfg(feature = "w512")]
-mod i32x16_impl;
-#[cfg(feature = "w512")]
-mod i64x8_impl;
-#[cfg(feature = "w512")]
-mod i8x64_impl;
-#[cfg(feature = "w512")]
-mod transcendentals_f32x16;
-#[cfg(feature = "w512")]
-mod u16x32_impl;
-#[cfg(feature = "w512")]
-mod u32x16_impl;
-#[cfg(feature = "w512")]
-mod u64x8_impl;
-#[cfg(feature = "w512")]
-mod u8x64_impl;
 
 #[cfg(feature = "w512")]
 pub use f32x16_impl::f32x16;

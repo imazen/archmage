@@ -5,6 +5,7 @@
 #![allow(non_camel_case_types)]
 
 pub(crate) mod sealed;
+#[doc(hidden)]
 pub use crate::scalar::{F32ScalarBackend, F64ScalarBackend};
 
 mod f32x4;

@@ -1221,7 +1221,7 @@ const COMPILE_BUDGETS: &[(&str, &[&str], usize)] = &[
             "magetypes/src/simd/impls/scalar.rs",
             "magetypes/src/simd/backends/",
         ],
-        34_708, // measured 34 308
+        34_708, // measured 34 456
     ),
     (
         "aarch64",
@@ -1230,7 +1230,7 @@ const COMPILE_BUDGETS: &[(&str, &[&str], usize)] = &[
             "magetypes/src/simd/impls/scalar.rs",
             "magetypes/src/simd/backends/",
         ],
-        26_997, // measured 26 597
+        26_997, // measured 26 700
     ),
     (
         "wasm32",
@@ -1239,7 +1239,7 @@ const COMPILE_BUDGETS: &[(&str, &[&str], usize)] = &[
             "magetypes/src/simd/impls/scalar.rs",
             "magetypes/src/simd/backends/",
         ],
-        26_532, // measured 26 132
+        26_532, // measured 26 236
     ),
 ];
 
@@ -2672,7 +2672,18 @@ fn run_ci() -> Result<()> {
     // Step 14: Documentation build (catches broken doc links)
     timer.begin("Step 14/19: Building documentation");
     let doc = std::process::Command::new("cargo")
-        .args(["doc", "--features", "std avx512", "--no-deps"])
+        .args([
+            "doc",
+            "-p",
+            "archmage",
+            "-p",
+            "magetypes",
+            "-p",
+            "magemath",
+            "--features",
+            "std avx512",
+            "--no-deps",
+        ])
         .env("RUSTDOCFLAGS", "-Dwarnings")
         .status()
         .context("Failed to run cargo doc")?;

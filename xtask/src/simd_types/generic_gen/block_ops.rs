@@ -246,7 +246,7 @@ fn gen_f32x4_extras() -> String {
             /// Input: 16 bytes = 4 RGBA pixels in interleaved format.
             /// Output: `(R, G, B, A)` where each is f32x4 with values in `[0.0, 255.0]`.
             #[inline(always)]
-            pub fn load_4_rgba_u8_t(token: T, rgba: &[u8; 16]) -> (Self, Self, Self, Self) {{
+            pub fn load_rgba_u8_t(token: T, rgba: &[u8; 16]) -> (Self, Self, Self, Self) {{
                 let r: [f32; 4] = core::array::from_fn(|i| rgba[i * 4] as f32);
                 let g: [f32; 4] = core::array::from_fn(|i| rgba[i * 4 + 1] as f32);
                 let b: [f32; 4] = core::array::from_fn(|i| rgba[i * 4 + 2] as f32);
@@ -259,13 +259,28 @@ fn gen_f32x4_extras() -> String {
                 )
             }}
 
-            /// Interleave 4 f32x4 channels and store as 4 RGBA u8 pixels.
+            /// Load 4 packed RGBA byte pixels. See [`Self::load_rgba_u8_t`].
+            #[deprecated(since = "0.9.32", note = "Use load_rgba_u8_t(token, rgba).")]
+            #[inline(always)]
+            pub fn load_4_rgba_u8_t(token: T, rgba: &[u8; 16]) -> (Self, Self, Self, Self) {{
+                Self::load_rgba_u8_t(token, rgba)
+            }}
+
+            /// Store 4 packed RGBA byte pixels from planar channels.
             ///
-            /// Values are rounded and clamped to `[0, 255]`.
-            /// Output: 16 bytes = 4 RGBA pixels in interleaved format.
+            /// Rounds ties to even, saturates to `0..=255`, and maps NaN to zero.
+            #[inline(always)]
+            pub fn store_rgba_u8(r: Self, g: Self, b: Self, a: Self, out: &mut [u8; 16]) {{
+                T::store_rgba_u8_into(r.1, r.0, g.0, b.0, a.0, out);
+            }}
+
+            /// Store 4 packed RGBA byte pixels. See [`Self::store_rgba_u8`].
+            #[deprecated(since = "0.9.32", note = "Use store_rgba_u8(r, g, b, a, out).")]
             #[inline(always)]
             pub fn store_4_rgba_u8(r: Self, g: Self, b: Self, a: Self) -> [u8; 16] {{
-                T::store_rgba_bytes(r.1, r.0, g.0, b.0, a.0)
+                let mut out = [0u8; 16];
+                Self::store_rgba_u8(r, g, b, a, &mut out);
+                out
             }}
 
             // ====== Matrix Transpose ======
@@ -427,7 +442,7 @@ fn gen_f32x8_extras() -> String {
             /// Input: 32 bytes = 8 RGBA pixels in interleaved format.
             /// Output: `(R, G, B, A)` where each is f32x8 with values in `[0.0, 255.0]`.
             #[inline(always)]
-            pub fn load_8_rgba_u8_t(token: T, rgba: &[u8; 32]) -> (Self, Self, Self, Self) {{
+            pub fn load_rgba_u8_t(token: T, rgba: &[u8; 32]) -> (Self, Self, Self, Self) {{
                 let r: [f32; 8] = core::array::from_fn(|i| rgba[i * 4] as f32);
                 let g: [f32; 8] = core::array::from_fn(|i| rgba[i * 4 + 1] as f32);
                 let b: [f32; 8] = core::array::from_fn(|i| rgba[i * 4 + 2] as f32);
@@ -440,13 +455,28 @@ fn gen_f32x8_extras() -> String {
                 )
             }}
 
-            /// Interleave 4 f32x8 channels and store as 8 RGBA u8 pixels.
+            /// Load 8 packed RGBA byte pixels. See [`Self::load_rgba_u8_t`].
+            #[deprecated(since = "0.9.32", note = "Use load_rgba_u8_t(token, rgba).")]
+            #[inline(always)]
+            pub fn load_8_rgba_u8_t(token: T, rgba: &[u8; 32]) -> (Self, Self, Self, Self) {{
+                Self::load_rgba_u8_t(token, rgba)
+            }}
+
+            /// Store 8 packed RGBA byte pixels from planar channels.
             ///
-            /// Values are rounded and clamped to `[0, 255]`.
-            /// Output: 32 bytes = 8 RGBA pixels in interleaved format.
+            /// Rounds ties to even, saturates to `0..=255`, and maps NaN to zero.
+            #[inline(always)]
+            pub fn store_rgba_u8(r: Self, g: Self, b: Self, a: Self, out: &mut [u8; 32]) {{
+                T::store_rgba_u8_into(r.1, r.0, g.0, b.0, a.0, out);
+            }}
+
+            /// Store 8 packed RGBA byte pixels. See [`Self::store_rgba_u8`].
+            #[deprecated(since = "0.9.32", note = "Use store_rgba_u8(r, g, b, a, out).")]
             #[inline(always)]
             pub fn store_8_rgba_u8(r: Self, g: Self, b: Self, a: Self) -> [u8; 32] {{
-                T::store_rgba_bytes(r.1, r.0, g.0, b.0, a.0)
+                let mut out = [0u8; 32];
+                Self::store_rgba_u8(r, g, b, a, &mut out);
+                out
             }}
 
             // ====== Matrix Transpose ======

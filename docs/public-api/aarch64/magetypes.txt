@@ -6,16 +6,16 @@
 # impls omitted; re-export duplicates annotated `[also: path]`.
 # DO NOT EDIT BY HAND — commit regenerated changes with the code.
 #
-# files: magetypes.txt 3051 lines (supported surface) | magetypes.features.txt 12 added (features: avx512,std,w512) | magetypes.internal.txt 66 lines (76 hidden + 0 excluded-feature)
+# files: magetypes.txt 2966 lines (supported surface) | magetypes.features.txt 12 added (features: avx512,std,w512) | magetypes.internal.txt 245 lines (255 hidden + 0 excluded-feature)
 
 ## summary
 #
 #   pub modules                                14
-#   pub types (struct/enum/trait/alias)       315
-#   pub consts/statics                        308
-#   free functions                           4373
-#   inherent methods                         1363
-#   enum variants                              45
+#   pub types (struct/enum/trait/alias)       301
+#   pub consts/statics                        270
+#   free functions                           4381
+#   inherent methods                         1296
+#   enum variants                              23
 #   re-exports                                  2
 #   trait roster entries (type × trait)       817
 #   conditional trait impls (verbatim)        120
@@ -23,14 +23,14 @@
 #   auto-trait exceptions                      30
 #
 # per-module pub lines:
-#   (root)                          437
+#   (root)                          365
 #   cast                              3
 #   numerics                         34
-#   prelude                        4120
-#   scalar                           61
-#   simd                           1765
+#   prelude                        4128
+#   scalar                           51
+#   simd                           1706
 
-## items (2816 lines)
+## items (2731 lines)
 
 pub mod magetypes
 pub use archmage
@@ -40,66 +40,78 @@ pub fn cast::Downcast::downcast(self) -> T
 pub trait cast::Upcast<T>
 pub unsafe fn cast::Upcast::upcast(self) -> T
 pub mod numerics
+#[non_exhaustive] #[repr(u32)] pub enum numerics::ExtremaDomain
 pub numerics::ExtremaDomain::DropNan
 pub numerics::ExtremaDomain::Finite
 pub numerics::ExtremaDomain::NonNanRhs
 pub numerics::ExtremaDomain::PropagateNan
+#[non_exhaustive] pub enum numerics::HalfDomain
 pub numerics::HalfDomain::AllFloats
 pub numerics::HalfDomain::Finite
+#[non_exhaustive] pub enum numerics::HalfRounding
 pub numerics::HalfRounding::NearestEven
 pub numerics::HalfRounding::Trunc
+#[non_exhaustive] pub enum numerics::HalfSubnormals
 pub numerics::HalfSubnormals::FlushOrClamp
 pub numerics::HalfSubnormals::Normalize
+#[non_exhaustive] #[repr(u32)] pub enum numerics::IntBounds
 pub numerics::IntBounds::Finite
 pub numerics::IntBounds::InRange
 pub numerics::IntBounds::NonNegativeFinite
 pub numerics::IntBounds::SaturateAll
+#[non_exhaustive] #[repr(u32)] pub enum numerics::IntRounding
 pub numerics::IntRounding::NearestEven
 pub numerics::IntRounding::Trunc
+#[non_exhaustive] pub enum numerics::RecipDomain
 pub numerics::RecipDomain::AllFloats
 pub numerics::RecipDomain::FiniteNormal
+#[non_exhaustive] #[repr(u32)] pub enum numerics::RecipPrecision
 pub numerics::RecipPrecision::Approx = 1
 pub numerics::RecipPrecision::Exact = 3
 pub numerics::RecipPrecision::Nr1 = 0
 pub numerics::RecipPrecision::Nr1Ceil = 2
-pub const fn ExtremaOptions::bits(self) -> u32 [also: (root)]
-pub const fn ExtremaOptions::domain(self, ExtremaDomain) -> Self [also: (root)]
-pub const fn ExtremaOptions::drop_nan(self) -> Self [also: (root)]
-pub const fn ExtremaOptions::from_bits(u32) -> core::option::Option<Self> [also: (root)]
-pub const fn ExtremaOptions::new() -> Self [also: (root)]
-pub const fn ExtremaOptions::non_nan_rhs(self) -> Self [also: (root)]
-pub const fn ExtremaOptions::propagate_nan(self) -> Self [also: (root)]
-pub const fn HalfConvert::all_floats(self) -> Self [also: (root)]
-pub const fn HalfConvert::bits(self) -> u32 [also: (root)]
-pub const fn HalfConvert::domain(self, HalfDomain) -> Self [also: (root)]
-pub const fn HalfConvert::flush_or_clamp(self) -> Self [also: (root)]
-pub const fn HalfConvert::from_bits(u32) -> core::option::Option<Self> [also: (root)]
-pub const fn HalfConvert::new() -> Self [also: (root)]
-pub const fn HalfConvert::normalize(self) -> Self [also: (root)]
-pub const fn HalfConvert::rounding(self, HalfRounding) -> Self [also: (root)]
-pub const fn HalfConvert::subnormals(self, HalfSubnormals) -> Self [also: (root)]
-pub const fn HalfConvert::trunc(self) -> Self [also: (root)]
-pub const fn IntConvert::bits(self) -> u32 [also: (root)]
-pub const fn IntConvert::bounds(self, IntBounds) -> Self [also: (root)]
-pub const fn IntConvert::finite(self) -> Self [also: (root)]
-pub const fn IntConvert::from_bits(u32) -> core::option::Option<Self> [also: (root)]
-pub const fn IntConvert::in_range(self) -> Self [also: (root)]
-pub const fn IntConvert::nearest_even(self) -> Self [also: (root)]
-pub const fn IntConvert::new() -> Self [also: (root)]
-pub const fn IntConvert::non_negative_finite(self) -> Self [also: (root)]
-pub const fn IntConvert::rounding(self, IntRounding) -> Self [also: (root)]
-pub const fn IntConvert::saturate_all(self) -> Self [also: (root)]
-pub const fn IntConvert::trunc(self) -> Self [also: (root)]
-pub const fn RecipOptions::all_floats(self) -> Self [also: (root)]
-pub const fn RecipOptions::approx(self) -> Self [also: (root)]
-pub const fn RecipOptions::bits(self) -> u32 [also: (root)]
-pub const fn RecipOptions::domain(self, RecipDomain) -> Self [also: (root)]
-pub const fn RecipOptions::exact(self) -> Self [also: (root)]
-pub const fn RecipOptions::from_bits(u32) -> core::option::Option<Self> [also: (root)]
-pub const fn RecipOptions::new() -> Self [also: (root)]
-pub const fn RecipOptions::nr1(self) -> Self [also: (root)]
-pub const fn RecipOptions::nr1_ceil(self) -> Self [also: (root)]
-pub const fn RecipOptions::precision(self, RecipPrecision) -> Self [also: (root)]
+pub struct numerics::ExtremaOptions(_)
+pub const fn numerics::ExtremaOptions::bits(self) -> u32
+pub const fn numerics::ExtremaOptions::domain(self, numerics::ExtremaDomain) -> Self
+pub const fn numerics::ExtremaOptions::drop_nan(self) -> Self
+pub const fn numerics::ExtremaOptions::from_bits(u32) -> core::option::Option<Self>
+pub const fn numerics::ExtremaOptions::new() -> Self
+pub const fn numerics::ExtremaOptions::non_nan_rhs(self) -> Self
+pub const fn numerics::ExtremaOptions::propagate_nan(self) -> Self
+pub struct numerics::HalfConvert
+pub const fn numerics::HalfConvert::all_floats(self) -> Self
+pub const fn numerics::HalfConvert::bits(self) -> u32
+pub const fn numerics::HalfConvert::domain(self, numerics::HalfDomain) -> Self
+pub const fn numerics::HalfConvert::flush_or_clamp(self) -> Self
+pub const fn numerics::HalfConvert::from_bits(u32) -> core::option::Option<Self>
+pub const fn numerics::HalfConvert::new() -> Self
+pub const fn numerics::HalfConvert::normalize(self) -> Self
+pub const fn numerics::HalfConvert::rounding(self, numerics::HalfRounding) -> Self
+pub const fn numerics::HalfConvert::subnormals(self, numerics::HalfSubnormals) -> Self
+pub const fn numerics::HalfConvert::trunc(self) -> Self
+pub struct numerics::IntConvert
+pub const fn numerics::IntConvert::bits(self) -> u32
+pub const fn numerics::IntConvert::bounds(self, numerics::IntBounds) -> Self
+pub const fn numerics::IntConvert::finite(self) -> Self
+pub const fn numerics::IntConvert::from_bits(u32) -> core::option::Option<Self>
+pub const fn numerics::IntConvert::in_range(self) -> Self
+pub const fn numerics::IntConvert::nearest_even(self) -> Self
+pub const fn numerics::IntConvert::new() -> Self
+pub const fn numerics::IntConvert::non_negative_finite(self) -> Self
+pub const fn numerics::IntConvert::rounding(self, numerics::IntRounding) -> Self
+pub const fn numerics::IntConvert::saturate_all(self) -> Self
+pub const fn numerics::IntConvert::trunc(self) -> Self
+pub struct numerics::RecipOptions
+pub const fn numerics::RecipOptions::all_floats(self) -> Self
+pub const fn numerics::RecipOptions::approx(self) -> Self
+pub const fn numerics::RecipOptions::bits(self) -> u32
+pub const fn numerics::RecipOptions::domain(self, numerics::RecipDomain) -> Self
+pub const fn numerics::RecipOptions::exact(self) -> Self
+pub const fn numerics::RecipOptions::from_bits(u32) -> core::option::Option<Self>
+pub const fn numerics::RecipOptions::new() -> Self
+pub const fn numerics::RecipOptions::nr1(self) -> Self
+pub const fn numerics::RecipOptions::nr1_ceil(self) -> Self
+pub const fn numerics::RecipOptions::precision(self, numerics::RecipPrecision) -> Self
 pub mod prelude
 pub use prelude::SimdToken
 #[repr(C)] pub struct prelude::f32x16<T: simd::backends::F32x16Backend>(_, _) [also: simd::generic]
@@ -135,9 +147,9 @@ pub fn prelude::f32x16<T>::to_u16(self) -> [u16; 16] [also: prelude::f32x16<T>]
 pub fn prelude::f32x16<T>::to_u16_with<const CFG: u32>(self) -> [u16; 16] [also: prelude::f32x16<T>]
 pub fn prelude::f32x16<T>::to_u8_with<const CFG: u32>(self) -> [u8; 16] [also: prelude::f32x16<T>]
 pub fn prelude::f32x16<T>::from_u8_t(T, &[u8; 16]) -> Self [also: prelude::f32x16<T>]
-pub fn prelude::f32x16<T>::load_16_rgba_u8_t(T, &[u8; 64]) -> (Self, Self, Self, Self) [also: prelude::f32x16<T>]
-pub fn prelude::f32x16<T>::store_16_rgba_u8(Self, Self, Self, Self) -> [u8; 64] [also: prelude::f32x16<T>]
-pub fn prelude::f32x16<T>::store_16_rgba_u8_with<const CFG: u32>(Self, Self, Self, Self) -> [u8; 64] [also: prelude::f32x16<T>]
+pub fn prelude::f32x16<T>::load_rgba_u8_t(T, &[u8; 64]) -> (Self, Self, Self, Self) [also: prelude::f32x16<T>]
+pub fn prelude::f32x16<T>::store_rgba_u8(Self, Self, Self, Self, &mut [u8; 64]) [also: prelude::f32x16<T>]
+pub fn prelude::f32x16<T>::store_rgba_u8_with<const CFG: u32>(Self, Self, Self, Self, &mut [u8; 64]) [also: prelude::f32x16<T>]
 pub fn prelude::f32x16<T>::to_u8(self) -> [u8; 16] [also: prelude::f32x16<T>]
 pub fn prelude::f32x16<T>::from_array(T, [f32; 16]) -> Self [also: prelude::f32x16<T>]
 pub fn prelude::f32x16<T>::from_repr(T, <T as simd::backends::F32x16Backend>::Repr) -> Self [also: prelude::f32x16<T>]
@@ -216,7 +228,9 @@ pub fn prelude::f32x4<T>::interleave_4ch([Self; 4]) -> [Self; 4] [also: prelude:
 pub fn prelude::f32x4<T>::interleave_hi(self, Self) -> Self [also: prelude::f32x4<T>, prelude::f32x8<T>]
 pub fn prelude::f32x4<T>::interleave_lo(self, Self) -> Self [also: prelude::f32x4<T>, prelude::f32x8<T>]
 pub fn prelude::f32x4<T>::load_4_rgba_u8_t(T, &[u8; 16]) -> (Self, Self, Self, Self) [also: prelude::f32x4<T>]
+pub fn prelude::f32x4<T>::load_rgba_u8_t(T, &[u8; 16]) -> (Self, Self, Self, Self) [also: prelude::f32x4<T>]
 pub fn prelude::f32x4<T>::store_4_rgba_u8(Self, Self, Self, Self) -> [u8; 16] [also: prelude::f32x4<T>]
+pub fn prelude::f32x4<T>::store_rgba_u8(Self, Self, Self, Self, &mut [u8; 16]) [also: prelude::f32x4<T>]
 pub fn prelude::f32x4<T>::to_u8(self) -> [u8; 4] [also: prelude::f32x4<T>]
 pub fn prelude::f32x4<T>::transpose_4x4(&mut [Self; 4]) [also: prelude::f32x4<T>]
 pub fn prelude::f32x4<T>::transpose_4x4_copy([Self; 4]) -> [Self; 4] [also: prelude::f32x4<T>]
@@ -248,11 +262,11 @@ pub fn prelude::f32x4<T>::reduce_min_with<const CFG: u32>(self) -> f32 [also: pr
 pub fn prelude::f32x4<T>::rsqrt_with<const CFG: u32>(self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>, prelude::f64x2<T>, prelude::f64x4<T>, prelude::f64x8<T>]
 pub fn prelude::f32x4<T>::deinterleave_3ch([Self; 3]) -> [Self; 3] [also: prelude::f32x4<T>, prelude::f32x8<T>]
 pub fn prelude::f32x4<T>::interleave_3ch([Self; 3]) -> [Self; 3] [also: prelude::f32x4<T>, prelude::f32x8<T>]
-pub fn prelude::f32x4<T>::load_4_rgb_u16_t(T, &[u16; 12]) -> (Self, Self, Self) [also: prelude::f32x4<T>]
-pub fn prelude::f32x4<T>::load_4_rgb_u8_t(T, &[u8; 12]) -> (Self, Self, Self) [also: prelude::f32x4<T>]
-pub fn prelude::f32x4<T>::store_4_rgb_u8(Self, Self, Self) -> [u8; 12] [also: prelude::f32x4<T>]
-pub fn prelude::f32x4<T>::store_4_rgb_u8_with<const CFG: u32>(Self, Self, Self) -> [u8; 12] [also: prelude::f32x4<T>]
-pub fn prelude::f32x4<T>::store_4_rgba_u8_with<const CFG: u32>(Self, Self, Self, Self) -> [u8; 16] [also: prelude::f32x4<T>]
+pub fn prelude::f32x4<T>::load_rgb_u16_t(T, &[u16; 12]) -> (Self, Self, Self) [also: prelude::f32x4<T>]
+pub fn prelude::f32x4<T>::load_rgb_u8_t(T, &[u8; 12]) -> (Self, Self, Self) [also: prelude::f32x4<T>]
+pub fn prelude::f32x4<T>::store_rgb_u8(Self, Self, Self, &mut [u8; 12]) [also: prelude::f32x4<T>]
+pub fn prelude::f32x4<T>::store_rgb_u8_with<const CFG: u32>(Self, Self, Self, &mut [u8; 12]) [also: prelude::f32x4<T>]
+pub fn prelude::f32x4<T>::store_rgba_u8_with<const CFG: u32>(Self, Self, Self, Self, &mut [u8; 16]) [also: prelude::f32x4<T>]
 pub fn prelude::f32x4<T>::from_array(T, [f32; 4]) -> Self [also: prelude::f32x4<T>]
 pub fn prelude::f32x4<T>::from_repr(T, <T as simd::backends::F32x4Backend>::Repr) -> Self [also: prelude::f32x4<T>]
 pub fn prelude::f32x4<T>::from_slice(T, &[f32]) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
@@ -347,8 +361,10 @@ pub fn prelude::f32x8<T>::from_bytes_t(T, &[u8; 32]) -> Self [also: prelude::f32
 pub fn prelude::f32x8<T>::from_u8_t(T, &[u8; 8]) -> Self [also: prelude::f32x8<T>]
 pub fn prelude::f32x8<T>::load_8_rgba_u8_t(T, &[u8; 32]) -> (Self, Self, Self, Self) [also: prelude::f32x8<T>]
 pub fn prelude::f32x8<T>::load_8x8_t(T, &[f32; 64]) -> [Self; 8] [also: prelude::f32x8<T>]
+pub fn prelude::f32x8<T>::load_rgba_u8_t(T, &[u8; 32]) -> (Self, Self, Self, Self) [also: prelude::f32x8<T>]
 pub fn prelude::f32x8<T>::store_8_rgba_u8(Self, Self, Self, Self) -> [u8; 32] [also: prelude::f32x8<T>]
 pub fn prelude::f32x8<T>::store_8x8(&[Self; 8], &mut [f32; 64]) [also: prelude::f32x8<T>]
+pub fn prelude::f32x8<T>::store_rgba_u8(Self, Self, Self, Self, &mut [u8; 32]) [also: prelude::f32x8<T>]
 pub fn prelude::f32x8<T>::to_u8(self) -> [u8; 8] [also: prelude::f32x8<T>]
 pub fn prelude::f32x8<T>::transpose_8x8(&mut [Self; 8]) [also: prelude::f32x8<T>]
 pub fn prelude::f32x8<T>::transpose_8x8_copy([Self; 8]) -> [Self; 8] [also: prelude::f32x8<T>]
@@ -368,11 +384,11 @@ pub fn prelude::f32x8<T>::from_bytes_owned(T, [u8; 32]) -> Self [also: prelude::
 pub fn prelude::f32x8<T>::from_u8(T, &[u8; 8]) -> Self [also: prelude::f32x8<T>]
 pub fn prelude::f32x8<T>::load_8_rgba_u8(T, &[u8; 32]) -> (Self, Self, Self, Self) [also: prelude::f32x8<T>]
 pub fn prelude::f32x8<T>::load_8x8(T, &[f32; 64]) -> [Self; 8] [also: prelude::f32x8<T>]
-pub fn prelude::f32x8<T>::load_8_rgb_u16_t(T, &[u16; 24]) -> (Self, Self, Self) [also: prelude::f32x8<T>]
-pub fn prelude::f32x8<T>::load_8_rgb_u8_t(T, &[u8; 24]) -> (Self, Self, Self) [also: prelude::f32x8<T>]
-pub fn prelude::f32x8<T>::store_8_rgb_u8(Self, Self, Self) -> [u8; 24] [also: prelude::f32x8<T>]
-pub fn prelude::f32x8<T>::store_8_rgb_u8_with<const CFG: u32>(Self, Self, Self) -> [u8; 24] [also: prelude::f32x8<T>]
-pub fn prelude::f32x8<T>::store_8_rgba_u8_with<const CFG: u32>(Self, Self, Self, Self) -> [u8; 32] [also: prelude::f32x8<T>]
+pub fn prelude::f32x8<T>::load_rgb_u16_t(T, &[u16; 24]) -> (Self, Self, Self) [also: prelude::f32x8<T>]
+pub fn prelude::f32x8<T>::load_rgb_u8_t(T, &[u8; 24]) -> (Self, Self, Self) [also: prelude::f32x8<T>]
+pub fn prelude::f32x8<T>::store_rgb_u8(Self, Self, Self, &mut [u8; 24]) [also: prelude::f32x8<T>]
+pub fn prelude::f32x8<T>::store_rgb_u8_with<const CFG: u32>(Self, Self, Self, &mut [u8; 24]) [also: prelude::f32x8<T>]
+pub fn prelude::f32x8<T>::store_rgba_u8_with<const CFG: u32>(Self, Self, Self, Self, &mut [u8; 32]) [also: prelude::f32x8<T>]
 pub fn prelude::f32x8<T>::from_array(T, [f32; 8]) -> Self [also: prelude::f32x8<T>]
 pub fn prelude::f32x8<T>::from_repr(T, <T as simd::backends::F32x8Backend>::Repr) -> Self [also: prelude::f32x8<T>]
 pub fn prelude::f32x8<T>::load(T, &[f32; 8]) -> Self [also: prelude::f32x8<T>]
@@ -1110,18 +1126,8 @@ pub fn prelude::F32x8FromHalves::from_halves(self, <Self as simd::backends::F32x
 pub fn prelude::F32x8FromHalves::high(self, <Self as simd::backends::F32x8Backend>::Repr) -> <Self as simd::backends::F32x4Backend>::Repr
 pub fn prelude::F32x8FromHalves::low(self, <Self as simd::backends::F32x8Backend>::Repr) -> <Self as simd::backends::F32x4Backend>::Repr
 pub mod scalar
-pub trait scalar::F32ScalarBackend: archmage::tokens::IntoConcreteToken + archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static [also: simd::backends]
-pub fn scalar::F32ScalarBackend::max_fast_f32(self, f32, f32) -> f32
-pub fn scalar::F32ScalarBackend::min_fast_f32(self, f32, f32) -> f32
-pub fn scalar::F32ScalarBackend::mul_add_relaxed_f32(self, f32, f32, f32) -> f32
-pub fn scalar::F32ScalarBackend::mul_sub_relaxed_f32(self, f32, f32, f32) -> f32
-pub fn scalar::F32ScalarBackend::to_i32_fast_scalar(self, f32) -> i32
-pub fn scalar::F32ScalarBackend::to_i32_scalar(self, f32) -> i32
-pub trait scalar::F64ScalarBackend: archmage::tokens::IntoConcreteToken + archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static [also: simd::backends]
-pub fn scalar::F64ScalarBackend::max_fast_f64(self, f64, f64) -> f64
-pub fn scalar::F64ScalarBackend::min_fast_f64(self, f64, f64) -> f64
-pub fn scalar::F64ScalarBackend::mul_add_relaxed_f64(self, f64, f64, f64) -> f64
-pub fn scalar::F64ScalarBackend::mul_sub_relaxed_f64(self, f64, f64, f64) -> f64
+pub trait scalar::F32ScalarBackend: archmage::tokens::IntoConcreteToken + archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
+pub trait scalar::F64ScalarBackend: archmage::tokens::IntoConcreteToken + archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
 pub fn scalar::ceil_f32(f32) -> f32
 pub fn scalar::ceil_f64(f64) -> f64
 pub fn scalar::clamp_f32<T: scalar::F32ScalarBackend>(T, f32, f32, f32) -> f32
@@ -1177,12 +1183,6 @@ pub fn scalar::trunc_f32(f32) -> f32
 pub fn scalar::trunc_f64(f64) -> f64
 pub mod simd
 pub mod simd::backends
-pub fn simd::backends::F32ScalarBackend::max_fast_f32(self, f32, f32) -> f32
-pub fn simd::backends::F32ScalarBackend::min_fast_f32(self, f32, f32) -> f32
-pub fn simd::backends::F32ScalarBackend::mul_add_relaxed_f32(self, f32, f32, f32) -> f32
-pub fn simd::backends::F32ScalarBackend::mul_sub_relaxed_f32(self, f32, f32, f32) -> f32
-pub fn simd::backends::F32ScalarBackend::to_i32_fast_scalar(self, f32) -> i32
-pub fn simd::backends::F32ScalarBackend::to_i32_scalar(self, f32) -> i32
 pub trait simd::backends::F32x16Backend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + scalar::F32ScalarBackend + core::marker::Copy + 'static
 pub type simd::backends::F32x16Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync + crate::simd_storage::Pod
 pub fn simd::backends::F32x16Backend::abs(self, Self::Repr) -> Self::Repr
@@ -1191,19 +1191,11 @@ pub fn simd::backends::F32x16Backend::bitand(self, Self::Repr, Self::Repr) -> Se
 pub fn simd::backends::F32x16Backend::bitor(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x16Backend::bitxor(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x16Backend::blend(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
-pub fn simd::backends::F32x16Backend::broadcast_rgba_alpha_repr(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x16Backend::ceil(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x16Backend::clamp(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
-pub fn simd::backends::F32x16Backend::deinterleave_rgba_wide(self, [Self::Repr; 4]) -> [Self::Repr; 4]
 pub fn simd::backends::F32x16Backend::div(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x16Backend::floor(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x16Backend::from_array(self, [f32; 16]) -> Self::Repr
-pub fn simd::backends::F32x16Backend::from_bf16_lanes(self, &[u16; 16]) -> Self::Repr
-pub fn simd::backends::F32x16Backend::from_f16_lanes<const CFG: u32>(self, &[u16; 16]) -> Self::Repr
-pub fn simd::backends::F32x16Backend::from_u16_lanes(self, &[u16; 16]) -> Self::Repr
-pub fn simd::backends::F32x16Backend::from_u32_lanes(self, Self::Repr) -> Self::Repr
-pub fn simd::backends::F32x16Backend::from_u8_lanes_wide(self, &[u8; 16]) -> Self::Repr
-pub fn simd::backends::F32x16Backend::interleave_rgba_wide(self, [Self::Repr; 4]) -> [Self::Repr; 4]
 pub fn simd::backends::F32x16Backend::load(self, &[f32; 16]) -> Self::Repr
 pub fn simd::backends::F32x16Backend::max(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x16Backend::max_fast(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -1239,13 +1231,7 @@ pub fn simd::backends::F32x16Backend::sqrt(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x16Backend::store(self, Self::Repr, &mut [f32; 16])
 pub fn simd::backends::F32x16Backend::sub(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x16Backend::to_array(self, Self::Repr) -> [f32; 16]
-pub fn simd::backends::F32x16Backend::to_bf16_lanes<const CFG: u32>(self, Self::Repr) -> [u16; 16]
-pub fn simd::backends::F32x16Backend::to_f16_lanes<const CFG: u32>(self, Self::Repr) -> [u16; 16]
-pub fn simd::backends::F32x16Backend::to_u16_lanes<const CFG: u32>(self, Self::Repr) -> [u16; 16]
-pub fn simd::backends::F32x16Backend::to_u32_lanes<const CFG: u32>(self, Self::Repr) -> Self::Repr
-pub fn simd::backends::F32x16Backend::to_u8_lanes<const CFG: u32>(self, Self::Repr) -> [u8; 16]
 pub fn simd::backends::F32x16Backend::trunc(self, Self::Repr) -> Self::Repr
-pub fn simd::backends::F32x16Backend::with_rgba_alpha_repr(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x16Backend::zero(self) -> Self::Repr
 pub trait simd::backends::F32x16Convert: simd::backends::F32x16Backend + simd::backends::I32x16Backend + archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
 pub fn simd::backends::F32x16Convert::bitcast_f32_to_i32(self, <Self as simd::backends::F32x16Backend>::Repr) -> <Self as simd::backends::I32x16Backend>::Repr
@@ -1263,20 +1249,12 @@ pub fn simd::backends::F32x4Backend::bitand(self, Self::Repr, Self::Repr) -> Sel
 pub fn simd::backends::F32x4Backend::bitor(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x4Backend::bitxor(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x4Backend::blend(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
-pub fn simd::backends::F32x4Backend::broadcast_rgba_alpha_repr(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x4Backend::ceil(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x4Backend::clamp(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
-pub fn simd::backends::F32x4Backend::deinterleave_3ch_repr(self, [Self::Repr; 3]) -> [Self::Repr; 3]
 pub fn simd::backends::F32x4Backend::div(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x4Backend::floor(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x4Backend::from_array(self, [f32; 4]) -> Self::Repr
-pub fn simd::backends::F32x4Backend::from_bf16_lanes(self, &[u16; 4]) -> Self::Repr
-pub fn simd::backends::F32x4Backend::from_f16_lanes<const CFG: u32>(self, &[u16; 4]) -> Self::Repr
-pub fn simd::backends::F32x4Backend::from_u16_lanes(self, &[u16; 4]) -> Self::Repr
-pub fn simd::backends::F32x4Backend::from_u32_lanes(self, Self::Repr) -> Self::Repr
-pub fn simd::backends::F32x4Backend::interleave_3ch_repr(self, [Self::Repr; 3]) -> [Self::Repr; 3]
 pub fn simd::backends::F32x4Backend::load(self, &[f32; 4]) -> Self::Repr
-pub fn simd::backends::F32x4Backend::load_rgb_bytes(self, &[u8; 12]) -> (Self::Repr, Self::Repr, Self::Repr)
 pub fn simd::backends::F32x4Backend::max(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x4Backend::max_fast(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x4Backend::maximum(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -1309,20 +1287,11 @@ pub fn simd::backends::F32x4Backend::simd_ne(self, Self::Repr, Self::Repr) -> Se
 pub fn simd::backends::F32x4Backend::splat(self, f32) -> Self::Repr
 pub fn simd::backends::F32x4Backend::sqrt(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x4Backend::store(self, Self::Repr, &mut [f32; 4])
-pub fn simd::backends::F32x4Backend::store_rgb_bytes(self, Self::Repr, Self::Repr, Self::Repr) -> [u8; 12]
 pub fn simd::backends::F32x4Backend::store_rgba_bytes(self, Self::Repr, Self::Repr, Self::Repr, Self::Repr) -> [u8; 16]
-pub fn simd::backends::F32x4Backend::store_rgba_bytes_with<const CFG: u32>(self, Self::Repr, Self::Repr, Self::Repr, Self::Repr) -> [u8; 16]
 pub fn simd::backends::F32x4Backend::sub(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x4Backend::to_array(self, Self::Repr) -> [f32; 4]
-pub fn simd::backends::F32x4Backend::to_bf16_lanes<const CFG: u32>(self, Self::Repr) -> [u16; 4]
-pub fn simd::backends::F32x4Backend::to_f16_lanes<const CFG: u32>(self, Self::Repr) -> [u16; 4]
-pub fn simd::backends::F32x4Backend::to_u16_lanes<const CFG: u32>(self, Self::Repr) -> [u16; 4]
-pub fn simd::backends::F32x4Backend::to_u32_lanes<const CFG: u32>(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x4Backend::to_u8_bytes(self, Self::Repr) -> [u8; 4]
-pub fn simd::backends::F32x4Backend::to_u8_lanes<const CFG: u32>(self, Self::Repr) -> [u8; 4]
-pub fn simd::backends::F32x4Backend::transpose_4x4_repr(self, [Self::Repr; 4]) -> [Self::Repr; 4]
 pub fn simd::backends::F32x4Backend::trunc(self, Self::Repr) -> Self::Repr
-pub fn simd::backends::F32x4Backend::with_rgba_alpha_repr(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x4Backend::zero(self) -> Self::Repr
 pub trait simd::backends::F32x4Convert: simd::backends::F32x4Backend + simd::backends::I32x4Backend + archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
 pub fn simd::backends::F32x4Convert::bitcast_f32_to_i32(self, <Self as simd::backends::F32x4Backend>::Repr) -> <Self as simd::backends::I32x4Backend>::Repr
@@ -1340,20 +1309,12 @@ pub fn simd::backends::F32x8Backend::bitand(self, Self::Repr, Self::Repr) -> Sel
 pub fn simd::backends::F32x8Backend::bitor(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x8Backend::bitxor(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x8Backend::blend(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
-pub fn simd::backends::F32x8Backend::broadcast_rgba_alpha_repr(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x8Backend::ceil(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x8Backend::clamp(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
-pub fn simd::backends::F32x8Backend::deinterleave_3ch_repr(self, [Self::Repr; 3]) -> [Self::Repr; 3]
 pub fn simd::backends::F32x8Backend::div(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x8Backend::floor(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x8Backend::from_array(self, [f32; 8]) -> Self::Repr
-pub fn simd::backends::F32x8Backend::from_bf16_lanes(self, &[u16; 8]) -> Self::Repr
-pub fn simd::backends::F32x8Backend::from_f16_lanes<const CFG: u32>(self, &[u16; 8]) -> Self::Repr
-pub fn simd::backends::F32x8Backend::from_u16_lanes(self, &[u16; 8]) -> Self::Repr
-pub fn simd::backends::F32x8Backend::from_u32_lanes(self, Self::Repr) -> Self::Repr
-pub fn simd::backends::F32x8Backend::interleave_3ch_repr(self, [Self::Repr; 3]) -> [Self::Repr; 3]
 pub fn simd::backends::F32x8Backend::load(self, &[f32; 8]) -> Self::Repr
-pub fn simd::backends::F32x8Backend::load_rgb_bytes(self, &[u8; 24]) -> (Self::Repr, Self::Repr, Self::Repr)
 pub fn simd::backends::F32x8Backend::max(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x8Backend::max_fast(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x8Backend::maximum(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -1386,20 +1347,12 @@ pub fn simd::backends::F32x8Backend::simd_ne(self, Self::Repr, Self::Repr) -> Se
 pub fn simd::backends::F32x8Backend::splat(self, f32) -> Self::Repr
 pub fn simd::backends::F32x8Backend::sqrt(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x8Backend::store(self, Self::Repr, &mut [f32; 8])
-pub fn simd::backends::F32x8Backend::store_rgb_bytes(self, Self::Repr, Self::Repr, Self::Repr) -> [u8; 24]
 pub fn simd::backends::F32x8Backend::store_rgba_bytes(self, Self::Repr, Self::Repr, Self::Repr, Self::Repr) -> [u8; 32]
-pub fn simd::backends::F32x8Backend::store_rgba_bytes_with<const CFG: u32>(self, Self::Repr, Self::Repr, Self::Repr, Self::Repr) -> [u8; 32]
 pub fn simd::backends::F32x8Backend::sub(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x8Backend::to_array(self, Self::Repr) -> [f32; 8]
-pub fn simd::backends::F32x8Backend::to_bf16_lanes<const CFG: u32>(self, Self::Repr) -> [u16; 8]
-pub fn simd::backends::F32x8Backend::to_f16_lanes<const CFG: u32>(self, Self::Repr) -> [u16; 8]
-pub fn simd::backends::F32x8Backend::to_u16_lanes<const CFG: u32>(self, Self::Repr) -> [u16; 8]
-pub fn simd::backends::F32x8Backend::to_u32_lanes<const CFG: u32>(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x8Backend::to_u8_bytes(self, Self::Repr) -> [u8; 8]
-pub fn simd::backends::F32x8Backend::to_u8_lanes<const CFG: u32>(self, Self::Repr) -> [u8; 8]
 pub fn simd::backends::F32x8Backend::transpose_8x8_repr(self, [Self::Repr; 8]) -> [Self::Repr; 8]
 pub fn simd::backends::F32x8Backend::trunc(self, Self::Repr) -> Self::Repr
-pub fn simd::backends::F32x8Backend::with_rgba_alpha_repr(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x8Backend::zero(self) -> Self::Repr
 pub trait simd::backends::F32x8Convert: simd::backends::F32x8Backend + simd::backends::I32x8Backend + archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
 pub fn simd::backends::F32x8Convert::bitcast_f32_to_i32(self, <Self as simd::backends::F32x8Backend>::Repr) -> <Self as simd::backends::I32x8Backend>::Repr
@@ -1409,10 +1362,6 @@ pub fn simd::backends::F32x8Convert::convert_f32_to_i32_fast(self, <Self as simd
 pub fn simd::backends::F32x8Convert::convert_f32_to_i32_round(self, <Self as simd::backends::F32x8Backend>::Repr) -> <Self as simd::backends::I32x8Backend>::Repr
 pub fn simd::backends::F32x8Convert::convert_f32_to_i32_saturating(self, <Self as simd::backends::F32x8Backend>::Repr) -> <Self as simd::backends::I32x8Backend>::Repr
 pub fn simd::backends::F32x8Convert::convert_i32_to_f32(self, <Self as simd::backends::I32x8Backend>::Repr) -> <Self as simd::backends::F32x8Backend>::Repr
-pub fn simd::backends::F64ScalarBackend::max_fast_f64(self, f64, f64) -> f64
-pub fn simd::backends::F64ScalarBackend::min_fast_f64(self, f64, f64) -> f64
-pub fn simd::backends::F64ScalarBackend::mul_add_relaxed_f64(self, f64, f64, f64) -> f64
-pub fn simd::backends::F64ScalarBackend::mul_sub_relaxed_f64(self, f64, f64, f64) -> f64
 pub trait simd::backends::F64x2Backend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + scalar::F64ScalarBackend + core::marker::Copy + 'static
 pub type simd::backends::F64x2Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync + crate::simd_storage::Pod
 pub fn simd::backends::F64x2Backend::abs(self, Self::Repr) -> Self::Repr
@@ -2679,40 +2628,6 @@ pub type simd::u64x8 = prelude::u64x8<archmage::tokens::generated::arm::NeonToke
 pub type simd::u8x16 = prelude::u8x16<archmage::tokens::generated::arm::NeonToken> [also: simd::neon]
 pub type simd::u8x32 = prelude::u8x32<archmage::tokens::generated::arm::NeonToken> [also: simd::neon]
 pub type simd::u8x64 = prelude::u8x64<archmage::tokens::generated::arm::NeonToken>
-#[non_exhaustive] #[repr(u32)] pub enum ExtremaDomain [also: numerics]
-pub ExtremaDomain::DropNan
-pub ExtremaDomain::Finite
-pub ExtremaDomain::NonNanRhs
-pub ExtremaDomain::PropagateNan
-#[non_exhaustive] pub enum HalfDomain [also: numerics]
-pub HalfDomain::AllFloats
-pub HalfDomain::Finite
-#[non_exhaustive] pub enum HalfRounding [also: numerics]
-pub HalfRounding::NearestEven
-pub HalfRounding::Trunc
-#[non_exhaustive] pub enum HalfSubnormals [also: numerics]
-pub HalfSubnormals::FlushOrClamp
-pub HalfSubnormals::Normalize
-#[non_exhaustive] #[repr(u32)] pub enum IntBounds [also: numerics]
-pub IntBounds::Finite
-pub IntBounds::InRange
-pub IntBounds::NonNegativeFinite
-pub IntBounds::SaturateAll
-#[non_exhaustive] #[repr(u32)] pub enum IntRounding [also: numerics]
-pub IntRounding::NearestEven
-pub IntRounding::Trunc
-#[non_exhaustive] pub enum RecipDomain [also: numerics]
-pub RecipDomain::AllFloats
-pub RecipDomain::FiniteNormal
-#[non_exhaustive] #[repr(u32)] pub enum RecipPrecision [also: numerics]
-pub RecipPrecision::Approx = 1
-pub RecipPrecision::Exact = 3
-pub RecipPrecision::Nr1 = 0
-pub RecipPrecision::Nr1Ceil = 2
-pub struct ExtremaOptions(_) [also: numerics]
-pub struct HalfConvert [also: numerics]
-pub struct IntConvert [also: numerics]
-pub struct RecipOptions [also: numerics]
 pub trait SimdTypes: archmage::tokens::SimdToken
 pub type SimdTypes::F32
 pub type SimdTypes::F64
@@ -2851,18 +2766,6 @@ pub fn WidthDispatch::u8x64_zero(self) -> Self::U8x64
 
 ## trait impls (84 types)
 
-ExtremaDomain: Clone, Copy, Debug, Default, Eq, PartialEq
-ExtremaOptions: Clone, Copy, Debug, Default, Eq, PartialEq
-HalfConvert: Clone, Copy, Debug, Default, Eq, PartialEq
-HalfDomain: Clone, Copy, Debug, Default, Eq, PartialEq
-HalfRounding: Clone, Copy, Debug, Default, Eq, PartialEq
-HalfSubnormals: Clone, Copy, Debug, Default, Eq, PartialEq
-IntBounds: Clone, Copy, Debug, Default, Eq, PartialEq
-IntConvert: Clone, Copy, Debug, Default, Eq, PartialEq
-IntRounding: Clone, Copy, Debug, Default, Eq, PartialEq
-RecipDomain: Clone, Copy, Debug, Default, Eq, PartialEq
-RecipOptions: Clone, Copy, Debug, Default, Eq, PartialEq
-RecipPrecision: Clone, Copy, Debug, Default, Eq, PartialEq
 [f32; 16]: From<prelude::f32x16<T>>
 [f32; 4]: From<prelude::f32x4<T>>
 [f32; 8]: From<prelude::f32x8<T>>
@@ -2895,6 +2798,18 @@ RecipPrecision: Clone, Copy, Debug, Default, Eq, PartialEq
 [u8; 64]: From<prelude::u8x64<T>>
 archmage::tokens::ScalarToken: SimdTypes, prelude::F16Convert, prelude::F32x16FromHalves, prelude::F32x8FromHalves, scalar::F32ScalarBackend, scalar::F64ScalarBackend, simd::backends::F32x16Backend, simd::backends::F32x16Convert, simd::backends::F32x4Backend, simd::backends::F32x4Convert, simd::backends::F32x8Backend, simd::backends::F32x8Convert, simd::backends::F64x2Backend, simd::backends::F64x4Backend, simd::backends::F64x8Backend, simd::backends::I16x16Backend, simd::backends::I16x16Bitcast, simd::backends::I16x32Backend, simd::backends::I16x8Backend, simd::backends::I16x8Bitcast, simd::backends::I32x16Backend, simd::backends::I32x4Backend, simd::backends::I32x8Backend, simd::backends::I64x2Backend, simd::backends::I64x2Bitcast, simd::backends::I64x4Backend, simd::backends::I64x4Bitcast, simd::backends::I64x8Backend, simd::backends::I8x16Backend, simd::backends::I8x16Bitcast, simd::backends::I8x32Backend, simd::backends::I8x32Bitcast, simd::backends::I8x64Backend, simd::backends::U16x16Backend, simd::backends::U16x32Backend, simd::backends::U16x8Backend, simd::backends::U32x16Backend, simd::backends::U32x4Backend, simd::backends::U32x4Bitcast, simd::backends::U32x8Backend, simd::backends::U32x8Bitcast, simd::backends::U64x2Backend, simd::backends::U64x2Bitcast, simd::backends::U64x4Backend, simd::backends::U64x4Bitcast, simd::backends::U64x8Backend, simd::backends::U8x16Backend, simd::backends::U8x32Backend, simd::backends::U8x64Backend
 archmage::tokens::generated::arm::NeonToken: SimdTypes, WidthDispatch, prelude::F16Convert, prelude::F32x16FromHalves, prelude::F32x8FromHalves, scalar::F32ScalarBackend, scalar::F64ScalarBackend, simd::backends::F32x16Backend, simd::backends::F32x16Convert, simd::backends::F32x4Backend, simd::backends::F32x4Convert, simd::backends::F32x8Backend, simd::backends::F32x8Convert, simd::backends::F64x2Backend, simd::backends::F64x4Backend, simd::backends::F64x8Backend, simd::backends::I16x16Backend, simd::backends::I16x16Bitcast, simd::backends::I16x32Backend, simd::backends::I16x8Backend, simd::backends::I16x8Bitcast, simd::backends::I32x16Backend, simd::backends::I32x4Backend, simd::backends::I32x8Backend, simd::backends::I64x2Backend, simd::backends::I64x2Bitcast, simd::backends::I64x4Backend, simd::backends::I64x4Bitcast, simd::backends::I64x8Backend, simd::backends::I8x16Backend, simd::backends::I8x16Bitcast, simd::backends::I8x32Backend, simd::backends::I8x32Bitcast, simd::backends::I8x64Backend, simd::backends::U16x16Backend, simd::backends::U16x32Backend, simd::backends::U16x8Backend, simd::backends::U32x16Backend, simd::backends::U32x4Backend, simd::backends::U32x4Bitcast, simd::backends::U32x8Backend, simd::backends::U32x8Bitcast, simd::backends::U64x2Backend, simd::backends::U64x2Bitcast, simd::backends::U64x4Backend, simd::backends::U64x4Bitcast, simd::backends::U64x8Backend, simd::backends::U8x16Backend, simd::backends::U8x32Backend, simd::backends::U8x64Backend
+numerics::ExtremaDomain: Clone, Copy, Debug, Default, Eq, PartialEq
+numerics::ExtremaOptions: Clone, Copy, Debug, Default, Eq, PartialEq
+numerics::HalfConvert: Clone, Copy, Debug, Default, Eq, PartialEq
+numerics::HalfDomain: Clone, Copy, Debug, Default, Eq, PartialEq
+numerics::HalfRounding: Clone, Copy, Debug, Default, Eq, PartialEq
+numerics::HalfSubnormals: Clone, Copy, Debug, Default, Eq, PartialEq
+numerics::IntBounds: Clone, Copy, Debug, Default, Eq, PartialEq
+numerics::IntConvert: Clone, Copy, Debug, Default, Eq, PartialEq
+numerics::IntRounding: Clone, Copy, Debug, Default, Eq, PartialEq
+numerics::RecipDomain: Clone, Copy, Debug, Default, Eq, PartialEq
+numerics::RecipOptions: Clone, Copy, Debug, Default, Eq, PartialEq
+numerics::RecipPrecision: Clone, Copy, Debug, Default, Eq, PartialEq
 prelude::f32x16<T>: Add, Add<f32>, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Debug, Div, Div<f32>, DivAssign, Index<usize>, IndexMut<usize>, Mul, Mul<f32>, MulAssign, Neg, Sub, Sub<f32>, SubAssign
 prelude::f32x4<T>: Add, Add<f32>, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Debug, Div, Div<f32>, DivAssign, Index<usize>, IndexMut<usize>, Mul, Mul<f32>, MulAssign, Neg, Sub, Sub<f32>, SubAssign
 prelude::f32x8<T>: Add, Add<f32>, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Debug, Div, Div<f32>, DivAssign, Index<usize>, IndexMut<usize>, Mul, Mul<f32>, MulAssign, Neg, Sub, Sub<f32>, SubAssign

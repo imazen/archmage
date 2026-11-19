@@ -65,6 +65,12 @@
 //! is a few one-line blocks in one internal module that load, store, gather and
 //! scatter vector storage, each stating the invariant it relies on. See the
 //! [safety model](https://imazen.github.io/archmage/magetypes/safety/).
+//!
+//! ## Modules
+//!
+//! - [`prelude`] and [`simd::generic`] provide token-gated vector types.
+//! - [`numerics`] defines compile-time policies for configurable vector and scalar operations.
+//! - [`scalar`] provides portable and token-matched scalar remainder helpers for `no_std`.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
@@ -117,7 +123,6 @@ pub mod simd;
 pub mod scalar;
 
 pub mod numerics;
-pub use numerics::*;
 
 // Width dispatch trait for accessing all SIMD sizes from any token
 mod width;

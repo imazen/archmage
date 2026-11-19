@@ -1,7 +1,7 @@
 //! Cross-architecture value checks for f32x8 (W256) pixel block ops.
 //!
 //! The generated `cross_arch_parity` suite only covers W128 types, so the
-//! f32x8 `to_u8` / `store_8_rgba_u8` paths (native on x86 AVX2 and the ARM
+//! f32x8 `to_u8` / `store_rgba_u8` paths (native on x86 AVX2 and the ARM
 //! polyfill) would otherwise be exercised only on x86. These run on the native
 //! token of each architecture (X64V3Token / NeonToken / Wasm128Token) so the
 //! restored native pack+interleave is verified identical everywhere.
@@ -56,7 +56,9 @@ fn f32x8_store_8_rgba_u8_interleave() {
             0, 10, 20, 255, 64, 74, 84, 255, 128, 138, 148, 0, 255, 245, 235, 128, 1, 11, 21, 31,
             2, 12, 22, 32, 3, 13, 23, 33, 4, 14, 24, 34,
         ];
-        assert_eq!(f32x8::<Tok>::store_8_rgba_u8(r, g, b, a), want);
+        let mut out = [0; 32];
+        f32x8::<Tok>::store_rgba_u8(r, g, b, a, &mut out);
+        assert_eq!(out, want);
     }
 }
 

@@ -241,13 +241,13 @@ impl F32x4Backend for archmage::Wasm128Token {
 
     #[inline(always)]
     fn to_u16_lanes<const CFG: u32>(self, value: v128) -> [u16; 4] {
-        let opts = const { crate::IntConvert::decode(CFG) };
+        let opts = const { crate::numerics::IntConvert::decode(CFG) };
         let a = if opts.rounds() {
             f32x4_nearest(value)
         } else {
             value
         };
-        let i = if const { crate::IntConvert::decode(CFG).is_in_range() } {
+        let i = if const { crate::numerics::IntConvert::decode(CFG).is_in_range() } {
             crate::wasm_fma::trunc_f32x4_fast(self, a)
         } else {
             i32x4_trunc_sat_f32x4(a)
@@ -257,7 +257,7 @@ impl F32x4Backend for archmage::Wasm128Token {
 
     #[inline(always)]
     fn to_u8_lanes<const CFG: u32>(self, value: v128) -> [u8; 4] {
-        let opts = const { crate::IntConvert::decode(CFG) };
+        let opts = const { crate::numerics::IntConvert::decode(CFG) };
         let a = if opts.rounds() {
             f32x4_nearest(value)
         } else {
@@ -274,7 +274,7 @@ impl F32x4Backend for archmage::Wasm128Token {
 
     #[inline(always)]
     fn to_u32_lanes<const CFG: u32>(self, value: v128) -> v128 {
-        let opts = const { crate::IntConvert::decode(CFG) };
+        let opts = const { crate::numerics::IntConvert::decode(CFG) };
         let a = if opts.rounds() {
             f32x4_nearest(value)
         } else {
@@ -368,7 +368,7 @@ impl F32x4Backend for archmage::Wasm128Token {
     }
 
     #[inline(always)]
-    fn store_rgba_bytes(self, r: v128, g: v128, b: v128, a: v128) -> [u8; 16] {
+    fn store_rgba_u8_into(self, r: v128, g: v128, b: v128, a: v128, out: &mut [u8; 16]) {
         let lo = i32x4_splat(0);
         let hi = i32x4_splat(255);
         let clamp = |v: v128| i32x4_min(i32x4_max(i32x4_trunc_sat_f32x4(f32x4_nearest(v)), lo), hi);
@@ -376,7 +376,7 @@ impl F32x4Backend for archmage::Wasm128Token {
             v128_or(clamp(r), i32x4_shl(clamp(g), 8)),
             v128_or(i32x4_shl(clamp(b), 16), i32x4_shl(clamp(a), 24)),
         );
-        crate::simd_storage::cast(pixels)
+        crate::simd_storage::store(pixels, out);
     }
 
     #[inline(always)]
@@ -416,7 +416,7 @@ impl F32x4Backend for archmage::Wasm128Token {
     }
 
     #[inline(always)]
-    fn store_rgb_bytes(self, r: v128, g: v128, b: v128) -> [u8; 12] {
+    fn store_rgb_u8_into(self, r: v128, g: v128, b: v128, out: &mut [u8; 12]) {
         let narrow4 = |v: v128| -> v128 {
             let i32s = i32x4_trunc_sat_f32x4(f32x4_nearest(v));
             let i16s = i16x8_narrow_i32x4(i32s, i32s);
@@ -425,7 +425,6 @@ impl F32x4Backend for archmage::Wasm128Token {
         let rg8 = i32x4_shuffle::<0, 4, 0, 0>(narrow4(r), narrow4(g));
         let packed =
             i8x16_shuffle::<0, 4, 16, 1, 5, 17, 2, 6, 18, 3, 7, 19, 0, 0, 0, 0>(rg8, narrow4(b));
-        let mut out = [0u8; 12];
         crate::simd_storage::store(
             u64x2_extract_lane::<0>(packed),
             out.first_chunk_mut::<8>().unwrap(),
@@ -434,7 +433,6 @@ impl F32x4Backend for archmage::Wasm128Token {
             u32x4_extract_lane::<2>(packed),
             out.last_chunk_mut::<4>().unwrap(),
         );
-        out
     }
 }
 
@@ -792,7 +790,14 @@ impl F32x8Backend for archmage::Wasm128Token {
     }
 
     #[inline(always)]
-    fn store_rgba_bytes(self, r: [v128; 2], g: [v128; 2], b: [v128; 2], a: [v128; 2]) -> [u8; 32] {
+    fn store_rgba_u8_into(
+        self,
+        r: [v128; 2],
+        g: [v128; 2],
+        b: [v128; 2],
+        a: [v128; 2],
+        out: &mut [u8; 32],
+    ) {
         let lo = i32x4_splat(0);
         let hi = i32x4_splat(255);
         let clamp = |v: v128| i32x4_min(i32x4_max(i32x4_trunc_sat_f32x4(f32x4_nearest(v)), lo), hi);
@@ -802,7 +807,10 @@ impl F32x8Backend for archmage::Wasm128Token {
                 v128_or(i32x4_shl(clamp(b), 16), i32x4_shl(clamp(a), 24)),
             )
         };
-        crate::simd_storage::cast([pack(r[0], g[0], b[0], a[0]), pack(r[1], g[1], b[1], a[1])])
+        crate::simd_storage::store(
+            [pack(r[0], g[0], b[0], a[0]), pack(r[1], g[1], b[1], a[1])],
+            out,
+        );
     }
 
     #[inline(always)]
@@ -850,7 +858,7 @@ impl F32x8Backend for archmage::Wasm128Token {
     }
 
     #[inline(always)]
-    fn store_rgb_bytes(self, r: [v128; 2], g: [v128; 2], b: [v128; 2]) -> [u8; 24] {
+    fn store_rgb_u8_into(self, r: [v128; 2], g: [v128; 2], b: [v128; 2], out: &mut [u8; 24]) {
         // Narrow each channel to u8x16 individually before combining so LLVM
         // preserves hardware i16x8.narrow_i32x4_s + i8x16.narrow_i16x8_u.
         let narrow8 = |v: [v128; 2]| -> v128 {
@@ -866,13 +874,11 @@ impl F32x8Backend for archmage::Wasm128Token {
         let rg8 = i64x2_shuffle::<0, 2>(r8, g8);
         let lo16 = i8x16_shuffle::<0, 8, 16, 1, 9, 17, 2, 10, 18, 3, 11, 19, 4, 12, 20, 5>(rg8, b8);
         let hi8 = i8x16_shuffle::<13, 21, 6, 14, 22, 7, 15, 23, 0, 0, 0, 0, 0, 0, 0, 0>(rg8, b8);
-        let mut out = [0u8; 24];
         crate::simd_storage::store(lo16, out.first_chunk_mut::<16>().unwrap());
         crate::simd_storage::store(
             u64x2_extract_lane::<0>(hi8),
             out.last_chunk_mut::<8>().unwrap(),
         );
-        out
     }
 }
 

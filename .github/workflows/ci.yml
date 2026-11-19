@@ -826,7 +826,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Build docs
-        run: cargo doc --features "${{ env.FEATURES }}" --no-deps
+        run: cargo doc -p archmage -p magetypes -p magemath --features "${{ env.FEATURES }}" --no-deps
         env:
           RUSTDOCFLAGS: -Dwarnings
 

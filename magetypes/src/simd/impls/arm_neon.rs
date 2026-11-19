@@ -293,13 +293,14 @@ impl F32x4Backend for NeonToken {
     }
 
     #[arcane(suppress_const_test, _self = NeonToken)]
-    fn store_rgba_bytes(
+    fn store_rgba_u8_into(
         self,
         r: float32x4_t,
         g: float32x4_t,
         b: float32x4_t,
         a: float32x4_t,
-    ) -> [u8; 16] {
+        out: &mut [u8; 16],
+    ) {
         let lo = vdupq_n_s32(0);
         let hi = vdupq_n_s32(255);
         let ri = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(r), lo), hi));
@@ -310,7 +311,7 @@ impl F32x4Backend for NeonToken {
             vorrq_u32(ri, vshlq_n_u32::<8>(gi)),
             vorrq_u32(vshlq_n_u32::<16>(bi), vshlq_n_u32::<24>(ai)),
         );
-        crate::simd_storage::cast(vreinterpretq_u8_u32(pixels))
+        crate::simd_storage::store(vreinterpretq_u8_u32(pixels), out);
     }
 
     #[arcane(suppress_const_test, _self = NeonToken)]
@@ -320,7 +321,7 @@ impl F32x4Backend for NeonToken {
 
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn to_u16_lanes<const CFG: u32>(self, value: float32x4_t) -> [u16; 4] {
-        let i = if const { crate::IntConvert::decode(CFG).rounds() } {
+        let i = if const { crate::numerics::IntConvert::decode(CFG).rounds() } {
             vcvtnq_u32_f32(value)
         } else {
             vcvtq_u32_f32(value)
@@ -330,7 +331,7 @@ impl F32x4Backend for NeonToken {
 
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn to_u8_lanes<const CFG: u32>(self, value: float32x4_t) -> [u8; 4] {
-        let i = if const { crate::IntConvert::decode(CFG).rounds() } {
+        let i = if const { crate::numerics::IntConvert::decode(CFG).rounds() } {
             vcvtnq_u32_f32(value)
         } else {
             vcvtq_u32_f32(value)
@@ -342,14 +343,15 @@ impl F32x4Backend for NeonToken {
     }
 
     #[arcane(suppress_const_test, _self = NeonToken)]
-    fn store_rgba_bytes_with<const CFG: u32>(
+    fn store_rgba_u8_with_into<const CFG: u32>(
         self,
         r: float32x4_t,
         g: float32x4_t,
         b: float32x4_t,
         a: float32x4_t,
-    ) -> [u8; 16] {
-        let opts = const { crate::IntConvert::decode(CFG) };
+        out: &mut [u8; 16],
+    ) {
+        let opts = const { crate::numerics::IntConvert::decode(CFG) };
         if cfg!(target_endian = "little") && opts.is_in_range() {
             let convert = |x| {
                 if opts.rounds() {
@@ -360,19 +362,24 @@ impl F32x4Backend for NeonToken {
             };
             let rg = vsliq_n_u32::<8>(convert(r), convert(g));
             let rgb = vsliq_n_u32::<16>(rg, convert(b));
-            return crate::simd_storage::cast(vsliq_n_u32::<24>(rgb, convert(a)));
+            crate::simd_storage::store(vsliq_n_u32::<24>(rgb, convert(a)), out);
+            return;
         }
         let channels = [r, g, b, a].map(|v| <Self as F32x4Backend>::to_u8_lanes::<CFG>(self, v));
-        core::array::from_fn(|i| channels[i % 4][i / 4])
+        for (i, byte) in out.iter_mut().enumerate() {
+            *byte = channels[i % 4][i / 4];
+        }
     }
 
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn to_u32_lanes<const CFG: u32>(self, value: float32x4_t) -> float32x4_t {
-        vreinterpretq_f32_u32(if const { crate::IntConvert::decode(CFG).rounds() } {
-            vcvtnq_u32_f32(value)
-        } else {
-            vcvtq_u32_f32(value)
-        })
+        vreinterpretq_f32_u32(
+            if const { crate::numerics::IntConvert::decode(CFG).rounds() } {
+                vcvtnq_u32_f32(value)
+            } else {
+                vcvtq_u32_f32(value)
+            },
+        )
     }
 
     #[arcane(suppress_const_test, _self = NeonToken)]
@@ -385,7 +392,7 @@ impl F32x4Backend for NeonToken {
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn from_f16_lanes<const CFG: u32>(self, lanes: &[u16; 4]) -> float32x4_t {
         let words: uint16x4_t = crate::simd_storage::cast(*lanes);
-        let words = if const { crate::HalfConvert::decode(CFG).flushes() } {
+        let words = if const { crate::numerics::HalfConvert::decode(CFG).flushes() } {
             let mag = vand_u16(words, vdup_n_u16(0x7fff));
             vbsl_u16(
                 vclt_u16(mag, vdup_n_u16(0x400)),
@@ -412,7 +419,7 @@ impl F32x4Backend for NeonToken {
     #[allow(clippy::incompatible_msrv)]
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn to_f16_lanes<const CFG: u32>(self, value: float32x4_t) -> [u16; 4] {
-        let opts = const { crate::HalfConvert::decode(CFG) };
+        let opts = const { crate::numerics::HalfConvert::decode(CFG) };
         if opts.rounds() {
             let h = vreinterpret_u16_f16(vcvt_f16_f32(value));
             let words = if opts.flushes() {
@@ -545,7 +552,7 @@ impl F32x4Backend for NeonToken {
     }
 
     #[arcane(suppress_const_test, _self = NeonToken)]
-    fn store_rgb_bytes(self, r: float32x4_t, g: float32x4_t, b: float32x4_t) -> [u8; 12] {
+    fn store_rgb_u8_into(self, r: float32x4_t, g: float32x4_t, b: float32x4_t, out: &mut [u8; 12]) {
         let ri = vqmovn_s32(vcvtnq_s32_f32(r));
         let gi = vqmovn_s32(vcvtnq_s32_f32(g));
         let bi = vqmovn_s32(vcvtnq_s32_f32(b));
@@ -555,13 +562,11 @@ impl F32x4Backend for NeonToken {
         let idx: uint8x16_t =
             crate::simd_storage::cast([0u8, 4, 8, 1, 5, 9, 2, 6, 10, 3, 7, 11, 255, 255, 255, 255]);
         let packed = vqtbl1q_u8(planes, idx);
-        let mut out = [0u8; 12];
         crate::simd_storage::store(vget_low_u8(packed), out.first_chunk_mut::<8>().unwrap());
         crate::simd_storage::store(
             vgetq_lane_u32::<2>(vreinterpretq_u32_u8(packed)),
             out.last_chunk_mut::<4>().unwrap(),
         );
-        out
     }
 }
 
@@ -943,13 +948,14 @@ impl F32x8Backend for NeonToken {
     }
 
     #[arcane(suppress_const_test, _self = NeonToken)]
-    fn store_rgba_bytes(
+    fn store_rgba_u8_into(
         self,
         r: [float32x4_t; 2],
         g: [float32x4_t; 2],
         b: [float32x4_t; 2],
         a: [float32x4_t; 2],
-    ) -> [u8; 32] {
+        out: &mut [u8; 32],
+    ) {
         let lo = vdupq_n_s32(0);
         let hi = vdupq_n_s32(255);
         let r0 = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(r[0]), lo), hi));
@@ -968,7 +974,7 @@ impl F32x8Backend for NeonToken {
             vorrq_u32(r1, vshlq_n_u32::<8>(g1)),
             vorrq_u32(vshlq_n_u32::<16>(b1), vshlq_n_u32::<24>(a1)),
         );
-        crate::simd_storage::cast([vreinterpretq_u8_u32(p0), vreinterpretq_u8_u32(p1)])
+        crate::simd_storage::store([vreinterpretq_u8_u32(p0), vreinterpretq_u8_u32(p1)], out);
     }
 
     #[inline(always)]
@@ -1151,12 +1157,13 @@ impl F32x8Backend for NeonToken {
     }
 
     #[arcane(suppress_const_test, _self = NeonToken)]
-    fn store_rgb_bytes(
+    fn store_rgb_u8_into(
         self,
         r: [float32x4_t; 2],
         g: [float32x4_t; 2],
         b: [float32x4_t; 2],
-    ) -> [u8; 24] {
+        out: &mut [u8; 24],
+    ) {
         let r8 = vqmovun_s16(vcombine_s16(
             vqmovn_s32(vcvtnq_s32_f32(r[0])),
             vqmovn_s32(vcvtnq_s32_f32(r[1])),
@@ -1177,10 +1184,8 @@ impl F32x8Backend for NeonToken {
         ]);
         let lo16 = vqtbl2q_u8(tbl, idx_lo);
         let hi8 = vqtbl2q_u8(tbl, idx_hi);
-        let mut out = [0u8; 24];
         crate::simd_storage::store(lo16, out.first_chunk_mut::<16>().unwrap());
         crate::simd_storage::store(vget_low_u8(hi8), out.last_chunk_mut::<8>().unwrap());
-        out
     }
 }
 

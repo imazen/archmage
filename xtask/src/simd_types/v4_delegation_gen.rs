@@ -21,8 +21,16 @@ const TOKENS: &[(&str, &str)] = &[
 /// Methods that take the AVX-512VL path: (trait, method, helper).
 const OVERRIDES: &[(&str, &str, &str)] = &[
     ("F32x4Backend", "to_u8_bytes", "to_u8_bytes_x4_v4"),
-    ("F32x4Backend", "store_rgba_bytes", "store_rgba_bytes_x4_v4"),
-    ("F32x4Backend", "store_rgb_bytes", "store_rgb_bytes_x4_v4"),
+    (
+        "F32x4Backend",
+        "store_rgba_u8_into",
+        "store_rgba_u8_into_x4_v4",
+    ),
+    (
+        "F32x4Backend",
+        "store_rgb_u8_into",
+        "store_rgb_u8_into_x4_v4",
+    ),
     ("F32x8Backend", "to_u8_bytes", "to_u8_bytes_x8_v4"),
     ("F32x4Backend", "min", "min_x4_v4"),
     ("F32x4Backend", "max", "max_x4_v4"),
@@ -83,7 +91,7 @@ pub(crate) fn generate(f32x4_trait_src: &str, f32x8_trait_src: &str) -> String {
         //!
         //! ## The exception: pixel packing
         //!
-        //! `to_u8_bytes` (both widths) and `f32x4::{{store_rgba_bytes, store_rgb_bytes}}`
+        //! `to_u8_bytes` (both widths) and `f32x4::{{store_rgba_u8_into, store_rgb_u8_into}}`
         //! call the hand-written AVX-512VL helpers in `x86_v4_f32_overrides.rs`, which
         //! take a concrete `X64V4Token` (`self` for V4, `self.v4()` for V4x and FP16).
 
@@ -195,6 +203,9 @@ fn delegating_impl(
         .expect("method signature re-parse");
         let sig = &sig;
         let name = &sig.ident;
+        if name == "store_rgba_bytes" {
+            continue;
+        }
         assert!(
             matches!(sig.inputs.first(), Some(FnArg::Receiver(_))),
             "{trait_name}::{name} has no receiver; the delegation needs `self`"

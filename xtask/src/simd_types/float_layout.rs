@@ -9,6 +9,7 @@ pub(super) fn trait_methods(elem: &str, lanes: usize, backend: &str) -> String {
     let transpose = if lanes == 4 {
         formatdoc! {r#"
             /// Transpose four vectors without changing any lane bits.
+            #[doc(hidden)]
             #[inline(always)]
             fn transpose_4x4_repr(self, rows: [Self::Repr; 4]) -> [Self::Repr; 4] {{
                 let rows = rows.map(|r| <Self as {backend}>::to_array(self, r));
@@ -21,10 +22,13 @@ pub(super) fn trait_methods(elem: &str, lanes: usize, backend: &str) -> String {
     let rgba_pack = if lanes <= 8 {
         formatdoc! {r#"
             /// Quantize and pack planar RGBA with the encoded integer policy.
+            #[doc(hidden)]
             #[inline(always)]
-            fn store_rgba_bytes_with<const CFG: u32>(self, r: Self::Repr, g: Self::Repr, b: Self::Repr, a: Self::Repr) -> [u8; {rgba_bytes}] {{
+            fn store_rgba_u8_with_into<const CFG: u32>(self, r: Self::Repr, g: Self::Repr, b: Self::Repr, a: Self::Repr, out: &mut [u8; {rgba_bytes}]) {{
                 let channels = [r, g, b, a].map(|v| <Self as {backend}>::to_u8_lanes::<CFG>(self, v));
-                core::array::from_fn(|i| channels[i % 4][i / 4])
+                for (i, byte) in out.iter_mut().enumerate() {{
+                    *byte = channels[i % 4][i / 4];
+                }}
             }}
         "#, rgba_bytes = lanes * 4}
     } else {
@@ -33,12 +37,14 @@ pub(super) fn trait_methods(elem: &str, lanes: usize, backend: &str) -> String {
     let wide = if lanes == 16 {
         formatdoc! {r#"
             /// Widen sixteen consecutive bytes to float.
+            #[doc(hidden)]
             #[inline(always)]
             fn from_u8_lanes_wide(self, lanes: &[u8; 16]) -> Self::Repr {{
                 <Self as {backend}>::from_array(self, lanes.map(f32::from))
             }}
 
             /// Deinterleave sixteen RGBA pixels into planar float storage.
+            #[doc(hidden)]
             #[inline(always)]
             fn deinterleave_rgba_wide(self, rgba: [Self::Repr; 4]) -> [Self::Repr; 4] {{
                 let pixels = rgba.map(|r| <Self as {backend}>::to_array(self, r));
@@ -48,6 +54,7 @@ pub(super) fn trait_methods(elem: &str, lanes: usize, backend: &str) -> String {
             }}
 
             /// Interleave sixteen planar float pixels into RGBA storage.
+            #[doc(hidden)]
             #[inline(always)]
             fn interleave_rgba_wide(self, channels: [Self::Repr; 4]) -> [Self::Repr; 4] {{
                 let channels = channels.map(|r| <Self as {backend}>::to_array(self, r));
@@ -61,24 +68,28 @@ pub(super) fn trait_methods(elem: &str, lanes: usize, backend: &str) -> String {
     };
     formatdoc! {r#"
         /// Load unsigned lanes and convert them exactly, without normalization.
+        #[doc(hidden)]
         #[inline(always)]
         fn from_u16_lanes(self, lanes: &[u16; {lanes}]) -> Self::Repr {{
             <Self as {backend}>::from_array(self, lanes.map(f32::from))
         }}
 
         /// Convert lanes to u16 using the encoded policy.
+        #[doc(hidden)]
         #[inline(always)]
         fn to_u16_lanes<const CFG: u32>(self, value: Self::Repr) -> [u16; {lanes}] {{
             <Self as {backend}>::to_array(self, value).map(crate::scalar::to_u16_with::<CFG>)
         }}
 
         /// Convert lanes to u8 using the encoded policy.
+        #[doc(hidden)]
         #[inline(always)]
         fn to_u8_lanes<const CFG: u32>(self, value: Self::Repr) -> [u8; {lanes}] {{
             <Self as {backend}>::to_array(self, value).map(crate::scalar::to_u8_with::<CFG>)
         }}
 
         /// Convert f32 lanes to unsigned u32 stored in the float representation.
+        #[doc(hidden)]
         #[inline(always)]
         fn to_u32_lanes<const CFG: u32>(self, value: Self::Repr) -> Self::Repr {{
             let lanes = <Self as {backend}>::to_array(self, value);
@@ -86,6 +97,7 @@ pub(super) fn trait_methods(elem: &str, lanes: usize, backend: &str) -> String {
         }}
 
         /// Widen unsigned u32 bit patterns stored in the float representation.
+        #[doc(hidden)]
         #[inline(always)]
         fn from_u32_lanes(self, value: Self::Repr) -> Self::Repr {{
             let lanes = <Self as {backend}>::to_array(self, value);
@@ -93,30 +105,35 @@ pub(super) fn trait_methods(elem: &str, lanes: usize, backend: &str) -> String {
         }}
 
         /// Decode binary16 using the encoded policy.
+        #[doc(hidden)]
         #[inline(always)]
         fn from_f16_lanes<const CFG: u32>(self, lanes: &[u16; {lanes}]) -> Self::Repr {{
             <Self as {backend}>::from_array(self, lanes.map(crate::scalar::from_f16_with::<CFG>))
         }}
 
         /// Encode binary16 using the encoded policy.
+        #[doc(hidden)]
         #[inline(always)]
         fn to_f16_lanes<const CFG: u32>(self, value: Self::Repr) -> [u16; {lanes}] {{
             <Self as {backend}>::to_array(self, value).map(crate::scalar::to_f16_bits_with::<CFG>)
         }}
 
         /// Widen bfloat16 bit patterns.
+        #[doc(hidden)]
         #[inline(always)]
         fn from_bf16_lanes(self, lanes: &[u16; {lanes}]) -> Self::Repr {{
             <Self as {backend}>::from_array(self, lanes.map(crate::scalar::from_bf16))
         }}
 
         /// Encode bfloat16 using the encoded policy.
+        #[doc(hidden)]
         #[inline(always)]
         fn to_bf16_lanes<const CFG: u32>(self, value: Self::Repr) -> [u16; {lanes}] {{
             <Self as {backend}>::to_array(self, value).map(crate::scalar::to_bf16_with::<CFG>)
         }}
 
         /// Broadcast lane 3 in each consecutive group of four lanes.
+        #[doc(hidden)]
         #[inline(always)]
         fn broadcast_rgba_alpha_repr(self, value: Self::Repr) -> Self::Repr {{
             let value = <Self as {backend}>::to_array(self, value);
@@ -124,6 +141,7 @@ pub(super) fn trait_methods(elem: &str, lanes: usize, backend: &str) -> String {
         }}
 
         /// Replace lane 3 in each consecutive group of four lanes.
+        #[doc(hidden)]
         #[inline(always)]
         fn with_rgba_alpha_repr(self, value: Self::Repr, src: Self::Repr) -> Self::Repr {{
             let mut value = <Self as {backend}>::to_array(self, value);
@@ -244,7 +262,7 @@ pub(super) fn x86(lanes: usize, repr: &str, attr: &str) -> String {
 
         {attr}
         fn to_u16_lanes<const CFG: u32>(self, value: {repr}) -> [u16; {lanes}] {{
-            let opts = const {{ crate::IntConvert::decode(CFG) }};
+            let opts = const {{ crate::numerics::IntConvert::decode(CFG) }};
             let value = if opts.saturates_all() {{
                 {prefix}_min_ps({prefix}_set1_ps(65535.0), value)
             }} else {{
@@ -257,7 +275,7 @@ pub(super) fn x86(lanes: usize, repr: &str, attr: &str) -> String {
 
         {attr}
         fn to_u8_lanes<const CFG: u32>(self, value: {repr}) -> [u8; {lanes}] {{
-            let opts = const {{ crate::IntConvert::decode(CFG) }};
+            let opts = const {{ crate::numerics::IntConvert::decode(CFG) }};
             let value = if opts.saturates_all() {{
                 {prefix}_min_ps({prefix}_set1_ps(255.0), value)
             }} else {{
@@ -271,7 +289,7 @@ pub(super) fn x86(lanes: usize, repr: &str, attr: &str) -> String {
 
         {attr}
         fn from_f16_lanes<const CFG: u32>(self, lanes: &[u16; {lanes}]) -> {repr} {{
-            let opts = const {{ crate::HalfConvert::decode(CFG) }};
+            let opts = const {{ crate::numerics::HalfConvert::decode(CFG) }};
             let h = {load_half};
             let h = if opts.flushes() {{
                 let mag = {half_prefix}_and_si{half_bits}(h, {half_prefix}_set1_epi16(0x7fff));
@@ -283,7 +301,7 @@ pub(super) fn x86(lanes: usize, repr: &str, attr: &str) -> String {
 
         {attr}
         fn to_f16_lanes<const CFG: u32>(self, value: {repr}) -> [u16; {lanes}] {{
-            let opts = const {{ crate::HalfConvert::decode(CFG) }};
+            let opts = const {{ crate::numerics::HalfConvert::decode(CFG) }};
             let h = if opts.rounds() {{ {prefix}_cvtps_ph::<0>(value) }} else {{ {prefix}_cvtps_ph::<3>(value) }};
             let h = if opts.flushes() {{
                 let mag = {half_prefix}_and_si{half_bits}(h, {half_prefix}_set1_epi16(0x7fff));
@@ -300,7 +318,7 @@ pub(super) fn x86(lanes: usize, repr: &str, attr: &str) -> String {
 
         {attr}
         fn to_bf16_lanes<const CFG: u32>(self, value: {repr}) -> [u16; {lanes}] {{
-            let opts = const {{ crate::HalfConvert::decode(CFG) }};
+            let opts = const {{ crate::numerics::HalfConvert::decode(CFG) }};
             let raw = {cast_to_int}(value);
             let rounded = if opts.rounds() {{
                 let lsb = {prefix}_and_si{bits}({prefix}_srli_epi32::<16>(raw), {prefix}_set1_epi32(1));
@@ -351,33 +369,36 @@ pub(super) fn neon(attr: &str) -> String {
 
         {attr}
         fn to_u16_lanes<const CFG: u32>(self, value: float32x4_t) -> [u16; 4] {{
-            let i = if const {{ crate::IntConvert::decode(CFG).rounds() }} {{ vcvtnq_u32_f32(value) }} else {{ vcvtq_u32_f32(value) }};
+            let i = if const {{ crate::numerics::IntConvert::decode(CFG).rounds() }} {{ vcvtnq_u32_f32(value) }} else {{ vcvtq_u32_f32(value) }};
             crate::simd_storage::cast(vqmovn_u32(i))
         }}
 
         {attr}
         fn to_u8_lanes<const CFG: u32>(self, value: float32x4_t) -> [u8; 4] {{
-            let i = if const {{ crate::IntConvert::decode(CFG).rounds() }} {{ vcvtnq_u32_f32(value) }} else {{ vcvtq_u32_f32(value) }};
+            let i = if const {{ crate::numerics::IntConvert::decode(CFG).rounds() }} {{ vcvtnq_u32_f32(value) }} else {{ vcvtq_u32_f32(value) }};
             let words = vqmovn_u32(i);
             crate::simd_storage::cast(vget_lane_u32::<0>(vreinterpret_u32_u8(vqmovn_u16(vcombine_u16(words, words)))))
         }}
 
         {attr}
-        fn store_rgba_bytes_with<const CFG: u32>(self, r: float32x4_t, g: float32x4_t, b: float32x4_t, a: float32x4_t) -> [u8; 16] {{
-            let opts = const {{ crate::IntConvert::decode(CFG) }};
+        fn store_rgba_u8_with_into<const CFG: u32>(self, r: float32x4_t, g: float32x4_t, b: float32x4_t, a: float32x4_t, out: &mut [u8; 16]) {{
+            let opts = const {{ crate::numerics::IntConvert::decode(CFG) }};
             if cfg!(target_endian = "little") && opts.is_in_range() {{
                 let convert = |x| if opts.rounds() {{ vcvtnq_u32_f32(x) }} else {{ vcvtq_u32_f32(x) }};
                 let rg = vsliq_n_u32::<8>(convert(r), convert(g));
                 let rgb = vsliq_n_u32::<16>(rg, convert(b));
-                return crate::simd_storage::cast(vsliq_n_u32::<24>(rgb, convert(a)));
+                crate::simd_storage::store(vsliq_n_u32::<24>(rgb, convert(a)), out);
+                return;
             }}
             let channels = [r, g, b, a].map(|v| <Self as F32x4Backend>::to_u8_lanes::<CFG>(self, v));
-            core::array::from_fn(|i| channels[i % 4][i / 4])
+            for (i, byte) in out.iter_mut().enumerate() {{
+                *byte = channels[i % 4][i / 4];
+            }}
         }}
 
         {attr}
         fn to_u32_lanes<const CFG: u32>(self, value: float32x4_t) -> float32x4_t {{
-            vreinterpretq_f32_u32(if const {{ crate::IntConvert::decode(CFG).rounds() }} {{ vcvtnq_u32_f32(value) }} else {{ vcvtq_u32_f32(value) }})
+            vreinterpretq_f32_u32(if const {{ crate::numerics::IntConvert::decode(CFG).rounds() }} {{ vcvtnq_u32_f32(value) }} else {{ vcvtq_u32_f32(value) }})
         }}
 
         {attr}
@@ -390,7 +411,7 @@ pub(super) fn neon(attr: &str) -> String {
         {attr}
         fn from_f16_lanes<const CFG: u32>(self, lanes: &[u16; 4]) -> float32x4_t {{
             let words: uint16x4_t = crate::simd_storage::cast(*lanes);
-            let words = if const {{ crate::HalfConvert::decode(CFG).flushes() }} {{
+            let words = if const {{ crate::numerics::HalfConvert::decode(CFG).flushes() }} {{
                 let mag = vand_u16(words, vdup_n_u16(0x7fff));
                 vbsl_u16(vclt_u16(mag, vdup_n_u16(0x400)), vand_u16(words, vdup_n_u16(0x8000)), words)
             }} else {{
@@ -412,7 +433,7 @@ pub(super) fn neon(attr: &str) -> String {
         #[allow(clippy::incompatible_msrv)]
         {attr}
         fn to_f16_lanes<const CFG: u32>(self, value: float32x4_t) -> [u16; 4] {{
-            let opts = const {{ crate::HalfConvert::decode(CFG) }};
+            let opts = const {{ crate::numerics::HalfConvert::decode(CFG) }};
             if opts.rounds() {{
                 let h = vreinterpret_u16_f16(vcvt_f16_f32(value));
                 let words = if opts.flushes() {{
@@ -482,15 +503,15 @@ pub(super) fn wasm() -> String {
 
         #[inline(always)]
         fn to_u16_lanes<const CFG: u32>(self, value: v128) -> [u16; 4] {{
-            let opts = const {{ crate::IntConvert::decode(CFG) }};
+            let opts = const {{ crate::numerics::IntConvert::decode(CFG) }};
             let a = if opts.rounds() {{ f32x4_nearest(value) }} else {{ value }};
-            let i = if const {{ crate::IntConvert::decode(CFG).is_in_range() }} {{ crate::wasm_fma::trunc_f32x4_fast(self, a) }} else {{ i32x4_trunc_sat_f32x4(a) }};
+            let i = if const {{ crate::numerics::IntConvert::decode(CFG).is_in_range() }} {{ crate::wasm_fma::trunc_f32x4_fast(self, a) }} else {{ i32x4_trunc_sat_f32x4(a) }};
             crate::simd_storage::cast(u64x2_extract_lane::<0>(u16x8_narrow_i32x4(i, i)))
         }}
 
         #[inline(always)]
         fn to_u8_lanes<const CFG: u32>(self, value: v128) -> [u8; 4] {{
-            let opts = const {{ crate::IntConvert::decode(CFG) }};
+            let opts = const {{ crate::numerics::IntConvert::decode(CFG) }};
             let a = if opts.rounds() {{ f32x4_nearest(value) }} else {{ value }};
             let i = if opts.is_in_range() {{ crate::wasm_fma::trunc_f32x4_fast(self, a) }} else {{ i32x4_trunc_sat_f32x4(a) }};
             let n = i16x8_narrow_i32x4(i, i);
@@ -499,7 +520,7 @@ pub(super) fn wasm() -> String {
 
         #[inline(always)]
         fn to_u32_lanes<const CFG: u32>(self, value: v128) -> v128 {{
-            let opts = const {{ crate::IntConvert::decode(CFG) }};
+            let opts = const {{ crate::numerics::IntConvert::decode(CFG) }};
             let a = if opts.rounds() {{ f32x4_nearest(value) }} else {{ value }};
             #[cfg(target_feature = "relaxed-simd")]
             if opts.is_in_range() {{
@@ -580,7 +601,7 @@ pub(super) fn polyfill(lanes: usize, part: usize, repr: &str) -> String {
         formatdoc! {r#"
             {attr}
             fn to_u16_lanes<const CFG: u32>(self, value: {repr}) -> [u16; {lanes}] {{
-                let opts = const {{ crate::IntConvert::decode(CFG) }};
+                let opts = const {{ crate::numerics::IntConvert::decode(CFG) }};
                 let convert = |v| {{
                     let v = if opts.saturates_all() {{ _mm256_min_ps(_mm256_set1_ps(65535.0), v) }} else {{ v }};
                     if opts.rounds() {{ _mm256_cvtps_epi32(v) }} else {{ _mm256_cvttps_epi32(v) }}
@@ -669,7 +690,7 @@ fn x86_unsigned(lanes: usize, prefix: &str, repr: &str, attr: &str) -> String {
     } else {
         formatdoc! {r#"
             let value = if opts.nonnegative() {{ value }} else {{ {prefix}_max_ps(value, {prefix}_setzero_ps()) }};
-            if const {{ !crate::IntConvert::decode(CFG).is_in_range() && !crate::IntConvert::decode(CFG).saturates_all() }} {{
+            if const {{ !crate::numerics::IntConvert::decode(CFG).is_in_range() && !crate::numerics::IntConvert::decode(CFG).saturates_all() }} {{
                 let i = if opts.rounds() {{ {prefix}_cvtps_epi32(value) }} else {{ {prefix}_cvttps_epi32(value) }};
                 return {prefix}_castsi{bits}_ps(i);
             }}
@@ -700,7 +721,7 @@ fn x86_unsigned(lanes: usize, prefix: &str, repr: &str, attr: &str) -> String {
     formatdoc! {r#"
         {attr}
         fn to_u32_lanes<const CFG: u32>(self, value: {repr}) -> {repr} {{
-            let opts = const {{ crate::IntConvert::decode(CFG) }};
+            let opts = const {{ crate::numerics::IntConvert::decode(CFG) }};
             {to_int}
         }}
 

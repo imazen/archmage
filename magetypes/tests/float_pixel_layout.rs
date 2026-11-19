@@ -1,7 +1,8 @@
 use archmage::{ScalarToken, SimdToken};
+use magetypes::numerics::{ExtremaOptions, HalfConvert, IntConvert, RecipOptions};
+use magetypes::scalar;
 use magetypes::simd::backends::{F32x4Convert, F32x8Convert, U32x4Backend, U32x8Backend};
 use magetypes::simd::generic::{f32x4, f32x8};
-use magetypes::{ExtremaOptions, HalfConvert, IntConvert, RecipOptions, scalar};
 
 const FLOATS: [f32; 20] = [
     0.0,
@@ -52,9 +53,12 @@ macro_rules! check_lanes {
             let loaded = $vec::from_u16_t($token, &values);
             assert_eq!(loaded.to_array(), values.map(f32::from));
             assert_eq!(
-                loaded
-                    .to_u16_with::<{ magetypes::IntConvert::new().trunc().saturate_all().bits() }>(
-                    ),
+                loaded.to_u16_with::<{
+                    magetypes::numerics::IntConvert::new()
+                        .trunc()
+                        .saturate_all()
+                        .bits()
+                }>(),
                 values
             );
         }
@@ -62,9 +66,12 @@ macro_rules! check_lanes {
         for start in 0..FLOATS.len() {
             let values = core::array::from_fn(|i| FLOATS[(start + i) % FLOATS.len()]);
             assert_eq!(
-                $vec::from_array_t($token, values)
-                    .to_u16_with::<{ magetypes::IntConvert::new().trunc().saturate_all().bits() }>(
-                    ),
+                $vec::from_array_t($token, values).to_u16_with::<{
+                    magetypes::numerics::IntConvert::new()
+                        .trunc()
+                        .saturate_all()
+                        .bits()
+                }>(),
                 values.map(|x| x as u16)
             );
         }
@@ -230,8 +237,8 @@ macro_rules! check_rgb {
 fn check_narrow<T: F32x4Convert + F32x8Convert + U32x4Backend + U32x8Backend>(token: T) {
     check_lanes!(token, f32x4, 4);
     check_lanes!(token, f32x8, 8);
-    check_rgb!(token, f32x4, load_4_rgb_u16_t, 4);
-    check_rgb!(token, f32x8, load_8_rgb_u16_t, 8);
+    check_rgb!(token, f32x4, load_rgb_u16_t, 4);
+    check_rgb!(token, f32x8, load_rgb_u16_t, 8);
 
     let rows = core::array::from_fn(|i| {
         f32x4::from_array_t(
@@ -274,13 +281,15 @@ fn check_wide<
     check_lanes!(token, f32x16, 16);
 
     let rgba = core::array::from_fn(|i| u8::try_from(i * 4).unwrap());
-    let (r, g, b, a) = f32x16::load_16_rgba_u8_t(token, &rgba);
+    let (r, g, b, a) = f32x16::load_rgba_u8_t(token, &rgba);
     let channels = [r, g, b, a].map(|v| v.to_array());
     assert_eq!(
         channels,
         core::array::from_fn(|c| core::array::from_fn(|i| f32::from(rgba[i * 4 + c])))
     );
-    assert_eq!(f32x16::store_16_rgba_u8(r, g, b, a), rgba);
+    let mut out = [0; 64];
+    f32x16::store_rgba_u8(r, g, b, a, &mut out);
+    assert_eq!(out, rgba);
 
     let rows = core::array::from_fn(|i| {
         f32x16::from_array_t(

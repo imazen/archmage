@@ -1,6 +1,6 @@
 //! Direct AVX-512VL implementations for the narrow vector backends.
 //!
-//! `to_u8` (both widths) and `f32x4::{store_4_rgba_u8, store_4_rgb_u8}` use
+//! `to_u8` (both widths) and `f32x4::{store_rgba_u8, store_rgb_u8}` use
 //! AVX-512VL
 //! instead of the V3 bodies, because the narrowing instruction makes them
 //! cheaper with identical bytes. `max(x, 0)` then `cvtps` leaves +inf and
@@ -17,7 +17,7 @@
 
 #![cfg(all(target_arch = "x86_64", feature = "avx512"))]
 
-use crate::IntConvert;
+use crate::numerics::IntConvert;
 use core::arch::x86_64::{__m128, __m128d, __m256, __m256d};
 
 /// `f32x4::to_u8`: `max(x, 0)`, round-to-nearest-even `cvtps`, `vpmovusdb`.
@@ -34,16 +34,17 @@ pub(super) fn to_u8_bytes_x8_v4(_token: archmage::X64V4Token, a: __m256) -> [u8;
     (_mm_cvtsi128_si64(bytes) as u64).to_ne_bytes()
 }
 
-/// `f32x4::store_4_rgba_u8`: two planes per 256-bit register, so `max`,
+/// `f32x4::store_rgba_u8`: two planes per 256-bit register, so `max`,
 /// `cvtps` and `vpmovusdb` each cover two planes; one `pshufb` interleaves.
 #[archmage::arcane(import_intrinsics)]
-pub(super) fn store_rgba_bytes_x4_v4(
+pub(super) fn store_rgba_u8_into_x4_v4(
     _token: archmage::X64V4Token,
     r: __m128,
     g: __m128,
     b: __m128,
     a: __m128,
-) -> [u8; 16] {
+    out: &mut [u8; 16],
+) {
     let zero = _mm256_setzero_ps();
     let rg = _mm256_insertf128_ps::<1>(_mm256_castps128_ps256(r), g);
     let ba = _mm256_insertf128_ps::<1>(_mm256_castps128_ps256(b), a);
@@ -52,25 +53,25 @@ pub(super) fn store_rgba_bytes_x4_v4(
     // [R0-3, G0-3, B0-3, A0-3] -> interleaved RGBA pixels 0-3.
     let planes = _mm_unpacklo_epi64(rg, ba);
     let shuf = _mm_setr_epi8(0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15);
-    crate::simd_storage::cast(_mm_shuffle_epi8(planes, shuf))
+    crate::simd_storage::store(_mm_shuffle_epi8(planes, shuf), out);
 }
 
-/// `f32x4::store_4_rgb_u8`: pack R+G in one 256-bit `vpmovusdb` and B in one
+/// `f32x4::store_rgb_u8`: pack R+G in one 256-bit `vpmovusdb` and B in one
 /// 128-bit `vpmovusdb`, interleave 12 RGB bytes with one `pshufb`, and write 8+4B.
 #[archmage::arcane(import_intrinsics)]
-pub(super) fn store_rgb_bytes_x4_v4(
+pub(super) fn store_rgb_u8_into_x4_v4(
     _token: archmage::X64V4Token,
     r: __m128,
     g: __m128,
     b: __m128,
-) -> [u8; 12] {
+    out: &mut [u8; 12],
+) {
     let rg = _mm256_insertf128_ps::<1>(_mm256_castps128_ps256(r), g);
     let rg8 = _mm256_cvtusepi32_epi8(_mm256_cvtps_epi32(_mm256_max_ps(rg, _mm256_setzero_ps())));
     let b8 = _mm_cvtusepi32_epi8(_mm_cvtps_epi32(_mm_max_ps(b, _mm_setzero_ps())));
     let planes = _mm_unpacklo_epi64(rg8, b8);
     let shuf = _mm_setr_epi8(0, 4, 8, 1, 5, 9, 2, 6, 10, 3, 7, 11, -1, -1, -1, -1);
     let packed = _mm_shuffle_epi8(planes, shuf);
-    let mut out = [0u8; 12];
     crate::simd_storage::store(
         _mm_cvtsi128_si64(packed) as u64,
         out.first_chunk_mut::<8>().unwrap(),
@@ -79,7 +80,6 @@ pub(super) fn store_rgb_bytes_x4_v4(
         _mm_extract_epi32::<2>(packed) as u32,
         out.last_chunk_mut::<4>().unwrap(),
     );
-    out
 }
 
 // 0x04 and 0x05 preserve the sign of the selected operand.

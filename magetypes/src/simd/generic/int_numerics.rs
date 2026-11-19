@@ -1,9 +1,22 @@
-use crate::IntConvert;
+use crate::numerics::IntConvert;
 
 macro_rules! int_numerics {
     ($float:ident, $int:ident, $unsigned:ident, $convert:ident, $float_backend:ident, $unsigned_backend:ident) => {
+        /// ### Signed integer conversion
         impl<T: crate::simd::backends::$convert> super::$float<T> {
+            /// Truncate toward zero with the native conversion instruction.
+            ///
+            /// Exact when the truncated input fits in `i32`. Out-of-range and
+            /// NaN inputs return an unspecified integer. The scalar remainder
+            /// equivalent is [`crate::scalar::to_i32_fast`].
+            #[inline(always)]
+            pub fn to_i32_fast(self) -> super::$int<T> {
+                self.to_i32_with::<{ IntConvert::new().trunc().in_range().bits() }>()
+            }
+
             /// Convert to signed integers with the encoded rounding and bounds.
+            ///
+            /// Configure with [`IntConvert`](crate::numerics::IntConvert).
             #[inline(always)]
             pub fn to_i32_with<const CFG: u32>(self) -> super::$int<T> {
                 let opts = const { IntConvert::decode(CFG) };
@@ -19,6 +32,7 @@ macro_rules! int_numerics {
             }
         }
 
+        /// ### Unsigned integer conversion
         impl<T: crate::simd::backends::$float_backend + crate::simd::backends::$unsigned_backend>
             super::$float<T>
         {
@@ -30,6 +44,8 @@ macro_rules! int_numerics {
             }
 
             /// Convert to unsigned integers with the encoded rounding and bounds.
+            ///
+            /// Configure with [`IntConvert`](crate::numerics::IntConvert).
             #[inline(always)]
             pub fn to_u32_with<const CFG: u32>(self) -> super::$unsigned<T> {
                 const {

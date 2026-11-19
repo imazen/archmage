@@ -510,24 +510,30 @@ where
     }
     for base in (3..(3 + 256 * 3)).step_by(24) {
         let chunk24: &[u8; 24] = full_rgb[base..base + 24].try_into().unwrap();
-        let (r, g, b) = f32x8::load_8_rgb_u8_t(token, chunk24);
+        let (r, g, b) = f32x8::load_rgb_u8_t(token, chunk24);
         let exp_r: [f32; 8] = core::array::from_fn(|i| chunk24[i * 3] as f32);
         let exp_g: [f32; 8] = core::array::from_fn(|i| chunk24[i * 3 + 1] as f32);
         let exp_b: [f32; 8] = core::array::from_fn(|i| chunk24[i * 3 + 2] as f32);
         assert_eq!(r.to_array(), exp_r, "{tier}");
         assert_eq!(g.to_array(), exp_g, "{tier}");
         assert_eq!(b.to_array(), exp_b, "{tier}");
-        assert_eq!(&f32x8::store_8_rgb_u8(r, g, b), chunk24, "{tier}");
+        let mut out = [0; 24];
+        f32x8::store_rgb_u8(r, g, b, &mut out);
+        assert_eq!(&out, chunk24, "{tier}");
 
         let chunk12_lo: &[u8; 12] = chunk24[..12].try_into().unwrap();
         let chunk12_hi: &[u8; 12] = chunk24[12..].try_into().unwrap();
-        let (r4l, g4l, b4l) = f32x4::load_4_rgb_u8_t(token, chunk12_lo);
-        let (r4h, g4h, b4h) = f32x4::load_4_rgb_u8_t(token, chunk12_hi);
-        assert_eq!(&f32x4::store_4_rgb_u8(r4l, g4l, b4l), chunk12_lo, "{tier}");
-        assert_eq!(&f32x4::store_4_rgb_u8(r4h, g4h, b4h), chunk12_hi, "{tier}");
+        let (r4l, g4l, b4l) = f32x4::load_rgb_u8_t(token, chunk12_lo);
+        let (r4h, g4h, b4h) = f32x4::load_rgb_u8_t(token, chunk12_hi);
+        let mut out = [0; 12];
+        f32x4::store_rgb_u8(r4l, g4l, b4l, &mut out);
+        assert_eq!(&out, chunk12_lo, "{tier}");
+        let mut out = [0; 12];
+        f32x4::store_rgb_u8(r4h, g4h, b4h, &mut out);
+        assert_eq!(&out, chunk12_hi, "{tier}");
     }
 
-    // Halfway ties, NaN, infinities, negatives, and out-of-range floats match store_{4,8}_rgba_u8.
+    // Halfway ties, NaN, infinities, negatives, and out-of-range floats match store_rgba_u8.
     let edge_vals: [f32; 24] = [
         0.0,
         -0.0,
@@ -557,25 +563,53 @@ where
     let er8 = f32x8::from_array_t(token, core::array::from_fn(|i| edge_vals[i]));
     let eg8 = f32x8::from_array_t(token, core::array::from_fn(|i| edge_vals[8 + i]));
     let eb8 = f32x8::from_array_t(token, core::array::from_fn(|i| edge_vals[16 + i]));
-    let rgba8_ref = f32x8::store_8_rgba_u8(er8, eg8, eb8, f32x8::zero_t(token));
+    let mut rgba8_ref = [0; 32];
+    f32x8::store_rgba_u8(er8, eg8, eb8, f32x8::zero_t(token), &mut rgba8_ref);
     let rgb8_expected: [u8; 24] = core::array::from_fn(|i| rgba8_ref[(i / 3) * 4 + (i % 3)]);
+    let mut packed = [0; 24];
+    f32x8::store_rgb_u8(er8, eg8, eb8, &mut packed);
+    assert_eq!(packed, rgb8_expected, "{tier}");
+
+    const TRUNC: u32 = magetypes::numerics::IntConvert::new()
+        .trunc()
+        .saturate_all()
+        .bits();
+    let alpha = f32x8::splat_t(token, 127.9);
+    let mut rgb_buf = [0xa5; 26];
+    let mut rgba_buf = [0xa5; 34];
+    f32x8::store_rgb_u8_with::<TRUNC>(er8, eg8, eb8, (&mut rgb_buf[1..25]).try_into().unwrap());
+    f32x8::store_rgba_u8_with::<TRUNC>(
+        er8,
+        eg8,
+        eb8,
+        alpha,
+        (&mut rgba_buf[1..33]).try_into().unwrap(),
+    );
+    for i in 0..8 {
+        let expected = [
+            edge_vals[i] as u8,
+            edge_vals[8 + i] as u8,
+            edge_vals[16 + i] as u8,
+        ];
+        assert_eq!(rgb_buf[1 + 3 * i..4 + 3 * i], expected, "{tier}");
+        assert_eq!(rgba_buf[1 + 4 * i..4 + 4 * i], expected, "{tier}");
+        assert_eq!(rgba_buf[4 + 4 * i], 127, "{tier}");
+    }
     assert_eq!(
-        f32x8::store_8_rgb_u8(er8, eg8, eb8),
-        rgb8_expected,
-        "{tier}"
+        [rgb_buf[0], rgb_buf[25], rgba_buf[0], rgba_buf[33]],
+        [0xa5; 4]
     );
 
     for half in [0usize, 4usize] {
         let er4 = f32x4::from_array_t(token, core::array::from_fn(|i| edge_vals[half + i]));
         let eg4 = f32x4::from_array_t(token, core::array::from_fn(|i| edge_vals[8 + half + i]));
         let eb4 = f32x4::from_array_t(token, core::array::from_fn(|i| edge_vals[16 + half + i]));
-        let rgba4_ref = f32x4::store_4_rgba_u8(er4, eg4, eb4, f32x4::zero_t(token));
+        let mut rgba4_ref = [0; 16];
+        f32x4::store_rgba_u8(er4, eg4, eb4, f32x4::zero_t(token), &mut rgba4_ref);
         let rgb4_expected: [u8; 12] = core::array::from_fn(|i| rgba4_ref[(i / 3) * 4 + (i % 3)]);
-        assert_eq!(
-            f32x4::store_4_rgb_u8(er4, eg4, eb4),
-            rgb4_expected,
-            "{tier}"
-        );
+        let mut packed = [0; 12];
+        f32x4::store_rgb_u8(er4, eg4, eb4, &mut packed);
+        assert_eq!(packed, rgb4_expected, "{tier}");
     }
 }
 

@@ -200,9 +200,9 @@ pub trait F64x4Backend:
     }
 
     /// Fast reciprocal square root approximation: backend-dependent
-    /// (x86 ~12-bit, ARM ~8-bit, WASM full). [`rsqrt`] is full f32 everywhere.
+    /// (x86 ~12-bit, ARM ~8-bit, WASM full). [`rsqrt`](Self::rsqrt) is full f32 everywhere.
     ///
-    /// See [`rcp_approx`] for default-body rationale.
+    /// See [`rcp_approx`](Self::rcp_approx) for default-body rationale.
     #[inline(always)]
     fn rsqrt_approx(self, a: Self::Repr) -> Self::Repr {
         a
@@ -236,7 +236,7 @@ pub trait F64x4Backend:
     }
 
     /// Working-tier reciprocal — defaults to delegating to
-    /// [`rcp_approx`] (which itself defaults to identity), so every
+    /// [`rcp_approx`](Self::rcp_approx) (which itself defaults to identity), so every
     /// backend MUST override. Contract: <= 4 ULP by the backend's
     /// fastest conforming path (estimate + Newton on x86/NEON f32,
     /// exact division elsewhere); rails are per-backend and may be
@@ -247,7 +247,7 @@ pub trait F64x4Backend:
         Self::rcp_approx(self, a)
     }
 
-    /// Working-tier reciprocal square root — see [`recip`] for the
+    /// Working-tier reciprocal square root — see [`recip`](Self::recip) for the
     /// contract shape.
     #[inline(always)]
     fn rsqrt(self, a: Self::Repr) -> Self::Repr {

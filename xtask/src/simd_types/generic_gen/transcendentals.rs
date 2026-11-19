@@ -595,30 +595,28 @@ pub(super) fn gen_mod_rs(all_types: &[SimdType]) -> String {
         .filter(|t| t.width == SimdWidth::W512)
         .collect();
 
-    // Block ops modules (hardcoded list, alphabetical)
-    let block_ops_types = [
-        "f32x4", "f32x8", "f64x2", "f64x4", "i32x4", "i32x8", "i8x16", "u32x4",
-    ];
-    for name in &block_ops_types {
+    // Core impl blocks appear first on rustdoc's vector pages.
+    let mut w128_w256_names: Vec<String> = w128_w256.iter().map(|t| t.name()).collect();
+    w128_w256_names.sort();
+    let mut w512_names: Vec<String> = w512.iter().map(|t| t.name()).collect();
+    w512_names.sort();
+
+    code.push_str("// Core vector types and methods\n");
+    for name in &w128_w256_names {
+        code.push_str(&format!("mod {name}_impl;\n"));
+    }
+    for name in &w512_names {
+        code.push_str(&format!("#[cfg(feature = \"w512\")]\nmod {name}_impl;\n"));
+    }
+
+    code.push_str("\n// Block layout operations\n");
+    for (name, _, _) in super::block_ops_types() {
         code.push_str(&format!("mod block_ops_{name};\n"));
     }
 
-    // W128+W256 type mod declarations + transcendentals, all sorted alphabetically.
-    // The transcendentals modules sort between i8x32_impl and u16x16_impl naturally.
-    let mut w128_w256_names: Vec<String> = w128_w256.iter().map(|t| t.name()).collect();
-    w128_w256_names.sort();
-
-    let mut all_mods: Vec<String> = w128_w256_names
-        .iter()
-        .map(|name| format!("{name}_impl"))
-        .collect();
-    all_mods.push("transcendentals_f32x4".to_string());
-    all_mods.push("transcendentals_f32x8".to_string());
-    all_mods.sort();
-
-    for mod_name in &all_mods {
-        code.push_str(&format!("mod {mod_name};\n"));
-    }
+    code.push_str("\n// Transcendental approximations\n");
+    code.push_str("mod transcendentals_f32x4;\nmod transcendentals_f32x8;\n");
+    code.push_str("#[cfg(feature = \"w512\")]\nmod transcendentals_f32x16;\n");
 
     // W128+W256 pub use declarations (specific non-alphabetical order:
     // floats by width, then signed ints by element size, then unsigned ints by element size)
@@ -635,19 +633,6 @@ pub(super) fn gen_mod_rs(all_types: &[SimdType]) -> String {
 
     // 512-bit section — gated behind `w512` feature
     code.push_str("\n// 512-bit generic wrapper types (gated behind `w512` feature)\n");
-
-    // W512 mod declarations (alphabetical, plus transcendentals)
-    let mut w512_names: Vec<String> = w512.iter().map(|t| t.name()).collect();
-    w512_names.sort();
-    let mut w512_mods: Vec<String> = w512_names
-        .iter()
-        .map(|name| format!("{name}_impl"))
-        .collect();
-    w512_mods.push("transcendentals_f32x16".to_string());
-    w512_mods.sort();
-    for mod_name in &w512_mods {
-        code.push_str(&format!("#[cfg(feature = \"w512\")]\nmod {mod_name};\n"));
-    }
 
     // W512 pub use declarations (specific order:
     // floats, then signed ints by element size, then unsigned ints by element size)

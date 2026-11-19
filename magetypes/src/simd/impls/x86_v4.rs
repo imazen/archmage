@@ -267,7 +267,7 @@ impl F32x16Backend for X64V4Token {
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn to_u16_lanes<const CFG: u32>(self, value: __m512) -> [u16; 16] {
-        let opts = const { crate::IntConvert::decode(CFG) };
+        let opts = const { crate::numerics::IntConvert::decode(CFG) };
         let value = if opts.saturates_all() {
             _mm512_min_ps(_mm512_set1_ps(65535.0), value)
         } else {
@@ -295,7 +295,7 @@ impl F32x16Backend for X64V4Token {
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn to_u8_lanes<const CFG: u32>(self, value: __m512) -> [u8; 16] {
-        let opts = const { crate::IntConvert::decode(CFG) };
+        let opts = const { crate::numerics::IntConvert::decode(CFG) };
         let value = if opts.saturates_all() {
             _mm512_min_ps(_mm512_set1_ps(255.0), value)
         } else {
@@ -322,7 +322,7 @@ impl F32x16Backend for X64V4Token {
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn to_u32_lanes<const CFG: u32>(self, value: __m512) -> __m512 {
-        let opts = const { crate::IntConvert::decode(CFG) };
+        let opts = const { crate::numerics::IntConvert::decode(CFG) };
         let clamped = if opts.nonnegative() {
             value
         } else {
@@ -343,7 +343,7 @@ impl F32x16Backend for X64V4Token {
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn from_f16_lanes<const CFG: u32>(self, lanes: &[u16; 16]) -> __m512 {
-        let opts = const { crate::HalfConvert::decode(CFG) };
+        let opts = const { crate::numerics::HalfConvert::decode(CFG) };
         let h = crate::simd_storage::cast(*lanes);
         let h = if opts.flushes() {
             let mag = _mm256_and_si256(h, _mm256_set1_epi16(0x7fff));
@@ -357,7 +357,7 @@ impl F32x16Backend for X64V4Token {
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn to_f16_lanes<const CFG: u32>(self, value: __m512) -> [u16; 16] {
-        let opts = const { crate::HalfConvert::decode(CFG) };
+        let opts = const { crate::numerics::HalfConvert::decode(CFG) };
         let h = if opts.rounds() {
             _mm512_cvtps_ph::<0>(value)
         } else {
@@ -382,7 +382,7 @@ impl F32x16Backend for X64V4Token {
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn to_bf16_lanes<const CFG: u32>(self, value: __m512) -> [u16; 16] {
-        let opts = const { crate::HalfConvert::decode(CFG) };
+        let opts = const { crate::numerics::HalfConvert::decode(CFG) };
         let raw = _mm512_castps_si512(value);
         let rounded = if opts.rounds() {
             let lsb = _mm512_and_si512(_mm512_srli_epi32::<16>(raw), _mm512_set1_epi32(1));
@@ -2706,7 +2706,7 @@ impl F32x16Backend for X64V4xToken {
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn to_u16_lanes<const CFG: u32>(self, value: __m512) -> [u16; 16] {
-        let opts = const { crate::IntConvert::decode(CFG) };
+        let opts = const { crate::numerics::IntConvert::decode(CFG) };
         let value = if opts.saturates_all() {
             _mm512_min_ps(_mm512_set1_ps(65535.0), value)
         } else {
@@ -2734,7 +2734,7 @@ impl F32x16Backend for X64V4xToken {
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn to_u8_lanes<const CFG: u32>(self, value: __m512) -> [u8; 16] {
-        let opts = const { crate::IntConvert::decode(CFG) };
+        let opts = const { crate::numerics::IntConvert::decode(CFG) };
         let value = if opts.saturates_all() {
             _mm512_min_ps(_mm512_set1_ps(255.0), value)
         } else {
@@ -2761,7 +2761,7 @@ impl F32x16Backend for X64V4xToken {
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn to_u32_lanes<const CFG: u32>(self, value: __m512) -> __m512 {
-        let opts = const { crate::IntConvert::decode(CFG) };
+        let opts = const { crate::numerics::IntConvert::decode(CFG) };
         let clamped = if opts.nonnegative() {
             value
         } else {
@@ -2782,7 +2782,7 @@ impl F32x16Backend for X64V4xToken {
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn from_f16_lanes<const CFG: u32>(self, lanes: &[u16; 16]) -> __m512 {
-        let opts = const { crate::HalfConvert::decode(CFG) };
+        let opts = const { crate::numerics::HalfConvert::decode(CFG) };
         let h = crate::simd_storage::cast(*lanes);
         let h = if opts.flushes() {
             let mag = _mm256_and_si256(h, _mm256_set1_epi16(0x7fff));
@@ -2796,7 +2796,7 @@ impl F32x16Backend for X64V4xToken {
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn to_f16_lanes<const CFG: u32>(self, value: __m512) -> [u16; 16] {
-        let opts = const { crate::HalfConvert::decode(CFG) };
+        let opts = const { crate::numerics::HalfConvert::decode(CFG) };
         let h = if opts.rounds() {
             _mm512_cvtps_ph::<0>(value)
         } else {
@@ -2821,7 +2821,7 @@ impl F32x16Backend for X64V4xToken {
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn to_bf16_lanes<const CFG: u32>(self, value: __m512) -> [u16; 16] {
-        let opts = const { crate::HalfConvert::decode(CFG) };
+        let opts = const { crate::numerics::HalfConvert::decode(CFG) };
         let raw = _mm512_castps_si512(value);
         let rounded = if opts.rounds() {
             let lsb = _mm512_and_si512(_mm512_srli_epi32::<16>(raw), _mm512_set1_epi32(1));

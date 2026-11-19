@@ -82,15 +82,17 @@ fn generate_cross_arch_parity() -> String {
                 }}
 
                 #[test]
-                fn test_f32x4_store_4_rgba_u8() {{
+                fn test_f32x4_store_rgba_u8() {{
                     if let Some(token) = <$token_ty>::summon() {{
                         let r = f32x4::from_array_t(token, [0.0, 64.0, 128.0, 255.0]);
                         let g = f32x4::from_array_t(token, [10.0, 74.0, 138.0, 245.0]);
                         let b = f32x4::from_array_t(token, [20.0, 84.0, 148.0, 235.0]);
                         let a = f32x4::from_array_t(token, [255.0, 300.0, -5.0, 128.5]);
                         // Interleaved RGBA with clamp (300->255, -5->0) + round-even (128.5->128).
+                        let mut out = [0; 16];
+                        f32x4::store_rgba_u8(r, g, b, a, &mut out);
                         assert_eq!(
-                            f32x4::store_4_rgba_u8(r, g, b, a),
+                            out,
                             [0, 10, 20, 255, 64, 74, 84, 255, 128, 138, 148, 0, 255, 245, 235, 128]
                         );
                     }}

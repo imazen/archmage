@@ -590,7 +590,7 @@ fn generate_float_backend_trait(ty: &W512Type) -> String {
             #[inline(always)]
             fn rcp_approx(self, a: Self::Repr) -> Self::Repr {{ a }}
 
-            /// Fast reciprocal square root approximation — see [`rcp_approx`].
+            /// Fast reciprocal square root approximation — see [`rcp_approx`](Self::rcp_approx).
             #[inline(always)]
             fn rsqrt_approx(self, a: Self::Repr) -> Self::Repr {{ a }}
 
@@ -626,7 +626,7 @@ fn generate_float_backend_trait(ty: &W512Type) -> String {
             #[inline(always)]
             fn recip(self, a: Self::Repr) -> Self::Repr {{ Self::rcp_approx(self, a) }}
 
-            /// Precise reciprocal square root — see [`recip`].
+            /// Precise reciprocal square root — see [`recip`](Self::recip).
             #[inline(always)]
             fn rsqrt(self, a: Self::Repr) -> Self::Repr {{ Self::rsqrt_approx(self, a) }}
 

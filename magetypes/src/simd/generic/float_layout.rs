@@ -1,11 +1,12 @@
 #![forbid(unsafe_code)]
 
 use super::{f32x4, f32x8};
+use crate::numerics::{HalfConvert, IntConvert};
 use crate::simd::backends::{F32x4Backend, F32x8Backend};
-use crate::{HalfConvert, IntConvert};
 
 macro_rules! float_layout {
     ($vector:ident, $backend:ident, $lanes:literal) => {
+        /// ### Lane and half-precision conversion
         impl<T: $backend> $vector<T> {
             /// Load unsigned integers in lane order and convert exactly to `f32`.
             ///
@@ -23,6 +24,8 @@ macro_rules! float_layout {
             }
 
             /// Convert lanes to u16 with the encoded rounding and bounds.
+            ///
+            /// Configure with [`IntConvert`](crate::numerics::IntConvert).
             #[inline(always)]
             pub fn to_u16_with<const CFG: u32>(self) -> [u16; $lanes] {
                 const {
@@ -32,6 +35,8 @@ macro_rules! float_layout {
             }
 
             /// Convert lanes to u8 with the encoded rounding and bounds.
+            ///
+            /// Configure with [`IntConvert`](crate::numerics::IntConvert).
             #[inline(always)]
             pub fn to_u8_with<const CFG: u32>(self) -> [u8; $lanes] {
                 const {
@@ -47,6 +52,8 @@ macro_rules! float_layout {
             }
 
             /// Decode binary16 lanes with the encoded domain and subnormal mode.
+            ///
+            /// Configure with [`HalfConvert`](crate::numerics::HalfConvert).
             #[inline(always)]
             pub fn from_f16_with_t<const CFG: u32>(token: T, bits: &[u16; $lanes]) -> Self {
                 const {
@@ -62,6 +69,8 @@ macro_rules! float_layout {
             }
 
             /// Encode to binary16 with the selected domain, subnormal and rounding policy.
+            ///
+            /// Configure with [`HalfConvert`](crate::numerics::HalfConvert).
             #[inline(always)]
             pub fn to_f16_bits_with<const CFG: u32>(self) -> [u16; $lanes] {
                 const {
@@ -83,6 +92,8 @@ macro_rules! float_layout {
             }
 
             /// Encode bfloat16 with the selected domain, subnormal and rounding policy.
+            ///
+            /// Configure with [`HalfConvert`](crate::numerics::HalfConvert).
             #[inline(always)]
             pub fn to_bf16_with<const CFG: u32>(self) -> [u16; $lanes] {
                 const {
@@ -117,11 +128,12 @@ float_layout!(f32x8, F32x8Backend, 8);
 
 #[cfg(feature = "w512")]
 mod w512 {
+    use crate::numerics::{HalfConvert, IntConvert};
     use crate::simd::{backends::F32x16Backend, generic::f32x16};
-    use crate::{HalfConvert, IntConvert};
 
     float_layout!(f32x16, F32x16Backend, 16);
 
+    /// ### Packed RGBA layout
     impl<T: F32x16Backend> f32x16<T> {
         /// Load 16 unsigned bytes in order and convert exactly to `f32`.
         #[inline(always)]
@@ -155,7 +167,7 @@ mod w512 {
 
         /// Load 16 packed RGBA byte pixels as four planes with values in `[0.0, 255.0]`.
         #[inline(always)]
-        pub fn load_16_rgba_u8_t(token: T, rgba: &[u8; 64]) -> (Self, Self, Self, Self) {
+        pub fn load_rgba_u8_t(token: T, rgba: &[u8; 64]) -> (Self, Self, Self, Self) {
             let (blocks, _) = rgba.as_chunks::<16>();
             let [r, g, b, a] = Self::deinterleave_4ch(core::array::from_fn(|i| {
                 Self::from_u8_t(token, &blocks[i])
@@ -165,20 +177,27 @@ mod w512 {
 
         /// Store 16 packed RGBA byte pixels from four planes using nearest-even saturation.
         #[inline(always)]
-        pub fn store_16_rgba_u8(r: Self, g: Self, b: Self, a: Self) -> [u8; 64] {
-            Self::store_16_rgba_u8_with::<{ IntConvert::new().saturate_all().bits() }>(r, g, b, a)
+        pub fn store_rgba_u8(r: Self, g: Self, b: Self, a: Self, out: &mut [u8; 64]) {
+            Self::store_rgba_u8_with::<{ IntConvert::new().saturate_all().bits() }>(
+                r, g, b, a, out,
+            );
         }
 
         /// Store 16 RGBA pixels with the configured rounding and bounds.
+        ///
+        /// Configure with [`IntConvert`](crate::numerics::IntConvert).
         #[inline(always)]
-        pub fn store_16_rgba_u8_with<const CFG: u32>(
+        pub fn store_rgba_u8_with<const CFG: u32>(
             r: Self,
             g: Self,
             b: Self,
             a: Self,
-        ) -> [u8; 64] {
-            let groups = Self::interleave_4ch([r, g, b, a]).map(Self::to_u8_with::<CFG>);
-            crate::simd_storage::cast(groups)
+            out: &mut [u8; 64],
+        ) {
+            let groups = Self::interleave_4ch([r, g, b, a]);
+            for (block, group) in out.as_chunks_mut::<16>().0.iter_mut().zip(groups) {
+                *block = group.to_u8_with::<CFG>();
+            }
         }
     }
 }
@@ -186,7 +205,7 @@ mod w512 {
 #[cfg(any(target_arch = "aarch64", target_arch = "wasm32"))]
 pub(crate) mod half4 {
     use super::super::{f32x4, i32x4};
-    use crate::HalfConvert;
+    use crate::numerics::HalfConvert;
     use crate::simd::backends::F32x4Convert;
 
     #[inline(always)]

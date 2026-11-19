@@ -276,6 +276,7 @@ impl F32x8FromHalves for archmage::ScalarToken {
     }
 }
 
+/// ### Vector halves
 impl<T: F32x8FromHalves> f32x8<T> {
     /// Combine two `f32x4<T>` halves into one `f32x8<T>`.
     ///
@@ -512,6 +513,7 @@ impl F32x16FromHalves for archmage::ScalarToken {
 }
 
 #[cfg(feature = "w512")]
+/// ### Vector halves
 impl<T: F32x16FromHalves> f32x16<T> {
     /// Combine two `f32x8<T>` halves into one `f32x16<T>`.
     #[inline(always)]

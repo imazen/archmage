@@ -1,7 +1,8 @@
-use crate::{ExtremaDomain, ExtremaOptions, RecipOptions, RecipPrecision};
+use crate::numerics::{ExtremaDomain, ExtremaOptions, RecipOptions, RecipPrecision};
 
 macro_rules! float_numerics {
     ($vector:ident, $backend:ident, $elem:ty, $min:ident, $max:ident) => {
+        /// ### Floating-point numerics
         impl<T: crate::simd::backends::$backend> super::$vector<T> {
             /// Truncate each lane toward zero, retaining the sign of zero.
             #[must_use]
@@ -13,6 +14,7 @@ macro_rules! float_numerics {
             /// Compute `c - self * b` with native or separate rounding.
             #[must_use]
             #[inline(always)]
+            #[doc(alias = "fnmadd")]
             pub fn mul_neg_add_relaxed(self, b: Self, c: Self) -> Self {
                 Self(T::mul_neg_add_relaxed(self.1, self.0, b.0, c.0), self.1)
             }
@@ -20,11 +22,14 @@ macro_rules! float_numerics {
             /// Compute `c - self * b` with one rounding.
             #[must_use]
             #[inline(always)]
+            #[doc(alias = "fnmadd")]
             pub fn mul_neg_add_fused(self, b: Self, c: Self) -> Self {
                 Self(T::mul_neg_add_fused(self.1, self.0, b.0, c.0), self.1)
             }
 
             /// Lane-wise reciprocal with a compile-time domain and precision.
+            ///
+            /// Configure with [`RecipOptions`](crate::numerics::RecipOptions).
             #[must_use]
             #[inline(always)]
             pub fn recip_with<const CFG: u32>(self) -> Self {
@@ -67,6 +72,8 @@ macro_rules! float_numerics {
             }
 
             /// Lane-wise reciprocal square root with a compile-time policy.
+            ///
+            /// Configure with [`RecipOptions`](crate::numerics::RecipOptions).
             #[must_use]
             #[inline(always)]
             pub fn rsqrt_with<const CFG: u32>(self) -> Self {
@@ -97,6 +104,8 @@ macro_rules! float_numerics {
             }
 
             /// Lane-wise minimum under the selected NaN and signed-zero contract.
+            ///
+            /// Configure with [`ExtremaOptions`](crate::numerics::ExtremaOptions).
             #[must_use]
             #[inline(always)]
             pub fn min_with<const CFG: u32>(self, rhs: Self) -> Self {
@@ -110,6 +119,8 @@ macro_rules! float_numerics {
             }
 
             /// Lane-wise maximum under the selected NaN and signed-zero contract.
+            ///
+            /// Configure with [`ExtremaOptions`](crate::numerics::ExtremaOptions).
             #[must_use]
             #[inline(always)]
             pub fn max_with<const CFG: u32>(self, rhs: Self) -> Self {
@@ -123,6 +134,8 @@ macro_rules! float_numerics {
             }
 
             /// Clamp each lane with the selected extrema policy.
+            ///
+            /// Configure with [`ExtremaOptions`](crate::numerics::ExtremaOptions).
             #[must_use]
             #[inline(always)]
             pub fn clamp_with<const CFG: u32>(self, lo: Self, hi: Self) -> Self {
@@ -131,6 +144,8 @@ macro_rules! float_numerics {
 
             /// Reduce lanes to a minimum with the selected NaN policy.
             /// `NonNanRhs` requires every lane to be non-NaN for a reduction.
+            ///
+            /// Configure with [`ExtremaOptions`](crate::numerics::ExtremaOptions).
             #[inline(always)]
             pub fn reduce_min_with<const CFG: u32>(self) -> $elem {
                 match const { ExtremaOptions::decode(CFG) } {
@@ -155,6 +170,8 @@ macro_rules! float_numerics {
 
             /// Reduce lanes to a maximum with the selected NaN policy.
             /// `NonNanRhs` requires every lane to be non-NaN for a reduction.
+            ///
+            /// Configure with [`ExtremaOptions`](crate::numerics::ExtremaOptions).
             #[inline(always)]
             pub fn reduce_max_with<const CFG: u32>(self) -> $elem {
                 match const { ExtremaOptions::decode(CFG) } {

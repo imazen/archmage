@@ -280,8 +280,8 @@ pub mod magemath_tails {
 
 pub mod fast_rgb_ops {
     //! Generic `F32x8Backend + F32x8Convert` RGB kernel combining native
-    //! `load_8_rgb_u8_t`, `interleave_3ch` / `deinterleave_3ch`, `max_fast` /
-    //! `min_fast`, `to_i32_fast`, and `store_8_rgb_u8`, paired with
+    //! `load_rgb_u8_t`, `interleave_3ch` / `deinterleave_3ch`, `max_fast` /
+    //! `min_fast`, `to_i32_fast`, and `store_rgb_u8`, paired with
     //! `magetypes::scalar` tail helpers inside `#[archmage::attune]`.
 
     use magetypes::scalar;
@@ -295,7 +295,7 @@ pub mod fast_rgb_ops {
         scale: f32,
         bias: f32,
     ) -> ([u8; 24], [i32; 8]) {
-        let (r, g, b) = f32x8::load_8_rgb_u8_t(token, rgb);
+        let (r, g, b) = f32x8::load_rgb_u8_t(token, rgb);
         // Round-trip planar -> AoS -> planar inside the generic kernel.
         let [r, g, b] = f32x8::deinterleave_3ch(f32x8::interleave_3ch([r, g, b]));
         let s = f32x8::splat_t(token, scale);
@@ -308,7 +308,9 @@ pub mod fast_rgb_ops {
         let b = b.mul_add_portable(s, o).max_fast(lo).min_fast(hi);
 
         let quant_r = r.to_i32_fast().to_array();
-        (f32x8::store_8_rgb_u8(r, g, b), quant_r)
+        let mut out = [0; 24];
+        f32x8::store_rgb_u8(r, g, b, &mut out);
+        (out, quant_r)
     }
 
     #[archmage::attune(_*_t, +v4x(cfg(avx512)), define(f32x8))]

@@ -356,7 +356,7 @@ pub(super) fn trait_methods(src: &str) -> String {
             let method = p.method(half);
             let offset = if matches!(half, Half::Low) { 0 } else { n };
             code.push_str(&formatdoc! {r#"
-                /// Widen in natural lane order: result[i] = a[i + {offset}] as {de}.
+                /// Widen in natural lane order: `result[i] = a[i + {offset}] as {de}`.
                 fn {method}(self, a: <Self as super::{sb}>::Repr) -> <Self as super::{db}>::Repr
                 where Self: super::{db};
             "#});

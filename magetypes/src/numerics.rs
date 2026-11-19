@@ -1,4 +1,25 @@
 //! Compile-time numerical policies for vector operations and scalar tails.
+//!
+//! Encode a policy with `bits()` and pass it to the same `*_with` operation
+//! in the vector loop and its [scalar remainder](crate::scalar).
+//!
+//! | Policy | Vector example | Scalar equivalent |
+//! | --- | --- | --- |
+//! | [`IntConvert`] | [`f32x8::to_u16_with`](crate::simd::generic::f32x8::to_u16_with) | [`scalar::to_u16_with`](crate::scalar::to_u16_with) |
+//! | [`HalfConvert`] | [`f32x8::to_f16_bits_with`](crate::simd::generic::f32x8::to_f16_bits_with) | [`scalar::to_f16_bits_with`](crate::scalar::to_f16_bits_with) |
+//! | [`RecipOptions`] | [`f32x8::recip_with`](crate::simd::generic::f32x8::recip_with) | [`scalar::recip_f32_with`](crate::scalar::recip_f32_with) |
+//! | [`ExtremaOptions`] | [`f32x8::min_with`](crate::simd::generic::f32x8::min_with) | [`scalar::min_f32_with`](crate::scalar::min_f32_with) |
+//!
+//! ```
+//! use archmage::ScalarToken;
+//! use magetypes::{numerics::IntConvert, scalar, simd::generic::f32x8};
+//!
+//! const CFG: u32 = IntConvert::new().trunc().saturate_all().bits();
+//! let input = [1.9, -1.0, f32::NAN, 65_536.0, 255.5, 42.0, 0.0, 8.9];
+//! let vector = f32x8::load_t(ScalarToken, &input);
+//! assert_eq!(vector.to_u16_with::<CFG>(), input.map(scalar::to_u16_with::<CFG>));
+//! assert_eq!(scalar::to_u16_with::<CFG>(1.9), 1);
+//! ```
 
 /// Rounding before conversion to an integer.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]

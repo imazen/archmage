@@ -117,6 +117,18 @@ pub(super) fn generate(source: &str) -> String {
                 .collect::<Vec<_>>()
                 .join(", ");
             let note = format!("Use {name}({args}); {legacy} becomes tokenless in magetypes 0.10.");
+            let (doc, note) = if name == "load_4_rgba_u8_t" || name == "load_8_rgba_u8_t" {
+                alias.attrs.retain(|a| !a.path().is_ident("deprecated"));
+                alias.attrs.push(syn::parse_quote!(#[allow(deprecated)]));
+                (
+                    "Deprecated spelling of [`Self::load_rgba_u8_t`].".to_owned(),
+                    format!(
+                        "Use load_rgba_u8_t({args}); {legacy} will be removed in magetypes 0.10."
+                    ),
+                )
+            } else {
+                (doc, note)
+            };
             alias.attrs.push(syn::parse_quote!(#[doc = #doc]));
             alias
                 .attrs
@@ -222,7 +234,7 @@ mod tests {
                 pub fn from_float32x4_t(token: NeonToken, raw: float32x4_t) -> Self { todo!() }
                 pub fn from_raw_t(token: NeonToken, raw: float32x4_t) -> Self { todo!() }
                 pub fn load_padded_t(token: NeonToken, slice: &[f32], pad: f32) -> Self { todo!() }
-                pub fn load_8_rgb_u8_t(token: NeonToken, rgb: &[u8; 24]) -> Self { todo!() }
+                pub fn load_rgb_u8_t(token: NeonToken, rgb: &[u8; 24]) -> Self { todo!() }
             }
         "#;
         assert!(generate(source).is_empty());

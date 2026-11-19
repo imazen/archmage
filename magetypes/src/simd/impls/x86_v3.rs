@@ -356,7 +356,7 @@ impl F32x4Backend for X64V3Token {
     }
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
-    fn store_rgba_bytes(self, r: __m128, g: __m128, b: __m128, a: __m128) -> [u8; 16] {
+    fn store_rgba_u8_into(self, r: __m128, g: __m128, b: __m128, a: __m128, out: &mut [u8; 16]) {
         let max = _mm_set1_ps(255.0);
         let rg = _mm_packs_epi32(
             _mm_cvtps_epi32(_mm_min_ps(max, r)),
@@ -369,7 +369,7 @@ impl F32x4Backend for X64V3Token {
         // [R0-3,G0-3,B0-3,A0-3] -> interleaved RGBA pixels 0-3.
         let packed = _mm_packus_epi16(rg, ba);
         let shuf = _mm_setr_epi8(0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15);
-        crate::simd_storage::cast(_mm_shuffle_epi8(packed, shuf))
+        crate::simd_storage::store(_mm_shuffle_epi8(packed, shuf), out);
     }
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
@@ -381,7 +381,7 @@ impl F32x4Backend for X64V3Token {
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn to_u16_lanes<const CFG: u32>(self, value: __m128) -> [u16; 4] {
-        let opts = const { crate::IntConvert::decode(CFG) };
+        let opts = const { crate::numerics::IntConvert::decode(CFG) };
         let value = if opts.saturates_all() {
             _mm_min_ps(_mm_set1_ps(65535.0), value)
         } else {
@@ -401,7 +401,7 @@ impl F32x4Backend for X64V3Token {
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn to_u8_lanes<const CFG: u32>(self, value: __m128) -> [u8; 4] {
-        let opts = const { crate::IntConvert::decode(CFG) };
+        let opts = const { crate::numerics::IntConvert::decode(CFG) };
         let value = if opts.saturates_all() {
             _mm_min_ps(_mm_set1_ps(255.0), value)
         } else {
@@ -420,15 +420,15 @@ impl F32x4Backend for X64V3Token {
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn to_u32_lanes<const CFG: u32>(self, value: __m128) -> __m128 {
-        let opts = const { crate::IntConvert::decode(CFG) };
+        let opts = const { crate::numerics::IntConvert::decode(CFG) };
         let value = if opts.nonnegative() {
             value
         } else {
             _mm_max_ps(value, _mm_setzero_ps())
         };
         if const {
-            !crate::IntConvert::decode(CFG).is_in_range()
-                && !crate::IntConvert::decode(CFG).saturates_all()
+            !crate::numerics::IntConvert::decode(CFG).is_in_range()
+                && !crate::numerics::IntConvert::decode(CFG).saturates_all()
         } {
             let i = if opts.rounds() {
                 _mm_cvtps_epi32(value)
@@ -465,7 +465,7 @@ impl F32x4Backend for X64V3Token {
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn from_f16_lanes<const CFG: u32>(self, lanes: &[u16; 4]) -> __m128 {
-        let opts = const { crate::HalfConvert::decode(CFG) };
+        let opts = const { crate::numerics::HalfConvert::decode(CFG) };
         let h = _mm_cvtsi64_si128(crate::simd_storage::cast(*lanes));
         let h = if opts.flushes() {
             let mag = _mm_and_si128(h, _mm_set1_epi16(0x7fff));
@@ -479,7 +479,7 @@ impl F32x4Backend for X64V3Token {
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn to_f16_lanes<const CFG: u32>(self, value: __m128) -> [u16; 4] {
-        let opts = const { crate::HalfConvert::decode(CFG) };
+        let opts = const { crate::numerics::HalfConvert::decode(CFG) };
         let h = if opts.rounds() {
             _mm_cvtps_ph::<0>(value)
         } else {
@@ -504,7 +504,7 @@ impl F32x4Backend for X64V3Token {
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn to_bf16_lanes<const CFG: u32>(self, value: __m128) -> [u16; 4] {
-        let opts = const { crate::HalfConvert::decode(CFG) };
+        let opts = const { crate::numerics::HalfConvert::decode(CFG) };
         let raw = _mm_castps_si128(value);
         let rounded = if opts.rounds() {
             let lsb = _mm_and_si128(_mm_srli_epi32::<16>(raw), _mm_set1_epi32(1));
@@ -610,7 +610,7 @@ impl F32x4Backend for X64V3Token {
     }
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
-    fn store_rgb_bytes(self, r: __m128, g: __m128, b: __m128) -> [u8; 12] {
+    fn store_rgb_u8_into(self, r: __m128, g: __m128, b: __m128, out: &mut [u8; 12]) {
         let max = _mm_set1_ps(255.0);
         let rg16 = _mm_packs_epi32(
             _mm_cvtps_epi32(_mm_min_ps(max, r)),
@@ -620,7 +620,6 @@ impl F32x4Backend for X64V3Token {
         let rgb8 = _mm_packus_epi16(rg16, b16);
         let shuf = _mm_setr_epi8(0, 4, 8, 1, 5, 9, 2, 6, 10, 3, 7, 11, -1, -1, -1, -1);
         let packed = _mm_shuffle_epi8(rgb8, shuf);
-        let mut out = [0u8; 12];
         crate::simd_storage::store(
             _mm_cvtsi128_si64(packed) as u64,
             out.first_chunk_mut::<8>().unwrap(),
@@ -629,7 +628,6 @@ impl F32x4Backend for X64V3Token {
             _mm_extract_epi32::<2>(packed) as u32,
             out.last_chunk_mut::<4>().unwrap(),
         );
-        out
     }
 }
 
@@ -960,7 +958,7 @@ impl F32x8Backend for X64V3Token {
     }
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
-    fn store_rgba_bytes(self, r: __m256, g: __m256, b: __m256, a: __m256) -> [u8; 32] {
+    fn store_rgba_u8_into(self, r: __m256, g: __m256, b: __m256, a: __m256, out: &mut [u8; 32]) {
         // AVX2 packs are lane-wise: lane0 holds pixels 0-3, lane1 4-7.
         let max = _mm256_set1_ps(255.0);
         let rg = _mm256_packs_epi32(
@@ -976,7 +974,7 @@ impl F32x8Backend for X64V3Token {
             0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15, 0, 4, 8, 12, 1, 5, 9, 13, 2, 6,
             10, 14, 3, 7, 11, 15,
         );
-        crate::simd_storage::cast(_mm256_shuffle_epi8(packed, shuf))
+        crate::simd_storage::store(_mm256_shuffle_epi8(packed, shuf), out);
     }
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
@@ -986,7 +984,7 @@ impl F32x8Backend for X64V3Token {
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn to_u16_lanes<const CFG: u32>(self, value: __m256) -> [u16; 8] {
-        let opts = const { crate::IntConvert::decode(CFG) };
+        let opts = const { crate::numerics::IntConvert::decode(CFG) };
         let value = if opts.saturates_all() {
             _mm256_min_ps(_mm256_set1_ps(65535.0), value)
         } else {
@@ -1006,7 +1004,7 @@ impl F32x8Backend for X64V3Token {
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn to_u8_lanes<const CFG: u32>(self, value: __m256) -> [u8; 8] {
-        let opts = const { crate::IntConvert::decode(CFG) };
+        let opts = const { crate::numerics::IntConvert::decode(CFG) };
         let value = if opts.saturates_all() {
             _mm256_min_ps(_mm256_set1_ps(255.0), value)
         } else {
@@ -1025,15 +1023,15 @@ impl F32x8Backend for X64V3Token {
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn to_u32_lanes<const CFG: u32>(self, value: __m256) -> __m256 {
-        let opts = const { crate::IntConvert::decode(CFG) };
+        let opts = const { crate::numerics::IntConvert::decode(CFG) };
         let value = if opts.nonnegative() {
             value
         } else {
             _mm256_max_ps(value, _mm256_setzero_ps())
         };
         if const {
-            !crate::IntConvert::decode(CFG).is_in_range()
-                && !crate::IntConvert::decode(CFG).saturates_all()
+            !crate::numerics::IntConvert::decode(CFG).is_in_range()
+                && !crate::numerics::IntConvert::decode(CFG).saturates_all()
         } {
             let i = if opts.rounds() {
                 _mm256_cvtps_epi32(value)
@@ -1073,7 +1071,7 @@ impl F32x8Backend for X64V3Token {
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn from_f16_lanes<const CFG: u32>(self, lanes: &[u16; 8]) -> __m256 {
-        let opts = const { crate::HalfConvert::decode(CFG) };
+        let opts = const { crate::numerics::HalfConvert::decode(CFG) };
         let h = crate::simd_storage::cast(*lanes);
         let h = if opts.flushes() {
             let mag = _mm_and_si128(h, _mm_set1_epi16(0x7fff));
@@ -1087,7 +1085,7 @@ impl F32x8Backend for X64V3Token {
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn to_f16_lanes<const CFG: u32>(self, value: __m256) -> [u16; 8] {
-        let opts = const { crate::HalfConvert::decode(CFG) };
+        let opts = const { crate::numerics::HalfConvert::decode(CFG) };
         let h = if opts.rounds() {
             _mm256_cvtps_ph::<0>(value)
         } else {
@@ -1112,7 +1110,7 @@ impl F32x8Backend for X64V3Token {
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn to_bf16_lanes<const CFG: u32>(self, value: __m256) -> [u16; 8] {
-        let opts = const { crate::HalfConvert::decode(CFG) };
+        let opts = const { crate::numerics::HalfConvert::decode(CFG) };
         let raw = _mm256_castps_si256(value);
         let rounded = if opts.rounds() {
             let lsb = _mm256_and_si256(_mm256_srli_epi32::<16>(raw), _mm256_set1_epi32(1));
@@ -1210,7 +1208,7 @@ impl F32x8Backend for X64V3Token {
     }
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
-    fn store_rgb_bytes(self, r: __m256, g: __m256, b: __m256) -> [u8; 24] {
+    fn store_rgb_u8_into(self, r: __m256, g: __m256, b: __m256, out: &mut [u8; 24]) {
         let max = _mm256_set1_ps(255.0);
         let rg16 = _mm256_packs_epi32(
             _mm256_cvtps_epi32(_mm256_min_ps(max, r)),
@@ -1230,13 +1228,11 @@ impl F32x8Backend for X64V3Token {
         let hi12 = _mm256_extracti128_si256::<1>(packed);
         let lo16 = _mm_or_si128(lo12, _mm_slli_si128::<12>(hi12));
         let hi8 = _mm_srli_si128::<4>(hi12);
-        let mut out = [0u8; 24];
         crate::simd_storage::store(lo16, out.first_chunk_mut::<16>().unwrap());
         crate::simd_storage::store(
             _mm_cvtsi128_si64(hi8) as u64,
             out.last_chunk_mut::<8>().unwrap(),
         );
-        out
     }
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
@@ -5553,7 +5549,7 @@ impl F32x16Backend for X64V3Token {
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn to_u16_lanes<const CFG: u32>(self, value: [__m256; 2]) -> [u16; 16] {
-        let opts = const { crate::IntConvert::decode(CFG) };
+        let opts = const { crate::numerics::IntConvert::decode(CFG) };
         let convert = |v| {
             let v = if opts.saturates_all() {
                 _mm256_min_ps(_mm256_set1_ps(65535.0), v)

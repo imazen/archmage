@@ -46,6 +46,18 @@
 //!      [`mul_sub_relaxed_f64`]
 //!    - Native / unchecked float-to-integer truncation (`v.to_i32` / `v.to_i32_fast`):
 //!      [`to_i32`], [`to_i32_fast`]
+//! 3. **Compile-time policy-matched helpers** for vector remainders. Use the
+//!    same [`crate::numerics`] policy bits in both paths.
+//!    - Truncation and multiply-negate-add: [`trunc_f32`], [`trunc_f64`],
+//!      [`mul_neg_add_fused_f32`], [`mul_neg_add_fused_f64`],
+//!      [`mul_neg_add_relaxed_f32`], [`mul_neg_add_relaxed_f64`].
+//!    - Integer and half conversions: [`from_u32`], [`from_bf16`],
+//!      [`from_f16_with`], [`to_i32_with`], [`to_u32_with`], [`to_u16_with`],
+//!      [`to_u8_with`], [`to_f16_bits_with`], [`to_bf16_with`].
+//!    - Reciprocals: [`recip_f32_with`], [`recip_f64_with`],
+//!      [`rsqrt_f32_with`], [`rsqrt_f64_with`].
+//!    - Extrema: [`min_f32_with`], [`max_f32_with`], [`clamp_f32_with`],
+//!      [`min_f64_with`], [`max_f64_with`], [`clamp_f64_with`].
 
 #![forbid(unsafe_code)]
 
@@ -197,21 +209,27 @@ pub fn mul_sub_fused_f64(a: f64, b: f64, c: f64) -> f64 {
 /// [`to_i32_fast`] directly in their scalar tails.
 pub trait F32ScalarBackend: IntoConcreteToken + SimdToken + Sealed + Copy + 'static {
     /// Fast scalar minimum matching `f32xN::<Self>::min_fast`.
+    #[doc(hidden)]
     fn min_fast_f32(self, a: f32, b: f32) -> f32;
 
     /// Fast scalar maximum matching `f32xN::<Self>::max_fast`.
+    #[doc(hidden)]
     fn max_fast_f32(self, a: f32, b: f32) -> f32;
 
     /// Relaxed scalar multiply-add `a * b + c` matching `f32xN::<Self>::mul_add_relaxed`.
+    #[doc(hidden)]
     fn mul_add_relaxed_f32(self, a: f32, b: f32, c: f32) -> f32;
 
     /// Relaxed scalar multiply-sub `a * b - c` matching `f32xN::<Self>::mul_sub_relaxed`.
+    #[doc(hidden)]
     fn mul_sub_relaxed_f32(self, a: f32, b: f32, c: f32) -> f32;
 
     /// Scalar truncation matching `f32xN::<Self>::to_i32`.
+    #[doc(hidden)]
     fn to_i32_scalar(self, a: f32) -> i32;
 
     /// Fast unchecked scalar truncation matching `f32xN::<Self>::to_i32_fast`.
+    #[doc(hidden)]
     fn to_i32_fast_scalar(self, a: f32) -> i32;
 }
 
@@ -224,15 +242,19 @@ pub trait F32ScalarBackend: IntoConcreteToken + SimdToken + Sealed + Copy + 'sta
 /// scalar tails.
 pub trait F64ScalarBackend: IntoConcreteToken + SimdToken + Sealed + Copy + 'static {
     /// Fast scalar minimum matching `f64xN::<Self>::min_fast`.
+    #[doc(hidden)]
     fn min_fast_f64(self, a: f64, b: f64) -> f64;
 
     /// Fast scalar maximum matching `f64xN::<Self>::max_fast`.
+    #[doc(hidden)]
     fn max_fast_f64(self, a: f64, b: f64) -> f64;
 
     /// Relaxed scalar multiply-add `a * b + c` matching `f64xN::<Self>::mul_add_relaxed`.
+    #[doc(hidden)]
     fn mul_add_relaxed_f64(self, a: f64, b: f64, c: f64) -> f64;
 
     /// Relaxed scalar multiply-sub `a * b - c` matching `f64xN::<Self>::mul_sub_relaxed`.
+    #[doc(hidden)]
     fn mul_sub_relaxed_f64(self, a: f64, b: f64, c: f64) -> f64;
 }
 

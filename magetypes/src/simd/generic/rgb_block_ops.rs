@@ -9,6 +9,7 @@
 use crate::simd::backends::{F32x4Backend, F32x8Backend};
 use crate::simd::generic::{f32x4, f32x8};
 
+/// ### Packed RGB layout
 impl<T: F32x4Backend> f32x4<T> {
     /// Deinterleave 4 packed RGB pixels (`12` floats across 3 [`f32x4`] vectors)
     /// from AoS to SoA planar format.
@@ -45,7 +46,7 @@ impl<T: F32x4Backend> f32x4<T> {
     /// Load 4 packed RGB `u8` pixels (`12` bytes) and deinterleave into 3 planar
     /// [`f32x4`] channel vectors `(R, G, B)` with values in `[0.0, 255.0]`.
     #[inline(always)]
-    pub fn load_4_rgb_u8_t(token: T, rgb: &[u8; 12]) -> (Self, Self, Self) {
+    pub fn load_rgb_u8_t(token: T, rgb: &[u8; 12]) -> (Self, Self, Self) {
         let (r, g, b) = T::load_rgb_bytes(token, rgb);
         (Self(r, token), Self(g, token), Self(b, token))
     }
@@ -54,7 +55,7 @@ impl<T: F32x4Backend> f32x4<T> {
     ///
     /// Reads exactly the 12 words in the input block.
     #[inline(always)]
-    pub fn load_4_rgb_u16_t(token: T, rgb: &[u16; 12]) -> (Self, Self, Self) {
+    pub fn load_rgb_u16_t(token: T, rgb: &[u16; 12]) -> (Self, Self, Self) {
         let (chunks, _) = rgb.as_chunks::<4>();
         let [r, g, b] = Self::deinterleave_3ch(core::array::from_fn(|i| {
             Self::from_u16_t(token, &chunks[i])
@@ -66,29 +67,42 @@ impl<T: F32x4Backend> f32x4<T> {
     /// vectors into 4 packed RGB `u8` pixels (`12` bytes).
     ///
     /// Uses the same nearest-even rounding and `[0, 255]` saturation contract as
-    /// [`Self::store_4_rgba_u8`] and [`Self::to_u8`].
+    /// [`Self::store_rgba_u8`] and [`Self::to_u8`].
     #[inline(always)]
-    pub fn store_4_rgb_u8(r: Self, g: Self, b: Self) -> [u8; 12] {
-        T::store_rgb_bytes(r.1, r.0, g.0, b.0)
+    pub fn store_rgb_u8(r: Self, g: Self, b: Self, out: &mut [u8; 12]) {
+        T::store_rgb_u8_into(r.1, r.0, g.0, b.0, out);
     }
 
     /// Store 4 packed RGB pixels with the configured rounding and bounds.
+    ///
+    /// Configure with [`IntConvert`](crate::numerics::IntConvert).
     #[inline(always)]
-    pub fn store_4_rgb_u8_with<const CFG: u32>(r: Self, g: Self, b: Self) -> [u8; 12] {
+    pub fn store_rgb_u8_with<const CFG: u32>(r: Self, g: Self, b: Self, out: &mut [u8; 12]) {
         let [r, g, b] = [r, g, b].map(Self::to_u8_with::<CFG>);
-        core::array::from_fn(|i| [r[i / 3], g[i / 3], b[i / 3]][i % 3])
+        for (i, pixel) in out.as_chunks_mut::<3>().0.iter_mut().enumerate() {
+            *pixel = [r[i], g[i], b[i]];
+        }
     }
 
     /// Store 4 packed RGBA pixels with the configured rounding and bounds.
+    ///
+    /// Configure with [`IntConvert`](crate::numerics::IntConvert).
     #[inline(always)]
-    pub fn store_4_rgba_u8_with<const CFG: u32>(r: Self, g: Self, b: Self, a: Self) -> [u8; 16] {
+    pub fn store_rgba_u8_with<const CFG: u32>(
+        r: Self,
+        g: Self,
+        b: Self,
+        a: Self,
+        out: &mut [u8; 16],
+    ) {
         const {
-            let _ = crate::IntConvert::decode(CFG);
+            let _ = crate::numerics::IntConvert::decode(CFG);
         }
-        T::store_rgba_bytes_with::<CFG>(r.1, r.0, g.0, b.0, a.0)
+        T::store_rgba_u8_with_into::<CFG>(r.1, r.0, g.0, b.0, a.0, out);
     }
 }
 
+/// ### Packed RGB layout
 impl<T: F32x8Backend> f32x8<T> {
     /// Deinterleave 8 packed RGB pixels (`24` floats across 3 [`f32x8`] vectors)
     /// from AoS to SoA planar format.
@@ -125,7 +139,7 @@ impl<T: F32x8Backend> f32x8<T> {
     /// Load 8 packed RGB `u8` pixels (`24` bytes) and deinterleave into 3 planar
     /// [`f32x8`] channel vectors `(R, G, B)` with values in `[0.0, 255.0]`.
     #[inline(always)]
-    pub fn load_8_rgb_u8_t(token: T, rgb: &[u8; 24]) -> (Self, Self, Self) {
+    pub fn load_rgb_u8_t(token: T, rgb: &[u8; 24]) -> (Self, Self, Self) {
         let (r, g, b) = T::load_rgb_bytes(token, rgb);
         (Self(r, token), Self(g, token), Self(b, token))
     }
@@ -134,7 +148,7 @@ impl<T: F32x8Backend> f32x8<T> {
     ///
     /// Reads exactly the 24 words in the input block.
     #[inline(always)]
-    pub fn load_8_rgb_u16_t(token: T, rgb: &[u16; 24]) -> (Self, Self, Self) {
+    pub fn load_rgb_u16_t(token: T, rgb: &[u16; 24]) -> (Self, Self, Self) {
         let (chunks, _) = rgb.as_chunks::<8>();
         let [r, g, b] = Self::deinterleave_3ch(core::array::from_fn(|i| {
             Self::from_u16_t(token, &chunks[i])
@@ -146,25 +160,37 @@ impl<T: F32x8Backend> f32x8<T> {
     /// vectors into 8 packed RGB `u8` pixels (`24` bytes).
     ///
     /// Uses the same nearest-even rounding and `[0, 255]` saturation contract as
-    /// [`Self::store_8_rgba_u8`] and [`Self::to_u8`].
+    /// [`Self::store_rgba_u8`] and [`Self::to_u8`].
     #[inline(always)]
-    pub fn store_8_rgb_u8(r: Self, g: Self, b: Self) -> [u8; 24] {
-        T::store_rgb_bytes(r.1, r.0, g.0, b.0)
+    pub fn store_rgb_u8(r: Self, g: Self, b: Self, out: &mut [u8; 24]) {
+        T::store_rgb_u8_into(r.1, r.0, g.0, b.0, out);
     }
 
     /// Store 8 packed RGB pixels with the configured rounding and bounds.
+    ///
+    /// Configure with [`IntConvert`](crate::numerics::IntConvert).
     #[inline(always)]
-    pub fn store_8_rgb_u8_with<const CFG: u32>(r: Self, g: Self, b: Self) -> [u8; 24] {
+    pub fn store_rgb_u8_with<const CFG: u32>(r: Self, g: Self, b: Self, out: &mut [u8; 24]) {
         let [r, g, b] = [r, g, b].map(Self::to_u8_with::<CFG>);
-        core::array::from_fn(|i| [r[i / 3], g[i / 3], b[i / 3]][i % 3])
+        for (i, pixel) in out.as_chunks_mut::<3>().0.iter_mut().enumerate() {
+            *pixel = [r[i], g[i], b[i]];
+        }
     }
 
     /// Store 8 packed RGBA pixels with the configured rounding and bounds.
+    ///
+    /// Configure with [`IntConvert`](crate::numerics::IntConvert).
     #[inline(always)]
-    pub fn store_8_rgba_u8_with<const CFG: u32>(r: Self, g: Self, b: Self, a: Self) -> [u8; 32] {
+    pub fn store_rgba_u8_with<const CFG: u32>(
+        r: Self,
+        g: Self,
+        b: Self,
+        a: Self,
+        out: &mut [u8; 32],
+    ) {
         const {
-            let _ = crate::IntConvert::decode(CFG);
+            let _ = crate::numerics::IntConvert::decode(CFG);
         }
-        T::store_rgba_bytes_with::<CFG>(r.1, r.0, g.0, b.0, a.0)
+        T::store_rgba_u8_with_into::<CFG>(r.1, r.0, g.0, b.0, a.0, out);
     }
 }

@@ -326,7 +326,7 @@ verify-asm-update:
 
 # Check rustdoc builds cleanly (catches broken doc links)
 doc-check:
-    RUSTDOCFLAGS="-Dwarnings" cargo doc --features "std avx512" --no-deps
+    RUSTDOCFLAGS="-Dwarnings" cargo doc -p archmage -p magetypes -p magemath --features "std avx512" --no-deps
 
 # Compile and execute website and README Rust examples directly
 docs-test:
