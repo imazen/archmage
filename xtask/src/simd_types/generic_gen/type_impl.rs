@@ -287,7 +287,7 @@ fn gen_layout_asserts(ty: &SimdType) -> String {
         SimdWidth::W128 | SimdWidth::W256 => {
             native_blocks.push_str(&formatdoc! {r#"
 
-                #[cfg(target_arch = "x86_64")]
+                #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
                 const _: () = {{
                     assert!(
                         size_of::<{name}<archmage::X64V3Token>>()
@@ -306,7 +306,7 @@ fn gen_layout_asserts(ty: &SimdType) -> String {
             // so we don't need an extra feature gate here.
             native_blocks.push_str(&formatdoc! {r#"
 
-                #[cfg(target_arch = "x86_64")]
+                #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
                 const _: () = {{
                     assert!(
                         size_of::<{name}<archmage::X64V3Token>>()
@@ -321,7 +321,7 @@ fn gen_layout_asserts(ty: &SimdType) -> String {
                 // Native AVX-512 (`__m512`/`__m512d`/`__m512i`) — gated on the
                 // `avx512` feature, which is how archmage exposes X64V4Token's
                 // 512-bit backend impls.
-                #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+                #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
                 const _: () = {{
                     assert!(
                         size_of::<{name}<archmage::X64V4Token>>()
@@ -395,13 +395,13 @@ fn gen_methods(ty: &SimdType) -> String {
 
     // ====== Construction ======
     code.push_str("    // ====== Construction (token-gated) ======\n\n");
-    code.push_str(&gen_construction(elem, lanes));
+    code.push_str(&gen_construction(&name, elem, lanes));
     code.push_str(&gen_partition_slice(ty));
     code.push_str(&gen_partition_slice_mut(ty));
 
     // ====== Accessors ======
     code.push_str("    // ====== Accessors ======\n\n");
-    code.push_str(&gen_accessors(elem, lanes));
+    code.push_str(&gen_accessors(&name, elem, lanes));
 
     // ====== Math ======
     code.push_str("    // ====== Math ======\n\n");
@@ -509,7 +509,7 @@ fn gen_methods(ty: &SimdType) -> String {
     code
 }
 
-fn gen_construction(elem: &str, lanes: usize) -> String {
+fn gen_construction(ty_name: &str, elem: &str, lanes: usize) -> String {
     // Token threading: backend trait construction methods now take `self`,
     // and the generic struct stores `T` (ZST), so we pass the user's token
     // through to the backend AND store it for later operator/method use.
@@ -545,15 +545,54 @@ fn gen_construction(elem: &str, lanes: usize) -> String {
                 Self(T::from_array(token, arr), token)
             }}
 
+            /// Load up to `{lanes}` elements from `slice`, filling remaining high lanes with `pad`.
+            ///
+            /// Designed for single-vector slice tails after [`partition_slice_t`](Self::partition_slice_t)
+            /// (typically paired with [`store_prefix`](Self::store_prefix)).
+            ///
+            /// # Panics
+            ///
+            /// Panics if `slice.len() > {lanes}`.
+            #[inline(always)]
+            pub fn load_padded_t(token: T, slice: &[{elem}], pad: {elem}) -> Self {{
+                assert!(
+                    slice.len() <= {lanes},
+                    \"{ty_name}::load_padded_t requires slice.len() <= {lanes}, got {{}}\",
+                    slice.len(),
+                );
+                let mut arr = [pad; {lanes}];
+                arr[..slice.len()].copy_from_slice(slice);
+                Self(T::from_array(token, arr), token)
+            }}
+
     "}
 }
 
-fn gen_accessors(elem: &str, lanes: usize) -> String {
+fn gen_accessors(ty_name: &str, elem: &str, lanes: usize) -> String {
     formatdoc! {"
         \x20   /// Store to array.
             #[inline(always)]
             pub fn store(self, out: &mut [{elem}; {lanes}]) {{
                 T::store(self.1, self.0, out);
+            }}
+
+            /// Store the low `out.len()` lanes into `out`.
+            ///
+            /// Designed for single-vector slice tails after [`partition_slice_mut_t`](Self::partition_slice_mut_t)
+            /// (typically paired with [`load_padded_t`](Self::load_padded_t)).
+            ///
+            /// # Panics
+            ///
+            /// Panics if `out.len() > {lanes}`.
+            #[inline(always)]
+            pub fn store_prefix(self, out: &mut [{elem}]) {{
+                assert!(
+                    out.len() <= {lanes},
+                    \"{ty_name}::store_prefix requires out.len() <= {lanes}, got {{}}\",
+                    out.len(),
+                );
+                let arr = T::to_array(self.1, self.0);
+                out.copy_from_slice(&arr[..out.len()]);
             }}
 
             /// Convert to array.
@@ -566,6 +605,12 @@ fn gen_accessors(elem: &str, lanes: usize) -> String {
             #[inline(always)]
             pub fn into_repr(self) -> T::Repr {{
                 self.0
+            }}
+
+            /// Get the capability token carried by this vector.
+            #[inline(always)]
+            pub fn token(self) -> T {{
+                self.1
             }}
 
             /// Wrap a platform representation (token-gated).
@@ -588,27 +633,96 @@ fn gen_accessors(elem: &str, lanes: usize) -> String {
 
 fn gen_math(ty: &SimdType) -> String {
     if ty.elem.is_float() {
-        gen_float_math()
+        gen_float_math(ty)
     } else {
         gen_int_math(ty)
     }
 }
 
-fn gen_float_math() -> String {
+fn gen_float_math(ty: &SimdType) -> String {
+    let ty_name = ty.name();
+    let elem = super::elem_prefix(&ty_name);
     formatdoc! {"
-        \x20   /// Lane-wise minimum.
+        \x20   /// Lane-wise minimum matching [`{elem}::min`].
+            ///
+            /// If one lane is `NaN` and the other is numeric (including `±inf`), returns
+            /// the numeric lane; `(-0.0, +0.0)` tie-breaking is unspecified. Scalar tail
+            /// equivalent: `{elem}::min`.
+            ///
+            /// Signalling `NaN` handling is unspecified and differs by backend, as
+            /// Rust leaves it for `{elem}::min`: NEON (one `fminnm`, the same
+            /// instruction as [`min_fast`](Self::min_fast)) and AVX-512 `f32`
+            /// (`vrangeps`) return a quiet `NaN`; x86 V3, AVX-512 `f64`, WASM and
+            /// `ScalarToken` return the numeric lane.
             #[inline(always)]
             pub fn min(self, other: Self) -> Self {{
                 Self(T::min(self.1, self.0, other.0), self.1)
             }}
 
-            /// Lane-wise maximum.
+            /// Lane-wise maximum matching [`{elem}::max`].
+            ///
+            /// If one lane is `NaN` and the other is numeric (including `±inf`), returns
+            /// the numeric lane; `(-0.0, +0.0)` tie-breaking is unspecified. Scalar tail
+            /// equivalent: `{elem}::max`.
+            ///
+            /// Signalling `NaN` handling is unspecified and differs by backend, as
+            /// Rust leaves it for `{elem}::max`: NEON (one `fmaxnm`, the same
+            /// instruction as [`max_fast`](Self::max_fast)) and AVX-512 `f32`
+            /// (`vrangeps`) return a quiet `NaN`; x86 V3, AVX-512 `f64`, WASM and
+            /// `ScalarToken` return the numeric lane.
             #[inline(always)]
             pub fn max(self, other: Self) -> Self {{
                 Self(T::max(self.1, self.0, other.0), self.1)
             }}
 
-            /// Clamp between lo and hi.
+            /// IEEE 754-2019 lane-wise minimum (propagates `NaN` and orders `-0.0 < +0.0`).
+            ///
+            /// A `NaN` result is quiet; its sign and payload differ by backend.
+            /// Scalar tail equivalent: [`minimum_{elem}`](crate::scalar::minimum_{elem}).
+            #[inline(always)]
+            pub fn minimum(self, other: Self) -> Self {{
+                Self(T::minimum(self.1, self.0, other.0), self.1)
+            }}
+
+            /// IEEE 754-2019 lane-wise maximum (propagates `NaN` and orders `-0.0 < +0.0`).
+            ///
+            /// A `NaN` result is quiet; its sign and payload differ by backend.
+            /// Scalar tail equivalent: [`maximum_{elem}`](crate::scalar::maximum_{elem}).
+            #[inline(always)]
+            pub fn maximum(self, other: Self) -> Self {{
+                Self(T::maximum(self.1, self.0, other.0), self.1)
+            }}
+
+            /// Fast single-instruction lane-wise minimum ignoring `NaN` and `±0.0`.
+            ///
+            /// Emits `vminps`/`vminpd` on x86, `fminnm` on NEON, `pmin(other, self)`
+            /// (or `relaxed_min` with `relaxed-simd`) on WASM, and `a < b ? a : b` on
+            /// `ScalarToken`. Scalar tail equivalent: [`min_fast_{elem}`](crate::scalar::min_fast_{elem}).
+            #[inline(always)]
+            pub fn min_fast(self, other: Self) -> Self {{
+                Self(T::min_fast(self.1, self.0, other.0), self.1)
+            }}
+
+            /// Fast single-instruction lane-wise maximum ignoring `NaN` and `±0.0`.
+            ///
+            /// Emits `vmaxps`/`vmaxpd` on x86, `fmaxnm` on NEON, `pmax(other, self)`
+            /// (or `relaxed_max` with `relaxed-simd`) on WASM, and `a > b ? a : b` on
+            /// `ScalarToken`. Scalar tail equivalent: [`max_fast_{elem}`](crate::scalar::max_fast_{elem}).
+            #[inline(always)]
+            pub fn max_fast(self, other: Self) -> Self {{
+                Self(T::max_fast(self.1, self.0, other.0), self.1)
+            }}
+
+            /// Clamp between `lo` and `hi`: `self.max_fast(lo).min_fast(hi)`, two
+            /// instructions on native backends.
+            ///
+            /// Exact when `lo <= hi` and nothing is `NaN`. A quiet `NaN` lane in `self`
+            /// becomes `lo` on x86, NEON, strict WASM, and `ScalarToken`; a signalling
+            /// `NaN` lane (`lo` on x86, `hi` on NEON) and any `NaN` with WASM
+            /// `relaxed-simd` are unspecified per backend. `NaN` bounds and `lo > hi`
+            /// give an unspecified lane and never panic. [`{elem}::clamp`] differs: it
+            /// keeps `NaN` and panics on such bounds. Scalar tail equivalent:
+            /// [`clamp_{elem}`](crate::scalar::clamp_{elem}).
             #[inline(always)]
             pub fn clamp(self, lo: Self, hi: Self) -> Self {{
                 Self(T::clamp(self.1, self.0, lo.0, hi.0), self.1)
@@ -963,11 +1077,10 @@ fn gen_approximations(ty: &SimdType) -> String {
 
         "}
     } else {
-        // f64: no estimate hardware worth refining exists at any width, so the
-        // bare names are exact division everywhere — 0 ULP with IEEE rails.
         formatdoc! {"
             \x20   /// Fast reciprocal approximation (1/x): the backend's native estimate
-                /// (exact division on f64 — no hardware estimate exists).
+                /// (~14 bits on 512-bit AVX-512 `f64x8`, ~16 bits on NEON; exact IEEE
+                /// division on x86 V3, narrow AVX-512, WASM and scalar).
                 #[inline(always)]
                 pub fn rcp_approx(self) -> Self {{
                     Self(T::rcp_approx(self.1, self.0), self.1)
@@ -983,8 +1096,9 @@ fn gen_approximations(ty: &SimdType) -> String {
                     Self(T::recip(self.1, self.0), self.1)
                 }}
 
-                /// Fast reciprocal square root approximation (exact division +
-                /// sqrt on f64 — no hardware estimate exists).
+                /// Fast reciprocal square root approximation (~14 bits on 512-bit
+                /// AVX-512 `f64x8`, ~16 bits on NEON; exact division + `sqrt` on x86 V3,
+                /// narrow AVX-512, WASM and scalar).
                 #[inline(always)]
                 pub fn rsqrt_approx(self) -> Self {{
                     Self(T::rsqrt_approx(self.1, self.0), self.1)
@@ -1025,7 +1139,10 @@ fn gen_deterministic_reciprocals(ty: &SimdType) -> String {
             /// Deterministic reciprocal-sqrt estimate (~8-bit), bit-identical on
             /// every platform.
             ///
-            /// Seed (integer bit-trick) plus one non-FMA Newton step. Opt into more
+            /// Seed (integer bit-trick) plus one non-FMA Newton step. Intended for
+            /// positive normal inputs (`f32::MIN_POSITIVE..2.0f32.powi(126)`); `0.0`,
+            /// subnormals, `f32::MAX`, and negative inputs follow raw bit-trick
+            /// arithmetic rather than producing infinities or `NaN`. Opt into more
             /// accuracy with [`rsqrt_newton_portable`](Self::rsqrt_newton_portable)
             /// (one more step ≈ 16-bit), or use
             /// [`rsqrt_portable`](Self::rsqrt_portable) for full precision.
@@ -1067,9 +1184,13 @@ fn gen_deterministic_reciprocals(ty: &SimdType) -> String {
             /// Deterministic reciprocal estimate (~8-bit), bit-identical on every
             /// platform.
             ///
-            /// Seed (integer bit-trick) plus one non-FMA Newton step. Opt into more
-            /// accuracy with [`recip_newton_portable`](Self::recip_newton_portable),
-            /// or use [`recip_portable`](Self::recip_portable) for full precision.
+            /// Seed (integer bit-trick) plus one non-FMA Newton step. Intended for
+            /// positive normal inputs (`f32::MIN_POSITIVE..2.0f32.powi(126)`); `0.0`
+            /// and subnormals produce finite values near `f32::MAX`, and inputs above
+            /// `2^126` or negative follow raw bit-trick arithmetic rather than producing
+            /// infinities or `NaN`. Opt into more accuracy with
+            /// [`recip_newton_portable`](Self::recip_newton_portable), or use
+            /// [`recip_portable`](Self::recip_portable) for full precision.
             #[inline(always)]
             pub fn rcp_approx_portable(self) -> Self
             where
@@ -1584,7 +1705,7 @@ fn gen_platform(ty: &SimdType) -> String {
 
             formatdoc! {"
                 {scalar_block}
-                #[cfg(target_arch = \"x86_64\")]
+                #[cfg(all(target_arch = \"x86_64\", target_feature = \"sse2\"))]
                 impl {name}<archmage::X64V3Token> {{
                     /// Implementation identifier for this backend.
                     pub const fn implementation_name() -> &'static str {{
@@ -1628,7 +1749,7 @@ fn gen_platform(ty: &SimdType) -> String {
 
             formatdoc! {"
                 {scalar_block}
-                #[cfg(target_arch = \"x86_64\")]
+                #[cfg(all(target_arch = \"x86_64\", target_feature = \"sse2\"))]
                 impl {name}<archmage::X64V3Token> {{
                     /// Implementation identifier for this backend.
                     pub const fn implementation_name() -> &'static str {{
@@ -1677,7 +1798,7 @@ fn gen_platform(ty: &SimdType) -> String {
                     }}
                 }}
 
-                #[cfg(target_arch = \"x86_64\")]
+                #[cfg(all(target_arch = \"x86_64\", target_feature = \"sse2\"))]
                 impl {name}<archmage::X64V3Token> {{
                     /// Implementation identifier for this backend.
                     pub const fn implementation_name() -> &'static str {{
@@ -1685,7 +1806,7 @@ fn gen_platform(ty: &SimdType) -> String {
                     }}
                 }}
 
-                #[cfg(all(target_arch = \"x86_64\", feature = \"avx512\"))]
+                #[cfg(all(target_arch = \"x86_64\", target_feature = \"sse2\", feature = \"avx512\"))]
                 impl {name}<archmage::X64V4Token> {{
                     /// Implementation identifier for this backend.
                     pub const fn implementation_name() -> &'static str {{
@@ -1693,7 +1814,7 @@ fn gen_platform(ty: &SimdType) -> String {
                     }}
                 }}
 
-                #[cfg(all(target_arch = \"x86_64\", feature = \"avx512\"))]
+                #[cfg(all(target_arch = \"x86_64\", target_feature = \"sse2\", feature = \"avx512\"))]
                 impl {name}<archmage::X64V4xToken> {{
                     /// Implementation identifier for this backend.
                     pub const fn implementation_name() -> &'static str {{
@@ -1775,7 +1896,9 @@ pub(super) fn gen_raw_interop(ty: &SimdType, registry: &crate::registry::Registr
             .expect("registered raw backend")
             .features
             .join(",");
-        let cfg = if feature.is_empty() {
+        let cfg = if arch == "x86_64" {
+            format!(r#"all(target_arch = "x86_64", target_feature = "sse2"{feature})"#)
+        } else if feature.is_empty() {
             format!("target_arch = \"{arch}\"")
         } else {
             format!("all(target_arch = \"{arch}\"{feature})")

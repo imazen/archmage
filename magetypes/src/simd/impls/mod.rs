@@ -5,22 +5,22 @@
 //!
 //! **Auto-generated** by `cargo xtask generate` - do not edit manually.
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 mod x86_v3;
 
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
 mod x86_v4;
 
 // The AVX-512 tokens' W128 / W256 f32 backends, forwarded to V3's
 // (generated from the trait definitions; V4 ⊃ V3, so delegating is
 // sound), plus the hand-written AVX-512VL pixel-packing overrides.
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
 mod x86_v4_f32_delegated;
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
 mod x86_v4_f32_overrides;
 // The remaining W128 / W256 backends (f64 + int families) and the
 // float↔int convert/bitcast traits, forwarded to V3's the same way.
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
 mod x86_v4_narrow_delegated;
 
 #[cfg(target_arch = "aarch64")]

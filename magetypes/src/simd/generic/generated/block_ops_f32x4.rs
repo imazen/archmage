@@ -158,7 +158,7 @@ impl<T: F32x4Backend> f32x4<T> {
     /// Input: 16 bytes = 4 RGBA pixels in interleaved format.
     /// Output: `(R, G, B, A)` where each is f32x4 with values in `[0.0, 255.0]`.
     #[inline(always)]
-    pub fn load_4_rgba_u8_t(token: T, rgba: &[u8; 16]) -> (Self, Self, Self, Self) {
+    pub fn load_rgba_u8_t(token: T, rgba: &[u8; 16]) -> (Self, Self, Self, Self) {
         let r: [f32; 4] = core::array::from_fn(|i| rgba[i * 4] as f32);
         let g: [f32; 4] = core::array::from_fn(|i| rgba[i * 4 + 1] as f32);
         let b: [f32; 4] = core::array::from_fn(|i| rgba[i * 4 + 2] as f32);
@@ -171,13 +171,28 @@ impl<T: F32x4Backend> f32x4<T> {
         )
     }
 
-    /// Interleave 4 f32x4 channels and store as 4 RGBA u8 pixels.
+    /// Load 4 packed RGBA byte pixels. See [`Self::load_rgba_u8_t`].
+    #[deprecated(since = "0.9.32", note = "Use load_rgba_u8_t(token, rgba).")]
+    #[inline(always)]
+    pub fn load_4_rgba_u8_t(token: T, rgba: &[u8; 16]) -> (Self, Self, Self, Self) {
+        Self::load_rgba_u8_t(token, rgba)
+    }
+
+    /// Store 4 packed RGBA byte pixels from planar channels.
     ///
-    /// Values are rounded and clamped to `[0, 255]`.
-    /// Output: 16 bytes = 4 RGBA pixels in interleaved format.
+    /// Rounds ties to even, saturates to `0..=255`, and maps NaN to zero.
+    #[inline(always)]
+    pub fn store_rgba_u8(r: Self, g: Self, b: Self, a: Self, out: &mut [u8; 16]) {
+        T::store_rgba_u8_into(r.1, r.0, g.0, b.0, a.0, out);
+    }
+
+    /// Store 4 packed RGBA byte pixels. See [`Self::store_rgba_u8`].
+    #[deprecated(since = "0.9.32", note = "Use store_rgba_u8(r, g, b, a, out).")]
     #[inline(always)]
     pub fn store_4_rgba_u8(r: Self, g: Self, b: Self, a: Self) -> [u8; 16] {
-        T::store_rgba_bytes(r.1, r.0, g.0, b.0, a.0)
+        let mut out = [0u8; 16];
+        Self::store_rgba_u8(r, g, b, a, &mut out);
+        out
     }
 
     // ====== Matrix Transpose ======
@@ -187,23 +202,15 @@ impl<T: F32x4Backend> f32x4<T> {
     /// After transpose, `rows[i][j]` becomes `rows[j][i]`.
     #[inline(always)]
     pub fn transpose_4x4(rows: &mut [Self; 4]) {
-        let token = rows[0].1;
-        let a = rows[0].to_array();
-        let b = rows[1].to_array();
-        let c = rows[2].to_array();
-        let d = rows[3].to_array();
-        rows[0] = Self::from_repr_unchecked(token, T::from_array(token, [a[0], b[0], c[0], d[0]]));
-        rows[1] = Self::from_repr_unchecked(token, T::from_array(token, [a[1], b[1], c[1], d[1]]));
-        rows[2] = Self::from_repr_unchecked(token, T::from_array(token, [a[2], b[2], c[2], d[2]]));
-        rows[3] = Self::from_repr_unchecked(token, T::from_array(token, [a[3], b[3], c[3], d[3]]));
+        *rows = Self::transpose_4x4_copy(*rows);
     }
 
     /// Transpose a 4x4 matrix, returning the transposed rows.
     #[inline(always)]
     pub fn transpose_4x4_copy(rows: [Self; 4]) -> [Self; 4] {
-        let mut result = rows;
-        Self::transpose_4x4(&mut result);
-        result
+        let token = rows[0].1;
+        T::transpose_4x4_repr(token, rows.map(|row| row.0))
+            .map(|row| Self::from_repr_unchecked(token, row))
     }
 }
 
@@ -272,9 +279,10 @@ impl<T: F32x4Backend> f32x4<T> {
         Self::from_u8_t(token, bytes)
     }
     #[inline(always)]
-    #[doc = "Deprecated token-taking spelling of [`Self::load_4_rgba_u8_t`].\n\nUse `load_4_rgba_u8_t` to keep explicit-token construction when `load_4_rgba_u8` becomes tokenless in magetypes 0.10."]
+    #[allow(deprecated)]
+    #[doc = "Deprecated spelling of [`Self::load_rgba_u8_t`]."]
     #[deprecated(
-        note = "Use load_4_rgba_u8_t(token, rgba); load_4_rgba_u8 becomes tokenless in magetypes 0.10."
+        note = "Use load_rgba_u8_t(token, rgba); load_4_rgba_u8 will be removed in magetypes 0.10."
     )]
     #[forbid(unsafe_code)]
     pub fn load_4_rgba_u8(token: T, rgba: &[u8; 16]) -> (Self, Self, Self, Self) {

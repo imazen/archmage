@@ -144,7 +144,7 @@ pub trait WidthDispatch: SimdToken + Copy {
     fn u64x8_load(self, data: &[u64; 8]) -> Self::U64x8;
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 mod x86_impl {
     use super::WidthDispatch;
     use archmage::X64V3Token;

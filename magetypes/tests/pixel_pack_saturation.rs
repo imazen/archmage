@@ -56,7 +56,8 @@ fn check4<T: F32x4Backend>(t: T, name: &str) {
     for k in 0..EDGES.len() {
         let p: [[f32; 4]; 4] = core::array::from_fn(|c| plane::<4>(k, c));
         let v = |c: usize| f32x4::<T>::from_array_t(t, p[c]);
-        let got = f32x4::<T>::store_4_rgba_u8(v(0), v(1), v(2), v(3));
+        let mut got = [0; 16];
+        f32x4::<T>::store_rgba_u8(v(0), v(1), v(2), v(3), &mut got);
         let want: [u8; 16] = core::array::from_fn(|j| expected(p[j % 4][j / 4]));
         assert_eq!(got, want, "{name} f32x4::store_4_rgba_u8 rotation {k}");
     }
@@ -75,7 +76,8 @@ fn check8<T: F32x8Backend>(t: T, name: &str) {
     for k in 0..EDGES.len() {
         let p: [[f32; 8]; 4] = core::array::from_fn(|c| plane::<8>(k, c));
         let v = |c: usize| f32x8::<T>::from_array_t(t, p[c]);
-        let got = f32x8::<T>::store_8_rgba_u8(v(0), v(1), v(2), v(3));
+        let mut got = [0; 32];
+        f32x8::<T>::store_rgba_u8(v(0), v(1), v(2), v(3), &mut got);
         let want: [u8; 32] = core::array::from_fn(|j| expected(p[j % 4][j / 4]));
         assert_eq!(got, want, "{name} f32x8::store_8_rgba_u8 rotation {k}");
     }
@@ -145,4 +147,55 @@ fn wasm128() {
         }
         None => eprintln!("skipped: no simd128"),
     }
+}
+
+#[test]
+#[allow(deprecated)]
+fn published_rgba_forwarders_match_destination_stores() {
+    use archmage::ScalarToken;
+    use magetypes::simd::backends::{F32x4Backend, F32x8Backend};
+
+    let rgba4 = core::array::from_fn(|i| (i * 7) as u8);
+    let (r, g, b, a) = f32x4::load_4_rgba_u8_t(ScalarToken, &rgba4);
+    assert_eq!(
+        f32x4::load_rgba_u8_t(ScalarToken, &rgba4).0.to_array(),
+        r.to_array()
+    );
+    assert_eq!(
+        f32x4::load_4_rgba_u8(ScalarToken, &rgba4).3.to_array(),
+        a.to_array()
+    );
+    assert_eq!(f32x4::store_4_rgba_u8(r, g, b, a), rgba4);
+    assert_eq!(
+        F32x4Backend::store_rgba_bytes(
+            ScalarToken,
+            r.into_repr(),
+            g.into_repr(),
+            b.into_repr(),
+            a.into_repr()
+        ),
+        rgba4
+    );
+
+    let rgba8 = core::array::from_fn(|i| (i * 7) as u8);
+    let (r, g, b, a) = f32x8::load_8_rgba_u8_t(ScalarToken, &rgba8);
+    assert_eq!(
+        f32x8::load_rgba_u8_t(ScalarToken, &rgba8).0.to_array(),
+        r.to_array()
+    );
+    assert_eq!(
+        f32x8::load_8_rgba_u8(ScalarToken, &rgba8).3.to_array(),
+        a.to_array()
+    );
+    assert_eq!(f32x8::store_8_rgba_u8(r, g, b, a), rgba8);
+    assert_eq!(
+        F32x8Backend::store_rgba_bytes(
+            ScalarToken,
+            r.into_repr(),
+            g.into_repr(),
+            b.into_repr(),
+            a.into_repr()
+        ),
+        rgba8
+    );
 }

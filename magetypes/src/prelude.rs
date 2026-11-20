@@ -1,5 +1,5 @@
 //! Common magetypes imports: the generic SIMD vector types plus the
-//! [`SimdToken`](archmage::SimdToken) trait.
+//! [`SimdToken`] trait.
 //!
 //! Pair this with `use archmage::prelude::*;` for the tokens and macros, and
 //! name the token explicitly so the lane width and tier stay visible:
@@ -8,7 +8,7 @@
 //! use archmage::prelude::*;
 //! use magetypes::prelude::*;
 //!
-//! # #[cfg(target_arch = "x86_64")]
+//! # #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 //! # fn example() {
 //! if let Some(token) = X64V3Token::summon() {
 //!     let a = f32x8::<X64V3Token>::splat_t(token, 1.0);

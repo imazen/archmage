@@ -57,7 +57,7 @@ const _: () = {
     );
 };
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 const _: () = {
     assert!(
         size_of::<i8x64<archmage::X64V3Token>>()
@@ -72,7 +72,7 @@ const _: () = {
 // Native AVX-512 (`__m512`/`__m512d`/`__m512i`) — gated on the
 // `avx512` feature, which is how archmage exposes X64V4Token's
 // 512-bit backend impls.
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
 const _: () = {
     assert!(
         size_of::<i8x64<archmage::X64V4Token>>()
@@ -145,6 +145,26 @@ impl<T: I8x64Backend> i8x64<T> {
         Self(T::from_array(token, arr), token)
     }
 
+    /// Load up to `64` elements from `slice`, filling remaining high lanes with `pad`.
+    ///
+    /// Designed for single-vector slice tails after [`partition_slice_t`](Self::partition_slice_t)
+    /// (typically paired with [`store_prefix`](Self::store_prefix)).
+    ///
+    /// # Panics
+    ///
+    /// Panics if `slice.len() > 64`.
+    #[inline(always)]
+    pub fn load_padded_t(token: T, slice: &[i8], pad: i8) -> Self {
+        assert!(
+            slice.len() <= 64,
+            "i8x64::load_padded_t requires slice.len() <= 64, got {}",
+            slice.len(),
+        );
+        let mut arr = [pad; 64];
+        arr[..slice.len()].copy_from_slice(slice);
+        Self(T::from_array(token, arr), token)
+    }
+
     /// Split a slice into SIMD-width chunks and a scalar remainder.
     ///
     /// Returns `(&[[i8; 64]], &[i8])` — fixed-size arrays suitable
@@ -171,6 +191,25 @@ impl<T: I8x64Backend> i8x64<T> {
         T::store(self.1, self.0, out);
     }
 
+    /// Store the low `out.len()` lanes into `out`.
+    ///
+    /// Designed for single-vector slice tails after [`partition_slice_mut_t`](Self::partition_slice_mut_t)
+    /// (typically paired with [`load_padded_t`](Self::load_padded_t)).
+    ///
+    /// # Panics
+    ///
+    /// Panics if `out.len() > 64`.
+    #[inline(always)]
+    pub fn store_prefix(self, out: &mut [i8]) {
+        assert!(
+            out.len() <= 64,
+            "i8x64::store_prefix requires out.len() <= 64, got {}",
+            out.len(),
+        );
+        let arr = T::to_array(self.1, self.0);
+        out.copy_from_slice(&arr[..out.len()]);
+    }
+
     /// Convert to array.
     #[inline(always)]
     pub fn to_array(self) -> [i8; 64] {
@@ -181,6 +220,12 @@ impl<T: I8x64Backend> i8x64<T> {
     #[inline(always)]
     pub fn into_repr(self) -> T::Repr {
         self.0
+    }
+
+    /// Get the capability token carried by this vector.
+    #[inline(always)]
+    pub fn token(self) -> T {
+        self.1
     }
 
     /// Wrap a platform representation (token-gated).
@@ -564,7 +609,7 @@ impl i8x64<archmage::ScalarToken> {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl i8x64<archmage::X64V3Token> {
     /// Implementation identifier for this backend.
     pub const fn implementation_name() -> &'static str {
@@ -572,7 +617,7 @@ impl i8x64<archmage::X64V3Token> {
     }
 }
 
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
 impl i8x64<archmage::X64V4Token> {
     /// Implementation identifier for this backend.
     pub const fn implementation_name() -> &'static str {
@@ -580,7 +625,7 @@ impl i8x64<archmage::X64V4Token> {
     }
 }
 
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
 impl i8x64<archmage::X64V4xToken> {
     /// Implementation identifier for this backend.
     pub const fn implementation_name() -> &'static str {
@@ -621,7 +666,7 @@ impl<T: crate::simd::backends::i8x64PopcntBackend> i8x64<T> {
         Self(T::popcnt(self.1, self.0), self.1)
     }
 }
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
 impl i8x64<archmage::X64V4Token> {
     /// Get the raw `__m512i` value.
     #[inline(always)]
@@ -654,7 +699,7 @@ impl i8x64<archmage::X64V4Token> {
         Self(value, archmage::X64V4Token::from_context())
     }
 }
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
 impl i8x64<archmage::X64V4xToken> {
     /// Get the raw `__m512i` value.
     #[inline(always)]

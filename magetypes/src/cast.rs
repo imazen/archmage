@@ -43,7 +43,7 @@ pub use crate::simd_storage::Upcast;
 // x86 implementations
 // =============================================================================
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 mod x86_impl {
     // Cross-tier casting between same-width vectors (e.g. an SSE-context f32x4
     // used inside an AVX2 region) is a no-op on the generic types: the value
@@ -54,7 +54,7 @@ mod x86_impl {
 
 #[cfg(test)]
 mod tests {
-    #[cfg(target_arch = "x86_64")]
+    #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
     #[test]
     fn downcast_is_documented() {
         // This test just verifies the module compiles and documents the casting rules.

@@ -25,7 +25,7 @@
 //! for `X64V4xToken` (native AVX-512 VPOPCNTDQ) and have no V3
 //! impls to forward to.
 
-#![cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#![cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
 
 // Wildcard: the impls' signatures name supertraits of the
 // implemented traits (`<Self as F32x8Backend>::Repr` inside a
@@ -89,12 +89,40 @@ impl F64x2Backend for archmage::X64V4Token {
         <archmage::X64V3Token as F64x2Backend>::max(self.v3(), a, b)
     }
     #[inline(always)]
+    fn minimum(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F64x2Backend>::minimum(self.v3(), a, b)
+    }
+    #[inline(always)]
+    fn maximum(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F64x2Backend>::maximum(self.v3(), a, b)
+    }
+    #[inline(always)]
+    fn min_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F64x2Backend>::min_fast(self.v3(), a, b)
+    }
+    #[inline(always)]
+    fn max_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F64x2Backend>::max_fast(self.v3(), a, b)
+    }
+    #[inline(always)]
     fn sqrt(self, a: Self::Repr) -> Self::Repr {
         <archmage::X64V3Token as F64x2Backend>::sqrt(self.v3(), a)
     }
     #[inline(always)]
     fn abs(self, a: Self::Repr) -> Self::Repr {
         <archmage::X64V3Token as F64x2Backend>::abs(self.v3(), a)
+    }
+    #[inline(always)]
+    fn trunc(self, a: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F64x2Backend>::trunc(self.v3(), a)
+    }
+    #[inline(always)]
+    fn mul_neg_add_relaxed(self, a: Self::Repr, b: Self::Repr, c: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F64x2Backend>::mul_neg_add_relaxed(self.v3(), a, b, c)
+    }
+    #[inline(always)]
+    fn mul_neg_add_fused(self, a: Self::Repr, b: Self::Repr, c: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F64x2Backend>::mul_neg_add_fused(self.v3(), a, b, c)
     }
     #[inline(always)]
     fn floor(self, a: Self::Repr) -> Self::Repr {
@@ -257,12 +285,40 @@ impl F64x2Backend for archmage::X64V4xToken {
         <archmage::X64V3Token as F64x2Backend>::max(self.v3(), a, b)
     }
     #[inline(always)]
+    fn minimum(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F64x2Backend>::minimum(self.v3(), a, b)
+    }
+    #[inline(always)]
+    fn maximum(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F64x2Backend>::maximum(self.v3(), a, b)
+    }
+    #[inline(always)]
+    fn min_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F64x2Backend>::min_fast(self.v3(), a, b)
+    }
+    #[inline(always)]
+    fn max_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F64x2Backend>::max_fast(self.v3(), a, b)
+    }
+    #[inline(always)]
     fn sqrt(self, a: Self::Repr) -> Self::Repr {
         <archmage::X64V3Token as F64x2Backend>::sqrt(self.v3(), a)
     }
     #[inline(always)]
     fn abs(self, a: Self::Repr) -> Self::Repr {
         <archmage::X64V3Token as F64x2Backend>::abs(self.v3(), a)
+    }
+    #[inline(always)]
+    fn trunc(self, a: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F64x2Backend>::trunc(self.v3(), a)
+    }
+    #[inline(always)]
+    fn mul_neg_add_relaxed(self, a: Self::Repr, b: Self::Repr, c: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F64x2Backend>::mul_neg_add_relaxed(self.v3(), a, b, c)
+    }
+    #[inline(always)]
+    fn mul_neg_add_fused(self, a: Self::Repr, b: Self::Repr, c: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F64x2Backend>::mul_neg_add_fused(self.v3(), a, b, c)
     }
     #[inline(always)]
     fn floor(self, a: Self::Repr) -> Self::Repr {
@@ -425,12 +481,40 @@ impl F64x2Backend for archmage::Avx512Fp16Token {
         <archmage::X64V3Token as F64x2Backend>::max(self.v3(), a, b)
     }
     #[inline(always)]
+    fn minimum(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F64x2Backend>::minimum(self.v3(), a, b)
+    }
+    #[inline(always)]
+    fn maximum(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F64x2Backend>::maximum(self.v3(), a, b)
+    }
+    #[inline(always)]
+    fn min_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F64x2Backend>::min_fast(self.v3(), a, b)
+    }
+    #[inline(always)]
+    fn max_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F64x2Backend>::max_fast(self.v3(), a, b)
+    }
+    #[inline(always)]
     fn sqrt(self, a: Self::Repr) -> Self::Repr {
         <archmage::X64V3Token as F64x2Backend>::sqrt(self.v3(), a)
     }
     #[inline(always)]
     fn abs(self, a: Self::Repr) -> Self::Repr {
         <archmage::X64V3Token as F64x2Backend>::abs(self.v3(), a)
+    }
+    #[inline(always)]
+    fn trunc(self, a: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F64x2Backend>::trunc(self.v3(), a)
+    }
+    #[inline(always)]
+    fn mul_neg_add_relaxed(self, a: Self::Repr, b: Self::Repr, c: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F64x2Backend>::mul_neg_add_relaxed(self.v3(), a, b, c)
+    }
+    #[inline(always)]
+    fn mul_neg_add_fused(self, a: Self::Repr, b: Self::Repr, c: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F64x2Backend>::mul_neg_add_fused(self.v3(), a, b, c)
     }
     #[inline(always)]
     fn floor(self, a: Self::Repr) -> Self::Repr {
@@ -593,12 +677,40 @@ impl F64x4Backend for archmage::X64V4Token {
         <archmage::X64V3Token as F64x4Backend>::max(self.v3(), a, b)
     }
     #[inline(always)]
+    fn minimum(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F64x4Backend>::minimum(self.v3(), a, b)
+    }
+    #[inline(always)]
+    fn maximum(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F64x4Backend>::maximum(self.v3(), a, b)
+    }
+    #[inline(always)]
+    fn min_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F64x4Backend>::min_fast(self.v3(), a, b)
+    }
+    #[inline(always)]
+    fn max_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F64x4Backend>::max_fast(self.v3(), a, b)
+    }
+    #[inline(always)]
     fn sqrt(self, a: Self::Repr) -> Self::Repr {
         <archmage::X64V3Token as F64x4Backend>::sqrt(self.v3(), a)
     }
     #[inline(always)]
     fn abs(self, a: Self::Repr) -> Self::Repr {
         <archmage::X64V3Token as F64x4Backend>::abs(self.v3(), a)
+    }
+    #[inline(always)]
+    fn trunc(self, a: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F64x4Backend>::trunc(self.v3(), a)
+    }
+    #[inline(always)]
+    fn mul_neg_add_relaxed(self, a: Self::Repr, b: Self::Repr, c: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F64x4Backend>::mul_neg_add_relaxed(self.v3(), a, b, c)
+    }
+    #[inline(always)]
+    fn mul_neg_add_fused(self, a: Self::Repr, b: Self::Repr, c: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F64x4Backend>::mul_neg_add_fused(self.v3(), a, b, c)
     }
     #[inline(always)]
     fn floor(self, a: Self::Repr) -> Self::Repr {
@@ -761,12 +873,40 @@ impl F64x4Backend for archmage::X64V4xToken {
         <archmage::X64V3Token as F64x4Backend>::max(self.v3(), a, b)
     }
     #[inline(always)]
+    fn minimum(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F64x4Backend>::minimum(self.v3(), a, b)
+    }
+    #[inline(always)]
+    fn maximum(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F64x4Backend>::maximum(self.v3(), a, b)
+    }
+    #[inline(always)]
+    fn min_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F64x4Backend>::min_fast(self.v3(), a, b)
+    }
+    #[inline(always)]
+    fn max_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F64x4Backend>::max_fast(self.v3(), a, b)
+    }
+    #[inline(always)]
     fn sqrt(self, a: Self::Repr) -> Self::Repr {
         <archmage::X64V3Token as F64x4Backend>::sqrt(self.v3(), a)
     }
     #[inline(always)]
     fn abs(self, a: Self::Repr) -> Self::Repr {
         <archmage::X64V3Token as F64x4Backend>::abs(self.v3(), a)
+    }
+    #[inline(always)]
+    fn trunc(self, a: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F64x4Backend>::trunc(self.v3(), a)
+    }
+    #[inline(always)]
+    fn mul_neg_add_relaxed(self, a: Self::Repr, b: Self::Repr, c: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F64x4Backend>::mul_neg_add_relaxed(self.v3(), a, b, c)
+    }
+    #[inline(always)]
+    fn mul_neg_add_fused(self, a: Self::Repr, b: Self::Repr, c: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F64x4Backend>::mul_neg_add_fused(self.v3(), a, b, c)
     }
     #[inline(always)]
     fn floor(self, a: Self::Repr) -> Self::Repr {
@@ -929,12 +1069,40 @@ impl F64x4Backend for archmage::Avx512Fp16Token {
         <archmage::X64V3Token as F64x4Backend>::max(self.v3(), a, b)
     }
     #[inline(always)]
+    fn minimum(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F64x4Backend>::minimum(self.v3(), a, b)
+    }
+    #[inline(always)]
+    fn maximum(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F64x4Backend>::maximum(self.v3(), a, b)
+    }
+    #[inline(always)]
+    fn min_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F64x4Backend>::min_fast(self.v3(), a, b)
+    }
+    #[inline(always)]
+    fn max_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F64x4Backend>::max_fast(self.v3(), a, b)
+    }
+    #[inline(always)]
     fn sqrt(self, a: Self::Repr) -> Self::Repr {
         <archmage::X64V3Token as F64x4Backend>::sqrt(self.v3(), a)
     }
     #[inline(always)]
     fn abs(self, a: Self::Repr) -> Self::Repr {
         <archmage::X64V3Token as F64x4Backend>::abs(self.v3(), a)
+    }
+    #[inline(always)]
+    fn trunc(self, a: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F64x4Backend>::trunc(self.v3(), a)
+    }
+    #[inline(always)]
+    fn mul_neg_add_relaxed(self, a: Self::Repr, b: Self::Repr, c: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F64x4Backend>::mul_neg_add_relaxed(self.v3(), a, b, c)
+    }
+    #[inline(always)]
+    fn mul_neg_add_fused(self, a: Self::Repr, b: Self::Repr, c: Self::Repr) -> Self::Repr {
+        <archmage::X64V3Token as F64x4Backend>::mul_neg_add_fused(self.v3(), a, b, c)
     }
     #[inline(always)]
     fn floor(self, a: Self::Repr) -> Self::Repr {
@@ -8359,6 +8527,13 @@ impl F32x4Convert for archmage::X64V4Token {
         <archmage::X64V3Token as F32x4Convert>::convert_f32_to_i32_saturating(self.v3(), a)
     }
     #[inline(always)]
+    fn convert_f32_to_i32_fast(
+        self,
+        a: <Self as F32x4Backend>::Repr,
+    ) -> <Self as I32x4Backend>::Repr {
+        <archmage::X64V3Token as F32x4Convert>::convert_f32_to_i32_fast(self.v3(), a)
+    }
+    #[inline(always)]
     fn convert_f32_to_i32_round(
         self,
         a: <Self as F32x4Backend>::Repr,
@@ -8390,6 +8565,13 @@ impl F32x4Convert for archmage::X64V4xToken {
         a: <Self as F32x4Backend>::Repr,
     ) -> <Self as I32x4Backend>::Repr {
         <archmage::X64V3Token as F32x4Convert>::convert_f32_to_i32_saturating(self.v3(), a)
+    }
+    #[inline(always)]
+    fn convert_f32_to_i32_fast(
+        self,
+        a: <Self as F32x4Backend>::Repr,
+    ) -> <Self as I32x4Backend>::Repr {
+        <archmage::X64V3Token as F32x4Convert>::convert_f32_to_i32_fast(self.v3(), a)
     }
     #[inline(always)]
     fn convert_f32_to_i32_round(
@@ -8425,6 +8607,13 @@ impl F32x4Convert for archmage::Avx512Fp16Token {
         <archmage::X64V3Token as F32x4Convert>::convert_f32_to_i32_saturating(self.v3(), a)
     }
     #[inline(always)]
+    fn convert_f32_to_i32_fast(
+        self,
+        a: <Self as F32x4Backend>::Repr,
+    ) -> <Self as I32x4Backend>::Repr {
+        <archmage::X64V3Token as F32x4Convert>::convert_f32_to_i32_fast(self.v3(), a)
+    }
+    #[inline(always)]
     fn convert_f32_to_i32_round(
         self,
         a: <Self as F32x4Backend>::Repr,
@@ -8456,6 +8645,13 @@ impl F32x8Convert for archmage::X64V4Token {
         a: <Self as F32x8Backend>::Repr,
     ) -> <Self as I32x8Backend>::Repr {
         <archmage::X64V3Token as F32x8Convert>::convert_f32_to_i32_saturating(self.v3(), a)
+    }
+    #[inline(always)]
+    fn convert_f32_to_i32_fast(
+        self,
+        a: <Self as F32x8Backend>::Repr,
+    ) -> <Self as I32x8Backend>::Repr {
+        <archmage::X64V3Token as F32x8Convert>::convert_f32_to_i32_fast(self.v3(), a)
     }
     #[inline(always)]
     fn convert_f32_to_i32_round(
@@ -8491,6 +8687,13 @@ impl F32x8Convert for archmage::X64V4xToken {
         <archmage::X64V3Token as F32x8Convert>::convert_f32_to_i32_saturating(self.v3(), a)
     }
     #[inline(always)]
+    fn convert_f32_to_i32_fast(
+        self,
+        a: <Self as F32x8Backend>::Repr,
+    ) -> <Self as I32x8Backend>::Repr {
+        <archmage::X64V3Token as F32x8Convert>::convert_f32_to_i32_fast(self.v3(), a)
+    }
+    #[inline(always)]
     fn convert_f32_to_i32_round(
         self,
         a: <Self as F32x8Backend>::Repr,
@@ -8522,6 +8725,13 @@ impl F32x8Convert for archmage::Avx512Fp16Token {
         a: <Self as F32x8Backend>::Repr,
     ) -> <Self as I32x8Backend>::Repr {
         <archmage::X64V3Token as F32x8Convert>::convert_f32_to_i32_saturating(self.v3(), a)
+    }
+    #[inline(always)]
+    fn convert_f32_to_i32_fast(
+        self,
+        a: <Self as F32x8Backend>::Repr,
+    ) -> <Self as I32x8Backend>::Repr {
+        <archmage::X64V3Token as F32x8Convert>::convert_f32_to_i32_fast(self.v3(), a)
     }
     #[inline(always)]
     fn convert_f32_to_i32_round(

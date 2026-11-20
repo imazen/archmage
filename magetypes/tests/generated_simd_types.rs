@@ -2,7 +2,7 @@
 //!
 //! **Auto-generated** by `cargo xtask generate` - do not edit manually.
 
-#![cfg(target_arch = "x86_64")]
+#![cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #![allow(clippy::needless_range_loop)]
 
 use magetypes::simd::*;
@@ -160,14 +160,15 @@ fn test_f32x4_load_store_rgba_u8() {
             255, 255, 255, 255, // white
         ];
 
-        let (r, g, b, a) = f32x4::load_4_rgba_u8_t(token, &rgba);
+        let (r, g, b, a) = f32x4::load_rgba_u8_t(token, &rgba);
         assert_eq!(r.to_array(), [255.0, 0.0, 0.0, 255.0]);
         assert_eq!(g.to_array(), [0.0, 255.0, 0.0, 255.0]);
         assert_eq!(b.to_array(), [0.0, 0.0, 255.0, 255.0]);
         assert_eq!(a.to_array(), [255.0, 255.0, 255.0, 255.0]);
 
         // Roundtrip
-        let out = f32x4::store_4_rgba_u8(r, g, b, a);
+        let mut out = [0; 16];
+        f32x4::store_rgba_u8(r, g, b, a, &mut out);
         assert_eq!(out, rgba);
     }
 }
@@ -187,7 +188,7 @@ fn test_f32x8_load_store_rgba_u8() {
             128, 0, 255, 255, // purple
         ];
 
-        let (r, g, b, a) = f32x8::load_8_rgba_u8_t(token, &rgba);
+        let (r, g, b, a) = f32x8::load_rgba_u8_t(token, &rgba);
         assert_eq!(
             r.to_array(),
             [255.0, 0.0, 0.0, 255.0, 128.0, 0.0, 255.0, 128.0]
@@ -206,7 +207,8 @@ fn test_f32x8_load_store_rgba_u8() {
         );
 
         // Roundtrip
-        let out = f32x8::store_8_rgba_u8(r, g, b, a);
+        let mut out = [0; 32];
+        f32x8::store_rgba_u8(r, g, b, a, &mut out);
         assert_eq!(out, rgba);
     }
 }
@@ -215,7 +217,7 @@ fn test_f32x8_load_store_rgba_u8() {
 // 512-bit Tests (V3 polyfill: 2×256-bit)
 // ============================================================================
 
-#[cfg(all(target_arch = "x86_64", feature = "w512"))]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "w512"))]
 mod w512_tests {
     use archmage::{SimdToken, X64V3Token};
     use magetypes::simd::*;

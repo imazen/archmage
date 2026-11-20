@@ -8,6 +8,57 @@
 use super::sealed::Sealed;
 use archmage::SimdToken;
 
+/// Crate-private layout and conversion hooks for `16`-lane `f32` backends.
+pub(crate) trait F32x16Internal: SimdToken + Sealed + Copy + 'static {
+    type InternalRepr: Copy + Clone + Send + Sync;
+
+    /// Load unsigned lanes and convert them exactly, without normalization.
+    fn from_u16_lanes(self, lanes: &[u16; 16]) -> Self::InternalRepr;
+
+    /// Convert lanes to u16 using the encoded policy.
+    fn to_u16_lanes<const CFG: u32>(self, value: Self::InternalRepr) -> [u16; 16];
+
+    /// Convert lanes to u8 using the encoded policy.
+    fn to_u8_lanes<const CFG: u32>(self, value: Self::InternalRepr) -> [u8; 16];
+
+    /// Convert f32 lanes to unsigned u32 stored in the float representation.
+    fn to_u32_lanes<const CFG: u32>(self, value: Self::InternalRepr) -> Self::InternalRepr;
+
+    /// Widen unsigned u32 bit patterns stored in the float representation.
+    fn from_u32_lanes(self, value: Self::InternalRepr) -> Self::InternalRepr;
+
+    /// Decode binary16 using the encoded policy.
+    fn from_f16_lanes<const CFG: u32>(self, lanes: &[u16; 16]) -> Self::InternalRepr;
+
+    /// Encode binary16 using the encoded policy.
+    fn to_f16_lanes<const CFG: u32>(self, value: Self::InternalRepr) -> [u16; 16];
+
+    /// Widen bfloat16 bit patterns.
+    fn from_bf16_lanes(self, lanes: &[u16; 16]) -> Self::InternalRepr;
+
+    /// Encode bfloat16 using the encoded policy.
+    fn to_bf16_lanes<const CFG: u32>(self, value: Self::InternalRepr) -> [u16; 16];
+
+    /// Broadcast lane 3 in each consecutive group of four lanes.
+    fn broadcast_rgba_alpha_repr(self, value: Self::InternalRepr) -> Self::InternalRepr;
+
+    /// Replace lane 3 in each consecutive group of four lanes.
+    fn with_rgba_alpha_repr(
+        self,
+        value: Self::InternalRepr,
+        src: Self::InternalRepr,
+    ) -> Self::InternalRepr;
+
+    /// Widen sixteen consecutive bytes to float.
+    fn from_u8_lanes_wide(self, lanes: &[u8; 16]) -> Self::InternalRepr;
+
+    /// Deinterleave sixteen RGBA pixels into planar float storage.
+    fn deinterleave_rgba_wide(self, rgba: [Self::InternalRepr; 4]) -> [Self::InternalRepr; 4];
+
+    /// Interleave sixteen planar float pixels into RGBA storage.
+    fn interleave_rgba_wide(self, channels: [Self::InternalRepr; 4]) -> [Self::InternalRepr; 4];
+}
+
 /// Backend implementation for 16-lane f32 SIMD vectors.
 ///
 /// Trait methods take `self` (the token) as receiver — the token value
@@ -21,7 +72,15 @@ use archmage::SimdToken;
 ///
 /// This trait is sealed — only archmage token types can implement it.
 /// The token proves CPU support was verified via `summon()`.
-pub trait F32x16Backend: SimdToken + Sealed + Copy + 'static {
+#[allow(private_bounds)]
+pub trait F32x16Backend:
+    SimdToken
+    + Sealed
+    + F32x16Internal<InternalRepr = <Self as F32x16Backend>::Repr>
+    + crate::scalar::F32ScalarBackend
+    + Copy
+    + 'static
+{
     /// Platform-native SIMD representation.
     #[allow(private_bounds)]
     type Repr: Copy + Clone + Send + Sync + crate::simd_storage::Pod;
@@ -65,17 +124,54 @@ pub trait F32x16Backend: SimdToken + Sealed + Copy + 'static {
 
     // ====== Math ======
 
-    /// Lane-wise minimum.
+    /// Lane-wise minimum matching `f32::min` (returns the numeric operand on a single quiet `NaN`; signalling `NaN` and `±0.0` unspecified).
     fn min(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
-    /// Lane-wise maximum.
+    /// Lane-wise maximum matching `f32::max` (returns the numeric operand on a single quiet `NaN`; signalling `NaN` and `±0.0` unspecified).
     fn max(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
+
+    /// IEEE 754-2019 minimum (`NaN`-propagating, `-0.0 < +0.0`).
+    fn minimum(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
+
+    /// IEEE 754-2019 maximum (`NaN`-propagating, `-0.0 < +0.0`).
+    fn maximum(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
+
+    /// Fast lane-wise minimum (`NaN` and `±0.0` unspecified).
+    #[inline(always)]
+    fn min_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        Self::min(self, a, b)
+    }
+
+    /// Fast lane-wise maximum (`NaN` and `±0.0` unspecified).
+    #[inline(always)]
+    fn max_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        Self::max(self, a, b)
+    }
 
     /// Square root.
     fn sqrt(self, a: Self::Repr) -> Self::Repr;
 
     /// Absolute value.
     fn abs(self, a: Self::Repr) -> Self::Repr;
+
+    /// Truncate toward zero without changing the sign of zero.
+    #[inline(always)]
+    fn trunc(self, a: Self::Repr) -> Self::Repr {
+        let lanes = <Self as F32x16Backend>::to_array(self, a);
+        <Self as F32x16Backend>::from_array(self, lanes.map(crate::scalar::trunc_f32))
+    }
+
+    /// Multiply-negate-add with backend-dependent rounding.
+    #[inline(always)]
+    fn mul_neg_add_relaxed(self, a: Self::Repr, b: Self::Repr, c: Self::Repr) -> Self::Repr {
+        <Self as F32x16Backend>::mul_add(self, <Self as F32x16Backend>::neg(self, a), b, c)
+    }
+
+    /// Multiply-negate-add with one rounding.
+    #[inline(always)]
+    fn mul_neg_add_fused(self, a: Self::Repr, b: Self::Repr, c: Self::Repr) -> Self::Repr {
+        <Self as F32x16Backend>::mul_add_portable(self, <Self as F32x16Backend>::neg(self, a), b, c)
+    }
 
     /// Round toward negative infinity.
     fn floor(self, a: Self::Repr) -> Self::Repr;
@@ -155,7 +251,7 @@ pub trait F32x16Backend: SimdToken + Sealed + Copy + 'static {
         a
     }
 
-    /// Fast reciprocal square root approximation — see [`rcp_approx`].
+    /// Fast reciprocal square root approximation — see [`rcp_approx`](Self::rcp_approx).
     #[inline(always)]
     fn rsqrt_approx(self, a: Self::Repr) -> Self::Repr {
         a
@@ -177,10 +273,15 @@ pub trait F32x16Backend: SimdToken + Sealed + Copy + 'static {
 
     // ====== Default implementations ======
 
-    /// Clamp values between lo and hi.
+    /// Clamp values between `lo` and `hi`: `min_fast(max_fast(a, lo), hi)`,
+    /// two instructions on native backends.
+    ///
+    /// A quiet `NaN` lane in `a` becomes `lo` on x86, NEON, strict WASM, and
+    /// `ScalarToken`; signalling `NaN`, WASM `relaxed-simd` `NaN` lanes, `NaN`
+    /// bounds, and `lo > hi` are unspecified per backend, and `clamp` never panics.
     #[inline(always)]
     fn clamp(self, a: Self::Repr, lo: Self::Repr, hi: Self::Repr) -> Self::Repr {
-        <Self as F32x16Backend>::min(self, <Self as F32x16Backend>::max(self, a, lo), hi)
+        <Self as F32x16Backend>::min_fast(self, <Self as F32x16Backend>::max_fast(self, a, lo), hi)
     }
 
     /// Precise reciprocal — defaults to delegating to rcp_approx.
@@ -190,7 +291,7 @@ pub trait F32x16Backend: SimdToken + Sealed + Copy + 'static {
         Self::rcp_approx(self, a)
     }
 
-    /// Precise reciprocal square root — see [`recip`].
+    /// Precise reciprocal square root — see [`recip`](Self::recip).
     #[inline(always)]
     fn rsqrt(self, a: Self::Repr) -> Self::Repr {
         Self::rsqrt_approx(self, a)

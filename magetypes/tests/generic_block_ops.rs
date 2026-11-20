@@ -259,7 +259,7 @@ fn f32x8_load_8_rgba_u8() {
             rgba[i * 4 + 2] = (i * 10 + 2) as u8;
             rgba[i * 4 + 3] = (i * 10 + 3) as u8;
         }
-        let (r, g, b, a) = f32x8::<X64V3Token>::load_8_rgba_u8_t(t, &rgba);
+        let (r, g, b, a) = f32x8::<X64V3Token>::load_rgba_u8_t(t, &rgba);
         assert_eq!(
             r.to_array(),
             [0.0, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0]
@@ -290,7 +290,8 @@ fn f32x8_store_8_rgba_u8() {
             f32x8::<X64V3Token>::from_array_t(t, [2.0, 12.0, 22.0, 32.0, 42.0, 52.0, 62.0, 72.0]);
         let a =
             f32x8::<X64V3Token>::from_array_t(t, [3.0, 13.0, 23.0, 33.0, 43.0, 53.0, 63.0, 73.0]);
-        let out = f32x8::<X64V3Token>::store_8_rgba_u8(r, g, b, a);
+        let mut out = [0; 32];
+        f32x8::<X64V3Token>::store_rgba_u8(r, g, b, a, &mut out);
         for i in 0..8 {
             assert_eq!(out[i * 4], (i * 10) as u8);
             assert_eq!(out[i * 4 + 1], (i * 10 + 1) as u8);
@@ -304,8 +305,9 @@ fn f32x8_store_8_rgba_u8() {
 fn f32x8_rgba_load_store_roundtrip() {
     if let Some(t) = X64V3Token::summon() {
         let rgba: [u8; 32] = core::array::from_fn(|i| i as u8);
-        let (r, g, b, a) = f32x8::<X64V3Token>::load_8_rgba_u8_t(t, &rgba);
-        let out = f32x8::<X64V3Token>::store_8_rgba_u8(r, g, b, a);
+        let (r, g, b, a) = f32x8::<X64V3Token>::load_rgba_u8_t(t, &rgba);
+        let mut out = [0; 32];
+        f32x8::<X64V3Token>::store_rgba_u8(r, g, b, a, &mut out);
         assert_eq!(rgba, out);
     }
 }
@@ -548,7 +550,7 @@ fn f32x4_load_4_rgba_u8() {
             90, 100, 110, 120, // pixel 2
             130, 140, 150, 160, // pixel 3
         ];
-        let (r, g, b, a) = f32x4::<X64V3Token>::load_4_rgba_u8_t(t, &rgba);
+        let (r, g, b, a) = f32x4::<X64V3Token>::load_rgba_u8_t(t, &rgba);
         assert_eq!(r.to_array(), [10.0, 50.0, 90.0, 130.0]);
         assert_eq!(g.to_array(), [20.0, 60.0, 100.0, 140.0]);
         assert_eq!(b.to_array(), [30.0, 70.0, 110.0, 150.0]);
@@ -563,7 +565,8 @@ fn f32x4_store_4_rgba_u8() {
         let g = f32x4::<X64V3Token>::from_array_t(t, [20.0, 60.0, 100.0, 140.0]);
         let b = f32x4::<X64V3Token>::from_array_t(t, [30.0, 70.0, 110.0, 150.0]);
         let a = f32x4::<X64V3Token>::from_array_t(t, [40.0, 80.0, 120.0, 160.0]);
-        let out = f32x4::<X64V3Token>::store_4_rgba_u8(r, g, b, a);
+        let mut out = [0; 16];
+        f32x4::<X64V3Token>::store_rgba_u8(r, g, b, a, &mut out);
         assert_eq!(
             out,
             [
@@ -577,8 +580,9 @@ fn f32x4_store_4_rgba_u8() {
 fn f32x4_rgba_roundtrip() {
     if let Some(t) = X64V3Token::summon() {
         let rgba: [u8; 16] = core::array::from_fn(|i| (i * 15) as u8);
-        let (r, g, b, a) = f32x4::<X64V3Token>::load_4_rgba_u8_t(t, &rgba);
-        let out = f32x4::<X64V3Token>::store_4_rgba_u8(r, g, b, a);
+        let (r, g, b, a) = f32x4::<X64V3Token>::load_rgba_u8_t(t, &rgba);
+        let mut out = [0; 16];
+        f32x4::<X64V3Token>::store_rgba_u8(r, g, b, a, &mut out);
         assert_eq!(rgba, out);
     }
 }
@@ -686,8 +690,9 @@ fn f32x8_scalar_transpose_8x8() {
 #[test]
 fn f32x8_scalar_rgba_roundtrip() {
     let rgba: [u8; 32] = core::array::from_fn(|i| i as u8);
-    let (r, g, b, a) = f32x8::<ScalarToken>::load_8_rgba_u8_t(ScalarToken, &rgba);
-    let out = f32x8::<ScalarToken>::store_8_rgba_u8(r, g, b, a);
+    let (r, g, b, a) = f32x8::<ScalarToken>::load_rgba_u8_t(ScalarToken, &rgba);
+    let mut out = [0; 32];
+    f32x8::<ScalarToken>::store_rgba_u8(r, g, b, a, &mut out);
     assert_eq!(rgba, out);
 }
 
@@ -751,8 +756,8 @@ fn f32x8_v3_vs_scalar_rgba() {
     if let Some(t) = X64V3Token::summon() {
         let rgba: [u8; 32] = core::array::from_fn(|i| (i * 7 + 13) as u8);
 
-        let (r1, g1, b1, a1) = f32x8::<X64V3Token>::load_8_rgba_u8_t(t, &rgba);
-        let (r2, g2, b2, a2) = f32x8::<ScalarToken>::load_8_rgba_u8_t(ScalarToken, &rgba);
+        let (r1, g1, b1, a1) = f32x8::<X64V3Token>::load_rgba_u8_t(t, &rgba);
+        let (r2, g2, b2, a2) = f32x8::<ScalarToken>::load_rgba_u8_t(ScalarToken, &rgba);
 
         assert_eq!(r1.to_array(), r2.to_array());
         assert_eq!(g1.to_array(), g2.to_array());
@@ -923,8 +928,8 @@ fn f32x8_parity_load_store_rgba() {
         use magetypes::simd::f32x8 as OldF32x8;
         let rgba: [u8; 32] = core::array::from_fn(|i| (i * 7 + 13) as u8);
 
-        let (or, og, ob, oa) = OldF32x8::load_8_rgba_u8_t(t, &rgba);
-        let (nr, ng, nb, na) = f32x8::<X64V3Token>::load_8_rgba_u8_t(t, &rgba);
+        let (or, og, ob, oa) = OldF32x8::load_rgba_u8_t(t, &rgba);
+        let (nr, ng, nb, na) = f32x8::<X64V3Token>::load_rgba_u8_t(t, &rgba);
 
         assert_eq!(or.to_array(), nr.to_array());
         assert_eq!(og.to_array(), ng.to_array());
@@ -939,12 +944,12 @@ fn f32x8_parity_load_store_rgba() {
 
 /// Demonstrates a generic image processing function using block ops.
 fn brighten_pixels<T: F32x8Backend>(token: T, pixels: &mut [u8; 32], amount: f32) {
-    let (r, g, b, a) = f32x8::<T>::load_8_rgba_u8_t(token, pixels);
+    let (r, g, b, a) = f32x8::<T>::load_rgba_u8_t(token, pixels);
     // Use operator overloads — the scalar broadcast Add<f32> impl
     let r = r + amount;
     let g = g + amount;
     let b = b + amount;
-    *pixels = f32x8::<T>::store_8_rgba_u8(r, g, b, a);
+    f32x8::<T>::store_rgba_u8(r, g, b, a, pixels);
 }
 
 #[test]

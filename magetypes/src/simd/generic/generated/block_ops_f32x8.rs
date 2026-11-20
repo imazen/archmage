@@ -211,7 +211,7 @@ impl<T: F32x8Backend> f32x8<T> {
     /// Input: 32 bytes = 8 RGBA pixels in interleaved format.
     /// Output: `(R, G, B, A)` where each is f32x8 with values in `[0.0, 255.0]`.
     #[inline(always)]
-    pub fn load_8_rgba_u8_t(token: T, rgba: &[u8; 32]) -> (Self, Self, Self, Self) {
+    pub fn load_rgba_u8_t(token: T, rgba: &[u8; 32]) -> (Self, Self, Self, Self) {
         let r: [f32; 8] = core::array::from_fn(|i| rgba[i * 4] as f32);
         let g: [f32; 8] = core::array::from_fn(|i| rgba[i * 4 + 1] as f32);
         let b: [f32; 8] = core::array::from_fn(|i| rgba[i * 4 + 2] as f32);
@@ -224,13 +224,28 @@ impl<T: F32x8Backend> f32x8<T> {
         )
     }
 
-    /// Interleave 4 f32x8 channels and store as 8 RGBA u8 pixels.
+    /// Load 8 packed RGBA byte pixels. See [`Self::load_rgba_u8_t`].
+    #[deprecated(since = "0.9.32", note = "Use load_rgba_u8_t(token, rgba).")]
+    #[inline(always)]
+    pub fn load_8_rgba_u8_t(token: T, rgba: &[u8; 32]) -> (Self, Self, Self, Self) {
+        Self::load_rgba_u8_t(token, rgba)
+    }
+
+    /// Store 8 packed RGBA byte pixels from planar channels.
     ///
-    /// Values are rounded and clamped to `[0, 255]`.
-    /// Output: 32 bytes = 8 RGBA pixels in interleaved format.
+    /// Rounds ties to even, saturates to `0..=255`, and maps NaN to zero.
+    #[inline(always)]
+    pub fn store_rgba_u8(r: Self, g: Self, b: Self, a: Self, out: &mut [u8; 32]) {
+        T::store_rgba_u8_into(r.1, r.0, g.0, b.0, a.0, out);
+    }
+
+    /// Store 8 packed RGBA byte pixels. See [`Self::store_rgba_u8`].
+    #[deprecated(since = "0.9.32", note = "Use store_rgba_u8(r, g, b, a, out).")]
     #[inline(always)]
     pub fn store_8_rgba_u8(r: Self, g: Self, b: Self, a: Self) -> [u8; 32] {
-        T::store_rgba_bytes(r.1, r.0, g.0, b.0, a.0)
+        let mut out = [0u8; 32];
+        Self::store_rgba_u8(r, g, b, a, &mut out);
+        out
     }
 
     // ====== Matrix Transpose ======
@@ -339,9 +354,10 @@ impl<T: F32x8Backend> f32x8<T> {
         Self::from_u8_t(token, bytes)
     }
     #[inline(always)]
-    #[doc = "Deprecated token-taking spelling of [`Self::load_8_rgba_u8_t`].\n\nUse `load_8_rgba_u8_t` to keep explicit-token construction when `load_8_rgba_u8` becomes tokenless in magetypes 0.10."]
+    #[allow(deprecated)]
+    #[doc = "Deprecated spelling of [`Self::load_rgba_u8_t`]."]
     #[deprecated(
-        note = "Use load_8_rgba_u8_t(token, rgba); load_8_rgba_u8 becomes tokenless in magetypes 0.10."
+        note = "Use load_rgba_u8_t(token, rgba); load_8_rgba_u8 will be removed in magetypes 0.10."
     )]
     #[forbid(unsafe_code)]
     pub fn load_8_rgba_u8(token: T, rgba: &[u8; 32]) -> (Self, Self, Self, Self) {

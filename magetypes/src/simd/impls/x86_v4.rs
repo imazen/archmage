@@ -18,12 +18,10 @@
 //! which require POD storage and enforce equal sizes at compile time.
 //! Token-bearing wrappers never implement the storage POD trait.
 
-#[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 use core::arch::x86_64::*;
 
-#[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 use archmage::{X64V4Token, X64V4xToken, arcane};
 
 use crate::simd::backends::*;
@@ -32,8 +30,8 @@ use crate::simd::backends::*;
 // X64V4Token — base AVX-512 (F/BW/CD/DQ/VL)
 // ============================================================================
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl F32x16Backend for X64V4Token {
     type Repr = __m512;
 
@@ -94,11 +92,39 @@ impl F32x16Backend for X64V4Token {
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn min(self, a: __m512, b: __m512) -> __m512 {
-        _mm512_min_ps(a, b)
+        _mm512_range_ps::<0x04>(a, b)
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn max(self, a: __m512, b: __m512) -> __m512 {
+        _mm512_range_ps::<0x05>(a, b)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn minimum(self, a: __m512, b: __m512) -> __m512 {
+        _mm512_mask_blend_ps(
+            _mm512_cmp_ps_mask::<_CMP_UNORD_Q>(a, b),
+            _mm512_or_ps(_mm512_min_ps(a, b), _mm512_min_ps(b, a)),
+            _mm512_set1_ps(f32::NAN),
+        )
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn maximum(self, a: __m512, b: __m512) -> __m512 {
+        _mm512_mask_blend_ps(
+            _mm512_cmp_ps_mask::<_CMP_UNORD_Q>(a, b),
+            _mm512_and_ps(_mm512_max_ps(a, b), _mm512_max_ps(b, a)),
+            _mm512_set1_ps(f32::NAN),
+        )
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn min_fast(self, a: __m512, b: __m512) -> __m512 {
+        _mm512_min_ps(a, b)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn max_fast(self, a: __m512, b: __m512) -> __m512 {
         _mm512_max_ps(a, b)
     }
 
@@ -111,6 +137,21 @@ impl F32x16Backend for X64V4Token {
     fn abs(self, a: __m512) -> __m512 {
         let mask = _mm512_castsi512_ps(_mm512_set1_epi32(0x7FFF_FFFFu32 as i32));
         _mm512_and_ps(a, mask)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn trunc(self, a: __m512) -> __m512 {
+        _mm512_roundscale_ps::<0x03>(a)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn mul_neg_add_relaxed(self, a: __m512, b: __m512, c: __m512) -> __m512 {
+        _mm512_fnmadd_ps(a, b, c)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn mul_neg_add_fused(self, a: __m512, b: __m512, c: __m512) -> __m512 {
+        _mm512_fnmadd_ps(a, b, c)
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
@@ -265,9 +306,224 @@ impl F32x16Backend for X64V4Token {
         _mm512_xor_ps(a, b)
     }
 }
-
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
+impl F32x16Internal for X64V4Token {
+    type InternalRepr = __m512;
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn from_u16_lanes(self, lanes: &[u16; 16]) -> __m512 {
+        _mm512_cvtepi32_ps(_mm512_cvtepu16_epi32(crate::simd_storage::cast(*lanes)))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn to_u16_lanes<const CFG: u32>(self, value: __m512) -> [u16; 16] {
+        let opts = const { crate::numerics::IntConvert::decode(CFG) };
+        let value = if opts.saturates_all() {
+            _mm512_min_ps(_mm512_set1_ps(65535.0), value)
+        } else {
+            value
+        };
+        if opts.nonnegative() {
+            let i = if opts.rounds() {
+                _mm512_cvtps_epu32(value)
+            } else {
+                _mm512_cvttps_epu32(value)
+            };
+            return crate::simd_storage::cast(_mm512_cvtusepi32_epi16(i));
+        }
+
+        let i = if opts.rounds() {
+            _mm512_cvtps_epi32(value)
+        } else {
+            _mm512_cvttps_epi32(value)
+        };
+        crate::simd_storage::cast(_mm512_cvtusepi32_epi16(_mm512_max_epi32(
+            i,
+            _mm512_setzero_si512(),
+        )))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn to_u8_lanes<const CFG: u32>(self, value: __m512) -> [u8; 16] {
+        let opts = const { crate::numerics::IntConvert::decode(CFG) };
+        let value = if opts.saturates_all() {
+            _mm512_min_ps(_mm512_set1_ps(255.0), value)
+        } else {
+            value
+        };
+        if opts.nonnegative() {
+            let i = if opts.rounds() {
+                _mm512_cvtps_epu32(value)
+            } else {
+                _mm512_cvttps_epu32(value)
+            };
+            return crate::simd_storage::cast(_mm512_cvtusepi32_epi8(i));
+        }
+        let i = if opts.rounds() {
+            _mm512_cvtps_epi32(value)
+        } else {
+            _mm512_cvttps_epi32(value)
+        };
+        crate::simd_storage::cast(_mm512_cvtusepi32_epi8(_mm512_max_epi32(
+            i,
+            _mm512_setzero_si512(),
+        )))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn to_u32_lanes<const CFG: u32>(self, value: __m512) -> __m512 {
+        let opts = const { crate::numerics::IntConvert::decode(CFG) };
+        let clamped = if opts.nonnegative() {
+            value
+        } else {
+            _mm512_max_ps(value, _mm512_setzero_ps())
+        };
+        let i = if opts.rounds() {
+            _mm512_cvtps_epu32(clamped)
+        } else {
+            _mm512_cvttps_epu32(clamped)
+        };
+        _mm512_castsi512_ps(i)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn from_u32_lanes(self, value: __m512) -> __m512 {
+        _mm512_cvtepu32_ps(_mm512_castps_si512(value))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn from_f16_lanes<const CFG: u32>(self, lanes: &[u16; 16]) -> __m512 {
+        let opts = const { crate::numerics::HalfConvert::decode(CFG) };
+        let h = crate::simd_storage::cast(*lanes);
+        let h = if opts.flushes() {
+            let mag = _mm256_and_si256(h, _mm256_set1_epi16(0x7fff));
+            let small = _mm256_cmpgt_epi16(_mm256_set1_epi16(0x400), mag);
+            _mm256_andnot_si256(_mm256_and_si256(small, _mm256_set1_epi16(0x7fff)), h)
+        } else {
+            h
+        };
+        _mm512_cvtph_ps(h)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn to_f16_lanes<const CFG: u32>(self, value: __m512) -> [u16; 16] {
+        let opts = const { crate::numerics::HalfConvert::decode(CFG) };
+        let h = if opts.rounds() {
+            _mm512_cvtps_ph::<0>(value)
+        } else {
+            _mm512_cvtps_ph::<3>(value)
+        };
+        let h = if opts.flushes() {
+            let mag = _mm256_and_si256(h, _mm256_set1_epi16(0x7fff));
+            let small = _mm256_cmpgt_epi16(_mm256_set1_epi16(0x400), mag);
+            _mm256_andnot_si256(_mm256_and_si256(small, _mm256_set1_epi16(0x7fff)), h)
+        } else {
+            h
+        };
+        crate::simd_storage::cast(h)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn from_bf16_lanes(self, lanes: &[u16; 16]) -> __m512 {
+        _mm512_castsi512_ps(_mm512_slli_epi32::<16>(_mm512_cvtepu16_epi32(
+            crate::simd_storage::cast(*lanes),
+        )))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn to_bf16_lanes<const CFG: u32>(self, value: __m512) -> [u16; 16] {
+        let opts = const { crate::numerics::HalfConvert::decode(CFG) };
+        let raw = _mm512_castps_si512(value);
+        let rounded = if opts.rounds() {
+            let lsb = _mm512_and_si512(_mm512_srli_epi32::<16>(raw), _mm512_set1_epi32(1));
+            _mm512_add_epi32(raw, _mm512_add_epi32(lsb, _mm512_set1_epi32(0x7fff)))
+        } else {
+            raw
+        };
+        let rounded = if opts.is_finite() {
+            rounded
+        } else {
+            _mm512_mask_blend_epi32(
+                _mm512_cmpgt_epi32_mask(
+                    _mm512_and_si512(raw, _mm512_set1_epi32(0x7fff_ffff)),
+                    _mm512_set1_epi32(0x7f80_0000),
+                ),
+                rounded,
+                _mm512_or_si512(raw, _mm512_set1_epi32(0x0040_0000)),
+            )
+        };
+        let i = _mm512_srli_epi32::<16>(rounded);
+        let i = if opts.flushes() {
+            _mm512_mask_blend_epi32(
+                _mm512_test_epi32_mask(i, _mm512_set1_epi32(0x7f80)),
+                _mm512_and_si512(i, _mm512_set1_epi32(0x8000)),
+                i,
+            )
+        } else {
+            i
+        };
+        crate::simd_storage::cast(_mm512_cvtusepi32_epi16(_mm512_max_epi32(
+            i,
+            _mm512_setzero_si512(),
+        )))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn from_u8_lanes_wide(self, lanes: &[u8; 16]) -> __m512 {
+        _mm512_cvtepi32_ps(_mm512_cvtepu8_epi32(crate::simd_storage::cast(*lanes)))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn deinterleave_rgba_wide(self, rgba: [__m512; 4]) -> [__m512; 4] {
+        let [a, b, c, d] = rgba;
+        let rg = _mm512_setr_epi32(0, 4, 8, 12, 16, 20, 24, 28, 1, 5, 9, 13, 17, 21, 25, 29);
+        let ba = _mm512_add_epi32(rg, _mm512_set1_epi32(2));
+        let low = _mm512_setr_epi32(0, 1, 2, 3, 4, 5, 6, 7, 16, 17, 18, 19, 20, 21, 22, 23);
+        let high = _mm512_add_epi32(low, _mm512_set1_epi32(8));
+        let ab_rg = _mm512_permutex2var_ps(a, rg, b);
+        let cd_rg = _mm512_permutex2var_ps(c, rg, d);
+        let ab_ba = _mm512_permutex2var_ps(a, ba, b);
+        let cd_ba = _mm512_permutex2var_ps(c, ba, d);
+        [
+            _mm512_permutex2var_ps(ab_rg, low, cd_rg),
+            _mm512_permutex2var_ps(ab_rg, high, cd_rg),
+            _mm512_permutex2var_ps(ab_ba, low, cd_ba),
+            _mm512_permutex2var_ps(ab_ba, high, cd_ba),
+        ]
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn interleave_rgba_wide(self, channels: [__m512; 4]) -> [__m512; 4] {
+        let [r, g, b, a] = channels;
+        let low = _mm512_setr_epi32(0, 16, 1, 17, 2, 18, 3, 19, 4, 20, 5, 21, 6, 22, 7, 23);
+        let high = _mm512_add_epi32(low, _mm512_set1_epi32(8));
+        let first = _mm512_setr_epi32(0, 1, 16, 17, 2, 3, 18, 19, 4, 5, 20, 21, 6, 7, 22, 23);
+        let second = _mm512_add_epi32(first, _mm512_set1_epi32(8));
+        let rg0 = _mm512_permutex2var_ps(r, low, g);
+        let ba0 = _mm512_permutex2var_ps(b, low, a);
+        let rg1 = _mm512_permutex2var_ps(r, high, g);
+        let ba1 = _mm512_permutex2var_ps(b, high, a);
+        [
+            _mm512_permutex2var_ps(rg0, first, ba0),
+            _mm512_permutex2var_ps(rg0, second, ba0),
+            _mm512_permutex2var_ps(rg1, first, ba1),
+            _mm512_permutex2var_ps(rg1, second, ba1),
+        ]
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn broadcast_rgba_alpha_repr(self, value: __m512) -> __m512 {
+        _mm512_permute_ps::<255>(value)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn with_rgba_alpha_repr(self, value: __m512, src: __m512) -> __m512 {
+        _mm512_mask_blend_ps(0x8888, value, src)
+    }
+}
+
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
+#[cfg(feature = "w512")]
 impl F64x8Backend for X64V4Token {
     type Repr = __m512d;
 
@@ -328,11 +584,47 @@ impl F64x8Backend for X64V4Token {
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn min(self, a: __m512d, b: __m512d) -> __m512d {
-        _mm512_min_pd(a, b)
+        _mm512_mask_blend_pd(
+            _mm512_cmp_pd_mask::<_CMP_UNORD_Q>(b, b),
+            _mm512_min_pd(a, b),
+            a,
+        )
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn max(self, a: __m512d, b: __m512d) -> __m512d {
+        _mm512_mask_blend_pd(
+            _mm512_cmp_pd_mask::<_CMP_UNORD_Q>(b, b),
+            _mm512_max_pd(a, b),
+            a,
+        )
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn minimum(self, a: __m512d, b: __m512d) -> __m512d {
+        _mm512_mask_blend_pd(
+            _mm512_cmp_pd_mask::<_CMP_UNORD_Q>(a, b),
+            _mm512_or_pd(_mm512_min_pd(a, b), _mm512_min_pd(b, a)),
+            _mm512_set1_pd(f64::NAN),
+        )
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn maximum(self, a: __m512d, b: __m512d) -> __m512d {
+        _mm512_mask_blend_pd(
+            _mm512_cmp_pd_mask::<_CMP_UNORD_Q>(a, b),
+            _mm512_and_pd(_mm512_max_pd(a, b), _mm512_max_pd(b, a)),
+            _mm512_set1_pd(f64::NAN),
+        )
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn min_fast(self, a: __m512d, b: __m512d) -> __m512d {
+        _mm512_min_pd(a, b)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn max_fast(self, a: __m512d, b: __m512d) -> __m512d {
         _mm512_max_pd(a, b)
     }
 
@@ -345,6 +637,21 @@ impl F64x8Backend for X64V4Token {
     fn abs(self, a: __m512d) -> __m512d {
         let mask = _mm512_castsi512_pd(_mm512_set1_epi64(0x7FFF_FFFF_FFFF_FFFFu64 as i64));
         _mm512_and_pd(a, mask)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn trunc(self, a: __m512d) -> __m512d {
+        _mm512_roundscale_pd::<0x03>(a)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn mul_neg_add_relaxed(self, a: __m512d, b: __m512d, c: __m512d) -> __m512d {
+        _mm512_fnmadd_pd(a, b, c)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn mul_neg_add_fused(self, a: __m512d, b: __m512d, c: __m512d) -> __m512d {
+        _mm512_fnmadd_pd(a, b, c)
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
@@ -483,8 +790,8 @@ impl F64x8Backend for X64V4Token {
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl I8x64Backend for X64V4Token {
     type Repr = __m512i;
 
@@ -675,9 +982,7 @@ impl I8x64Backend for X64V4Token {
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn bitmask(self, a: __m512i) -> u64 {
-        // Extract high bit of each lane: compare < 0 for signed interpretation
-        let zero = _mm512_setzero_si512();
-        _mm512_cmpneq_epi8_mask(_mm512_and_si512(a, _mm512_set1_epi8(1_i8 << (8 - 1))), zero)
+        _mm512_movepi8_mask(a)
     }
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn widen_low_i8_to_i16(self, a: __m512i) -> __m512i {
@@ -690,8 +995,8 @@ impl I8x64Backend for X64V4Token {
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl U8x64Backend for X64V4Token {
     type Repr = __m512i;
 
@@ -876,9 +1181,7 @@ impl U8x64Backend for X64V4Token {
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn bitmask(self, a: __m512i) -> u64 {
-        // Extract high bit of each lane: compare < 0 for signed interpretation
-        let zero = _mm512_setzero_si512();
-        _mm512_cmpneq_epi8_mask(_mm512_and_si512(a, _mm512_set1_epi8(1_i8 << (8 - 1))), zero)
+        _mm512_movepi8_mask(a)
     }
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn widen_low_u8_to_u16(self, a: __m512i) -> __m512i {
@@ -920,8 +1223,8 @@ impl U8x64Backend for X64V4Token {
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl I16x32Backend for X64V4Token {
     type Repr = __m512i;
 
@@ -1117,12 +1420,7 @@ impl I16x32Backend for X64V4Token {
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn bitmask(self, a: __m512i) -> u64 {
-        // Extract high bit of each lane: compare < 0 for signed interpretation
-        let zero = _mm512_setzero_si512();
-        _mm512_cmpneq_epi16_mask(
-            _mm512_and_si512(a, _mm512_set1_epi16(1_i16 << (16 - 1))),
-            zero,
-        ) as u64
+        _mm512_movepi16_mask(a) as u64
     }
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn widen_low_i16_to_i32(self, a: __m512i) -> __m512i {
@@ -1165,8 +1463,8 @@ impl I16x32Backend for X64V4Token {
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl U16x32Backend for X64V4Token {
     type Repr = __m512i;
 
@@ -1357,12 +1655,7 @@ impl U16x32Backend for X64V4Token {
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn bitmask(self, a: __m512i) -> u64 {
-        // Extract high bit of each lane: compare < 0 for signed interpretation
-        let zero = _mm512_setzero_si512();
-        _mm512_cmpneq_epi16_mask(
-            _mm512_and_si512(a, _mm512_set1_epi16(1_i16 << (16 - 1))),
-            zero,
-        ) as u64
+        _mm512_movepi16_mask(a) as u64
     }
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn widen_low_u16_to_u32(self, a: __m512i) -> __m512i {
@@ -1383,8 +1676,8 @@ impl U16x32Backend for X64V4Token {
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl I32x16Backend for X64V4Token {
     type Repr = __m512i;
 
@@ -1526,7 +1819,41 @@ impl I32x16Backend for X64V4Token {
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn shl_const<const N: i32>(self, a: __m512i) -> __m512i {
-        _mm512_sll_epi32(a, _mm_cvtsi32_si128(N))
+        match N {
+            0 => _mm512_slli_epi32::<0>(a),
+            1 => _mm512_slli_epi32::<1>(a),
+            2 => _mm512_slli_epi32::<2>(a),
+            3 => _mm512_slli_epi32::<3>(a),
+            4 => _mm512_slli_epi32::<4>(a),
+            5 => _mm512_slli_epi32::<5>(a),
+            6 => _mm512_slli_epi32::<6>(a),
+            7 => _mm512_slli_epi32::<7>(a),
+            8 => _mm512_slli_epi32::<8>(a),
+            9 => _mm512_slli_epi32::<9>(a),
+            10 => _mm512_slli_epi32::<10>(a),
+            11 => _mm512_slli_epi32::<11>(a),
+            12 => _mm512_slli_epi32::<12>(a),
+            13 => _mm512_slli_epi32::<13>(a),
+            14 => _mm512_slli_epi32::<14>(a),
+            15 => _mm512_slli_epi32::<15>(a),
+            16 => _mm512_slli_epi32::<16>(a),
+            17 => _mm512_slli_epi32::<17>(a),
+            18 => _mm512_slli_epi32::<18>(a),
+            19 => _mm512_slli_epi32::<19>(a),
+            20 => _mm512_slli_epi32::<20>(a),
+            21 => _mm512_slli_epi32::<21>(a),
+            22 => _mm512_slli_epi32::<22>(a),
+            23 => _mm512_slli_epi32::<23>(a),
+            24 => _mm512_slli_epi32::<24>(a),
+            25 => _mm512_slli_epi32::<25>(a),
+            26 => _mm512_slli_epi32::<26>(a),
+            27 => _mm512_slli_epi32::<27>(a),
+            28 => _mm512_slli_epi32::<28>(a),
+            29 => _mm512_slli_epi32::<29>(a),
+            30 => _mm512_slli_epi32::<30>(a),
+            31 => _mm512_slli_epi32::<31>(a),
+            _ => unreachable!("shift count checked by the public API"),
+        }
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
@@ -1570,12 +1897,7 @@ impl I32x16Backend for X64V4Token {
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn bitmask(self, a: __m512i) -> u64 {
-        // Extract high bit of each lane: compare < 0 for signed interpretation
-        let zero = _mm512_setzero_si512();
-        _mm512_cmpneq_epi32_mask(
-            _mm512_and_si512(a, _mm512_set1_epi32(1_i32 << (32 - 1))),
-            zero,
-        ) as u64
+        _mm512_movepi32_mask(a) as u64
     }
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn narrow_saturating_i32_to_i16(self, a: __m512i, b: __m512i) -> __m512i {
@@ -1598,8 +1920,8 @@ impl I32x16Backend for X64V4Token {
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl U32x16Backend for X64V4Token {
     type Repr = __m512i;
 
@@ -1736,7 +2058,41 @@ impl U32x16Backend for X64V4Token {
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn shl_const<const N: i32>(self, a: __m512i) -> __m512i {
-        _mm512_sll_epi32(a, _mm_cvtsi32_si128(N))
+        match N {
+            0 => _mm512_slli_epi32::<0>(a),
+            1 => _mm512_slli_epi32::<1>(a),
+            2 => _mm512_slli_epi32::<2>(a),
+            3 => _mm512_slli_epi32::<3>(a),
+            4 => _mm512_slli_epi32::<4>(a),
+            5 => _mm512_slli_epi32::<5>(a),
+            6 => _mm512_slli_epi32::<6>(a),
+            7 => _mm512_slli_epi32::<7>(a),
+            8 => _mm512_slli_epi32::<8>(a),
+            9 => _mm512_slli_epi32::<9>(a),
+            10 => _mm512_slli_epi32::<10>(a),
+            11 => _mm512_slli_epi32::<11>(a),
+            12 => _mm512_slli_epi32::<12>(a),
+            13 => _mm512_slli_epi32::<13>(a),
+            14 => _mm512_slli_epi32::<14>(a),
+            15 => _mm512_slli_epi32::<15>(a),
+            16 => _mm512_slli_epi32::<16>(a),
+            17 => _mm512_slli_epi32::<17>(a),
+            18 => _mm512_slli_epi32::<18>(a),
+            19 => _mm512_slli_epi32::<19>(a),
+            20 => _mm512_slli_epi32::<20>(a),
+            21 => _mm512_slli_epi32::<21>(a),
+            22 => _mm512_slli_epi32::<22>(a),
+            23 => _mm512_slli_epi32::<23>(a),
+            24 => _mm512_slli_epi32::<24>(a),
+            25 => _mm512_slli_epi32::<25>(a),
+            26 => _mm512_slli_epi32::<26>(a),
+            27 => _mm512_slli_epi32::<27>(a),
+            28 => _mm512_slli_epi32::<28>(a),
+            29 => _mm512_slli_epi32::<29>(a),
+            30 => _mm512_slli_epi32::<30>(a),
+            31 => _mm512_slli_epi32::<31>(a),
+            _ => unreachable!("shift count checked by the public API"),
+        }
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
@@ -1780,17 +2136,12 @@ impl U32x16Backend for X64V4Token {
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn bitmask(self, a: __m512i) -> u64 {
-        // Extract high bit of each lane: compare < 0 for signed interpretation
-        let zero = _mm512_setzero_si512();
-        _mm512_cmpneq_epi32_mask(
-            _mm512_and_si512(a, _mm512_set1_epi32(1_i32 << (32 - 1))),
-            zero,
-        ) as u64
+        _mm512_movepi32_mask(a) as u64
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl I64x8Backend for X64V4Token {
     type Repr = __m512i;
 
@@ -1956,17 +2307,12 @@ impl I64x8Backend for X64V4Token {
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn bitmask(self, a: __m512i) -> u64 {
-        // Extract high bit of each lane: compare < 0 for signed interpretation
-        let zero = _mm512_setzero_si512();
-        _mm512_cmpneq_epi64_mask(
-            _mm512_and_si512(a, _mm512_set1_epi64(1_i64 << (64 - 1))),
-            zero,
-        ) as u64
+        _mm512_movepi64_mask(a) as u64
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl U64x8Backend for X64V4Token {
     type Repr = __m512i;
 
@@ -2127,12 +2473,7 @@ impl U64x8Backend for X64V4Token {
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn bitmask(self, a: __m512i) -> u64 {
-        // Extract high bit of each lane: compare < 0 for signed interpretation
-        let zero = _mm512_setzero_si512();
-        _mm512_cmpneq_epi64_mask(
-            _mm512_and_si512(a, _mm512_set1_epi64(1_i64 << (64 - 1))),
-            zero,
-        ) as u64
+        _mm512_movepi64_mask(a) as u64
     }
 }
 
@@ -2140,8 +2481,8 @@ impl U64x8Backend for X64V4Token {
 // X64V4xToken — base AVX-512 (same intrinsics as V4)
 // ============================================================================
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl F32x16Backend for X64V4xToken {
     type Repr = __m512;
 
@@ -2202,11 +2543,39 @@ impl F32x16Backend for X64V4xToken {
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn min(self, a: __m512, b: __m512) -> __m512 {
-        _mm512_min_ps(a, b)
+        _mm512_range_ps::<0x04>(a, b)
     }
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn max(self, a: __m512, b: __m512) -> __m512 {
+        _mm512_range_ps::<0x05>(a, b)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn minimum(self, a: __m512, b: __m512) -> __m512 {
+        _mm512_mask_blend_ps(
+            _mm512_cmp_ps_mask::<_CMP_UNORD_Q>(a, b),
+            _mm512_or_ps(_mm512_min_ps(a, b), _mm512_min_ps(b, a)),
+            _mm512_set1_ps(f32::NAN),
+        )
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn maximum(self, a: __m512, b: __m512) -> __m512 {
+        _mm512_mask_blend_ps(
+            _mm512_cmp_ps_mask::<_CMP_UNORD_Q>(a, b),
+            _mm512_and_ps(_mm512_max_ps(a, b), _mm512_max_ps(b, a)),
+            _mm512_set1_ps(f32::NAN),
+        )
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn min_fast(self, a: __m512, b: __m512) -> __m512 {
+        _mm512_min_ps(a, b)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn max_fast(self, a: __m512, b: __m512) -> __m512 {
         _mm512_max_ps(a, b)
     }
 
@@ -2219,6 +2588,21 @@ impl F32x16Backend for X64V4xToken {
     fn abs(self, a: __m512) -> __m512 {
         let mask = _mm512_castsi512_ps(_mm512_set1_epi32(0x7FFF_FFFFu32 as i32));
         _mm512_and_ps(a, mask)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn trunc(self, a: __m512) -> __m512 {
+        _mm512_roundscale_ps::<0x03>(a)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn mul_neg_add_relaxed(self, a: __m512, b: __m512, c: __m512) -> __m512 {
+        _mm512_fnmadd_ps(a, b, c)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn mul_neg_add_fused(self, a: __m512, b: __m512, c: __m512) -> __m512 {
+        _mm512_fnmadd_ps(a, b, c)
     }
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
@@ -2373,9 +2757,224 @@ impl F32x16Backend for X64V4xToken {
         _mm512_xor_ps(a, b)
     }
 }
-
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
+impl F32x16Internal for X64V4xToken {
+    type InternalRepr = __m512;
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn from_u16_lanes(self, lanes: &[u16; 16]) -> __m512 {
+        _mm512_cvtepi32_ps(_mm512_cvtepu16_epi32(crate::simd_storage::cast(*lanes)))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn to_u16_lanes<const CFG: u32>(self, value: __m512) -> [u16; 16] {
+        let opts = const { crate::numerics::IntConvert::decode(CFG) };
+        let value = if opts.saturates_all() {
+            _mm512_min_ps(_mm512_set1_ps(65535.0), value)
+        } else {
+            value
+        };
+        if opts.nonnegative() {
+            let i = if opts.rounds() {
+                _mm512_cvtps_epu32(value)
+            } else {
+                _mm512_cvttps_epu32(value)
+            };
+            return crate::simd_storage::cast(_mm512_cvtusepi32_epi16(i));
+        }
+
+        let i = if opts.rounds() {
+            _mm512_cvtps_epi32(value)
+        } else {
+            _mm512_cvttps_epi32(value)
+        };
+        crate::simd_storage::cast(_mm512_cvtusepi32_epi16(_mm512_max_epi32(
+            i,
+            _mm512_setzero_si512(),
+        )))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn to_u8_lanes<const CFG: u32>(self, value: __m512) -> [u8; 16] {
+        let opts = const { crate::numerics::IntConvert::decode(CFG) };
+        let value = if opts.saturates_all() {
+            _mm512_min_ps(_mm512_set1_ps(255.0), value)
+        } else {
+            value
+        };
+        if opts.nonnegative() {
+            let i = if opts.rounds() {
+                _mm512_cvtps_epu32(value)
+            } else {
+                _mm512_cvttps_epu32(value)
+            };
+            return crate::simd_storage::cast(_mm512_cvtusepi32_epi8(i));
+        }
+        let i = if opts.rounds() {
+            _mm512_cvtps_epi32(value)
+        } else {
+            _mm512_cvttps_epi32(value)
+        };
+        crate::simd_storage::cast(_mm512_cvtusepi32_epi8(_mm512_max_epi32(
+            i,
+            _mm512_setzero_si512(),
+        )))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn to_u32_lanes<const CFG: u32>(self, value: __m512) -> __m512 {
+        let opts = const { crate::numerics::IntConvert::decode(CFG) };
+        let clamped = if opts.nonnegative() {
+            value
+        } else {
+            _mm512_max_ps(value, _mm512_setzero_ps())
+        };
+        let i = if opts.rounds() {
+            _mm512_cvtps_epu32(clamped)
+        } else {
+            _mm512_cvttps_epu32(clamped)
+        };
+        _mm512_castsi512_ps(i)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn from_u32_lanes(self, value: __m512) -> __m512 {
+        _mm512_cvtepu32_ps(_mm512_castps_si512(value))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn from_f16_lanes<const CFG: u32>(self, lanes: &[u16; 16]) -> __m512 {
+        let opts = const { crate::numerics::HalfConvert::decode(CFG) };
+        let h = crate::simd_storage::cast(*lanes);
+        let h = if opts.flushes() {
+            let mag = _mm256_and_si256(h, _mm256_set1_epi16(0x7fff));
+            let small = _mm256_cmpgt_epi16(_mm256_set1_epi16(0x400), mag);
+            _mm256_andnot_si256(_mm256_and_si256(small, _mm256_set1_epi16(0x7fff)), h)
+        } else {
+            h
+        };
+        _mm512_cvtph_ps(h)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn to_f16_lanes<const CFG: u32>(self, value: __m512) -> [u16; 16] {
+        let opts = const { crate::numerics::HalfConvert::decode(CFG) };
+        let h = if opts.rounds() {
+            _mm512_cvtps_ph::<0>(value)
+        } else {
+            _mm512_cvtps_ph::<3>(value)
+        };
+        let h = if opts.flushes() {
+            let mag = _mm256_and_si256(h, _mm256_set1_epi16(0x7fff));
+            let small = _mm256_cmpgt_epi16(_mm256_set1_epi16(0x400), mag);
+            _mm256_andnot_si256(_mm256_and_si256(small, _mm256_set1_epi16(0x7fff)), h)
+        } else {
+            h
+        };
+        crate::simd_storage::cast(h)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn from_bf16_lanes(self, lanes: &[u16; 16]) -> __m512 {
+        _mm512_castsi512_ps(_mm512_slli_epi32::<16>(_mm512_cvtepu16_epi32(
+            crate::simd_storage::cast(*lanes),
+        )))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn to_bf16_lanes<const CFG: u32>(self, value: __m512) -> [u16; 16] {
+        let opts = const { crate::numerics::HalfConvert::decode(CFG) };
+        let raw = _mm512_castps_si512(value);
+        let rounded = if opts.rounds() {
+            let lsb = _mm512_and_si512(_mm512_srli_epi32::<16>(raw), _mm512_set1_epi32(1));
+            _mm512_add_epi32(raw, _mm512_add_epi32(lsb, _mm512_set1_epi32(0x7fff)))
+        } else {
+            raw
+        };
+        let rounded = if opts.is_finite() {
+            rounded
+        } else {
+            _mm512_mask_blend_epi32(
+                _mm512_cmpgt_epi32_mask(
+                    _mm512_and_si512(raw, _mm512_set1_epi32(0x7fff_ffff)),
+                    _mm512_set1_epi32(0x7f80_0000),
+                ),
+                rounded,
+                _mm512_or_si512(raw, _mm512_set1_epi32(0x0040_0000)),
+            )
+        };
+        let i = _mm512_srli_epi32::<16>(rounded);
+        let i = if opts.flushes() {
+            _mm512_mask_blend_epi32(
+                _mm512_test_epi32_mask(i, _mm512_set1_epi32(0x7f80)),
+                _mm512_and_si512(i, _mm512_set1_epi32(0x8000)),
+                i,
+            )
+        } else {
+            i
+        };
+        crate::simd_storage::cast(_mm512_cvtusepi32_epi16(_mm512_max_epi32(
+            i,
+            _mm512_setzero_si512(),
+        )))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn from_u8_lanes_wide(self, lanes: &[u8; 16]) -> __m512 {
+        _mm512_cvtepi32_ps(_mm512_cvtepu8_epi32(crate::simd_storage::cast(*lanes)))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn deinterleave_rgba_wide(self, rgba: [__m512; 4]) -> [__m512; 4] {
+        let [a, b, c, d] = rgba;
+        let rg = _mm512_setr_epi32(0, 4, 8, 12, 16, 20, 24, 28, 1, 5, 9, 13, 17, 21, 25, 29);
+        let ba = _mm512_add_epi32(rg, _mm512_set1_epi32(2));
+        let low = _mm512_setr_epi32(0, 1, 2, 3, 4, 5, 6, 7, 16, 17, 18, 19, 20, 21, 22, 23);
+        let high = _mm512_add_epi32(low, _mm512_set1_epi32(8));
+        let ab_rg = _mm512_permutex2var_ps(a, rg, b);
+        let cd_rg = _mm512_permutex2var_ps(c, rg, d);
+        let ab_ba = _mm512_permutex2var_ps(a, ba, b);
+        let cd_ba = _mm512_permutex2var_ps(c, ba, d);
+        [
+            _mm512_permutex2var_ps(ab_rg, low, cd_rg),
+            _mm512_permutex2var_ps(ab_rg, high, cd_rg),
+            _mm512_permutex2var_ps(ab_ba, low, cd_ba),
+            _mm512_permutex2var_ps(ab_ba, high, cd_ba),
+        ]
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn interleave_rgba_wide(self, channels: [__m512; 4]) -> [__m512; 4] {
+        let [r, g, b, a] = channels;
+        let low = _mm512_setr_epi32(0, 16, 1, 17, 2, 18, 3, 19, 4, 20, 5, 21, 6, 22, 7, 23);
+        let high = _mm512_add_epi32(low, _mm512_set1_epi32(8));
+        let first = _mm512_setr_epi32(0, 1, 16, 17, 2, 3, 18, 19, 4, 5, 20, 21, 6, 7, 22, 23);
+        let second = _mm512_add_epi32(first, _mm512_set1_epi32(8));
+        let rg0 = _mm512_permutex2var_ps(r, low, g);
+        let ba0 = _mm512_permutex2var_ps(b, low, a);
+        let rg1 = _mm512_permutex2var_ps(r, high, g);
+        let ba1 = _mm512_permutex2var_ps(b, high, a);
+        [
+            _mm512_permutex2var_ps(rg0, first, ba0),
+            _mm512_permutex2var_ps(rg0, second, ba0),
+            _mm512_permutex2var_ps(rg1, first, ba1),
+            _mm512_permutex2var_ps(rg1, second, ba1),
+        ]
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn broadcast_rgba_alpha_repr(self, value: __m512) -> __m512 {
+        _mm512_permute_ps::<255>(value)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn with_rgba_alpha_repr(self, value: __m512, src: __m512) -> __m512 {
+        _mm512_mask_blend_ps(0x8888, value, src)
+    }
+}
+
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
+#[cfg(feature = "w512")]
 impl F64x8Backend for X64V4xToken {
     type Repr = __m512d;
 
@@ -2436,11 +3035,47 @@ impl F64x8Backend for X64V4xToken {
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn min(self, a: __m512d, b: __m512d) -> __m512d {
-        _mm512_min_pd(a, b)
+        _mm512_mask_blend_pd(
+            _mm512_cmp_pd_mask::<_CMP_UNORD_Q>(b, b),
+            _mm512_min_pd(a, b),
+            a,
+        )
     }
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn max(self, a: __m512d, b: __m512d) -> __m512d {
+        _mm512_mask_blend_pd(
+            _mm512_cmp_pd_mask::<_CMP_UNORD_Q>(b, b),
+            _mm512_max_pd(a, b),
+            a,
+        )
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn minimum(self, a: __m512d, b: __m512d) -> __m512d {
+        _mm512_mask_blend_pd(
+            _mm512_cmp_pd_mask::<_CMP_UNORD_Q>(a, b),
+            _mm512_or_pd(_mm512_min_pd(a, b), _mm512_min_pd(b, a)),
+            _mm512_set1_pd(f64::NAN),
+        )
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn maximum(self, a: __m512d, b: __m512d) -> __m512d {
+        _mm512_mask_blend_pd(
+            _mm512_cmp_pd_mask::<_CMP_UNORD_Q>(a, b),
+            _mm512_and_pd(_mm512_max_pd(a, b), _mm512_max_pd(b, a)),
+            _mm512_set1_pd(f64::NAN),
+        )
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn min_fast(self, a: __m512d, b: __m512d) -> __m512d {
+        _mm512_min_pd(a, b)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn max_fast(self, a: __m512d, b: __m512d) -> __m512d {
         _mm512_max_pd(a, b)
     }
 
@@ -2453,6 +3088,21 @@ impl F64x8Backend for X64V4xToken {
     fn abs(self, a: __m512d) -> __m512d {
         let mask = _mm512_castsi512_pd(_mm512_set1_epi64(0x7FFF_FFFF_FFFF_FFFFu64 as i64));
         _mm512_and_pd(a, mask)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn trunc(self, a: __m512d) -> __m512d {
+        _mm512_roundscale_pd::<0x03>(a)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn mul_neg_add_relaxed(self, a: __m512d, b: __m512d, c: __m512d) -> __m512d {
+        _mm512_fnmadd_pd(a, b, c)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn mul_neg_add_fused(self, a: __m512d, b: __m512d, c: __m512d) -> __m512d {
+        _mm512_fnmadd_pd(a, b, c)
     }
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
@@ -2591,8 +3241,8 @@ impl F64x8Backend for X64V4xToken {
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl I8x64Backend for X64V4xToken {
     type Repr = __m512i;
 
@@ -2783,9 +3433,7 @@ impl I8x64Backend for X64V4xToken {
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn bitmask(self, a: __m512i) -> u64 {
-        // Extract high bit of each lane: compare < 0 for signed interpretation
-        let zero = _mm512_setzero_si512();
-        _mm512_cmpneq_epi8_mask(_mm512_and_si512(a, _mm512_set1_epi8(1_i8 << (8 - 1))), zero)
+        _mm512_movepi8_mask(a)
     }
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn widen_low_i8_to_i16(self, a: __m512i) -> __m512i {
@@ -2798,8 +3446,8 @@ impl I8x64Backend for X64V4xToken {
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl U8x64Backend for X64V4xToken {
     type Repr = __m512i;
 
@@ -2984,9 +3632,7 @@ impl U8x64Backend for X64V4xToken {
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn bitmask(self, a: __m512i) -> u64 {
-        // Extract high bit of each lane: compare < 0 for signed interpretation
-        let zero = _mm512_setzero_si512();
-        _mm512_cmpneq_epi8_mask(_mm512_and_si512(a, _mm512_set1_epi8(1_i8 << (8 - 1))), zero)
+        _mm512_movepi8_mask(a)
     }
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn widen_low_u8_to_u16(self, a: __m512i) -> __m512i {
@@ -3028,8 +3674,8 @@ impl U8x64Backend for X64V4xToken {
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl I16x32Backend for X64V4xToken {
     type Repr = __m512i;
 
@@ -3225,12 +3871,7 @@ impl I16x32Backend for X64V4xToken {
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn bitmask(self, a: __m512i) -> u64 {
-        // Extract high bit of each lane: compare < 0 for signed interpretation
-        let zero = _mm512_setzero_si512();
-        _mm512_cmpneq_epi16_mask(
-            _mm512_and_si512(a, _mm512_set1_epi16(1_i16 << (16 - 1))),
-            zero,
-        ) as u64
+        _mm512_movepi16_mask(a) as u64
     }
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn widen_low_i16_to_i32(self, a: __m512i) -> __m512i {
@@ -3273,8 +3914,8 @@ impl I16x32Backend for X64V4xToken {
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl U16x32Backend for X64V4xToken {
     type Repr = __m512i;
 
@@ -3465,12 +4106,7 @@ impl U16x32Backend for X64V4xToken {
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn bitmask(self, a: __m512i) -> u64 {
-        // Extract high bit of each lane: compare < 0 for signed interpretation
-        let zero = _mm512_setzero_si512();
-        _mm512_cmpneq_epi16_mask(
-            _mm512_and_si512(a, _mm512_set1_epi16(1_i16 << (16 - 1))),
-            zero,
-        ) as u64
+        _mm512_movepi16_mask(a) as u64
     }
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn widen_low_u16_to_u32(self, a: __m512i) -> __m512i {
@@ -3491,8 +4127,8 @@ impl U16x32Backend for X64V4xToken {
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl I32x16Backend for X64V4xToken {
     type Repr = __m512i;
 
@@ -3634,7 +4270,41 @@ impl I32x16Backend for X64V4xToken {
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn shl_const<const N: i32>(self, a: __m512i) -> __m512i {
-        _mm512_sll_epi32(a, _mm_cvtsi32_si128(N))
+        match N {
+            0 => _mm512_slli_epi32::<0>(a),
+            1 => _mm512_slli_epi32::<1>(a),
+            2 => _mm512_slli_epi32::<2>(a),
+            3 => _mm512_slli_epi32::<3>(a),
+            4 => _mm512_slli_epi32::<4>(a),
+            5 => _mm512_slli_epi32::<5>(a),
+            6 => _mm512_slli_epi32::<6>(a),
+            7 => _mm512_slli_epi32::<7>(a),
+            8 => _mm512_slli_epi32::<8>(a),
+            9 => _mm512_slli_epi32::<9>(a),
+            10 => _mm512_slli_epi32::<10>(a),
+            11 => _mm512_slli_epi32::<11>(a),
+            12 => _mm512_slli_epi32::<12>(a),
+            13 => _mm512_slli_epi32::<13>(a),
+            14 => _mm512_slli_epi32::<14>(a),
+            15 => _mm512_slli_epi32::<15>(a),
+            16 => _mm512_slli_epi32::<16>(a),
+            17 => _mm512_slli_epi32::<17>(a),
+            18 => _mm512_slli_epi32::<18>(a),
+            19 => _mm512_slli_epi32::<19>(a),
+            20 => _mm512_slli_epi32::<20>(a),
+            21 => _mm512_slli_epi32::<21>(a),
+            22 => _mm512_slli_epi32::<22>(a),
+            23 => _mm512_slli_epi32::<23>(a),
+            24 => _mm512_slli_epi32::<24>(a),
+            25 => _mm512_slli_epi32::<25>(a),
+            26 => _mm512_slli_epi32::<26>(a),
+            27 => _mm512_slli_epi32::<27>(a),
+            28 => _mm512_slli_epi32::<28>(a),
+            29 => _mm512_slli_epi32::<29>(a),
+            30 => _mm512_slli_epi32::<30>(a),
+            31 => _mm512_slli_epi32::<31>(a),
+            _ => unreachable!("shift count checked by the public API"),
+        }
     }
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
@@ -3678,12 +4348,7 @@ impl I32x16Backend for X64V4xToken {
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn bitmask(self, a: __m512i) -> u64 {
-        // Extract high bit of each lane: compare < 0 for signed interpretation
-        let zero = _mm512_setzero_si512();
-        _mm512_cmpneq_epi32_mask(
-            _mm512_and_si512(a, _mm512_set1_epi32(1_i32 << (32 - 1))),
-            zero,
-        ) as u64
+        _mm512_movepi32_mask(a) as u64
     }
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn narrow_saturating_i32_to_i16(self, a: __m512i, b: __m512i) -> __m512i {
@@ -3706,8 +4371,8 @@ impl I32x16Backend for X64V4xToken {
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl U32x16Backend for X64V4xToken {
     type Repr = __m512i;
 
@@ -3844,7 +4509,41 @@ impl U32x16Backend for X64V4xToken {
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn shl_const<const N: i32>(self, a: __m512i) -> __m512i {
-        _mm512_sll_epi32(a, _mm_cvtsi32_si128(N))
+        match N {
+            0 => _mm512_slli_epi32::<0>(a),
+            1 => _mm512_slli_epi32::<1>(a),
+            2 => _mm512_slli_epi32::<2>(a),
+            3 => _mm512_slli_epi32::<3>(a),
+            4 => _mm512_slli_epi32::<4>(a),
+            5 => _mm512_slli_epi32::<5>(a),
+            6 => _mm512_slli_epi32::<6>(a),
+            7 => _mm512_slli_epi32::<7>(a),
+            8 => _mm512_slli_epi32::<8>(a),
+            9 => _mm512_slli_epi32::<9>(a),
+            10 => _mm512_slli_epi32::<10>(a),
+            11 => _mm512_slli_epi32::<11>(a),
+            12 => _mm512_slli_epi32::<12>(a),
+            13 => _mm512_slli_epi32::<13>(a),
+            14 => _mm512_slli_epi32::<14>(a),
+            15 => _mm512_slli_epi32::<15>(a),
+            16 => _mm512_slli_epi32::<16>(a),
+            17 => _mm512_slli_epi32::<17>(a),
+            18 => _mm512_slli_epi32::<18>(a),
+            19 => _mm512_slli_epi32::<19>(a),
+            20 => _mm512_slli_epi32::<20>(a),
+            21 => _mm512_slli_epi32::<21>(a),
+            22 => _mm512_slli_epi32::<22>(a),
+            23 => _mm512_slli_epi32::<23>(a),
+            24 => _mm512_slli_epi32::<24>(a),
+            25 => _mm512_slli_epi32::<25>(a),
+            26 => _mm512_slli_epi32::<26>(a),
+            27 => _mm512_slli_epi32::<27>(a),
+            28 => _mm512_slli_epi32::<28>(a),
+            29 => _mm512_slli_epi32::<29>(a),
+            30 => _mm512_slli_epi32::<30>(a),
+            31 => _mm512_slli_epi32::<31>(a),
+            _ => unreachable!("shift count checked by the public API"),
+        }
     }
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
@@ -3888,17 +4587,12 @@ impl U32x16Backend for X64V4xToken {
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn bitmask(self, a: __m512i) -> u64 {
-        // Extract high bit of each lane: compare < 0 for signed interpretation
-        let zero = _mm512_setzero_si512();
-        _mm512_cmpneq_epi32_mask(
-            _mm512_and_si512(a, _mm512_set1_epi32(1_i32 << (32 - 1))),
-            zero,
-        ) as u64
+        _mm512_movepi32_mask(a) as u64
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl I64x8Backend for X64V4xToken {
     type Repr = __m512i;
 
@@ -4064,17 +4758,12 @@ impl I64x8Backend for X64V4xToken {
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn bitmask(self, a: __m512i) -> u64 {
-        // Extract high bit of each lane: compare < 0 for signed interpretation
-        let zero = _mm512_setzero_si512();
-        _mm512_cmpneq_epi64_mask(
-            _mm512_and_si512(a, _mm512_set1_epi64(1_i64 << (64 - 1))),
-            zero,
-        ) as u64
+        _mm512_movepi64_mask(a) as u64
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl U64x8Backend for X64V4xToken {
     type Repr = __m512i;
 
@@ -4235,12 +4924,7 @@ impl U64x8Backend for X64V4xToken {
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn bitmask(self, a: __m512i) -> u64 {
-        // Extract high bit of each lane: compare < 0 for signed interpretation
-        let zero = _mm512_setzero_si512();
-        _mm512_cmpneq_epi64_mask(
-            _mm512_and_si512(a, _mm512_set1_epi64(1_i64 << (64 - 1))),
-            zero,
-        ) as u64
+        _mm512_movepi64_mask(a) as u64
     }
 }
 
@@ -4248,8 +4932,8 @@ impl U64x8Backend for X64V4xToken {
 // X64V4xToken — extension: popcnt (VPOPCNTDQ + BITALG)
 // ============================================================================
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl i8x64PopcntBackend for X64V4xToken {
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn popcnt(self, a: __m512i) -> __m512i {
@@ -4257,8 +4941,8 @@ impl i8x64PopcntBackend for X64V4xToken {
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl u8x64PopcntBackend for X64V4xToken {
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn popcnt(self, a: __m512i) -> __m512i {
@@ -4266,8 +4950,8 @@ impl u8x64PopcntBackend for X64V4xToken {
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl i16x32PopcntBackend for X64V4xToken {
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn popcnt(self, a: __m512i) -> __m512i {
@@ -4275,8 +4959,8 @@ impl i16x32PopcntBackend for X64V4xToken {
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl u16x32PopcntBackend for X64V4xToken {
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn popcnt(self, a: __m512i) -> __m512i {
@@ -4284,8 +4968,8 @@ impl u16x32PopcntBackend for X64V4xToken {
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl i32x16PopcntBackend for X64V4xToken {
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn popcnt(self, a: __m512i) -> __m512i {
@@ -4293,8 +4977,8 @@ impl i32x16PopcntBackend for X64V4xToken {
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl u32x16PopcntBackend for X64V4xToken {
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn popcnt(self, a: __m512i) -> __m512i {
@@ -4302,8 +4986,8 @@ impl u32x16PopcntBackend for X64V4xToken {
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl i64x8PopcntBackend for X64V4xToken {
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn popcnt(self, a: __m512i) -> __m512i {
@@ -4311,8 +4995,8 @@ impl i64x8PopcntBackend for X64V4xToken {
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl u64x8PopcntBackend for X64V4xToken {
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn popcnt(self, a: __m512i) -> __m512i {
@@ -4324,7 +5008,7 @@ impl u64x8PopcntBackend for X64V4xToken {
 // F32x16Convert — native AVX-512 conversions
 // ============================================================================
 
-#[cfg(all(target_arch = "x86_64", feature = "w512"))]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "w512"))]
 #[cfg(feature = "w512")]
 impl F32x16Convert for X64V4Token {
     #[arcane(suppress_const_test, _self = X64V4Token)]
@@ -4363,7 +5047,7 @@ impl F32x16Convert for X64V4Token {
     }
 }
 
-#[cfg(all(target_arch = "x86_64", feature = "w512"))]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "w512"))]
 #[cfg(feature = "w512")]
 impl F32x16Convert for X64V4xToken {
     #[arcane(suppress_const_test, _self = X64V4xToken)]

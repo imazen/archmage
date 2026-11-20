@@ -690,6 +690,7 @@ fn generate_float_backend_trait(ty: &FloatVecType) -> String {
     let elem = ty.elem;
     let lanes = ty.lanes;
     let array = ty.array_type();
+    let internal_trait = super::float_layout::internal_trait(elem, lanes);
 
     // Pixel-pack default (f32 only): round-to-nearest + saturate each lane to u8.
     // Scalar fallback; x86/ARM backends override with native cvt+pack. Restores the
@@ -715,27 +716,38 @@ fn generate_float_backend_trait(ty: &FloatVecType) -> String {
             /// `roundevenf`); the byte interleave is left to LLVM, which recovers
             /// it to native shuffles. A backend may still override for a tighter
             /// fused sequence.
+            #[deprecated(since = "0.9.32", note = "Use {vector}::store_rgba_u8")]
             #[inline(always)]
             fn store_rgba_bytes(self, r: Self::Repr, g: Self::Repr, b: Self::Repr, a: Self::Repr) -> [u8; {rgba_bytes}] {{
-                let rb = <Self as {trait_name}>::to_u8_bytes(self, r);
-                let gb = <Self as {trait_name}>::to_u8_bytes(self, g);
-                let bb = <Self as {trait_name}>::to_u8_bytes(self, b);
-                let ab = <Self as {trait_name}>::to_u8_bytes(self, a);
                 let mut out = [0u8; {rgba_bytes}];
-                let mut i = 0;
-                while i < {lanes} {{
-                    out[i * 4] = rb[i];
-                    out[i * 4 + 1] = gb[i];
-                    out[i * 4 + 2] = bb[i];
-                    out[i * 4 + 3] = ab[i];
-                    i += 1;
-                }}
+                <Self as F32x{lanes}Internal>::store_rgba_u8_into(self, r, g, b, a, &mut out);
                 out
             }}
-        "#, rgba_bytes = lanes * 4}
+        "#, rgba_bytes = lanes * 4, vector = ty.name()}
     } else {
         String::new()
     };
+
+    let min_max_fast_trait = formatdoc! {r#"
+
+        /// IEEE 754-2019 minimum (`NaN`-propagating, `-0.0 < +0.0`).
+        fn minimum(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
+
+        /// IEEE 754-2019 maximum (`NaN`-propagating, `-0.0 < +0.0`).
+        fn maximum(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
+
+        /// Fast lane-wise minimum (`NaN` and `±0.0` unspecified).
+        #[inline(always)]
+        fn min_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {{
+            Self::min(self, a, b)
+        }}
+
+        /// Fast lane-wise maximum (`NaN` and `±0.0` unspecified).
+        #[inline(always)]
+        fn max_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {{
+            Self::max(self, a, b)
+        }}
+    "#};
 
     // 8x8 transpose lives only on f32x8 (8 rows of 8). Default is a scalar
     // gather (LLVM recovers it to native shuffles on ARM/WASM); x86 overrides
@@ -760,6 +772,14 @@ fn generate_float_backend_trait(ty: &FloatVecType) -> String {
         String::new()
     };
 
+    let scalar_bound = if elem == "f32" {
+        format!(
+            " + F32x{lanes}Internal<InternalRepr = <Self as {trait_name}>::Repr> + crate::scalar::F32ScalarBackend"
+        )
+    } else {
+        " + crate::scalar::F64ScalarBackend".to_string()
+    };
+
     formatdoc! {r#"
         //! Backend trait for `{name}<T>` — {lanes}-lane {elem} SIMD vector.
         //!
@@ -771,7 +791,7 @@ fn generate_float_backend_trait(ty: &FloatVecType) -> String {
         use super::sealed::Sealed;
         use archmage::SimdToken;
 
-        /// Backend implementation for {lanes}-lane {elem} SIMD vectors.
+        {internal_trait}/// Backend implementation for {lanes}-lane {elem} SIMD vectors.
         ///
         /// Trait methods take `self` (the token) as receiver — the token value
         /// is the proof of CPU support, and requiring it as the receiver means
@@ -784,7 +804,8 @@ fn generate_float_backend_trait(ty: &FloatVecType) -> String {
         ///
         /// This trait is sealed — only archmage token types can implement it.
         /// The token proves CPU support was verified via `summon()`.
-        pub trait {trait_name}: SimdToken + Sealed + Copy + 'static {{
+        #[allow(private_bounds)]
+        pub trait {trait_name}: SimdToken + Sealed{scalar_bound} + Copy + 'static {{
             /// Platform-native SIMD representation.
             #[allow(private_bounds)]
             type Repr: Copy + Clone + Send + Sync + crate::simd_storage::Pod;
@@ -828,17 +849,37 @@ fn generate_float_backend_trait(ty: &FloatVecType) -> String {
 
             // ====== Math ======
 
-            /// Lane-wise minimum.
+            /// Lane-wise minimum matching `{elem}::min` (returns the numeric operand on a single quiet `NaN`; signalling `NaN` and `±0.0` unspecified).
             fn min(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
-            /// Lane-wise maximum.
+            /// Lane-wise maximum matching `{elem}::max` (returns the numeric operand on a single quiet `NaN`; signalling `NaN` and `±0.0` unspecified).
             fn max(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
+            {min_max_fast_trait}
 
             /// Square root.
             fn sqrt(self, a: Self::Repr) -> Self::Repr;
 
             /// Absolute value.
             fn abs(self, a: Self::Repr) -> Self::Repr;
+
+            /// Truncate toward zero without changing the sign of zero.
+            #[inline(always)]
+            fn trunc(self, a: Self::Repr) -> Self::Repr {{
+                let lanes = <Self as {trait_name}>::to_array(self, a);
+                <Self as {trait_name}>::from_array(self, lanes.map(crate::scalar::trunc_{elem}))
+            }}
+
+            /// Multiply-negate-add with backend-dependent rounding.
+            #[inline(always)]
+            fn mul_neg_add_relaxed(self, a: Self::Repr, b: Self::Repr, c: Self::Repr) -> Self::Repr {{
+                <Self as {trait_name}>::mul_add(self, <Self as {trait_name}>::neg(self, a), b, c)
+            }}
+
+            /// Multiply-negate-add with one rounding.
+            #[inline(always)]
+            fn mul_neg_add_fused(self, a: Self::Repr, b: Self::Repr, c: Self::Repr) -> Self::Repr {{
+                <Self as {trait_name}>::mul_add_portable(self, <Self as {trait_name}>::neg(self, a), b, c)
+            }}
 
             /// Round toward negative infinity.
             fn floor(self, a: Self::Repr) -> Self::Repr;
@@ -922,9 +963,9 @@ fn generate_float_backend_trait(ty: &FloatVecType) -> String {
             fn rcp_approx(self, a: Self::Repr) -> Self::Repr {{ a }}
 
             /// Fast reciprocal square root approximation: backend-dependent
-            /// (x86 ~12-bit, ARM ~8-bit, WASM full). [`rsqrt`] is full f32 everywhere.
+            /// (x86 ~12-bit, ARM ~8-bit, WASM full). [`rsqrt`](Self::rsqrt) is full f32 everywhere.
             ///
-            /// See [`rcp_approx`] for default-body rationale.
+            /// See [`rcp_approx`](Self::rcp_approx) for default-body rationale.
             #[inline(always)]
             fn rsqrt_approx(self, a: Self::Repr) -> Self::Repr {{ a }}
 
@@ -944,14 +985,19 @@ fn generate_float_backend_trait(ty: &FloatVecType) -> String {
 
             // ====== Default implementations ======
 
-            /// Clamp values between lo and hi.
+            /// Clamp values between `lo` and `hi`: `min_fast(max_fast(a, lo), hi)`,
+            /// two instructions on native backends.
+            ///
+            /// A quiet `NaN` lane in `a` becomes `lo` on x86, NEON, strict WASM, and
+            /// `ScalarToken`; signalling `NaN`, WASM `relaxed-simd` `NaN` lanes, `NaN`
+            /// bounds, and `lo > hi` are unspecified per backend, and `clamp` never panics.
             #[inline(always)]
             fn clamp(self, a: Self::Repr, lo: Self::Repr, hi: Self::Repr) -> Self::Repr {{
-                <Self as {trait_name}>::min(self, <Self as {trait_name}>::max(self, a, lo), hi)
+                <Self as {trait_name}>::min_fast(self, <Self as {trait_name}>::max_fast(self, a, lo), hi)
             }}
 
             /// Working-tier reciprocal — defaults to delegating to
-            /// [`rcp_approx`] (which itself defaults to identity), so every
+            /// [`rcp_approx`](Self::rcp_approx) (which itself defaults to identity), so every
             /// backend MUST override. Contract: <= 4 ULP by the backend's
             /// fastest conforming path (estimate + Newton on x86/NEON f32,
             /// exact division elsewhere); rails are per-backend and may be
@@ -960,7 +1006,7 @@ fn generate_float_backend_trait(ty: &FloatVecType) -> String {
             #[inline(always)]
             fn recip(self, a: Self::Repr) -> Self::Repr {{ Self::rcp_approx(self, a) }}
 
-            /// Working-tier reciprocal square root — see [`recip`] for the
+            /// Working-tier reciprocal square root — see [`recip`](Self::recip) for the
             /// contract shape.
             #[inline(always)]
             fn rsqrt(self, a: Self::Repr) -> Self::Repr {{ Self::rsqrt_approx(self, a) }}
@@ -999,7 +1045,14 @@ fn generate_backends_mod(
     for ty in types {
         let name = ty.name();
         let trait_name = ty.trait_name();
-        code.push_str(&format!("mod {name};\npub use {name}::{trait_name};\n\n"));
+        code.push_str(&format!("mod {name};\npub use {name}::{trait_name};\n"));
+        if ty.elem == "f32" {
+            code.push_str(&format!(
+                "pub(crate) use {name}::F32x{}Internal;\n",
+                ty.lanes
+            ));
+        }
+        code.push('\n');
     }
 
     // Module declarations and re-exports (i32)
@@ -1036,8 +1089,15 @@ fn generate_backends_mod(
         let name = ty.name();
         let trait_name = ty.trait_name();
         code.push_str(&format!(
-            "#[cfg(feature = \"w512\")]\nmod {name};\n#[cfg(feature = \"w512\")]\npub use {name}::{trait_name};\n\n"
+            "#[cfg(feature = \"w512\")]\nmod {name};\n#[cfg(feature = \"w512\")]\npub use {name}::{trait_name};\n"
         ));
+        if ty.elem == "f32" {
+            code.push_str(&format!(
+                "#[cfg(feature = \"w512\")]\npub(crate) use {name}::F32x{}Internal;\n",
+                ty.lanes
+            ));
+        }
+        code.push('\n');
     }
 
     // Extension traits (popcnt for Modern token)
@@ -1092,22 +1152,22 @@ fn generate_impls_mod() -> String {
         //!
         //! **Auto-generated** by `cargo xtask generate` - do not edit manually.
 
-        #[cfg(target_arch = "x86_64")]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
         mod x86_v3;
 
-        #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
         mod x86_v4;
 
         // The AVX-512 tokens' W128 / W256 f32 backends, forwarded to V3's
         // (generated from the trait definitions; V4 ⊃ V3, so delegating is
         // sound), plus the hand-written AVX-512VL pixel-packing overrides.
-        #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
         mod x86_v4_f32_delegated;
-        #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
         mod x86_v4_f32_overrides;
         // The remaining W128 / W256 backends (f64 + int families) and the
         // float↔int convert/bitcast traits, forwarded to V3's the same way.
-        #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
         mod x86_v4_narrow_delegated;
 
         #[cfg(target_arch = "aarch64")]
@@ -1175,10 +1235,10 @@ fn generate_x86_v4_impls_file(w512_types: &[super::backend_gen_w512::W512Type]) 
         //! **Auto-generated** by `cargo xtask generate` - do not edit manually.
         //!
         {safety}
-        #[cfg(target_arch = "x86_64")]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
         use core::arch::x86_64::*;
 
-        #[cfg(target_arch = "x86_64")]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
         use archmage::{{arcane, X64V4Token, X64V4xToken}};
 
         use crate::simd::backends::*;
@@ -1233,7 +1293,7 @@ fn generate_x86_v4_impls_file(w512_types: &[super::backend_gen_w512::W512Type]) 
 fn generate_x86_v4_f32x16_convert(token: &str) -> String {
     let arcane = super::backend_syntax::arcane(token);
     formatdoc! {r#"
-        #[cfg(all(target_arch = "x86_64", feature = "w512"))]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "w512"))]
         impl F32x16Convert for archmage::{token} {{
             {arcane}
             fn bitcast_f32_to_i32(self, a: __m512) -> __m512i {{
@@ -1287,10 +1347,10 @@ fn generate_x86_impls(types: &[FloatVecType], token: &str, max_width: usize) -> 
         //! **Auto-generated** by `cargo xtask generate` - do not edit manually.
         //!
         {safety}
-        #[cfg(target_arch = "x86_64")]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
         use core::arch::x86_64::*;
 
-        #[cfg(target_arch = "x86_64")]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
         use archmage::{{arcane, {token}}};
 
         use crate::simd::backends::*;
@@ -1303,7 +1363,7 @@ fn generate_x86_impls(types: &[FloatVecType], token: &str, max_width: usize) -> 
         if ty.width_bits > max_width {
             continue;
         }
-        code.push_str("#[cfg(target_arch = \"x86_64\")]\n");
+        code.push_str("#[cfg(all(target_arch = \"x86_64\", target_feature = \"sse2\"))]\n");
         code.push_str(&generate_x86_float_impl(ty, token));
         code.push('\n');
     }
@@ -1523,7 +1583,7 @@ fn generate_x86_float_impl(ty: &FloatVecType, token: &str) -> String {
         formatdoc! {r#"
 
             {arcane}
-            fn store_rgba_bytes(self, r: {inner}, g: {inner}, b: {inner}, a: {inner}) -> [u8; 16] {{
+            fn store_rgba_u8_into(self, r: {inner}, g: {inner}, b: {inner}, a: {inner}, out: &mut [u8; 16]) {{
                 let max = _mm_set1_ps(255.0);
                 let rg = _mm_packs_epi32(
                     _mm_cvtps_epi32(_mm_min_ps(max, r)),
@@ -1536,14 +1596,14 @@ fn generate_x86_float_impl(ty: &FloatVecType, token: &str) -> String {
                 // [R0-3,G0-3,B0-3,A0-3] -> interleaved RGBA pixels 0-3.
                 let packed = _mm_packus_epi16(rg, ba);
                 let shuf = _mm_setr_epi8(0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15);
-                crate::simd_storage::cast(_mm_shuffle_epi8(packed, shuf))
+                crate::simd_storage::store(_mm_shuffle_epi8(packed, shuf), out);
             }}
         "#}
     } else if elem == "f32" && bits == 256 {
         formatdoc! {r#"
 
             {arcane}
-            fn store_rgba_bytes(self, r: {inner}, g: {inner}, b: {inner}, a: {inner}) -> [u8; 32] {{
+            fn store_rgba_u8_into(self, r: {inner}, g: {inner}, b: {inner}, a: {inner}, out: &mut [u8; 32]) {{
                 // AVX2 packs are lane-wise: lane0 holds pixels 0-3, lane1 4-7.
                 let max = _mm256_set1_ps(255.0);
                 let rg = _mm256_packs_epi32(
@@ -1559,7 +1619,184 @@ fn generate_x86_float_impl(ty: &FloatVecType, token: &str) -> String {
                     0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15,
                     0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15,
                 );
-                crate::simd_storage::cast(_mm256_shuffle_epi8(packed, shuf))
+                crate::simd_storage::store(_mm256_shuffle_epi8(packed, shuf), out);
+            }}
+        "#}
+    } else {
+        String::new()
+    };
+
+    // Native 3-channel RGB AoS<->SoA shuffles and wide u8 loads/stores (issue #169).
+    let float_layout = if elem == "f32" {
+        super::float_layout::x86(ty.lanes, inner, &arcane)
+    } else {
+        String::new()
+    };
+    let rgb_3ch_x86 = if elem == "f32" && bits == 128 {
+        formatdoc! {r#"
+
+            {arcane}
+            fn deinterleave_3ch_repr(self, rgb: [{inner}; 3]) -> [{inner}; 3] {{
+                let [v0, v1, v2] = rgb;
+                let t_r = _mm_shuffle_ps::<0b01_01_10_10>(v1, v2);
+                let r = _mm_shuffle_ps::<0b10_00_11_00>(v0, t_r);
+                let t_g0 = _mm_shuffle_ps::<0b00_00_01_01>(v0, v1);
+                let t_g1 = _mm_shuffle_ps::<0b10_10_11_11>(v1, v2);
+                let g = _mm_shuffle_ps::<0b10_00_10_00>(t_g0, t_g1);
+                let t_b = _mm_shuffle_ps::<0b01_01_10_10>(v0, v1);
+                let b = _mm_shuffle_ps::<0b11_00_10_00>(t_b, v2);
+                [r, g, b]
+            }}
+
+            {arcane}
+            fn interleave_3ch_repr(self, channels: [{inner}; 3]) -> [{inner}; 3] {{
+                let [r, g, b] = channels;
+                let rg_lo = _mm_unpacklo_ps(r, g);
+                let rg_hi = _mm_unpackhi_ps(r, g);
+                let gb_lo = _mm_unpacklo_ps(g, b);
+                let gb_hi = _mm_unpackhi_ps(g, b);
+                let br01 = _mm_shuffle_ps::<0b01_01_00_00>(b, r);
+                let out0 = _mm_shuffle_ps::<0b10_00_01_00>(rg_lo, br01);
+                let out1 = _mm_shuffle_ps::<0b01_00_11_10>(gb_lo, rg_hi);
+                let br23 = _mm_shuffle_ps::<0b11_11_10_10>(b, r);
+                let out2 = _mm_shuffle_ps::<0b11_10_10_00>(br23, gb_hi);
+                [out0, out1, out2]
+            }}
+
+            {arcane}
+            fn load_rgb_bytes(self, rgb: &[u8; 12]) -> ({inner}, {inner}, {inner}) {{
+                let lo8: u64 = crate::simd_storage::copy(rgb.first_chunk::<8>().unwrap());
+                let hi4: u32 = crate::simd_storage::copy(rgb.last_chunk::<4>().unwrap());
+                let raw = _mm_insert_epi32::<2>(_mm_cvtsi64_si128(lo8 as i64), hi4 as i32);
+                let r32 = _mm_shuffle_epi8(
+                    raw,
+                    _mm_setr_epi8(0, -1, -1, -1, 3, -1, -1, -1, 6, -1, -1, -1, 9, -1, -1, -1),
+                );
+                let g32 = _mm_shuffle_epi8(
+                    raw,
+                    _mm_setr_epi8(1, -1, -1, -1, 4, -1, -1, -1, 7, -1, -1, -1, 10, -1, -1, -1),
+                );
+                let b32 = _mm_shuffle_epi8(
+                    raw,
+                    _mm_setr_epi8(2, -1, -1, -1, 5, -1, -1, -1, 8, -1, -1, -1, 11, -1, -1, -1),
+                );
+                (_mm_cvtepi32_ps(r32), _mm_cvtepi32_ps(g32), _mm_cvtepi32_ps(b32))
+            }}
+
+            {arcane}
+            fn store_rgb_u8_into(self, r: {inner}, g: {inner}, b: {inner}, out: &mut [u8; 12]) {{
+                let max = _mm_set1_ps(255.0);
+                let rg16 = _mm_packs_epi32(
+                    _mm_cvtps_epi32(_mm_min_ps(max, r)),
+                    _mm_cvtps_epi32(_mm_min_ps(max, g)),
+                );
+                let b16 = _mm_packs_epi32(
+                    _mm_cvtps_epi32(_mm_min_ps(max, b)),
+                    _mm_setzero_si128(),
+                );
+                let rgb8 = _mm_packus_epi16(rg16, b16);
+                let shuf = _mm_setr_epi8(0, 4, 8, 1, 5, 9, 2, 6, 10, 3, 7, 11, -1, -1, -1, -1);
+                let packed = _mm_shuffle_epi8(rgb8, shuf);
+                crate::simd_storage::store(
+                    _mm_cvtsi128_si64(packed) as u64,
+                    out.first_chunk_mut::<8>().unwrap(),
+                );
+                crate::simd_storage::store(
+                    _mm_extract_epi32::<2>(packed) as u32,
+                    out.last_chunk_mut::<4>().unwrap(),
+                );
+            }}
+        "#}
+    } else if elem == "f32" && bits == 256 {
+        // Since gcd(3, 8) = 1, 2 blends + 1 vpermps deinterleave (and inverse);
+        // load_rgb_bytes reads overlapping 16B chunks at +0 and +8 within [u8; 24].
+        formatdoc! {r#"
+
+            {arcane}
+            fn deinterleave_3ch_repr(self, rgb: [{inner}; 3]) -> [{inner}; 3] {{
+                let [v0, v1, v2] = rgb;
+                let r_mix = _mm256_blend_ps::<0x24>(_mm256_blend_ps::<0x92>(v0, v1), v2);
+                let g_mix = _mm256_blend_ps::<0x49>(_mm256_blend_ps::<0x24>(v0, v1), v2);
+                let b_mix = _mm256_blend_ps::<0x92>(_mm256_blend_ps::<0x49>(v0, v1), v2);
+                [
+                    _mm256_permutevar8x32_ps(r_mix, _mm256_setr_epi32(0, 3, 6, 1, 4, 7, 2, 5)),
+                    _mm256_permutevar8x32_ps(g_mix, _mm256_setr_epi32(1, 4, 7, 2, 5, 0, 3, 6)),
+                    _mm256_permutevar8x32_ps(b_mix, _mm256_setr_epi32(2, 5, 0, 3, 6, 1, 4, 7)),
+                ]
+            }}
+
+            {arcane}
+            fn interleave_3ch_repr(self, channels: [{inner}; 3]) -> [{inner}; 3] {{
+                let [r, g, b] = channels;
+                let rp = _mm256_permutevar8x32_ps(r, _mm256_setr_epi32(0, 3, 6, 1, 4, 7, 2, 5));
+                let gp = _mm256_permutevar8x32_ps(g, _mm256_setr_epi32(5, 0, 3, 6, 1, 4, 7, 2));
+                let bp = _mm256_permutevar8x32_ps(b, _mm256_setr_epi32(2, 5, 0, 3, 6, 1, 4, 7));
+                [
+                    _mm256_blend_ps::<0x24>(_mm256_blend_ps::<0x92>(rp, gp), bp),
+                    _mm256_blend_ps::<0x24>(_mm256_blend_ps::<0x49>(rp, bp), gp),
+                    _mm256_blend_ps::<0x24>(_mm256_blend_ps::<0x92>(gp, bp), rp),
+                ]
+            }}
+
+            {arcane}
+            fn load_rgb_bytes(self, rgb: &[u8; 24]) -> ({inner}, {inner}, {inner}) {{
+                let lo: __m128i = crate::simd_storage::copy(rgb.first_chunk::<16>().unwrap());
+                let hi: __m128i = crate::simd_storage::copy(rgb.last_chunk::<16>().unwrap());
+                let raw = _mm256_inserti128_si256::<1>(_mm256_castsi128_si256(lo), hi);
+                let r32 = _mm256_shuffle_epi8(
+                    raw,
+                    _mm256_setr_epi8(
+                        0, -1, -1, -1, 3, -1, -1, -1, 6, -1, -1, -1, 9, -1, -1, -1,
+                        4, -1, -1, -1, 7, -1, -1, -1, 10, -1, -1, -1, 13, -1, -1, -1,
+                    ),
+                );
+                let g32 = _mm256_shuffle_epi8(
+                    raw,
+                    _mm256_setr_epi8(
+                        1, -1, -1, -1, 4, -1, -1, -1, 7, -1, -1, -1, 10, -1, -1, -1,
+                        5, -1, -1, -1, 8, -1, -1, -1, 11, -1, -1, -1, 14, -1, -1, -1,
+                    ),
+                );
+                let b32 = _mm256_shuffle_epi8(
+                    raw,
+                    _mm256_setr_epi8(
+                        2, -1, -1, -1, 5, -1, -1, -1, 8, -1, -1, -1, 11, -1, -1, -1,
+                        6, -1, -1, -1, 9, -1, -1, -1, 12, -1, -1, -1, 15, -1, -1, -1,
+                    ),
+                );
+                (
+                    _mm256_cvtepi32_ps(r32),
+                    _mm256_cvtepi32_ps(g32),
+                    _mm256_cvtepi32_ps(b32),
+                )
+            }}
+
+            {arcane}
+            fn store_rgb_u8_into(self, r: {inner}, g: {inner}, b: {inner}, out: &mut [u8; 24]) {{
+                let max = _mm256_set1_ps(255.0);
+                let rg16 = _mm256_packs_epi32(
+                    _mm256_cvtps_epi32(_mm256_min_ps(max, r)),
+                    _mm256_cvtps_epi32(_mm256_min_ps(max, g)),
+                );
+                let b16 = _mm256_packs_epi32(
+                    _mm256_cvtps_epi32(_mm256_min_ps(max, b)),
+                    _mm256_setzero_si256(),
+                );
+                let rgb8 = _mm256_packus_epi16(rg16, b16);
+                let shuf = _mm256_setr_epi8(
+                    0, 4, 8, 1, 5, 9, 2, 6, 10, 3, 7, 11, -1, -1, -1, -1,
+                    0, 4, 8, 1, 5, 9, 2, 6, 10, 3, 7, 11, -1, -1, -1, -1,
+                );
+                let packed = _mm256_shuffle_epi8(rgb8, shuf);
+                let lo12 = _mm256_castsi256_si128(packed);
+                let hi12 = _mm256_extracti128_si256::<1>(packed);
+                let lo16 = _mm_or_si128(lo12, _mm_slli_si128::<12>(hi12));
+                let hi8 = _mm_srli_si128::<4>(hi12);
+                crate::simd_storage::store(lo16, out.first_chunk_mut::<16>().unwrap());
+                crate::simd_storage::store(
+                    _mm_cvtsi128_si64(hi8) as u64,
+                    out.last_chunk_mut::<8>().unwrap(),
+                );
             }}
         "#}
     } else {
@@ -1675,11 +1912,31 @@ fn generate_x86_float_impl(ty: &FloatVecType, token: &str) -> String {
 
             {arcane}
             fn min(self, a: {inner}, b: {inner}) -> {inner} {{
-                {p}_min_{s}(a, b)
+                {p}_blendv_{s}({p}_min_{s}(a, b), a, {cmp}::<_CMP_UNORD_Q>(b, b))
             }}
 
             {arcane}
             fn max(self, a: {inner}, b: {inner}) -> {inner} {{
+                {p}_blendv_{s}({p}_max_{s}(a, b), a, {cmp}::<_CMP_UNORD_Q>(b, b))
+            }}
+
+            {arcane}
+            fn minimum(self, a: {inner}, b: {inner}) -> {inner} {{
+                {p}_or_{s}({p}_or_{s}({p}_min_{s}(a, b), {p}_min_{s}(b, a)), {cmp}::<_CMP_UNORD_Q>(a, b))
+            }}
+
+            {arcane}
+            fn maximum(self, a: {inner}, b: {inner}) -> {inner} {{
+                {p}_or_{s}({p}_and_{s}({p}_max_{s}(a, b), {p}_max_{s}(b, a)), {cmp}::<_CMP_UNORD_Q>(a, b))
+            }}
+
+            {arcane}
+            fn min_fast(self, a: {inner}, b: {inner}) -> {inner} {{
+                {p}_min_{s}(a, b)
+            }}
+
+            {arcane}
+            fn max_fast(self, a: {inner}, b: {inner}) -> {inner} {{
                 {p}_max_{s}(a, b)
             }}
 
@@ -1694,6 +1951,15 @@ fn generate_x86_float_impl(ty: &FloatVecType, token: &str) -> String {
                 let mask = {cast_int_to_float}({p}_set1_{set1_int}({abs_mask}));
                 {p}_and_{s}(a, mask)
             }}
+
+            {arcane}
+            fn trunc(self, a: {inner}) -> {inner} {{ {p}_round_{s}::<0x0b>(a) }}
+
+            {arcane}
+            fn mul_neg_add_relaxed(self, a: {inner}, b: {inner}, c: {inner}) -> {inner} {{ {p}_fnmadd_{s}(a, b, c) }}
+
+            {arcane}
+            fn mul_neg_add_fused(self, a: {inner}, b: {inner}, c: {inner}) -> {inner} {{ {p}_fnmadd_{s}(a, b, c) }}
 
             {arcane}
             fn floor(self, a: {inner}) -> {inner} {{
@@ -1815,10 +2081,24 @@ fn generate_x86_float_impl(ty: &FloatVecType, token: &str) -> String {
             }}
             {baseline_end}
             {to_u8_x86}
-            {store_rgba_x86}
             {transpose_8x8_x86}
-        }}
+        }}{internal_impl}
     "#,
+        internal_impl = if elem == "f32" {
+            formatdoc! {r#"
+
+                #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
+                impl crate::simd::backends::F32x{lanes}Internal for archmage::{token} {{
+                    type InternalRepr = {inner};
+                {store_rgba_x86}
+                {float_layout}
+                {rgb_3ch_x86}
+                }}"#,
+                lanes = ty.lanes,
+            }
+        } else {
+            String::new()
+        },
     }
 }
 
@@ -2214,6 +2494,33 @@ fn generate_scalar_float_impl(ty: &FloatVecType) -> String {
             }}
         "#}
     };
+    let (min_ieee, max_ieee) = if elem == "f32" {
+        ("minimumf", "maximumf")
+    } else {
+        ("minimum", "maximum")
+    };
+    let min_max_fast_scalar = formatdoc! {r#"
+
+        #[inline(always)]
+        fn minimum(self, a: {array}, b: {array}) -> {array} {{
+            core::array::from_fn(|i| crate::nostd_math::{min_ieee}(a[i], b[i]))
+        }}
+
+        #[inline(always)]
+        fn maximum(self, a: {array}, b: {array}) -> {array} {{
+            core::array::from_fn(|i| crate::nostd_math::{max_ieee}(a[i], b[i]))
+        }}
+
+        #[inline(always)]
+        fn min_fast(self, a: {array}, b: {array}) -> {array} {{
+            core::array::from_fn(|i| if a[i] < b[i] {{ a[i] }} else {{ b[i] }})
+        }}
+
+        #[inline(always)]
+        fn max_fast(self, a: {array}, b: {array}) -> {array} {{
+            core::array::from_fn(|i| if a[i] > b[i] {{ a[i] }} else {{ b[i] }})
+        }}
+    "#};
 
     formatdoc! {r#"
         impl {trait_name} for archmage::ScalarToken {{
@@ -2289,6 +2596,7 @@ fn generate_scalar_float_impl(ty: &FloatVecType) -> String {
             fn max(self, a: {array}, b: {array}) -> {array} {{
                 {max_lanes}
             }}
+            {min_max_fast_scalar}
 
             #[inline(always)]
             fn sqrt(self, a: {array}) -> {array} {{
@@ -2469,8 +2777,13 @@ fn generate_scalar_float_impl(ty: &FloatVecType) -> String {
             fn bitxor(self, a: {array}, b: {array}) -> {array} {{
                 {xor_lanes}
             }}
-        }}
+        }}{scalar_internal}
     "#,
+        scalar_internal = if elem == "f32" {
+            super::float_layout::scalar_internal_impl(lanes)
+        } else {
+            String::new()
+        },
         add_lanes = binary_lanes("+"),
         sub_lanes = binary_lanes("-"),
         mul_lanes = binary_lanes("*"),
@@ -2540,6 +2853,11 @@ fn generate_neon_float_impl(ty: &FloatVecType) -> String {
         _ => unreachable!(),
     };
     let native_lanes = if elem == "f32" { 4 } else { 2 };
+    let base_trait = if elem == "f32" {
+        "F32x4Backend"
+    } else {
+        "F64x2Backend"
+    };
 
     // If this is a native 128-bit type, no polyfill needed
     if ty.native_on_neon() {
@@ -2676,7 +2994,7 @@ fn generate_neon_float_impl(ty: &FloatVecType) -> String {
         formatdoc! {r#"
 
             {arcane}
-            fn store_rgba_bytes(self, r: {repr}, g: {repr}, b: {repr}, a: {repr}) -> [u8; 32] {{
+            fn store_rgba_u8_into(self, r: {repr}, g: {repr}, b: {repr}, a: {repr}, out: &mut [u8; 32]) {{
                 let lo = vdupq_n_s32(0);
                 let hi = vdupq_n_s32(255);
                 let r0 = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(r[0]), lo), hi));
@@ -2695,7 +3013,160 @@ fn generate_neon_float_impl(ty: &FloatVecType) -> String {
                     vorrq_u32(r1, vshlq_n_u32::<8>(g1)),
                     vorrq_u32(vshlq_n_u32::<16>(b1), vshlq_n_u32::<24>(a1)),
                 );
-                crate::simd_storage::cast([vreinterpretq_u8_u32(p0), vreinterpretq_u8_u32(p1)])
+                let b0 = vreinterpretq_u8_u32(p0);
+                let b1 = vreinterpretq_u8_u32(p1);
+                #[cfg(target_endian = "big")]
+                let (b0, b1) = (vrev32q_u8(b0), vrev32q_u8(b1));
+                crate::simd_storage::store([b0, b1], out);
+            }}
+        "#}
+    } else {
+        String::new()
+    };
+
+    let float_layout = if elem == "f32" {
+        super::float_layout::polyfill(lanes, 4, &repr)
+    } else {
+        String::new()
+    };
+    let rgb_3ch_arm_poly = if elem == "f32" && lanes == 8 {
+        formatdoc! {r#"
+
+            {arcane}
+            fn deinterleave_3ch_repr(self, rgb: [{repr}; 3]) -> [{repr}; 3] {{
+                let idx_r: uint8x16_t = crate::simd_storage::cast([
+                    0u8, 1, 2, 3, 12, 13, 14, 15, 24, 25, 26, 27, 36, 37, 38, 39,
+                ]);
+                let idx_g: uint8x16_t = crate::simd_storage::cast([
+                    4u8, 5, 6, 7, 16, 17, 18, 19, 28, 29, 30, 31, 40, 41, 42, 43,
+                ]);
+                let idx_b: uint8x16_t = crate::simd_storage::cast([
+                    8u8, 9, 10, 11, 20, 21, 22, 23, 32, 33, 34, 35, 44, 45, 46, 47,
+                ]);
+                let tbl_lo = uint8x16x3_t(
+                    vreinterpretq_u8_f32(rgb[0][0]),
+                    vreinterpretq_u8_f32(rgb[0][1]),
+                    vreinterpretq_u8_f32(rgb[1][0]),
+                );
+                let tbl_hi = uint8x16x3_t(
+                    vreinterpretq_u8_f32(rgb[1][1]),
+                    vreinterpretq_u8_f32(rgb[2][0]),
+                    vreinterpretq_u8_f32(rgb[2][1]),
+                );
+                [
+                    [
+                        vreinterpretq_f32_u8(vqtbl3q_u8(tbl_lo, idx_r)),
+                        vreinterpretq_f32_u8(vqtbl3q_u8(tbl_hi, idx_r)),
+                    ],
+                    [
+                        vreinterpretq_f32_u8(vqtbl3q_u8(tbl_lo, idx_g)),
+                        vreinterpretq_f32_u8(vqtbl3q_u8(tbl_hi, idx_g)),
+                    ],
+                    [
+                        vreinterpretq_f32_u8(vqtbl3q_u8(tbl_lo, idx_b)),
+                        vreinterpretq_f32_u8(vqtbl3q_u8(tbl_hi, idx_b)),
+                    ],
+                ]
+            }}
+
+            {arcane}
+            fn interleave_3ch_repr(self, channels: [{repr}; 3]) -> [{repr}; 3] {{
+                let [r, g, b] = channels;
+                let idx_0: uint8x16_t = crate::simd_storage::cast([
+                    0u8, 1, 2, 3, 16, 17, 18, 19, 32, 33, 34, 35, 4, 5, 6, 7,
+                ]);
+                let idx_1: uint8x16_t = crate::simd_storage::cast([
+                    20u8, 21, 22, 23, 36, 37, 38, 39, 8, 9, 10, 11, 24, 25, 26, 27,
+                ]);
+                let idx_2: uint8x16_t = crate::simd_storage::cast([
+                    40u8, 41, 42, 43, 12, 13, 14, 15, 28, 29, 30, 31, 44, 45, 46, 47,
+                ]);
+                let tbl_lo = uint8x16x3_t(
+                    vreinterpretq_u8_f32(r[0]),
+                    vreinterpretq_u8_f32(g[0]),
+                    vreinterpretq_u8_f32(b[0]),
+                );
+                let tbl_hi = uint8x16x3_t(
+                    vreinterpretq_u8_f32(r[1]),
+                    vreinterpretq_u8_f32(g[1]),
+                    vreinterpretq_u8_f32(b[1]),
+                );
+                [
+                    [
+                        vreinterpretq_f32_u8(vqtbl3q_u8(tbl_lo, idx_0)),
+                        vreinterpretq_f32_u8(vqtbl3q_u8(tbl_lo, idx_1)),
+                    ],
+                    [
+                        vreinterpretq_f32_u8(vqtbl3q_u8(tbl_lo, idx_2)),
+                        vreinterpretq_f32_u8(vqtbl3q_u8(tbl_hi, idx_0)),
+                    ],
+                    [
+                        vreinterpretq_f32_u8(vqtbl3q_u8(tbl_hi, idx_1)),
+                        vreinterpretq_f32_u8(vqtbl3q_u8(tbl_hi, idx_2)),
+                    ],
+                ]
+            }}
+
+            {arcane}
+            fn load_rgb_bytes(self, rgb: &[u8; 24]) -> ({repr}, {repr}, {repr}) {{
+                let lo16: uint8x16_t = crate::simd_storage::copy(rgb.first_chunk::<16>().unwrap());
+                let hi8: uint8x8_t = crate::simd_storage::copy(rgb.last_chunk::<8>().unwrap());
+                let tbl = uint8x16x2_t(lo16, vcombine_u8(hi8, vdup_n_u8(0)));
+                let rg_idx: uint8x16_t = crate::simd_storage::cast([
+                    0u8, 3, 6, 9, 12, 15, 18, 21, 1, 4, 7, 10, 13, 16, 19, 22,
+                ]);
+                let b_idx: uint8x16_t = crate::simd_storage::cast([
+                    2u8, 5, 8, 11, 14, 17, 20, 23, 255, 255, 255, 255, 255, 255, 255, 255,
+                ]);
+                let rg8 = vqtbl2q_u8(tbl, rg_idx);
+                let b8 = vqtbl2q_u8(tbl, b_idx);
+                let r16 = vmovl_u8(vget_low_u8(rg8));
+                let g16 = vmovl_high_u8(rg8);
+                let b16 = vmovl_u8(vget_low_u8(b8));
+                (
+                    [
+                        vcvtq_f32_u32(vmovl_u16(vget_low_u16(r16))),
+                        vcvtq_f32_u32(vmovl_high_u16(r16)),
+                    ],
+                    [
+                        vcvtq_f32_u32(vmovl_u16(vget_low_u16(g16))),
+                        vcvtq_f32_u32(vmovl_high_u16(g16)),
+                    ],
+                    [
+                        vcvtq_f32_u32(vmovl_u16(vget_low_u16(b16))),
+                        vcvtq_f32_u32(vmovl_high_u16(b16)),
+                    ],
+                )
+            }}
+
+            {arcane}
+            fn store_rgb_u8_into(self, r: {repr}, g: {repr}, b: {repr}, out: &mut [u8; 24]) {{
+                let r8 = vqmovun_s16(vcombine_s16(
+                    vqmovn_s32(vcvtnq_s32_f32(r[0])),
+                    vqmovn_s32(vcvtnq_s32_f32(r[1])),
+                ));
+                let g8 = vqmovun_s16(vcombine_s16(
+                    vqmovn_s32(vcvtnq_s32_f32(g[0])),
+                    vqmovn_s32(vcvtnq_s32_f32(g[1])),
+                ));
+                let b8 = vqmovun_s16(vcombine_s16(
+                    vqmovn_s32(vcvtnq_s32_f32(b[0])),
+                    vqmovn_s32(vcvtnq_s32_f32(b[1])),
+                ));
+                let tbl = uint8x16x2_t(vcombine_u8(r8, g8), vcombine_u8(b8, b8));
+                let idx_lo: uint8x16_t = crate::simd_storage::cast([
+                    0u8, 8, 16, 1, 9, 17, 2, 10, 18, 3, 11, 19, 4, 12, 20, 5,
+                ]);
+                let idx_hi: uint8x16_t = crate::simd_storage::cast([
+                    13u8, 21, 6, 14, 22, 7, 15, 23, 255, 255, 255, 255, 255, 255, 255, 255,
+                ]);
+                let lo16 = vqtbl2q_u8(tbl, idx_lo);
+                let hi8 = vqtbl2q_u8(tbl, idx_hi);
+                crate::simd_storage::store(lo16, out.first_chunk_mut::<16>().unwrap());
+                crate::simd_storage::store(
+                    vget_low_u8(hi8),
+                    out.last_chunk_mut::<8>().unwrap(),
+                );
             }}
         "#}
     } else {
@@ -2780,6 +3251,26 @@ fn generate_neon_float_impl(ty: &FloatVecType) -> String {
             }}
 
             {arcane}
+            fn minimum(self, a: {repr}, b: {repr}) -> {repr} {{
+                {minimum_body}
+            }}
+
+            {arcane}
+            fn maximum(self, a: {repr}, b: {repr}) -> {repr} {{
+                {maximum_body}
+            }}
+
+            {arcane}
+            fn min_fast(self, a: {repr}, b: {repr}) -> {repr} {{
+                {min_fast_body}
+            }}
+
+            {arcane}
+            fn max_fast(self, a: {repr}, b: {repr}) -> {repr} {{
+                {max_fast_body}
+            }}
+
+            {arcane}
             fn sqrt(self, a: {repr}) -> {repr} {{
                 {sqrt_body}
             }}
@@ -2788,6 +3279,15 @@ fn generate_neon_float_impl(ty: &FloatVecType) -> String {
             fn abs(self, a: {repr}) -> {repr} {{
                 {abs_body}
             }}
+
+            #[inline(always)]
+            fn trunc(self, a: {repr}) -> {repr} {{ a.map(|a| <Self as {base_trait}>::trunc(self, a)) }}
+
+            #[inline(always)]
+            fn mul_neg_add_relaxed(self, a: {repr}, b: {repr}, c: {repr}) -> {repr} {{ core::array::from_fn(|i| <Self as {base_trait}>::mul_neg_add_relaxed(self, a[i], b[i], c[i])) }}
+
+            #[inline(always)]
+            fn mul_neg_add_fused(self, a: {repr}, b: {repr}, c: {repr}) -> {repr} {{ core::array::from_fn(|i| <Self as {base_trait}>::mul_neg_add_fused(self, a[i], b[i], c[i])) }}
 
             {arcane}
             fn floor(self, a: {repr}) -> {repr} {{
@@ -2927,9 +3427,21 @@ fn generate_neon_float_impl(ty: &FloatVecType) -> String {
                 {xor_body}
             }}
             {to_u8_arm_poly}
-            {store_rgba_arm_poly}
-        }}
+        }}{internal_impl}
     "#,
+        internal_impl = if elem == "f32" {
+            formatdoc! {r#"
+
+                #[cfg(target_arch = "aarch64")]
+                impl crate::simd::backends::F32x{lanes}Internal for archmage::NeonToken {{
+                    type InternalRepr = {repr};
+                {store_rgba_arm_poly}
+                {float_layout}
+                {rgb_3ch_arm_poly}
+                }}"#}
+        } else {
+            String::new()
+        },
         v4_copies = (0..sub_count).map(|_| "v4").collect::<Vec<_>>().join(", "),
         z_copies = (0..sub_count).map(|_| "z").collect::<Vec<_>>().join(", "),
         add_body = binary_op(&format!("vaddq_{ns}")),
@@ -2937,8 +3449,32 @@ fn generate_neon_float_impl(ty: &FloatVecType) -> String {
         mul_body = binary_op(&format!("vmulq_{ns}")),
         div_body = binary_op(&format!("vdivq_{ns}")),
         neg_body = unary_op(&format!("vnegq_{ns}")),
-        min_body = binary_op(&format!("vminq_{ns}")),
-        max_body = binary_op(&format!("vmaxq_{ns}")),
+        min_body = {
+            let items: Vec<String> = (0..sub_count)
+                .map(|i| {
+                    // One fminnm/fmaxnm: a quiet NaN yields the numeric
+                    // operand; a signalling NaN yields a quiet NaN, which the
+                    // min/max contract leaves unspecified (as Rust does).
+                    format!("vminnmq_{ns}(a[{i}], b[{i}])")
+                })
+                .collect();
+            format!("[{}]", items.join(", "))
+        },
+        max_body = {
+            let items: Vec<String> = (0..sub_count)
+                .map(|i| {
+                    // One fminnm/fmaxnm: a quiet NaN yields the numeric
+                    // operand; a signalling NaN yields a quiet NaN, which the
+                    // min/max contract leaves unspecified (as Rust does).
+                    format!("vmaxnmq_{ns}(a[{i}], b[{i}])")
+                })
+                .collect();
+            format!("[{}]", items.join(", "))
+        },
+        minimum_body = binary_op(&format!("vminq_{ns}")),
+        maximum_body = binary_op(&format!("vmaxq_{ns}")),
+        min_fast_body = binary_op(&format!("vminnmq_{ns}")),
+        max_fast_body = binary_op(&format!("vmaxnmq_{ns}")),
         sqrt_body = unary_op(&format!("vsqrtq_{ns}")),
         abs_body = unary_op(&format!("vabsq_{ns}")),
         floor_body = unary_op(&format!("vrndmq_{ns}")),
@@ -3087,7 +3623,7 @@ fn generate_neon_native_impl(ty: &FloatVecType) -> String {
         formatdoc! {r#"
 
             {arcane}
-            fn store_rgba_bytes(self, r: {repr}, g: {repr}, b: {repr}, a: {repr}) -> [u8; 16] {{
+            fn store_rgba_u8_into(self, r: {repr}, g: {repr}, b: {repr}, a: {repr}, out: &mut [u8; 16]) {{
                 let lo = vdupq_n_s32(0);
                 let hi = vdupq_n_s32(255);
                 let ri = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(r), lo), hi));
@@ -3098,7 +3634,112 @@ fn generate_neon_native_impl(ty: &FloatVecType) -> String {
                     vorrq_u32(ri, vshlq_n_u32::<8>(gi)),
                     vorrq_u32(vshlq_n_u32::<16>(bi), vshlq_n_u32::<24>(ai)),
                 );
-                crate::simd_storage::cast(vreinterpretq_u8_u32(pixels))
+                let bytes = vreinterpretq_u8_u32(pixels);
+                #[cfg(target_endian = "big")]
+                let bytes = vrev32q_u8(bytes);
+                crate::simd_storage::store(bytes, out);
+            }}
+        "#}
+    } else {
+        String::new()
+    };
+
+    let float_layout = if elem == "f32" {
+        super::float_layout::neon(&arcane)
+    } else {
+        String::new()
+    };
+    let rgb_3ch_arm = if elem == "f32" && lanes == 4 {
+        formatdoc! {r#"
+
+            {arcane}
+            fn deinterleave_3ch_repr(self, rgb: [{repr}; 3]) -> [{repr}; 3] {{
+                let idx_r: uint8x16_t = crate::simd_storage::cast([
+                    0u8, 1, 2, 3, 12, 13, 14, 15, 24, 25, 26, 27, 36, 37, 38, 39,
+                ]);
+                let idx_g: uint8x16_t = crate::simd_storage::cast([
+                    4u8, 5, 6, 7, 16, 17, 18, 19, 28, 29, 30, 31, 40, 41, 42, 43,
+                ]);
+                let idx_b: uint8x16_t = crate::simd_storage::cast([
+                    8u8, 9, 10, 11, 20, 21, 22, 23, 32, 33, 34, 35, 44, 45, 46, 47,
+                ]);
+                let tbl = uint8x16x3_t(
+                    vreinterpretq_u8_f32(rgb[0]),
+                    vreinterpretq_u8_f32(rgb[1]),
+                    vreinterpretq_u8_f32(rgb[2]),
+                );
+                [
+                    vreinterpretq_f32_u8(vqtbl3q_u8(tbl, idx_r)),
+                    vreinterpretq_f32_u8(vqtbl3q_u8(tbl, idx_g)),
+                    vreinterpretq_f32_u8(vqtbl3q_u8(tbl, idx_b)),
+                ]
+            }}
+
+            {arcane}
+            fn interleave_3ch_repr(self, channels: [{repr}; 3]) -> [{repr}; 3] {{
+                let idx_0: uint8x16_t = crate::simd_storage::cast([
+                    0u8, 1, 2, 3, 16, 17, 18, 19, 32, 33, 34, 35, 4, 5, 6, 7,
+                ]);
+                let idx_1: uint8x16_t = crate::simd_storage::cast([
+                    20u8, 21, 22, 23, 36, 37, 38, 39, 8, 9, 10, 11, 24, 25, 26, 27,
+                ]);
+                let idx_2: uint8x16_t = crate::simd_storage::cast([
+                    40u8, 41, 42, 43, 12, 13, 14, 15, 28, 29, 30, 31, 44, 45, 46, 47,
+                ]);
+                let tbl = uint8x16x3_t(
+                    vreinterpretq_u8_f32(channels[0]),
+                    vreinterpretq_u8_f32(channels[1]),
+                    vreinterpretq_u8_f32(channels[2]),
+                );
+                [
+                    vreinterpretq_f32_u8(vqtbl3q_u8(tbl, idx_0)),
+                    vreinterpretq_f32_u8(vqtbl3q_u8(tbl, idx_1)),
+                    vreinterpretq_f32_u8(vqtbl3q_u8(tbl, idx_2)),
+                ]
+            }}
+
+            {arcane}
+            fn load_rgb_bytes(self, rgb: &[u8; 12]) -> ({repr}, {repr}, {repr}) {{
+                let lo8: uint8x8_t = crate::simd_storage::copy(rgb.first_chunk::<8>().unwrap());
+                let hi4: u32 = crate::simd_storage::copy(rgb.last_chunk::<4>().unwrap());
+                let raw = vreinterpretq_u8_u32(vsetq_lane_u32::<2>(
+                    hi4,
+                    vreinterpretq_u32_u8(vcombine_u8(lo8, vdup_n_u8(0))),
+                ));
+                // All 12 channel bytes fit in one 16B tbl: [R0..3, G0..3, B0..3, 0..0].
+                let idx: uint8x16_t = crate::simd_storage::cast([
+                    0u8, 3, 6, 9, 1, 4, 7, 10, 2, 5, 8, 11, 255, 255, 255, 255,
+                ]);
+                let rgb8 = vqtbl1q_u8(raw, idx);
+                let rg16 = vmovl_u8(vget_low_u8(rgb8));
+                let b16 = vmovl_high_u8(rgb8);
+                (
+                    vcvtq_f32_u32(vmovl_u16(vget_low_u16(rg16))),
+                    vcvtq_f32_u32(vmovl_high_u16(rg16)),
+                    vcvtq_f32_u32(vmovl_u16(vget_low_u16(b16))),
+                )
+            }}
+
+            {arcane}
+            fn store_rgb_u8_into(self, r: {repr}, g: {repr}, b: {repr}, out: &mut [u8; 12]) {{
+                let ri = vqmovn_s32(vcvtnq_s32_f32(r));
+                let gi = vqmovn_s32(vcvtnq_s32_f32(g));
+                let bi = vqmovn_s32(vcvtnq_s32_f32(b));
+                let rg8 = vqmovun_s16(vcombine_s16(ri, gi));
+                let b8 = vqmovun_s16(vcombine_s16(bi, bi));
+                let planes = vcombine_u8(rg8, b8);
+                let idx: uint8x16_t = crate::simd_storage::cast([
+                    0u8, 4, 8, 1, 5, 9, 2, 6, 10, 3, 7, 11, 255, 255, 255, 255,
+                ]);
+                let packed = vqtbl1q_u8(planes, idx);
+                crate::simd_storage::store(
+                    vget_low_u8(packed),
+                    out.first_chunk_mut::<8>().unwrap(),
+                );
+                crate::simd_storage::store(
+                    vgetq_lane_u32::<2>(vreinterpretq_u32_u8(packed)),
+                    out.last_chunk_mut::<4>().unwrap(),
+                );
             }}
         "#}
     } else {
@@ -3150,13 +3791,30 @@ fn generate_neon_native_impl(ty: &FloatVecType) -> String {
             {arcane}
             fn neg(self, a: {repr}) -> {repr} {{ vnegq_{ns}(a) }}
             {arcane}
-            fn min(self, a: {repr}, b: {repr}) -> {repr} {{ vminq_{ns}(a, b) }}
+            fn min(self, a: {repr}, b: {repr}) -> {repr} {{ vminnmq_{ns}(a, b) }}
             {arcane}
-            fn max(self, a: {repr}, b: {repr}) -> {repr} {{ vmaxq_{ns}(a, b) }}
+            fn max(self, a: {repr}, b: {repr}) -> {repr} {{ vmaxnmq_{ns}(a, b) }}
+            {arcane}
+            fn minimum(self, a: {repr}, b: {repr}) -> {repr} {{ vminq_{ns}(a, b) }}
+            {arcane}
+            fn maximum(self, a: {repr}, b: {repr}) -> {repr} {{ vmaxq_{ns}(a, b) }}
+            {arcane}
+            fn min_fast(self, a: {repr}, b: {repr}) -> {repr} {{ vminnmq_{ns}(a, b) }}
+            {arcane}
+            fn max_fast(self, a: {repr}, b: {repr}) -> {repr} {{ vmaxnmq_{ns}(a, b) }}
             {arcane}
             fn sqrt(self, a: {repr}) -> {repr} {{ vsqrtq_{ns}(a) }}
             {arcane}
             fn abs(self, a: {repr}) -> {repr} {{ vabsq_{ns}(a) }}
+            {arcane}
+            fn trunc(self, a: {repr}) -> {repr} {{ vrndq_{ns}(a) }}
+
+            {arcane}
+            fn mul_neg_add_relaxed(self, a: {repr}, b: {repr}, c: {repr}) -> {repr} {{ vfmsq_{ns}(c, a, b) }}
+
+            {arcane}
+            fn mul_neg_add_fused(self, a: {repr}, b: {repr}, c: {repr}) -> {repr} {{ vfmsq_{ns}(c, a, b) }}
+
             {arcane}
             fn floor(self, a: {repr}) -> {repr} {{ vrndmq_{ns}(a) }}
             {arcane}
@@ -3294,12 +3952,24 @@ fn generate_neon_native_impl(ty: &FloatVecType) -> String {
                 vreinterpretq_{ns}_u{eb}(veorq_u{eb}(vreinterpretq_u{eb}_{ns}(a), vreinterpretq_u{eb}_{ns}(b)))
             }}
             {to_u8_arm}
-            {store_rgba_arm}
-        }}
+        }}{internal_impl}
     "#,
+        internal_impl = if elem == "f32" {
+            formatdoc! {r#"
+
+                #[cfg(target_arch = "aarch64")]
+                impl crate::simd::backends::F32x{lanes}Internal for archmage::NeonToken {{
+                    type InternalRepr = {repr};
+                {store_rgba_arm}
+                {float_layout}
+                {rgb_3ch_arm}
+                }}"#}
+        } else {
+            String::new()
+        },
         reduce_add = reduce_pairwise(&format!("vpaddq_{ns}")),
-        reduce_min = reduce_pairwise(&format!("vpminq_{ns}")),
-        reduce_max = reduce_pairwise(&format!("vpmaxq_{ns}")),
+        reduce_min = if elem == "f32" { String::from("vminnmvq_f32(a)") } else { reduce_pairwise(&format!("vpminq_{ns}")) },
+        reduce_max = if elem == "f32" { String::from("vmaxnmvq_f32(a)") } else { reduce_pairwise(&format!("vpmaxq_{ns}")) },
     }
 }
 
@@ -3341,6 +4011,11 @@ fn generate_wasm_float_impl(ty: &FloatVecType) -> String {
     let zero_lit = if elem == "f32" { "0.0f32" } else { "0.0f64" };
     let sub_count = ty.sub_count();
     let native_lanes = if elem == "f32" { 4 } else { 2 };
+    let base_trait = if elem == "f32" {
+        "F32x4Backend"
+    } else {
+        "F64x2Backend"
+    };
 
     if ty.native_on_wasm() {
         return generate_wasm_native_impl(ty);
@@ -3405,10 +4080,15 @@ fn generate_wasm_float_impl(ty: &FloatVecType) -> String {
     // methods — no second copy of the estimate to keep in sync.
     let sub_trait = format!("F{}x{}Backend", &elem[1..], native_lanes);
 
-    // Native pixel pack for the wasm f32x8 polyfill ([v128; 2]). Same sequence
-    // as the native f32x4 path, applied per half; the i16 narrow combines both
-    // halves so the 8-lane pack is one `u8x16_narrow_i16x8`.
-    let pixel_pack_wasm_poly = if elem == "f32" && lanes == 8 {
+    // Native pixel pack + 3-channel RGB helpers for the wasm f32x8 polyfill ([v128; 2]).
+    // Note: deinterleave_3ch_repr uses the trait default on Wasm128Token because LLVM
+    // already lowers it to the optimal 12 i8x16.shuffle sequence.
+    let float_layout = if elem == "f32" {
+        super::float_layout::polyfill(lanes, 4, &repr)
+    } else {
+        String::new()
+    };
+    let to_u8_wasm_poly = if elem == "f32" && lanes == 8 {
         formatdoc! {r#"
 
             #[inline(always)]
@@ -3421,9 +4101,23 @@ fn generate_wasm_float_impl(ty: &FloatVecType) -> String {
                 let hi = u32x4_extract_lane::<1>(u8s);
                 ((u64::from(hi) << 32) | u64::from(lo)).to_ne_bytes()
             }}
+        "#}
+    } else {
+        String::new()
+    };
+    let pixel_pack_wasm_poly = if elem == "f32" && lanes == 8 {
+        formatdoc! {r#"
 
             #[inline(always)]
-            fn store_rgba_bytes(self, r: [v128; 2], g: [v128; 2], b: [v128; 2], a: [v128; 2]) -> [u8; 32] {{
+            fn deinterleave_3ch_repr(self, rgb: [[v128; 2]; 3]) -> [[v128; 2]; 3] {{
+                let [[v0, v1], [v2, v3], [v4, v5]] = rgb;
+                let [r0, g0, b0] = <Self as F32x4Internal>::deinterleave_3ch_repr(self, [v0, v1, v2]);
+                let [r1, g1, b1] = <Self as F32x4Internal>::deinterleave_3ch_repr(self, [v3, v4, v5]);
+                [[r0, r1], [g0, g1], [b0, b1]]
+            }}
+
+            #[inline(always)]
+            fn store_rgba_u8_into(self, r: [v128; 2], g: [v128; 2], b: [v128; 2], a: [v128; 2], out: &mut [u8; 32]) {{
                 let lo = i32x4_splat(0);
                 let hi = i32x4_splat(255);
                 let clamp = |v: v128| i32x4_min(i32x4_max(i32x4_trunc_sat_f32x4(f32x4_nearest(v)), lo), hi);
@@ -3433,12 +4127,102 @@ fn generate_wasm_float_impl(ty: &FloatVecType) -> String {
                         v128_or(i32x4_shl(clamp(b), 16), i32x4_shl(clamp(a), 24)),
                     )
                 }};
-                crate::simd_storage::cast([pack(r[0], g[0], b[0], a[0]), pack(r[1], g[1], b[1], a[1])])
+                crate::simd_storage::store([pack(r[0], g[0], b[0], a[0]), pack(r[1], g[1], b[1], a[1])], out);
+            }}
+
+            #[inline(always)]
+            fn interleave_3ch_repr(self, channels: [[v128; 2]; 3]) -> [[v128; 2]; 3] {{
+                let [r, g, b] = channels;
+                let int4 = |r: v128, g: v128, b: v128| -> (v128, v128, v128) {{
+                    let rg01 = i32x4_shuffle::<0, 4, 1, 5>(r, g);
+                    let rg23 = i32x4_shuffle::<2, 6, 3, 7>(r, g);
+                    let gb123 = i32x4_shuffle::<1, 5, 6, 7>(g, b);
+                    let out0 = i32x4_shuffle::<0, 1, 4, 2>(rg01, b);
+                    let out1 = i32x4_shuffle::<0, 1, 4, 5>(gb123, rg23);
+                    let out2 = i32x4_shuffle::<2, 6, 7, 3>(gb123, rg23);
+                    (out0, out1, out2)
+                }};
+                let (q0, q1, q2) = int4(r[0], g[0], b[0]);
+                let (q3, q4, q5) = int4(r[1], g[1], b[1]);
+                [[q0, q1], [q2, q3], [q4, q5]]
+            }}
+
+            #[inline(always)]
+            fn load_rgb_bytes(self, rgb: &[u8; 24]) -> ([v128; 2], [v128; 2], [v128; 2]) {{
+                let lo16: v128 = crate::simd_storage::copy(rgb.first_chunk::<16>().unwrap());
+                let hi8 = u64x2(crate::simd_storage::copy(rgb.last_chunk::<8>().unwrap()), 0);
+                let rg8 = i8x16_shuffle::<
+                    0, 3, 6, 9, 12, 15, 18, 21, 1, 4, 7, 10, 13, 16, 19, 22,
+                >(lo16, hi8);
+                let b8 = i8x16_shuffle::<
+                    2, 5, 8, 11, 14, 17, 20, 23, 24, 24, 24, 24, 24, 24, 24, 24,
+                >(lo16, hi8);
+                let r16 = u16x8_extend_low_u8x16(rg8);
+                let g16 = u16x8_extend_high_u8x16(rg8);
+                let b16 = u16x8_extend_low_u8x16(b8);
+                (
+                    [
+                        f32x4_convert_u32x4(u32x4_extend_low_u16x8(r16)),
+                        f32x4_convert_u32x4(u32x4_extend_high_u16x8(r16)),
+                    ],
+                    [
+                        f32x4_convert_u32x4(u32x4_extend_low_u16x8(g16)),
+                        f32x4_convert_u32x4(u32x4_extend_high_u16x8(g16)),
+                    ],
+                    [
+                        f32x4_convert_u32x4(u32x4_extend_low_u16x8(b16)),
+                        f32x4_convert_u32x4(u32x4_extend_high_u16x8(b16)),
+                    ],
+                )
+            }}
+
+            #[inline(always)]
+            fn store_rgb_u8_into(self, r: [v128; 2], g: [v128; 2], b: [v128; 2], out: &mut [u8; 24]) {{
+                // Narrow each channel to u8x16 individually before combining so LLVM
+                // preserves hardware i16x8.narrow_i32x4_s + i8x16.narrow_i16x8_u.
+                let narrow8 = |v: [v128; 2]| -> v128 {{
+                    let i16s = i16x8_narrow_i32x4(
+                        i32x4_trunc_sat_f32x4(f32x4_nearest(v[0])),
+                        i32x4_trunc_sat_f32x4(f32x4_nearest(v[1])),
+                    );
+                    u8x16_narrow_i16x8(i16s, i16s)
+                }};
+                let r8 = narrow8(r);
+                let g8 = narrow8(g);
+                let b8 = narrow8(b);
+                let rg8 = i64x2_shuffle::<0, 2>(r8, g8);
+                let lo16 = i8x16_shuffle::<
+                    0, 8, 16, 1, 9, 17, 2, 10, 18, 3, 11, 19, 4, 12, 20, 5,
+                >(rg8, b8);
+                let hi8 = i8x16_shuffle::<
+                    13, 21, 6, 14, 22, 7, 15, 23, 0, 0, 0, 0, 0, 0, 0, 0,
+                >(rg8, b8);
+                crate::simd_storage::store(lo16, out.first_chunk_mut::<16>().unwrap());
+                crate::simd_storage::store(
+                    u64x2_extract_lane::<0>(hi8),
+                    out.last_chunk_mut::<8>().unwrap(),
+                );
             }}
         "#}
     } else {
         String::new()
     };
+
+    let min_fast_lanes = (0..sub_count)
+        .map(|i| format!("crate::wasm_fma::min_{wp}_fast(self, a[{i}], b[{i}])"))
+        .collect::<Vec<_>>()
+        .join(", ");
+    let max_fast_lanes = (0..sub_count)
+        .map(|i| format!("crate::wasm_fma::max_{wp}_fast(self, a[{i}], b[{i}])"))
+        .collect::<Vec<_>>()
+        .join(", ");
+    let min_max_fast_wasm_poly = formatdoc! {r#"
+
+        #[inline(always)]
+        fn min_fast(self, a: {repr}, b: {repr}) -> {repr} {{ [{min_fast_lanes}] }}
+        #[inline(always)]
+        fn max_fast(self, a: {repr}, b: {repr}) -> {repr} {{ [{max_fast_lanes}] }}
+    "#};
     formatdoc! {r#"
         impl {trait_name} for archmage::Wasm128Token {{
             type Repr = {repr};
@@ -3492,9 +4276,23 @@ fn generate_wasm_float_impl(ty: &FloatVecType) -> String {
             #[inline(always)]
             fn max(self, a: {repr}, b: {repr}) -> {repr} {{ {max} }}
             #[inline(always)]
+            fn minimum(self, a: {repr}, b: {repr}) -> {repr} {{ {minimum} }}
+            #[inline(always)]
+            fn maximum(self, a: {repr}, b: {repr}) -> {repr} {{ {maximum} }}
+            {min_max_fast}
+            #[inline(always)]
             fn sqrt(self, a: {repr}) -> {repr} {{ {sqrt} }}
             #[inline(always)]
             fn abs(self, a: {repr}) -> {repr} {{ {abs} }}
+            #[inline(always)]
+            fn trunc(self, a: {repr}) -> {repr} {{ a.map(|a| <Self as {base_trait}>::trunc(self, a)) }}
+
+            #[inline(always)]
+            fn mul_neg_add_relaxed(self, a: {repr}, b: {repr}, c: {repr}) -> {repr} {{ core::array::from_fn(|i| <Self as {base_trait}>::mul_neg_add_relaxed(self, a[i], b[i], c[i])) }}
+
+            #[inline(always)]
+            fn mul_neg_add_fused(self, a: {repr}, b: {repr}, c: {repr}) -> {repr} {{ core::array::from_fn(|i| <Self as {base_trait}>::mul_neg_add_fused(self, a[i], b[i], c[i])) }}
+
             #[inline(always)]
             fn floor(self, a: {repr}) -> {repr} {{ {floor} }}
             #[inline(always)]
@@ -3584,9 +4382,23 @@ fn generate_wasm_float_impl(ty: &FloatVecType) -> String {
             fn bitor(self, a: {repr}, b: {repr}) -> {repr} {{ {or} }}
             #[inline(always)]
             fn bitxor(self, a: {repr}, b: {repr}) -> {repr} {{ {xor} }}
-        {pixel_pack}
-        }}
+            {to_u8_wasm_poly}
+        }}{internal_impl}
     "#,
+        internal_impl = if elem == "f32" {
+            formatdoc! {r#"
+
+                #[cfg(target_arch = "wasm32")]
+                impl crate::simd::backends::F32x{lanes}Internal for archmage::Wasm128Token {{
+                    type InternalRepr = {repr};
+                {float_layout}
+                {pixel_pack}
+                }}"#,
+                pixel_pack = pixel_pack_wasm_poly,
+            }
+        } else {
+            String::new()
+        },
         v4_copies = (0..sub_count).map(|_| "v4").collect::<Vec<_>>().join(", "),
         z_copies = (0..sub_count).map(|_| "z").collect::<Vec<_>>().join(", "),
         load_lanes = format!("[{}]", (0..sub_count)
@@ -3600,8 +4412,14 @@ fn generate_wasm_float_impl(ty: &FloatVecType) -> String {
         mul = binary_op(&format!("{wp}_mul")),
         div = binary_op(&format!("{wp}_div")),
         neg = unary_op(&format!("{wp}_neg")),
-        min = binary_op(&format!("{wp}_min")),
-        max = binary_op(&format!("{wp}_max")),
+        min = format!("[{}]", (0..sub_count)
+            .map(|i| format!("v128_bitselect(a[{i}], {wp}_pmin(b[{i}], a[{i}]), {wp}_ne(b[{i}], b[{i}]))"))
+            .collect::<Vec<_>>().join(", ")),
+        max = format!("[{}]", (0..sub_count)
+            .map(|i| format!("v128_bitselect(a[{i}], {wp}_pmax(b[{i}], a[{i}]), {wp}_ne(b[{i}], b[{i}]))"))
+            .collect::<Vec<_>>().join(", ")),
+        minimum = binary_op(&format!("{wp}_min")),
+        maximum = binary_op(&format!("{wp}_max")),
         sqrt = unary_op(&format!("{wp}_sqrt")),
         abs = unary_op(&format!("{wp}_abs")),
         floor = unary_op(&format!("{wp}_floor")),
@@ -3635,7 +4453,7 @@ fn generate_wasm_float_impl(ty: &FloatVecType) -> String {
         and = binary_op("v128_and"),
         or = binary_op("v128_or"),
         xor = binary_op("v128_xor"),
-        pixel_pack = pixel_pack_wasm_poly,
+        min_max_fast = min_max_fast_wasm_poly,
     }
 }
 
@@ -3649,14 +4467,16 @@ fn generate_wasm_native_impl(ty: &FloatVecType) -> String {
     let wp = ty.wasm_prefix();
     let zero_lit = if elem == "f32" { "0.0f32" } else { "0.0f64" };
 
-    // Native pixel pack for wasm f32x4. `f32x4_nearest` is round-half-to-even,
-    // matching the scalar default's `roundevenf`; `i32x4_trunc_sat_f32x4` then
-    // truncates an already-integral value exactly, and the two saturating
-    // narrows clamp into 0..=255. Without this override the trait default runs
-    // the software `roundevenf` per lane and LLVM does not recover it — the
-    // emitted module carries no `f32x4.nearest`/`narrow` at all, just an
-    // out-of-line call.
-    let pixel_pack_wasm_native = if elem == "f32" && lanes == 4 {
+    // Native pixel pack + 3-channel RGB helpers for wasm f32x4. `f32x4_nearest`
+    // is round-half-to-even, matching the scalar default's `roundevenf`;
+    // `i32x4_trunc_sat_f32x4` then truncates an already-integral value exactly,
+    // and the two saturating narrows clamp into 0..=255.
+    let float_layout = if elem == "f32" {
+        super::float_layout::wasm()
+    } else {
+        String::new()
+    };
+    let to_u8_wasm_native = if elem == "f32" && lanes == 4 {
         formatdoc! {r#"
 
             #[inline(always)]
@@ -3666,9 +4486,28 @@ fn generate_wasm_native_impl(ty: &FloatVecType) -> String {
                 let u8s = u8x16_narrow_i16x8(i16s, i16s);
                 (u32x4_extract_lane::<0>(u8s)).to_ne_bytes()
             }}
+        "#}
+    } else {
+        String::new()
+    };
+    let pixel_pack_wasm_native = if elem == "f32" && lanes == 4 {
+        formatdoc! {r#"
 
             #[inline(always)]
-            fn store_rgba_bytes(self, r: v128, g: v128, b: v128, a: v128) -> [u8; 16] {{
+            fn deinterleave_3ch_repr(self, rgb: [v128; 3]) -> [v128; 3] {{
+                let [v0, v1, v2] = rgb;
+                let r = i32x4_shuffle::<0, 3, 6, 0>(v0, v1);
+                let g = i32x4_shuffle::<1, 4, 7, 0>(v0, v1);
+                let b = i32x4_shuffle::<2, 5, 0, 0>(v0, v1);
+                [
+                    i32x4_shuffle::<0, 1, 2, 5>(r, v2),
+                    i32x4_shuffle::<0, 1, 2, 6>(g, v2),
+                    i32x4_shuffle::<0, 1, 4, 7>(b, v2),
+                ]
+            }}
+
+            #[inline(always)]
+            fn store_rgba_u8_into(self, r: v128, g: v128, b: v128, a: v128, out: &mut [u8; 16]) {{
                 let lo = i32x4_splat(0);
                 let hi = i32x4_splat(255);
                 let clamp = |v: v128| i32x4_min(i32x4_max(i32x4_trunc_sat_f32x4(f32x4_nearest(v)), lo), hi);
@@ -3676,12 +4515,76 @@ fn generate_wasm_native_impl(ty: &FloatVecType) -> String {
                     v128_or(clamp(r), i32x4_shl(clamp(g), 8)),
                     v128_or(i32x4_shl(clamp(b), 16), i32x4_shl(clamp(a), 24)),
                 );
-                crate::simd_storage::cast(pixels)
+                crate::simd_storage::store(pixels, out);
+            }}
+
+            #[inline(always)]
+            fn interleave_3ch_repr(self, channels: [v128; 3]) -> [v128; 3] {{
+                let [r, g, b] = channels;
+                let rg01 = i32x4_shuffle::<0, 4, 1, 5>(r, g);
+                let rg23 = i32x4_shuffle::<2, 6, 3, 7>(r, g);
+                let gb123 = i32x4_shuffle::<1, 5, 6, 7>(g, b);
+                let out0 = i32x4_shuffle::<0, 1, 4, 2>(rg01, b);
+                let out1 = i32x4_shuffle::<0, 1, 4, 5>(gb123, rg23);
+                let out2 = i32x4_shuffle::<2, 6, 7, 3>(gb123, rg23);
+                [out0, out1, out2]
+            }}
+
+            #[inline(always)]
+            fn load_rgb_bytes(self, rgb: &[u8; 12]) -> (v128, v128, v128) {{
+                let lo8 = u64x2(crate::simd_storage::copy(rgb.first_chunk::<8>().unwrap()), 0);
+                let hi4 = u32x4(
+                    crate::simd_storage::copy(rgb.last_chunk::<4>().unwrap()),
+                    0,
+                    0,
+                    0,
+                );
+                // Extract all 12 bytes [R0..3, G0..3, B0..3, 0..0] in one shuffle;
+                // lane 8 references lo8's zeroed high half so LLVM emits v128.load64_zero.
+                let rgb8 = i8x16_shuffle::<
+                    0, 3, 6, 17, 1, 4, 7, 18, 2, 5, 16, 19, 8, 8, 8, 8,
+                >(lo8, hi4);
+                let rg16 = u16x8_extend_low_u8x16(rgb8);
+                let b16 = u16x8_extend_high_u8x16(rgb8);
+                (
+                    f32x4_convert_u32x4(u32x4_extend_low_u16x8(rg16)),
+                    f32x4_convert_u32x4(u32x4_extend_high_u16x8(rg16)),
+                    f32x4_convert_u32x4(u32x4_extend_low_u16x8(b16)),
+                )
+            }}
+
+            #[inline(always)]
+            fn store_rgb_u8_into(self, r: v128, g: v128, b: v128, out: &mut [u8; 12]) {{
+                let narrow4 = |v: v128| -> v128 {{
+                    let i32s = i32x4_trunc_sat_f32x4(f32x4_nearest(v));
+                    let i16s = i16x8_narrow_i32x4(i32s, i32s);
+                    u8x16_narrow_i16x8(i16s, i16s)
+                }};
+                let rg8 = i32x4_shuffle::<0, 4, 0, 0>(narrow4(r), narrow4(g));
+                let packed = i8x16_shuffle::<
+                    0, 4, 16, 1, 5, 17, 2, 6, 18, 3, 7, 19, 0, 0, 0, 0,
+                >(rg8, narrow4(b));
+                crate::simd_storage::store(
+                    u64x2_extract_lane::<0>(packed),
+                    out.first_chunk_mut::<8>().unwrap(),
+                );
+                crate::simd_storage::store(
+                    u32x4_extract_lane::<2>(packed),
+                    out.last_chunk_mut::<4>().unwrap(),
+                );
             }}
         "#}
     } else {
         String::new()
     };
+
+    let min_max_fast_wasm_native = formatdoc! {r#"
+
+        #[inline(always)]
+        fn min_fast(self, a: v128, b: v128) -> v128 {{ crate::wasm_fma::min_{wp}_fast(self, a, b) }}
+        #[inline(always)]
+        fn max_fast(self, a: v128, b: v128) -> v128 {{ crate::wasm_fma::max_{wp}_fast(self, a, b) }}
+    "#};
 
     // Adjacent-pair tree for f32x4 to match x86/NEON shape (#50).
     let reduce_add_body = || -> String {
@@ -3785,13 +4688,27 @@ fn generate_wasm_native_impl(ty: &FloatVecType) -> String {
             #[inline(always)]
             fn neg(self, a: v128) -> v128 {{ {wp}_neg(a) }}
             #[inline(always)]
-            fn min(self, a: v128, b: v128) -> v128 {{ {wp}_min(a, b) }}
+            fn min(self, a: v128, b: v128) -> v128 {{ v128_bitselect(a, {wp}_pmin(b, a), {wp}_ne(b, b)) }}
             #[inline(always)]
-            fn max(self, a: v128, b: v128) -> v128 {{ {wp}_max(a, b) }}
+            fn max(self, a: v128, b: v128) -> v128 {{ v128_bitselect(a, {wp}_pmax(b, a), {wp}_ne(b, b)) }}
+            #[inline(always)]
+            fn minimum(self, a: v128, b: v128) -> v128 {{ {wp}_min(a, b) }}
+            #[inline(always)]
+            fn maximum(self, a: v128, b: v128) -> v128 {{ {wp}_max(a, b) }}
+            {min_max_fast}
             #[inline(always)]
             fn sqrt(self, a: v128) -> v128 {{ {wp}_sqrt(a) }}
             #[inline(always)]
             fn abs(self, a: v128) -> v128 {{ {wp}_abs(a) }}
+            #[inline(always)]
+            fn trunc(self, a: v128) -> v128 {{ {wp}_trunc(a) }}
+
+            #[inline(always)]
+            fn mul_neg_add_relaxed(self, a: v128, b: v128, c: v128) -> v128 {{ crate::wasm_fma::nmadd_{wp}(self, a, b, c) }}
+
+            #[inline(always)]
+            fn mul_neg_add_fused(self, a: v128, b: v128, c: v128) -> v128 {{ crate::wasm_fma::fused_{wp}(self, {wp}_neg(a), b, c) }}
+
             #[inline(always)]
             fn floor(self, a: v128) -> v128 {{ {wp}_floor(a) }}
             #[inline(always)]
@@ -3843,13 +4760,27 @@ fn generate_wasm_native_impl(ty: &FloatVecType) -> String {
             fn bitor(self, a: v128, b: v128) -> v128 {{ v128_or(a, b) }}
             #[inline(always)]
             fn bitxor(self, a: v128, b: v128) -> v128 {{ v128_xor(a, b) }}
-        {pixel_pack}
-        }}
+            {to_u8_wasm_native}
+        }}{internal_impl}
     "#,
+        internal_impl = if elem == "f32" {
+            formatdoc! {r#"
+
+                #[cfg(target_arch = "wasm32")]
+                impl crate::simd::backends::F32x{lanes}Internal for archmage::Wasm128Token {{
+                    type InternalRepr = v128;
+                {float_layout}
+                {pixel_pack}
+                }}"#,
+                pixel_pack = pixel_pack_wasm_native,
+            }
+        } else {
+            String::new()
+        },
         reduce_add = reduce_add_body(),
         reduce_min = reduce_minmax("min"),
         reduce_max = reduce_minmax("max"),
-        pixel_pack = pixel_pack_wasm_native,
+        min_max_fast = min_max_fast_wasm_native,
     }
 }
 
@@ -4093,12 +5024,18 @@ fn generate_convert_traits() -> String {
             /// lanes clamp to `i32::MIN`/`i32::MAX`, NaN lanes become 0 —
             /// identical on every backend (Rust `as` / NEON FCVTZS / WASM
             /// trunc_sat semantics). Default delegates to
-            /// [`convert_f32_to_i32`] (already conformant on NEON/WASM/
+            /// [`convert_f32_to_i32`](Self::convert_f32_to_i32) (already conformant on NEON/WASM/
             /// scalar); x86 overrides with a cvttps + compare/blend fixup
             /// (the bare op yields the `i32::MIN` sentinel for overflow AND
             /// NaN there — issue #80).
             #[inline(always)]
             fn convert_f32_to_i32_saturating(self, a: <Self as F32x4Backend>::Repr) -> <Self as I32x4Backend>::Repr {{
+                <Self as F32x4Convert>::convert_f32_to_i32(self, a)
+            }}
+
+            /// Fast in-range truncation toward zero (overflow/NaN unspecified; relaxed trunc on WASM `relaxed-simd`).
+            #[inline(always)]
+            fn convert_f32_to_i32_fast(self, a: <Self as F32x4Backend>::Repr) -> <Self as I32x4Backend>::Repr {{
                 <Self as F32x4Convert>::convert_f32_to_i32(self, a)
             }}
 
@@ -4126,12 +5063,18 @@ fn generate_convert_traits() -> String {
             /// lanes clamp to `i32::MIN`/`i32::MAX`, NaN lanes become 0 —
             /// identical on every backend (Rust `as` / NEON FCVTZS / WASM
             /// trunc_sat semantics). Default delegates to
-            /// [`convert_f32_to_i32`] (already conformant on NEON/WASM/
+            /// [`convert_f32_to_i32`](Self::convert_f32_to_i32) (already conformant on NEON/WASM/
             /// scalar); x86 overrides with a cvttps + compare/blend fixup
             /// (the bare op yields the `i32::MIN` sentinel for overflow AND
             /// NaN there — issue #80).
             #[inline(always)]
             fn convert_f32_to_i32_saturating(self, a: <Self as F32x8Backend>::Repr) -> <Self as I32x8Backend>::Repr {{
+                <Self as F32x8Convert>::convert_f32_to_i32(self, a)
+            }}
+
+            /// Fast in-range truncation toward zero (overflow/NaN unspecified; relaxed trunc on WASM `relaxed-simd`).
+            #[inline(always)]
+            fn convert_f32_to_i32_fast(self, a: <Self as F32x8Backend>::Repr) -> <Self as I32x8Backend>::Repr {{
                 <Self as F32x8Convert>::convert_f32_to_i32(self, a)
             }}
 
@@ -4160,12 +5103,18 @@ fn generate_convert_traits() -> String {
             /// lanes clamp to `i32::MIN`/`i32::MAX`, NaN lanes become 0 —
             /// identical on every backend (Rust `as` / NEON FCVTZS / WASM
             /// trunc_sat semantics). Default delegates to
-            /// [`convert_f32_to_i32`] (already conformant on NEON/WASM/
+            /// [`convert_f32_to_i32`](Self::convert_f32_to_i32) (already conformant on NEON/WASM/
             /// scalar); x86 overrides with a cvttps + compare/blend fixup
             /// (the bare op yields the `i32::MIN` sentinel for overflow AND
             /// NaN there — issue #80).
             #[inline(always)]
             fn convert_f32_to_i32_saturating(self, a: <Self as F32x16Backend>::Repr) -> <Self as I32x16Backend>::Repr {{
+                <Self as F32x16Convert>::convert_f32_to_i32(self, a)
+            }}
+
+            /// Fast in-range truncation toward zero (overflow/NaN unspecified; relaxed trunc on WASM `relaxed-simd`).
+            #[inline(always)]
+            fn convert_f32_to_i32_fast(self, a: <Self as F32x16Backend>::Repr) -> <Self as I32x16Backend>::Repr {{
                 <Self as F32x16Convert>::convert_f32_to_i32(self, a)
             }}
 
@@ -4233,7 +5182,7 @@ fn generate_x86_i32_impls(types: &[I32VecType], token: &str, max_width: usize) -
         if ty.width_bits > max_width {
             continue;
         }
-        code.push_str("\n#[cfg(target_arch = \"x86_64\")]\n");
+        code.push_str("\n#[cfg(all(target_arch = \"x86_64\", target_feature = \"sse2\"))]\n");
         code.push_str(&generate_x86_i32_impl(ty, token));
         code.push('\n');
     }
@@ -4499,7 +5448,7 @@ fn generate_x86_convert_impls(token: &str) -> String {
     let arcane = super::backend_syntax::arcane(token);
     formatdoc! {r#"
 
-        #[cfg(target_arch = "x86_64")]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
         impl F32x4Convert for archmage::{token} {{
             {arcane}
             fn bitcast_f32_to_i32(self, a: __m128) -> __m128i {{
@@ -4538,7 +5487,7 @@ fn generate_x86_convert_impls(token: &str) -> String {
             }}
         }}
 
-        #[cfg(target_arch = "x86_64")]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
         impl F32x8Convert for archmage::{token} {{
             {arcane}
             fn bitcast_f32_to_i32(self, a: __m256) -> __m256i {{
@@ -4576,7 +5525,7 @@ fn generate_x86_convert_impls(token: &str) -> String {
             }}
         }}
 
-        #[cfg(all(target_arch = "x86_64", feature = "w512"))]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "w512"))]
         impl F32x16Convert for archmage::{token} {{
             {arcane}
             fn bitcast_f32_to_i32(self, a: [__m256; 2]) -> [__m256i; 2] {{
@@ -4617,7 +5566,7 @@ fn generate_x86_convert_impls(token: &str) -> String {
             }}
         }}
 
-        #[cfg(target_arch = "x86_64")]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
         impl U32x4Bitcast for archmage::{token} {{
             {arcane}
             fn bitcast_u32_to_i32(self, a: __m128i) -> __m128i {{
@@ -4630,7 +5579,7 @@ fn generate_x86_convert_impls(token: &str) -> String {
             }}
         }}
 
-        #[cfg(target_arch = "x86_64")]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
         impl U32x8Bitcast for archmage::{token} {{
             {arcane}
             fn bitcast_u32_to_i32(self, a: __m256i) -> __m256i {{
@@ -4643,7 +5592,7 @@ fn generate_x86_convert_impls(token: &str) -> String {
             }}
         }}
 
-        #[cfg(target_arch = "x86_64")]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
         impl I64x2Bitcast for archmage::{token} {{
             {arcane}
             fn bitcast_i64_to_f64(self, a: __m128i) -> __m128d {{
@@ -4656,7 +5605,7 @@ fn generate_x86_convert_impls(token: &str) -> String {
             }}
         }}
 
-        #[cfg(target_arch = "x86_64")]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
         impl I64x4Bitcast for archmage::{token} {{
             {arcane}
             fn bitcast_i64_to_f64(self, a: __m256i) -> __m256d {{
@@ -6175,6 +7124,11 @@ fn generate_wasm_convert_impls() -> String {
             }}
 
             #[inline(always)]
+            fn convert_f32_to_i32_fast(self, a: v128) -> v128 {{
+                crate::wasm_fma::trunc_f32x4_fast(self, a)
+            }}
+
+            #[inline(always)]
             fn convert_f32_to_i32_round(self, a: v128) -> v128 {{
                 i32x4_trunc_sat_f32x4(f32x4_nearest(a))
             }}
@@ -6196,6 +7150,14 @@ fn generate_wasm_convert_impls() -> String {
             #[inline(always)]
             fn convert_f32_to_i32(self, a: [v128; 2]) -> [v128; 2] {{
                 [i32x4_trunc_sat_f32x4(a[0]), i32x4_trunc_sat_f32x4(a[1])]
+            }}
+
+            #[inline(always)]
+            fn convert_f32_to_i32_fast(self, a: [v128; 2]) -> [v128; 2] {{
+                [
+                    crate::wasm_fma::trunc_f32x4_fast(self, a[0]),
+                    crate::wasm_fma::trunc_f32x4_fast(self, a[1]),
+                ]
             }}
 
             #[inline(always)]
@@ -6223,6 +7185,16 @@ fn generate_wasm_convert_impls() -> String {
             #[inline(always)]
             fn convert_f32_to_i32(self, a: [v128; 4]) -> [v128; 4] {{
                 [i32x4_trunc_sat_f32x4(a[0]), i32x4_trunc_sat_f32x4(a[1]), i32x4_trunc_sat_f32x4(a[2]), i32x4_trunc_sat_f32x4(a[3])]
+            }}
+
+            #[inline(always)]
+            fn convert_f32_to_i32_fast(self, a: [v128; 4]) -> [v128; 4] {{
+                [
+                    crate::wasm_fma::trunc_f32x4_fast(self, a[0]),
+                    crate::wasm_fma::trunc_f32x4_fast(self, a[1]),
+                    crate::wasm_fma::trunc_f32x4_fast(self, a[2]),
+                    crate::wasm_fma::trunc_f32x4_fast(self, a[3]),
+                ]
             }}
 
             #[inline(always)]
@@ -6468,7 +7440,7 @@ fn generate_x86_u32_impls(types: &[U32VecType], token: &str, max_width: usize) -
         if ty.width_bits > max_width {
             continue;
         }
-        code.push_str("\n#[cfg(target_arch = \"x86_64\")]\n");
+        code.push_str("\n#[cfg(all(target_arch = \"x86_64\", target_feature = \"sse2\"))]\n");
         code.push_str(&generate_x86_u32_impl(ty, token));
         code.push('\n');
     }
@@ -6588,14 +7560,12 @@ fn generate_x86_u32_impl(ty: &U32VecType, token: &str) -> String {
 
             {arcane}
             fn simd_le(self, a: {inner}, b: {inner}) -> {inner} {{
-                let gt = <Self as {trait_name}>::simd_gt(_self, a, b);
-                {p}_andnot_si{bits}(gt, {p}_set1_epi32(-1))
+                {p}_cmpeq_epi32({p}_min_epu32(a, b), a)
             }}
 
             {arcane}
             fn simd_ge(self, a: {inner}, b: {inner}) -> {inner} {{
-                let lt = <Self as {trait_name}>::simd_gt(_self, b, a);
-                {p}_andnot_si{bits}(lt, {p}_set1_epi32(-1))
+                {p}_cmpeq_epi32({p}_min_epu32(a, b), b)
             }}
 
             {arcane}

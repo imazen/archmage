@@ -57,7 +57,7 @@ const _: () = {
     );
 };
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 const _: () = {
     assert!(
         size_of::<i32x4<archmage::X64V3Token>>()
@@ -130,6 +130,26 @@ impl<T: I32x4Backend> i32x4<T> {
         Self(T::from_array(token, arr), token)
     }
 
+    /// Load up to `4` elements from `slice`, filling remaining high lanes with `pad`.
+    ///
+    /// Designed for single-vector slice tails after [`partition_slice_t`](Self::partition_slice_t)
+    /// (typically paired with [`store_prefix`](Self::store_prefix)).
+    ///
+    /// # Panics
+    ///
+    /// Panics if `slice.len() > 4`.
+    #[inline(always)]
+    pub fn load_padded_t(token: T, slice: &[i32], pad: i32) -> Self {
+        assert!(
+            slice.len() <= 4,
+            "i32x4::load_padded_t requires slice.len() <= 4, got {}",
+            slice.len(),
+        );
+        let mut arr = [pad; 4];
+        arr[..slice.len()].copy_from_slice(slice);
+        Self(T::from_array(token, arr), token)
+    }
+
     /// Split a slice into SIMD-width chunks and a scalar remainder.
     ///
     /// Returns `(&[[i32; 4]], &[i32])` — fixed-size arrays suitable
@@ -156,6 +176,25 @@ impl<T: I32x4Backend> i32x4<T> {
         T::store(self.1, self.0, out);
     }
 
+    /// Store the low `out.len()` lanes into `out`.
+    ///
+    /// Designed for single-vector slice tails after [`partition_slice_mut_t`](Self::partition_slice_mut_t)
+    /// (typically paired with [`load_padded_t`](Self::load_padded_t)).
+    ///
+    /// # Panics
+    ///
+    /// Panics if `out.len() > 4`.
+    #[inline(always)]
+    pub fn store_prefix(self, out: &mut [i32]) {
+        assert!(
+            out.len() <= 4,
+            "i32x4::store_prefix requires out.len() <= 4, got {}",
+            out.len(),
+        );
+        let arr = T::to_array(self.1, self.0);
+        out.copy_from_slice(&arr[..out.len()]);
+    }
+
     /// Convert to array.
     #[inline(always)]
     pub fn to_array(self) -> [i32; 4] {
@@ -166,6 +205,12 @@ impl<T: I32x4Backend> i32x4<T> {
     #[inline(always)]
     pub fn into_repr(self) -> T::Repr {
         self.0
+    }
+
+    /// Get the capability token carried by this vector.
+    #[inline(always)]
+    pub fn token(self) -> T {
+        self.1
     }
 
     /// Wrap a platform representation (token-gated).
@@ -634,7 +679,7 @@ impl i32x4<archmage::ScalarToken> {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl i32x4<archmage::X64V3Token> {
     /// Implementation identifier for this backend.
     pub const fn implementation_name() -> &'static str {
@@ -672,7 +717,7 @@ impl i32x4<archmage::Wasm128Token> {
         "wasm::wasm128::i32x4"
     }
 }
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl i32x4<archmage::X64V3Token> {
     /// Wrap a raw `__m128i` using an explicit CPU capability token.
     ///

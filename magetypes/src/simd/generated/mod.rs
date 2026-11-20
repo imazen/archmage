@@ -76,7 +76,7 @@ pub mod v3 {
     //! Also includes 128-bit native types and 512-bit polyfills
     //! (emulated via 2×256-bit ops). All take `X64V3Token`.
 
-    #[cfg(target_arch = "x86_64")]
+    #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
     #[allow(non_camel_case_types)]
     mod _w256_aliases {
         pub type f32x8 = crate::simd::generic::f32x8<archmage::X64V3Token>;
@@ -90,16 +90,16 @@ pub mod v3 {
         pub type i64x4 = crate::simd::generic::i64x4<archmage::X64V3Token>;
         pub type u64x4 = crate::simd::generic::u64x4<archmage::X64V3Token>;
     }
-    #[cfg(target_arch = "x86_64")]
+    #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
     pub use _w256_aliases::*;
 
-    #[cfg(target_arch = "x86_64")]
+    #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
     pub use _w256_aliases::{
         f32x8 as f32xN, f64x4 as f64xN, i8x32 as i8xN, i16x16 as i16xN, i32x8 as i32xN,
         i64x4 as i64xN, u8x32 as u8xN, u16x16 as u16xN, u32x8 as u32xN, u64x4 as u64xN,
     };
 
-    #[cfg(target_arch = "x86_64")]
+    #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
     #[allow(non_camel_case_types)]
     mod _w128_aliases {
         pub type f32x4 = crate::simd::generic::f32x4<archmage::X64V3Token>;
@@ -113,11 +113,11 @@ pub mod v3 {
         pub type i64x2 = crate::simd::generic::i64x2<archmage::X64V3Token>;
         pub type u64x2 = crate::simd::generic::u64x2<archmage::X64V3Token>;
     }
-    #[cfg(target_arch = "x86_64")]
+    #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
     pub use _w128_aliases::*;
 
     // 512-bit generic types (2×256-bit polyfill, same X64V3Token)
-    #[cfg(all(target_arch = "x86_64", feature = "w512"))]
+    #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "w512"))]
     #[allow(non_camel_case_types)]
     mod _w512_aliases {
         pub type f32x16 = crate::simd::generic::f32x16<archmage::X64V3Token>;
@@ -131,7 +131,7 @@ pub mod v3 {
         pub type i64x8 = crate::simd::generic::i64x8<archmage::X64V3Token>;
         pub type u64x8 = crate::simd::generic::u64x8<archmage::X64V3Token>;
     }
-    #[cfg(all(target_arch = "x86_64", feature = "w512"))]
+    #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "w512"))]
     pub use _w512_aliases::*;
 
     /// Token type for this width level
@@ -152,7 +152,7 @@ pub mod v4 {
     //! Also includes 128-bit and 256-bit native types. These accept
     //! `X64V3Token` — use `token.v3()` to downcast your `X64V4Token`.
 
-    #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+    #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
     #[allow(non_camel_case_types)]
     mod _w512_aliases {
         pub type f32x16 = crate::simd::generic::f32x16<archmage::X64V4Token>;
@@ -166,7 +166,12 @@ pub mod v4 {
         pub type i64x8 = crate::simd::generic::i64x8<archmage::X64V4Token>;
         pub type u64x8 = crate::simd::generic::u64x8<archmage::X64V4Token>;
     }
-    #[cfg(all(target_arch = "x86_64", not(feature = "avx512"), feature = "w512"))]
+    #[cfg(all(
+        target_arch = "x86_64",
+        target_feature = "sse2",
+        not(feature = "avx512"),
+        feature = "w512"
+    ))]
     #[allow(non_camel_case_types)]
     mod _w512_aliases {
         pub type f32x16 = crate::simd::generic::f32x16<archmage::X64V3Token>;
@@ -180,16 +185,16 @@ pub mod v4 {
         pub type i64x8 = crate::simd::generic::i64x8<archmage::X64V3Token>;
         pub type u64x8 = crate::simd::generic::u64x8<archmage::X64V3Token>;
     }
-    #[cfg(all(target_arch = "x86_64", feature = "w512"))]
+    #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "w512"))]
     pub use _w512_aliases::*;
 
-    #[cfg(all(target_arch = "x86_64", feature = "w512"))]
+    #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "w512"))]
     pub use _w512_aliases::{
         f32x16 as f32xN, f64x8 as f64xN, i8x64 as i8xN, i16x32 as i16xN, i32x16 as i32xN,
         i64x8 as i64xN, u8x64 as u8xN, u16x32 as u16xN, u32x16 as u32xN, u64x8 as u64xN,
     };
 
-    #[cfg(target_arch = "x86_64")]
+    #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
     #[allow(non_camel_case_types)]
     mod _w128_aliases {
         pub type f32x4 = crate::simd::generic::f32x4<archmage::X64V3Token>;
@@ -203,10 +208,10 @@ pub mod v4 {
         pub type i64x2 = crate::simd::generic::i64x2<archmage::X64V3Token>;
         pub type u64x2 = crate::simd::generic::u64x2<archmage::X64V3Token>;
     }
-    #[cfg(target_arch = "x86_64")]
+    #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
     pub use _w128_aliases::*;
 
-    #[cfg(target_arch = "x86_64")]
+    #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
     #[allow(non_camel_case_types)]
     mod _w256_aliases {
         pub type f32x8 = crate::simd::generic::f32x8<archmage::X64V3Token>;
@@ -220,7 +225,7 @@ pub mod v4 {
         pub type i64x4 = crate::simd::generic::i64x4<archmage::X64V3Token>;
         pub type u64x4 = crate::simd::generic::u64x4<archmage::X64V3Token>;
     }
-    #[cfg(target_arch = "x86_64")]
+    #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
     pub use _w256_aliases::*;
 
     /// Token type for this width level
@@ -243,7 +248,7 @@ pub mod v4x {
     //! extension methods. Also includes 128-bit and 256-bit native types.
     //! Use `token.v3()` to downcast for narrower types.
 
-    #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+    #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
     #[allow(non_camel_case_types)]
     mod _w512_aliases {
         pub type f32x16 = crate::simd::generic::f32x16<archmage::X64V4xToken>;
@@ -257,7 +262,12 @@ pub mod v4x {
         pub type i64x8 = crate::simd::generic::i64x8<archmage::X64V4xToken>;
         pub type u64x8 = crate::simd::generic::u64x8<archmage::X64V4xToken>;
     }
-    #[cfg(all(target_arch = "x86_64", not(feature = "avx512"), feature = "w512"))]
+    #[cfg(all(
+        target_arch = "x86_64",
+        target_feature = "sse2",
+        not(feature = "avx512"),
+        feature = "w512"
+    ))]
     #[allow(non_camel_case_types)]
     mod _w512_aliases {
         pub type f32x16 = crate::simd::generic::f32x16<archmage::X64V3Token>;
@@ -271,16 +281,16 @@ pub mod v4x {
         pub type i64x8 = crate::simd::generic::i64x8<archmage::X64V3Token>;
         pub type u64x8 = crate::simd::generic::u64x8<archmage::X64V3Token>;
     }
-    #[cfg(all(target_arch = "x86_64", feature = "w512"))]
+    #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "w512"))]
     pub use _w512_aliases::*;
 
-    #[cfg(all(target_arch = "x86_64", feature = "w512"))]
+    #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "w512"))]
     pub use _w512_aliases::{
         f32x16 as f32xN, f64x8 as f64xN, i8x64 as i8xN, i16x32 as i16xN, i32x16 as i32xN,
         i64x8 as i64xN, u8x64 as u8xN, u16x32 as u16xN, u32x16 as u32xN, u64x8 as u64xN,
     };
 
-    #[cfg(target_arch = "x86_64")]
+    #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
     #[allow(non_camel_case_types)]
     mod _w128_aliases {
         pub type f32x4 = crate::simd::generic::f32x4<archmage::X64V3Token>;
@@ -294,10 +304,10 @@ pub mod v4x {
         pub type i64x2 = crate::simd::generic::i64x2<archmage::X64V3Token>;
         pub type u64x2 = crate::simd::generic::u64x2<archmage::X64V3Token>;
     }
-    #[cfg(target_arch = "x86_64")]
+    #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
     pub use _w128_aliases::*;
 
-    #[cfg(target_arch = "x86_64")]
+    #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
     #[allow(non_camel_case_types)]
     mod _w256_aliases {
         pub type f32x8 = crate::simd::generic::f32x8<archmage::X64V3Token>;
@@ -311,7 +321,7 @@ pub mod v4x {
         pub type i64x4 = crate::simd::generic::i64x4<archmage::X64V3Token>;
         pub type u64x4 = crate::simd::generic::u64x4<archmage::X64V3Token>;
     }
-    #[cfg(target_arch = "x86_64")]
+    #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
     pub use _w256_aliases::*;
 
     /// Token type for this width level

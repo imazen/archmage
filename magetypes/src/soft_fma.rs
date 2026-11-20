@@ -29,7 +29,7 @@ macro_rules! std_hardware_fma {
             feature = "std",
             any(
                 all(target_arch = "aarch64", target_feature = "neon"),
-                all(any(target_arch = "x86", target_arch = "x86_64"), target_feature = "fma")
+                all(any(target_arch = "x86", all(target_arch = "x86_64", target_feature = "sse2")), target_feature = "fma")
             )
         ))]
         $item
@@ -45,7 +45,7 @@ macro_rules! token_or_software_fma {
             feature = "std",
             any(
                 all(target_arch = "aarch64", target_feature = "neon"),
-                all(any(target_arch = "x86", target_arch = "x86_64"), target_feature = "fma")
+                all(any(target_arch = "x86", all(target_arch = "x86_64", target_feature = "sse2")), target_feature = "fma")
             )
         )))]
         $item
@@ -86,7 +86,7 @@ token_or_software_fma! {
             not(miri),
             not(feature = "std"),
             any(
-                all(target_arch = "x86_64", target_feature = "fma"),
+                all(target_arch = "x86_64", target_feature = "sse2", target_feature = "fma"),
                 all(target_arch = "aarch64", target_feature = "neon")
             )
         ))]
@@ -110,7 +110,7 @@ token_or_software_fma! {
         #[cfg(all(
             not(miri),
             any(
-                all(target_arch = "x86_64", any(feature = "std", target_feature = "fma")),
+                all(target_arch = "x86_64", target_feature = "sse2", any(feature = "std", target_feature = "fma")),
                 all(target_arch = "aarch64", target_feature = "neon")
             )
         ))]
@@ -141,21 +141,29 @@ token_or_software_fma! {
 #[cfg(all(
     not(miri),
     any(
-        all(target_arch = "x86_64", any(feature = "std", target_feature = "fma")),
+        all(
+            target_arch = "x86_64",
+            target_feature = "sse2",
+            any(feature = "std", target_feature = "fma")
+        ),
         all(target_arch = "aarch64", target_feature = "neon")
     ),
     not(all(
         feature = "std",
         any(
             all(target_arch = "aarch64", target_feature = "neon"),
-            all(target_arch = "x86_64", target_feature = "fma")
+            all(
+                target_arch = "x86_64",
+                target_feature = "sse2",
+                target_feature = "fma"
+            )
         )
     ))
 ))]
 mod hw {
     use archmage::SimdToken;
 
-    #[cfg(target_arch = "x86_64")]
+    #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
     pub(super) type Token = archmage::X64V3Token;
     #[cfg(target_arch = "aarch64")]
     pub(super) type Token = archmage::NeonToken;
@@ -165,7 +173,7 @@ mod hw {
         Token::summon()
     }
 
-    #[cfg(target_arch = "x86_64")]
+    #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
     #[archmage::arcane]
     pub(super) fn fma2(
         _token: archmage::X64V3Token,
@@ -185,7 +193,7 @@ mod hw {
         (fma1(a0, b0, c0), fma1(a1, b1, c1))
     }
 
-    #[cfg(target_arch = "x86_64")]
+    #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
     #[archmage::arcane]
     pub(super) fn fma(_token: archmage::X64V3Token, a: f64, b: f64, c: f64) -> f64 {
         use core::arch::x86_64::*;
@@ -194,6 +202,7 @@ mod hw {
 
     #[cfg(all(
         target_arch = "x86_64",
+        target_feature = "sse2",
         all(
             not(feature = "std"),
             any(target_arch = "aarch64", target_feature = "fma")
@@ -253,7 +262,7 @@ macro_rules! software_fma_or_test {
             feature = "std",
             any(
                 all(target_arch = "aarch64", target_feature = "neon"),
-                all(any(target_arch = "x86", target_arch = "x86_64"), target_feature = "fma")
+                all(any(target_arch = "x86", all(target_arch = "x86_64", target_feature = "sse2")), target_feature = "fma")
             )
         ))))]
         $item

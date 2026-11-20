@@ -11,10 +11,10 @@
 //! which require POD storage and enforce equal sizes at compile time.
 //! Token-bearing wrappers never implement the storage POD trait.
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 use core::arch::x86_64::*;
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 use archmage::{X64V3Token, arcane};
 
 use crate::simd::backends::*;
@@ -30,7 +30,7 @@ macro_rules! sse2_baseline {
     };
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl F32x4Backend for X64V3Token {
     type Repr = __m128;
 
@@ -99,11 +99,37 @@ impl F32x4Backend for X64V3Token {
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn min(self, a: __m128, b: __m128) -> __m128 {
-        _mm_min_ps(a, b)
+        _mm_blendv_ps(_mm_min_ps(a, b), a, _mm_cmp_ps::<_CMP_UNORD_Q>(b, b))
     }
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn max(self, a: __m128, b: __m128) -> __m128 {
+        _mm_blendv_ps(_mm_max_ps(a, b), a, _mm_cmp_ps::<_CMP_UNORD_Q>(b, b))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn minimum(self, a: __m128, b: __m128) -> __m128 {
+        _mm_or_ps(
+            _mm_or_ps(_mm_min_ps(a, b), _mm_min_ps(b, a)),
+            _mm_cmp_ps::<_CMP_UNORD_Q>(a, b),
+        )
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn maximum(self, a: __m128, b: __m128) -> __m128 {
+        _mm_or_ps(
+            _mm_and_ps(_mm_max_ps(a, b), _mm_max_ps(b, a)),
+            _mm_cmp_ps::<_CMP_UNORD_Q>(a, b),
+        )
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn min_fast(self, a: __m128, b: __m128) -> __m128 {
+        _mm_min_ps(a, b)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn max_fast(self, a: __m128, b: __m128) -> __m128 {
         _mm_max_ps(a, b)
     }
 
@@ -117,6 +143,21 @@ impl F32x4Backend for X64V3Token {
     fn abs(self, a: __m128) -> __m128 {
         let mask = _mm_castsi128_ps(_mm_set1_epi32(0x7FFF_FFFFi32));
         _mm_and_ps(a, mask)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn trunc(self, a: __m128) -> __m128 {
+        _mm_round_ps::<0x0b>(a)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn mul_neg_add_relaxed(self, a: __m128, b: __m128, c: __m128) -> __m128 {
+        _mm_fnmadd_ps(a, b, c)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn mul_neg_add_fused(self, a: __m128, b: __m128, c: __m128) -> __m128 {
+        _mm_fnmadd_ps(a, b, c)
     }
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
@@ -313,9 +354,13 @@ impl F32x4Backend for X64V3Token {
         let u8s = _mm_packus_epi16(i16s, i16s);
         (_mm_cvtsi128_si32(u8s) as u32).to_ne_bytes()
     }
+}
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
+impl F32x4Internal for X64V3Token {
+    type InternalRepr = __m128;
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
-    fn store_rgba_bytes(self, r: __m128, g: __m128, b: __m128, a: __m128) -> [u8; 16] {
+    fn store_rgba_u8_into(self, r: __m128, g: __m128, b: __m128, a: __m128, out: &mut [u8; 16]) {
         let max = _mm_set1_ps(255.0);
         let rg = _mm_packs_epi32(
             _mm_cvtps_epi32(_mm_min_ps(max, r)),
@@ -328,11 +373,282 @@ impl F32x4Backend for X64V3Token {
         // [R0-3,G0-3,B0-3,A0-3] -> interleaved RGBA pixels 0-3.
         let packed = _mm_packus_epi16(rg, ba);
         let shuf = _mm_setr_epi8(0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15);
-        crate::simd_storage::cast(_mm_shuffle_epi8(packed, shuf))
+        crate::simd_storage::store(_mm_shuffle_epi8(packed, shuf), out);
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn from_u16_lanes(self, lanes: &[u16; 4]) -> __m128 {
+        _mm_cvtepi32_ps(_mm_cvtepu16_epi32(_mm_cvtsi64_si128(
+            crate::simd_storage::cast(*lanes),
+        )))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn to_u16_lanes<const CFG: u32>(self, value: __m128) -> [u16; 4] {
+        let opts = const { crate::numerics::IntConvert::decode(CFG) };
+        let value = if opts.saturates_all() {
+            _mm_min_ps(_mm_set1_ps(65535.0), value)
+        } else {
+            value
+        };
+
+        let i = if opts.rounds() {
+            _mm_cvtps_epi32(value)
+        } else {
+            _mm_cvttps_epi32(value)
+        };
+        crate::simd_storage::cast::<_, [u16; 8]>(_mm_packus_epi32(i, i))
+            .first_chunk::<4>()
+            .copied()
+            .unwrap()
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn to_u8_lanes<const CFG: u32>(self, value: __m128) -> [u8; 4] {
+        let opts = const { crate::numerics::IntConvert::decode(CFG) };
+        let value = if opts.saturates_all() {
+            _mm_min_ps(_mm_set1_ps(255.0), value)
+        } else {
+            value
+        };
+        let i = if opts.rounds() {
+            _mm_cvtps_epi32(value)
+        } else {
+            _mm_cvttps_epi32(value)
+        };
+        crate::simd_storage::cast(_mm_cvtsi128_si32(_mm_packus_epi16(
+            _mm_packs_epi32(i, i),
+            _mm_setzero_si128(),
+        )) as u32)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn to_u32_lanes<const CFG: u32>(self, value: __m128) -> __m128 {
+        let opts = const { crate::numerics::IntConvert::decode(CFG) };
+        let value = if opts.nonnegative() {
+            value
+        } else {
+            _mm_max_ps(value, _mm_setzero_ps())
+        };
+        if const {
+            !crate::numerics::IntConvert::decode(CFG).is_in_range()
+                && !crate::numerics::IntConvert::decode(CFG).saturates_all()
+        } {
+            let i = if opts.rounds() {
+                _mm_cvtps_epi32(value)
+            } else {
+                _mm_cvttps_epi32(value)
+            };
+            return _mm_castsi128_ps(i);
+        }
+        let offset = _mm_set1_ps(2147483648.0);
+        let hi = _mm_cmp_ps::<_CMP_GE_OQ>(value, offset);
+        let adjusted = _mm_sub_ps(value, _mm_and_ps(hi, offset));
+        let i = if opts.rounds() {
+            _mm_cvtps_epi32(adjusted)
+        } else {
+            _mm_cvttps_epi32(adjusted)
+        };
+        let i = _mm_or_ps(_mm_castsi128_ps(i), _mm_and_ps(hi, _mm_set1_ps(-0.0)));
+        if opts.saturates_all() {
+            let overflow = _mm_cmp_ps::<_CMP_GE_OQ>(value, _mm_set1_ps(4294967296.0));
+            _mm_or_ps(i, overflow)
+        } else {
+            i
+        }
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn from_u32_lanes(self, value: __m128) -> __m128 {
+        let i = _mm_castps_si128(value);
+        // Both halves widen exactly. FMA rounds the reconstructed u32 once.
+        let hi = _mm_cvtepi32_ps(_mm_srli_epi32::<16>(i));
+        let lo = _mm_cvtepi32_ps(_mm_and_si128(i, _mm_set1_epi32(65535)));
+        _mm_fmadd_ps(hi, _mm_set1_ps(65536.0), lo)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn from_f16_lanes<const CFG: u32>(self, lanes: &[u16; 4]) -> __m128 {
+        let opts = const { crate::numerics::HalfConvert::decode(CFG) };
+        let h = _mm_cvtsi64_si128(crate::simd_storage::cast(*lanes));
+        let h = if opts.flushes() {
+            let mag = _mm_and_si128(h, _mm_set1_epi16(0x7fff));
+            let small = _mm_cmpgt_epi16(_mm_set1_epi16(0x400), mag);
+            _mm_andnot_si128(_mm_and_si128(small, _mm_set1_epi16(0x7fff)), h)
+        } else {
+            h
+        };
+        _mm_cvtph_ps(h)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn to_f16_lanes<const CFG: u32>(self, value: __m128) -> [u16; 4] {
+        let opts = const { crate::numerics::HalfConvert::decode(CFG) };
+        let h = if opts.rounds() {
+            _mm_cvtps_ph::<0>(value)
+        } else {
+            _mm_cvtps_ph::<3>(value)
+        };
+        let h = if opts.flushes() {
+            let mag = _mm_and_si128(h, _mm_set1_epi16(0x7fff));
+            let small = _mm_cmpgt_epi16(_mm_set1_epi16(0x400), mag);
+            _mm_andnot_si128(_mm_and_si128(small, _mm_set1_epi16(0x7fff)), h)
+        } else {
+            h
+        };
+        crate::simd_storage::cast(_mm_cvtsi128_si64(h) as u64)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn from_bf16_lanes(self, lanes: &[u16; 4]) -> __m128 {
+        _mm_castsi128_ps(_mm_slli_epi32::<16>(_mm_cvtepu16_epi32(_mm_cvtsi64_si128(
+            crate::simd_storage::cast(*lanes),
+        ))))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn to_bf16_lanes<const CFG: u32>(self, value: __m128) -> [u16; 4] {
+        let opts = const { crate::numerics::HalfConvert::decode(CFG) };
+        let raw = _mm_castps_si128(value);
+        let rounded = if opts.rounds() {
+            let lsb = _mm_and_si128(_mm_srli_epi32::<16>(raw), _mm_set1_epi32(1));
+            _mm_add_epi32(raw, _mm_add_epi32(lsb, _mm_set1_epi32(0x7fff)))
+        } else {
+            raw
+        };
+        let rounded = if opts.is_finite() {
+            rounded
+        } else {
+            _mm_blendv_epi8(
+                rounded,
+                _mm_or_si128(raw, _mm_set1_epi32(0x0040_0000)),
+                _mm_cmpgt_epi32(
+                    _mm_and_si128(raw, _mm_set1_epi32(0x7fff_ffff)),
+                    _mm_set1_epi32(0x7f80_0000),
+                ),
+            )
+        };
+        let i = _mm_srli_epi32::<16>(rounded);
+        let i = if opts.flushes() {
+            _mm_andnot_si128(
+                _mm_and_si128(
+                    _mm_cmpeq_epi32(
+                        _mm_and_si128(i, _mm_set1_epi32(0x7f80)),
+                        _mm_setzero_si128(),
+                    ),
+                    _mm_set1_epi32(0x7fff),
+                ),
+                i,
+            )
+        } else {
+            i
+        };
+        crate::simd_storage::cast::<_, [u16; 8]>(_mm_packus_epi32(i, i))
+            .first_chunk::<4>()
+            .copied()
+            .unwrap()
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn broadcast_rgba_alpha_repr(self, value: __m128) -> __m128 {
+        _mm_shuffle_ps::<255>(value, value)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn with_rgba_alpha_repr(self, value: __m128, src: __m128) -> __m128 {
+        _mm_blend_ps::<8>(value, src)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn transpose_4x4_repr(self, rows: [__m128; 4]) -> [__m128; 4] {
+        let [a, b, c, d] = rows;
+        let ab_lo = _mm_unpacklo_ps(a, b);
+        let ab_hi = _mm_unpackhi_ps(a, b);
+        let cd_lo = _mm_unpacklo_ps(c, d);
+        let cd_hi = _mm_unpackhi_ps(c, d);
+        [
+            _mm_movelh_ps(ab_lo, cd_lo),
+            _mm_movehl_ps(cd_lo, ab_lo),
+            _mm_movelh_ps(ab_hi, cd_hi),
+            _mm_movehl_ps(cd_hi, ab_hi),
+        ]
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn deinterleave_3ch_repr(self, rgb: [__m128; 3]) -> [__m128; 3] {
+        let [v0, v1, v2] = rgb;
+        let t_r = _mm_shuffle_ps::<0b01_01_10_10>(v1, v2);
+        let r = _mm_shuffle_ps::<0b10_00_11_00>(v0, t_r);
+        let t_g0 = _mm_shuffle_ps::<0b00_00_01_01>(v0, v1);
+        let t_g1 = _mm_shuffle_ps::<0b10_10_11_11>(v1, v2);
+        let g = _mm_shuffle_ps::<0b10_00_10_00>(t_g0, t_g1);
+        let t_b = _mm_shuffle_ps::<0b01_01_10_10>(v0, v1);
+        let b = _mm_shuffle_ps::<0b11_00_10_00>(t_b, v2);
+        [r, g, b]
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn interleave_3ch_repr(self, channels: [__m128; 3]) -> [__m128; 3] {
+        let [r, g, b] = channels;
+        let rg_lo = _mm_unpacklo_ps(r, g);
+        let rg_hi = _mm_unpackhi_ps(r, g);
+        let gb_lo = _mm_unpacklo_ps(g, b);
+        let gb_hi = _mm_unpackhi_ps(g, b);
+        let br01 = _mm_shuffle_ps::<0b01_01_00_00>(b, r);
+        let out0 = _mm_shuffle_ps::<0b10_00_01_00>(rg_lo, br01);
+        let out1 = _mm_shuffle_ps::<0b01_00_11_10>(gb_lo, rg_hi);
+        let br23 = _mm_shuffle_ps::<0b11_11_10_10>(b, r);
+        let out2 = _mm_shuffle_ps::<0b11_10_10_00>(br23, gb_hi);
+        [out0, out1, out2]
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn load_rgb_bytes(self, rgb: &[u8; 12]) -> (__m128, __m128, __m128) {
+        let lo8: u64 = crate::simd_storage::copy(rgb.first_chunk::<8>().unwrap());
+        let hi4: u32 = crate::simd_storage::copy(rgb.last_chunk::<4>().unwrap());
+        let raw = _mm_insert_epi32::<2>(_mm_cvtsi64_si128(lo8 as i64), hi4 as i32);
+        let r32 = _mm_shuffle_epi8(
+            raw,
+            _mm_setr_epi8(0, -1, -1, -1, 3, -1, -1, -1, 6, -1, -1, -1, 9, -1, -1, -1),
+        );
+        let g32 = _mm_shuffle_epi8(
+            raw,
+            _mm_setr_epi8(1, -1, -1, -1, 4, -1, -1, -1, 7, -1, -1, -1, 10, -1, -1, -1),
+        );
+        let b32 = _mm_shuffle_epi8(
+            raw,
+            _mm_setr_epi8(2, -1, -1, -1, 5, -1, -1, -1, 8, -1, -1, -1, 11, -1, -1, -1),
+        );
+        (
+            _mm_cvtepi32_ps(r32),
+            _mm_cvtepi32_ps(g32),
+            _mm_cvtepi32_ps(b32),
+        )
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn store_rgb_u8_into(self, r: __m128, g: __m128, b: __m128, out: &mut [u8; 12]) {
+        let max = _mm_set1_ps(255.0);
+        let rg16 = _mm_packs_epi32(
+            _mm_cvtps_epi32(_mm_min_ps(max, r)),
+            _mm_cvtps_epi32(_mm_min_ps(max, g)),
+        );
+        let b16 = _mm_packs_epi32(_mm_cvtps_epi32(_mm_min_ps(max, b)), _mm_setzero_si128());
+        let rgb8 = _mm_packus_epi16(rg16, b16);
+        let shuf = _mm_setr_epi8(0, 4, 8, 1, 5, 9, 2, 6, 10, 3, 7, 11, -1, -1, -1, -1);
+        let packed = _mm_shuffle_epi8(rgb8, shuf);
+        crate::simd_storage::store(
+            _mm_cvtsi128_si64(packed) as u64,
+            out.first_chunk_mut::<8>().unwrap(),
+        );
+        crate::simd_storage::store(
+            _mm_extract_epi32::<2>(packed) as u32,
+            out.last_chunk_mut::<4>().unwrap(),
+        );
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl F32x8Backend for X64V3Token {
     type Repr = __m256;
 
@@ -399,11 +715,37 @@ impl F32x8Backend for X64V3Token {
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn min(self, a: __m256, b: __m256) -> __m256 {
-        _mm256_min_ps(a, b)
+        _mm256_blendv_ps(_mm256_min_ps(a, b), a, _mm256_cmp_ps::<_CMP_UNORD_Q>(b, b))
     }
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn max(self, a: __m256, b: __m256) -> __m256 {
+        _mm256_blendv_ps(_mm256_max_ps(a, b), a, _mm256_cmp_ps::<_CMP_UNORD_Q>(b, b))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn minimum(self, a: __m256, b: __m256) -> __m256 {
+        _mm256_or_ps(
+            _mm256_or_ps(_mm256_min_ps(a, b), _mm256_min_ps(b, a)),
+            _mm256_cmp_ps::<_CMP_UNORD_Q>(a, b),
+        )
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn maximum(self, a: __m256, b: __m256) -> __m256 {
+        _mm256_or_ps(
+            _mm256_and_ps(_mm256_max_ps(a, b), _mm256_max_ps(b, a)),
+            _mm256_cmp_ps::<_CMP_UNORD_Q>(a, b),
+        )
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn min_fast(self, a: __m256, b: __m256) -> __m256 {
+        _mm256_min_ps(a, b)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn max_fast(self, a: __m256, b: __m256) -> __m256 {
         _mm256_max_ps(a, b)
     }
 
@@ -416,6 +758,21 @@ impl F32x8Backend for X64V3Token {
     fn abs(self, a: __m256) -> __m256 {
         let mask = _mm256_castsi256_ps(_mm256_set1_epi32(0x7FFF_FFFFi32));
         _mm256_and_ps(a, mask)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn trunc(self, a: __m256) -> __m256 {
+        _mm256_round_ps::<0x0b>(a)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn mul_neg_add_relaxed(self, a: __m256, b: __m256, c: __m256) -> __m256 {
+        _mm256_fnmadd_ps(a, b, c)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn mul_neg_add_fused(self, a: __m256, b: __m256, c: __m256) -> __m256 {
+        _mm256_fnmadd_ps(a, b, c)
     }
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
@@ -618,26 +975,6 @@ impl F32x8Backend for X64V3Token {
     }
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
-    fn store_rgba_bytes(self, r: __m256, g: __m256, b: __m256, a: __m256) -> [u8; 32] {
-        // AVX2 packs are lane-wise: lane0 holds pixels 0-3, lane1 4-7.
-        let max = _mm256_set1_ps(255.0);
-        let rg = _mm256_packs_epi32(
-            _mm256_cvtps_epi32(_mm256_min_ps(max, r)),
-            _mm256_cvtps_epi32(_mm256_min_ps(max, g)),
-        );
-        let ba = _mm256_packs_epi32(
-            _mm256_cvtps_epi32(_mm256_min_ps(max, b)),
-            _mm256_cvtps_epi32(_mm256_min_ps(max, a)),
-        );
-        let packed = _mm256_packus_epi16(rg, ba);
-        let shuf = _mm256_setr_epi8(
-            0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15, 0, 4, 8, 12, 1, 5, 9, 13, 2, 6,
-            10, 14, 3, 7, 11, 15,
-        );
-        crate::simd_storage::cast(_mm256_shuffle_epi8(packed, shuf))
-    }
-
-    #[arcane(suppress_const_test, _self = X64V3Token)]
     fn transpose_8x8_repr(self, rows: [__m256; 8]) -> [__m256; 8] {
         let t0 = _mm256_unpacklo_ps(rows[0], rows[1]);
         let t1 = _mm256_unpackhi_ps(rows[0], rows[1]);
@@ -667,8 +1004,303 @@ impl F32x8Backend for X64V3Token {
         ]
     }
 }
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
+impl F32x8Internal for X64V3Token {
+    type InternalRepr = __m256;
 
-#[cfg(target_arch = "x86_64")]
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn store_rgba_u8_into(self, r: __m256, g: __m256, b: __m256, a: __m256, out: &mut [u8; 32]) {
+        // AVX2 packs are lane-wise: lane0 holds pixels 0-3, lane1 4-7.
+        let max = _mm256_set1_ps(255.0);
+        let rg = _mm256_packs_epi32(
+            _mm256_cvtps_epi32(_mm256_min_ps(max, r)),
+            _mm256_cvtps_epi32(_mm256_min_ps(max, g)),
+        );
+        let ba = _mm256_packs_epi32(
+            _mm256_cvtps_epi32(_mm256_min_ps(max, b)),
+            _mm256_cvtps_epi32(_mm256_min_ps(max, a)),
+        );
+        let packed = _mm256_packus_epi16(rg, ba);
+        let shuf = _mm256_setr_epi8(
+            0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15, 0, 4, 8, 12, 1, 5, 9, 13, 2, 6,
+            10, 14, 3, 7, 11, 15,
+        );
+        crate::simd_storage::store(_mm256_shuffle_epi8(packed, shuf), out);
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn from_u16_lanes(self, lanes: &[u16; 8]) -> __m256 {
+        _mm256_cvtepi32_ps(_mm256_cvtepu16_epi32(crate::simd_storage::cast(*lanes)))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn to_u16_lanes<const CFG: u32>(self, value: __m256) -> [u16; 8] {
+        let opts = const { crate::numerics::IntConvert::decode(CFG) };
+        let value = if opts.saturates_all() {
+            _mm256_min_ps(_mm256_set1_ps(65535.0), value)
+        } else {
+            value
+        };
+
+        let i = if opts.rounds() {
+            _mm256_cvtps_epi32(value)
+        } else {
+            _mm256_cvttps_epi32(value)
+        };
+        crate::simd_storage::cast(_mm_packus_epi32(
+            _mm256_castsi256_si128(i),
+            _mm256_extracti128_si256::<1>(i),
+        ))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn to_u8_lanes<const CFG: u32>(self, value: __m256) -> [u8; 8] {
+        let opts = const { crate::numerics::IntConvert::decode(CFG) };
+        let value = if opts.saturates_all() {
+            _mm256_min_ps(_mm256_set1_ps(255.0), value)
+        } else {
+            value
+        };
+        let i = if opts.rounds() {
+            _mm256_cvtps_epi32(value)
+        } else {
+            _mm256_cvttps_epi32(value)
+        };
+        crate::simd_storage::cast(_mm_cvtsi128_si64(_mm_packus_epi16(
+            _mm_packs_epi32(_mm256_castsi256_si128(i), _mm256_extracti128_si256::<1>(i)),
+            _mm_setzero_si128(),
+        )) as u64)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn to_u32_lanes<const CFG: u32>(self, value: __m256) -> __m256 {
+        let opts = const { crate::numerics::IntConvert::decode(CFG) };
+        let value = if opts.nonnegative() {
+            value
+        } else {
+            _mm256_max_ps(value, _mm256_setzero_ps())
+        };
+        if const {
+            !crate::numerics::IntConvert::decode(CFG).is_in_range()
+                && !crate::numerics::IntConvert::decode(CFG).saturates_all()
+        } {
+            let i = if opts.rounds() {
+                _mm256_cvtps_epi32(value)
+            } else {
+                _mm256_cvttps_epi32(value)
+            };
+            return _mm256_castsi256_ps(i);
+        }
+        let offset = _mm256_set1_ps(2147483648.0);
+        let hi = _mm256_cmp_ps::<_CMP_GE_OQ>(value, offset);
+        let adjusted = _mm256_sub_ps(value, _mm256_and_ps(hi, offset));
+        let i = if opts.rounds() {
+            _mm256_cvtps_epi32(adjusted)
+        } else {
+            _mm256_cvttps_epi32(adjusted)
+        };
+        let i = _mm256_or_ps(
+            _mm256_castsi256_ps(i),
+            _mm256_and_ps(hi, _mm256_set1_ps(-0.0)),
+        );
+        if opts.saturates_all() {
+            let overflow = _mm256_cmp_ps::<_CMP_GE_OQ>(value, _mm256_set1_ps(4294967296.0));
+            _mm256_or_ps(i, overflow)
+        } else {
+            i
+        }
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn from_u32_lanes(self, value: __m256) -> __m256 {
+        let i = _mm256_castps_si256(value);
+        // Both halves widen exactly. FMA rounds the reconstructed u32 once.
+        let hi = _mm256_cvtepi32_ps(_mm256_srli_epi32::<16>(i));
+        let lo = _mm256_cvtepi32_ps(_mm256_and_si256(i, _mm256_set1_epi32(65535)));
+        _mm256_fmadd_ps(hi, _mm256_set1_ps(65536.0), lo)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn from_f16_lanes<const CFG: u32>(self, lanes: &[u16; 8]) -> __m256 {
+        let opts = const { crate::numerics::HalfConvert::decode(CFG) };
+        let h = crate::simd_storage::cast(*lanes);
+        let h = if opts.flushes() {
+            let mag = _mm_and_si128(h, _mm_set1_epi16(0x7fff));
+            let small = _mm_cmpgt_epi16(_mm_set1_epi16(0x400), mag);
+            _mm_andnot_si128(_mm_and_si128(small, _mm_set1_epi16(0x7fff)), h)
+        } else {
+            h
+        };
+        _mm256_cvtph_ps(h)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn to_f16_lanes<const CFG: u32>(self, value: __m256) -> [u16; 8] {
+        let opts = const { crate::numerics::HalfConvert::decode(CFG) };
+        let h = if opts.rounds() {
+            _mm256_cvtps_ph::<0>(value)
+        } else {
+            _mm256_cvtps_ph::<3>(value)
+        };
+        let h = if opts.flushes() {
+            let mag = _mm_and_si128(h, _mm_set1_epi16(0x7fff));
+            let small = _mm_cmpgt_epi16(_mm_set1_epi16(0x400), mag);
+            _mm_andnot_si128(_mm_and_si128(small, _mm_set1_epi16(0x7fff)), h)
+        } else {
+            h
+        };
+        crate::simd_storage::cast(h)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn from_bf16_lanes(self, lanes: &[u16; 8]) -> __m256 {
+        _mm256_castsi256_ps(_mm256_slli_epi32::<16>(_mm256_cvtepu16_epi32(
+            crate::simd_storage::cast(*lanes),
+        )))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn to_bf16_lanes<const CFG: u32>(self, value: __m256) -> [u16; 8] {
+        let opts = const { crate::numerics::HalfConvert::decode(CFG) };
+        let raw = _mm256_castps_si256(value);
+        let rounded = if opts.rounds() {
+            let lsb = _mm256_and_si256(_mm256_srli_epi32::<16>(raw), _mm256_set1_epi32(1));
+            _mm256_add_epi32(raw, _mm256_add_epi32(lsb, _mm256_set1_epi32(0x7fff)))
+        } else {
+            raw
+        };
+        let rounded = if opts.is_finite() {
+            rounded
+        } else {
+            _mm256_blendv_epi8(
+                rounded,
+                _mm256_or_si256(raw, _mm256_set1_epi32(0x0040_0000)),
+                _mm256_cmpgt_epi32(
+                    _mm256_and_si256(raw, _mm256_set1_epi32(0x7fff_ffff)),
+                    _mm256_set1_epi32(0x7f80_0000),
+                ),
+            )
+        };
+        let i = _mm256_srli_epi32::<16>(rounded);
+        let i = if opts.flushes() {
+            _mm256_andnot_si256(
+                _mm256_and_si256(
+                    _mm256_cmpeq_epi32(
+                        _mm256_and_si256(i, _mm256_set1_epi32(0x7f80)),
+                        _mm256_setzero_si256(),
+                    ),
+                    _mm256_set1_epi32(0x7fff),
+                ),
+                i,
+            )
+        } else {
+            i
+        };
+        crate::simd_storage::cast(_mm_packus_epi32(
+            _mm256_castsi256_si128(i),
+            _mm256_extracti128_si256::<1>(i),
+        ))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn broadcast_rgba_alpha_repr(self, value: __m256) -> __m256 {
+        _mm256_permute_ps::<255>(value)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn with_rgba_alpha_repr(self, value: __m256, src: __m256) -> __m256 {
+        _mm256_blend_ps::<136>(value, src)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn deinterleave_3ch_repr(self, rgb: [__m256; 3]) -> [__m256; 3] {
+        let [v0, v1, v2] = rgb;
+        let r_mix = _mm256_blend_ps::<0x24>(_mm256_blend_ps::<0x92>(v0, v1), v2);
+        let g_mix = _mm256_blend_ps::<0x49>(_mm256_blend_ps::<0x24>(v0, v1), v2);
+        let b_mix = _mm256_blend_ps::<0x92>(_mm256_blend_ps::<0x49>(v0, v1), v2);
+        [
+            _mm256_permutevar8x32_ps(r_mix, _mm256_setr_epi32(0, 3, 6, 1, 4, 7, 2, 5)),
+            _mm256_permutevar8x32_ps(g_mix, _mm256_setr_epi32(1, 4, 7, 2, 5, 0, 3, 6)),
+            _mm256_permutevar8x32_ps(b_mix, _mm256_setr_epi32(2, 5, 0, 3, 6, 1, 4, 7)),
+        ]
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn interleave_3ch_repr(self, channels: [__m256; 3]) -> [__m256; 3] {
+        let [r, g, b] = channels;
+        let rp = _mm256_permutevar8x32_ps(r, _mm256_setr_epi32(0, 3, 6, 1, 4, 7, 2, 5));
+        let gp = _mm256_permutevar8x32_ps(g, _mm256_setr_epi32(5, 0, 3, 6, 1, 4, 7, 2));
+        let bp = _mm256_permutevar8x32_ps(b, _mm256_setr_epi32(2, 5, 0, 3, 6, 1, 4, 7));
+        [
+            _mm256_blend_ps::<0x24>(_mm256_blend_ps::<0x92>(rp, gp), bp),
+            _mm256_blend_ps::<0x24>(_mm256_blend_ps::<0x49>(rp, bp), gp),
+            _mm256_blend_ps::<0x24>(_mm256_blend_ps::<0x92>(gp, bp), rp),
+        ]
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn load_rgb_bytes(self, rgb: &[u8; 24]) -> (__m256, __m256, __m256) {
+        let lo: __m128i = crate::simd_storage::copy(rgb.first_chunk::<16>().unwrap());
+        let hi: __m128i = crate::simd_storage::copy(rgb.last_chunk::<16>().unwrap());
+        let raw = _mm256_inserti128_si256::<1>(_mm256_castsi128_si256(lo), hi);
+        let r32 = _mm256_shuffle_epi8(
+            raw,
+            _mm256_setr_epi8(
+                0, -1, -1, -1, 3, -1, -1, -1, 6, -1, -1, -1, 9, -1, -1, -1, 4, -1, -1, -1, 7, -1,
+                -1, -1, 10, -1, -1, -1, 13, -1, -1, -1,
+            ),
+        );
+        let g32 = _mm256_shuffle_epi8(
+            raw,
+            _mm256_setr_epi8(
+                1, -1, -1, -1, 4, -1, -1, -1, 7, -1, -1, -1, 10, -1, -1, -1, 5, -1, -1, -1, 8, -1,
+                -1, -1, 11, -1, -1, -1, 14, -1, -1, -1,
+            ),
+        );
+        let b32 = _mm256_shuffle_epi8(
+            raw,
+            _mm256_setr_epi8(
+                2, -1, -1, -1, 5, -1, -1, -1, 8, -1, -1, -1, 11, -1, -1, -1, 6, -1, -1, -1, 9, -1,
+                -1, -1, 12, -1, -1, -1, 15, -1, -1, -1,
+            ),
+        );
+        (
+            _mm256_cvtepi32_ps(r32),
+            _mm256_cvtepi32_ps(g32),
+            _mm256_cvtepi32_ps(b32),
+        )
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn store_rgb_u8_into(self, r: __m256, g: __m256, b: __m256, out: &mut [u8; 24]) {
+        let max = _mm256_set1_ps(255.0);
+        let rg16 = _mm256_packs_epi32(
+            _mm256_cvtps_epi32(_mm256_min_ps(max, r)),
+            _mm256_cvtps_epi32(_mm256_min_ps(max, g)),
+        );
+        let b16 = _mm256_packs_epi32(
+            _mm256_cvtps_epi32(_mm256_min_ps(max, b)),
+            _mm256_setzero_si256(),
+        );
+        let rgb8 = _mm256_packus_epi16(rg16, b16);
+        let shuf = _mm256_setr_epi8(
+            0, 4, 8, 1, 5, 9, 2, 6, 10, 3, 7, 11, -1, -1, -1, -1, 0, 4, 8, 1, 5, 9, 2, 6, 10, 3, 7,
+            11, -1, -1, -1, -1,
+        );
+        let packed = _mm256_shuffle_epi8(rgb8, shuf);
+        let lo12 = _mm256_castsi256_si128(packed);
+        let hi12 = _mm256_extracti128_si256::<1>(packed);
+        let lo16 = _mm_or_si128(lo12, _mm_slli_si128::<12>(hi12));
+        let hi8 = _mm_srli_si128::<4>(hi12);
+        crate::simd_storage::store(lo16, out.first_chunk_mut::<16>().unwrap());
+        crate::simd_storage::store(
+            _mm_cvtsi128_si64(hi8) as u64,
+            out.last_chunk_mut::<8>().unwrap(),
+        );
+    }
+}
+
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl F64x2Backend for X64V3Token {
     type Repr = __m128d;
 
@@ -737,11 +1369,37 @@ impl F64x2Backend for X64V3Token {
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn min(self, a: __m128d, b: __m128d) -> __m128d {
-        _mm_min_pd(a, b)
+        _mm_blendv_pd(_mm_min_pd(a, b), a, _mm_cmp_pd::<_CMP_UNORD_Q>(b, b))
     }
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn max(self, a: __m128d, b: __m128d) -> __m128d {
+        _mm_blendv_pd(_mm_max_pd(a, b), a, _mm_cmp_pd::<_CMP_UNORD_Q>(b, b))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn minimum(self, a: __m128d, b: __m128d) -> __m128d {
+        _mm_or_pd(
+            _mm_or_pd(_mm_min_pd(a, b), _mm_min_pd(b, a)),
+            _mm_cmp_pd::<_CMP_UNORD_Q>(a, b),
+        )
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn maximum(self, a: __m128d, b: __m128d) -> __m128d {
+        _mm_or_pd(
+            _mm_and_pd(_mm_max_pd(a, b), _mm_max_pd(b, a)),
+            _mm_cmp_pd::<_CMP_UNORD_Q>(a, b),
+        )
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn min_fast(self, a: __m128d, b: __m128d) -> __m128d {
+        _mm_min_pd(a, b)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn max_fast(self, a: __m128d, b: __m128d) -> __m128d {
         _mm_max_pd(a, b)
     }
 
@@ -755,6 +1413,21 @@ impl F64x2Backend for X64V3Token {
     fn abs(self, a: __m128d) -> __m128d {
         let mask = _mm_castsi128_pd(_mm_set1_epi64x(0x7FFF_FFFF_FFFF_FFFFi64));
         _mm_and_pd(a, mask)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn trunc(self, a: __m128d) -> __m128d {
+        _mm_round_pd::<0x0b>(a)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn mul_neg_add_relaxed(self, a: __m128d, b: __m128d, c: __m128d) -> __m128d {
+        _mm_fnmadd_pd(a, b, c)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn mul_neg_add_fused(self, a: __m128d, b: __m128d, c: __m128d) -> __m128d {
+        _mm_fnmadd_pd(a, b, c)
     }
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
@@ -912,7 +1585,7 @@ impl F64x2Backend for X64V3Token {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl F64x4Backend for X64V3Token {
     type Repr = __m256d;
 
@@ -979,11 +1652,37 @@ impl F64x4Backend for X64V3Token {
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn min(self, a: __m256d, b: __m256d) -> __m256d {
-        _mm256_min_pd(a, b)
+        _mm256_blendv_pd(_mm256_min_pd(a, b), a, _mm256_cmp_pd::<_CMP_UNORD_Q>(b, b))
     }
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn max(self, a: __m256d, b: __m256d) -> __m256d {
+        _mm256_blendv_pd(_mm256_max_pd(a, b), a, _mm256_cmp_pd::<_CMP_UNORD_Q>(b, b))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn minimum(self, a: __m256d, b: __m256d) -> __m256d {
+        _mm256_or_pd(
+            _mm256_or_pd(_mm256_min_pd(a, b), _mm256_min_pd(b, a)),
+            _mm256_cmp_pd::<_CMP_UNORD_Q>(a, b),
+        )
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn maximum(self, a: __m256d, b: __m256d) -> __m256d {
+        _mm256_or_pd(
+            _mm256_and_pd(_mm256_max_pd(a, b), _mm256_max_pd(b, a)),
+            _mm256_cmp_pd::<_CMP_UNORD_Q>(a, b),
+        )
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn min_fast(self, a: __m256d, b: __m256d) -> __m256d {
+        _mm256_min_pd(a, b)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn max_fast(self, a: __m256d, b: __m256d) -> __m256d {
         _mm256_max_pd(a, b)
     }
 
@@ -996,6 +1695,21 @@ impl F64x4Backend for X64V3Token {
     fn abs(self, a: __m256d) -> __m256d {
         let mask = _mm256_castsi256_pd(_mm256_set1_epi64x(0x7FFF_FFFF_FFFF_FFFFi64));
         _mm256_and_pd(a, mask)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn trunc(self, a: __m256d) -> __m256d {
+        _mm256_round_pd::<0x0b>(a)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn mul_neg_add_relaxed(self, a: __m256d, b: __m256d, c: __m256d) -> __m256d {
+        _mm256_fnmadd_pd(a, b, c)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn mul_neg_add_fused(self, a: __m256d, b: __m256d, c: __m256d) -> __m256d {
+        _mm256_fnmadd_pd(a, b, c)
     }
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
@@ -1158,7 +1872,7 @@ impl F64x4Backend for X64V3Token {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl I32x4Backend for X64V3Token {
     type Repr = __m128i;
 
@@ -1379,7 +2093,7 @@ impl I32x4Backend for X64V3Token {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl I32x8Backend for X64V3Token {
     type Repr = __m256i;
 
@@ -1597,7 +2311,7 @@ impl I32x8Backend for X64V3Token {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl U32x4Backend for X64V3Token {
     type Repr = __m128i;
 
@@ -1696,14 +2410,12 @@ impl U32x4Backend for X64V3Token {
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn simd_le(self, a: __m128i, b: __m128i) -> __m128i {
-        let gt = <Self as U32x4Backend>::simd_gt(_self, a, b);
-        _mm_andnot_si128(gt, _mm_set1_epi32(-1))
+        _mm_cmpeq_epi32(_mm_min_epu32(a, b), a)
     }
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn simd_ge(self, a: __m128i, b: __m128i) -> __m128i {
-        let lt = <Self as U32x4Backend>::simd_gt(_self, b, a);
-        _mm_andnot_si128(lt, _mm_set1_epi32(-1))
+        _mm_cmpeq_epi32(_mm_min_epu32(a, b), b)
     }
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
@@ -1795,7 +2507,7 @@ impl U32x4Backend for X64V3Token {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl U32x8Backend for X64V3Token {
     type Repr = __m256i;
 
@@ -1892,14 +2604,12 @@ impl U32x8Backend for X64V3Token {
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn simd_le(self, a: __m256i, b: __m256i) -> __m256i {
-        let gt = <Self as U32x8Backend>::simd_gt(_self, a, b);
-        _mm256_andnot_si256(gt, _mm256_set1_epi32(-1))
+        _mm256_cmpeq_epi32(_mm256_min_epu32(a, b), a)
     }
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn simd_ge(self, a: __m256i, b: __m256i) -> __m256i {
-        let lt = <Self as U32x8Backend>::simd_gt(_self, b, a);
-        _mm256_andnot_si256(lt, _mm256_set1_epi32(-1))
+        _mm256_cmpeq_epi32(_mm256_min_epu32(a, b), b)
     }
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
@@ -1990,7 +2700,7 @@ impl U32x8Backend for X64V3Token {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl I64x2Backend for X64V3Token {
     type Repr = __m128i;
 
@@ -2199,7 +2909,7 @@ impl I64x2Backend for X64V3Token {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl I64x4Backend for X64V3Token {
     type Repr = __m256i;
 
@@ -2404,7 +3114,7 @@ impl I64x4Backend for X64V3Token {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl I8x16Backend for X64V3Token {
     type Repr = __m128i;
 
@@ -2618,7 +3328,7 @@ impl I8x16Backend for X64V3Token {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl I8x32Backend for X64V3Token {
     type Repr = __m256i;
 
@@ -2827,7 +3537,7 @@ impl I8x32Backend for X64V3Token {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl U8x16Backend for X64V3Token {
     type Repr = __m128i;
 
@@ -3035,7 +3745,7 @@ impl U8x16Backend for X64V3Token {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl U8x32Backend for X64V3Token {
     type Repr = __m256i;
 
@@ -3259,7 +3969,7 @@ impl U8x32Backend for X64V3Token {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl I16x8Backend for X64V3Token {
     type Repr = __m128i;
 
@@ -3500,7 +4210,7 @@ impl I16x8Backend for X64V3Token {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl I16x16Backend for X64V3Token {
     type Repr = __m256i;
 
@@ -3741,7 +4451,7 @@ impl I16x16Backend for X64V3Token {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl U16x8Backend for X64V3Token {
     type Repr = __m128i;
 
@@ -3954,7 +4664,7 @@ impl U16x8Backend for X64V3Token {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl U16x16Backend for X64V3Token {
     type Repr = __m256i;
 
@@ -4168,7 +4878,7 @@ impl U16x16Backend for X64V3Token {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl U64x2Backend for X64V3Token {
     type Repr = __m128i;
 
@@ -4345,7 +5055,7 @@ impl U64x2Backend for X64V3Token {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl U64x4Backend for X64V3Token {
     type Repr = __m256i;
 
@@ -4516,7 +5226,7 @@ impl U64x4Backend for X64V3Token {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl F32x4Convert for X64V3Token {
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn bitcast_f32_to_i32(self, a: __m128) -> __m128i {
@@ -4555,7 +5265,7 @@ impl F32x4Convert for X64V3Token {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl F32x8Convert for X64V3Token {
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn bitcast_f32_to_i32(self, a: __m256) -> __m256i {
@@ -4593,7 +5303,7 @@ impl F32x8Convert for X64V3Token {
     }
 }
 
-#[cfg(all(target_arch = "x86_64", feature = "w512"))]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "w512"))]
 impl F32x16Convert for X64V3Token {
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn bitcast_f32_to_i32(self, a: [__m256; 2]) -> [__m256i; 2] {
@@ -4632,7 +5342,7 @@ impl F32x16Convert for X64V3Token {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl U32x4Bitcast for X64V3Token {
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn bitcast_u32_to_i32(self, a: __m128i) -> __m128i {
@@ -4645,7 +5355,7 @@ impl U32x4Bitcast for X64V3Token {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl U32x8Bitcast for X64V3Token {
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn bitcast_u32_to_i32(self, a: __m256i) -> __m256i {
@@ -4658,7 +5368,7 @@ impl U32x8Bitcast for X64V3Token {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl I64x2Bitcast for X64V3Token {
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn bitcast_i64_to_f64(self, a: __m128i) -> __m128d {
@@ -4671,7 +5381,7 @@ impl I64x2Bitcast for X64V3Token {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl I64x4Bitcast for X64V3Token {
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn bitcast_i64_to_f64(self, a: __m256i) -> __m256d {
@@ -4684,7 +5394,7 @@ impl I64x4Bitcast for X64V3Token {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl I8x16Bitcast for X64V3Token {
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn bitcast_i8_to_u8(self, a: __m128i) -> __m128i {
@@ -4696,7 +5406,7 @@ impl I8x16Bitcast for X64V3Token {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl I8x32Bitcast for X64V3Token {
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn bitcast_i8_to_u8(self, a: __m256i) -> __m256i {
@@ -4708,7 +5418,7 @@ impl I8x32Bitcast for X64V3Token {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl I16x8Bitcast for X64V3Token {
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn bitcast_i16_to_u16(self, a: __m128i) -> __m128i {
@@ -4720,7 +5430,7 @@ impl I16x8Bitcast for X64V3Token {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl I16x16Bitcast for X64V3Token {
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn bitcast_i16_to_u16(self, a: __m256i) -> __m256i {
@@ -4732,7 +5442,7 @@ impl I16x16Bitcast for X64V3Token {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl U64x2Bitcast for X64V3Token {
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn bitcast_u64_to_i64(self, a: __m128i) -> __m128i {
@@ -4744,7 +5454,7 @@ impl U64x2Bitcast for X64V3Token {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl U64x4Bitcast for X64V3Token {
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn bitcast_u64_to_i64(self, a: __m256i) -> __m256i {
@@ -4755,8 +5465,8 @@ impl U64x4Bitcast for X64V3Token {
         a
     }
 }
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl F32x16Backend for X64V3Token {
     type Repr = [__m256; 2];
 
@@ -4867,6 +5577,38 @@ impl F32x16Backend for X64V3Token {
     }
 
     #[inline(always)]
+    fn minimum(self, a: [__m256; 2], b: [__m256; 2]) -> [__m256; 2] {
+        [
+            <X64V3Token as F32x8Backend>::minimum(self, a[0], b[0]),
+            <X64V3Token as F32x8Backend>::minimum(self, a[1], b[1]),
+        ]
+    }
+
+    #[inline(always)]
+    fn maximum(self, a: [__m256; 2], b: [__m256; 2]) -> [__m256; 2] {
+        [
+            <X64V3Token as F32x8Backend>::maximum(self, a[0], b[0]),
+            <X64V3Token as F32x8Backend>::maximum(self, a[1], b[1]),
+        ]
+    }
+
+    #[inline(always)]
+    fn min_fast(self, a: [__m256; 2], b: [__m256; 2]) -> [__m256; 2] {
+        [
+            <X64V3Token as F32x8Backend>::min_fast(self, a[0], b[0]),
+            <X64V3Token as F32x8Backend>::min_fast(self, a[1], b[1]),
+        ]
+    }
+
+    #[inline(always)]
+    fn max_fast(self, a: [__m256; 2], b: [__m256; 2]) -> [__m256; 2] {
+        [
+            <X64V3Token as F32x8Backend>::max_fast(self, a[0], b[0]),
+            <X64V3Token as F32x8Backend>::max_fast(self, a[1], b[1]),
+        ]
+    }
+
+    #[inline(always)]
     fn sqrt(self, a: [__m256; 2]) -> [__m256; 2] {
         [
             <X64V3Token as F32x8Backend>::sqrt(self, a[0]),
@@ -4880,6 +5622,23 @@ impl F32x16Backend for X64V3Token {
             <X64V3Token as F32x8Backend>::abs(self, a[0]),
             <X64V3Token as F32x8Backend>::abs(self, a[1]),
         ]
+    }
+
+    #[inline(always)]
+    fn trunc(self, a: [__m256; 2]) -> [__m256; 2] {
+        a.map(|a| <Self as F32x8Backend>::trunc(self, a))
+    }
+
+    #[inline(always)]
+    fn mul_neg_add_relaxed(self, a: [__m256; 2], b: [__m256; 2], c: [__m256; 2]) -> [__m256; 2] {
+        core::array::from_fn(|i| {
+            <Self as F32x8Backend>::mul_neg_add_relaxed(self, a[i], b[i], c[i])
+        })
+    }
+
+    #[inline(always)]
+    fn mul_neg_add_fused(self, a: [__m256; 2], b: [__m256; 2], c: [__m256; 2]) -> [__m256; 2] {
+        core::array::from_fn(|i| <Self as F32x8Backend>::mul_neg_add_fused(self, a[i], b[i], c[i]))
     }
 
     #[inline(always)]
@@ -5079,8 +5838,125 @@ impl F32x16Backend for X64V3Token {
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
+impl F32x16Internal for X64V3Token {
+    type InternalRepr = [__m256; 2];
+    #[inline(always)]
+    fn from_u16_lanes(self, lanes: &[u16; 16]) -> [__m256; 2] {
+        let (chunks, _) = lanes.as_chunks::<8>();
+        core::array::from_fn(|i| <Self as F32x8Internal>::from_u16_lanes(self, &chunks[i]))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn to_u16_lanes<const CFG: u32>(self, value: [__m256; 2]) -> [u16; 16] {
+        let opts = const { crate::numerics::IntConvert::decode(CFG) };
+        let convert = |v| {
+            let v = if opts.saturates_all() {
+                _mm256_min_ps(_mm256_set1_ps(65535.0), v)
+            } else {
+                v
+            };
+            if opts.rounds() {
+                _mm256_cvtps_epi32(v)
+            } else {
+                _mm256_cvttps_epi32(v)
+            }
+        };
+        let packed = _mm256_packus_epi32(convert(value[0]), convert(value[1]));
+        crate::simd_storage::cast(_mm256_permute4x64_epi64::<0xd8>(packed))
+    }
+
+    #[inline(always)]
+    fn to_u8_lanes<const CFG: u32>(self, value: [__m256; 2]) -> [u8; 16] {
+        let parts = value.map(|v| <Self as F32x8Internal>::to_u8_lanes::<CFG>(self, v));
+        crate::simd_storage::cast(parts)
+    }
+
+    #[inline(always)]
+    fn to_u32_lanes<const CFG: u32>(self, value: [__m256; 2]) -> [__m256; 2] {
+        value.map(|part| <Self as F32x8Internal>::to_u32_lanes::<CFG>(self, part))
+    }
+
+    #[inline(always)]
+    fn from_u32_lanes(self, value: [__m256; 2]) -> [__m256; 2] {
+        value.map(|part| <Self as F32x8Internal>::from_u32_lanes(self, part))
+    }
+
+    #[inline(always)]
+    fn from_f16_lanes<const CFG: u32>(self, lanes: &[u16; 16]) -> [__m256; 2] {
+        let (chunks, _) = lanes.as_chunks::<8>();
+        core::array::from_fn(|i| <Self as F32x8Internal>::from_f16_lanes::<CFG>(self, &chunks[i]))
+    }
+
+    #[inline(always)]
+    fn to_f16_lanes<const CFG: u32>(self, value: [__m256; 2]) -> [u16; 16] {
+        crate::simd_storage::cast(
+            value.map(|part| <Self as F32x8Internal>::to_f16_lanes::<CFG>(self, part)),
+        )
+    }
+
+    #[inline(always)]
+    fn from_bf16_lanes(self, lanes: &[u16; 16]) -> [__m256; 2] {
+        let (chunks, _) = lanes.as_chunks::<8>();
+        core::array::from_fn(|i| <Self as F32x8Internal>::from_bf16_lanes(self, &chunks[i]))
+    }
+
+    #[inline(always)]
+    fn to_bf16_lanes<const CFG: u32>(self, value: [__m256; 2]) -> [u16; 16] {
+        crate::simd_storage::cast(
+            value.map(|part| <Self as F32x8Internal>::to_bf16_lanes::<CFG>(self, part)),
+        )
+    }
+
+    #[inline(always)]
+    fn from_u8_lanes_wide(self, lanes: &[u8; 16]) -> [__m256; 2] {
+        use crate::simd::generic::f32x8 as V;
+        let (parts, _) = lanes.as_chunks::<8>();
+        core::array::from_fn(|i| V::from_u8_t(self, &parts[i]).into_repr())
+    }
+
+    #[inline(always)]
+    fn deinterleave_rgba_wide(self, rgba: [[__m256; 2]; 4]) -> [[__m256; 2]; 4] {
+        use crate::simd::generic::f32x8 as V;
+        let groups: [[V<Self>; 4]; 2] = core::array::from_fn(|i| {
+            V::deinterleave_4ch(core::array::from_fn(|j| {
+                let block = 4 * i + j;
+                V::from_repr_unchecked(self, rgba[block / 2][block % 2])
+            }))
+        });
+        core::array::from_fn(|c| core::array::from_fn(|i| groups[i][c].into_repr()))
+    }
+
+    #[inline(always)]
+    fn interleave_rgba_wide(self, channels: [[__m256; 2]; 4]) -> [[__m256; 2]; 4] {
+        use crate::simd::generic::f32x8 as V;
+        let groups: [[V<Self>; 4]; 2] = core::array::from_fn(|i| {
+            V::interleave_4ch(channels.map(|c| V::from_repr_unchecked(self, c[i])))
+        });
+        core::array::from_fn(|i| {
+            core::array::from_fn(|j| {
+                let block = i * 2 + j;
+                groups[block / 4][block % 4].into_repr()
+            })
+        })
+    }
+
+    #[inline(always)]
+    fn broadcast_rgba_alpha_repr(self, value: [__m256; 2]) -> [__m256; 2] {
+        value.map(|v| <Self as F32x8Internal>::broadcast_rgba_alpha_repr(self, v))
+    }
+
+    #[inline(always)]
+    fn with_rgba_alpha_repr(self, value: [__m256; 2], src: [__m256; 2]) -> [__m256; 2] {
+        core::array::from_fn(|i| {
+            <Self as F32x8Internal>::with_rgba_alpha_repr(self, value[i], src[i])
+        })
+    }
+}
+
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
+#[cfg(feature = "w512")]
 impl F64x8Backend for X64V3Token {
     type Repr = [__m256d; 2];
 
@@ -5191,6 +6067,38 @@ impl F64x8Backend for X64V3Token {
     }
 
     #[inline(always)]
+    fn minimum(self, a: [__m256d; 2], b: [__m256d; 2]) -> [__m256d; 2] {
+        [
+            <X64V3Token as F64x4Backend>::minimum(self, a[0], b[0]),
+            <X64V3Token as F64x4Backend>::minimum(self, a[1], b[1]),
+        ]
+    }
+
+    #[inline(always)]
+    fn maximum(self, a: [__m256d; 2], b: [__m256d; 2]) -> [__m256d; 2] {
+        [
+            <X64V3Token as F64x4Backend>::maximum(self, a[0], b[0]),
+            <X64V3Token as F64x4Backend>::maximum(self, a[1], b[1]),
+        ]
+    }
+
+    #[inline(always)]
+    fn min_fast(self, a: [__m256d; 2], b: [__m256d; 2]) -> [__m256d; 2] {
+        [
+            <X64V3Token as F64x4Backend>::min_fast(self, a[0], b[0]),
+            <X64V3Token as F64x4Backend>::min_fast(self, a[1], b[1]),
+        ]
+    }
+
+    #[inline(always)]
+    fn max_fast(self, a: [__m256d; 2], b: [__m256d; 2]) -> [__m256d; 2] {
+        [
+            <X64V3Token as F64x4Backend>::max_fast(self, a[0], b[0]),
+            <X64V3Token as F64x4Backend>::max_fast(self, a[1], b[1]),
+        ]
+    }
+
+    #[inline(always)]
     fn sqrt(self, a: [__m256d; 2]) -> [__m256d; 2] {
         [
             <X64V3Token as F64x4Backend>::sqrt(self, a[0]),
@@ -5204,6 +6112,28 @@ impl F64x8Backend for X64V3Token {
             <X64V3Token as F64x4Backend>::abs(self, a[0]),
             <X64V3Token as F64x4Backend>::abs(self, a[1]),
         ]
+    }
+
+    #[inline(always)]
+    fn trunc(self, a: [__m256d; 2]) -> [__m256d; 2] {
+        a.map(|a| <Self as F64x4Backend>::trunc(self, a))
+    }
+
+    #[inline(always)]
+    fn mul_neg_add_relaxed(
+        self,
+        a: [__m256d; 2],
+        b: [__m256d; 2],
+        c: [__m256d; 2],
+    ) -> [__m256d; 2] {
+        core::array::from_fn(|i| {
+            <Self as F64x4Backend>::mul_neg_add_relaxed(self, a[i], b[i], c[i])
+        })
+    }
+
+    #[inline(always)]
+    fn mul_neg_add_fused(self, a: [__m256d; 2], b: [__m256d; 2], c: [__m256d; 2]) -> [__m256d; 2] {
+        core::array::from_fn(|i| <Self as F64x4Backend>::mul_neg_add_fused(self, a[i], b[i], c[i]))
     }
 
     #[inline(always)]
@@ -5408,8 +6338,8 @@ impl F64x8Backend for X64V3Token {
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl I8x64Backend for X64V3Token {
     type Repr = [__m256i; 2];
 
@@ -5682,8 +6612,8 @@ impl I8x64Backend for X64V3Token {
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl U8x64Backend for X64V3Token {
     type Repr = [__m256i; 2];
 
@@ -6005,8 +6935,8 @@ impl U8x64Backend for X64V3Token {
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl I16x32Backend for X64V3Token {
     type Repr = [__m256i; 2];
 
@@ -6335,8 +7265,8 @@ impl I16x32Backend for X64V3Token {
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl U16x32Backend for X64V3Token {
     type Repr = [__m256i; 2];
 
@@ -6643,8 +7573,8 @@ impl U16x32Backend for X64V3Token {
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl I32x16Backend for X64V3Token {
     type Repr = [__m256i; 2];
 
@@ -6934,8 +7864,8 @@ impl I32x16Backend for X64V3Token {
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl U32x16Backend for X64V3Token {
     type Repr = [__m256i; 2];
 
@@ -7203,8 +8133,8 @@ impl U32x16Backend for X64V3Token {
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl I64x8Backend for X64V3Token {
     type Repr = [__m256i; 2];
 
@@ -7452,8 +8382,8 @@ impl I64x8Backend for X64V3Token {
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
 impl U64x8Backend for X64V3Token {
     type Repr = [__m256i; 2];
 

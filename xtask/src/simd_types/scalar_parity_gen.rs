@@ -38,7 +38,7 @@ fn file_header() -> String {
         #![allow(clippy::float_cmp)]
         // Other architectures have no native backend to compare against.
         #![cfg_attr(
-            not(any(target_arch = "x86_64", target_arch = "aarch64", target_arch = "wasm32")),
+            not(any(all(target_arch = "x86_64", target_feature = "sse2"), target_arch = "aarch64", target_arch = "wasm32")),
             allow(dead_code, unused_macros)
         )]
 
@@ -491,31 +491,6 @@ fn gen_float_type_tests(code: &mut String, elem: &str, lanes: usize) {
                 }}
             }}
 
-            /// Like run_binary but skips chunks where either input contains NaN or infinity.
-            fn run_binary_finite(
-                op: &str,
-                f: impl Fn(
-                    generic::{type_name}<ScalarToken>, generic::{type_name}<ScalarToken>,
-                    generic::{type_name}<$native_token>, generic::{type_name}<$native_token>,
-                ) -> ([{elem}; {lanes}], [{elem}; {lanes}]),
-                cmp: impl Fn(&[{elem}], &[{elem}], &str, &[{elem}]),
-            ) {{
-                let token_s = ScalarToken;
-                if let Some(token_n) = <$native_token>::summon() {{
-                    for (ca, cb) in super::{edge_a}.chunks_exact({lanes}).zip(super::{edge_b}.chunks_exact({lanes})) {{
-                        let a: [{elem}; {lanes}] = ca.try_into().unwrap();
-                        let b: [{elem}; {lanes}] = cb.try_into().unwrap();
-                        if super::has_nan_or_inf_{elem}(&a) || super::has_nan_or_inf_{elem}(&b) {{ continue; }}
-                        let as_ = generic::{type_name}::<ScalarToken>::from_array_t(token_s, a);
-                        let bs = generic::{type_name}::<ScalarToken>::from_array_t(token_s, b);
-                        let an = generic::{type_name}::<$native_token>::from_array_t(token_n, a);
-                        let bn = generic::{type_name}::<$native_token>::from_array_t(token_n, b);
-                        let (s, n) = f(as_, bs, an, bn);
-                        cmp(&s, &n, op, &a);
-                    }}
-                }}
-            }}
-
     "#});
 
     // Unary exact ops
@@ -581,13 +556,12 @@ fn gen_float_type_tests(code: &mut String, elem: &str, lanes: usize) {
         });
     }
 
-    // min, max — skip NaN inputs (NaN propagation differs: SSE min/max returns
-    // second operand when first is NaN, scalar f32::min/max returns non-NaN)
-    for op in &["min", "max"] {
+    // min, max match Rust f32/f64 (NaN-suppressing); minimum, maximum follow IEEE 754-2019 (NaN-propagating)
+    for op in &["min", "max", "minimum", "maximum"] {
         code.push_str(&formatdoc! {r#"
             #[test]
             fn {op}() {{
-                run_binary_finite("{type_name}::{op}", |as_, bs, an, bn| {{
+                run_binary("{type_name}::{op}", |as_, bs, an, bn| {{
                     (as_.{op}(bs).to_array(), an.{op}(bn).to_array())
                 }}, super::{assert_exact});
             }}
@@ -1027,7 +1001,7 @@ fn cfg_gated_invocations() -> String {
         // Architecture-specific invocations
         // ============================================================================
 
-        #[cfg(target_arch = "x86_64")]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
         mod x86 {{
             scalar_vs_native!(archmage::X64V3Token);
         }}

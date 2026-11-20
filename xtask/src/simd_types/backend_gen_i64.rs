@@ -289,7 +289,7 @@ pub(super) fn generate_x86_i64_impls(
         if ty.width_bits > max_width {
             continue;
         }
-        code.push_str("\n#[cfg(target_arch = \"x86_64\")]\n");
+        code.push_str("\n#[cfg(all(target_arch = \"x86_64\", target_feature = \"sse2\"))]\n");
         code.push_str(&generate_x86_i64_impl(ty, token));
         code.push('\n');
     }

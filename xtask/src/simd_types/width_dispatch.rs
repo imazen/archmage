@@ -130,7 +130,7 @@ struct TokenConfig {
 const TOKEN_CONFIGS: &[TokenConfig] = &[
     TokenConfig {
         token: "X64V3Token",
-        cfg: "target_arch = \"x86_64\"",
+        cfg: "all(target_arch = \"x86_64\", target_feature = \"sse2\")",
         mod_name: "x86_impl",
         native_width: 256,
         poly_w256: None, // native

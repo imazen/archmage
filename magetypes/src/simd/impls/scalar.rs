@@ -140,6 +140,26 @@ impl F32x4Backend for archmage::ScalarToken {
     }
 
     #[inline(always)]
+    fn minimum(self, a: [f32; 4], b: [f32; 4]) -> [f32; 4] {
+        core::array::from_fn(|i| crate::nostd_math::minimumf(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn maximum(self, a: [f32; 4], b: [f32; 4]) -> [f32; 4] {
+        core::array::from_fn(|i| crate::nostd_math::maximumf(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn min_fast(self, a: [f32; 4], b: [f32; 4]) -> [f32; 4] {
+        core::array::from_fn(|i| if a[i] < b[i] { a[i] } else { b[i] })
+    }
+
+    #[inline(always)]
+    fn max_fast(self, a: [f32; 4], b: [f32; 4]) -> [f32; 4] {
+        core::array::from_fn(|i| if a[i] > b[i] { a[i] } else { b[i] })
+    }
+
+    #[inline(always)]
     fn sqrt(self, a: [f32; 4]) -> [f32; 4] {
         let mut r = [0.0f32; 4];
         for i in 0..4 {
@@ -400,6 +420,132 @@ impl F32x4Backend for archmage::ScalarToken {
         ]
     }
 }
+impl F32x4Internal for archmage::ScalarToken {
+    type InternalRepr = [f32; 4];
+
+    #[inline(always)]
+    fn from_u16_lanes(self, lanes: &[u16; 4]) -> [f32; 4] {
+        lanes.map(f32::from)
+    }
+
+    #[inline(always)]
+    fn to_u16_lanes<const CFG: u32>(self, value: [f32; 4]) -> [u16; 4] {
+        value.map(crate::scalar::to_u16_with::<CFG>)
+    }
+
+    #[inline(always)]
+    fn to_u8_lanes<const CFG: u32>(self, value: [f32; 4]) -> [u8; 4] {
+        value.map(crate::scalar::to_u8_with::<CFG>)
+    }
+
+    #[inline(always)]
+    fn to_u32_lanes<const CFG: u32>(self, value: [f32; 4]) -> [f32; 4] {
+        value.map(|x| f32::from_bits(crate::scalar::to_u32_with::<CFG>(x)))
+    }
+
+    #[inline(always)]
+    fn from_u32_lanes(self, value: [f32; 4]) -> [f32; 4] {
+        value.map(|x| x.to_bits() as f32)
+    }
+
+    #[inline(always)]
+    fn from_f16_lanes<const CFG: u32>(self, lanes: &[u16; 4]) -> [f32; 4] {
+        lanes.map(crate::scalar::from_f16_with::<CFG>)
+    }
+
+    #[inline(always)]
+    fn to_f16_lanes<const CFG: u32>(self, value: [f32; 4]) -> [u16; 4] {
+        value.map(crate::scalar::to_f16_bits_with::<CFG>)
+    }
+
+    #[inline(always)]
+    fn from_bf16_lanes(self, lanes: &[u16; 4]) -> [f32; 4] {
+        lanes.map(crate::scalar::from_bf16)
+    }
+
+    #[inline(always)]
+    fn to_bf16_lanes<const CFG: u32>(self, value: [f32; 4]) -> [u16; 4] {
+        value.map(crate::scalar::to_bf16_with::<CFG>)
+    }
+
+    #[inline(always)]
+    fn broadcast_rgba_alpha_repr(self, value: [f32; 4]) -> [f32; 4] {
+        core::array::from_fn(|i| value[i | 3])
+    }
+
+    #[inline(always)]
+    fn with_rgba_alpha_repr(self, mut value: [f32; 4], src: [f32; 4]) -> [f32; 4] {
+        for i in (3..4).step_by(4) {
+            value[i] = src[i];
+        }
+        value
+    }
+
+    #[inline(always)]
+    fn transpose_4x4_repr(self, rows: [[f32; 4]; 4]) -> [[f32; 4]; 4] {
+        core::array::from_fn(|col| rows.map(|r| r[col]))
+    }
+
+    #[inline(always)]
+    fn store_rgba_u8_into(
+        self,
+        r: [f32; 4],
+        g: [f32; 4],
+        b: [f32; 4],
+        a: [f32; 4],
+        out: &mut [u8; 16],
+    ) {
+        let rb = <Self as F32x4Backend>::to_u8_bytes(self, r);
+        let gb = <Self as F32x4Backend>::to_u8_bytes(self, g);
+        let bb = <Self as F32x4Backend>::to_u8_bytes(self, b);
+        let ab = <Self as F32x4Backend>::to_u8_bytes(self, a);
+        for i in 0..4 {
+            out[i * 4] = rb[i];
+            out[i * 4 + 1] = gb[i];
+            out[i * 4 + 2] = bb[i];
+            out[i * 4 + 3] = ab[i];
+        }
+    }
+
+    #[inline(always)]
+    fn deinterleave_3ch_repr(self, rgb: [[f32; 4]; 3]) -> [[f32; 4]; 3] {
+        let [v0, v1, v2] = rgb;
+        [
+            [v0[0], v0[3], v1[2], v2[1]],
+            [v0[1], v1[0], v1[3], v2[2]],
+            [v0[2], v1[1], v2[0], v2[3]],
+        ]
+    }
+
+    #[inline(always)]
+    fn interleave_3ch_repr(self, channels: [[f32; 4]; 3]) -> [[f32; 4]; 3] {
+        let [r, g, b] = channels;
+        [
+            [r[0], g[0], b[0], r[1]],
+            [g[1], b[1], r[2], g[2]],
+            [b[2], r[3], g[3], b[3]],
+        ]
+    }
+
+    #[inline(always)]
+    fn load_rgb_bytes(self, rgb: &[u8; 12]) -> ([f32; 4], [f32; 4], [f32; 4]) {
+        let ch = |c| core::array::from_fn(|i| rgb[i * 3 + c] as f32);
+        (ch(0), ch(1), ch(2))
+    }
+
+    #[inline(always)]
+    fn store_rgb_u8_into(self, r: [f32; 4], g: [f32; 4], b: [f32; 4], out: &mut [u8; 12]) {
+        let [rb, gb, bb] = [r, g, b].map(|v| <Self as F32x4Backend>::to_u8_bytes(self, v));
+        for (pixel, ((r, g), b)) in out
+            .as_chunks_mut::<3>()
+            .0
+            .iter_mut()
+            .zip(rb.into_iter().zip(gb).zip(bb))
+        {
+            *pixel = [r, g, b];
+        }
+    }
+}
 
 impl F32x8Backend for archmage::ScalarToken {
     type Repr = [f32; 8];
@@ -527,6 +673,26 @@ impl F32x8Backend for archmage::ScalarToken {
             a[6].max(b[6]),
             a[7].max(b[7]),
         ]
+    }
+
+    #[inline(always)]
+    fn minimum(self, a: [f32; 8], b: [f32; 8]) -> [f32; 8] {
+        core::array::from_fn(|i| crate::nostd_math::minimumf(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn maximum(self, a: [f32; 8], b: [f32; 8]) -> [f32; 8] {
+        core::array::from_fn(|i| crate::nostd_math::maximumf(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn min_fast(self, a: [f32; 8], b: [f32; 8]) -> [f32; 8] {
+        core::array::from_fn(|i| if a[i] < b[i] { a[i] } else { b[i] })
+    }
+
+    #[inline(always)]
+    fn max_fast(self, a: [f32; 8], b: [f32; 8]) -> [f32; 8] {
+        core::array::from_fn(|i| if a[i] > b[i] { a[i] } else { b[i] })
     }
 
     #[inline(always)]
@@ -822,6 +988,127 @@ impl F32x8Backend for archmage::ScalarToken {
         ]
     }
 }
+impl F32x8Internal for archmage::ScalarToken {
+    type InternalRepr = [f32; 8];
+
+    #[inline(always)]
+    fn from_u16_lanes(self, lanes: &[u16; 8]) -> [f32; 8] {
+        lanes.map(f32::from)
+    }
+
+    #[inline(always)]
+    fn to_u16_lanes<const CFG: u32>(self, value: [f32; 8]) -> [u16; 8] {
+        value.map(crate::scalar::to_u16_with::<CFG>)
+    }
+
+    #[inline(always)]
+    fn to_u8_lanes<const CFG: u32>(self, value: [f32; 8]) -> [u8; 8] {
+        value.map(crate::scalar::to_u8_with::<CFG>)
+    }
+
+    #[inline(always)]
+    fn to_u32_lanes<const CFG: u32>(self, value: [f32; 8]) -> [f32; 8] {
+        value.map(|x| f32::from_bits(crate::scalar::to_u32_with::<CFG>(x)))
+    }
+
+    #[inline(always)]
+    fn from_u32_lanes(self, value: [f32; 8]) -> [f32; 8] {
+        value.map(|x| x.to_bits() as f32)
+    }
+
+    #[inline(always)]
+    fn from_f16_lanes<const CFG: u32>(self, lanes: &[u16; 8]) -> [f32; 8] {
+        lanes.map(crate::scalar::from_f16_with::<CFG>)
+    }
+
+    #[inline(always)]
+    fn to_f16_lanes<const CFG: u32>(self, value: [f32; 8]) -> [u16; 8] {
+        value.map(crate::scalar::to_f16_bits_with::<CFG>)
+    }
+
+    #[inline(always)]
+    fn from_bf16_lanes(self, lanes: &[u16; 8]) -> [f32; 8] {
+        lanes.map(crate::scalar::from_bf16)
+    }
+
+    #[inline(always)]
+    fn to_bf16_lanes<const CFG: u32>(self, value: [f32; 8]) -> [u16; 8] {
+        value.map(crate::scalar::to_bf16_with::<CFG>)
+    }
+
+    #[inline(always)]
+    fn broadcast_rgba_alpha_repr(self, value: [f32; 8]) -> [f32; 8] {
+        core::array::from_fn(|i| value[i | 3])
+    }
+
+    #[inline(always)]
+    fn with_rgba_alpha_repr(self, mut value: [f32; 8], src: [f32; 8]) -> [f32; 8] {
+        for i in (3..8).step_by(4) {
+            value[i] = src[i];
+        }
+        value
+    }
+
+    #[inline(always)]
+    fn store_rgba_u8_into(
+        self,
+        r: [f32; 8],
+        g: [f32; 8],
+        b: [f32; 8],
+        a: [f32; 8],
+        out: &mut [u8; 32],
+    ) {
+        let rb = <Self as F32x8Backend>::to_u8_bytes(self, r);
+        let gb = <Self as F32x8Backend>::to_u8_bytes(self, g);
+        let bb = <Self as F32x8Backend>::to_u8_bytes(self, b);
+        let ab = <Self as F32x8Backend>::to_u8_bytes(self, a);
+        for i in 0..8 {
+            out[i * 4] = rb[i];
+            out[i * 4 + 1] = gb[i];
+            out[i * 4 + 2] = bb[i];
+            out[i * 4 + 3] = ab[i];
+        }
+    }
+
+    #[inline(always)]
+    fn deinterleave_3ch_repr(self, rgb: [[f32; 8]; 3]) -> [[f32; 8]; 3] {
+        let [v0, v1, v2] = rgb;
+        [
+            [v0[0], v0[3], v0[6], v1[1], v1[4], v1[7], v2[2], v2[5]],
+            [v0[1], v0[4], v0[7], v1[2], v1[5], v2[0], v2[3], v2[6]],
+            [v0[2], v0[5], v1[0], v1[3], v1[6], v2[1], v2[4], v2[7]],
+        ]
+    }
+
+    #[inline(always)]
+    fn interleave_3ch_repr(self, channels: [[f32; 8]; 3]) -> [[f32; 8]; 3] {
+        let [r, g, b] = channels;
+        [
+            [r[0], g[0], b[0], r[1], g[1], b[1], r[2], g[2]],
+            [b[2], r[3], g[3], b[3], r[4], g[4], b[4], r[5]],
+            [g[5], b[5], r[6], g[6], b[6], r[7], g[7], b[7]],
+        ]
+    }
+
+    #[inline(always)]
+    fn load_rgb_bytes(self, rgb: &[u8; 24]) -> ([f32; 8], [f32; 8], [f32; 8]) {
+        let ch = |c| core::array::from_fn(|i| rgb[i * 3 + c] as f32);
+        (ch(0), ch(1), ch(2))
+    }
+
+    #[inline(always)]
+    fn store_rgb_u8_into(self, r: [f32; 8], g: [f32; 8], b: [f32; 8], out: &mut [u8; 24]) {
+        let [rb, gb, bb] = [r, g, b].map(|v| <Self as F32x8Backend>::to_u8_bytes(self, v));
+        for (pixel, ((r, g), b)) in out
+            .as_chunks_mut::<3>()
+            .0
+            .iter_mut()
+            .zip(rb.into_iter().zip(gb).zip(bb))
+        {
+            *pixel = [r, g, b];
+        }
+    }
+}
 
 impl F64x2Backend for archmage::ScalarToken {
     type Repr = [f64; 2];
@@ -895,6 +1182,26 @@ impl F64x2Backend for archmage::ScalarToken {
     #[inline(always)]
     fn max(self, a: [f64; 2], b: [f64; 2]) -> [f64; 2] {
         [a[0].max(b[0]), a[1].max(b[1])]
+    }
+
+    #[inline(always)]
+    fn minimum(self, a: [f64; 2], b: [f64; 2]) -> [f64; 2] {
+        core::array::from_fn(|i| crate::nostd_math::minimum(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn maximum(self, a: [f64; 2], b: [f64; 2]) -> [f64; 2] {
+        core::array::from_fn(|i| crate::nostd_math::maximum(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn min_fast(self, a: [f64; 2], b: [f64; 2]) -> [f64; 2] {
+        core::array::from_fn(|i| if a[i] < b[i] { a[i] } else { b[i] })
+    }
+
+    #[inline(always)]
+    fn max_fast(self, a: [f64; 2], b: [f64; 2]) -> [f64; 2] {
+        core::array::from_fn(|i| if a[i] > b[i] { a[i] } else { b[i] })
     }
 
     #[inline(always)]
@@ -1215,6 +1522,26 @@ impl F64x4Backend for archmage::ScalarToken {
             a[2].max(b[2]),
             a[3].max(b[3]),
         ]
+    }
+
+    #[inline(always)]
+    fn minimum(self, a: [f64; 4], b: [f64; 4]) -> [f64; 4] {
+        core::array::from_fn(|i| crate::nostd_math::minimum(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn maximum(self, a: [f64; 4], b: [f64; 4]) -> [f64; 4] {
+        core::array::from_fn(|i| crate::nostd_math::maximum(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn min_fast(self, a: [f64; 4], b: [f64; 4]) -> [f64; 4] {
+        core::array::from_fn(|i| if a[i] < b[i] { a[i] } else { b[i] })
+    }
+
+    #[inline(always)]
+    fn max_fast(self, a: [f64; 4], b: [f64; 4]) -> [f64; 4] {
+        core::array::from_fn(|i| if a[i] > b[i] { a[i] } else { b[i] })
     }
 
     #[inline(always)]
@@ -9372,11 +9699,31 @@ impl F32x16Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn min(self, a: [f32; 16], b: [f32; 16]) -> [f32; 16] {
-        core::array::from_fn(|i| if a[i] < b[i] { a[i] } else { b[i] })
+        core::array::from_fn(|i| a[i].min(b[i]))
     }
 
     #[inline(always)]
     fn max(self, a: [f32; 16], b: [f32; 16]) -> [f32; 16] {
+        core::array::from_fn(|i| a[i].max(b[i]))
+    }
+
+    #[inline(always)]
+    fn minimum(self, a: [f32; 16], b: [f32; 16]) -> [f32; 16] {
+        core::array::from_fn(|i| crate::nostd_math::minimumf(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn maximum(self, a: [f32; 16], b: [f32; 16]) -> [f32; 16] {
+        core::array::from_fn(|i| crate::nostd_math::maximumf(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn min_fast(self, a: [f32; 16], b: [f32; 16]) -> [f32; 16] {
+        core::array::from_fn(|i| if a[i] < b[i] { a[i] } else { b[i] })
+    }
+
+    #[inline(always)]
+    fn max_fast(self, a: [f32; 16], b: [f32; 16]) -> [f32; 16] {
         core::array::from_fn(|i| if a[i] > b[i] { a[i] } else { b[i] })
     }
 
@@ -9567,6 +9914,83 @@ impl F32x16Backend for archmage::ScalarToken {
         core::array::from_fn(|i| f32::from_bits(a[i].to_bits() ^ b[i].to_bits()))
     }
 }
+#[cfg(feature = "w512")]
+impl F32x16Internal for archmage::ScalarToken {
+    type InternalRepr = [f32; 16];
+
+    #[inline(always)]
+    fn from_u16_lanes(self, lanes: &[u16; 16]) -> [f32; 16] {
+        lanes.map(f32::from)
+    }
+
+    #[inline(always)]
+    fn to_u16_lanes<const CFG: u32>(self, value: [f32; 16]) -> [u16; 16] {
+        value.map(crate::scalar::to_u16_with::<CFG>)
+    }
+
+    #[inline(always)]
+    fn to_u8_lanes<const CFG: u32>(self, value: [f32; 16]) -> [u8; 16] {
+        value.map(crate::scalar::to_u8_with::<CFG>)
+    }
+
+    #[inline(always)]
+    fn to_u32_lanes<const CFG: u32>(self, value: [f32; 16]) -> [f32; 16] {
+        value.map(|x| f32::from_bits(crate::scalar::to_u32_with::<CFG>(x)))
+    }
+
+    #[inline(always)]
+    fn from_u32_lanes(self, value: [f32; 16]) -> [f32; 16] {
+        value.map(|x| x.to_bits() as f32)
+    }
+
+    #[inline(always)]
+    fn from_f16_lanes<const CFG: u32>(self, lanes: &[u16; 16]) -> [f32; 16] {
+        lanes.map(crate::scalar::from_f16_with::<CFG>)
+    }
+
+    #[inline(always)]
+    fn to_f16_lanes<const CFG: u32>(self, value: [f32; 16]) -> [u16; 16] {
+        value.map(crate::scalar::to_f16_bits_with::<CFG>)
+    }
+
+    #[inline(always)]
+    fn from_bf16_lanes(self, lanes: &[u16; 16]) -> [f32; 16] {
+        lanes.map(crate::scalar::from_bf16)
+    }
+
+    #[inline(always)]
+    fn to_bf16_lanes<const CFG: u32>(self, value: [f32; 16]) -> [u16; 16] {
+        value.map(crate::scalar::to_bf16_with::<CFG>)
+    }
+
+    #[inline(always)]
+    fn broadcast_rgba_alpha_repr(self, value: [f32; 16]) -> [f32; 16] {
+        core::array::from_fn(|i| value[i | 3])
+    }
+
+    #[inline(always)]
+    fn with_rgba_alpha_repr(self, mut value: [f32; 16], src: [f32; 16]) -> [f32; 16] {
+        for i in (3..16).step_by(4) {
+            value[i] = src[i];
+        }
+        value
+    }
+
+    #[inline(always)]
+    fn from_u8_lanes_wide(self, lanes: &[u8; 16]) -> [f32; 16] {
+        lanes.map(f32::from)
+    }
+
+    #[inline(always)]
+    fn deinterleave_rgba_wide(self, rgba: [[f32; 16]; 4]) -> [[f32; 16]; 4] {
+        core::array::from_fn(|c| core::array::from_fn(|i| rgba[i / 4][4 * (i % 4) + c]))
+    }
+
+    #[inline(always)]
+    fn interleave_rgba_wide(self, channels: [[f32; 16]; 4]) -> [[f32; 16]; 4] {
+        core::array::from_fn(|group| core::array::from_fn(|i| channels[i % 4][4 * group + i / 4]))
+    }
+}
 
 #[cfg(feature = "w512")]
 impl F64x8Backend for archmage::ScalarToken {
@@ -9629,11 +10053,31 @@ impl F64x8Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn min(self, a: [f64; 8], b: [f64; 8]) -> [f64; 8] {
-        core::array::from_fn(|i| if a[i] < b[i] { a[i] } else { b[i] })
+        core::array::from_fn(|i| a[i].min(b[i]))
     }
 
     #[inline(always)]
     fn max(self, a: [f64; 8], b: [f64; 8]) -> [f64; 8] {
+        core::array::from_fn(|i| a[i].max(b[i]))
+    }
+
+    #[inline(always)]
+    fn minimum(self, a: [f64; 8], b: [f64; 8]) -> [f64; 8] {
+        core::array::from_fn(|i| crate::nostd_math::minimum(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn maximum(self, a: [f64; 8], b: [f64; 8]) -> [f64; 8] {
+        core::array::from_fn(|i| crate::nostd_math::maximum(a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn min_fast(self, a: [f64; 8], b: [f64; 8]) -> [f64; 8] {
+        core::array::from_fn(|i| if a[i] < b[i] { a[i] } else { b[i] })
+    }
+
+    #[inline(always)]
+    fn max_fast(self, a: [f64; 8], b: [f64; 8]) -> [f64; 8] {
         core::array::from_fn(|i| if a[i] > b[i] { a[i] } else { b[i] })
     }
 

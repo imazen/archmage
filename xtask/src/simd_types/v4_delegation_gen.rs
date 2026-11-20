@@ -3,8 +3,7 @@
 //!
 //! Derived from the generated trait definitions, so every method the trait
 //! declares is forwarded and a new trait method cannot silently fall back to
-//! its scalar default body for the AVX-512 tokens (issue #60). The three
-//! methods with a cheaper AVX-512VL form call the hand-written helpers in
+//! its scalar default body for the AVX-512 tokens (issue #60). Methods with a cheaper AVX-512VL form call the hand-written helpers in
 //! `impls/x86_v4_f32_overrides.rs` instead.
 
 use indoc::formatdoc;
@@ -22,8 +21,29 @@ const TOKENS: &[(&str, &str)] = &[
 /// Methods that take the AVX-512VL path: (trait, method, helper).
 const OVERRIDES: &[(&str, &str, &str)] = &[
     ("F32x4Backend", "to_u8_bytes", "to_u8_bytes_x4_v4"),
-    ("F32x4Backend", "store_rgba_bytes", "store_rgba_bytes_x4_v4"),
+    (
+        "F32x4Internal",
+        "store_rgba_u8_into",
+        "store_rgba_u8_into_x4_v4",
+    ),
+    (
+        "F32x4Internal",
+        "store_rgb_u8_into",
+        "store_rgb_u8_into_x4_v4",
+    ),
     ("F32x8Backend", "to_u8_bytes", "to_u8_bytes_x8_v4"),
+    ("F32x4Backend", "min", "min_x4_v4"),
+    ("F32x4Backend", "max", "max_x4_v4"),
+    ("F32x4Internal", "to_u16_lanes", "to_u16_lanes_x4_v4"),
+    ("F32x4Internal", "to_u8_lanes", "to_u8_lanes_x4_v4"),
+    ("F32x4Internal", "to_u32_lanes", "to_u32_lanes_x4_v4"),
+    ("F32x4Internal", "from_u32_lanes", "from_u32_lanes_x4_v4"),
+    ("F32x8Backend", "min", "min_x8_v4"),
+    ("F32x8Backend", "max", "max_x8_v4"),
+    ("F32x8Internal", "to_u16_lanes", "to_u16_lanes_x8_v4"),
+    ("F32x8Internal", "to_u8_lanes", "to_u8_lanes_x8_v4"),
+    ("F32x8Internal", "to_u32_lanes", "to_u32_lanes_x8_v4"),
+    ("F32x8Internal", "from_u32_lanes", "from_u32_lanes_x8_v4"),
 ];
 
 /// Generate the delegation file from the two trait sources.
@@ -31,7 +51,9 @@ pub(crate) fn generate(f32x4_trait_src: &str, f32x8_trait_src: &str) -> String {
     let mut body = String::new();
     for (trait_name, src) in [
         ("F32x4Backend", f32x4_trait_src),
+        ("F32x4Internal", f32x4_trait_src),
         ("F32x8Backend", f32x8_trait_src),
+        ("F32x8Internal", f32x8_trait_src),
     ] {
         let trait_item = find_trait(src, trait_name);
         for (token, v4_expr) in TOKENS {
@@ -67,13 +89,13 @@ pub(crate) fn generate(f32x4_trait_src: &str, f32x8_trait_src: &str) -> String {
         //!
         //! ## The exception: pixel packing
         //!
-        //! `to_u8_bytes` (both widths) and `f32x4::store_rgba_bytes` call the
-        //! hand-written AVX-512VL helpers in `x86_v4_f32_overrides.rs`, which take
-        //! a concrete `X64V4Token` (`self` for V4, `self.v4()` for V4x and FP16).
+        //! `to_u8_bytes` (both widths) and `f32x4::{{store_rgba_u8_into, store_rgb_u8_into}}`
+        //! call the hand-written AVX-512VL helpers in `x86_v4_f32_overrides.rs`, which
+        //! take a concrete `X64V4Token` (`self` for V4, `self.v4()` for V4x and FP16).
 
-        #![cfg(all(target_arch = "x86_64", feature = "avx512"))]
+        #![cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
 
-        use crate::simd::backends::{{F32x4Backend, F32x8Backend}};
+        use crate::simd::backends::{{F32x4Backend, F32x4Internal, F32x8Backend, F32x8Internal}};
         use super::x86_v4_f32_overrides as overrides;
 
         {body}
@@ -127,7 +149,7 @@ pub(crate) fn generate_narrow(specs: &[(String, String)]) -> String {
         //! for `X64V4xToken` (native AVX-512 VPOPCNTDQ) and have no V3
         //! impls to forward to.
 
-        #![cfg(all(target_arch = "x86_64", feature = "avx512"))]
+        #![cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
 
         // Wildcard: the impls' signatures name supertraits of the
         // implemented traits (`<Self as F32x8Backend>::Repr` inside a
@@ -178,6 +200,9 @@ fn delegating_impl(
         .expect("method signature re-parse");
         let sig = &sig;
         let name = &sig.ident;
+        if name == "store_rgba_bytes" {
+            continue;
+        }
         assert!(
             matches!(sig.inputs.first(), Some(FnArg::Receiver(_))),
             "{trait_name}::{name} has no receiver; the delegation needs `self`"
@@ -219,7 +244,7 @@ fn delegating_impl(
             .find(|(t, m, _)| *t == trait_name && name == m)
             .map(|(_, _, helper)| format_ident!("{helper}"));
         let body = match override_helper {
-            Some(helper) => quote! { overrides::#helper(#v4, #(#args),*) },
+            Some(helper) => quote! { overrides::#helper #turbofish(#v4, #(#args),*) },
             None => {
                 quote! { <archmage::X64V3Token as #trait_ident>::#name #turbofish(self.v3(), #(#args),*) }
             }
@@ -232,12 +257,12 @@ fn delegating_impl(
     // `type Repr` exists on the backend traits but not on the
     // float↔int conversion traits (whose methods name supertrait Reprs
     // in signature position) — emit it only when the trait declares it.
-    let has_repr = trait_item
-        .items
-        .iter()
-        .any(|item| matches!(item, TraitItem::Type(_)));
-    let repr_impl = has_repr.then(|| {
-        quote! { type Repr = <archmage::X64V3Token as #trait_ident>::Repr; }
+    let assoc_ty = trait_item.items.iter().find_map(|item| match item {
+        TraitItem::Type(ty) => Some(&ty.ident),
+        _ => None,
+    });
+    let repr_impl = assoc_ty.map(|assoc| {
+        quote! { type #assoc = <archmage::X64V3Token as #trait_ident>::#assoc; }
     });
     let tokens = quote! {
         impl #trait_ident for #token_path {

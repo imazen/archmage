@@ -64,7 +64,7 @@ impl_pod!(
 // SAFETY: arrays add no padding between elements and preserve their validity.
 unsafe impl<T: Pod, const N: usize> Pod for [T; N] {}
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 const _: () = {
     use core::arch::x86_64::*;
     impl_pod!(
@@ -314,7 +314,7 @@ pub(crate) fn cast<Src: Pod, Dst: Pod>(src: Src) -> Dst {
 /// still exercises it on every architecture.
 #[cfg_attr(
     not(any(
-        target_arch = "x86_64",
+        all(target_arch = "x86_64", target_feature = "sse2"),
         target_arch = "aarch64",
         target_arch = "wasm32"
     )),
@@ -624,7 +624,7 @@ pub(crate) fn store<Src: Pod, Dst: Pod>(src: Src, dest: &mut Dst) {
 ///     FI
 /// ENDFOR
 /// ```
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
 pub(crate) mod gather {
     use super::Pod;
     use archmage::X64V4Token;

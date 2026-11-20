@@ -90,9 +90,14 @@ impl<T: F32x16Convert> f32x16<T> {
 
         // floor(x) <= 127 keeps the bit trick (n+127)<<23 in range; at 127.99
         // the result stays below f32::MAX despite the polynomial's error.
+        // Preserve quiet NaNs in one instruction per bound across all backends.
+        #[cfg(any(target_arch = "aarch64", target_arch = "wasm32"))]
         let x = self
-            .max(splat_f32::<T>(self.1, -126.0))
-            .min(splat_f32::<T>(self.1, 127.99));
+            .maximum(splat_f32::<T>(self.1, -126.0))
+            .minimum(splat_f32::<T>(self.1, 127.99));
+        #[cfg(not(any(target_arch = "aarch64", target_arch = "wasm32")))]
+        let x =
+            splat_f32::<T>(self.1, 127.99).min_fast(splat_f32::<T>(self.1, -126.0).max_fast(self));
         let xi = x.floor();
         let xf = x - xi;
 
@@ -152,7 +157,7 @@ impl<T: F32x16Convert> f32x16<T> {
     #[inline(always)]
     pub fn pow_lowp(self, n: f32) -> Self {
         let result = (self.log2_lowp() * splat_f32::<T>(self.1, n)).exp2_lowp();
-        // Zero masking: pow(0, n) = 0 for n > 0
+        // Unconditional zero masking: pow(0, n) returns 0.0 for all n (including n <= 0)
         let is_zero = self.simd_eq(splat_f32::<T>(self.1, 0.0));
         Self::blend(is_zero, splat_f32::<T>(self.1, 0.0), result)
     }
@@ -214,7 +219,9 @@ impl<T: F32x16Convert> f32x16<T> {
             splat_f32::<T>(self.1, f32::NEG_INFINITY),
             result,
         );
-        let result = Self::blend(self.simd_lt(zero), splat_f32::<T>(self.1, f32::NAN), result);
+        // Ordered >= is true only for non-negative non-NaN lanes, mapping
+        // both negative inputs and NaN to NaN while preserving ±0 -> -inf.
+        let result = Self::blend(self.simd_ge(zero), result, splat_f32::<T>(self.1, f32::NAN));
         // +inf -> +inf; the polynomial otherwise returns inf's raw
         // unbiased exponent (128) for an infinite input.
         let inf = splat_f32::<T>(self.1, f32::INFINITY);
@@ -250,7 +257,11 @@ impl<T: F32x16Convert> f32x16<T> {
         // polynomial's range: up to 134.1 ULP there. Folding in the missing
         // factor of two measured 7-12% slower for exp2/exp/pow with AVX2 and
         // 4-8% slower on the scalar backend.
-        let xi = self.round().min(splat_f32::<T>(self.1, 127.0));
+        let rounded = self.round();
+        #[cfg(any(target_arch = "aarch64", target_arch = "wasm32"))]
+        let xi = rounded.minimum(splat_f32::<T>(self.1, 127.0));
+        #[cfg(not(any(target_arch = "aarch64", target_arch = "wasm32")))]
+        let xi = splat_f32::<T>(self.1, 127.0).min_fast(rounded);
         let xf = self - xi;
 
         let poly = splat_f32::<T>(self.1, C6).mul_add_relaxed(xf, splat_f32::<T>(self.1, C5));
@@ -275,8 +286,12 @@ impl<T: F32x16Convert> f32x16<T> {
         let underflow_limit = splat_f32::<T>(self.1, -126.0);
         let overflow_limit = splat_f32::<T>(self.1, 128.0);
 
-        // Clamp to prevent overflow in intermediate calculations
-        let clamped = self.max(underflow_limit).min(overflow_limit);
+        // Clamp to prevent overflow in intermediate calculations while
+        // preserving quiet NaNs in one instruction per bound.
+        #[cfg(any(target_arch = "aarch64", target_arch = "wasm32"))]
+        let clamped = self.maximum(underflow_limit).minimum(overflow_limit);
+        #[cfg(not(any(target_arch = "aarch64", target_arch = "wasm32")))]
+        let clamped = overflow_limit.min_fast(underflow_limit.max_fast(self));
         let result = clamped.exp2_midp_unchecked();
 
         // Handle edge cases: large negative → 0, large positive → inf
@@ -367,7 +382,15 @@ impl<T: F32x16Convert> f32x16<T> {
     /// exactly `x`.
     #[inline(always)]
     pub fn silu_midp(self) -> Self {
-        self * self.sigmoid_midp()
+        let neg_inf = splat_f32::<T>(self.1, f32::NEG_INFINITY);
+        let result = self * self.sigmoid_midp();
+        // (-inf) * 0.0 evaluates to NaN, whereas large negative finite inputs
+        // follow x * (+0.0) = -0.0; clamp -inf to the -0.0 limit.
+        Self::blend(
+            self.simd_eq(neg_inf),
+            splat_f32::<T>(self.1, -0.0f32),
+            result,
+        )
     }
 
     /// Mid-precision base-10 logarithm (at most 4.5 ULP).

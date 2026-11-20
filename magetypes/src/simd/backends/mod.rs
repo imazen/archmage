@@ -8,9 +8,11 @@ pub(crate) mod sealed;
 
 mod f32x4;
 pub use f32x4::F32x4Backend;
+pub(crate) use f32x4::F32x4Internal;
 
 mod f32x8;
 pub use f32x8::F32x8Backend;
+pub(crate) use f32x8::F32x8Internal;
 
 mod f64x2;
 pub use f64x2::F64x2Backend;
@@ -70,6 +72,8 @@ pub use u64x4::U64x4Backend;
 mod f32x16;
 #[cfg(feature = "w512")]
 pub use f32x16::F32x16Backend;
+#[cfg(feature = "w512")]
+pub(crate) use f32x16::F32x16Internal;
 
 #[cfg(feature = "w512")]
 mod f64x8;

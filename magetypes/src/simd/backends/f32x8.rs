@@ -8,6 +8,95 @@
 use super::sealed::Sealed;
 use archmage::SimdToken;
 
+/// Crate-private layout and conversion hooks for `8`-lane `f32` backends.
+pub(crate) trait F32x8Internal: SimdToken + Sealed + Copy + 'static {
+    type InternalRepr: Copy + Clone + Send + Sync;
+
+    /// Load unsigned lanes and convert them exactly, without normalization.
+    fn from_u16_lanes(self, lanes: &[u16; 8]) -> Self::InternalRepr;
+
+    /// Convert lanes to u16 using the encoded policy.
+    fn to_u16_lanes<const CFG: u32>(self, value: Self::InternalRepr) -> [u16; 8];
+
+    /// Convert lanes to u8 using the encoded policy.
+    fn to_u8_lanes<const CFG: u32>(self, value: Self::InternalRepr) -> [u8; 8];
+
+    /// Convert f32 lanes to unsigned u32 stored in the float representation.
+    fn to_u32_lanes<const CFG: u32>(self, value: Self::InternalRepr) -> Self::InternalRepr;
+
+    /// Widen unsigned u32 bit patterns stored in the float representation.
+    fn from_u32_lanes(self, value: Self::InternalRepr) -> Self::InternalRepr;
+
+    /// Decode binary16 using the encoded policy.
+    fn from_f16_lanes<const CFG: u32>(self, lanes: &[u16; 8]) -> Self::InternalRepr;
+
+    /// Encode binary16 using the encoded policy.
+    fn to_f16_lanes<const CFG: u32>(self, value: Self::InternalRepr) -> [u16; 8];
+
+    /// Widen bfloat16 bit patterns.
+    fn from_bf16_lanes(self, lanes: &[u16; 8]) -> Self::InternalRepr;
+
+    /// Encode bfloat16 using the encoded policy.
+    fn to_bf16_lanes<const CFG: u32>(self, value: Self::InternalRepr) -> [u16; 8];
+
+    /// Broadcast lane 3 in each consecutive group of four lanes.
+    fn broadcast_rgba_alpha_repr(self, value: Self::InternalRepr) -> Self::InternalRepr;
+
+    /// Replace lane 3 in each consecutive group of four lanes.
+    fn with_rgba_alpha_repr(
+        self,
+        value: Self::InternalRepr,
+        src: Self::InternalRepr,
+    ) -> Self::InternalRepr;
+
+    /// Quantize and store planar channels into packed RGBA bytes.
+    fn store_rgba_u8_into(
+        self,
+        r: Self::InternalRepr,
+        g: Self::InternalRepr,
+        b: Self::InternalRepr,
+        a: Self::InternalRepr,
+        out: &mut [u8; 32],
+    );
+
+    /// Quantize and pack planar RGBA with the encoded integer policy.
+    #[inline(always)]
+    fn store_rgba_u8_with_into<const CFG: u32>(
+        self,
+        r: Self::InternalRepr,
+        g: Self::InternalRepr,
+        b: Self::InternalRepr,
+        a: Self::InternalRepr,
+        out: &mut [u8; 32],
+    ) {
+        let channels = [r, g, b, a].map(|v| Self::to_u8_lanes::<CFG>(self, v));
+        for (i, byte) in out.iter_mut().enumerate() {
+            *byte = channels[i % 4][i / 4];
+        }
+    }
+
+    /// Deinterleave 8 packed RGB pixels from AoS into planar `[R, G, B]`.
+    fn deinterleave_3ch_repr(self, rgb: [Self::InternalRepr; 3]) -> [Self::InternalRepr; 3];
+
+    /// Interleave 3 planar `[R, G, B]` vectors into 3 AoS RGB vectors.
+    fn interleave_3ch_repr(self, channels: [Self::InternalRepr; 3]) -> [Self::InternalRepr; 3];
+
+    /// Load 8 packed RGB `u8` pixels into planar `f32` `(R, G, B)`.
+    fn load_rgb_bytes(
+        self,
+        rgb: &[u8; 24],
+    ) -> (Self::InternalRepr, Self::InternalRepr, Self::InternalRepr);
+
+    /// Round-to-nearest-even, clamp to `0..=255`, and interleave into 8 RGB pixels.
+    fn store_rgb_u8_into(
+        self,
+        r: Self::InternalRepr,
+        g: Self::InternalRepr,
+        b: Self::InternalRepr,
+        out: &mut [u8; 24],
+    );
+}
+
 /// Backend implementation for 8-lane f32 SIMD vectors.
 ///
 /// Trait methods take `self` (the token) as receiver — the token value
@@ -21,7 +110,15 @@ use archmage::SimdToken;
 ///
 /// This trait is sealed — only archmage token types can implement it.
 /// The token proves CPU support was verified via `summon()`.
-pub trait F32x8Backend: SimdToken + Sealed + Copy + 'static {
+#[allow(private_bounds)]
+pub trait F32x8Backend:
+    SimdToken
+    + Sealed
+    + F32x8Internal<InternalRepr = <Self as F32x8Backend>::Repr>
+    + crate::scalar::F32ScalarBackend
+    + Copy
+    + 'static
+{
     /// Platform-native SIMD representation.
     #[allow(private_bounds)]
     type Repr: Copy + Clone + Send + Sync + crate::simd_storage::Pod;
@@ -65,17 +162,54 @@ pub trait F32x8Backend: SimdToken + Sealed + Copy + 'static {
 
     // ====== Math ======
 
-    /// Lane-wise minimum.
+    /// Lane-wise minimum matching `f32::min` (returns the numeric operand on a single quiet `NaN`; signalling `NaN` and `±0.0` unspecified).
     fn min(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
-    /// Lane-wise maximum.
+    /// Lane-wise maximum matching `f32::max` (returns the numeric operand on a single quiet `NaN`; signalling `NaN` and `±0.0` unspecified).
     fn max(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
+
+    /// IEEE 754-2019 minimum (`NaN`-propagating, `-0.0 < +0.0`).
+    fn minimum(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
+
+    /// IEEE 754-2019 maximum (`NaN`-propagating, `-0.0 < +0.0`).
+    fn maximum(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
+
+    /// Fast lane-wise minimum (`NaN` and `±0.0` unspecified).
+    #[inline(always)]
+    fn min_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        Self::min(self, a, b)
+    }
+
+    /// Fast lane-wise maximum (`NaN` and `±0.0` unspecified).
+    #[inline(always)]
+    fn max_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        Self::max(self, a, b)
+    }
 
     /// Square root.
     fn sqrt(self, a: Self::Repr) -> Self::Repr;
 
     /// Absolute value.
     fn abs(self, a: Self::Repr) -> Self::Repr;
+
+    /// Truncate toward zero without changing the sign of zero.
+    #[inline(always)]
+    fn trunc(self, a: Self::Repr) -> Self::Repr {
+        let lanes = <Self as F32x8Backend>::to_array(self, a);
+        <Self as F32x8Backend>::from_array(self, lanes.map(crate::scalar::trunc_f32))
+    }
+
+    /// Multiply-negate-add with backend-dependent rounding.
+    #[inline(always)]
+    fn mul_neg_add_relaxed(self, a: Self::Repr, b: Self::Repr, c: Self::Repr) -> Self::Repr {
+        <Self as F32x8Backend>::mul_add(self, <Self as F32x8Backend>::neg(self, a), b, c)
+    }
+
+    /// Multiply-negate-add with one rounding.
+    #[inline(always)]
+    fn mul_neg_add_fused(self, a: Self::Repr, b: Self::Repr, c: Self::Repr) -> Self::Repr {
+        <Self as F32x8Backend>::mul_add_portable(self, <Self as F32x8Backend>::neg(self, a), b, c)
+    }
 
     /// Round toward negative infinity.
     fn floor(self, a: Self::Repr) -> Self::Repr;
@@ -161,9 +295,9 @@ pub trait F32x8Backend: SimdToken + Sealed + Copy + 'static {
     }
 
     /// Fast reciprocal square root approximation: backend-dependent
-    /// (x86 ~12-bit, ARM ~8-bit, WASM full). [`rsqrt`] is full f32 everywhere.
+    /// (x86 ~12-bit, ARM ~8-bit, WASM full). [`rsqrt`](Self::rsqrt) is full f32 everywhere.
     ///
-    /// See [`rcp_approx`] for default-body rationale.
+    /// See [`rcp_approx`](Self::rcp_approx) for default-body rationale.
     #[inline(always)]
     fn rsqrt_approx(self, a: Self::Repr) -> Self::Repr {
         a
@@ -185,14 +319,19 @@ pub trait F32x8Backend: SimdToken + Sealed + Copy + 'static {
 
     // ====== Default implementations ======
 
-    /// Clamp values between lo and hi.
+    /// Clamp values between `lo` and `hi`: `min_fast(max_fast(a, lo), hi)`,
+    /// two instructions on native backends.
+    ///
+    /// A quiet `NaN` lane in `a` becomes `lo` on x86, NEON, strict WASM, and
+    /// `ScalarToken`; signalling `NaN`, WASM `relaxed-simd` `NaN` lanes, `NaN`
+    /// bounds, and `lo > hi` are unspecified per backend, and `clamp` never panics.
     #[inline(always)]
     fn clamp(self, a: Self::Repr, lo: Self::Repr, hi: Self::Repr) -> Self::Repr {
-        <Self as F32x8Backend>::min(self, <Self as F32x8Backend>::max(self, a, lo), hi)
+        <Self as F32x8Backend>::min_fast(self, <Self as F32x8Backend>::max_fast(self, a, lo), hi)
     }
 
     /// Working-tier reciprocal — defaults to delegating to
-    /// [`rcp_approx`] (which itself defaults to identity), so every
+    /// [`rcp_approx`](Self::rcp_approx) (which itself defaults to identity), so every
     /// backend MUST override. Contract: <= 4 ULP by the backend's
     /// fastest conforming path (estimate + Newton on x86/NEON f32,
     /// exact division elsewhere); rails are per-backend and may be
@@ -203,7 +342,7 @@ pub trait F32x8Backend: SimdToken + Sealed + Copy + 'static {
         Self::rcp_approx(self, a)
     }
 
-    /// Working-tier reciprocal square root — see [`recip`] for the
+    /// Working-tier reciprocal square root — see [`recip`](Self::recip) for the
     /// contract shape.
     #[inline(always)]
     fn rsqrt(self, a: Self::Repr) -> Self::Repr {
@@ -228,6 +367,7 @@ pub trait F32x8Backend: SimdToken + Sealed + Copy + 'static {
     /// `roundevenf`); the byte interleave is left to LLVM, which recovers
     /// it to native shuffles. A backend may still override for a tighter
     /// fused sequence.
+    #[deprecated(since = "0.9.32", note = "Use f32x8::store_rgba_u8")]
     #[inline(always)]
     fn store_rgba_bytes(
         self,
@@ -236,19 +376,8 @@ pub trait F32x8Backend: SimdToken + Sealed + Copy + 'static {
         b: Self::Repr,
         a: Self::Repr,
     ) -> [u8; 32] {
-        let rb = <Self as F32x8Backend>::to_u8_bytes(self, r);
-        let gb = <Self as F32x8Backend>::to_u8_bytes(self, g);
-        let bb = <Self as F32x8Backend>::to_u8_bytes(self, b);
-        let ab = <Self as F32x8Backend>::to_u8_bytes(self, a);
         let mut out = [0u8; 32];
-        let mut i = 0;
-        while i < 8 {
-            out[i * 4] = rb[i];
-            out[i * 4 + 1] = gb[i];
-            out[i * 4 + 2] = bb[i];
-            out[i * 4 + 3] = ab[i];
-            i += 1;
-        }
+        <Self as F32x8Internal>::store_rgba_u8_into(self, r, g, b, a, &mut out);
         out
     }
 

@@ -166,7 +166,7 @@ fn conversion_and_block_aliases() {
             .map(f32::to_bits),
         [0, 1, 0x8000_0000, 0x7fc0_1234]
     );
-    let (r, g, b, a) = f32x4::load_4_rgba_u8_t(token, &bytes);
+    let (r, g, b, a) = f32x4::load_rgba_u8_t(token, &bytes);
     assert_eq!(r.to_array(), [0., 4., 8., 12.]);
     assert_eq!(g.to_array(), [1., 5., 9., 13.]);
     assert_eq!(b.to_array(), [2., 6., 10., 14.]);

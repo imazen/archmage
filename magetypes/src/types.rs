@@ -56,7 +56,7 @@ pub trait SimdTypes: SimdToken {
 // x86_64 implementations
 // =============================================================================
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl SimdTypes for archmage::X64V3Token {
     type F32 = crate::simd::generic::f32x8<archmage::X64V3Token>;
     type F64 = crate::simd::generic::f64x4<archmage::X64V3Token>;
@@ -74,7 +74,7 @@ impl SimdTypes for archmage::X64V3Token {
     const I32_LANES: usize = 8;
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl SimdTypes for archmage::X64V2Token {
     type F32 = crate::simd::generic::f32x4<archmage::X64V3Token>;
     type F64 = crate::simd::generic::f64x2<archmage::X64V3Token>;
@@ -92,7 +92,7 @@ impl SimdTypes for archmage::X64V2Token {
     const I32_LANES: usize = 4;
 }
 
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
 impl SimdTypes for archmage::X64V4Token {
     type F32 = crate::simd::generic::f32x16<archmage::X64V4Token>;
     type F64 = crate::simd::generic::f64x8<archmage::X64V4Token>;
@@ -110,7 +110,7 @@ impl SimdTypes for archmage::X64V4Token {
     const I32_LANES: usize = 16;
 }
 
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
 impl SimdTypes for archmage::X64V4xToken {
     type F32 = crate::simd::generic::f32x16<archmage::X64V4xToken>;
     type F64 = crate::simd::generic::f64x8<archmage::X64V4xToken>;
@@ -208,7 +208,7 @@ mod tests {
         check::<archmage::ScalarToken>();
     }
 
-    #[cfg(target_arch = "x86_64")]
+    #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
     #[test]
     fn x64v3_token_types() {
         fn check<T: SimdTypes>() {
@@ -219,7 +219,7 @@ mod tests {
         check::<archmage::X64V3Token>();
     }
 
-    #[cfg(target_arch = "x86_64")]
+    #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
     #[test]
     fn x64v2_token_types() {
         fn check<T: SimdTypes>() {
@@ -230,7 +230,7 @@ mod tests {
         check::<archmage::X64V2Token>();
     }
 
-    #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+    #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
     #[test]
     fn x64v4_token_types() {
         fn check<T: SimdTypes>() {

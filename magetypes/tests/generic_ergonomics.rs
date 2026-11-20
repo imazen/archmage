@@ -144,7 +144,7 @@ fn example_brightness() {
 // ============================================================================
 
 fn apply_gamma_correction<T: F32x8Backend + F32x8Convert>(token: T, rgba_pixels: &mut [u8; 32]) {
-    let (r, g, b, a) = f32x8::<T>::load_8_rgba_u8_t(token, rgba_pixels);
+    let (r, g, b, a) = f32x8::<T>::load_rgba_u8_t(token, rgba_pixels);
 
     // Normalize to [0, 1]
     let inv255 = f32x8::<T>::splat_t(token, 1.0 / 255.0);
@@ -165,7 +165,7 @@ fn apply_gamma_correction<T: F32x8Backend + F32x8Convert>(token: T, rgba_pixels:
     let b = b * scale;
     // Alpha unchanged.
 
-    *rgba_pixels = f32x8::<T>::store_8_rgba_u8(r, g, b, a);
+    f32x8::<T>::store_rgba_u8(r, g, b, a, rgba_pixels);
 }
 
 #[test]

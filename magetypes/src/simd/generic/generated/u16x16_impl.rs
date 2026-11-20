@@ -57,7 +57,7 @@ const _: () = {
     );
 };
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 const _: () = {
     assert!(
         size_of::<u16x16<archmage::X64V3Token>>()
@@ -130,6 +130,26 @@ impl<T: U16x16Backend> u16x16<T> {
         Self(T::from_array(token, arr), token)
     }
 
+    /// Load up to `16` elements from `slice`, filling remaining high lanes with `pad`.
+    ///
+    /// Designed for single-vector slice tails after [`partition_slice_t`](Self::partition_slice_t)
+    /// (typically paired with [`store_prefix`](Self::store_prefix)).
+    ///
+    /// # Panics
+    ///
+    /// Panics if `slice.len() > 16`.
+    #[inline(always)]
+    pub fn load_padded_t(token: T, slice: &[u16], pad: u16) -> Self {
+        assert!(
+            slice.len() <= 16,
+            "u16x16::load_padded_t requires slice.len() <= 16, got {}",
+            slice.len(),
+        );
+        let mut arr = [pad; 16];
+        arr[..slice.len()].copy_from_slice(slice);
+        Self(T::from_array(token, arr), token)
+    }
+
     /// Split a slice into SIMD-width chunks and a scalar remainder.
     ///
     /// Returns `(&[[u16; 16]], &[u16])` — fixed-size arrays suitable
@@ -156,6 +176,25 @@ impl<T: U16x16Backend> u16x16<T> {
         T::store(self.1, self.0, out);
     }
 
+    /// Store the low `out.len()` lanes into `out`.
+    ///
+    /// Designed for single-vector slice tails after [`partition_slice_mut_t`](Self::partition_slice_mut_t)
+    /// (typically paired with [`load_padded_t`](Self::load_padded_t)).
+    ///
+    /// # Panics
+    ///
+    /// Panics if `out.len() > 16`.
+    #[inline(always)]
+    pub fn store_prefix(self, out: &mut [u16]) {
+        assert!(
+            out.len() <= 16,
+            "u16x16::store_prefix requires out.len() <= 16, got {}",
+            out.len(),
+        );
+        let arr = T::to_array(self.1, self.0);
+        out.copy_from_slice(&arr[..out.len()]);
+    }
+
     /// Convert to array.
     #[inline(always)]
     pub fn to_array(self) -> [u16; 16] {
@@ -166,6 +205,12 @@ impl<T: U16x16Backend> u16x16<T> {
     #[inline(always)]
     pub fn into_repr(self) -> T::Repr {
         self.0
+    }
+
+    /// Get the capability token carried by this vector.
+    #[inline(always)]
+    pub fn token(self) -> T {
+        self.1
     }
 
     /// Wrap a platform representation (token-gated).
@@ -610,7 +655,7 @@ impl u16x16<archmage::ScalarToken> {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl u16x16<archmage::X64V3Token> {
     /// Implementation identifier for this backend.
     pub const fn implementation_name() -> &'static str {
@@ -648,7 +693,7 @@ impl u16x16<archmage::Wasm128Token> {
         "polyfill::wasm128::u16x16"
     }
 }
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl u16x16<archmage::X64V3Token> {
     /// Wrap a raw `__m256i` using an explicit CPU capability token.
     ///

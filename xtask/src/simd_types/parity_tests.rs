@@ -48,7 +48,7 @@ fn generate_cross_arch_parity() -> String {
         /// - aarch64: NeonToken
         /// - wasm32: Wasm128Token
         #[cfg(any(
-            target_arch = "x86_64",
+            all(target_arch = "x86_64", target_feature = "sse2"),
             target_arch = "aarch64",
             target_arch = "wasm32"
         ))]
@@ -82,15 +82,17 @@ fn generate_cross_arch_parity() -> String {
                 }}
 
                 #[test]
-                fn test_f32x4_store_4_rgba_u8() {{
+                fn test_f32x4_store_rgba_u8() {{
                     if let Some(token) = <$token_ty>::summon() {{
                         let r = f32x4::from_array_t(token, [0.0, 64.0, 128.0, 255.0]);
                         let g = f32x4::from_array_t(token, [10.0, 74.0, 138.0, 245.0]);
                         let b = f32x4::from_array_t(token, [20.0, 84.0, 148.0, 235.0]);
                         let a = f32x4::from_array_t(token, [255.0, 300.0, -5.0, 128.5]);
                         // Interleaved RGBA with clamp (300->255, -5->0) + round-even (128.5->128).
+                        let mut out = [0; 16];
+                        f32x4::store_rgba_u8(r, g, b, a, &mut out);
                         assert_eq!(
-                            f32x4::store_4_rgba_u8(r, g, b, a),
+                            out,
                             [0, 10, 20, 255, 64, 74, 84, 255, 128, 138, 148, 0, 255, 245, 235, 128]
                         );
                     }}
@@ -140,6 +142,28 @@ fn generate_cross_arch_parity() -> String {
                         let b = f32x4::from_array_t(token, [2.0, 4.0, 6.0, 8.0]);
                         assert_eq!(a.min(b).to_array(), [1.0, 4.0, 3.0, 7.0]);
                         assert_eq!(a.max(b).to_array(), [2.0, 5.0, 6.0, 8.0]);
+                        assert_eq!(a.min_fast(b).to_array(), [1.0, 4.0, 3.0, 7.0]);
+                        assert_eq!(a.max_fast(b).to_array(), [2.0, 5.0, 6.0, 8.0]);
+
+                        let x = f32x4::from_array_t(token, [f32::NAN, 5.0, -0.0, 0.0]);
+                        let y = f32x4::from_array_t(token, [5.0, f32::NAN, 0.0, -0.0]);
+                        let mn = x.min(y).to_array();
+                        let mx = x.max(y).to_array();
+                        assert_eq!(mn[0], 5.0);
+                        assert_eq!(mn[1], 5.0);
+                        assert_eq!(mx[0], 5.0);
+                        assert_eq!(mx[1], 5.0);
+
+                        let mmn = x.minimum(y).to_array();
+                        let mmx = x.maximum(y).to_array();
+                        assert!(mmn[0].is_nan());
+                        assert!(mmn[1].is_nan());
+                        assert_eq!(mmn[2].to_bits(), (-0.0f32).to_bits());
+                        assert_eq!(mmn[3].to_bits(), (-0.0f32).to_bits());
+                        assert!(mmx[0].is_nan());
+                        assert!(mmx[1].is_nan());
+                        assert_eq!(mmx[2].to_bits(), 0.0f32.to_bits());
+                        assert_eq!(mmx[3].to_bits(), 0.0f32.to_bits());
                     }}
                 }}
 
@@ -252,6 +276,36 @@ fn generate_cross_arch_parity() -> String {
                     }}
                 }}
 
+                #[test]
+                fn test_f64x2_min_max() {{
+                    if let Some(token) = <$token_ty>::summon() {{
+                        let a = f64x2::from_array_t(token, [1.0, 5.0]);
+                        let b = f64x2::from_array_t(token, [2.0, 4.0]);
+                        assert_eq!(a.min(b).to_array(), [1.0, 4.0]);
+                        assert_eq!(a.max(b).to_array(), [2.0, 5.0]);
+                        assert_eq!(a.min_fast(b).to_array(), [1.0, 4.0]);
+                        assert_eq!(a.max_fast(b).to_array(), [2.0, 5.0]);
+
+                        let nx = f64x2::from_array_t(token, [f64::NAN, 5.0]);
+                        let ny = f64x2::from_array_t(token, [5.0, f64::NAN]);
+                        assert_eq!(nx.min(ny).to_array(), [5.0, 5.0]);
+                        assert_eq!(nx.max(ny).to_array(), [5.0, 5.0]);
+                        let mmn = nx.minimum(ny).to_array();
+                        let mmx = nx.maximum(ny).to_array();
+                        assert!(mmn[0].is_nan() && mmn[1].is_nan());
+                        assert!(mmx[0].is_nan() && mmx[1].is_nan());
+
+                        let z0 = f64x2::from_array_t(token, [-0.0, 0.0]);
+                        let z1 = f64x2::from_array_t(token, [0.0, -0.0]);
+                        let zmn = z0.minimum(z1).to_array();
+                        let zmx = z0.maximum(z1).to_array();
+                        assert_eq!(zmn[0].to_bits(), (-0.0f64).to_bits());
+                        assert_eq!(zmn[1].to_bits(), (-0.0f64).to_bits());
+                        assert_eq!(zmx[0].to_bits(), 0.0f64.to_bits());
+                        assert_eq!(zmx[1].to_bits(), 0.0f64.to_bits());
+                    }}
+                }}
+
                 // ========== i32x4 tests ==========
 
                 #[test]
@@ -307,7 +361,7 @@ fn generate_cross_arch_parity() -> String {
                 }}
 
                 // Bitwise operator tests (x86 only - ARM uses method calls instead)
-                #[cfg(target_arch = "x86_64")]
+                #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
                 #[test]
                 fn test_i32x4_bitwise() {{
                     if let Some(token) = <$token_ty>::summon() {{
@@ -541,7 +595,7 @@ fn generate_cross_arch_parity() -> String {
         // Architecture-specific modules
         // ============================================================================
 
-        #[cfg(target_arch = "x86_64")]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
         mod x86 {{
             w128_parity_suite!(archmage::X64V3Token);
         }}

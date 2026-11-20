@@ -67,12 +67,30 @@ impl F32x4Backend for archmage::Wasm128Token {
     }
     #[inline(always)]
     fn min(self, a: v128, b: v128) -> v128 {
-        f32x4_min(a, b)
+        v128_bitselect(a, f32x4_pmin(b, a), f32x4_ne(b, b))
     }
     #[inline(always)]
     fn max(self, a: v128, b: v128) -> v128 {
+        v128_bitselect(a, f32x4_pmax(b, a), f32x4_ne(b, b))
+    }
+    #[inline(always)]
+    fn minimum(self, a: v128, b: v128) -> v128 {
+        f32x4_min(a, b)
+    }
+    #[inline(always)]
+    fn maximum(self, a: v128, b: v128) -> v128 {
         f32x4_max(a, b)
     }
+
+    #[inline(always)]
+    fn min_fast(self, a: v128, b: v128) -> v128 {
+        crate::wasm_fma::min_f32x4_fast(self, a, b)
+    }
+    #[inline(always)]
+    fn max_fast(self, a: v128, b: v128) -> v128 {
+        crate::wasm_fma::max_f32x4_fast(self, a, b)
+    }
+
     #[inline(always)]
     fn sqrt(self, a: v128) -> v128 {
         f32x4_sqrt(a)
@@ -81,6 +99,21 @@ impl F32x4Backend for archmage::Wasm128Token {
     fn abs(self, a: v128) -> v128 {
         f32x4_abs(a)
     }
+    #[inline(always)]
+    fn trunc(self, a: v128) -> v128 {
+        f32x4_trunc(a)
+    }
+
+    #[inline(always)]
+    fn mul_neg_add_relaxed(self, a: v128, b: v128, c: v128) -> v128 {
+        crate::wasm_fma::nmadd_f32x4(self, a, b, c)
+    }
+
+    #[inline(always)]
+    fn mul_neg_add_fused(self, a: v128, b: v128, c: v128) -> v128 {
+        crate::wasm_fma::fused_f32x4(self, f32x4_neg(a), b, c)
+    }
+
     #[inline(always)]
     fn floor(self, a: v128) -> v128 {
         f32x4_floor(a)
@@ -208,9 +241,138 @@ impl F32x4Backend for archmage::Wasm128Token {
         let u8s = u8x16_narrow_i16x8(i16s, i16s);
         (u32x4_extract_lane::<0>(u8s)).to_ne_bytes()
     }
+}
+#[cfg(target_arch = "wasm32")]
+impl F32x4Internal for archmage::Wasm128Token {
+    type InternalRepr = v128;
+    #[inline(always)]
+    fn from_u16_lanes(self, lanes: &[u16; 4]) -> v128 {
+        let words = u64x2(crate::simd_storage::cast(*lanes), 0);
+        f32x4_convert_u32x4(u32x4_extend_low_u16x8(words))
+    }
 
     #[inline(always)]
-    fn store_rgba_bytes(self, r: v128, g: v128, b: v128, a: v128) -> [u8; 16] {
+    fn to_u16_lanes<const CFG: u32>(self, value: v128) -> [u16; 4] {
+        let opts = const { crate::numerics::IntConvert::decode(CFG) };
+        let a = if opts.rounds() {
+            f32x4_nearest(value)
+        } else {
+            value
+        };
+        let i = if const { crate::numerics::IntConvert::decode(CFG).is_in_range() } {
+            crate::wasm_fma::trunc_f32x4_fast(self, a)
+        } else {
+            i32x4_trunc_sat_f32x4(a)
+        };
+        crate::simd_storage::cast(u64x2_extract_lane::<0>(u16x8_narrow_i32x4(i, i)))
+    }
+
+    #[inline(always)]
+    fn to_u8_lanes<const CFG: u32>(self, value: v128) -> [u8; 4] {
+        let opts = const { crate::numerics::IntConvert::decode(CFG) };
+        let a = if opts.rounds() {
+            f32x4_nearest(value)
+        } else {
+            value
+        };
+        let i = if opts.is_in_range() {
+            crate::wasm_fma::trunc_f32x4_fast(self, a)
+        } else {
+            i32x4_trunc_sat_f32x4(a)
+        };
+        let n = i16x8_narrow_i32x4(i, i);
+        crate::simd_storage::cast(i32x4_extract_lane::<0>(u8x16_narrow_i16x8(n, n)))
+    }
+
+    #[inline(always)]
+    fn to_u32_lanes<const CFG: u32>(self, value: v128) -> v128 {
+        let opts = const { crate::numerics::IntConvert::decode(CFG) };
+        let a = if opts.rounds() {
+            f32x4_nearest(value)
+        } else {
+            value
+        };
+        #[cfg(target_feature = "relaxed-simd")]
+        if opts.is_in_range() {
+            return crate::wasm_fma::trunc_u32_f32x4_fast(self, a);
+        }
+        u32x4_trunc_sat_f32x4(a)
+    }
+
+    #[inline(always)]
+    fn from_u32_lanes(self, value: v128) -> v128 {
+        f32x4_convert_u32x4(value)
+    }
+
+    #[inline(always)]
+    fn from_f16_lanes<const CFG: u32>(self, lanes: &[u16; 4]) -> v128 {
+        let words = u64x2(crate::simd_storage::cast(*lanes), 0);
+        crate::simd::generic::half4::widen_f16::<CFG, _>(
+            crate::simd::generic::i32x4::from_repr_unchecked(self, u32x4_extend_low_u16x8(words)),
+        )
+        .into_repr()
+    }
+
+    #[inline(always)]
+    fn to_f16_lanes<const CFG: u32>(self, value: v128) -> [u16; 4] {
+        let v = crate::simd::generic::f32x4::from_repr_unchecked(self, value);
+        let i = crate::simd::generic::half4::narrow_f16::<CFG, _>(v).into_repr();
+        crate::simd_storage::cast(u64x2_extract_lane::<0>(u16x8_narrow_i32x4(i, i)))
+    }
+
+    #[inline(always)]
+    fn to_bf16_lanes<const CFG: u32>(self, value: v128) -> [u16; 4] {
+        let v = crate::simd::generic::f32x4::from_repr_unchecked(self, value);
+        let i = crate::simd::generic::half4::narrow_bf16::<CFG, _>(v).into_repr();
+        crate::simd_storage::cast(u64x2_extract_lane::<0>(u16x8_narrow_i32x4(i, i)))
+    }
+
+    #[inline(always)]
+    fn from_bf16_lanes(self, lanes: &[u16; 4]) -> v128 {
+        let words = u64x2(crate::simd_storage::cast(*lanes), 0);
+        i32x4_shl(u32x4_extend_low_u16x8(words), 16)
+    }
+
+    #[inline(always)]
+    fn broadcast_rgba_alpha_repr(self, value: v128) -> v128 {
+        i32x4_shuffle::<3, 3, 3, 3>(value, value)
+    }
+
+    #[inline(always)]
+    fn with_rgba_alpha_repr(self, value: v128, src: v128) -> v128 {
+        i32x4_shuffle::<0, 1, 2, 7>(value, src)
+    }
+
+    #[inline(always)]
+    fn transpose_4x4_repr(self, rows: [v128; 4]) -> [v128; 4] {
+        let [a, b, c, d] = rows;
+        let ab_lo = i32x4_shuffle::<0, 4, 1, 5>(a, b);
+        let ab_hi = i32x4_shuffle::<2, 6, 3, 7>(a, b);
+        let cd_lo = i32x4_shuffle::<0, 4, 1, 5>(c, d);
+        let cd_hi = i32x4_shuffle::<2, 6, 3, 7>(c, d);
+        [
+            i64x2_shuffle::<0, 2>(ab_lo, cd_lo),
+            i64x2_shuffle::<1, 3>(ab_lo, cd_lo),
+            i64x2_shuffle::<0, 2>(ab_hi, cd_hi),
+            i64x2_shuffle::<1, 3>(ab_hi, cd_hi),
+        ]
+    }
+
+    #[inline(always)]
+    fn deinterleave_3ch_repr(self, rgb: [v128; 3]) -> [v128; 3] {
+        let [v0, v1, v2] = rgb;
+        let r = i32x4_shuffle::<0, 3, 6, 0>(v0, v1);
+        let g = i32x4_shuffle::<1, 4, 7, 0>(v0, v1);
+        let b = i32x4_shuffle::<2, 5, 0, 0>(v0, v1);
+        [
+            i32x4_shuffle::<0, 1, 2, 5>(r, v2),
+            i32x4_shuffle::<0, 1, 2, 6>(g, v2),
+            i32x4_shuffle::<0, 1, 4, 7>(b, v2),
+        ]
+    }
+
+    #[inline(always)]
+    fn store_rgba_u8_into(self, r: v128, g: v128, b: v128, a: v128, out: &mut [u8; 16]) {
         let lo = i32x4_splat(0);
         let hi = i32x4_splat(255);
         let clamp = |v: v128| i32x4_min(i32x4_max(i32x4_trunc_sat_f32x4(f32x4_nearest(v)), lo), hi);
@@ -218,7 +380,63 @@ impl F32x4Backend for archmage::Wasm128Token {
             v128_or(clamp(r), i32x4_shl(clamp(g), 8)),
             v128_or(i32x4_shl(clamp(b), 16), i32x4_shl(clamp(a), 24)),
         );
-        crate::simd_storage::cast(pixels)
+        crate::simd_storage::store(pixels, out);
+    }
+
+    #[inline(always)]
+    fn interleave_3ch_repr(self, channels: [v128; 3]) -> [v128; 3] {
+        let [r, g, b] = channels;
+        let rg01 = i32x4_shuffle::<0, 4, 1, 5>(r, g);
+        let rg23 = i32x4_shuffle::<2, 6, 3, 7>(r, g);
+        let gb123 = i32x4_shuffle::<1, 5, 6, 7>(g, b);
+        let out0 = i32x4_shuffle::<0, 1, 4, 2>(rg01, b);
+        let out1 = i32x4_shuffle::<0, 1, 4, 5>(gb123, rg23);
+        let out2 = i32x4_shuffle::<2, 6, 7, 3>(gb123, rg23);
+        [out0, out1, out2]
+    }
+
+    #[inline(always)]
+    fn load_rgb_bytes(self, rgb: &[u8; 12]) -> (v128, v128, v128) {
+        let lo8 = u64x2(
+            crate::simd_storage::copy(rgb.first_chunk::<8>().unwrap()),
+            0,
+        );
+        let hi4 = u32x4(
+            crate::simd_storage::copy(rgb.last_chunk::<4>().unwrap()),
+            0,
+            0,
+            0,
+        );
+        // Extract all 12 bytes [R0..3, G0..3, B0..3, 0..0] in one shuffle;
+        // lane 8 references lo8's zeroed high half so LLVM emits v128.load64_zero.
+        let rgb8 = i8x16_shuffle::<0, 3, 6, 17, 1, 4, 7, 18, 2, 5, 16, 19, 8, 8, 8, 8>(lo8, hi4);
+        let rg16 = u16x8_extend_low_u8x16(rgb8);
+        let b16 = u16x8_extend_high_u8x16(rgb8);
+        (
+            f32x4_convert_u32x4(u32x4_extend_low_u16x8(rg16)),
+            f32x4_convert_u32x4(u32x4_extend_high_u16x8(rg16)),
+            f32x4_convert_u32x4(u32x4_extend_low_u16x8(b16)),
+        )
+    }
+
+    #[inline(always)]
+    fn store_rgb_u8_into(self, r: v128, g: v128, b: v128, out: &mut [u8; 12]) {
+        let narrow4 = |v: v128| -> v128 {
+            let i32s = i32x4_trunc_sat_f32x4(f32x4_nearest(v));
+            let i16s = i16x8_narrow_i32x4(i32s, i32s);
+            u8x16_narrow_i16x8(i16s, i16s)
+        };
+        let rg8 = i32x4_shuffle::<0, 4, 0, 0>(narrow4(r), narrow4(g));
+        let packed =
+            i8x16_shuffle::<0, 4, 16, 1, 5, 17, 2, 6, 18, 3, 7, 19, 0, 0, 0, 0>(rg8, narrow4(b));
+        crate::simd_storage::store(
+            u64x2_extract_lane::<0>(packed),
+            out.first_chunk_mut::<8>().unwrap(),
+        );
+        crate::simd_storage::store(
+            u32x4_extract_lane::<2>(packed),
+            out.last_chunk_mut::<4>().unwrap(),
+        );
     }
 }
 
@@ -286,12 +504,42 @@ impl F32x8Backend for archmage::Wasm128Token {
     }
     #[inline(always)]
     fn min(self, a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
-        [f32x4_min(a[0], b[0]), f32x4_min(a[1], b[1])]
+        [
+            v128_bitselect(a[0], f32x4_pmin(b[0], a[0]), f32x4_ne(b[0], b[0])),
+            v128_bitselect(a[1], f32x4_pmin(b[1], a[1]), f32x4_ne(b[1], b[1])),
+        ]
     }
     #[inline(always)]
     fn max(self, a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
+        [
+            v128_bitselect(a[0], f32x4_pmax(b[0], a[0]), f32x4_ne(b[0], b[0])),
+            v128_bitselect(a[1], f32x4_pmax(b[1], a[1]), f32x4_ne(b[1], b[1])),
+        ]
+    }
+    #[inline(always)]
+    fn minimum(self, a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
+        [f32x4_min(a[0], b[0]), f32x4_min(a[1], b[1])]
+    }
+    #[inline(always)]
+    fn maximum(self, a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
         [f32x4_max(a[0], b[0]), f32x4_max(a[1], b[1])]
     }
+
+    #[inline(always)]
+    fn min_fast(self, a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
+        [
+            crate::wasm_fma::min_f32x4_fast(self, a[0], b[0]),
+            crate::wasm_fma::min_f32x4_fast(self, a[1], b[1]),
+        ]
+    }
+    #[inline(always)]
+    fn max_fast(self, a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
+        [
+            crate::wasm_fma::max_f32x4_fast(self, a[0], b[0]),
+            crate::wasm_fma::max_f32x4_fast(self, a[1], b[1]),
+        ]
+    }
+
     #[inline(always)]
     fn sqrt(self, a: [v128; 2]) -> [v128; 2] {
         [f32x4_sqrt(a[0]), f32x4_sqrt(a[1])]
@@ -300,6 +548,23 @@ impl F32x8Backend for archmage::Wasm128Token {
     fn abs(self, a: [v128; 2]) -> [v128; 2] {
         [f32x4_abs(a[0]), f32x4_abs(a[1])]
     }
+    #[inline(always)]
+    fn trunc(self, a: [v128; 2]) -> [v128; 2] {
+        a.map(|a| <Self as F32x4Backend>::trunc(self, a))
+    }
+
+    #[inline(always)]
+    fn mul_neg_add_relaxed(self, a: [v128; 2], b: [v128; 2], c: [v128; 2]) -> [v128; 2] {
+        core::array::from_fn(|i| {
+            <Self as F32x4Backend>::mul_neg_add_relaxed(self, a[i], b[i], c[i])
+        })
+    }
+
+    #[inline(always)]
+    fn mul_neg_add_fused(self, a: [v128; 2], b: [v128; 2], c: [v128; 2]) -> [v128; 2] {
+        core::array::from_fn(|i| <Self as F32x4Backend>::mul_neg_add_fused(self, a[i], b[i], c[i]))
+    }
+
     #[inline(always)]
     fn floor(self, a: [v128; 2]) -> [v128; 2] {
         [f32x4_floor(a[0]), f32x4_floor(a[1])]
@@ -453,9 +718,94 @@ impl F32x8Backend for archmage::Wasm128Token {
         let hi = u32x4_extract_lane::<1>(u8s);
         ((u64::from(hi) << 32) | u64::from(lo)).to_ne_bytes()
     }
+}
+#[cfg(target_arch = "wasm32")]
+impl F32x8Internal for archmage::Wasm128Token {
+    type InternalRepr = [v128; 2];
+    #[inline(always)]
+    fn from_u16_lanes(self, lanes: &[u16; 8]) -> [v128; 2] {
+        let (chunks, _) = lanes.as_chunks::<4>();
+        core::array::from_fn(|i| <Self as F32x4Internal>::from_u16_lanes(self, &chunks[i]))
+    }
 
     #[inline(always)]
-    fn store_rgba_bytes(self, r: [v128; 2], g: [v128; 2], b: [v128; 2], a: [v128; 2]) -> [u8; 32] {
+    fn to_u16_lanes<const CFG: u32>(self, value: [v128; 2]) -> [u16; 8] {
+        crate::simd_storage::cast(
+            value.map(|v| <Self as F32x4Internal>::to_u16_lanes::<CFG>(self, v)),
+        )
+    }
+
+    #[inline(always)]
+    fn to_u8_lanes<const CFG: u32>(self, value: [v128; 2]) -> [u8; 8] {
+        let parts = value.map(|v| <Self as F32x4Internal>::to_u8_lanes::<CFG>(self, v));
+        crate::simd_storage::cast(parts)
+    }
+
+    #[inline(always)]
+    fn to_u32_lanes<const CFG: u32>(self, value: [v128; 2]) -> [v128; 2] {
+        value.map(|part| <Self as F32x4Internal>::to_u32_lanes::<CFG>(self, part))
+    }
+
+    #[inline(always)]
+    fn from_u32_lanes(self, value: [v128; 2]) -> [v128; 2] {
+        value.map(|part| <Self as F32x4Internal>::from_u32_lanes(self, part))
+    }
+
+    #[inline(always)]
+    fn from_f16_lanes<const CFG: u32>(self, lanes: &[u16; 8]) -> [v128; 2] {
+        let (chunks, _) = lanes.as_chunks::<4>();
+        core::array::from_fn(|i| <Self as F32x4Internal>::from_f16_lanes::<CFG>(self, &chunks[i]))
+    }
+
+    #[inline(always)]
+    fn to_f16_lanes<const CFG: u32>(self, value: [v128; 2]) -> [u16; 8] {
+        crate::simd_storage::cast(
+            value.map(|part| <Self as F32x4Internal>::to_f16_lanes::<CFG>(self, part)),
+        )
+    }
+
+    #[inline(always)]
+    fn from_bf16_lanes(self, lanes: &[u16; 8]) -> [v128; 2] {
+        let (chunks, _) = lanes.as_chunks::<4>();
+        core::array::from_fn(|i| <Self as F32x4Internal>::from_bf16_lanes(self, &chunks[i]))
+    }
+
+    #[inline(always)]
+    fn to_bf16_lanes<const CFG: u32>(self, value: [v128; 2]) -> [u16; 8] {
+        crate::simd_storage::cast(
+            value.map(|part| <Self as F32x4Internal>::to_bf16_lanes::<CFG>(self, part)),
+        )
+    }
+
+    #[inline(always)]
+    fn broadcast_rgba_alpha_repr(self, value: [v128; 2]) -> [v128; 2] {
+        value.map(|v| <Self as F32x4Internal>::broadcast_rgba_alpha_repr(self, v))
+    }
+
+    #[inline(always)]
+    fn with_rgba_alpha_repr(self, value: [v128; 2], src: [v128; 2]) -> [v128; 2] {
+        core::array::from_fn(|i| {
+            <Self as F32x4Internal>::with_rgba_alpha_repr(self, value[i], src[i])
+        })
+    }
+
+    #[inline(always)]
+    fn deinterleave_3ch_repr(self, rgb: [[v128; 2]; 3]) -> [[v128; 2]; 3] {
+        let [[v0, v1], [v2, v3], [v4, v5]] = rgb;
+        let [r0, g0, b0] = <Self as F32x4Internal>::deinterleave_3ch_repr(self, [v0, v1, v2]);
+        let [r1, g1, b1] = <Self as F32x4Internal>::deinterleave_3ch_repr(self, [v3, v4, v5]);
+        [[r0, r1], [g0, g1], [b0, b1]]
+    }
+
+    #[inline(always)]
+    fn store_rgba_u8_into(
+        self,
+        r: [v128; 2],
+        g: [v128; 2],
+        b: [v128; 2],
+        a: [v128; 2],
+        out: &mut [u8; 32],
+    ) {
         let lo = i32x4_splat(0);
         let hi = i32x4_splat(255);
         let clamp = |v: v128| i32x4_min(i32x4_max(i32x4_trunc_sat_f32x4(f32x4_nearest(v)), lo), hi);
@@ -465,7 +815,78 @@ impl F32x8Backend for archmage::Wasm128Token {
                 v128_or(i32x4_shl(clamp(b), 16), i32x4_shl(clamp(a), 24)),
             )
         };
-        crate::simd_storage::cast([pack(r[0], g[0], b[0], a[0]), pack(r[1], g[1], b[1], a[1])])
+        crate::simd_storage::store(
+            [pack(r[0], g[0], b[0], a[0]), pack(r[1], g[1], b[1], a[1])],
+            out,
+        );
+    }
+
+    #[inline(always)]
+    fn interleave_3ch_repr(self, channels: [[v128; 2]; 3]) -> [[v128; 2]; 3] {
+        let [r, g, b] = channels;
+        let int4 = |r: v128, g: v128, b: v128| -> (v128, v128, v128) {
+            let rg01 = i32x4_shuffle::<0, 4, 1, 5>(r, g);
+            let rg23 = i32x4_shuffle::<2, 6, 3, 7>(r, g);
+            let gb123 = i32x4_shuffle::<1, 5, 6, 7>(g, b);
+            let out0 = i32x4_shuffle::<0, 1, 4, 2>(rg01, b);
+            let out1 = i32x4_shuffle::<0, 1, 4, 5>(gb123, rg23);
+            let out2 = i32x4_shuffle::<2, 6, 7, 3>(gb123, rg23);
+            (out0, out1, out2)
+        };
+        let (q0, q1, q2) = int4(r[0], g[0], b[0]);
+        let (q3, q4, q5) = int4(r[1], g[1], b[1]);
+        [[q0, q1], [q2, q3], [q4, q5]]
+    }
+
+    #[inline(always)]
+    fn load_rgb_bytes(self, rgb: &[u8; 24]) -> ([v128; 2], [v128; 2], [v128; 2]) {
+        let lo16: v128 = crate::simd_storage::copy(rgb.first_chunk::<16>().unwrap());
+        let hi8 = u64x2(crate::simd_storage::copy(rgb.last_chunk::<8>().unwrap()), 0);
+        let rg8 =
+            i8x16_shuffle::<0, 3, 6, 9, 12, 15, 18, 21, 1, 4, 7, 10, 13, 16, 19, 22>(lo16, hi8);
+        let b8 =
+            i8x16_shuffle::<2, 5, 8, 11, 14, 17, 20, 23, 24, 24, 24, 24, 24, 24, 24, 24>(lo16, hi8);
+        let r16 = u16x8_extend_low_u8x16(rg8);
+        let g16 = u16x8_extend_high_u8x16(rg8);
+        let b16 = u16x8_extend_low_u8x16(b8);
+        (
+            [
+                f32x4_convert_u32x4(u32x4_extend_low_u16x8(r16)),
+                f32x4_convert_u32x4(u32x4_extend_high_u16x8(r16)),
+            ],
+            [
+                f32x4_convert_u32x4(u32x4_extend_low_u16x8(g16)),
+                f32x4_convert_u32x4(u32x4_extend_high_u16x8(g16)),
+            ],
+            [
+                f32x4_convert_u32x4(u32x4_extend_low_u16x8(b16)),
+                f32x4_convert_u32x4(u32x4_extend_high_u16x8(b16)),
+            ],
+        )
+    }
+
+    #[inline(always)]
+    fn store_rgb_u8_into(self, r: [v128; 2], g: [v128; 2], b: [v128; 2], out: &mut [u8; 24]) {
+        // Narrow each channel to u8x16 individually before combining so LLVM
+        // preserves hardware i16x8.narrow_i32x4_s + i8x16.narrow_i16x8_u.
+        let narrow8 = |v: [v128; 2]| -> v128 {
+            let i16s = i16x8_narrow_i32x4(
+                i32x4_trunc_sat_f32x4(f32x4_nearest(v[0])),
+                i32x4_trunc_sat_f32x4(f32x4_nearest(v[1])),
+            );
+            u8x16_narrow_i16x8(i16s, i16s)
+        };
+        let r8 = narrow8(r);
+        let g8 = narrow8(g);
+        let b8 = narrow8(b);
+        let rg8 = i64x2_shuffle::<0, 2>(r8, g8);
+        let lo16 = i8x16_shuffle::<0, 8, 16, 1, 9, 17, 2, 10, 18, 3, 11, 19, 4, 12, 20, 5>(rg8, b8);
+        let hi8 = i8x16_shuffle::<13, 21, 6, 14, 22, 7, 15, 23, 0, 0, 0, 0, 0, 0, 0, 0>(rg8, b8);
+        crate::simd_storage::store(lo16, out.first_chunk_mut::<16>().unwrap());
+        crate::simd_storage::store(
+            u64x2_extract_lane::<0>(hi8),
+            out.last_chunk_mut::<8>().unwrap(),
+        );
     }
 }
 
@@ -522,12 +943,30 @@ impl F64x2Backend for archmage::Wasm128Token {
     }
     #[inline(always)]
     fn min(self, a: v128, b: v128) -> v128 {
-        f64x2_min(a, b)
+        v128_bitselect(a, f64x2_pmin(b, a), f64x2_ne(b, b))
     }
     #[inline(always)]
     fn max(self, a: v128, b: v128) -> v128 {
+        v128_bitselect(a, f64x2_pmax(b, a), f64x2_ne(b, b))
+    }
+    #[inline(always)]
+    fn minimum(self, a: v128, b: v128) -> v128 {
+        f64x2_min(a, b)
+    }
+    #[inline(always)]
+    fn maximum(self, a: v128, b: v128) -> v128 {
         f64x2_max(a, b)
     }
+
+    #[inline(always)]
+    fn min_fast(self, a: v128, b: v128) -> v128 {
+        crate::wasm_fma::min_f64x2_fast(self, a, b)
+    }
+    #[inline(always)]
+    fn max_fast(self, a: v128, b: v128) -> v128 {
+        crate::wasm_fma::max_f64x2_fast(self, a, b)
+    }
+
     #[inline(always)]
     fn sqrt(self, a: v128) -> v128 {
         f64x2_sqrt(a)
@@ -536,6 +975,21 @@ impl F64x2Backend for archmage::Wasm128Token {
     fn abs(self, a: v128) -> v128 {
         f64x2_abs(a)
     }
+    #[inline(always)]
+    fn trunc(self, a: v128) -> v128 {
+        f64x2_trunc(a)
+    }
+
+    #[inline(always)]
+    fn mul_neg_add_relaxed(self, a: v128, b: v128, c: v128) -> v128 {
+        crate::wasm_fma::nmadd_f64x2(self, a, b, c)
+    }
+
+    #[inline(always)]
+    fn mul_neg_add_fused(self, a: v128, b: v128, c: v128) -> v128 {
+        crate::wasm_fma::fused_f64x2(self, f64x2_neg(a), b, c)
+    }
+
     #[inline(always)]
     fn floor(self, a: v128) -> v128 {
         f64x2_floor(a)
@@ -709,12 +1163,42 @@ impl F64x4Backend for archmage::Wasm128Token {
     }
     #[inline(always)]
     fn min(self, a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
-        [f64x2_min(a[0], b[0]), f64x2_min(a[1], b[1])]
+        [
+            v128_bitselect(a[0], f64x2_pmin(b[0], a[0]), f64x2_ne(b[0], b[0])),
+            v128_bitselect(a[1], f64x2_pmin(b[1], a[1]), f64x2_ne(b[1], b[1])),
+        ]
     }
     #[inline(always)]
     fn max(self, a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
+        [
+            v128_bitselect(a[0], f64x2_pmax(b[0], a[0]), f64x2_ne(b[0], b[0])),
+            v128_bitselect(a[1], f64x2_pmax(b[1], a[1]), f64x2_ne(b[1], b[1])),
+        ]
+    }
+    #[inline(always)]
+    fn minimum(self, a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
+        [f64x2_min(a[0], b[0]), f64x2_min(a[1], b[1])]
+    }
+    #[inline(always)]
+    fn maximum(self, a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
         [f64x2_max(a[0], b[0]), f64x2_max(a[1], b[1])]
     }
+
+    #[inline(always)]
+    fn min_fast(self, a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
+        [
+            crate::wasm_fma::min_f64x2_fast(self, a[0], b[0]),
+            crate::wasm_fma::min_f64x2_fast(self, a[1], b[1]),
+        ]
+    }
+    #[inline(always)]
+    fn max_fast(self, a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
+        [
+            crate::wasm_fma::max_f64x2_fast(self, a[0], b[0]),
+            crate::wasm_fma::max_f64x2_fast(self, a[1], b[1]),
+        ]
+    }
+
     #[inline(always)]
     fn sqrt(self, a: [v128; 2]) -> [v128; 2] {
         [f64x2_sqrt(a[0]), f64x2_sqrt(a[1])]
@@ -723,6 +1207,23 @@ impl F64x4Backend for archmage::Wasm128Token {
     fn abs(self, a: [v128; 2]) -> [v128; 2] {
         [f64x2_abs(a[0]), f64x2_abs(a[1])]
     }
+    #[inline(always)]
+    fn trunc(self, a: [v128; 2]) -> [v128; 2] {
+        a.map(|a| <Self as F64x2Backend>::trunc(self, a))
+    }
+
+    #[inline(always)]
+    fn mul_neg_add_relaxed(self, a: [v128; 2], b: [v128; 2], c: [v128; 2]) -> [v128; 2] {
+        core::array::from_fn(|i| {
+            <Self as F64x2Backend>::mul_neg_add_relaxed(self, a[i], b[i], c[i])
+        })
+    }
+
+    #[inline(always)]
+    fn mul_neg_add_fused(self, a: [v128; 2], b: [v128; 2], c: [v128; 2]) -> [v128; 2] {
+        core::array::from_fn(|i| <Self as F64x2Backend>::mul_neg_add_fused(self, a[i], b[i], c[i]))
+    }
+
     #[inline(always)]
     fn floor(self, a: [v128; 2]) -> [v128; 2] {
         [f64x2_floor(a[0]), f64x2_floor(a[1])]
@@ -3754,6 +4255,11 @@ impl F32x4Convert for archmage::Wasm128Token {
     }
 
     #[inline(always)]
+    fn convert_f32_to_i32_fast(self, a: v128) -> v128 {
+        crate::wasm_fma::trunc_f32x4_fast(self, a)
+    }
+
+    #[inline(always)]
     fn convert_f32_to_i32_round(self, a: v128) -> v128 {
         i32x4_trunc_sat_f32x4(f32x4_nearest(a))
     }
@@ -3779,6 +4285,14 @@ impl F32x8Convert for archmage::Wasm128Token {
     #[inline(always)]
     fn convert_f32_to_i32(self, a: [v128; 2]) -> [v128; 2] {
         [i32x4_trunc_sat_f32x4(a[0]), i32x4_trunc_sat_f32x4(a[1])]
+    }
+
+    #[inline(always)]
+    fn convert_f32_to_i32_fast(self, a: [v128; 2]) -> [v128; 2] {
+        [
+            crate::wasm_fma::trunc_f32x4_fast(self, a[0]),
+            crate::wasm_fma::trunc_f32x4_fast(self, a[1]),
+        ]
     }
 
     #[inline(always)]
@@ -3814,6 +4328,16 @@ impl F32x16Convert for archmage::Wasm128Token {
             i32x4_trunc_sat_f32x4(a[1]),
             i32x4_trunc_sat_f32x4(a[2]),
             i32x4_trunc_sat_f32x4(a[3]),
+        ]
+    }
+
+    #[inline(always)]
+    fn convert_f32_to_i32_fast(self, a: [v128; 4]) -> [v128; 4] {
+        [
+            crate::wasm_fma::trunc_f32x4_fast(self, a[0]),
+            crate::wasm_fma::trunc_f32x4_fast(self, a[1]),
+            crate::wasm_fma::trunc_f32x4_fast(self, a[2]),
+            crate::wasm_fma::trunc_f32x4_fast(self, a[3]),
         ]
     }
 
@@ -4067,6 +4591,34 @@ impl F32x16Backend for archmage::Wasm128Token {
     }
 
     #[inline(always)]
+    fn min_fast(self, a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| {
+            <archmage::Wasm128Token as F32x4Backend>::min_fast(self, a[i], b[i])
+        })
+    }
+
+    #[inline(always)]
+    fn max_fast(self, a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| {
+            <archmage::Wasm128Token as F32x4Backend>::max_fast(self, a[i], b[i])
+        })
+    }
+
+    #[inline(always)]
+    fn minimum(self, a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| {
+            <archmage::Wasm128Token as F32x4Backend>::minimum(self, a[i], b[i])
+        })
+    }
+
+    #[inline(always)]
+    fn maximum(self, a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| {
+            <archmage::Wasm128Token as F32x4Backend>::maximum(self, a[i], b[i])
+        })
+    }
+
+    #[inline(always)]
     fn sqrt(self, a: [v128; 4]) -> [v128; 4] {
         core::array::from_fn(|i| <archmage::Wasm128Token as F32x4Backend>::sqrt(self, a[i]))
     }
@@ -4097,6 +4649,23 @@ impl F32x16Backend for archmage::Wasm128Token {
     #[inline(always)]
     fn abs(self, a: [v128; 4]) -> [v128; 4] {
         core::array::from_fn(|i| <archmage::Wasm128Token as F32x4Backend>::abs(self, a[i]))
+    }
+
+    #[inline(always)]
+    fn trunc(self, a: [v128; 4]) -> [v128; 4] {
+        a.map(|a| <Self as F32x4Backend>::trunc(self, a))
+    }
+
+    #[inline(always)]
+    fn mul_neg_add_relaxed(self, a: [v128; 4], b: [v128; 4], c: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| {
+            <Self as F32x4Backend>::mul_neg_add_relaxed(self, a[i], b[i], c[i])
+        })
+    }
+
+    #[inline(always)]
+    fn mul_neg_add_fused(self, a: [v128; 4], b: [v128; 4], c: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <Self as F32x4Backend>::mul_neg_add_fused(self, a[i], b[i], c[i]))
     }
 
     #[inline(always)]
@@ -4252,6 +4821,111 @@ impl F32x16Backend for archmage::Wasm128Token {
 
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "wasm32")]
+impl F32x16Internal for archmage::Wasm128Token {
+    type InternalRepr = [v128; 4];
+    #[inline(always)]
+    fn from_u16_lanes(self, lanes: &[u16; 16]) -> [v128; 4] {
+        let (chunks, _) = lanes.as_chunks::<4>();
+        core::array::from_fn(|i| <Self as F32x4Internal>::from_u16_lanes(self, &chunks[i]))
+    }
+
+    #[inline(always)]
+    fn to_u16_lanes<const CFG: u32>(self, value: [v128; 4]) -> [u16; 16] {
+        crate::simd_storage::cast(
+            value.map(|v| <Self as F32x4Internal>::to_u16_lanes::<CFG>(self, v)),
+        )
+    }
+
+    #[inline(always)]
+    fn to_u8_lanes<const CFG: u32>(self, value: [v128; 4]) -> [u8; 16] {
+        let parts = value.map(|v| <Self as F32x4Internal>::to_u8_lanes::<CFG>(self, v));
+        crate::simd_storage::cast(parts)
+    }
+
+    #[inline(always)]
+    fn to_u32_lanes<const CFG: u32>(self, value: [v128; 4]) -> [v128; 4] {
+        value.map(|part| <Self as F32x4Internal>::to_u32_lanes::<CFG>(self, part))
+    }
+
+    #[inline(always)]
+    fn from_u32_lanes(self, value: [v128; 4]) -> [v128; 4] {
+        value.map(|part| <Self as F32x4Internal>::from_u32_lanes(self, part))
+    }
+
+    #[inline(always)]
+    fn from_f16_lanes<const CFG: u32>(self, lanes: &[u16; 16]) -> [v128; 4] {
+        let (chunks, _) = lanes.as_chunks::<4>();
+        core::array::from_fn(|i| <Self as F32x4Internal>::from_f16_lanes::<CFG>(self, &chunks[i]))
+    }
+
+    #[inline(always)]
+    fn to_f16_lanes<const CFG: u32>(self, value: [v128; 4]) -> [u16; 16] {
+        crate::simd_storage::cast(
+            value.map(|part| <Self as F32x4Internal>::to_f16_lanes::<CFG>(self, part)),
+        )
+    }
+
+    #[inline(always)]
+    fn from_bf16_lanes(self, lanes: &[u16; 16]) -> [v128; 4] {
+        let (chunks, _) = lanes.as_chunks::<4>();
+        core::array::from_fn(|i| <Self as F32x4Internal>::from_bf16_lanes(self, &chunks[i]))
+    }
+
+    #[inline(always)]
+    fn to_bf16_lanes<const CFG: u32>(self, value: [v128; 4]) -> [u16; 16] {
+        crate::simd_storage::cast(
+            value.map(|part| <Self as F32x4Internal>::to_bf16_lanes::<CFG>(self, part)),
+        )
+    }
+
+    #[inline(always)]
+    fn from_u8_lanes_wide(self, lanes: &[u8; 16]) -> [v128; 4] {
+        use crate::simd::generic::f32x4 as V;
+        let (parts, _) = lanes.as_chunks::<4>();
+        core::array::from_fn(|i| V::from_u8_t(self, &parts[i]).into_repr())
+    }
+
+    #[inline(always)]
+    fn deinterleave_rgba_wide(self, rgba: [[v128; 4]; 4]) -> [[v128; 4]; 4] {
+        use crate::simd::generic::f32x4 as V;
+        let groups: [[V<Self>; 4]; 4] = core::array::from_fn(|i| {
+            V::deinterleave_4ch(core::array::from_fn(|j| {
+                let block = 4 * i + j;
+                V::from_repr_unchecked(self, rgba[block / 4][block % 4])
+            }))
+        });
+        core::array::from_fn(|c| core::array::from_fn(|i| groups[i][c].into_repr()))
+    }
+
+    #[inline(always)]
+    fn interleave_rgba_wide(self, channels: [[v128; 4]; 4]) -> [[v128; 4]; 4] {
+        use crate::simd::generic::f32x4 as V;
+        let groups: [[V<Self>; 4]; 4] = core::array::from_fn(|i| {
+            V::interleave_4ch(channels.map(|c| V::from_repr_unchecked(self, c[i])))
+        });
+        core::array::from_fn(|i| {
+            core::array::from_fn(|j| {
+                let block = i * 4 + j;
+                groups[block / 4][block % 4].into_repr()
+            })
+        })
+    }
+
+    #[inline(always)]
+    fn broadcast_rgba_alpha_repr(self, value: [v128; 4]) -> [v128; 4] {
+        value.map(|v| <Self as F32x4Internal>::broadcast_rgba_alpha_repr(self, v))
+    }
+
+    #[inline(always)]
+    fn with_rgba_alpha_repr(self, value: [v128; 4], src: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| {
+            <Self as F32x4Internal>::with_rgba_alpha_repr(self, value[i], src[i])
+        })
+    }
+}
+
+#[cfg(feature = "w512")]
+#[cfg(target_arch = "wasm32")]
 impl F64x8Backend for archmage::Wasm128Token {
     type Repr = [v128; 4];
 
@@ -4356,6 +5030,34 @@ impl F64x8Backend for archmage::Wasm128Token {
     }
 
     #[inline(always)]
+    fn min_fast(self, a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| {
+            <archmage::Wasm128Token as F64x2Backend>::min_fast(self, a[i], b[i])
+        })
+    }
+
+    #[inline(always)]
+    fn max_fast(self, a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| {
+            <archmage::Wasm128Token as F64x2Backend>::max_fast(self, a[i], b[i])
+        })
+    }
+
+    #[inline(always)]
+    fn minimum(self, a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| {
+            <archmage::Wasm128Token as F64x2Backend>::minimum(self, a[i], b[i])
+        })
+    }
+
+    #[inline(always)]
+    fn maximum(self, a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| {
+            <archmage::Wasm128Token as F64x2Backend>::maximum(self, a[i], b[i])
+        })
+    }
+
+    #[inline(always)]
     fn sqrt(self, a: [v128; 4]) -> [v128; 4] {
         core::array::from_fn(|i| <archmage::Wasm128Token as F64x2Backend>::sqrt(self, a[i]))
     }
@@ -4386,6 +5088,23 @@ impl F64x8Backend for archmage::Wasm128Token {
     #[inline(always)]
     fn abs(self, a: [v128; 4]) -> [v128; 4] {
         core::array::from_fn(|i| <archmage::Wasm128Token as F64x2Backend>::abs(self, a[i]))
+    }
+
+    #[inline(always)]
+    fn trunc(self, a: [v128; 4]) -> [v128; 4] {
+        a.map(|a| <Self as F64x2Backend>::trunc(self, a))
+    }
+
+    #[inline(always)]
+    fn mul_neg_add_relaxed(self, a: [v128; 4], b: [v128; 4], c: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| {
+            <Self as F64x2Backend>::mul_neg_add_relaxed(self, a[i], b[i], c[i])
+        })
+    }
+
+    #[inline(always)]
+    fn mul_neg_add_fused(self, a: [v128; 4], b: [v128; 4], c: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <Self as F64x2Backend>::mul_neg_add_fused(self, a[i], b[i], c[i]))
     }
 
     #[inline(always)]

@@ -11,7 +11,7 @@
 //!   the scalar default.
 //! - **AVX-512 (V4):** `max(x, 0)`, `cvtps`, then `vpmovusdb`, whose unsigned
 //!   saturation turns `cvtps`'s overflow value into 255. Used for `to_u8` at
-//!   both widths and for `f32x4::store_4_rgba_u8` (two planes per 256-bit
+//!   both widths and for `f32x4::store_rgba_u8` (two planes per 256-bit
 //!   register). Compared with the V3 form they replaced. `f32x8`'s RGBA store
 //!   stays on the V3 form: its only faster variant needs 512-bit registers,
 //!   which an `f32x8` operation does not otherwise touch.
@@ -135,14 +135,9 @@ mod kernels {
 
     #[arcane]
     pub fn rgba4_shipped(t: X64V3Token, src: &[f32], dst: &mut [u8]) {
-        for (p, o) in planes4(src).zip(dst.chunks_exact_mut(16)) {
+        for (p, o) in planes4(src).zip(dst.as_chunks_mut::<16>().0.iter_mut()) {
             let v = |i: usize| f32x4::<X64V3Token>::from_array_t(t, p[i]);
-            o.copy_from_slice(&f32x4::<X64V3Token>::store_4_rgba_u8(
-                v(0),
-                v(1),
-                v(2),
-                v(3),
-            ));
+            f32x4::<X64V3Token>::store_rgba_u8(v(0), v(1), v(2), v(3), o);
         }
     }
 
@@ -160,14 +155,9 @@ mod kernels {
 
     #[arcane]
     pub fn rgba4_scalar_default(_t: X64V3Token, src: &[f32], dst: &mut [u8]) {
-        for (p, o) in planes4(src).zip(dst.chunks_exact_mut(16)) {
+        for (p, o) in planes4(src).zip(dst.as_chunks_mut::<16>().0.iter_mut()) {
             let v = |i: usize| f32x4::<ScalarToken>::from_array_t(ScalarToken, p[i]);
-            o.copy_from_slice(&f32x4::<ScalarToken>::store_4_rgba_u8(
-                v(0),
-                v(1),
-                v(2),
-                v(3),
-            ));
+            f32x4::<ScalarToken>::store_rgba_u8(v(0), v(1), v(2), v(3), o);
         }
     }
 
@@ -180,14 +170,9 @@ mod kernels {
 
     #[arcane]
     pub fn rgba_shipped(t: X64V3Token, src: &[f32], dst: &mut [u8]) {
-        for (p, o) in planes(src).zip(dst.chunks_exact_mut(32)) {
+        for (p, o) in planes(src).zip(dst.as_chunks_mut::<32>().0.iter_mut()) {
             let v = |i: usize| f32x8::<X64V3Token>::from_array_t(t, p[i]);
-            o.copy_from_slice(&f32x8::<X64V3Token>::store_8_rgba_u8(
-                v(0),
-                v(1),
-                v(2),
-                v(3),
-            ));
+            f32x8::<X64V3Token>::store_rgba_u8(v(0), v(1), v(2), v(3), o);
         }
     }
 
@@ -208,14 +193,9 @@ mod kernels {
 
     #[arcane]
     pub fn rgba_scalar_default(_t: X64V3Token, src: &[f32], dst: &mut [u8]) {
-        for (p, o) in planes(src).zip(dst.chunks_exact_mut(32)) {
+        for (p, o) in planes(src).zip(dst.as_chunks_mut::<32>().0.iter_mut()) {
             let v = |i: usize| f32x8::<ScalarToken>::from_array_t(ScalarToken, p[i]);
-            o.copy_from_slice(&f32x8::<ScalarToken>::store_8_rgba_u8(
-                v(0),
-                v(1),
-                v(2),
-                v(3),
-            ));
+            f32x8::<ScalarToken>::store_rgba_u8(v(0), v(1), v(2), v(3), o);
         }
     }
 
@@ -302,14 +282,9 @@ mod kernels {
 
         #[arcane]
         pub fn rgba4_shipped(t: X64V4Token, src: &[f32], dst: &mut [u8]) {
-            for (p, o) in super::planes4(src).zip(dst.chunks_exact_mut(16)) {
+            for (p, o) in super::planes4(src).zip(dst.as_chunks_mut::<16>().0.iter_mut()) {
                 let v = |i: usize| f32x4::<X64V4Token>::from_array_t(t, p[i]);
-                o.copy_from_slice(&f32x4::<X64V4Token>::store_4_rgba_u8(
-                    v(0),
-                    v(1),
-                    v(2),
-                    v(3),
-                ));
+                f32x4::<X64V4Token>::store_rgba_u8(v(0), v(1), v(2), v(3), o);
             }
         }
 
@@ -338,14 +313,9 @@ mod kernels {
         #[arcane]
         pub fn rgba4_v3_form(t: X64V4Token, src: &[f32], dst: &mut [u8]) {
             let t = t.v3();
-            for (p, o) in super::planes4(src).zip(dst.chunks_exact_mut(16)) {
+            for (p, o) in super::planes4(src).zip(dst.as_chunks_mut::<16>().0.iter_mut()) {
                 let v = |i: usize| f32x4::<X64V3Token>::from_array_t(t, p[i]);
-                o.copy_from_slice(&f32x4::<X64V3Token>::store_4_rgba_u8(
-                    v(0),
-                    v(1),
-                    v(2),
-                    v(3),
-                ));
+                f32x4::<X64V3Token>::store_rgba_u8(v(0), v(1), v(2), v(3), o);
             }
         }
 
@@ -360,27 +330,17 @@ mod kernels {
 
         #[arcane]
         pub fn rgba_shipped(t: X64V4Token, src: &[f32], dst: &mut [u8]) {
-            for (p, o) in planes(src).zip(dst.chunks_exact_mut(32)) {
+            for (p, o) in planes(src).zip(dst.as_chunks_mut::<32>().0.iter_mut()) {
                 let v = |i: usize| f32x8::<X64V4Token>::from_array_t(t, p[i]);
-                o.copy_from_slice(&f32x8::<X64V4Token>::store_8_rgba_u8(
-                    v(0),
-                    v(1),
-                    v(2),
-                    v(3),
-                ));
+                f32x8::<X64V4Token>::store_rgba_u8(v(0), v(1), v(2), v(3), o);
             }
         }
 
         #[arcane]
         pub fn rgba_scalar_default(_t: X64V4Token, src: &[f32], dst: &mut [u8]) {
-            for (p, o) in planes(src).zip(dst.chunks_exact_mut(32)) {
+            for (p, o) in planes(src).zip(dst.as_chunks_mut::<32>().0.iter_mut()) {
                 let v = |i: usize| f32x8::<ScalarToken>::from_array_t(ScalarToken, p[i]);
-                o.copy_from_slice(&f32x8::<ScalarToken>::store_8_rgba_u8(
-                    v(0),
-                    v(1),
-                    v(2),
-                    v(3),
-                ));
+                f32x8::<ScalarToken>::store_rgba_u8(v(0), v(1), v(2), v(3), o);
             }
         }
     }

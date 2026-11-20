@@ -14,7 +14,7 @@
 // Other architectures have no native backend to compare against.
 #![cfg_attr(
     not(any(
-        target_arch = "x86_64",
+        all(target_arch = "x86_64", target_feature = "sse2"),
         target_arch = "aarch64",
         target_arch = "wasm32"
     )),
@@ -594,31 +594,6 @@ mod f32x4_parity {
         }
     }
 
-    /// Like run_binary but skips chunks where either input contains NaN or infinity.
-    fn run_binary_finite(
-        op: &str,
-        f: impl Fn(
-            generic::f32x4<ScalarToken>, generic::f32x4<ScalarToken>,
-            generic::f32x4<$native_token>, generic::f32x4<$native_token>,
-        ) -> ([f32; 4], [f32; 4]),
-        cmp: impl Fn(&[f32], &[f32], &str, &[f32]),
-    ) {
-        let token_s = ScalarToken;
-        if let Some(token_n) = <$native_token>::summon() {
-            for (ca, cb) in super::F32_EDGE_A.chunks_exact(4).zip(super::F32_EDGE_B.chunks_exact(4)) {
-                let a: [f32; 4] = ca.try_into().unwrap();
-                let b: [f32; 4] = cb.try_into().unwrap();
-                if super::has_nan_or_inf_f32(&a) || super::has_nan_or_inf_f32(&b) { continue; }
-                let as_ = generic::f32x4::<ScalarToken>::from_array_t(token_s, a);
-                let bs = generic::f32x4::<ScalarToken>::from_array_t(token_s, b);
-                let an = generic::f32x4::<$native_token>::from_array_t(token_n, a);
-                let bn = generic::f32x4::<$native_token>::from_array_t(token_n, b);
-                let (s, n) = f(as_, bs, an, bn);
-                cmp(&s, &n, op, &a);
-            }
-        }
-    }
-
 #[test]
 fn round() {
     run_unary("f32x4::round", |vs, vn| {
@@ -719,15 +694,29 @@ fn bitxor() {
 
 #[test]
 fn min() {
-    run_binary_finite("f32x4::min", |as_, bs, an, bn| {
+    run_binary("f32x4::min", |as_, bs, an, bn| {
         (as_.min(bs).to_array(), an.min(bn).to_array())
     }, super::assert_f32_exact);
 }
 
 #[test]
 fn max() {
-    run_binary_finite("f32x4::max", |as_, bs, an, bn| {
+    run_binary("f32x4::max", |as_, bs, an, bn| {
         (as_.max(bs).to_array(), an.max(bn).to_array())
+    }, super::assert_f32_exact);
+}
+
+#[test]
+fn minimum() {
+    run_binary("f32x4::minimum", |as_, bs, an, bn| {
+        (as_.minimum(bs).to_array(), an.minimum(bn).to_array())
+    }, super::assert_f32_exact);
+}
+
+#[test]
+fn maximum() {
+    run_binary("f32x4::maximum", |as_, bs, an, bn| {
+        (as_.maximum(bs).to_array(), an.maximum(bn).to_array())
     }, super::assert_f32_exact);
 }
 
@@ -1086,31 +1075,6 @@ mod f32x8_parity {
         }
     }
 
-    /// Like run_binary but skips chunks where either input contains NaN or infinity.
-    fn run_binary_finite(
-        op: &str,
-        f: impl Fn(
-            generic::f32x8<ScalarToken>, generic::f32x8<ScalarToken>,
-            generic::f32x8<$native_token>, generic::f32x8<$native_token>,
-        ) -> ([f32; 8], [f32; 8]),
-        cmp: impl Fn(&[f32], &[f32], &str, &[f32]),
-    ) {
-        let token_s = ScalarToken;
-        if let Some(token_n) = <$native_token>::summon() {
-            for (ca, cb) in super::F32_EDGE_A.chunks_exact(8).zip(super::F32_EDGE_B.chunks_exact(8)) {
-                let a: [f32; 8] = ca.try_into().unwrap();
-                let b: [f32; 8] = cb.try_into().unwrap();
-                if super::has_nan_or_inf_f32(&a) || super::has_nan_or_inf_f32(&b) { continue; }
-                let as_ = generic::f32x8::<ScalarToken>::from_array_t(token_s, a);
-                let bs = generic::f32x8::<ScalarToken>::from_array_t(token_s, b);
-                let an = generic::f32x8::<$native_token>::from_array_t(token_n, a);
-                let bn = generic::f32x8::<$native_token>::from_array_t(token_n, b);
-                let (s, n) = f(as_, bs, an, bn);
-                cmp(&s, &n, op, &a);
-            }
-        }
-    }
-
 #[test]
 fn round() {
     run_unary("f32x8::round", |vs, vn| {
@@ -1211,15 +1175,29 @@ fn bitxor() {
 
 #[test]
 fn min() {
-    run_binary_finite("f32x8::min", |as_, bs, an, bn| {
+    run_binary("f32x8::min", |as_, bs, an, bn| {
         (as_.min(bs).to_array(), an.min(bn).to_array())
     }, super::assert_f32_exact);
 }
 
 #[test]
 fn max() {
-    run_binary_finite("f32x8::max", |as_, bs, an, bn| {
+    run_binary("f32x8::max", |as_, bs, an, bn| {
         (as_.max(bs).to_array(), an.max(bn).to_array())
+    }, super::assert_f32_exact);
+}
+
+#[test]
+fn minimum() {
+    run_binary("f32x8::minimum", |as_, bs, an, bn| {
+        (as_.minimum(bs).to_array(), an.minimum(bn).to_array())
+    }, super::assert_f32_exact);
+}
+
+#[test]
+fn maximum() {
+    run_binary("f32x8::maximum", |as_, bs, an, bn| {
+        (as_.maximum(bs).to_array(), an.maximum(bn).to_array())
     }, super::assert_f32_exact);
 }
 
@@ -1578,31 +1556,6 @@ mod f64x2_parity {
         }
     }
 
-    /// Like run_binary but skips chunks where either input contains NaN or infinity.
-    fn run_binary_finite(
-        op: &str,
-        f: impl Fn(
-            generic::f64x2<ScalarToken>, generic::f64x2<ScalarToken>,
-            generic::f64x2<$native_token>, generic::f64x2<$native_token>,
-        ) -> ([f64; 2], [f64; 2]),
-        cmp: impl Fn(&[f64], &[f64], &str, &[f64]),
-    ) {
-        let token_s = ScalarToken;
-        if let Some(token_n) = <$native_token>::summon() {
-            for (ca, cb) in super::F64_EDGE_A.chunks_exact(2).zip(super::F64_EDGE_B.chunks_exact(2)) {
-                let a: [f64; 2] = ca.try_into().unwrap();
-                let b: [f64; 2] = cb.try_into().unwrap();
-                if super::has_nan_or_inf_f64(&a) || super::has_nan_or_inf_f64(&b) { continue; }
-                let as_ = generic::f64x2::<ScalarToken>::from_array_t(token_s, a);
-                let bs = generic::f64x2::<ScalarToken>::from_array_t(token_s, b);
-                let an = generic::f64x2::<$native_token>::from_array_t(token_n, a);
-                let bn = generic::f64x2::<$native_token>::from_array_t(token_n, b);
-                let (s, n) = f(as_, bs, an, bn);
-                cmp(&s, &n, op, &a);
-            }
-        }
-    }
-
 #[test]
 fn round() {
     run_unary("f64x2::round", |vs, vn| {
@@ -1703,15 +1656,29 @@ fn bitxor() {
 
 #[test]
 fn min() {
-    run_binary_finite("f64x2::min", |as_, bs, an, bn| {
+    run_binary("f64x2::min", |as_, bs, an, bn| {
         (as_.min(bs).to_array(), an.min(bn).to_array())
     }, super::assert_f64_exact);
 }
 
 #[test]
 fn max() {
-    run_binary_finite("f64x2::max", |as_, bs, an, bn| {
+    run_binary("f64x2::max", |as_, bs, an, bn| {
         (as_.max(bs).to_array(), an.max(bn).to_array())
+    }, super::assert_f64_exact);
+}
+
+#[test]
+fn minimum() {
+    run_binary("f64x2::minimum", |as_, bs, an, bn| {
+        (as_.minimum(bs).to_array(), an.minimum(bn).to_array())
+    }, super::assert_f64_exact);
+}
+
+#[test]
+fn maximum() {
+    run_binary("f64x2::maximum", |as_, bs, an, bn| {
+        (as_.maximum(bs).to_array(), an.maximum(bn).to_array())
     }, super::assert_f64_exact);
 }
 
@@ -1998,31 +1965,6 @@ mod f64x4_parity {
         }
     }
 
-    /// Like run_binary but skips chunks where either input contains NaN or infinity.
-    fn run_binary_finite(
-        op: &str,
-        f: impl Fn(
-            generic::f64x4<ScalarToken>, generic::f64x4<ScalarToken>,
-            generic::f64x4<$native_token>, generic::f64x4<$native_token>,
-        ) -> ([f64; 4], [f64; 4]),
-        cmp: impl Fn(&[f64], &[f64], &str, &[f64]),
-    ) {
-        let token_s = ScalarToken;
-        if let Some(token_n) = <$native_token>::summon() {
-            for (ca, cb) in super::F64_EDGE_A.chunks_exact(4).zip(super::F64_EDGE_B.chunks_exact(4)) {
-                let a: [f64; 4] = ca.try_into().unwrap();
-                let b: [f64; 4] = cb.try_into().unwrap();
-                if super::has_nan_or_inf_f64(&a) || super::has_nan_or_inf_f64(&b) { continue; }
-                let as_ = generic::f64x4::<ScalarToken>::from_array_t(token_s, a);
-                let bs = generic::f64x4::<ScalarToken>::from_array_t(token_s, b);
-                let an = generic::f64x4::<$native_token>::from_array_t(token_n, a);
-                let bn = generic::f64x4::<$native_token>::from_array_t(token_n, b);
-                let (s, n) = f(as_, bs, an, bn);
-                cmp(&s, &n, op, &a);
-            }
-        }
-    }
-
 #[test]
 fn round() {
     run_unary("f64x4::round", |vs, vn| {
@@ -2123,15 +2065,29 @@ fn bitxor() {
 
 #[test]
 fn min() {
-    run_binary_finite("f64x4::min", |as_, bs, an, bn| {
+    run_binary("f64x4::min", |as_, bs, an, bn| {
         (as_.min(bs).to_array(), an.min(bn).to_array())
     }, super::assert_f64_exact);
 }
 
 #[test]
 fn max() {
-    run_binary_finite("f64x4::max", |as_, bs, an, bn| {
+    run_binary("f64x4::max", |as_, bs, an, bn| {
         (as_.max(bs).to_array(), an.max(bn).to_array())
+    }, super::assert_f64_exact);
+}
+
+#[test]
+fn minimum() {
+    run_binary("f64x4::minimum", |as_, bs, an, bn| {
+        (as_.minimum(bs).to_array(), an.minimum(bn).to_array())
+    }, super::assert_f64_exact);
+}
+
+#[test]
+fn maximum() {
+    run_binary("f64x4::maximum", |as_, bs, an, bn| {
+        (as_.maximum(bs).to_array(), an.maximum(bn).to_array())
     }, super::assert_f64_exact);
 }
 
@@ -3240,7 +3196,7 @@ mod convert_f32x8_parity {
 // Architecture-specific invocations
 // ============================================================================
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 mod x86 {
     scalar_vs_native!(archmage::X64V3Token);
 }

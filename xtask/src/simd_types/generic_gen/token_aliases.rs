@@ -6,6 +6,34 @@
 use quote::{ToTokens, format_ident, quote};
 use syn::{FnArg, GenericParam, ImplItem, Item, Pat};
 
+/// Frozen set of `_t` constructors whose pre-0.9.30 token-taking short names
+/// remain as `#[deprecated]` compatibility forwarders until magetypes 0.10.
+/// Constructors introduced in 0.9.32+ must NOT get immediately-deprecated twins.
+const LEGACY_0_9_29_CONSTRUCTORS: &[&str] = &[
+    "cast_slice_mut_t",
+    "cast_slice_t",
+    "from_array_t",
+    "from_bytes_owned_t",
+    "from_bytes_t",
+    "from_halves_t",
+    "from_i32_bitcast_t",
+    "from_i32_t",
+    "from_i32x16_t",
+    "from_i32x4_t",
+    "from_i32x8_t",
+    "from_repr_t",
+    "from_slice_t",
+    "from_u8_t",
+    "load_4_rgba_u8_t",
+    "load_8_rgba_u8_t",
+    "load_8x8_t",
+    "load_t",
+    "partition_slice_mut_t",
+    "partition_slice_t",
+    "splat_t",
+    "zero_t",
+];
+
 pub(super) fn generate(source: &str) -> String {
     let file = syn::parse_file(source).expect("vector source must parse");
     let mut output = String::new();
@@ -21,14 +49,8 @@ pub(super) fn generate(source: &str) -> String {
                 continue;
             }
             let name = &method.sig.ident;
-            // Raw-context construction and legacy native NEON names already
-            // use their stable spelling; they have no deprecated short twin.
             let spelling = name.to_string();
-            if spelling == "from_raw_t"
-                || ["from_float", "from_int", "from_uint"]
-                    .iter()
-                    .any(|prefix| spelling.starts_with(prefix))
-            {
+            if !LEGACY_0_9_29_CONSTRUCTORS.contains(&spelling.as_str()) {
                 continue;
             }
             let Some(legacy) = spelling.strip_suffix("_t") else {
@@ -95,6 +117,18 @@ pub(super) fn generate(source: &str) -> String {
                 .collect::<Vec<_>>()
                 .join(", ");
             let note = format!("Use {name}({args}); {legacy} becomes tokenless in magetypes 0.10.");
+            let (doc, note) = if name == "load_4_rgba_u8_t" || name == "load_8_rgba_u8_t" {
+                alias.attrs.retain(|a| !a.path().is_ident("deprecated"));
+                alias.attrs.push(syn::parse_quote!(#[allow(deprecated)]));
+                (
+                    "Deprecated spelling of [`Self::load_rgba_u8_t`].".to_owned(),
+                    format!(
+                        "Use load_rgba_u8_t({args}); {legacy} will be removed in magetypes 0.10."
+                    ),
+                )
+            } else {
+                (doc, note)
+            };
             alias.attrs.push(syn::parse_quote!(#[doc = #doc]));
             alias
                 .attrs
@@ -194,11 +228,13 @@ mod tests {
     use super::*;
 
     #[test]
-    fn native_names_use_uniform_raw_spelling() {
+    fn native_and_post_0_9_31_names_do_not_get_deprecated_twins() {
         let source = r#"
             impl Vector<NeonToken> {
                 pub fn from_float32x4_t(token: NeonToken, raw: float32x4_t) -> Self { todo!() }
                 pub fn from_raw_t(token: NeonToken, raw: float32x4_t) -> Self { todo!() }
+                pub fn load_padded_t(token: NeonToken, slice: &[f32], pad: f32) -> Self { todo!() }
+                pub fn load_rgb_u8_t(token: NeonToken, rgb: &[u8; 24]) -> Self { todo!() }
             }
         "#;
         assert!(generate(source).is_empty());
@@ -211,7 +247,7 @@ mod tests {
             impl<T: Backend> Vector<T> where T::Repr: Copy {
                 #[cfg(target_arch = "wasm32")]
                 #[inline(always)]
-                pub fn partition_t<'a, const N: usize>(_: T, values: &'a mut [u8])
+                pub fn partition_slice_t<'a, const N: usize>(_: T, values: &'a mut [u8])
                     -> &'a mut [[u8; N]] where T: Other { todo!() }
                 pub fn value(self) -> i32 { 0 }
                 pub(crate) fn internal(token: T) -> Self { todo!() }
@@ -227,13 +263,13 @@ mod tests {
         let ImplItem::Fn(method) = &imp.items[0] else {
             panic!()
         };
-        assert_eq!(method.sig.ident, "partition");
+        assert_eq!(method.sig.ident, "partition_slice");
         assert!(method.attrs.iter().any(|a| a.path().is_ident("deprecated")));
         assert!(method.sig.generics.where_clause.is_some());
         assert!(method.attrs.iter().any(|a| a.path().is_ident("cfg")));
         assert_eq!(
             method.block.to_token_stream().to_string(),
-            "{ Self :: partition_t :: < N > (token , values) }"
+            "{ Self :: partition_slice_t :: < N > (token , values) }"
         );
     }
 }

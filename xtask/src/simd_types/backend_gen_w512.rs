@@ -386,6 +386,35 @@ fn generate_float_backend_trait(ty: &W512Type) -> String {
     let elem = ty.elem;
     let lanes = ty.lanes;
     let array = ty.array_type();
+    let internal_trait = super::float_layout::internal_trait(elem, lanes);
+    let min_max_fast_trait = formatdoc! {r#"
+
+        /// IEEE 754-2019 minimum (`NaN`-propagating, `-0.0 < +0.0`).
+        fn minimum(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
+
+        /// IEEE 754-2019 maximum (`NaN`-propagating, `-0.0 < +0.0`).
+        fn maximum(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
+
+        /// Fast lane-wise minimum (`NaN` and `±0.0` unspecified).
+        #[inline(always)]
+        fn min_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {{
+            Self::min(self, a, b)
+        }}
+
+        /// Fast lane-wise maximum (`NaN` and `±0.0` unspecified).
+        #[inline(always)]
+        fn max_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {{
+            Self::max(self, a, b)
+        }}
+    "#};
+
+    let scalar_bound = if elem == "f32" {
+        format!(
+            " + F32x{lanes}Internal<InternalRepr = <Self as {trait_name}>::Repr> + crate::scalar::F32ScalarBackend"
+        )
+    } else {
+        " + crate::scalar::F64ScalarBackend".to_string()
+    };
 
     formatdoc! {r#"
         //! Backend trait for `{name}<T>` — {lanes}-lane {elem} SIMD vector.
@@ -398,7 +427,7 @@ fn generate_float_backend_trait(ty: &W512Type) -> String {
         use super::sealed::Sealed;
         use archmage::SimdToken;
 
-        /// Backend implementation for {lanes}-lane {elem} SIMD vectors.
+        {internal_trait}/// Backend implementation for {lanes}-lane {elem} SIMD vectors.
         ///
         /// Trait methods take `self` (the token) as receiver — the token value
         /// is the proof of CPU support, and requiring it as the receiver means
@@ -411,7 +440,8 @@ fn generate_float_backend_trait(ty: &W512Type) -> String {
         ///
         /// This trait is sealed — only archmage token types can implement it.
         /// The token proves CPU support was verified via `summon()`.
-        pub trait {trait_name}: SimdToken + Sealed + Copy + 'static {{
+        #[allow(private_bounds)]
+        pub trait {trait_name}: SimdToken + Sealed{scalar_bound} + Copy + 'static {{
             /// Platform-native SIMD representation.
             #[allow(private_bounds)]
             type Repr: Copy + Clone + Send + Sync + crate::simd_storage::Pod;
@@ -455,17 +485,37 @@ fn generate_float_backend_trait(ty: &W512Type) -> String {
 
             // ====== Math ======
 
-            /// Lane-wise minimum.
+            /// Lane-wise minimum matching `{elem}::min` (returns the numeric operand on a single quiet `NaN`; signalling `NaN` and `±0.0` unspecified).
             fn min(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
-            /// Lane-wise maximum.
+            /// Lane-wise maximum matching `{elem}::max` (returns the numeric operand on a single quiet `NaN`; signalling `NaN` and `±0.0` unspecified).
             fn max(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
+            {min_max_fast_trait}
 
             /// Square root.
             fn sqrt(self, a: Self::Repr) -> Self::Repr;
 
             /// Absolute value.
             fn abs(self, a: Self::Repr) -> Self::Repr;
+
+            /// Truncate toward zero without changing the sign of zero.
+            #[inline(always)]
+            fn trunc(self, a: Self::Repr) -> Self::Repr {{
+                let lanes = <Self as {trait_name}>::to_array(self, a);
+                <Self as {trait_name}>::from_array(self, lanes.map(crate::scalar::trunc_{elem}))
+            }}
+
+            /// Multiply-negate-add with backend-dependent rounding.
+            #[inline(always)]
+            fn mul_neg_add_relaxed(self, a: Self::Repr, b: Self::Repr, c: Self::Repr) -> Self::Repr {{
+                <Self as {trait_name}>::mul_add(self, <Self as {trait_name}>::neg(self, a), b, c)
+            }}
+
+            /// Multiply-negate-add with one rounding.
+            #[inline(always)]
+            fn mul_neg_add_fused(self, a: Self::Repr, b: Self::Repr, c: Self::Repr) -> Self::Repr {{
+                <Self as {trait_name}>::mul_add_portable(self, <Self as {trait_name}>::neg(self, a), b, c)
+            }}
 
             /// Round toward negative infinity.
             fn floor(self, a: Self::Repr) -> Self::Repr;
@@ -543,7 +593,7 @@ fn generate_float_backend_trait(ty: &W512Type) -> String {
             #[inline(always)]
             fn rcp_approx(self, a: Self::Repr) -> Self::Repr {{ a }}
 
-            /// Fast reciprocal square root approximation — see [`rcp_approx`].
+            /// Fast reciprocal square root approximation — see [`rcp_approx`](Self::rcp_approx).
             #[inline(always)]
             fn rsqrt_approx(self, a: Self::Repr) -> Self::Repr {{ a }}
 
@@ -563,10 +613,15 @@ fn generate_float_backend_trait(ty: &W512Type) -> String {
 
             // ====== Default implementations ======
 
-            /// Clamp values between lo and hi.
+            /// Clamp values between `lo` and `hi`: `min_fast(max_fast(a, lo), hi)`,
+            /// two instructions on native backends.
+            ///
+            /// A quiet `NaN` lane in `a` becomes `lo` on x86, NEON, strict WASM, and
+            /// `ScalarToken`; signalling `NaN`, WASM `relaxed-simd` `NaN` lanes, `NaN`
+            /// bounds, and `lo > hi` are unspecified per backend, and `clamp` never panics.
             #[inline(always)]
             fn clamp(self, a: Self::Repr, lo: Self::Repr, hi: Self::Repr) -> Self::Repr {{
-                <Self as {trait_name}>::min(self, <Self as {trait_name}>::max(self, a, lo), hi)
+                <Self as {trait_name}>::min_fast(self, <Self as {trait_name}>::max_fast(self, a, lo), hi)
             }}
 
             /// Precise reciprocal — defaults to delegating to rcp_approx.
@@ -574,10 +629,9 @@ fn generate_float_backend_trait(ty: &W512Type) -> String {
             #[inline(always)]
             fn recip(self, a: Self::Repr) -> Self::Repr {{ Self::rcp_approx(self, a) }}
 
-            /// Precise reciprocal square root — see [`recip`].
+            /// Precise reciprocal square root — see [`recip`](Self::recip).
             #[inline(always)]
             fn rsqrt(self, a: Self::Repr) -> Self::Repr {{ Self::rsqrt_approx(self, a) }}
-
         }}
     "#,
         name = ty.name(),
@@ -1091,10 +1145,26 @@ fn generate_scalar_float_impl(ty: &W512Type) -> String {
             fn neg(self, a: {array}) -> {array} {{ core::array::from_fn(|i| -a[i]) }}
 
             #[inline(always)]
-            fn min(self, a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| if a[i] < b[i] {{ a[i] }} else {{ b[i] }}) }}
+            fn min(self, a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| a[i].min(b[i])) }}
 
             #[inline(always)]
-            fn max(self, a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| if a[i] > b[i] {{ a[i] }} else {{ b[i] }}) }}
+            fn max(self, a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| a[i].max(b[i])) }}
+
+            #[inline(always)]
+            fn minimum(self, a: {array}, b: {array}) -> {array} {{
+                core::array::from_fn(|i| crate::nostd_math::{min_ieee}(a[i], b[i]))
+            }}
+
+            #[inline(always)]
+            fn maximum(self, a: {array}, b: {array}) -> {array} {{
+                core::array::from_fn(|i| crate::nostd_math::{max_ieee}(a[i], b[i]))
+            }}
+
+            #[inline(always)]
+            fn min_fast(self, a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| if a[i] < b[i] {{ a[i] }} else {{ b[i] }}) }}
+
+            #[inline(always)]
+            fn max_fast(self, a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| if a[i] > b[i] {{ a[i] }} else {{ b[i] }}) }}
 
             #[inline(always)]
             fn sqrt(self, a: {array}) -> {array} {{
@@ -1177,10 +1247,17 @@ fn generate_scalar_float_impl(ty: &W512Type) -> String {
 
             #[inline(always)]
             fn bitxor(self, a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| {elem}::from_bits(a[i].to_bits() ^ b[i].to_bits())) }}
-        }}
+        }}{scalar_internal}
     "#,
+        scalar_internal = if elem == "f32" {
+            super::float_layout::scalar_internal_impl(16)
+        } else {
+            String::new()
+        },
         elem_name = zero_lit.to_string(),
         uint = if elem == "f32" { "u32" } else { "u64" },
+        min_ieee = if elem == "f32" { "minimumf" } else { "minimum" },
+        max_ieee = if elem == "f32" { "maximumf" } else { "maximum" },
         floor_fn = if elem == "f32" { "floorf" } else { "floor" },
         ceil_fn = if elem == "f32" { "ceilf" } else { "ceil" },
         round_fn = if elem == "f32" { "roundevenf" } else { "roundeven" },
@@ -1445,7 +1522,7 @@ fn generate_v3_polyfill_impl(ty: &W512Type) -> String {
     let zero_lit = ty.zero_lit();
 
     let mut code = formatdoc! {r#"
-        #[cfg(target_arch = "x86_64")]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
         impl {trait_name} for archmage::X64V3Token {{
             type Repr = {v3_repr};
 
@@ -1600,6 +1677,38 @@ fn generate_v3_polyfill_impl(ty: &W512Type) -> String {
         code.push_str(&formatdoc! {r#"
 
             #[inline(always)]
+            fn minimum(self, a: {v3_repr}, b: {v3_repr}) -> {v3_repr} {{
+                [
+                    <archmage::X64V3Token as {half_trait}>::minimum(self, a[0], b[0]),
+                    <archmage::X64V3Token as {half_trait}>::minimum(self, a[1], b[1]),
+                ]
+            }}
+
+            #[inline(always)]
+            fn maximum(self, a: {v3_repr}, b: {v3_repr}) -> {v3_repr} {{
+                [
+                    <archmage::X64V3Token as {half_trait}>::maximum(self, a[0], b[0]),
+                    <archmage::X64V3Token as {half_trait}>::maximum(self, a[1], b[1]),
+                ]
+            }}
+
+            #[inline(always)]
+            fn min_fast(self, a: {v3_repr}, b: {v3_repr}) -> {v3_repr} {{
+                [
+                    <archmage::X64V3Token as {half_trait}>::min_fast(self, a[0], b[0]),
+                    <archmage::X64V3Token as {half_trait}>::min_fast(self, a[1], b[1]),
+                ]
+            }}
+
+            #[inline(always)]
+            fn max_fast(self, a: {v3_repr}, b: {v3_repr}) -> {v3_repr} {{
+                [
+                    <archmage::X64V3Token as {half_trait}>::max_fast(self, a[0], b[0]),
+                    <archmage::X64V3Token as {half_trait}>::max_fast(self, a[1], b[1]),
+                ]
+            }}
+
+            #[inline(always)]
             fn sqrt(self, a: {v3_repr}) -> {v3_repr} {{
                 [
                     <archmage::X64V3Token as {half_trait}>::sqrt(self, a[0]),
@@ -1614,6 +1723,15 @@ fn generate_v3_polyfill_impl(ty: &W512Type) -> String {
                     <archmage::X64V3Token as {half_trait}>::abs(self, a[1]),
                 ]
             }}
+
+            #[inline(always)]
+            fn trunc(self, a: {v3_repr}) -> {v3_repr} {{ a.map(|a| <Self as {half_trait}>::trunc(self, a)) }}
+
+            #[inline(always)]
+            fn mul_neg_add_relaxed(self, a: {v3_repr}, b: {v3_repr}, c: {v3_repr}) -> {v3_repr} {{ core::array::from_fn(|i| <Self as {half_trait}>::mul_neg_add_relaxed(self, a[i], b[i], c[i])) }}
+
+            #[inline(always)]
+            fn mul_neg_add_fused(self, a: {v3_repr}, b: {v3_repr}, c: {v3_repr}) -> {v3_repr} {{ core::array::from_fn(|i| <Self as {half_trait}>::mul_neg_add_fused(self, a[i], b[i], c[i])) }}
 
             #[inline(always)]
             fn floor(self, a: {v3_repr}) -> {v3_repr} {{
@@ -1898,6 +2016,18 @@ fn generate_v3_polyfill_impl(ty: &W512Type) -> String {
         }}
     "#});
 
+    if ty.elem == "f32" {
+        let poly = super::float_layout::polyfill(16, 8, &v3_repr);
+        code.push_str(&formatdoc! {r#"
+
+            #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
+            impl crate::simd::backends::F32x16Internal for archmage::X64V3Token {{
+                type InternalRepr = {v3_repr};
+            {poly}
+            }}
+        "#});
+    }
+
     code
 }
 
@@ -2106,6 +2236,31 @@ fn generate_4way_polyfill_impl(
         code.push_str(&formatdoc! {r#"
 
             #[inline(always)]
+            fn min_fast(self, a: {repr}, b: {repr}) -> {repr} {{
+                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::min_fast(self, a[i], b[i]))
+            }}
+
+            #[inline(always)]
+            fn max_fast(self, a: {repr}, b: {repr}) -> {repr} {{
+                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::max_fast(self, a[i], b[i]))
+            }}
+        "#});
+    }
+
+    if ty.is_float() {
+        code.push_str(&formatdoc! {r#"
+
+            #[inline(always)]
+            fn minimum(self, a: {repr}, b: {repr}) -> {repr} {{
+                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::minimum(self, a[i], b[i]))
+            }}
+
+            #[inline(always)]
+            fn maximum(self, a: {repr}, b: {repr}) -> {repr} {{
+                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::maximum(self, a[i], b[i]))
+            }}
+
+            #[inline(always)]
             fn sqrt(self, a: {repr}) -> {repr} {{
                 core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::sqrt(self, a[i]))
             }}
@@ -2137,6 +2292,15 @@ fn generate_4way_polyfill_impl(
             fn abs(self, a: {repr}) -> {repr} {{
                 core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::abs(self, a[i]))
             }}
+
+            #[inline(always)]
+            fn trunc(self, a: {repr}) -> {repr} {{ a.map(|a| <Self as {quarter_trait}>::trunc(self, a)) }}
+
+            #[inline(always)]
+            fn mul_neg_add_relaxed(self, a: {repr}, b: {repr}, c: {repr}) -> {repr} {{ core::array::from_fn(|i| <Self as {quarter_trait}>::mul_neg_add_relaxed(self, a[i], b[i], c[i])) }}
+
+            #[inline(always)]
+            fn mul_neg_add_fused(self, a: {repr}, b: {repr}, c: {repr}) -> {repr} {{ core::array::from_fn(|i| <Self as {quarter_trait}>::mul_neg_add_fused(self, a[i], b[i], c[i])) }}
 
             #[inline(always)]
             fn floor(self, a: {repr}) -> {repr} {{
@@ -2351,6 +2515,18 @@ fn generate_4way_polyfill_impl(
         }}
     "#});
 
+    if ty.elem == "f32" {
+        let poly = super::float_layout::polyfill(16, 4, &repr);
+        code.push_str(&formatdoc! {r#"
+
+            #[cfg(target_arch = "{arch}")]
+            impl crate::simd::backends::F32x16Internal for archmage::{token} {{
+                type InternalRepr = {repr};
+            {poly}
+            }}
+        "#});
+    }
+
     code
 }
 
@@ -2386,6 +2562,11 @@ fn generate_x86_v4_float_impl_for_token(ty: &W512Type, token: &str) -> String {
     let inner = ty.x86_v4_inner();
     let s = ty.x86_float_suffix();
     let elem = ty.elem;
+    let float_layout = if elem == "f32" {
+        super::float_layout::x86(16, inner, &arcane)
+    } else {
+        String::new()
+    };
     let array = ty.array_type();
     let epi = if elem == "f32" { "epi32" } else { "epi64" };
     let abs_mask = if elem == "f32" {
@@ -2401,6 +2582,20 @@ fn generate_x86_v4_float_impl_for_token(ty: &W512Type, token: &str) -> String {
     // exact division — one step from 14 bits is ~28 bits, far short of the
     // contract, and the two-step form was never measured against
     // _mm512_div_pd.
+    let numeric_min = if elem == "f32" {
+        "_mm512_range_ps::<0x04>(a, b)".to_string()
+    } else {
+        format!(
+            "_mm512_mask_blend_{s}(_mm512_cmp_{s}_mask::<_CMP_UNORD_Q>(b, b), _mm512_min_{s}(a, b), a)"
+        )
+    };
+    let numeric_max = if elem == "f32" {
+        "_mm512_range_ps::<0x05>(a, b)".to_string()
+    } else {
+        format!(
+            "_mm512_mask_blend_{s}(_mm512_cmp_{s}_mask::<_CMP_UNORD_Q>(b, b), _mm512_max_{s}(a, b), a)"
+        )
+    };
     let working_recip_512 = if elem == "f32" {
         // rcp14/rsqrt14 + one FMA-Newton step + VFIXUPIMM rail patch. The
         // fixup tables classify the ORIGINAL input and overwrite exactly the
@@ -2453,7 +2648,7 @@ fn generate_x86_v4_float_impl_for_token(ty: &W512Type, token: &str) -> String {
         "#}
     };
     formatdoc! {r#"
-        #[cfg(target_arch = "x86_64")]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
         impl {trait_name} for archmage::{token} {{
             type Repr = {inner};
 
@@ -2514,11 +2709,39 @@ fn generate_x86_v4_float_impl_for_token(ty: &W512Type, token: &str) -> String {
 
             {arcane}
             fn min(self, a: {inner}, b: {inner}) -> {inner} {{
-                _mm512_min_{s}(a, b)
+                {numeric_min}
             }}
 
             {arcane}
             fn max(self, a: {inner}, b: {inner}) -> {inner} {{
+                {numeric_max}
+            }}
+
+            {arcane}
+            fn minimum(self, a: {inner}, b: {inner}) -> {inner} {{
+                _mm512_mask_blend_{s}(
+                    _mm512_cmp_{s}_mask::<_CMP_UNORD_Q>(a, b),
+                    _mm512_or_{s}(_mm512_min_{s}(a, b), _mm512_min_{s}(b, a)),
+                    _mm512_set1_{s}({elem}::NAN),
+                )
+            }}
+
+            {arcane}
+            fn maximum(self, a: {inner}, b: {inner}) -> {inner} {{
+                _mm512_mask_blend_{s}(
+                    _mm512_cmp_{s}_mask::<_CMP_UNORD_Q>(a, b),
+                    _mm512_and_{s}(_mm512_max_{s}(a, b), _mm512_max_{s}(b, a)),
+                    _mm512_set1_{s}({elem}::NAN),
+                )
+            }}
+
+            {arcane}
+            fn min_fast(self, a: {inner}, b: {inner}) -> {inner} {{
+                _mm512_min_{s}(a, b)
+            }}
+
+            {arcane}
+            fn max_fast(self, a: {inner}, b: {inner}) -> {inner} {{
                 _mm512_max_{s}(a, b)
             }}
 
@@ -2532,6 +2755,15 @@ fn generate_x86_v4_float_impl_for_token(ty: &W512Type, token: &str) -> String {
                 let mask = _mm512_castsi512_{s}(_mm512_set1_{epi}({abs_mask}));
                 _mm512_and_{s}(a, mask)
             }}
+
+            {arcane}
+            fn trunc(self, a: {inner}) -> {inner} {{ _mm512_roundscale_{s}::<0x03>(a) }}
+
+            {arcane}
+            fn mul_neg_add_relaxed(self, a: {inner}, b: {inner}, c: {inner}) -> {inner} {{ _mm512_fnmadd_{s}(a, b, c) }}
+
+            {arcane}
+            fn mul_neg_add_fused(self, a: {inner}, b: {inner}, c: {inner}) -> {inner} {{ _mm512_fnmadd_{s}(a, b, c) }}
 
             {arcane}
             fn floor(self, a: {inner}) -> {inner} {{
@@ -2659,8 +2891,20 @@ fn generate_x86_v4_float_impl_for_token(ty: &W512Type, token: &str) -> String {
             fn bitxor(self, a: {inner}, b: {inner}) -> {inner} {{
                 _mm512_xor_{s}(a, b)
             }}
-        }}
-    "#}
+        }}{internal_impl}
+    "#,
+        internal_impl = if elem == "f32" {
+            formatdoc! {r#"
+
+                #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
+                impl crate::simd::backends::F32x16Internal for archmage::{token} {{
+                    type InternalRepr = {inner};
+                {float_layout}
+                }}"#}
+        } else {
+            String::new()
+        },
+    }
 }
 
 /// Generate V4 native implementation for a W512 integer type.
@@ -2775,10 +3019,24 @@ fn generate_x86_v4_int_impl_for_token(ty: &W512Type, token: &str) -> String {
             "#}
         };
 
+        let shl = if elem_bits == 32 {
+            let cases = (0..32)
+                .map(|shift| format!("    {shift} => _mm512_slli_epi32::<{shift}>(a),"))
+                .collect::<Vec<_>>()
+                .join("\n");
+            formatdoc! {r#"
+                match N {{
+                {cases}
+                    _ => unreachable!("shift count checked by the public API"),
+                }}
+            "#}
+        } else {
+            format!("_mm512_sll_{epi}(a, _mm_cvtsi32_si128(N))")
+        };
         formatdoc! {r#"
             {arcane}
             fn shl_const<const N: i32>(self, a: __m512i) -> __m512i {{
-                _mm512_sll_{epi}(a, _mm_cvtsi32_si128(N))
+                {shl}
             }}
 
             {shr_arith}
@@ -2790,7 +3048,7 @@ fn generate_x86_v4_int_impl_for_token(ty: &W512Type, token: &str) -> String {
     };
 
     formatdoc! {r#"
-        #[cfg(target_arch = "x86_64")]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
         impl {trait_name} for archmage::{token} {{
             type Repr = __m512i;
 
@@ -2934,25 +3192,13 @@ fn generate_x86_v4_int_impl_for_token(ty: &W512Type, token: &str) -> String {
 
             {arcane}
             fn bitmask(self, a: __m512i) -> u64 {{
-                // Extract high bit of each lane: compare < 0 for signed interpretation
-                let zero = _mm512_setzero_si512();
-                _mm512_cmpneq_{blend_suffix}_mask(
-                    _mm512_and_si512(a, _mm512_set1_{set1_signed}(1_{sign_type} << ({elem_bits} - 1))),
-                    zero
-                ){mask_as_u64}
+                _mm512_movepi{elem_bits}_mask(a){mask_as_u64}
             }}
         {integer_methods}
         }}
     "#,
         // 8-bit lanes have a 64-bit mask already; narrower masks widen.
         mask_as_u64 = if elem_bits == 8 { "" } else { " as u64" },
-        sign_type = match elem_bits {
-            8 => "i8",
-            16 => "i16",
-            32 => "i32",
-            64 => "i64",
-            _ => unreachable!(),
-        },
     }
 }
 
@@ -3094,7 +3340,7 @@ fn generate_popcnt_impl(ty: &W512Type) -> String {
     let epi = ty.x86_arith_suffix();
 
     formatdoc! {r#"
-        #[cfg(target_arch = "x86_64")]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
         impl {name}PopcntBackend for archmage::X64V4xToken {{
             {arcane}
             fn popcnt(self, a: __m512i) -> __m512i {{

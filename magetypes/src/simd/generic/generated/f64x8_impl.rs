@@ -74,7 +74,7 @@ const _: () = {
     );
 };
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 const _: () = {
     assert!(
         size_of::<f64x8<archmage::X64V3Token>>()
@@ -89,7 +89,7 @@ const _: () = {
 // Native AVX-512 (`__m512`/`__m512d`/`__m512i`) — gated on the
 // `avx512` feature, which is how archmage exposes X64V4Token's
 // 512-bit backend impls.
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
 const _: () = {
     assert!(
         size_of::<f64x8<archmage::X64V4Token>>()
@@ -162,6 +162,26 @@ impl<T: F64x8Backend> f64x8<T> {
         Self(T::from_array(token, arr), token)
     }
 
+    /// Load up to `8` elements from `slice`, filling remaining high lanes with `pad`.
+    ///
+    /// Designed for single-vector slice tails after [`partition_slice_t`](Self::partition_slice_t)
+    /// (typically paired with [`store_prefix`](Self::store_prefix)).
+    ///
+    /// # Panics
+    ///
+    /// Panics if `slice.len() > 8`.
+    #[inline(always)]
+    pub fn load_padded_t(token: T, slice: &[f64], pad: f64) -> Self {
+        assert!(
+            slice.len() <= 8,
+            "f64x8::load_padded_t requires slice.len() <= 8, got {}",
+            slice.len(),
+        );
+        let mut arr = [pad; 8];
+        arr[..slice.len()].copy_from_slice(slice);
+        Self(T::from_array(token, arr), token)
+    }
+
     /// Split a slice into SIMD-width chunks and a scalar remainder.
     ///
     /// Returns `(&[[f64; 8]], &[f64])` — fixed-size arrays suitable
@@ -188,6 +208,25 @@ impl<T: F64x8Backend> f64x8<T> {
         T::store(self.1, self.0, out);
     }
 
+    /// Store the low `out.len()` lanes into `out`.
+    ///
+    /// Designed for single-vector slice tails after [`partition_slice_mut_t`](Self::partition_slice_mut_t)
+    /// (typically paired with [`load_padded_t`](Self::load_padded_t)).
+    ///
+    /// # Panics
+    ///
+    /// Panics if `out.len() > 8`.
+    #[inline(always)]
+    pub fn store_prefix(self, out: &mut [f64]) {
+        assert!(
+            out.len() <= 8,
+            "f64x8::store_prefix requires out.len() <= 8, got {}",
+            out.len(),
+        );
+        let arr = T::to_array(self.1, self.0);
+        out.copy_from_slice(&arr[..out.len()]);
+    }
+
     /// Convert to array.
     #[inline(always)]
     pub fn to_array(self) -> [f64; 8] {
@@ -198,6 +237,12 @@ impl<T: F64x8Backend> f64x8<T> {
     #[inline(always)]
     pub fn into_repr(self) -> T::Repr {
         self.0
+    }
+
+    /// Get the capability token carried by this vector.
+    #[inline(always)]
+    pub fn token(self) -> T {
+        self.1
     }
 
     /// Wrap a platform representation (token-gated).
@@ -217,19 +262,86 @@ impl<T: F64x8Backend> f64x8<T> {
 
     // ====== Math ======
 
-    /// Lane-wise minimum.
+    /// Lane-wise minimum matching [`f64::min`].
+    ///
+    /// If one lane is `NaN` and the other is numeric (including `±inf`), returns
+    /// the numeric lane; `(-0.0, +0.0)` tie-breaking is unspecified. Scalar tail
+    /// equivalent: `f64::min`.
+    ///
+    /// Signalling `NaN` handling is unspecified and differs by backend, as
+    /// Rust leaves it for `f64::min`: NEON (one `fminnm`, the same
+    /// instruction as [`min_fast`](Self::min_fast)) and AVX-512 `f32`
+    /// (`vrangeps`) return a quiet `NaN`; x86 V3, AVX-512 `f64`, WASM and
+    /// `ScalarToken` return the numeric lane.
     #[inline(always)]
     pub fn min(self, other: Self) -> Self {
         Self(T::min(self.1, self.0, other.0), self.1)
     }
 
-    /// Lane-wise maximum.
+    /// Lane-wise maximum matching [`f64::max`].
+    ///
+    /// If one lane is `NaN` and the other is numeric (including `±inf`), returns
+    /// the numeric lane; `(-0.0, +0.0)` tie-breaking is unspecified. Scalar tail
+    /// equivalent: `f64::max`.
+    ///
+    /// Signalling `NaN` handling is unspecified and differs by backend, as
+    /// Rust leaves it for `f64::max`: NEON (one `fmaxnm`, the same
+    /// instruction as [`max_fast`](Self::max_fast)) and AVX-512 `f32`
+    /// (`vrangeps`) return a quiet `NaN`; x86 V3, AVX-512 `f64`, WASM and
+    /// `ScalarToken` return the numeric lane.
     #[inline(always)]
     pub fn max(self, other: Self) -> Self {
         Self(T::max(self.1, self.0, other.0), self.1)
     }
 
-    /// Clamp between lo and hi.
+    /// IEEE 754-2019 lane-wise minimum (propagates `NaN` and orders `-0.0 < +0.0`).
+    ///
+    /// A `NaN` result is quiet; its sign and payload differ by backend.
+    /// Scalar tail equivalent: [`minimum_f64`](crate::scalar::minimum_f64).
+    #[inline(always)]
+    pub fn minimum(self, other: Self) -> Self {
+        Self(T::minimum(self.1, self.0, other.0), self.1)
+    }
+
+    /// IEEE 754-2019 lane-wise maximum (propagates `NaN` and orders `-0.0 < +0.0`).
+    ///
+    /// A `NaN` result is quiet; its sign and payload differ by backend.
+    /// Scalar tail equivalent: [`maximum_f64`](crate::scalar::maximum_f64).
+    #[inline(always)]
+    pub fn maximum(self, other: Self) -> Self {
+        Self(T::maximum(self.1, self.0, other.0), self.1)
+    }
+
+    /// Fast single-instruction lane-wise minimum ignoring `NaN` and `±0.0`.
+    ///
+    /// Emits `vminps`/`vminpd` on x86, `fminnm` on NEON, `pmin(other, self)`
+    /// (or `relaxed_min` with `relaxed-simd`) on WASM, and `a < b ? a : b` on
+    /// `ScalarToken`. Scalar tail equivalent: [`min_fast_f64`](crate::scalar::min_fast_f64).
+    #[inline(always)]
+    pub fn min_fast(self, other: Self) -> Self {
+        Self(T::min_fast(self.1, self.0, other.0), self.1)
+    }
+
+    /// Fast single-instruction lane-wise maximum ignoring `NaN` and `±0.0`.
+    ///
+    /// Emits `vmaxps`/`vmaxpd` on x86, `fmaxnm` on NEON, `pmax(other, self)`
+    /// (or `relaxed_max` with `relaxed-simd`) on WASM, and `a > b ? a : b` on
+    /// `ScalarToken`. Scalar tail equivalent: [`max_fast_f64`](crate::scalar::max_fast_f64).
+    #[inline(always)]
+    pub fn max_fast(self, other: Self) -> Self {
+        Self(T::max_fast(self.1, self.0, other.0), self.1)
+    }
+
+    /// Clamp between `lo` and `hi`: `self.max_fast(lo).min_fast(hi)`, two
+    /// instructions on native backends.
+    ///
+    /// Exact when `lo <= hi` and nothing is `NaN`. A quiet `NaN` lane in `self`
+    /// becomes `lo` on x86, NEON, strict WASM, and `ScalarToken`; a signalling
+    /// `NaN` lane (`lo` on x86, `hi` on NEON) and any `NaN` with WASM
+    /// `relaxed-simd` are unspecified per backend. `NaN` bounds and `lo > hi`
+    /// give an unspecified lane and never panic. [`f64::clamp`] differs: it
+    /// keeps `NaN` and panics on such bounds. Scalar tail equivalent:
+    /// [`clamp_f64`](crate::scalar::clamp_f64).
     #[inline(always)]
     pub fn clamp(self, lo: Self, hi: Self) -> Self {
         Self(T::clamp(self.1, self.0, lo.0, hi.0), self.1)
@@ -439,7 +551,8 @@ impl<T: F64x8Backend> f64x8<T> {
     // ====== Approximations ======
 
     /// Fast reciprocal approximation (1/x): the backend's native estimate
-    /// (exact division on f64 — no hardware estimate exists).
+    /// (~14 bits on 512-bit AVX-512 `f64x8`, ~16 bits on NEON; exact IEEE
+    /// division on x86 V3, narrow AVX-512, WASM and scalar).
     #[inline(always)]
     pub fn rcp_approx(self) -> Self {
         Self(T::rcp_approx(self.1, self.0), self.1)
@@ -455,8 +568,9 @@ impl<T: F64x8Backend> f64x8<T> {
         Self(T::recip(self.1, self.0), self.1)
     }
 
-    /// Fast reciprocal square root approximation (exact division +
-    /// sqrt on f64 — no hardware estimate exists).
+    /// Fast reciprocal square root approximation (~14 bits on 512-bit
+    /// AVX-512 `f64x8`, ~16 bits on NEON; exact division + `sqrt` on x86 V3,
+    /// narrow AVX-512, WASM and scalar).
     #[inline(always)]
     pub fn rsqrt_approx(self) -> Self {
         Self(T::rsqrt_approx(self.1, self.0), self.1)
@@ -688,7 +802,7 @@ impl f64x8<archmage::ScalarToken> {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl f64x8<archmage::X64V3Token> {
     /// Implementation identifier for this backend.
     pub const fn implementation_name() -> &'static str {
@@ -696,7 +810,7 @@ impl f64x8<archmage::X64V3Token> {
     }
 }
 
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
 impl f64x8<archmage::X64V4Token> {
     /// Implementation identifier for this backend.
     pub const fn implementation_name() -> &'static str {
@@ -704,7 +818,7 @@ impl f64x8<archmage::X64V4Token> {
     }
 }
 
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
 impl f64x8<archmage::X64V4xToken> {
     /// Implementation identifier for this backend.
     pub const fn implementation_name() -> &'static str {
@@ -727,7 +841,7 @@ impl f64x8<archmage::Wasm128Token> {
         "polyfill::wasm128_512::f64x8"
     }
 }
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
 impl f64x8<archmage::X64V4Token> {
     /// Get the raw `__m512d` value.
     #[inline(always)]
@@ -760,7 +874,7 @@ impl f64x8<archmage::X64V4Token> {
         Self(value, archmage::X64V4Token::from_context())
     }
 }
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
 impl f64x8<archmage::X64V4xToken> {
     /// Get the raw `__m512d` value.
     #[inline(always)]

@@ -21,7 +21,10 @@ use archmage::SimdToken;
 ///
 /// This trait is sealed — only archmage token types can implement it.
 /// The token proves CPU support was verified via `summon()`.
-pub trait F64x2Backend: SimdToken + Sealed + Copy + 'static {
+#[allow(private_bounds)]
+pub trait F64x2Backend:
+    SimdToken + Sealed + crate::scalar::F64ScalarBackend + Copy + 'static
+{
     /// Platform-native SIMD representation.
     #[allow(private_bounds)]
     type Repr: Copy + Clone + Send + Sync + crate::simd_storage::Pod;
@@ -65,17 +68,54 @@ pub trait F64x2Backend: SimdToken + Sealed + Copy + 'static {
 
     // ====== Math ======
 
-    /// Lane-wise minimum.
+    /// Lane-wise minimum matching `f64::min` (returns the numeric operand on a single quiet `NaN`; signalling `NaN` and `±0.0` unspecified).
     fn min(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
-    /// Lane-wise maximum.
+    /// Lane-wise maximum matching `f64::max` (returns the numeric operand on a single quiet `NaN`; signalling `NaN` and `±0.0` unspecified).
     fn max(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
+
+    /// IEEE 754-2019 minimum (`NaN`-propagating, `-0.0 < +0.0`).
+    fn minimum(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
+
+    /// IEEE 754-2019 maximum (`NaN`-propagating, `-0.0 < +0.0`).
+    fn maximum(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
+
+    /// Fast lane-wise minimum (`NaN` and `±0.0` unspecified).
+    #[inline(always)]
+    fn min_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        Self::min(self, a, b)
+    }
+
+    /// Fast lane-wise maximum (`NaN` and `±0.0` unspecified).
+    #[inline(always)]
+    fn max_fast(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+        Self::max(self, a, b)
+    }
 
     /// Square root.
     fn sqrt(self, a: Self::Repr) -> Self::Repr;
 
     /// Absolute value.
     fn abs(self, a: Self::Repr) -> Self::Repr;
+
+    /// Truncate toward zero without changing the sign of zero.
+    #[inline(always)]
+    fn trunc(self, a: Self::Repr) -> Self::Repr {
+        let lanes = <Self as F64x2Backend>::to_array(self, a);
+        <Self as F64x2Backend>::from_array(self, lanes.map(crate::scalar::trunc_f64))
+    }
+
+    /// Multiply-negate-add with backend-dependent rounding.
+    #[inline(always)]
+    fn mul_neg_add_relaxed(self, a: Self::Repr, b: Self::Repr, c: Self::Repr) -> Self::Repr {
+        <Self as F64x2Backend>::mul_add(self, <Self as F64x2Backend>::neg(self, a), b, c)
+    }
+
+    /// Multiply-negate-add with one rounding.
+    #[inline(always)]
+    fn mul_neg_add_fused(self, a: Self::Repr, b: Self::Repr, c: Self::Repr) -> Self::Repr {
+        <Self as F64x2Backend>::mul_add_portable(self, <Self as F64x2Backend>::neg(self, a), b, c)
+    }
 
     /// Round toward negative infinity.
     fn floor(self, a: Self::Repr) -> Self::Repr;
@@ -161,9 +201,9 @@ pub trait F64x2Backend: SimdToken + Sealed + Copy + 'static {
     }
 
     /// Fast reciprocal square root approximation: backend-dependent
-    /// (x86 ~12-bit, ARM ~8-bit, WASM full). [`rsqrt`] is full f32 everywhere.
+    /// (x86 ~12-bit, ARM ~8-bit, WASM full). [`rsqrt`](Self::rsqrt) is full f32 everywhere.
     ///
-    /// See [`rcp_approx`] for default-body rationale.
+    /// See [`rcp_approx`](Self::rcp_approx) for default-body rationale.
     #[inline(always)]
     fn rsqrt_approx(self, a: Self::Repr) -> Self::Repr {
         a
@@ -185,14 +225,19 @@ pub trait F64x2Backend: SimdToken + Sealed + Copy + 'static {
 
     // ====== Default implementations ======
 
-    /// Clamp values between lo and hi.
+    /// Clamp values between `lo` and `hi`: `min_fast(max_fast(a, lo), hi)`,
+    /// two instructions on native backends.
+    ///
+    /// A quiet `NaN` lane in `a` becomes `lo` on x86, NEON, strict WASM, and
+    /// `ScalarToken`; signalling `NaN`, WASM `relaxed-simd` `NaN` lanes, `NaN`
+    /// bounds, and `lo > hi` are unspecified per backend, and `clamp` never panics.
     #[inline(always)]
     fn clamp(self, a: Self::Repr, lo: Self::Repr, hi: Self::Repr) -> Self::Repr {
-        <Self as F64x2Backend>::min(self, <Self as F64x2Backend>::max(self, a, lo), hi)
+        <Self as F64x2Backend>::min_fast(self, <Self as F64x2Backend>::max_fast(self, a, lo), hi)
     }
 
     /// Working-tier reciprocal — defaults to delegating to
-    /// [`rcp_approx`] (which itself defaults to identity), so every
+    /// [`rcp_approx`](Self::rcp_approx) (which itself defaults to identity), so every
     /// backend MUST override. Contract: <= 4 ULP by the backend's
     /// fastest conforming path (estimate + Newton on x86/NEON f32,
     /// exact division elsewhere); rails are per-backend and may be
@@ -203,7 +248,7 @@ pub trait F64x2Backend: SimdToken + Sealed + Copy + 'static {
         Self::rcp_approx(self, a)
     }
 
-    /// Working-tier reciprocal square root — see [`recip`] for the
+    /// Working-tier reciprocal square root — see [`recip`](Self::recip) for the
     /// contract shape.
     #[inline(always)]
     fn rsqrt(self, a: Self::Repr) -> Self::Repr {

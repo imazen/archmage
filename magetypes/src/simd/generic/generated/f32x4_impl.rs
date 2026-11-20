@@ -57,7 +57,7 @@ const _: () = {
     );
 };
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 const _: () = {
     assert!(
         size_of::<f32x4<archmage::X64V3Token>>()
@@ -130,6 +130,26 @@ impl<T: F32x4Backend> f32x4<T> {
         Self(T::from_array(token, arr), token)
     }
 
+    /// Load up to `4` elements from `slice`, filling remaining high lanes with `pad`.
+    ///
+    /// Designed for single-vector slice tails after [`partition_slice_t`](Self::partition_slice_t)
+    /// (typically paired with [`store_prefix`](Self::store_prefix)).
+    ///
+    /// # Panics
+    ///
+    /// Panics if `slice.len() > 4`.
+    #[inline(always)]
+    pub fn load_padded_t(token: T, slice: &[f32], pad: f32) -> Self {
+        assert!(
+            slice.len() <= 4,
+            "f32x4::load_padded_t requires slice.len() <= 4, got {}",
+            slice.len(),
+        );
+        let mut arr = [pad; 4];
+        arr[..slice.len()].copy_from_slice(slice);
+        Self(T::from_array(token, arr), token)
+    }
+
     /// Split a slice into SIMD-width chunks and a scalar remainder.
     ///
     /// Returns `(&[[f32; 4]], &[f32])` — fixed-size arrays suitable
@@ -156,6 +176,25 @@ impl<T: F32x4Backend> f32x4<T> {
         T::store(self.1, self.0, out);
     }
 
+    /// Store the low `out.len()` lanes into `out`.
+    ///
+    /// Designed for single-vector slice tails after [`partition_slice_mut_t`](Self::partition_slice_mut_t)
+    /// (typically paired with [`load_padded_t`](Self::load_padded_t)).
+    ///
+    /// # Panics
+    ///
+    /// Panics if `out.len() > 4`.
+    #[inline(always)]
+    pub fn store_prefix(self, out: &mut [f32]) {
+        assert!(
+            out.len() <= 4,
+            "f32x4::store_prefix requires out.len() <= 4, got {}",
+            out.len(),
+        );
+        let arr = T::to_array(self.1, self.0);
+        out.copy_from_slice(&arr[..out.len()]);
+    }
+
     /// Convert to array.
     #[inline(always)]
     pub fn to_array(self) -> [f32; 4] {
@@ -166,6 +205,12 @@ impl<T: F32x4Backend> f32x4<T> {
     #[inline(always)]
     pub fn into_repr(self) -> T::Repr {
         self.0
+    }
+
+    /// Get the capability token carried by this vector.
+    #[inline(always)]
+    pub fn token(self) -> T {
+        self.1
     }
 
     /// Wrap a platform representation (token-gated).
@@ -185,19 +230,86 @@ impl<T: F32x4Backend> f32x4<T> {
 
     // ====== Math ======
 
-    /// Lane-wise minimum.
+    /// Lane-wise minimum matching [`f32::min`].
+    ///
+    /// If one lane is `NaN` and the other is numeric (including `±inf`), returns
+    /// the numeric lane; `(-0.0, +0.0)` tie-breaking is unspecified. Scalar tail
+    /// equivalent: `f32::min`.
+    ///
+    /// Signalling `NaN` handling is unspecified and differs by backend, as
+    /// Rust leaves it for `f32::min`: NEON (one `fminnm`, the same
+    /// instruction as [`min_fast`](Self::min_fast)) and AVX-512 `f32`
+    /// (`vrangeps`) return a quiet `NaN`; x86 V3, AVX-512 `f64`, WASM and
+    /// `ScalarToken` return the numeric lane.
     #[inline(always)]
     pub fn min(self, other: Self) -> Self {
         Self(T::min(self.1, self.0, other.0), self.1)
     }
 
-    /// Lane-wise maximum.
+    /// Lane-wise maximum matching [`f32::max`].
+    ///
+    /// If one lane is `NaN` and the other is numeric (including `±inf`), returns
+    /// the numeric lane; `(-0.0, +0.0)` tie-breaking is unspecified. Scalar tail
+    /// equivalent: `f32::max`.
+    ///
+    /// Signalling `NaN` handling is unspecified and differs by backend, as
+    /// Rust leaves it for `f32::max`: NEON (one `fmaxnm`, the same
+    /// instruction as [`max_fast`](Self::max_fast)) and AVX-512 `f32`
+    /// (`vrangeps`) return a quiet `NaN`; x86 V3, AVX-512 `f64`, WASM and
+    /// `ScalarToken` return the numeric lane.
     #[inline(always)]
     pub fn max(self, other: Self) -> Self {
         Self(T::max(self.1, self.0, other.0), self.1)
     }
 
-    /// Clamp between lo and hi.
+    /// IEEE 754-2019 lane-wise minimum (propagates `NaN` and orders `-0.0 < +0.0`).
+    ///
+    /// A `NaN` result is quiet; its sign and payload differ by backend.
+    /// Scalar tail equivalent: [`minimum_f32`](crate::scalar::minimum_f32).
+    #[inline(always)]
+    pub fn minimum(self, other: Self) -> Self {
+        Self(T::minimum(self.1, self.0, other.0), self.1)
+    }
+
+    /// IEEE 754-2019 lane-wise maximum (propagates `NaN` and orders `-0.0 < +0.0`).
+    ///
+    /// A `NaN` result is quiet; its sign and payload differ by backend.
+    /// Scalar tail equivalent: [`maximum_f32`](crate::scalar::maximum_f32).
+    #[inline(always)]
+    pub fn maximum(self, other: Self) -> Self {
+        Self(T::maximum(self.1, self.0, other.0), self.1)
+    }
+
+    /// Fast single-instruction lane-wise minimum ignoring `NaN` and `±0.0`.
+    ///
+    /// Emits `vminps`/`vminpd` on x86, `fminnm` on NEON, `pmin(other, self)`
+    /// (or `relaxed_min` with `relaxed-simd`) on WASM, and `a < b ? a : b` on
+    /// `ScalarToken`. Scalar tail equivalent: [`min_fast_f32`](crate::scalar::min_fast_f32).
+    #[inline(always)]
+    pub fn min_fast(self, other: Self) -> Self {
+        Self(T::min_fast(self.1, self.0, other.0), self.1)
+    }
+
+    /// Fast single-instruction lane-wise maximum ignoring `NaN` and `±0.0`.
+    ///
+    /// Emits `vmaxps`/`vmaxpd` on x86, `fmaxnm` on NEON, `pmax(other, self)`
+    /// (or `relaxed_max` with `relaxed-simd`) on WASM, and `a > b ? a : b` on
+    /// `ScalarToken`. Scalar tail equivalent: [`max_fast_f32`](crate::scalar::max_fast_f32).
+    #[inline(always)]
+    pub fn max_fast(self, other: Self) -> Self {
+        Self(T::max_fast(self.1, self.0, other.0), self.1)
+    }
+
+    /// Clamp between `lo` and `hi`: `self.max_fast(lo).min_fast(hi)`, two
+    /// instructions on native backends.
+    ///
+    /// Exact when `lo <= hi` and nothing is `NaN`. A quiet `NaN` lane in `self`
+    /// becomes `lo` on x86, NEON, strict WASM, and `ScalarToken`; a signalling
+    /// `NaN` lane (`lo` on x86, `hi` on NEON) and any `NaN` with WASM
+    /// `relaxed-simd` are unspecified per backend. `NaN` bounds and `lo > hi`
+    /// give an unspecified lane and never panic. [`f32::clamp`] differs: it
+    /// keeps `NaN` and panics on such bounds. Scalar tail equivalent:
+    /// [`clamp_f32`](crate::scalar::clamp_f32).
     #[inline(always)]
     pub fn clamp(self, lo: Self, hi: Self) -> Self {
         Self(T::clamp(self.1, self.0, lo.0, hi.0), self.1)
@@ -495,7 +607,10 @@ impl<T: F32x4Backend> f32x4<T> {
     /// Deterministic reciprocal-sqrt estimate (~8-bit), bit-identical on
     /// every platform.
     ///
-    /// Seed (integer bit-trick) plus one non-FMA Newton step. Opt into more
+    /// Seed (integer bit-trick) plus one non-FMA Newton step. Intended for
+    /// positive normal inputs (`f32::MIN_POSITIVE..2.0f32.powi(126)`); `0.0`,
+    /// subnormals, `f32::MAX`, and negative inputs follow raw bit-trick
+    /// arithmetic rather than producing infinities or `NaN`. Opt into more
     /// accuracy with [`rsqrt_newton_portable`](Self::rsqrt_newton_portable)
     /// (one more step ≈ 16-bit), or use
     /// [`rsqrt_portable`](Self::rsqrt_portable) for full precision.
@@ -537,9 +652,13 @@ impl<T: F32x4Backend> f32x4<T> {
     /// Deterministic reciprocal estimate (~8-bit), bit-identical on every
     /// platform.
     ///
-    /// Seed (integer bit-trick) plus one non-FMA Newton step. Opt into more
-    /// accuracy with [`recip_newton_portable`](Self::recip_newton_portable),
-    /// or use [`recip_portable`](Self::recip_portable) for full precision.
+    /// Seed (integer bit-trick) plus one non-FMA Newton step. Intended for
+    /// positive normal inputs (`f32::MIN_POSITIVE..2.0f32.powi(126)`); `0.0`
+    /// and subnormals produce finite values near `f32::MAX`, and inputs above
+    /// `2^126` or negative follow raw bit-trick arithmetic rather than producing
+    /// infinities or `NaN`. Opt into more accuracy with
+    /// [`recip_newton_portable`](Self::recip_newton_portable), or use
+    /// [`recip_portable`](Self::recip_portable) for full precision.
     #[inline(always)]
     pub fn rcp_approx_portable(self) -> Self
     where
@@ -885,7 +1004,7 @@ impl f32x4<archmage::ScalarToken> {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl f32x4<archmage::X64V3Token> {
     /// Implementation identifier for this backend.
     pub const fn implementation_name() -> &'static str {
@@ -923,7 +1042,7 @@ impl f32x4<archmage::Wasm128Token> {
         "wasm::wasm128::f32x4"
     }
 }
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl f32x4<archmage::X64V3Token> {
     /// Wrap a raw `__m128` using an explicit CPU capability token.
     ///
