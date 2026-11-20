@@ -1,8 +1,18 @@
 name: Publish to crates.io
 
 on:
+  push:
+    tags:
+      - "v[0-9]*"
+      - "magemath-v[0-9]*"
   release:
     types: [published]
+
+# Serialize tag-push and GitHub-Release runs for the same tag so a manual
+# `gh release create` after `git push origin <tag>` never races `cargo publish`.
+concurrency:
+  group: publish-${{ github.event.release.tag_name || github.ref_name }}
+  cancel-in-progress: false
 
 env:
   CARGO_TERM_COLOR: always
@@ -26,6 +36,8 @@ jobs:
     name: Check Release Tags
     runs-on: ubuntu-latest
     outputs:
+      tag: ${{ steps.version.outputs.tag }}
+      mode: ${{ steps.version.outputs.mode }}
       version: ${{ steps.version.outputs.version }}
       packages: ${{ steps.version.outputs.packages }}
     steps:
@@ -37,7 +49,7 @@ jobs:
       - name: Extract version and package selection from tag
         id: version
         run: |
-          TAG="${{ github.event.release.tag_name }}"
+          TAG="${{ github.event.release.tag_name || github.ref_name }}"
           if [[ "$TAG" =~ ^v([0-9]+\.[0-9]+\.[0-9]+(-beta(\.[0-9]+)?)?)$ ]]; then
             VERSION="${BASH_REMATCH[1]}"
             PACKAGES="-p archmage-macros -p archmage -p magetypes"
@@ -50,13 +62,15 @@ jobs:
             echo "::error::Release tag '$TAG' does not match v{version} or magemath-v{version}"
             exit 1
           fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "packages=$PACKAGES" >> "$GITHUB_OUTPUT"
           echo "mode=$MODE" >> "$GITHUB_OUTPUT"
-          echo "Publishing ($MODE) version: $VERSION ($PACKAGES)"
+          echo "Publishing ($MODE) tag $TAG -> version: $VERSION ($PACKAGES)"
 
       - name: Verify all required tags exist and match
         run: |
+          git fetch --tags --force origin
           VERSION="${{ steps.version.outputs.version }}"
           MODE="${{ steps.version.outputs.mode }}"
           FIRST_COMMIT=$(git rev-parse HEAD)
@@ -117,7 +131,31 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Verify selected crates package and build
-        run: cargo publish ${{ needs.check-tags.outputs.packages }} --dry-run
+        run: |
+          if [ "${{ needs.check-tags.outputs.mode }}" = "magemath" ]; then
+            python3 - <<'PY'
+          import json, tomllib, urllib.error, urllib.request
+          from pathlib import Path
+
+          manifest = tomllib.loads(Path("magemath/Cargo.toml").read_text())
+          for dep in ("archmage", "magetypes"):
+              req = manifest["dependencies"][dep]["version"].lstrip("^=~")
+              prefix = f"{dep[:2]}/{dep[2:4]}"
+              url = f"https://index.crates.io/{prefix}/{dep}"
+              try:
+                  body = urllib.request.urlopen(url, timeout=15).read().decode()
+              except urllib.error.HTTPError as exc:
+                  raise SystemExit(f"::error::{dep} index lookup failed ({exc.code}); publish {dep} first")
+              versions = {json.loads(line)["vers"] for line in body.splitlines() if line.strip() and not json.loads(line).get("yanked")}
+              if req not in versions:
+                  raise SystemExit(
+                      f"::error::magemath requires {dep} {req}, which is not yet on crates.io "
+                      f"(tag and publish v{req} before magemath-v*)"
+                  )
+              print(f"✓ {dep} {req} is published on crates.io")
+          PY
+          fi
+          cargo publish ${{ needs.check-tags.outputs.packages }} --dry-run
 
   # ==========================================================================
   # Publish selected workspace crates in dependency order
@@ -128,6 +166,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: [check-tags, pre-publish-check, full-ci]
     environment: crates-io
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v7
         with:
@@ -142,4 +182,51 @@ jobs:
       - name: Publish selected crates
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-        run: cargo publish ${{ needs.check-tags.outputs.packages }}
+        run: |
+          MODE="${{ needs.check-tags.outputs.mode }}"
+          VERSION="${{ needs.check-tags.outputs.version }}"
+          PENDING=$(python3 - "$MODE" "$VERSION" <<'PY'
+          import json, sys, urllib.error, urllib.request
+
+          mode, version = sys.argv[1], sys.argv[2]
+          crates = ["magemath"] if mode == "magemath" else ["archmage-macros", "archmage", "magetypes"]
+          pending = []
+          for crate in crates:
+              prefix = f"{crate[:2]}/{crate[2:4]}"
+              url = f"https://index.crates.io/{prefix}/{crate}"
+              published = set()
+              try:
+                  body = urllib.request.urlopen(url, timeout=15).read().decode()
+                  published = {json.loads(line)["vers"] for line in body.splitlines() if line.strip()}
+              except urllib.error.HTTPError as exc:
+                  if exc.code != 404:
+                      raise
+              if version in published:
+                  print(f"✓ {crate}@{version} already published on crates.io", file=sys.stderr)
+              else:
+                  pending.append(f"-p {crate}")
+          print(" ".join(pending))
+          PY
+          )
+          if [ -n "$PENDING" ]; then
+            echo "Publishing: $PENDING"
+            cargo publish $PENDING
+          else
+            echo "All selected crates are already published at $VERSION; skipping duplicate upload."
+          fi
+
+      - name: Ensure GitHub Release exists for tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${{ needs.check-tags.outputs.tag }}"
+          VERSION="${{ needs.check-tags.outputs.version }}"
+          if gh release view "$TAG" -R "${{ github.repository }}" >/dev/null 2>&1; then
+            echo "✓ GitHub Release $TAG already exists"
+          else
+            PRERELEASE_FLAG=()
+            if [[ "$VERSION" == *-* ]]; then
+              PRERELEASE_FLAG=(--prerelease)
+            fi
+            gh release create "$TAG" -R "${{ github.repository }}" --verify-tag --title "$TAG" --generate-notes "${PRERELEASE_FLAG[@]}"
+          fi

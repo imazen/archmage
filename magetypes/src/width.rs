@@ -1,3 +1,5 @@
+//! **Superseded (queued for deprecation):** Use `#[attune(_*_t, define(...))]` or backend-generic bounds (such as [`F32x8Backend`](crate::simd::backends::F32x8Backend) on [`f32x8<T>`](crate::simd::generic::f32x8)) instead.
+//!
 //! Width dispatch trait for token-based SIMD type construction.
 //!
 //! **Auto-generated** by `cargo xtask generate` - do not edit manually.
@@ -10,6 +12,8 @@
 
 use archmage::SimdToken;
 
+/// **Superseded (queued for deprecation):** Use `#[attune(_*_t, define(...))]` or backend-generic bounds (such as [`F32x8Backend`](crate::simd::backends::F32x8Backend) on [`f32x8<T>`](crate::simd::generic::f32x8)) instead.
+///
 /// Trait providing access to all SIMD sizes from a capability token.
 ///
 /// Every token implementing this trait can construct vectors of any size.

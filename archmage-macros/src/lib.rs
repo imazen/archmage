@@ -3,14 +3,20 @@
 //! [Official guide and examples](https://imazen.github.io/archmage/) ·
 //! [Intrinsics browser](https://imazen.github.io/archmage/intrinsics/) ·
 //! [Archmage API](https://docs.rs/archmage/latest/archmage/) ·
-//! [Magetypes vector API](https://docs.rs/magetypes/latest/magetypes/)
+//! [Magetypes vector API](https://docs.rs/magetypes/latest/magetypes/) ·
+//! [Magemath API](https://docs.rs/magemath/latest/magemath/)
 //!
 //! Applications should import these macros through `archmage`, which pins the
-//! compatible macro release. `#[magetypes]` generates functions; the separate
-//! magetypes crate supplies their vector types. See the
+//! compatible macro release. [`#[attune]`](attune) generates feature bodies,
+//! proof wrappers, per-tier vector families, and dispatchers; [`attuned!`] and
+//! [`reattune!`] dispatch across them. The separate `magetypes` crate supplies
+//! the portable vector types. See the
+//! [attunement guide](https://imazen.github.io/archmage/attunement/) and
 //! [complete generic call chains](https://imazen.github.io/archmage/magetypes/dispatch/types-and-dispatch/).
 //!
-//! Provides `#[arcane]`, `#[rite]`, `#[autoversion]`, `incant!`, and `#[magetypes]`.
+//! Earlier macro spellings (`#[arcane]`, `#[rite]`, `#[magetypes]`,
+//! `#[autoversion]`, `incant!`, and their descriptive aliases) remain
+//! warning-free in 0.9.32 and are queued for deprecation in the next release.
 
 #[cfg(test)]
 mod expansion_tests;
@@ -64,9 +70,7 @@ pub fn arcane(attr: TokenStream, item: TokenStream) -> TokenStream {
     arcane_impl(input_fn, "arcane", args).into()
 }
 
-/// Legacy alias for [`arcane`].
-///
-/// **Deprecated:** Use `#[arcane]` instead. This alias exists only for migration.
+/// **Superseded (queued for deprecation):** Use [`#[attune(wrap)]`](attune) or `#[attune] fn name_<tier>_t(...)` instead (legacy alias for [`arcane`]).
 #[proc_macro_attribute]
 #[doc(hidden)]
 pub fn simd_fn(attr: TokenStream, item: TokenStream) -> TokenStream {
@@ -75,7 +79,7 @@ pub fn simd_fn(attr: TokenStream, item: TokenStream) -> TokenStream {
     arcane_impl(input_fn, "simd_fn", args).into()
 }
 
-/// Descriptive alias for [`arcane`].
+/// **Superseded (queued for deprecation):** Use [`#[attune(wrap)]`](attune) or `#[attune] fn name_<tier>_t(...)` instead (descriptive alias for [`arcane`]).
 ///
 /// Generates a safe wrapper around a `#[target_feature]` inner function.
 /// The token type in your signature determines which CPU features are enabled.
@@ -98,6 +102,8 @@ pub fn token_target_features_boundary(attr: TokenStream, item: TokenStream) -> T
 // Rite macro for inner SIMD functions (inlines into matching #[target_feature] callers)
 // ============================================================================
 
+/// **Superseded (queued for deprecation):** Use [`#[attune(<tier>)]`](attune) (e.g. `#[attune(v3)]`), `#[attune] fn name_<tier>(...)`, or `#[attune(_*)]` instead.
+///
 /// Annotate inner SIMD helpers called from `#[arcane]` functions.
 ///
 /// Unlike `#[arcane]`, which creates an inner `#[target_feature]` function behind
@@ -186,7 +192,7 @@ pub fn rite(attr: TokenStream, item: TokenStream) -> TokenStream {
     rite_impl(input_fn, args).into()
 }
 
-/// Descriptive alias for [`rite`].
+/// **Superseded (queued for deprecation):** Use [`#[attune(<tier>)]`](attune) or `#[attune(_*)]` instead (descriptive alias for [`rite`]).
 ///
 /// Applies `#[target_feature]` + `#[inline]` based on the token type in your
 /// function signature. No wrapper, no optimization boundary. Use for functions
@@ -209,6 +215,8 @@ pub fn token_target_features(attr: TokenStream, item: TokenStream) -> TokenStrea
 // magetypes! macro - generate platform variants from generic function
 // =============================================================================
 
+/// **Superseded (queued for deprecation):** Use [`#[attune(_*_t, define(...))]`](attune) (with [`attuned!`]) or `#[attune(dispatch, define(...))]` instead.
+///
 /// Generate platform-specific variants from a function by replacing `Token`.
 ///
 /// Use `Token` as a placeholder for the token type. The macro generates
@@ -379,6 +387,8 @@ fn parse_magetypes_attr(
 // incant! macro - dispatch to platform-specific variants
 // =============================================================================
 
+/// **Superseded (queued for deprecation):** Use [`attuned!`] (or [`reattune!`] to re-probe stronger tiers at runtime) instead.
+///
 /// Dispatch to platform-specific SIMD variants.
 ///
 /// # Entry Point Mode (no token yet)
@@ -491,7 +501,7 @@ pub fn incant(input: TokenStream) -> TokenStream {
     incant_impl(input).into()
 }
 
-/// Legacy alias for [`incant!`].
+/// **Superseded (queued for deprecation):** Use [`attuned!`] instead (legacy alias for [`incant!`]).
 #[proc_macro]
 pub fn simd_route(input: TokenStream) -> TokenStream {
     if let Some(expanded) = expanded_passthrough(&input.clone().into()) {
@@ -501,7 +511,7 @@ pub fn simd_route(input: TokenStream) -> TokenStream {
     incant_impl(input).into()
 }
 
-/// Descriptive alias for [`incant!`].
+/// **Superseded (queued for deprecation):** Use [`attuned!`] instead (descriptive alias for [`incant!`]).
 ///
 /// Dispatches to architecture-specific function variants at runtime.
 /// Looks for suffixed functions (`_v3`, `_v4`, `_neon`, `_wasm128`, `_scalar`)
@@ -519,6 +529,8 @@ pub fn dispatch_variant(input: TokenStream) -> TokenStream {
 
 // =============================================================================
 
+/// **Superseded (queued for deprecation):** Use [`#[attune(dispatch)]`](attune) instead.
+///
 /// Let the compiler auto-vectorize scalar code for each architecture.
 ///
 /// Write a plain scalar function and let `#[autoversion]` generate
@@ -549,11 +561,12 @@ pub fn dispatch_variant(input: TokenStream) -> TokenStream {
 /// On x86-64, that loop compiles to `vfmadd231ps`. On aarch64, `fmla`.
 /// The `_scalar` fallback compiles without SIMD target features.
 ///
-/// # SimdToken — optional placeholder
+/// # SimdToken — Deprecated since 0.9.11
 ///
-/// You can optionally write `_token: SimdToken` as a parameter. The macro
-/// recognizes it and strips it from the dispatcher — both forms produce
-/// identical output. Prefer the tokenless form for new code.
+/// **Deprecated since 0.9.11 (queued for removal):** Omit the `_token: SimdToken`
+/// placeholder parameter and write a plain signature instead (or take
+/// `ScalarToken` when bridging from a manual dispatch list). The macro still
+/// strips `_token: SimdToken` for backwards compatibility.
 ///
 /// ```rust,ignore
 /// #[autoversion]
@@ -682,15 +695,22 @@ mod tests;
 
 /// Establish a feature context or generate explicit direct/proof/dispatch outputs.
 ///
-/// `#[attune(v3)]` keeps the function name. `#[attune]` infers a registered
-/// terminal tier suffix: `_v3` selects a direct context; `_v3_t` selects a proof
-/// boundary, adding a concrete proof parameter when omitted. A written proof
-/// must match the suffix. `make(_v3, _v3_t, _)` requests a direct function,
-/// a proof-taking wrapper, and a central dispatcher with a private scalar fallback.
-/// `dispatch` is an alias for `_`; `make(dispatch, +v4(avx512))` adds a private
-/// V4 implementation without exposing additional entry points.
+/// `#[attune(v3)]` keeps the function name. `#[attune(wrap)]` wraps a single
+/// token-taking function in a safe proof boundary while keeping its name. Bare
+/// `#[attune]` infers a registered terminal tier suffix: `_v3` selects a direct
+/// context; `_v3_t` selects a proof boundary, adding a concrete proof parameter
+/// when omitted. A written proof must match the suffix.
 ///
-/// Selectors can also be written directly: `#[attune(_v3, _v3_t, dispatch)]`.
+/// Family selectors generate portable multi-tier outputs across `v3`, `neon`,
+/// `wasm128`, and `scalar` by default:
+/// - `#[attune(_*_t, define(f32x8))]` generates `_<tier>_t` proof wrappers with
+///   per-tier Magetypes vector aliases (dispatched via [`attuned!`]).
+/// - `#[attune(dispatch)]` (alias `_`) generates a public dispatcher and private
+///   per-tier bodies; `#[attune(dispatch, +v4(cfg(avx512)))]` adds a private V4
+///   implementation gated on the caller's `avx512` Cargo feature.
+/// - `#[attune(_v3, _v3_t, dispatch)]` (or grouped `make(...)`) requests a direct
+///   function, a proof-taking wrapper, and a central dispatcher.
+///
 /// Selector-local options are visibility, `cfg(feature)`, and `inline(policy)`:
 /// `_v4x_t(cfg(avx512), pub)`. A top-level `v3` preserves the written function
 /// name; `_v3` generates a suffixed output. Top-level inline policy applies to
@@ -701,10 +721,10 @@ mod tests;
 /// or private operations get no attribute. Direct output visibility overrides
 /// participate; wrapper visibility overrides apply independently.
 /// `inline(none)`, `inline(hint)`, and `inline(never)` select explicit body policies.
-/// Per-output `make(inline(...) _v3)` overrides the definition-level policy.
-/// Definition-level policy does not alter proof-wrapper or dispatcher defaults.
-/// Trusted code generators may pass `suppress_const_test` on proof wrappers
-/// (`wrap` or `_t`) to omit the token-name mismatch const check.
+/// Per-output `_v3(inline(...))` (or `make(inline(...) _v3)`) overrides the
+/// definition-level policy. Definition-level policy does not alter proof-wrapper
+/// or dispatcher defaults. Trusted code generators may pass `suppress_const_test`
+/// on proof wrappers (`wrap` or `_t`) to omit the token-name mismatch const check.
 #[proc_macro_attribute]
 pub fn attune(attr: TokenStream, item: TokenStream) -> TokenStream {
     attune::expand(attr.into(), item.into())

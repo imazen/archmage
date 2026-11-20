@@ -6,7 +6,7 @@ weight = 7
 
 The production chain in `zen/zenwebp` at
 `20898b7deaa4740c3584bd74831393ab3e7d6a36` is
-[`apply_subtract_green_transform` → `incant!` → NEON/WASM entry](https://github.com/imazen/zenwebp/blob/20898b7deaa4740c3584bd74831393ab3e7d6a36/src/decoder/lossless_transform.rs#L759)
+[`apply_subtract_green_transform` → dispatch → NEON/WASM entry](https://github.com/imazen/zenwebp/blob/20898b7deaa4740c3584bd74831393ab3e7d6a36/src/decoder/lossless_transform.rs#L759)
 → [`add_green_portable<T: U8x16Backend>`](https://github.com/imazen/zenwebp/blob/20898b7deaa4740c3584bd74831393ab3e7d6a36/src/decoder/lossless_transform_simd.rs#L682).
 The actual portable body is scalar-unrolled Rust; it does not use the vector
 shift/reinterpret sequence previously shown on this page. LLVM can vectorize
@@ -14,8 +14,9 @@ it within the target-feature context, but the token bound alone does not
 establish that context.
 
 This standalone adaptation keeps that body, adds an inline annotation, and
-consolidates forwarding functions into a macro for V3/NEON/WASM/scalar. It omits
-the production x86 SSE2 specialization. The full callable chain is:
+consolidates forwarding functions into `#[attune(_*_t)]` and `attuned!` for
+V3/NEON/WASM/scalar. It omits the production x86 SSE2 specialization. The full
+callable chain is:
 
 ```rust
 use archmage::prelude::*;
@@ -47,13 +48,13 @@ fn add_green_portable<T: magetypes::simd::backends::U8x16Backend>(
     }
 }
 
-#[magetypes(v3, neon, wasm128, scalar)]
+#[attune(_*_t)]
 fn add_green_entry(token: Token, rgba: &mut [u8]) {
     add_green_portable(token, rgba);
 }
 
 pub fn add_green(rgba: &mut [u8]) {
-    incant!(add_green_entry(rgba), [v3, neon, wasm128, scalar])
+    attuned!(add_green_entry(rgba));
 }
 
 

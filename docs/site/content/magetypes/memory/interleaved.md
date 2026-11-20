@@ -14,13 +14,13 @@ same lane count. This reference exercise pins the channel order:
 
 ```rust
 use archmage::prelude::*;
-#[magetypes(define(f32x4), v3, neon, wasm128, scalar)]
+#[attune(_*_t, define(f32x4))]
 fn channels_impl(token: Token, pixels: [[f32; 4]; 4]) -> [[f32; 4]; 4] {
     let vectors = pixels.map(|p| f32x4::from_array_t(token, p));
     f32x4::deinterleave_4ch(vectors).map(|v| v.to_array())
 }
 pub fn channels(pixels: [[f32; 4]; 4]) -> [[f32; 4]; 4] {
-    incant!(channels_impl(pixels), [v3, neon, wasm128, scalar])
+    attuned!(channels_impl(pixels))
 }
 assert_eq!(channels([[1.,2.,3.,4.], [5.,6.,7.,8.], [9.,10.,11.,12.], [13.,14.,15.,16.]]),
            [[1.,5.,9.,13.], [2.,6.,10.,14.], [3.,7.,11.,15.], [4.,8.,12.,16.]]);

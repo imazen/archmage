@@ -1,10 +1,13 @@
-//! SimdTypes trait - associates SIMD types with tokens.
+//! **Superseded (queued for deprecation):** Use `#[attune(_*_t, define(...))]`
+//! or backend-generic bounds (such as [`F32x8Backend`](crate::simd::backends::F32x8Backend)
+//! on [`f32x8<T>`](crate::simd::generic::f32x8)) instead.
 //!
-//! This trait allows generic programming over token types by providing
-//! associated types for each SIMD element type.
+//! `SimdTypes` trait — associates SIMD types with tokens.
 
 use archmage::SimdToken;
 
+/// **Superseded (queued for deprecation):** Use `#[attune(_*_t, define(...))]` or backend-generic bounds (such as [`F32x8Backend`](crate::simd::backends::F32x8Backend) on [`f32x8<T>`](crate::simd::generic::f32x8)) instead.
+///
 /// Trait that associates SIMD vector types with a capability token.
 ///
 /// This enables generic programming where the vector width is determined
@@ -18,7 +21,7 @@ use archmage::SimdToken;
 ///
 /// fn sum<T: SimdToken + SimdTypes>(token: T, data: &[f32]) -> f32 {
 ///     // Use token's associated F32 type
-///     let zero = <T as SimdTypes>::F32::splat(token, 0.0);
+///     let zero = <T as SimdTypes>::F32::splat_t(token, 0.0);
 ///     // ...
 /// }
 /// ```

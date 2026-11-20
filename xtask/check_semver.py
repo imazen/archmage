@@ -12,6 +12,8 @@ from pathlib import Path
 import subprocess
 import tempfile
 import tomllib
+import urllib.error
+import urllib.request
 
 from check_target_features import compare
 
@@ -81,11 +83,29 @@ def selected_features(metadata):
     return sorted(node['features'])
 
 
+def crates_io_has_release(package):
+    prefix = f'{package[:2]}/{package[2:4]}'
+    url = f'https://index.crates.io/{prefix}/{package}'
+    try:
+        with urllib.request.urlopen(url, timeout=15) as response:
+            lines = [json.loads(line) for line in response.read().decode().splitlines() if line.strip()]
+    except urllib.error.HTTPError as exc:
+        if exc.code == 404:
+            return False
+        raise
+    return any(not entry.get('yanked', False) for entry in lines)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('package', choices=['archmage', 'magetypes'])
+    parser.add_argument('package', choices=['archmage', 'magetypes', 'magemath'])
     parser.add_argument('--baseline-version')
     args = parser.parse_args()
+    if args.package == 'magemath' and not args.baseline_version:
+        magemath_version = tomllib.loads((ROOT / 'magemath/Cargo.toml').read_text())['package']['version']
+        if magemath_version == '0.1.0' and not crates_io_has_release('magemath'):
+            print('magemath 0.1.0 is not yet published on crates.io; skipping pre-0.1.0 baseline comparison', flush=True)
+            return False
     output = ROOT / 'target' / 'semver-guard'
     output.mkdir(parents=True, exist_ok=True)
     directory = Path(tempfile.mkdtemp(prefix=f'{args.package}-', dir=output))

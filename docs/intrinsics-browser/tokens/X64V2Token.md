@@ -14,17 +14,17 @@ if let Some(token) = X64V2Token::summon() {
     process(token, &mut data);
 }
 
-#[arcane(import_intrinsics)]  // Entry point only
-fn process(token: X64V2Token, data: &mut [f32]) {
+#[attune(wrap, import_intrinsics)]  // Entry point only
+fn process(_token: X64V2Token, data: &mut [f32]) {
     for chunk in data.chunks_exact_mut(4) {
-        process_chunk(token, chunk.try_into().unwrap());
+        process_chunk(chunk.try_into().unwrap());
     }
 }
 
-#[rite(import_intrinsics)]  // All inner helpers
-fn process_chunk(_: X64V2Token, chunk: &mut [f32; 4]) {
+#[attune(v2, import_intrinsics)]  // All inner helpers
+fn process_chunk(chunk: &mut [f32; 4]) {
     let v = _mm_loadu_ps(chunk);  // safe!
-    let doubled = _mm_add_ps(v, v);  // value intrinsic (safe inside #[rite])
+    let doubled = _mm_add_ps(v, v);  // value intrinsic (safe inside #[attune(v2)])
     _mm_storeu_ps(chunk, doubled);  // safe!
 }
 // No unsafe anywhere. Use #![forbid(unsafe_code)] in your crate.

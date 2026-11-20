@@ -15,7 +15,7 @@ This source walkthrough traces the actual `zen/zenresize` implementation at
 standalone copy would otherwise omit.
 
 1. [Streaming row processing](https://github.com/imazen/zenresize/blob/33c7c10c0a5cd07a299b61ce2e239d6cbae57a4d/src/streaming.rs#L2418).
-2. [simd::filter_h_row_f32 and incant!](https://github.com/imazen/zenresize/blob/33c7c10c0a5cd07a299b61ce2e239d6cbae57a4d/src/simd/mod.rs#L48).
+2. [simd::filter_h_row_f32 dispatch](https://github.com/imazen/zenresize/blob/33c7c10c0a5cd07a299b61ce2e239d6cbae57a4d/src/simd/mod.rs#L48).
 3. [Generated NEON/WASM filter_h_row_f32_impl selects channels](https://github.com/imazen/zenresize/blob/33c7c10c0a5cd07a299b61ce2e239d6cbae57a4d/src/simd/wide_kernels.rs#L28).
 4. [filter_h_4ch<T: F32x4Backend> accumulates each weighted RGBA pixel](https://github.com/imazen/zenresize/blob/33c7c10c0a5cd07a299b61ce2e239d6cbae57a4d/src/simd/wide_kernels.rs#L50).
 5. [F32WeightTable owns the coefficient/extent contract](https://github.com/imazen/zenresize/blob/33c7c10c0a5cd07a299b61ce2e239d6cbae57a4d/src/weights.rs).
@@ -34,7 +34,7 @@ standalone copy would otherwise omit.
 4. [stackblur_plane_generic handles the selected large-radius path](https://github.com/imazen/zenpipe/blob/12b468e3e0a8ef46e2eeb1c92d7b1a859e53036a/zenfilters/src/simd/wide_simd.rs#L376).
 5. [FilterContext owns reusable scratch allocations](https://github.com/imazen/zenpipe/blob/12b468e3e0a8ef46e2eeb1c92d7b1a859e53036a/zenfilters/src/context.rs).
 
-The full chain includes image dimensions, edge padding, kernel selection, and scratch-buffer ownership. These are required for a faithful blur example. The previous partial snippet omitted their definitions. Generated entry functions can call generic helpers directly; nested incant! also supports tier-specific helpers, so explicit suffixed calls are not universally required.
+The full chain includes image dimensions, edge padding, kernel selection, and scratch-buffer ownership. These are required for a faithful blur example. The previous partial snippet omitted their definitions. Generated entry functions can call generic helpers directly; nested `attuned!` calls inside `#[attune]` bodies also resolve tier-specific helpers without another runtime probe, so explicit suffixed calls are not universally required.
 
 ## Quantization: Production Call Chain
 
@@ -43,7 +43,7 @@ This source walkthrough traces the actual `zen/zenjpeg` implementation at
 standalone copy would otherwise omit.
 
 1. [QuantTableSimd and ZeroBiasSimd define the 8×8 block and threshold inputs](https://github.com/imazen/zenjpeg/blob/fad6a0afd2efed488f4048efe5112753e20412c7/zenjpeg/src/foundation/simd_types.rs).
-2. [quantize_block calls incant!(mage_quantize_block(...))](https://github.com/imazen/zenjpeg/blob/fad6a0afd2efed488f4048efe5112753e20412c7/zenjpeg/src/foundation/simd_types.rs#L476).
+2. [quantize_block dispatches to mage_quantize_block](https://github.com/imazen/zenjpeg/blob/fad6a0afd2efed488f4048efe5112753e20412c7/zenjpeg/src/foundation/simd_types.rs#L476).
 3. [The macro generates the f32x8/i32x8 quantization body](https://github.com/imazen/zenjpeg/blob/fad6a0afd2efed488f4048efe5112753e20412c7/zenjpeg/src/foundation/simd_types.rs#L402).
 
 The body scales coefficients, forms a threshold mask, calls to_i32_round(), bitcasts the mask to i32, blends, and stores natural-order coefficients. Check the coefficient range and rounding contract before claiming identical results on all ISAs. A separately named quantize_block_with_zero_bias_simd in quant/mod.rs is currently a scalar loop; its name alone is not evidence of this dispatch chain.

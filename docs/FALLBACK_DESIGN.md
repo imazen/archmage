@@ -1,6 +1,8 @@
 # Fallback Strategy Design
 
-This document explains how archmage handles operations that lack direct hardware intrinsics.
+> **Macro interface note:** User-facing kernels and dispatch now use the unified `#[attune]`, `attuned!`, and `reattune!` macros (see [`ATTUNE.md`](ATTUNE.md)). The internal `xtask` backend generators still emit `#[arcane(suppress_const_test, ...)]` directly where shown below.
+
+This document explains how archmage and magetypes handle operations that lack direct hardware intrinsics.
 
 ## Fallback Hierarchy
 
@@ -79,7 +81,7 @@ has the measured accuracy for every function and domain.
 
 **Pattern:** the transcendentals are written once, in
 `xtask/src/simd_types/generic_gen/transcendentals.rs`, against the generic
-vector API (`mul_add`, `round`, `shl_const`, bit casts), so every backend gets
+vector API (`mul_add_relaxed`, `round`, `shl_const`, bit casts), so every backend gets
 the same polynomial.
 
 ## Platform-Specific Considerations
@@ -112,9 +114,10 @@ the same polynomial.
 ### WASM SIMD128 (w128) — Implemented
 - Uses `v128` type for all element types
 - Has `f32x4_add`, `i32x4_add`, etc.
-- No FMA in SIMD128: `mul_add` is a multiply then an add (two roundings), and
-  `mul_add_portable` fuses in software. With relaxed SIMD enabled, `mul_add`
-  emits `f32x4_relaxed_madd`, which an engine may or may not fuse.
+- No FMA in baseline SIMD128: `mul_add_relaxed` is a multiply then an add (two roundings), and
+  `mul_add_fused` (alias `mul_add_portable`) fuses in software. With `relaxed-simd` enabled,
+  `mul_add_relaxed` emits `f32x4_relaxed_madd`, and `mul_add_fused` uses it when a cached probe
+  shows the engine rounds once (falling back to software otherwise).
 
 ### WASM SIMD128 Polyfill (256-bit) — Implemented
 - Uses two 128-bit WASM vectors
@@ -132,8 +135,9 @@ The xtask generator should:
 ### Fallback Selection in Generator
 
 Current implementations are emitted by the backend generators inside
-token-matched `#[arcane]` contexts. Use the generic vector operation from a
-`#[magetypes]` kernel; the old manually wrapped implementation is obsolete.
+token-matched `#[arcane]` contexts. Call generic vector operations from an
+`#[attune(_*_t, define(...))]` (or `#[attune(dispatch, define(...))]`) kernel;
+the old manually wrapped implementation is obsolete.
 
 ## Adding New Operations
 
@@ -158,37 +162,37 @@ For hot loops, prefer:
 - Using lower precision if acceptable
 - Batching reductions across multiple vectors
 
-## Performance: `#[arcane]` and `#[rite]`
+## Performance: Proof Wrappers and Direct Feature Bodies
 
-### Use `#[arcane]` at the entry point, `#[rite]` for everything inside
+### Use `#[attune(wrap)]` at the entry point, direct `#[attune]` helpers inside
 
-The `#[arcane]` macro generates functions with `#[target_feature]` attributes.
-Operators like `a + b` inside `#[arcane]` or `#[rite]` compile to single SIMD instructions.
+Proof wrappers (`#[attune(wrap)]` / `_tier_t`, or legacy `#[arcane]`) generate functions with `#[target_feature]` attributes.
+Operators like `a + b` inside an `#[attune]` feature body compile to single SIMD instructions.
 
-**The cost is the `#[target_feature]` boundary**, not the wrapper itself. Each `#[arcane]` call
-from non-SIMD code creates an optimization boundary LLVM can't inline across.
+**The cost is the `#[target_feature]` boundary**, not the wrapper itself. Each wrapper call
+from non-SIMD code crosses a feature mismatch that LLVM cannot inline across.
 
 Measured overhead (see [PERFORMANCE.md](PERFORMANCE.md)):
-- Simple vector add: 4x slower per-iteration `#[arcane]` vs loop-inside-`#[arcane]`
-- DCT-8: 6.2x slower per-row `#[arcane]` vs loop-inside-`#[arcane]`
-- `#[rite]` inside `#[arcane]`: 0x overhead (fully inlined)
+- Simple vector add: 4x slower per-iteration boundary wrapper vs loop inside the wrapper
+- DCT-8: 6.2x slower per-row boundary wrapper vs loop inside the wrapper
+- Direct `#[attune(v3)]` (or `#[rite]`) inside a V3 wrapper: 0x overhead (fully inlined)
 
 ```rust
-use archmage::{arcane, rite, X64V3Token, SimdToken};
+use archmage::{X64V3Token, attune};
 use magetypes::simd::generic::f32x8;
 
 // Entry point — called from non-SIMD code
-#[arcane]
+#[attune(wrap)]
 fn process_vectors(token: X64V3Token, input: &[[f32; 8]]) -> f32 {
     let mut sum = f32x8::zero_t(token);
     for arr in input {
-        sum = add_chunk(token, sum, arr);  // #[rite] inlines here
+        sum = add_chunk(token, sum, arr);  // #[attune(v3)] inlines here
     }
     sum.reduce_add()
 }
 
-// Internal helper — inlines into #[arcane] caller
-#[rite]
+// Internal helper — direct V3 body, inlines into matching caller
+#[attune(v3)]
 fn add_chunk(token: X64V3Token, acc: f32x8<X64V3Token>, arr: &[f32; 8]) -> f32x8<X64V3Token> {
     acc + f32x8::load_t(token, arr)  // a load and one vaddps
 }

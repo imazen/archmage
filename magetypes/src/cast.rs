@@ -8,7 +8,7 @@
 //!
 //! - Any vector, any token: `f32x8::from_array_t(token, v.to_array())`. Token
 //!   conversions supply the narrower token, for example `v4.v3()`; a wider
-//!   token comes from `summon()` or from the enclosing `#[arcane]` region.
+//!   token comes from `summon()` or from the enclosing `#[attune]` region.
 //! - Native backends also have `raw()` and `from_raw_t(token, raw)`, which
 //!   unwrap and rewrap the raw intrinsic value at no cost.
 //! - Width changes use `low()`, `high()`, `split()` and `from_halves_t()`.
@@ -16,6 +16,8 @@
 //! Both traits, and with them this module, are queued for removal in
 //! magetypes 0.10.
 
+/// **Deprecated:** Rebuild the vector under the narrower token instead (for example `f32x8::from_array_t(v4.v3(), v.to_array())` or `from_raw_t`).
+///
 /// Marker trait for types that can be safely downcast.
 ///
 /// Downcasting from a wider SIMD context to a narrower one is always safe

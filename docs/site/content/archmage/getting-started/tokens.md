@@ -7,14 +7,15 @@ A token is a small proof value: its construction establishes that the required
 CPU features are available. Copying it does not repeat detection. It does not
 enable features in an ordinary function by being passed as an argument.
 
-Normally [incant!](@/archmage/dispatch/incant.md) summons the token and calls a
-`#[magetypes]` variant for you. Explicit summoning is useful for a chosen tier:
+Normally [attuned!](@/archmage/dispatch/incant.md) or `#[attune(dispatch)]`
+summons the token and calls a generated variant for you. Explicit summoning is
+useful for a chosen tier:
 
 ```rust
 use archmage::{SimdToken, X64V3Token};
 if X64V3Token::summon().is_some() {
     // This machine can provide V3 proof. SIMD work still belongs in
-    // a #[magetypes] or #[arcane] context, not this baseline block.
+    // an #[attune] context, not this baseline block.
 }
 ```
 
@@ -42,17 +43,17 @@ supply every magetypes backend implementation for that token type.
 
 ## Construct from an existing feature context
 
-Repository addition after 0.9.28: `from_context()` uses a target-feature function
-as the constructor. Rust requires a caller with matching or superset features:
+`from_context()` uses a target-feature function as the constructor. Rust
+requires a caller with matching or superset features:
 
 ```rust
 use archmage::prelude::*;
-#[rite(v3)]
+#[attune(v3)]
 fn context_helper() -> bool {
     let _token = X64V3Token::from_context();
     true
 }
-#[arcane]
+#[attune(wrap)]
 fn entry(_token: X64V3Token) -> bool { context_helper() }
 #[cfg(target_arch = "x86_64")]
 if let Some(token) = X64V3Token::summon() { assert!(entry(token)); }

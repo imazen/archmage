@@ -8,23 +8,19 @@ weight = 1
 sidebar = true
 +++
 
-**Taking the path of attunement?** The [short beta guide](@/attunement/_index.md)
-starts with `#[attune(dispatch)]`, composes helpers, and adds vectors without
-requiring the spellcraft attributes first. This section keeps the existing
-spellcraft APIs and production examples.
-
-
 Archmage lets you write SIMD code in Rust without `unsafe`. You prove a CPU
 tier is present once, and the type system keeps every intrinsic call sound.
+For a three-step quick start from an ordinary loop to vectors, see the
+[Path of Attunement](@/attunement/_index.md).
 
-This kernel multiplies a buffer by a gain, using AVX2, NEON or WASM SIMD where
+This kernel multiplies a buffer by a gain, using AVX2, NEON, or WASM SIMD where
 available:
 
 ```rust
 #![forbid(unsafe_code)]
 use archmage::prelude::*;
 
-#[magetypes(define(f32x8), v3, neon, wasm128, scalar)]
+#[attune(_*_t, define(f32x8))]
 fn gain_impl(token: Token, plane: &mut [f32], gain: f32) {
     let factor = f32x8::splat_t(token, gain);
     let (chunks, tail) = f32x8::partition_slice_mut_t(token, plane);
@@ -37,7 +33,7 @@ fn gain_impl(token: Token, plane: &mut [f32], gain: f32) {
 }
 
 pub fn apply_gain(plane: &mut [f32], gain: f32) {
-    incant!(gain_impl(plane, gain), [v3, neon, wasm128, scalar])
+    attuned!(gain_impl(plane, gain))
 }
 
 let mut data = [2.0; 11];
@@ -45,8 +41,10 @@ apply_gain(&mut data, 0.5);
 assert_eq!(data, [1.0; 11]);
 ```
 
-`#[magetypes]` compiles `gain_impl` once per tier in its list, and `incant!`
-runs the best one the CPU supports. Call it around your loop, as here, not
+`#[attune(_*_t, ...)]` compiles `gain_impl` once per portable tier (`v3`,
+`neon`, `wasm128`, `scalar`), and `attuned!` runs the best one the CPU supports
+(`#[attune(dispatch, define(f32x8))]` combines both into one function when you
+do not need separate `_t` entry points). Call it around your loop, as here, not
 inside it.
 
 The example compiles under `#![forbid(unsafe_code)]`; the
@@ -66,7 +64,7 @@ production source.
 
 Archmage provides tokens, feature contexts, and dispatch. Magetypes provides
 vectors such as [`f32x4<T>`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.f32x4.html) and [`f32x8<T>`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.f32x8.html). Generics and `define(...)` compose with
-`#[magetypes]`; neither is a substitute for a feature-enabled entry. Inspect
+`#[attune]`; neither is a substitute for a feature-enabled entry. Inspect
 optimized code and benchmark the complete loop before claiming zero overhead.
 
 [Installation](@/archmage/getting-started/installation.md) ·

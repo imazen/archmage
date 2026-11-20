@@ -9,8 +9,7 @@ sidebar = true
 +++
 
 Write a function, let Archmage select its CPU context, and keep the work inside
-that context. This path teaches the **0.9.31** unified macros. You can start
-here without learning `#[arcane]`, `#[rite]`, or `incant!` first.
+that context.
 
 1. [Attune a kernel](@/attunement/first-kernel.md): an ordinary public function
    that selects a CPU tier for its whole loop.
@@ -36,13 +35,11 @@ Start with `#[attune(dispatch)]` for a kernel called from ordinary code and
 needs them. `reattune!` is an explicit request to reconsider the CPU tier inside
 an existing context; it is not needed for the basic path.
 
-## Choose your guide
+## Where to go next
 
-The [Arcane Spellcraft guide](@/archmage/_index.md) covers the existing attributes
-and production examples. Those APIs remain supported. The
-[full attunement reference and migration table](@/attunement/reference.md)
-covers explicit proofs, visibility, inline policies, named tiers, and method and
-generic restrictions.
-
-Both paths use the same capability proofs and target-feature safety model.
-Attunement puts the routine selection and forwarding in generated code.
+The [Archmage guide](@/archmage/_index.md) covers capability tokens, the
+`#[target_feature]` safety model, raw intrinsics, testing, and architecture
+details alongside `#[attune]`. The [full attunement reference and migration
+table](@/attunement/reference.md) covers explicit proofs, visibility, inline
+policies, named tiers, method and generic restrictions, and legacy attribute
+mappings.

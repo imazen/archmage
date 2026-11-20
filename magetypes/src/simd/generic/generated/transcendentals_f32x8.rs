@@ -1,5 +1,10 @@
 //! Transcendental math functions for `f32x8<T>`.
 //!
+//! For configurable domains, explicit validation or clamping, bit-exact
+//! cross-platform portability, subnormal rescaling (`.admit_subnormals()`),
+//! and matching scalar tail helpers, prefer [`magemath`](https://docs.rs/magemath/latest/magemath/)
+//! (`magemath::SimdMath`, `Powf`, `Expf`, `Logf`, `Log1pf`, `Cbrtf`).
+//!
 //! Generic implementations using IEEE 754 bit manipulation and polynomial
 //! approximation. Available when `T: F32x8Convert` (float↔int conversion).
 //!
@@ -20,8 +25,8 @@
 //! - `_unchecked`: No edge case handling (fastest, undefined for ≤0/NaN/Inf)
 //! - (normal): Basic edge case handling (0→-inf, negative→NaN for log)
 //! - `_precise`: `cbrt_midp_precise` also handles subnormal inputs and the
-//!   whole range; the other `_midp_precise` names are aliases of the plain
-//!   forms, queued for removal
+//!   whole range; the other `_midp_precise` names are no-op aliases of the
+//!   plain forms, superseded and queued for deprecation
 
 use crate::simd::backends::{F32x8Backend, F32x8Convert, I32x8Backend};
 use crate::simd::generic::{f32x8, i32x8};
@@ -41,6 +46,8 @@ fn splat_f32<T: F32x8Convert>(token: T, v: f32) -> f32x8<T> {
 impl<T: F32x8Convert> f32x8<T> {
     // ====== Low-Precision Transcendentals ======
 
+    /// Prefer [`magemath`](https://docs.rs/magemath/latest/magemath/) (`SimdMath` / `Logf`, or `Log1pf` near 1) when configurable domains, bit-exact portability, subnormal rescaling, or scalar tail helpers are needed.
+    ///
     /// Low-precision base-2 logarithm (absolute error at most 6.4e-6).
     ///
     /// Uses rational polynomial approximation on the mantissa.
@@ -73,12 +80,16 @@ impl<T: F32x8Convert> f32x8<T> {
         yp / yq + exp_val
     }
 
+    /// Prefer [`magemath`](https://docs.rs/magemath/latest/magemath/) (`SimdMath` / `Logf`) when explicit `.unchecked()` domain contracts or scalar tail helpers are needed.
+    ///
     /// Low-precision base-2 logarithm, no edge case handling.
     #[inline(always)]
     pub fn log2_lowp_unchecked(self) -> Self {
         self.log2_lowp()
     }
 
+    /// Prefer [`magemath`](https://docs.rs/magemath/latest/magemath/) (`SimdMath` / `Expf`) when configurable domains, bit-exact portability, or scalar tail helpers are needed.
+    ///
     /// Low-precision base-2 exponential: relative error at most 0.56% for x up
     /// to 127.99 and 1.23% above, where the input is clamped to 127.99.
     #[inline(always)]
@@ -110,36 +121,48 @@ impl<T: F32x8Convert> f32x8<T> {
         poly * scale_bits.bitcast_to_f32()
     }
 
+    /// Prefer [`magemath`](https://docs.rs/magemath/latest/magemath/) (`SimdMath` / `Expf`) when explicit `.unchecked()` domain contracts or scalar tail helpers are needed.
+    ///
     /// Low-precision base-2 exponential, no edge case handling.
     #[inline(always)]
     pub fn exp2_lowp_unchecked(self) -> Self {
         self.exp2_lowp()
     }
 
+    /// Prefer [`magemath`](https://docs.rs/magemath/latest/magemath/) (`SimdMath` / `Logf`, or `Log1pf` near 1) when configurable domains, bit-exact portability, subnormal rescaling, or scalar tail helpers are needed.
+    ///
     /// Low-precision natural logarithm.
     #[inline(always)]
     pub fn ln_lowp(self) -> Self {
         self.log2_lowp() * splat_f32::<T>(self.1, core::f32::consts::LN_2)
     }
 
+    /// Prefer [`magemath`](https://docs.rs/magemath/latest/magemath/) (`SimdMath` / `Logf`) when explicit `.unchecked()` domain contracts or scalar tail helpers are needed.
+    ///
     /// Low-precision natural logarithm, no edge case handling.
     #[inline(always)]
     pub fn ln_lowp_unchecked(self) -> Self {
         self.ln_lowp()
     }
 
+    /// Prefer [`magemath`](https://docs.rs/magemath/latest/magemath/) (`SimdMath` / `Expf`) when configurable domains, bit-exact portability, or scalar tail helpers are needed.
+    ///
     /// Low-precision natural exponential.
     #[inline(always)]
     pub fn exp_lowp(self) -> Self {
         (self * splat_f32::<T>(self.1, core::f32::consts::LOG2_E)).exp2_lowp()
     }
 
+    /// Prefer [`magemath`](https://docs.rs/magemath/latest/magemath/) (`SimdMath` / `Expf`) when explicit `.unchecked()` domain contracts or scalar tail helpers are needed.
+    ///
     /// Low-precision natural exponential, no edge case handling.
     #[inline(always)]
     pub fn exp_lowp_unchecked(self) -> Self {
         self.exp_lowp()
     }
 
+    /// Prefer [`magemath`](https://docs.rs/magemath/latest/magemath/) (`SimdMath` / `Logf`) when configurable domains, bit-exact portability, subnormal rescaling, or scalar tail helpers are needed.
+    ///
     /// Low-precision base-10 logarithm.
     #[inline(always)]
     pub fn log10_lowp(self) -> Self {
@@ -147,12 +170,16 @@ impl<T: F32x8Convert> f32x8<T> {
             * splat_f32::<T>(self.1, core::f32::consts::LN_2 / core::f32::consts::LN_10)
     }
 
+    /// Prefer [`magemath`](https://docs.rs/magemath/latest/magemath/) (`SimdMath` / `Logf`) when explicit `.unchecked()` domain contracts or scalar tail helpers are needed.
+    ///
     /// Low-precision base-10 logarithm, no edge case handling.
     #[inline(always)]
     pub fn log10_lowp_unchecked(self) -> Self {
         self.log10_lowp()
     }
 
+    /// Prefer [`magemath`](https://docs.rs/magemath/latest/magemath/) (`SimdMath` / `Powf`) when configurable domains, constant-exponent specialization, bit-exact portability, subnormal rescaling, or scalar tail helpers are needed.
+    ///
     /// Low-precision power function: `self^n`. Returns 0 for zero input.
     #[inline(always)]
     pub fn pow_lowp(self, n: f32) -> Self {
@@ -162,6 +189,8 @@ impl<T: F32x8Convert> f32x8<T> {
         Self::blend(is_zero, splat_f32::<T>(self.1, 0.0), result)
     }
 
+    /// Prefer [`magemath`](https://docs.rs/magemath/latest/magemath/) (`SimdMath` / `Powf`) when explicit `.unchecked()` domain contracts or scalar tail helpers are needed.
+    ///
     /// Low-precision power function, no edge case handling.
     #[inline(always)]
     pub fn pow_lowp_unchecked(self, n: f32) -> Self {
@@ -170,6 +199,8 @@ impl<T: F32x8Convert> f32x8<T> {
 
     // ====== Mid-Precision Transcendentals ======
 
+    /// Prefer [`magemath`](https://docs.rs/magemath/latest/magemath/) (`SimdMath` / `Logf`) when explicit `.unchecked()` domain contracts, bit-exact portability, or scalar tail helpers are needed.
+    ///
     /// Mid-precision base-2 logarithm (at most 4.5 ULP).
     ///
     /// Uses (a-1)/(a+1) transform with odd polynomial evaluation.
@@ -207,6 +238,8 @@ impl<T: F32x8Convert> f32x8<T> {
         poly.mul_add_relaxed(y, n)
     }
 
+    /// Prefer [`magemath`](https://docs.rs/magemath/latest/magemath/) (`SimdMath` / `Logf`, or `Log1pf` near 1) when configurable domains, bit-exact portability, subnormal rescaling, or scalar tail helpers are needed.
+    ///
     /// Mid-precision base-2 logarithm with edge case handling.
     ///
     /// Returns -inf for 0, NaN for negative values, +inf for +inf.
@@ -228,14 +261,17 @@ impl<T: F32x8Convert> f32x8<T> {
         Self::blend(self.simd_eq(inf), inf, result)
     }
 
-    /// Same as [`log2_midp`](Self::log2_midp). Subnormal inputs are **not**
-    /// handled: they return about -127 (for 1e-42 the true value is -139.5).
-    /// Queued for removal.
+    /// **Superseded (queued for deprecation):** Identical to [`Self::log2_midp`]; use [`Self::log2_midp`], or [`magemath`](https://docs.rs/magemath/latest/magemath/) (`Logf` / `SimdMath`) with `.admit_subnormals()` when subnormal rescaling is needed.
+    ///
+    /// Subnormal inputs are **not** handled here: they return about -127
+    /// (for 1e-42 the true value is -139.5).
     #[inline(always)]
     pub fn log2_midp_precise(self) -> Self {
         self.log2_midp()
     }
 
+    /// Prefer [`magemath`](https://docs.rs/magemath/latest/magemath/) (`SimdMath` / `Expf`) when explicit `.unchecked()` domain contracts, bit-exact portability, or scalar tail helpers are needed.
+    ///
     /// Mid-precision base-2 exponential: at most 1.9 ULP for x below 127.5 and
     /// up to 134.1 ULP in [127.5, 128). Undefined outside [-126, 128).
     ///
@@ -276,6 +312,8 @@ impl<T: F32x8Convert> f32x8<T> {
         poly * scale_bits.bitcast_to_f32()
     }
 
+    /// Prefer [`magemath`](https://docs.rs/magemath/latest/magemath/) (`SimdMath` / `Expf`) when configurable domains, bit-exact portability, or scalar tail helpers are needed.
+    ///
     /// Mid-precision base-2 exponential with clamping.
     ///
     /// At most 1.9 ULP for x below 127.5 and up to 134.1 ULP in [127.5, 128).
@@ -304,33 +342,41 @@ impl<T: F32x8Convert> f32x8<T> {
         Self::blend(is_overflow, inf, result)
     }
 
-    /// Same as [`exp2_midp`](Self::exp2_midp), which covers every input:
-    /// a subnormal input is just close to zero. Queued for removal.
+    /// **Superseded (queued for deprecation):** Identical to [`Self::exp2_midp`]; use [`Self::exp2_midp`], or [`magemath`](https://docs.rs/magemath/latest/magemath/) (`Expf` / `SimdMath`) with `.admit_subnormals()` when subnormal rescaling is needed.
+    ///
+    /// `exp2_midp` already covers subnormal inputs (which are near zero).
     #[inline(always)]
     pub fn exp2_midp_precise(self) -> Self {
         self.exp2_midp()
     }
 
+    /// Prefer [`magemath`](https://docs.rs/magemath/latest/magemath/) (`SimdMath` / `Logf`, or `Log1pf` near 1) when configurable domains, bit-exact portability, subnormal rescaling, or scalar tail helpers are needed.
+    ///
     /// Mid-precision natural logarithm (at most 4.1 ULP).
     #[inline(always)]
     pub fn ln_midp(self) -> Self {
         self.log2_midp() * splat_f32::<T>(self.1, core::f32::consts::LN_2)
     }
 
+    /// Prefer [`magemath`](https://docs.rs/magemath/latest/magemath/) (`SimdMath` / `Logf`) when explicit `.unchecked()` domain contracts, bit-exact portability, or scalar tail helpers are needed.
+    ///
     /// Mid-precision natural logarithm, no edge case handling.
     #[inline(always)]
     pub fn ln_midp_unchecked(self) -> Self {
         self.log2_midp_unchecked() * splat_f32::<T>(self.1, core::f32::consts::LN_2)
     }
 
-    /// Same as [`ln_midp`](Self::ln_midp). Subnormal inputs are **not**
-    /// handled: they return about -88 (for 1e-42 the true value is -96.7).
-    /// Queued for removal.
+    /// **Superseded (queued for deprecation):** Identical to [`Self::ln_midp`]; use [`Self::ln_midp`], or [`magemath`](https://docs.rs/magemath/latest/magemath/) (`Logf` / `SimdMath`) with `.admit_subnormals()` when subnormal rescaling is needed.
+    ///
+    /// Subnormal inputs are **not** handled here: they return about -88
+    /// (for 1e-42 the true value is -96.7).
     #[inline(always)]
     pub fn ln_midp_precise(self) -> Self {
         self.ln_midp()
     }
 
+    /// Prefer [`magemath`](https://docs.rs/magemath/latest/magemath/) (`SimdMath` / `Expf`) when configurable domains, bit-exact portability, or scalar tail helpers are needed.
+    ///
     /// Mid-precision natural exponential.
     ///
     /// Computed as `exp2(x * log2(e))`, so the rounding of that product grows
@@ -342,20 +388,25 @@ impl<T: F32x8Convert> f32x8<T> {
         (self * splat_f32::<T>(self.1, core::f32::consts::LOG2_E)).exp2_midp()
     }
 
+    /// Prefer [`magemath`](https://docs.rs/magemath/latest/magemath/) (`SimdMath` / `Expf`) when explicit `.unchecked()` domain contracts, bit-exact portability, or scalar tail helpers are needed.
+    ///
     /// Mid-precision natural exponential, no edge case handling.
     #[inline(always)]
     pub fn exp_midp_unchecked(self) -> Self {
         (self * splat_f32::<T>(self.1, core::f32::consts::LOG2_E)).exp2_midp_unchecked()
     }
 
-    /// Same as [`exp_midp`](Self::exp_midp), which covers every input:
-    /// a subnormal input is just close to zero. Queued for removal.
+    /// **Superseded (queued for deprecation):** Identical to [`Self::exp_midp`]; use [`Self::exp_midp`], or [`magemath`](https://docs.rs/magemath/latest/magemath/) (`Expf` / `SimdMath`) with `.admit_subnormals()` when subnormal rescaling is needed.
+    ///
+    /// `exp_midp` already covers subnormal inputs (which are near zero).
     #[inline(always)]
     pub fn exp_midp_precise(self) -> Self {
         self.exp_midp()
     }
 
     /// Mid-precision logistic sigmoid: `1 / (1 + exp(-x))`, in `[0, 1]`.
+    ///
+    /// Built on [`Self::exp_midp`]; see [`magemath`](https://docs.rs/magemath/latest/magemath/) (`SimdMath` / `Expf`) when bit-exact cross-platform exponentials are needed.
     ///
     /// Rail-safe by construction (issue #64): the division is exact
     /// IEEE, so the saturated exponential behaves — for `x` ≲ -88,
@@ -393,6 +444,8 @@ impl<T: F32x8Convert> f32x8<T> {
         )
     }
 
+    /// Prefer [`magemath`](https://docs.rs/magemath/latest/magemath/) (`SimdMath` / `Logf`) when configurable domains, bit-exact portability, subnormal rescaling, or scalar tail helpers are needed.
+    ///
     /// Mid-precision base-10 logarithm (at most 4.5 ULP).
     #[inline(always)]
     pub fn log10_midp(self) -> Self {
@@ -400,6 +453,8 @@ impl<T: F32x8Convert> f32x8<T> {
             * splat_f32::<T>(self.1, core::f32::consts::LN_2 / core::f32::consts::LN_10)
     }
 
+    /// Prefer [`magemath`](https://docs.rs/magemath/latest/magemath/) (`SimdMath` / `Logf`) when explicit `.unchecked()` domain contracts, bit-exact portability, or scalar tail helpers are needed.
+    ///
     /// Mid-precision base-10 logarithm, no edge case handling.
     #[inline(always)]
     pub fn log10_midp_unchecked(self) -> Self {
@@ -407,14 +462,17 @@ impl<T: F32x8Convert> f32x8<T> {
             * splat_f32::<T>(self.1, core::f32::consts::LN_2 / core::f32::consts::LN_10)
     }
 
-    /// Same as [`log10_midp`](Self::log10_midp). Subnormal inputs are **not**
-    /// handled: they return about -38.2 (for 1e-42 the true value is -42.0).
-    /// Queued for removal.
+    /// **Superseded (queued for deprecation):** Identical to [`Self::log10_midp`]; use [`Self::log10_midp`], or [`magemath`](https://docs.rs/magemath/latest/magemath/) (`Logf` / `SimdMath`) with `.admit_subnormals()` when subnormal rescaling is needed.
+    ///
+    /// Subnormal inputs are **not** handled here: they return about -38.2
+    /// (for 1e-42 the true value is -42.0).
     #[inline(always)]
     pub fn log10_midp_precise(self) -> Self {
         self.log10_midp()
     }
 
+    /// Prefer [`magemath`](https://docs.rs/magemath/latest/magemath/) (`SimdMath` / `Powf`) when configurable domains, constant-exponent specialization, bit-exact portability, subnormal rescaling, or scalar tail helpers are needed.
+    ///
     /// Mid-precision power function: `self^n`.
     ///
     /// Computed as `exp2(n * log2(self))`, so the error grows with
@@ -425,20 +483,25 @@ impl<T: F32x8Convert> f32x8<T> {
         (self.log2_midp() * splat_f32::<T>(self.1, n)).exp2_midp()
     }
 
+    /// Prefer [`magemath`](https://docs.rs/magemath/latest/magemath/) (`SimdMath` / `Powf`) when explicit `.unchecked()` domain contracts, bit-exact portability, or scalar tail helpers are needed.
+    ///
     /// Mid-precision power function, no edge case handling.
     #[inline(always)]
     pub fn pow_midp_unchecked(self, n: f32) -> Self {
         (self.log2_midp_unchecked() * splat_f32::<T>(self.1, n)).exp2_midp_unchecked()
     }
 
-    /// Same as [`pow_midp`](Self::pow_midp). Subnormal inputs are **not**
-    /// handled: `pow_midp_precise(1e-42, 0.5)` returns about 7.7e-20, not
-    /// 1.0e-21. Queued for removal.
+    /// **Superseded (queued for deprecation):** Identical to [`Self::pow_midp`]; use [`Self::pow_midp`], or [`magemath`](https://docs.rs/magemath/latest/magemath/) (`Powf` / `SimdMath`) with `.admit_subnormals()` when subnormal rescaling is needed.
+    ///
+    /// Subnormal inputs are **not** handled here: `pow_midp_precise(1e-42, 0.5)`
+    /// returns about 7.7e-20, not 1.0e-21.
     #[inline(always)]
     pub fn pow_midp_precise(self, n: f32) -> Self {
         self.pow_midp(n)
     }
 
+    /// Prefer [`magemath`](https://docs.rs/magemath/latest/magemath/) (`SimdMath` / `Cbrtf`) when configurable domains, bit-exact portability, or scalar tail helpers are needed.
+    ///
     /// Low-precision cube root (~15 bits, ~4.5 decimal digits).
     ///
     /// Uses Kahan's bit-hack initial approximation followed by 1 Halley
@@ -481,6 +544,8 @@ impl<T: F32x8Convert> f32x8<T> {
         Self::blend(is_zero, self, result)
     }
 
+    /// Prefer [`magemath`](https://docs.rs/magemath/latest/magemath/) (`SimdMath` / `Cbrtf`) when configurable domains, bit-exact portability, or scalar tail helpers are needed.
+    ///
     /// Mid-precision cube root (max 3.2 ULP vs `std::f32::cbrt`).
     ///
     /// Uses Kahan's bit-hack initial approximation followed by 2 Halley
@@ -525,6 +590,8 @@ impl<T: F32x8Convert> f32x8<T> {
         Self::blend(is_zero, self, result)
     }
 
+    /// Prefer [`magemath`](https://docs.rs/magemath/latest/magemath/) (`SimdMath` / `Cbrtf`) when configurable domains, bit-exact portability, or scalar tail helpers are needed.
+    ///
     /// Mid-precision cube root over the whole f32 range (max 3.2 ULP).
     ///
     /// Wraps `cbrt_midp()`: denormals are scaled up first, magnitudes from

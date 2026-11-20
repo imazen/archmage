@@ -704,7 +704,7 @@ fn generate_memory_ops_reference(safe_simd_ops: &[SafeMemOp]) -> String {
     doc.push_str(&format!(
         "# Safe Memory Operations Reference\n\n\
          Safe unaligned load/store operations from `safe_unaligned_simd` v{SAFE_SIMD_VERSION},\n\
-         organized by the archmage token required to use them inside `#[arcane]` functions.\n\n\
+         organized by the archmage token required to use them inside `#[attune(..., import_intrinsics)]` functions.\n\n\
          Regenerate: `cargo xtask generate`\n\n"
     ));
 
@@ -1342,6 +1342,38 @@ fn check_package_licenses() -> Result<()> {
 
 /// Build the three packaged libraries together, without publishing anything.
 ///
+/// Check that `floor` is a semver-compatible minimum version `<= workspace`
+/// so `magemath` can release independently against an already-published `0.9.x`
+/// floor even after `archmage`/`magetypes` advance to a newer `0.9.(x+k)` on `main`.
+fn semver_compatible_floor(floor: &str, workspace: &str) -> bool {
+    let parse_xyz = |v: &str| -> Option<(u64, u64, u64)> {
+        if v.contains('-') || v.contains('+') {
+            return None;
+        }
+        let mut parts = v.split('.');
+        let major = parts.next()?.parse().ok()?;
+        let minor = parts.next()?.parse().ok()?;
+        let patch = parts.next()?.parse().ok()?;
+        if parts.next().is_some() {
+            return None;
+        }
+        Some((major, minor, patch))
+    };
+    if floor == workspace {
+        return true;
+    }
+    let (Some((fmaj, fmin, fpat)), Some((wmaj, wmin, wpat))) =
+        (parse_xyz(floor), parse_xyz(workspace))
+    else {
+        return false;
+    };
+    if wmaj == 0 {
+        fmaj == 0 && fmin == wmin && fpat <= wpat
+    } else {
+        fmaj == wmaj && (fmin, fpat) <= (wmin, wpat)
+    }
+}
+
 /// `cargo package` each crate, extract the archives into
 /// `target/package-verification/`, check that the published dependency
 /// protocol is what the release needs (archmage pins archmage-macros exactly,
@@ -1432,11 +1464,20 @@ fn check_packages(targets: &[String]) -> Result<()> {
         magetypes["dependencies"]["archmage"]["version"].as_str() == Some(&version("archmage")?),
         "packaged magetypes must require the workspace archmage version"
     );
+    let dep_archmage = magemath["dependencies"]["archmage"]["version"]
+        .as_str()
+        .context("magemath dependencies.archmage.version")?;
+    let dep_magetypes = magemath["dependencies"]["magetypes"]["version"]
+        .as_str()
+        .context("magemath dependencies.magetypes.version")?;
+    let ws_archmage = version("archmage")?;
+    let ws_magetypes = version("magetypes")?;
     anyhow::ensure!(
-        magemath["dependencies"]["archmage"]["version"].as_str() == Some(&version("archmage")?)
-            && magemath["dependencies"]["magetypes"]["version"].as_str()
-                == Some(&version("magetypes")?),
-        "packaged magemath must require the workspace archmage and magetypes versions"
+        dep_archmage == dep_magetypes
+            && semver_compatible_floor(dep_archmage, &ws_archmage)
+            && semver_compatible_floor(dep_magetypes, &ws_magetypes),
+        "packaged magemath must require matching, semver-compatible archmage/magetypes versions \
+         <= workspace ({ws_archmage} / {ws_magetypes}), got {dep_archmage} / {dep_magetypes}"
     );
 
     let mut workspace = format!(

@@ -138,7 +138,7 @@ These x86 target features remain behind feature gates as of 1.89:
 
 ## Why this matters for archmage
 
-Archmage maps capability tokens to `#[target_feature]` attributes. Before 1.89, writing `#[target_feature(enable = "avx512f")]` on stable Rust was a compiler error. Every AVX-512 token (`X64V4Token`, `X64V4xToken`, `Avx512Fp16Token`) and its generated `#[arcane]` wrapper would fail to compile without `#![feature(avx512_target_feature)]`.
+Archmage maps capability tokens to `#[target_feature]` attributes. Before 1.89, writing `#[target_feature(enable = "avx512f")]` on stable Rust was a compiler error. Every AVX-512 token (`X64V4Token`, `X64V4xToken`, `Avx512Fp16Token`) and its generated `#[attune]` wrapper would fail to compile without `#![feature(avx512_target_feature)]`.
 
 With 1.89, the full token hierarchy compiles on stable:
 

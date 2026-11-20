@@ -359,19 +359,19 @@ impl<T: I64x8Backend> i64x8<T> {
         Self(T::shr_logical_const::<N>(self.1, self.0), self.1)
     }
 
-    /// Alias for [`shl_const`](Self::shl_const).
+    /// **Superseded (queued for deprecation):** Use [`shl_const`](Self::shl_const) instead.
     #[inline(always)]
     pub fn shl<const N: i32>(self) -> Self {
         self.shl_const::<N>()
     }
 
-    /// Alias for [`shr_arithmetic_const`](Self::shr_arithmetic_const).
+    /// **Superseded (queued for deprecation):** Use [`shr_arithmetic_const`](Self::shr_arithmetic_const) instead.
     #[inline(always)]
     pub fn shr_arithmetic<const N: i32>(self) -> Self {
         self.shr_arithmetic_const::<N>()
     }
 
-    /// Alias for [`shr_logical_const`](Self::shr_logical_const).
+    /// **Superseded (queued for deprecation):** Use [`shr_logical_const`](Self::shr_logical_const) instead.
     #[inline(always)]
     pub fn shr_logical<const N: i32>(self) -> Self {
         self.shr_logical_const::<N>()
@@ -646,7 +646,7 @@ impl i64x8<archmage::X64V4Token> {
     /// Wrap a raw `__m512i` in a matching target-feature context.
     ///
     /// Rust requires the caller to enable the `v4` tier's features.
-    /// Use an archmage `#[rite(v4)]` helper or `#[arcane]` entry point.
+    /// Use an archmage `#[attune(v4)]` helper or `#[attune(wrap)]` entry point.
     #[forbid(unsafe_code)]
     /// # Safety
     /// The CPU must support the enabled target features. Safe calls require a
@@ -679,7 +679,7 @@ impl i64x8<archmage::X64V4xToken> {
     /// Wrap a raw `__m512i` in a matching target-feature context.
     ///
     /// Rust requires the caller to enable the `v4x` tier's features.
-    /// Use an archmage `#[rite(v4x)]` helper or `#[arcane]` entry point.
+    /// Use an archmage `#[attune(v4x)]` helper or `#[attune(wrap)]` entry point.
     #[forbid(unsafe_code)]
     /// # Safety
     /// The CPU must support the enabled target features. Safe calls require a

@@ -429,18 +429,21 @@
   function buildUsageExample(i, token) {
     if (!token) return '';
     const tn = token.name;
+    const tier = token.tier;
+    const attr = tier ? `#[attune(${tier}, import_intrinsics)]` : '#[attune(wrap, import_intrinsics)]';
+    const sig = tier ? 'fn example(/* params */)' : `fn example(_token: ${tn}, /* params */)`;
     const prelude = 'use archmage::prelude::*;';
     let code;
     if (i.u) {
       const sv = allData.safeVariants[i.n];
       if (sv) {
         // Prelude shadows this intrinsic with the safe version
-        code = `${prelude}\n// ${i.n} is safe via prelude (safe_unaligned_simd shadows core::arch)\n\n#[rite(import_intrinsics)]\nfn example(_: ${tn}, /* params */) {\n    let result = ${i.n}(/* args */);\n}`;
+        code = `${prelude}\n// ${i.n} is safe via prelude (safe_unaligned_simd shadows core::arch)\n\n${attr}\n${sig} {\n    let result = ${i.n}(/* args */);\n}`;
       } else {
         return '<div class="detail-code"><div class="code-label">No safe wrapper available</div><p>This intrinsic has obligations beyond CPU feature support. No callable example is generated. Consult its safety contract and use a reference-based alternative where one exists.</p></div>';
       }
     } else {
-      code = `${prelude}\n\n#[rite(import_intrinsics)]\nfn example(_: ${tn}, /* params */) {\n    let result = ${i.n}(/* args */);\n}`;
+      code = `${prelude}\n\n${attr}\n${sig} {\n    let result = ${i.n}(/* args */);\n}`;
     }
     return `<div class="detail-code"><div class="code-label">Usage with archmage</div><pre>${escHtml(code)}</pre></div>`;
   }

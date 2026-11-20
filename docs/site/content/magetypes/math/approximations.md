@@ -22,5 +22,9 @@ working-precision target therefore does not cover every normal input. Use
 `recip_portable()` when this range matters. Subnormal inputs also require care.
 
 See [ISA quirks and measured fixup overhead](@/magetypes/isa-quirks.md) for exact
-method calls, rails, and the hardware evidence. Use the
-[transcendental guide](@/magetypes/math/transcendentals.md) for pow/log/exp.
+method calls, rails, and the hardware evidence, and
+[Magetypes Fast Paths & Contract Tiers](@/magemath/magetypes-fast-paths.md) for
+Zen 5 / M4 Pro reciprocal timings, `RecipOptions`, `to_i32_fast`, `min_fast` / `clamp`,
+and FMA vs separate reduction loops. Use the
+[transcendental guide](@/magetypes/math/transcendentals.md) or
+[Magemath](@/magemath/_index.md) for pow/log/exp/cbrt.

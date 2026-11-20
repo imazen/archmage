@@ -4,14 +4,14 @@ Getting data from slices and arrays into SIMD registers.
 
 ## Quick Reference
 
-| Pattern | Input | Works in `#[arcane]`? | Notes |
-|---------|-------|----------------------|-------|
+| Pattern | Input | Works in `#[attune]`? | Notes |
+|---------|-------|-----------------------|-------|
 | `f32x8::load_t(token, &array)` | `&[f32; 8]` | Yes | Preferred for magetypes |
 | `f32x8::from_array_t(token, array)` | `[f32; 8]` | Yes | Takes by value |
 | `f32x8::from_slice_t(token, slice)` | `&[f32]` | Yes | Panics if `slice.len() < 8` |
 | `f32x8::splat_t(token, 1.0)` | scalar | Yes | Broadcast one value to all lanes |
 | `f32x8::zero_t(token)` | — | Yes | All lanes zero |
-| `_mm256_loadu_ps(data)` | `&[f32; 8]` | Yes | safe via `import_intrinsics` (reference-based) |
+| `_mm256_loadu_ps(data)` | `&[f32; 8]` | Yes | Safe via `import_intrinsics` (reference-based) |
 | `_mm256_loadu_ps(ptr)` | `*const f32` | unsafe | Raw stdarch (pointer-based) |
 
 ## Magetypes (recommended)
@@ -19,10 +19,10 @@ Getting data from slices and arrays into SIMD registers.
 The simplest path. Magetypes handles the load internally:
 
 ```rust
-use archmage::{X64V3Token, SimdToken, arcane};
+use archmage::{X64V3Token, attune};
 use magetypes::simd::generic::f32x8;
 
-#[arcane(import_intrinsics)]
+#[attune(wrap)]
 fn process(token: X64V3Token, data: &[f32; 8]) -> f32 {
     let v = f32x8::load_t(token, data);
     v.reduce_add()
@@ -32,7 +32,10 @@ fn process(token: X64V3Token, data: &[f32; 8]) -> f32 {
 ### From a slice
 
 ```rust
-#[arcane(import_intrinsics)]
+use archmage::{X64V3Token, attune};
+use magetypes::simd::generic::f32x8;
+
+#[attune(wrap)]
 fn sum_slice(token: X64V3Token, data: &[f32]) -> f32 {
     let mut total = f32x8::zero_t(token);
     for chunk in data.chunks_exact(8) {
@@ -50,12 +53,12 @@ let v = f32x8::from_array_t(token, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
 
 ## Safe memory ops (via `import_intrinsics`)
 
-When working with raw intrinsics inside `#[arcane]`, `import_intrinsics` provides safe memory operations that take references instead of raw pointers:
+When working with raw intrinsics inside `#[attune]`, `import_intrinsics` provides safe memory operations that take references instead of raw pointers:
 
 ```rust
-use archmage::{X64V3Token, arcane};
+use archmage::{X64V3Token, attune};
 
-#[arcane(import_intrinsics)]
+#[attune(wrap, import_intrinsics)]
 fn load_and_square(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
     // import_intrinsics provides safe versions: takes &[f32; 8], not *const f32
     let v = _mm256_loadu_ps(data);
@@ -73,7 +76,9 @@ When you have a slice but the intrinsic needs an array reference, use `.first_ch
 ### `.first_chunk::<N>()` (Rust 1.77+)
 
 ```rust
-#[arcane(import_intrinsics)]
+use archmage::prelude::*;
+
+#[attune(wrap, import_intrinsics)]
 fn load_from_slice(_token: X64V3Token, data: &[f32]) -> __m256 {
     let arr: &[f32; 8] = data.first_chunk().expect("need at least 8 elements");
     _mm256_loadu_ps(arr)
@@ -83,7 +88,9 @@ fn load_from_slice(_token: X64V3Token, data: &[f32]) -> __m256 {
 ### `.try_into()`
 
 ```rust
-#[arcane(import_intrinsics)]
+use archmage::prelude::*;
+
+#[attune(wrap, import_intrinsics)]
 fn load_via_try_into(_token: X64V3Token, data: &[f32]) -> __m256 {
     let arr: &[f32; 8] = data[..8].try_into().unwrap();
     _mm256_loadu_ps(arr)
@@ -97,7 +104,9 @@ Both produce identical assembly — a bounds check followed by `vmovups`. The bo
 Same patterns work for integer types. The compiler may use `vmovups` or `vmovdqu` (functionally identical on modern CPUs):
 
 ```rust
-#[arcane(import_intrinsics)]
+use archmage::prelude::*;
+
+#[attune(wrap, import_intrinsics)]
 fn load_bytes(_token: X64V3Token, data: &[u8; 32]) -> __m256i {
     _mm256_loadu_si256(data)
 }
@@ -110,21 +119,24 @@ reference-based wrappers above; ordinary slice alignment does not establish
 32-byte alignment for an aligned-load intrinsic.
 
 ```rust
-// WRONG: summon() + #[arcane] boundary every iteration
+// WRONG: summon() + #[attune(wrap)] boundary every iteration
 for chunk in data.chunks_exact(8) {
+    #[cfg(target_arch = "x86_64")]
     if let Some(token) = X64V3Token::summon() {
         process(token, chunk);  // target-feature boundary per call!
     }
 }
 
 // BETTER: summon hoisted, but still a boundary per iteration
+#[cfg(target_arch = "x86_64")]
 if let Some(token) = X64V3Token::summon() {
     for chunk in data.chunks_exact(8) {
-        process(token, chunk);  // still calling #[arcane] each iteration
+        process(token, chunk);  // still calling #[attune(wrap)] each iteration
     }
 }
 
-// BEST: loop inside #[arcane], #[rite] helpers
+// BEST: loop inside #[attune(wrap)], #[attune(v3)] helpers
+#[cfg(target_arch = "x86_64")]
 if let Some(token) = X64V3Token::summon() {
     process_all(token, data);  // one boundary crossing
 }

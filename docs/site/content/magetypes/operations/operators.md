@@ -23,14 +23,14 @@ shape used by zen color kernels. It is not a complete tone-mapping algorithm.
 
 ```rust
 use archmage::prelude::*;
-#[magetypes(define(f32x8), v3, neon, wasm128, scalar)]
+#[attune(_*_t, define(f32x8))]
 fn positive_impl(token: Token, values: [f32; 8]) -> [f32; 8] {
     let v = f32x8::from_array_t(token, values);
     let zero = f32x8::zero_t(token);
     f32x8::blend(v.simd_gt(zero), v, zero).to_array()
 }
 pub fn positive(values: [f32; 8]) -> [f32; 8] {
-    incant!(positive_impl(values), [v3, neon, wasm128, scalar])
+    attuned!(positive_impl(values))
 }
 assert_eq!(positive([-1.0, 2.0, 0.0, 3.0, -4.0, 5.0, 6.0, 7.0]),
            [0.0, 2.0, 0.0, 3.0, 0.0, 5.0, 6.0, 7.0]);
@@ -38,5 +38,5 @@ assert_eq!(positive([-1.0, 2.0, 0.0, 3.0, -4.0, 5.0, 6.0, 7.0]),
 
 Float `simd_ne` matches Rust `!=` on every backend, including NaNs, and its
 mask complements `simd_eq`. Do not infer bit-identical results from replacing multiply-plus-add with
-`mul_add`. The [ISA tables](@/magetypes/isa-quirks.md) specify these differences
+`mul_add_relaxed` or `mul_add_fused`. The [ISA tables](@/magetypes/isa-quirks.md) specify these differences
 and the fixups the library does apply.

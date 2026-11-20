@@ -33,3 +33,6 @@ compare exact expected output on every supported tier.
 The complete [linear-srgb gamma chain](@/magetypes/math/transcendentals.md)
 uses a vector approximation and scalar `powf` tail. Those are not bit-identical
 implementations. Test the accepted error at the vector/tail boundary and across ISAs.
+When you need bit-identical results across backends and between SIMD bodies and
+scalar tails — or configurable domain checks, subnormal policies, and `Highp`
+`powf` — use [Magemath](@/magemath/_index.md) ([Tuning Performance & Subnormals](@/magemath/tuning-and-subnormals.md)).

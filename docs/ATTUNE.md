@@ -1,9 +1,10 @@
-# Unified macros in 0.9.31
+# Unified macros: `#[attune]`, `attuned!`, and `reattune!`
 
 `#[attune]` defines feature bodies, proof wrappers, and dispatchers. `attuned!`
 calls a family using the enclosing feature context or proof; `reattune!` permits
-runtime reselection. Existing `arcane`, `rite`, `autoversion`, `magetypes`, and
-`incant!` spellings remain supported and are not newly deprecated in this release.
+runtime reselection. Earlier `#[arcane]`, `#[rite]`, `#[autoversion]`,
+`#[magetypes]`, and `incant!` spellings are superseded and queued for
+deprecation in the next release (they remain warning-free in 0.9.32).
 
 Use matching versions of archmage and magetypes. The archmage dependency
 pins archmage-macros exactly because generated code refers to archmage APIs.
@@ -590,9 +591,10 @@ outputs private with `pub(self)`; unified outputs otherwise inherit the source
 visibility. If the original dispatcher takes an explicit `ScalarToken`,
 preserve that dispatcher argument too; the tokenless example above does not.
 
-The migration is manual: no source converter and no replacement-deprecation
-machinery ship in this release. A family can also be migrated incrementally, one
-call at a time, by pointing a call-site dictionary at the legacy names:
+The migration is manual: no automatic source converter ships in 0.9.32, and
+`#[deprecated]` warnings on the legacy macro spellings are queued for the next
+release. A family can also be migrated incrementally, one call at a time, by
+pointing a call-site dictionary at the legacy names:
 
 ```rust
 use archmage::prelude::*;

@@ -17,8 +17,8 @@ compilation, numerical tests, and assembly inspection establish different facts.
 | Type and const generics on the generated function itself | zenanalyze `accumulate_row_simd<..., R>`; zenavif `yuv420_strip_kernel<S, P>` | [Generic specialization](@/magetypes/dispatch/types-and-dispatch.md) |
 | Const-mode specialization passed through dispatch | zenpixels-convert and zenpng `fused_cg_impl` | [Generic specialization](@/magetypes/dispatch/types-and-dispatch.md) |
 | Generated SIMD plus a separate scalar algorithm | aom-rs `aom-txb/src/simd.rs` | [Separate scalar fallback](@/archmage/dispatch/incant.md) |
-| Scalar loops under generated target features | zenpixels-convert swizzles; zenanalyze palette/grayscale | [Autoversion](@/archmage/dispatch/autoversion.md) |
-| Matched intrinsic helper chains | zenfilters x86 scale; rav1d-safe NEON CfL helpers | [Rite](@/archmage/concepts/rite.md) |
+| Scalar loops under generated target features | zenpixels-convert swizzles; zenanalyze palette/grayscale | [Attune a kernel](@/attunement/first-kernel.md), [Autoversion](@/archmage/dispatch/autoversion.md) |
+| Matched intrinsic helper chains | zenfilters x86 scale; rav1d-safe NEON CfL helpers | [Stay in context](@/attunement/helpers.md), [Rite](@/archmage/concepts/rite.md) |
 | Mixed hand-tuned x86 and portable ARM/WASM | zenresize, zenblend, zenfilters | [Dispatch](@/archmage/dispatch/incant.md), [production walkthroughs](@/magetypes/examples/convolution.md) |
 | f16 storage conversion | zenresize wide kernels | [Numeric conversion](@/magetypes/conversions/float-int.md) |
 | Wider logical types plus native V4 | linear-srgb transfer curves | [Transcendentals](@/magetypes/math/transcendentals.md) |
@@ -41,19 +41,19 @@ not proof that no downstream user needs a feature.
 
 | Area | Finding | Documentation treatment |
 |---|---|---|
-| `incant!(... with token)` | No production matches; implemented | Reference option. Checks held token type; does not upgrade or downcast it |
-| `incant!(... without token)` | No production matches; implemented | Reference option for tokenless matching-tier callees, with compiled examples |
+| Held-token dispatch (`attuned!(..., using(token))`) | No production matches for the legacy equivalent at scan time; implemented | Reference option. Checks held token type; does not upgrade or downcast it |
+| Contextual tokenless dispatch (`attuned!` inside `#[attune]`) | No production matches for the legacy equivalent at scan time; implemented | Standard in `#[attune]` bodies for matching-tier callees, with compiled examples |
 | `IntoConcreteToken` / exact-type branches | No production matches | Explain precisely; do not introduce into basic kernels |
-| `from_context()` | No production matches at scan time | Document the safe context constructor; new tokenless-rite composition uses it |
+| `from_context()` | No production matches at scan time | Document the safe context constructor; `#[attune]` feature contexts use `Token::from_context()` |
 | `stub` | No matches; parsers reject it | Removed stale claims that it is available |
 | Nested expansion | Two matches in mozjpeg-rs entropy helpers | Keep a focused receiver/nested reference; do not claim every method needs it |
-| Vector-reference `cast_slice` idiom | No matches for the scanned concrete/alias spellings | Reference-only. Ordinary pixel bytemuck casts are a different API |
-| Tokenless `#[rite(tier)]` | Many matches, including rav1d-safe | Teach as an exercised internal-helper pattern |
+| Vector-reference `cast_slice_t` idiom | No matches for the scanned concrete/alias spellings | Reference-only. Ordinary pixel bytemuck casts are a different API |
+| Tokenless feature helpers (`#[attune(tier)]` / `#[attune(_*)]`) | Many matches for the legacy equivalent at scan time, including rav1d-safe | Teach as an exercised internal-helper pattern |
 | Pairwise widening / newer terminal byte operations | API tests do not establish adoption in older zen kernels | Explain contracts; require a concrete consumer before promoting a recipe |
 | Checked portable gather/scatter; aligned/streaming methods | Not provided by the current generic API | Describe the gap; do not show fictitious methods |
 | Baseline caller → bare generic SIMD loop | Older docs taught it; it lacks the needed feature context | Replace with complete generated entry/helper chains |
 | Generic bounds inherently block inlining | Contradicted by Rust monomorphization and production helper patterns | Remove the claim |
-| V4 automatically widens [`f32x8`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.f32x8.html) | Contradicted by macro replacement and fixed lane count | Teach explicit logical shapes and supported backend lists |
+| V4 automatically widens [`f32x8`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.f32x8.html) | Contradicted by macro replacement and fixed lane count | Teach explicit logical shapes and per-tier width splits |
 | Universal speed/error multipliers | No general proof | Keep measurements scoped to CPU, operation, domain, and compiler |
 
 There are suspicious comments in consumers too: zenpixels-convert's gamut
@@ -65,15 +65,15 @@ compatibility and performance need their own tests before changing those crates.
 
 ## Version and evidence scope
 
-This site tracks the repository, whose current work is the 0.9.31-beta.2
-prerelease; the latest **stable** release is 0.9.30, and API links point to
-the latest **published** docs.rs version, which may lag the repository. The
-APIs this guide teaches (`from_context()`, the integer abstractions, tokenless
-rite construction) are available in the published 0.9.30 release; do not assume
-them in 0.9.28 or earlier. The beta's unified `#[attune]`, `attuned!`, and
-`reattune!` macros are documented in the repository's
-[beta guide](https://github.com/imazen/archmage/blob/main/docs/ATTUNE.md).
-No crate publication is implied by this guide.
+This site tracks the repository at 0.9.32+; API links point to the latest
+published docs.rs release, which may lag uncommitted repository changes. The
+unified `#[attune]`, `attuned!`, and `reattune!` macros are stable in 0.9.32+
+(introduced in 0.9.31; see the [attunement reference](@/attunement/reference.md)
+and [docs/ATTUNE.md](https://github.com/imazen/archmage/blob/main/docs/ATTUNE.md)).
+`from_context()`, the `_t` explicit-token constructors, and the cross-ISA
+integer abstractions require 0.9.30 or newer (`load_rgba_u8_t` requires
+0.9.32+); do not assume them in 0.9.28 or earlier. Legacy spellcraft spellings
+remain supported without deprecation warnings.
 
 The search used local checkouts; pinned walkthroughs name their source revisions.
 The additional inspected heads were zenanalyze `b102fa5`, zenavif `2ebca1b`,

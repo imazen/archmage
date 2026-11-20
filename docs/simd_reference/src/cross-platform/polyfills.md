@@ -74,15 +74,17 @@ No SIMD instruction exists for cbrt on any platform. All use:
 scalar initial guess → Newton-Raphson refinement
 ```
 
-### Transcendentals (exp, log, sin, cos, etc.)
+### Transcendentals (`exp2`, `exp`, `log2`, `ln`, `log10`, `pow`, `cbrt`)
 
-Implemented as polynomial approximations on all platforms. The polynomials are the same; only the intrinsics used differ:
+Implemented once as generic polynomial approximations (`mul_add_relaxed`, `round`, integer bit casts) across all platforms; trigonometric functions (`sin`, `cos`) are not implemented. Only the underlying backend instructions differ:
 
-| Precision | Suffix | Accuracy |
-|-----------|--------|----------|
-| Low | `_lowp` | ~3-4 decimal digits |
-| Medium | `_midp` | ~6-7 decimal digits |
-| Precise | `_midp_precise` | Additional Newton-Raphson step |
+| Precision | Suffix | Measured error (`f32` normal range, FMA and unfused backends) |
+|-----------|--------|---------------------------------------------------------------|
+| Low | `_lowp` | `exp2`/`exp`/`pow` ≤ 0.56% rel (≤ 1.23% above `2^127.99`); `log2`/`ln`/`log10` ≤ 8.5e-6 abs; `cbrt` ≤ 3e-5 rel |
+| Medium | `_midp` | `log2`/`ln`/`log10` ≤ 4.5 ULP; `cbrt` ≤ 3.2 ULP; `exp2` ≤ 1.9 ULP below `127.5` (≤ 134.1 ULP above) |
+| Subnormal / full-range cbrt | `cbrt_midp_precise` | Extends `cbrt_midp` to subnormal inputs and full range (other `_midp_precise` names are aliases queued for removal) |
+
+`sigmoid_midp` and `silu_midp` are also provided on `f32xN`. See [`docs/transcendentals.md`](../../../transcendentals.md) for per-function bounds.
 
 ## Performance Matrix
 

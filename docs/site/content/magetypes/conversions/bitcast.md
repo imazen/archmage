@@ -13,14 +13,14 @@ this roundtrip is an API test rather than a production algorithm.
 
 ```rust
 use archmage::prelude::*;
-#[magetypes(define(f32x8), v3, neon, wasm128, scalar)]
+#[attune(_*_t, define(f32x8))]
 fn bits_impl(token: Token, input: [f32; 8]) -> ([i32; 8], [f32; 8]) {
     let v = f32x8::from_array_t(token, input);
     let bits = v.bitcast_to_i32();
     (bits.to_array(), bits.bitcast_to_f32().to_array())
 }
 pub fn bits(input: [f32; 8]) -> ([i32; 8], [f32; 8]) {
-    incant!(bits_impl(input), [v3, neon, wasm128, scalar])
+    attuned!(bits_impl(input))
 }
 let (encoded, roundtrip) = bits([1.0; 8]);
 assert_eq!(encoded, [1.0f32.to_bits() as i32; 8]);

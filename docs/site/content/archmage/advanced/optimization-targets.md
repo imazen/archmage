@@ -9,9 +9,9 @@ are not substitutes for detection.
 
 | Workload | Starting point |
 |---|---|
-| Portable eight-lane f32 or 32-byte loops | `v3, neon, wasm128, scalar` |
-| Sixteen-lane f32 loops | `w512` logical types; optionally native V4 with `avx512` |
-| Existing scalar loops with regular memory access | `#[autoversion]`, then inspect vectorization |
+| Portable eight-lane f32 or 32-byte loops | Default `#[attune]` tiers (`v3`, `neon`, `wasm128`, `scalar`) |
+| Sixteen-lane f32 loops | `w512` logical types; optionally native V4 via `+v4(cfg(avx512))` or `_v4_t(cfg(avx512))` |
+| Existing scalar loops with regular memory access | `#[attune(dispatch)]`, then inspect vectorization |
 | ISA-specific shuffles, crypto, or dot products | A concrete token whose registry features cover the instructions |
 | Very short inputs | Compare dispatch and tail costs with a scalar implementation |
 

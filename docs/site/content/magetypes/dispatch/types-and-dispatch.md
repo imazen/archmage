@@ -4,14 +4,14 @@ weight = 1
 +++
 
 Use Rust generics for data representation and algorithm parameters, and
-`#[magetypes]` for ISA specialization. They compose in the same function.
+`#[attune]` for ISA specialization. They compose in the same function.
 `define(f32x8)` is optional shorthand for the generic vector type with the
 current `Token`; it does not replace Rust's function generics.
 
 ## A generic input type and a const mode
 
 This teaching extraction follows `zenanalyze/src/tier1.rs`:
-`accumulate_row` selects const modes, then `incant!` calls
+`accumulate_row` selects const modes, then dispatches to
 `accumulate_row_simd<const BT601: bool, const FULL: bool, const SKIN: bool,
 R: ChunkInput>`. The production kernel accumulates several image statistics.
 Here we retain the input-type and luma-coefficient specialization, and compute
@@ -33,7 +33,7 @@ impl Pixel for [u8; 4] {
     }
 }
 
-#[magetypes(define(f32x8), v3, neon, wasm128, scalar)]
+#[attune(_*_t, define(f32x8))]
 fn luma_impl<const BT601: bool, P: Pixel>(
     token: Token, pixels: &[P], weights: [f32; 3],
 ) -> f64 {
@@ -58,7 +58,7 @@ fn luma_impl<const BT601: bool, P: Pixel>(
 }
 
 pub fn luma_sum<const BT601: bool, P: Pixel>(pixels: &[P], weights: [f32; 3]) -> f64 {
-    incant!(luma_impl::<BT601, P>(pixels, weights), [v3, neon, wasm128, scalar])
+    attuned!(luma_impl::<BT601, P>(pixels, weights))
 }
 
 // Values are encoded RGB channel samples; this is a signal statistic,
@@ -74,6 +74,9 @@ assert_eq!(luma_sum::<true, [u8; 3]>(&[], [0.0; 3]), 0.0);
 `P` is statically resolved. `BT601` selects coefficients at specialization time.
 The ISA token is independently substituted by the macro. `define(f32x8)` binds
 the same generic vector implementation you could spell [`f32x8::<Token>`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.f32x8.html).
+When callers do not need separate `_t` entry points, `#[attune(dispatch, define(f32x8))]`
+on `luma_sum` with `let token = Token::from_context();` inside the body generates
+the same portable dispatch without a separate `luma_impl` wrapper.
 There is no trait-object dispatch here. The array construction is a simple
 teaching loader; production `ChunkInput` implementations specialize loading and
 layout too. Verify their assembly rather than assuming this loader is optimal.
@@ -83,7 +86,7 @@ layout too. Verify their assembly rather than assuming this loader is optimal.
 | Source | Generic specialization |
 |---|---|
 | `zenavif/src/yuv_convert.rs`, `yuv420_strip_kernel<S: YuvSample, P: StripPixel>` | u8/u16 input samples and RGB/RGBA output; macro supplies ISA features for ordinary loops |
-| `zenpixels-convert/src/scan.rs`, `fused_cg_impl<const A: bool, const B: bool>` | Opacity and grayscale checks; caller passes `::<A, B>` through `incant!` |
+| `zenpixels-convert/src/scan.rs`, `fused_cg_impl<const A: bool, const B: bool>` | Opacity and grayscale checks; caller passes `::<A, B>` through dispatch |
 | `zenpng/src/simd/scan.rs`, `fused_cg_impl<const A: bool, const B: bool, const C: bool>` | Adds binary-alpha scanning; same const-plus-ISA arrangement |
 | `zenpixels-convert/src/hdr/measure.rs`, `accumulate_strip_max_rgb_tier<const N: usize>` | RGB/RGBA stride with alpha ignored |
 | `linear-srgb/src/simd.rs` → `tf/srgb.rs` | Concrete generated slice loop calls a backend-generic vector-to-vector helper |
@@ -98,5 +101,5 @@ Extract an algorithm generic over `T: F32x8Backend` when several entries need it
 Keep the feature-enabled caller and inspect inlining. The complete
 [zenblend chain](@/magetypes/examples/pixel-blending.md) and
 [zenfilters helper chain](@/magetypes/examples/generic-kernels.md) show this.
-`#[magetypes]` can call ordinary helpers and other per-tier helpers; it is not
-restricted to leaf functions.
+`#[attune]` can call ordinary helpers and other per-tier helpers via `attuned!`;
+it is not restricted to leaf functions.

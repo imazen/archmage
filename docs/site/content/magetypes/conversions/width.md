@@ -14,7 +14,7 @@ range so the intermediate i16 addition cannot overflow.
 
 ```rust
 use archmage::prelude::*;
-#[magetypes(define(u8x16, i16x8), v3, neon, wasm128, scalar)]
+#[attune(_*_t, define(u8x16, i16x8))]
 fn brighten_impl(token: Token, input: [u8; 16], amount: u8) -> [u8; 16] {
     let bytes = u8x16::from_array_t(token, input);
     let lo = bytes.widen_low().bitcast_i16x8();
@@ -23,7 +23,7 @@ fn brighten_impl(token: Token, input: [u8; 16], amount: u8) -> [u8; 16] {
     (lo + offset).narrow_saturating_u8(hi + offset).to_array()
 }
 pub fn brighten(input: [u8; 16], amount: u8) -> [u8; 16] {
-    incant!(brighten_impl(input, amount), [v3, neon, wasm128, scalar])
+    attuned!(brighten_impl(input, amount))
 }
 let input = [0, 1, 2, 3, 4, 5, 6, 7, 240, 241, 242, 243, 252, 253, 254, 255];
 assert_eq!(brighten(input, 10), input.map(|v| v.saturating_add(10)));

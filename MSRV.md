@@ -31,7 +31,7 @@ Before 1.86, every `#[target_feature]` function was implicitly `unsafe fn`. Call
   Caller has fewer features?            Rust requires an unsafe block.
 ```
 
-**What this enabled for archmage:** `#[arcane]` generates an inner `#[target_feature]` function and a safe outer wrapper. The inner function can call `#[rite]` functions (which also carry `#[target_feature]`) safely — no `unsafe` needed at call sites between matching feature contexts. Before 1.86, every such call required `unsafe`.
+**What this enabled for archmage:** `#[attune(wrap)]` (and `_tier_t` proof wrappers, plus legacy `#[arcane]`) generates a private `#[target_feature]` inner function and a safe outer wrapper. The inner function can call direct `#[attune(v3)]` helpers (and legacy `#[rite]` functions, which also carry `#[target_feature]`) safely — no `unsafe` needed at call sites between matching feature contexts. Before 1.86, every such call required `unsafe`.
 
 ## Rust 1.87 — safe value-based intrinsics (May 2025)
 
@@ -58,9 +58,9 @@ fn example() {
 }
 ```
 
-**What this enabled for archmage:** Inside `#[arcane]` and `#[rite]` functions, most intrinsic calls are safe with no wrappers needed. The remaining gap — pointer-based memory ops — is closed by [`safe_unaligned_simd`](https://crates.io/crates/safe_unaligned_simd), which shadows `core::arch` load/store functions with reference-based versions (`_mm256_loadu_ps` takes `&[f32; 8]` instead of `*const f32`). Archmage re-exports these through `import_intrinsics`.
+**What this enabled for archmage:** Inside `#[attune]` feature bodies (and legacy `#[arcane]` / `#[rite]` functions), value-based intrinsic calls are safe with no wrappers needed. The remaining gap — pointer-based memory ops — is closed by [`safe_unaligned_simd`](https://crates.io/crates/safe_unaligned_simd), which shadows `core::arch` load/store functions with reference-based versions (`_mm256_loadu_ps` takes `&[f32; 8]` instead of `*const f32`). Archmage re-exports these through `import_intrinsics`.
 
-Combined with 1.86, this means the body of an `#[arcane(import_intrinsics)]` function contains zero `unsafe`. Your crate can use `#![forbid(unsafe_code)]`.
+Combined with 1.86, this means the body of an `#[attune(wrap, import_intrinsics)]` function contains zero `unsafe`. Your crate can use `#![forbid(unsafe_code)]`.
 
 ## Rust 1.88 — `as_chunks` on slices (June 2025)
 
@@ -138,7 +138,7 @@ On Rust 1.89, you can write AVX-512 code with zero `unsafe` (with archmage's `av
 ```rust
 use archmage::prelude::*;
 
-#[arcane(import_intrinsics)]
+#[attune(wrap, cfg(avx512), import_intrinsics)]
 fn sum_512(_token: X64V4Token, data: &[f32; 16]) -> f32 {
     let v = _mm512_loadu_ps(data);            // safe: reference-based
     let sum = _mm512_reduce_add_ps(v);        // safe: value-based
@@ -146,6 +146,7 @@ fn sum_512(_token: X64V4Token, data: &[f32; 16]) -> f32 {
 }
 
 fn main() {
+    #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
     if let Some(token) = X64V4Token::summon() {
         println!("{}", sum_512(token, &[1.0; 16]));
     }

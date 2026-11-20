@@ -1,13 +1,29 @@
 # Spec: Zero-Overhead Cross-Macro Calls via incant! Rewriting
 
-> **Status (2026-10-05): implemented, with one change from this plan.** Nested
-> `incant!` rewriting ships in `#[autoversion]`, `#[arcane]`, `#[rite]` and
+> **Primary unified interface (`0.9.32+`):** New code should use `#[attune]`, `attuned!`, and `reattune!` (see [`ATTUNE.md`](ATTUNE.md)). Inside an `#[attune]` feature body, `attuned!(callee(args))` automatically calls covered direct `_*` variants with no runtime probe and no wrapper overhead, and `reattune!(...)` explicitly probes for stronger tiers (`archmage-macros/src/attune/call.rs`):
+>
+> ```rust
+> use archmage::prelude::*;
+>
+> #[attune(all)]
+> fn normalize(v: &[f32; 4]) -> [f32; 4] { *v }
+>
+> #[attune(dispatch)]
+> fn transform(v: &[f32; 4], scale: f32) -> [f32; 4] {
+>     let n = attuned!(normalize(v)); // direct normalize_v3 / normalize_neon / ... call per tier
+>     [n[0] * scale, n[1] * scale, n[2] * scale, n[3] * scale]
+> }
+> ```
+>
+> **Legacy `incant!` status (2026-10-05): implemented and supported.** Nested
+> `incant!` rewriting ships in `#[autoversion]`, `#[arcane]`, `#[rite]`, and
 > `#[magetypes]` (`archmage-macros/src/rewrite.rs`; expansion snapshots in
 > `tests/expand/rewrite/`). Tokenless `#[rite(v3)]` was not deprecated (step 7
 > below): an `incant!` in a tokenless body selects the callee tiers its features
 > cover and builds the callee's token with `from_context()`
 > (`tests/tokenless_context.rs`), and `incant!(f(x) without token)` calls
-> tokenless callees. The rest of this file is the original design record.
+> tokenless callees. The rest of this file is the original design record for the
+> legacy `incant!` rewriter.
 
 ## Problem
 

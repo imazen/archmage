@@ -1046,7 +1046,7 @@ impl f32x16<archmage::X64V4Token> {
     /// Wrap a raw `__m512` in a matching target-feature context.
     ///
     /// Rust requires the caller to enable the `v4` tier's features.
-    /// Use an archmage `#[rite(v4)]` helper or `#[arcane]` entry point.
+    /// Use an archmage `#[attune(v4)]` helper or `#[attune(wrap)]` entry point.
     #[forbid(unsafe_code)]
     /// # Safety
     /// The CPU must support the enabled target features. Safe calls require a
@@ -1079,7 +1079,7 @@ impl f32x16<archmage::X64V4xToken> {
     /// Wrap a raw `__m512` in a matching target-feature context.
     ///
     /// Rust requires the caller to enable the `v4x` tier's features.
-    /// Use an archmage `#[rite(v4x)]` helper or `#[arcane]` entry point.
+    /// Use an archmage `#[attune(v4x)]` helper or `#[attune(wrap)]` entry point.
     #[forbid(unsafe_code)]
     /// # Safety
     /// The CPU must support the enabled target features. Safe calls require a

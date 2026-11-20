@@ -7,7 +7,9 @@ All patterns below are verified by `just verify-asm` to produce the expected ins
 ### From array reference (baseline)
 
 ```rust
-#[arcane(import_intrinsics)]
+use archmage::prelude::*;
+
+#[attune(wrap, import_intrinsics)]
 fn load_array_ref(_t: X64V3Token, data: &[f32; 8]) -> __m256 {
     _mm256_loadu_ps(data)
 }
@@ -18,7 +20,9 @@ fn load_array_ref(_t: X64V3Token, data: &[f32; 8]) -> __m256 {
 ### From slice via `.first_chunk()`
 
 ```rust
-#[arcane(import_intrinsics)]
+use archmage::prelude::*;
+
+#[attune(wrap, import_intrinsics)]
 fn load_first_chunk(_t: X64V3Token, data: &[f32]) -> __m256 {
     let arr: &[f32; 8] = data.first_chunk().unwrap();
     _mm256_loadu_ps(arr)
@@ -32,7 +36,9 @@ fn load_first_chunk(_t: X64V3Token, data: &[f32]) -> __m256 {
 ### From slice via `.try_into()`
 
 ```rust
-#[arcane(import_intrinsics)]
+use archmage::prelude::*;
+
+#[attune(wrap, import_intrinsics)]
 fn load_try_into(_t: X64V3Token, data: &[f32]) -> __m256 {
     let arr: &[f32; 8] = data[..8].try_into().unwrap();
     _mm256_loadu_ps(arr)
@@ -44,7 +50,9 @@ fn load_try_into(_t: X64V3Token, data: &[f32]) -> __m256 {
 ## 256-bit integer load
 
 ```rust
-#[arcane(import_intrinsics)]
+use archmage::prelude::*;
+
+#[attune(wrap, import_intrinsics)]
 fn load_first_chunk_i(_t: X64V3Token, data: &[u8]) -> __m256i {
     let arr: &[u8; 32] = data.first_chunk().unwrap();
     _mm256_loadu_si256(arr)
@@ -56,7 +64,9 @@ fn load_first_chunk_i(_t: X64V3Token, data: &[u8]) -> __m256i {
 ## 128-bit float load
 
 ```rust
-#[arcane(import_intrinsics)]
+use archmage::prelude::*;
+
+#[attune(wrap, import_intrinsics)]
 fn load_first_chunk_128(_t: X64V3Token, data: &[f32]) -> __m128 {
     let arr: &[f32; 4] = data.first_chunk().unwrap();
     _mm_loadu_ps(arr)
@@ -68,15 +78,16 @@ fn load_first_chunk_128(_t: X64V3Token, data: &[f32]) -> __m128 {
 ## Magetypes load
 
 ```rust
+use archmage::{X64V3Token, attune};
 use magetypes::simd::generic::f32x8;
 
-#[arcane(import_intrinsics)]
-fn load_f32x8_from_slice(_t: X64V3Token, data: &[f32]) -> f32x8<X64V3Token> {
-    f32x8::from_slice(_t, data)
+#[attune(wrap)]
+fn load_f32x8_from_slice(token: X64V3Token, data: &[f32]) -> f32x8<X64V3Token> {
+    f32x8::from_slice_t(token, data)
 }
 ```
 
-**ASM:** Same `vmovups ymm0, [rdi]` — magetypes' `from_slice` compiles down to the same instruction.
+**ASM:** Same `vmovups ymm0, [rdi]` — magetypes' `from_slice_t` compiles down to the same instruction.
 
 ## Key takeaway
 
@@ -87,5 +98,5 @@ All safe load patterns produce the same core instruction. The abstraction cost i
 | `&[f32; 8]` → `_mm256_loadu_ps` | `vmovups` | No |
 | `&[f32]` → `.first_chunk()` → `_mm256_loadu_ps` | `vmovups` | Yes (1 cmp) |
 | `&[f32]` → `.try_into()` → `_mm256_loadu_ps` | `vmovups` | Yes (1 cmp) |
-| `&[f32]` → `f32x8::from_slice` | `vmovups` | Yes (1 cmp) |
-| `&[f32; 8]` → `f32x8::load` | `vmovups` | No |
+| `&[f32]` → `f32x8::from_slice_t` | `vmovups` | Yes (1 cmp) |
+| `&[f32; 8]` → `f32x8::load_t` | `vmovups` | No |

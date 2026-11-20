@@ -1,6 +1,6 @@
 # ASM Verification Overview
 
-Every claim about generated assembly in this reference is backed by `cargo asm` output that's checked in CI. No hand-waving.
+Every claim about generated assembly in this reference is backed by `cargo asm` output checked in CI.
 
 ## How it works
 
@@ -19,7 +19,7 @@ Every claim about generated assembly in this reference is backed by `cargo asm` 
 |-------|--------|
 | Safe `_mm256_loadu_ps` (via `import_intrinsics`) compiles to `vmovups` | Verified |
 | Safe and unsafe single loads produce identical ASM | Verified |
-| `#[rite]` in `#[arcane]` matches manual inline | Verified |
+| Direct `#[attune(v3)]` / `#[rite]` helper in a proof wrapper matches manual inline | Verified |
 
 ### Load pattern claims (from `benches/asm_patterns.rs`)
 
@@ -30,8 +30,8 @@ Every claim about generated assembly in this reference is backed by `cargo asm` 
 | Integer `.first_chunk()` produces `vmovups`/`vmovdqu` | Verified |
 | 128-bit `.first_chunk()` produces `vmovups` | Verified |
 | Mutable `.first_chunk_mut()` store produces `vmovups` | Verified |
-| magetypes `from_slice` produces `vmovups` | Verified |
-| magetypes `load` via `first_chunk` produces `vmovups` | Verified |
+| magetypes `from_slice_t` produces `vmovups` | Verified |
+| magetypes `load_t` via `first_chunk` produces `vmovups` | Verified |
 
 ## Running verification
 

@@ -1,14 +1,18 @@
-//! Scalar polyfill types for `#[magetypes]` fallback.
+//! **Superseded (queued for deprecation):** Use generic vectors bound to
+//! [`ScalarToken`] (for example [`f32x8<ScalarToken>`](crate::simd::generic::f32x8))
+//! for the scalar tier, and plain Rust arithmetic or [`crate::scalar`] (or
+//! `magemath` `*_with_token`) for scalar remainder loops.
 //!
-//! These types wrap single values but provide the same API as SIMD types,
-//! allowing `#[magetypes]`-generated code to compile for the scalar fallback.
+//! Single-lane scalar wrapper types retained for backwards compatibility.
 
 #![allow(non_camel_case_types)]
 
 use archmage::ScalarToken;
 use core::ops::{Add, Div, Mul, Neg, Sub};
 
-/// Scalar f32 with SIMD-compatible API.
+/// **Superseded (queued for deprecation):** Use [`f32x8<ScalarToken>`](crate::simd::generic::f32x8) for the scalar tier, or plain `f32` / [`crate::scalar`] (and `magemath` `*_with_token`) for scalar tails.
+///
+/// Scalar `f32` with SIMD-compatible API.
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[repr(transparent)]
 pub struct f32x1(pub f32);
@@ -258,7 +262,9 @@ impl Neg for f32x1 {
     }
 }
 
-/// Scalar f64 with SIMD-compatible API.
+/// **Superseded (queued for deprecation):** Use [`f64x4<ScalarToken>`](crate::simd::generic::f64x4) for the scalar tier, or plain `f64` / [`crate::scalar`] for scalar tails.
+///
+/// Scalar `f64` with SIMD-compatible API.
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[repr(transparent)]
 pub struct f64x1(pub f64);
@@ -453,7 +459,9 @@ impl Neg for f64x1 {
     }
 }
 
-/// Scalar i32 with SIMD-compatible API.
+/// **Superseded (queued for deprecation):** Use [`i32x8<ScalarToken>`](crate::simd::generic::i32x8) for the scalar tier, or plain `i32` / [`crate::scalar`] for scalar tails.
+///
+/// Scalar `i32` with SIMD-compatible API.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(transparent)]
 pub struct i32x1(pub i32);
@@ -517,7 +525,9 @@ impl Mul for i32x1 {
     }
 }
 
-/// Scalar u32 with SIMD-compatible API.
+/// **Superseded (queued for deprecation):** Use [`u32x8<ScalarToken>`](crate::simd::generic::u32x8) for the scalar tier, or plain `u32` for scalar tails.
+///
+/// Scalar `u32` with SIMD-compatible API.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(transparent)]
 pub struct u32x1(pub u32);
@@ -581,7 +591,9 @@ impl Mul for u32x1 {
     }
 }
 
-/// Scalar i8 with SIMD-compatible API.
+/// **Superseded (queued for deprecation):** Use [`i8x16<ScalarToken>`](crate::simd::generic::i8x16) for the scalar tier, or plain `i8` for scalar tails.
+///
+/// Scalar `i8` with SIMD-compatible API.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(transparent)]
 pub struct i8x1(pub i8);
@@ -631,7 +643,9 @@ impl Sub for i8x1 {
     }
 }
 
-/// Scalar u8 with SIMD-compatible API.
+/// **Superseded (queued for deprecation):** Use [`u8x16<ScalarToken>`](crate::simd::generic::u8x16) for the scalar tier, or plain `u8` for scalar tails.
+///
+/// Scalar `u8` with SIMD-compatible API.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(transparent)]
 pub struct u8x1(pub u8);
@@ -681,7 +695,9 @@ impl Sub for u8x1 {
     }
 }
 
-/// Scalar i16 with SIMD-compatible API.
+/// **Superseded (queued for deprecation):** Use [`i16x8<ScalarToken>`](crate::simd::generic::i16x8) for the scalar tier, or plain `i16` for scalar tails.
+///
+/// Scalar `i16` with SIMD-compatible API.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(transparent)]
 pub struct i16x1(pub i16);
@@ -731,7 +747,9 @@ impl Sub for i16x1 {
     }
 }
 
-/// Scalar u16 with SIMD-compatible API.
+/// **Superseded (queued for deprecation):** Use [`u16x8<ScalarToken>`](crate::simd::generic::u16x8) for the scalar tier, or plain `u16` for scalar tails.
+///
+/// Scalar `u16` with SIMD-compatible API.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(transparent)]
 pub struct u16x1(pub u16);
@@ -781,7 +799,9 @@ impl Sub for u16x1 {
     }
 }
 
-/// Scalar i64 with SIMD-compatible API.
+/// **Superseded (queued for deprecation):** Use [`i64x4<ScalarToken>`](crate::simd::generic::i64x4) for the scalar tier, or plain `i64` for scalar tails.
+///
+/// Scalar `i64` with SIMD-compatible API.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(transparent)]
 pub struct i64x1(pub i64);
@@ -831,7 +851,9 @@ impl Sub for i64x1 {
     }
 }
 
-/// Scalar u64 with SIMD-compatible API.
+/// **Superseded (queued for deprecation):** Use [`u64x4<ScalarToken>`](crate::simd::generic::u64x4) for the scalar tier, or plain `u64` for scalar tails.
+///
+/// Scalar `u64` with SIMD-compatible API.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(transparent)]
 pub struct u64x1(pub u64);

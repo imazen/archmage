@@ -34,6 +34,8 @@ impl SimdToken for Wasm128Token {
 }
 
 impl Wasm128Token {
+    /// **Deprecated:** Use `from_context()` on native architectures (or [`SimdToken::summon`] for cross-platform runtime detection) instead.
+    ///
     /// Construct a proof for a foreign architecture. Always `unsafe`.
     ///
     /// On this token's native architecture the constructor is
@@ -109,6 +111,8 @@ impl SimdToken for Wasm128RelaxedToken {
 }
 
 impl Wasm128RelaxedToken {
+    /// **Deprecated:** Use `from_context()` on native architectures (or [`SimdToken::summon`] for cross-platform runtime detection) instead.
+    ///
     /// Construct a proof for a foreign architecture. Always `unsafe`.
     ///
     /// On this token's native architecture the constructor is

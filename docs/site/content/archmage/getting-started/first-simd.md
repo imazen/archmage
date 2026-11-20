@@ -13,7 +13,7 @@ are documented alongside the standalone version. Add both `archmage` and
 #![forbid(unsafe_code)]
 use archmage::prelude::*;
 
-#[magetypes(define(f32x8), v3, neon, wasm128, scalar)]
+#[attune(_*_t, define(f32x8))]
 fn gain_impl(token: Token, plane: &mut [f32], gain: f32) {
     let factor = f32x8::splat_t(token, gain);
     let (chunks, tail) = f32x8::partition_slice_mut_t(token, plane);
@@ -26,25 +26,27 @@ fn gain_impl(token: Token, plane: &mut [f32], gain: f32) {
 }
 
 pub fn apply_gain(plane: &mut [f32], gain: f32) {
-    incant!(gain_impl(plane, gain), [v3, neon, wasm128, scalar])
+    attuned!(gain_impl(plane, gain))
 }
-
 
 let mut data = [2.0; 11];
 apply_gain(&mut data, 0.5);
 assert_eq!(data, [1.0; 11]);
 ```
 
-The full chain is `apply_gain` → `incant!` → a generated `gain_impl_<tier>` →
-array-chunk loads, multiplication, and stores → scalar tail. The macro's
-`define(f32x8)` binds a generic vector to each selected token, enabling the right
-instructions inside the loop. Dispatch occurs outside the loop.
+The full chain is `apply_gain` → `attuned!` → a generated `gain_impl_<tier>_t` →
+array-chunk loads, multiplication, and stores → scalar tail. `define(f32x8)`
+binds a generic vector to each selected token (`v3`, `neon`, `wasm128`,
+`scalar`), enabling the right instructions inside the loop. Dispatch occurs
+outside the loop. When you do not need separate `_t` entry functions,
+`#[attune(dispatch, define(f32x8))]` with `let token = Token::from_context();`
+generates the public dispatcher directly.
 
 For reuse across kernels, see the complete
 [zenblend generic-helper chain](@/magetypes/examples/pixel-blending.md).
 `#[inline(always)]` can help that helper inline, but it cannot replace the
-`#[magetypes]` entry context. For direct intrinsics, use `#[arcane(import_intrinsics)]`
-at the boundary and `#[rite(import_intrinsics)]` for matched helpers; the
+`#[attune]` entry context. For direct intrinsics, use `#[attune(wrap, import_intrinsics)]`
+at the boundary and `#[attune(v3, import_intrinsics)]` for matched helpers; the
 [intrinsics browser](https://imazen.github.io/archmage/intrinsics/) lists the
 reference-based memory operations.
 

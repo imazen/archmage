@@ -1,6 +1,6 @@
 # magetypes [![CI](https://img.shields.io/github/actions/workflow/status/imazen/archmage/ci.yml?style=flat-square&label=CI)](https://github.com/imazen/archmage/actions/workflows/ci.yml) [![crates.io](https://img.shields.io/crates/v/magetypes?style=flat-square)](https://crates.io/crates/magetypes) [![lib.rs](https://img.shields.io/crates/v/magetypes?style=flat-square&label=lib.rs&color=blue)](https://lib.rs/crates/magetypes) [![docs.rs](https://img.shields.io/docsrs/magetypes?style=flat-square)](https://docs.rs/magetypes) [![MSRV](https://img.shields.io/badge/MSRV-1.89-blue?style=flat-square)](https://github.com/imazen/archmage/blob/main/MSRV.md) [![license](https://img.shields.io/crates/l/magetypes?style=flat-square)](#license)
 
-[Guide](https://imazen.github.io/archmage/) · [Intrinsics browser](https://imazen.github.io/archmage/intrinsics/) · [Archmage API](https://docs.rs/archmage/latest/archmage/) · [Magetypes API](https://docs.rs/magetypes/latest/magetypes/)
+[Guide](https://imazen.github.io/archmage/) · [Intrinsics browser](https://imazen.github.io/archmage/intrinsics/) · [Archmage API](https://docs.rs/archmage/latest/archmage/) · [Magetypes API](https://docs.rs/magetypes/latest/magetypes/) · [Magemath API](https://docs.rs/magemath/latest/magemath/)
 
 magetypes provides SIMD vector types with ordinary Rust operators: `f32x8`,
 `i32x4`, `u8x16` and the rest of the 128-, 256- and 512-bit float and integer
@@ -207,7 +207,8 @@ The macros come from archmage:
 | An algorithm shared across widths/backends | [A generic helper](https://imazen.github.io/archmage/magetypes/examples/generic-kernels/): `#[inline(always)] fn helper<T: F32x8Backend>(token: T, …)` | `helper(token, …)` from a `#[attune]` kernel |
 
 Earlier attributes (`#[magetypes]`, `#[arcane]`, `#[rite]`, `#[autoversion]`,
-`incant!`) remain supported; see [docs/ATTUNE.md](https://github.com/imazen/archmage/blob/main/docs/ATTUNE.md)
+`incant!`) are superseded by `#[attune]` and `attuned!` and queued for
+deprecation in the next release; see [docs/ATTUNE.md](https://github.com/imazen/archmage/blob/main/docs/ATTUNE.md)
 for the mapping.
 [Types and dispatch](https://imazen.github.io/archmage/magetypes/dispatch/types-and-dispatch/)
 covers kernels that are also generic over a pixel type or a constant.
@@ -344,7 +345,7 @@ MIT OR Apache-2.0
 
 ### General Rust awesomeness
 
-[zenbench] · [archmage] · **magetypes** · [enough] · [whereat] · [cargo-copter]
+[zenbench] · [archmage] · **magetypes** · [magemath] · [enough] · [whereat] · [cargo-copter]
 
 [Open source](https://www.imazen.io/open-source) · [@imazen](https://github.com/imazen) · [@lilith](https://github.com/lilith) · [lib.rs/~lilith](https://lib.rs/~lilith)
 
@@ -398,6 +399,7 @@ MIT OR Apache-2.0
 [zenpicker]: https://github.com/imazen/zenanalyze
 [zenbench]: https://github.com/imazen/zenbench
 [archmage]: https://github.com/imazen/archmage
+[magemath]: https://github.com/imazen/archmage/tree/main/magemath
 [enough]: https://github.com/imazen/enough
 [whereat]: https://github.com/lilith/whereat
 [cargo-copter]: https://github.com/imazen/cargo-copter

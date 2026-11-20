@@ -78,7 +78,7 @@ impl Wasm128Token {
         Self { _private: () }
     }
 
-    /// Deprecated alias for [`Wasm128Token::from_context`].
+    /// **Deprecated:** Use [`Wasm128Token::from_context`] instead.
     ///
     /// Identical in every respect — same `#[target_feature]` gate, same
     /// safe-call rules. The name predates the compiler-checked design
@@ -200,7 +200,7 @@ impl Wasm128RelaxedToken {
         Self { _private: () }
     }
 
-    /// Deprecated alias for [`Wasm128RelaxedToken::from_context`].
+    /// **Deprecated:** Use [`Wasm128RelaxedToken::from_context`] instead.
     ///
     /// Identical in every respect — same `#[target_feature]` gate, same
     /// safe-call rules. The name predates the compiler-checked design

@@ -38,8 +38,8 @@ def check_contract(ci, publish):
             'Only the PR-base comparison may be skipped outside PRs')
     require('workflow_call' in ci['on'], 'CI must remain reusable')
     semver = jobs['semver']
-    require(set(semver['strategy']['matrix']['crate']) == {'archmage', 'magetypes'},
-            'Semver must cover both libraries')
+    require(set(semver['strategy']['matrix']['crate']) == {'archmage', 'magetypes', 'magemath'},
+            'Semver must cover archmage, magetypes, and magemath')
     guard = [step for step in semver['steps'] if step.get('run') ==
              'python3 -B xtask/check_semver.py ${{ matrix.crate }}']
     require(len(guard) == 1 and 'if' not in guard[0]
@@ -57,6 +57,11 @@ def check_contract(ci, publish):
     require(any(step.get('run') == 'python3 xtask/fma_vectors.py --check'
                 for step in jobs['workflow-contracts']['steps']),
             'Exact-rational FMA fixtures must be checked independently')
+    publish_on = publish['on']
+    require(publish_on.get('push', {}).get('tags') == ['v[0-9]*', 'magemath-v[0-9]*'],
+            'Publish workflow must trigger on both core v* and independent magemath-v* tags')
+    require('release' in publish_on,
+            'Publish workflow must also accept published GitHub Releases')
     caller = publish['jobs']['full-ci']
     require(caller['uses'] == './.github/workflows/ci.yml',
             'Release must call CI from the same commit')
@@ -116,20 +121,44 @@ class GateTests(unittest.TestCase):
     def test_release_tag_versions(self):
         step = next(s for s in self.publish['jobs']['check-tags']['steps']
                     if s.get('id') == 'version')
-        match = re.search(r'if \[\[ "\$TAG" =~ (.+) \]\]; then', step['run'])
-        self.assertIsNotNone(match, 'release tag validation must remain explicit')
-        script = 'if [[ "$TAG" =~ ' + match.group(1) + ' ]]; then printf "%s" "${BASH_REMATCH[1]}"; else exit 1; fi'
-        for tag, version in [('v0.9.31', '0.9.31'), ('v0.9.31-beta', '0.9.31-beta'),
-                             ('v0.9.31-beta.1', '0.9.31-beta.1'),
-                             ('v0.9.31-beta.2', '0.9.31-beta.2'), ('v0.9', None),
-                             ('v0.9.31-beta!', None), ('v0.9.31-beta.', None),
-                             ('prefix-v0.9.31', None), ('v0.9.31-beta+suffix', None)]:
+        self.assertIn('github.event.release.tag_name || github.ref_name', step['run'],
+                      'release tag extraction must work for both tag push and GitHub Release events')
+        # Replace the GitHub expression with $TAG_INPUT so we exercise the exact workflow bash logic.
+        script = re.sub(r'\$\{\{\s*github\.event\.release\.tag_name\s*\|\|\s*github\.ref_name\s*\}\}',
+                        '${TAG_INPUT}', step['run'])
+        cases = [
+            ('v0.9.31', ('core', '0.9.31', '-p archmage-macros -p archmage -p magetypes')),
+            ('v0.9.31-beta', ('core', '0.9.31-beta', '-p archmage-macros -p archmage -p magetypes')),
+            ('v0.9.31-beta.1', ('core', '0.9.31-beta.1', '-p archmage-macros -p archmage -p magetypes')),
+            ('v0.9.31-beta.2', ('core', '0.9.31-beta.2', '-p archmage-macros -p archmage -p magetypes')),
+            ('magemath-v0.1.0', ('magemath', '0.1.0', '-p magemath')),
+            ('magemath-v0.2.0-beta.1', ('magemath', '0.2.0-beta.1', '-p magemath')),
+            ('archmage-macros-v0.9.31', None),
+            ('magetypes-v0.9.31', None),
+            ('magemath-0.1.0', None),
+            ('v0.9', None),
+            ('v0.9.31-beta!', None),
+            ('v0.9.31-beta.', None),
+            ('prefix-v0.9.31', None),
+            ('v0.9.31-beta+suffix', None),
+        ]
+        for tag, expected in cases:
             with self.subTest(tag=tag):
-                result = subprocess.run(['bash', '-c', script], env=dict(os.environ, TAG=tag),
-                                        capture_output=True, text=True)
-                self.assertEqual(result.returncode, 0 if version else 1)
-                if version:
-                    self.assertEqual(result.stdout, version)
+                out_file = ROOT / 'target' / f'test-gh-out-{os.getpid()}'
+                out_file.parent.mkdir(parents=True, exist_ok=True)
+                out_file.write_text('')
+                try:
+                    result = subprocess.run(
+                        ['bash', '-euo', 'pipefail', '-c', script],
+                        env=dict(os.environ, TAG_INPUT=tag, GITHUB_OUTPUT=str(out_file)),
+                        capture_output=True, text=True,
+                    )
+                    self.assertEqual(result.returncode, 0 if expected else 1, result.stderr + result.stdout)
+                    if expected:
+                        kv = dict(line.split('=', 1) for line in out_file.read_text().splitlines() if '=' in line)
+                        self.assertEqual((kv['mode'], kv['version'], kv['packages']), expected)
+                finally:
+                    out_file.unlink(missing_ok=True)
 
     def test_complete_matrix(self):
         check_results(self.results, self.required, 'pull_request')

@@ -6,7 +6,7 @@ This is the searchable reference companion to the [Archmage & Magetypes tutorial
 
 - **Tokens** — Complete reference for all capability tokens, their features, CPU requirements, and detection behavior.
 - **Patterns** — Quick-reference for loading, storing, dispatch, and the safety model.
-- **ASM-Verified Patterns** — Common code patterns with `cargo asm` proof that they compile to the expected instructions. No hand-waving.
+- **ASM-Verified Patterns** — Common code patterns with `cargo asm` proof that they compile to the expected instructions.
 - **Intrinsics Reference** — Auto-generated listings of every intrinsic mapped to its required token, with safety annotations. Updated on each `just generate`.
 - **Cross-Platform** — Semantic differences between x86/ARM/WASM and what gets polyfilled.
 
@@ -24,7 +24,10 @@ This is the searchable reference companion to the [Archmage & Magetypes tutorial
 
 ## Conventions
 
-- `#[arcane]` = boundary function (called from non-SIMD code after `summon()`)
-- `#[rite]` = internal helper (called from within `#[arcane]` or other `#[rite]` functions). Three modes: token-based, tier-based (`#[rite(v3)]`), multi-tier (`#[rite(v3, v4, neon)]`)
+- `#[attune(wrap)]` / `#[attune] fn work_v3_t(...)` = proof wrapper (boundary function called from ordinary code after `summon()`)
+- `#[attune(v3)]` / `#[attune] fn work_v3(...)` = direct feature body (internal helper called from a matching feature context)
+- `#[attune(_*_t, define(f32x8))]` + `attuned!` / `reattune!` / `#[attune(dispatch)]` = multi-tier family generation and runtime dispatch
+- `*_t(token, ...)` = token-first magetypes constructors (`splat_t`, `load_t`, `zero_t`, `from_array_t`, `from_slice_t`)
 - `Token::summon()` = runtime CPU feature detection (returns `Option<Token>`)
-- `Arm64` = friendly alias for `NeonToken`
+- `Arm64` = alias for `NeonToken`
+- Legacy `#[arcane]`, `#[rite]`, `#[magetypes]`, `#[autoversion]`, and `incant!` remain supported; see [`docs/ATTUNE.md`](../../ATTUNE.md) for the full reference and migration table.

@@ -34,6 +34,8 @@ impl SimdToken for NeonToken {
 }
 
 impl NeonToken {
+    /// **Deprecated:** Use `from_context()` on native architectures (or [`SimdToken::summon`] for cross-platform runtime detection) instead.
+    ///
     /// Construct a proof for a foreign architecture. Always `unsafe`.
     ///
     /// On this token's native architecture the constructor is
@@ -109,6 +111,8 @@ impl SimdToken for NeonAesToken {
 }
 
 impl NeonAesToken {
+    /// **Deprecated:** Use `from_context()` on native architectures (or [`SimdToken::summon`] for cross-platform runtime detection) instead.
+    ///
     /// Construct a proof for a foreign architecture. Always `unsafe`.
     ///
     /// On this token's native architecture the constructor is
@@ -184,6 +188,8 @@ impl SimdToken for NeonSha3Token {
 }
 
 impl NeonSha3Token {
+    /// **Deprecated:** Use `from_context()` on native architectures (or [`SimdToken::summon`] for cross-platform runtime detection) instead.
+    ///
     /// Construct a proof for a foreign architecture. Always `unsafe`.
     ///
     /// On this token's native architecture the constructor is
@@ -259,6 +265,8 @@ impl SimdToken for NeonCrcToken {
 }
 
 impl NeonCrcToken {
+    /// **Deprecated:** Use `from_context()` on native architectures (or [`SimdToken::summon`] for cross-platform runtime detection) instead.
+    ///
     /// Construct a proof for a foreign architecture. Always `unsafe`.
     ///
     /// On this token's native architecture the constructor is
@@ -336,6 +344,8 @@ impl SimdToken for Arm64V2Token {
 }
 
 impl Arm64V2Token {
+    /// **Deprecated:** Use `from_context()` on native architectures (or [`SimdToken::summon`] for cross-platform runtime detection) instead.
+    ///
     /// Construct a proof for a foreign architecture. Always `unsafe`.
     ///
     /// On this token's native architecture the constructor is
@@ -414,6 +424,8 @@ impl SimdToken for Arm64V3Token {
 }
 
 impl Arm64V3Token {
+    /// **Deprecated:** Use `from_context()` on native architectures (or [`SimdToken::summon`] for cross-platform runtime detection) instead.
+    ///
     /// Construct a proof for a foreign architecture. Always `unsafe`.
     ///
     /// On this token's native architecture the constructor is

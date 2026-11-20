@@ -34,6 +34,8 @@ impl SimdToken for X64V1Token {
 }
 
 impl X64V1Token {
+    /// **Deprecated:** Use `from_context()` on native architectures (or [`SimdToken::summon`] for cross-platform runtime detection) instead.
+    ///
     /// Construct a proof for a foreign architecture. Always `unsafe`.
     ///
     /// On this token's native architecture the constructor is
@@ -111,6 +113,8 @@ impl SimdToken for X64V2Token {
 }
 
 impl X64V2Token {
+    /// **Deprecated:** Use `from_context()` on native architectures (or [`SimdToken::summon`] for cross-platform runtime detection) instead.
+    ///
     /// Construct a proof for a foreign architecture. Always `unsafe`.
     ///
     /// On this token's native architecture the constructor is
@@ -187,6 +191,8 @@ impl SimdToken for X64CryptoToken {
 }
 
 impl X64CryptoToken {
+    /// **Deprecated:** Use `from_context()` on native architectures (or [`SimdToken::summon`] for cross-platform runtime detection) instead.
+    ///
     /// Construct a proof for a foreign architecture. Always `unsafe`.
     ///
     /// On this token's native architecture the constructor is
@@ -262,6 +268,8 @@ impl SimdToken for X64V3Token {
 }
 
 impl X64V3Token {
+    /// **Deprecated:** Use `from_context()` on native architectures (or [`SimdToken::summon`] for cross-platform runtime detection) instead.
+    ///
     /// Construct a proof for a foreign architecture. Always `unsafe`.
     ///
     /// On this token's native architecture the constructor is
@@ -337,6 +345,8 @@ impl SimdToken for X64V3CryptoToken {
 }
 
 impl X64V3CryptoToken {
+    /// **Deprecated:** Use `from_context()` on native architectures (or [`SimdToken::summon`] for cross-platform runtime detection) instead.
+    ///
     /// Construct a proof for a foreign architecture. Always `unsafe`.
     ///
     /// On this token's native architecture the constructor is
@@ -412,6 +422,8 @@ impl SimdToken for X64V3GfniCryptoToken {
 }
 
 impl X64V3GfniCryptoToken {
+    /// **Deprecated:** Use `from_context()` on native architectures (or [`SimdToken::summon`] for cross-platform runtime detection) instead.
+    ///
     /// Construct a proof for a foreign architecture. Always `unsafe`.
     ///
     /// On this token's native architecture the constructor is
@@ -487,6 +499,8 @@ impl SimdToken for X64V4Token {
 }
 
 impl X64V4Token {
+    /// **Deprecated:** Use `from_context()` on native architectures (or [`SimdToken::summon`] for cross-platform runtime detection) instead.
+    ///
     /// Construct a proof for a foreign architecture. Always `unsafe`.
     ///
     /// On this token's native architecture the constructor is
@@ -562,6 +576,8 @@ impl SimdToken for X64V4xToken {
 }
 
 impl X64V4xToken {
+    /// **Deprecated:** Use `from_context()` on native architectures (or [`SimdToken::summon`] for cross-platform runtime detection) instead.
+    ///
     /// Construct a proof for a foreign architecture. Always `unsafe`.
     ///
     /// On this token's native architecture the constructor is
@@ -637,6 +653,8 @@ impl SimdToken for Avx512Fp16Token {
 }
 
 impl Avx512Fp16Token {
+    /// **Deprecated:** Use `from_context()` on native architectures (or [`SimdToken::summon`] for cross-platform runtime detection) instead.
+    ///
     /// Construct a proof for a foreign architecture. Always `unsafe`.
     ///
     /// On this token's native architecture the constructor is
@@ -684,7 +702,7 @@ impl Avx512Fp16Token {
     }
 }
 
-/// Type alias for [`X64V1Token`].
+/// **Deprecated:** Use [`X64V1Token`] instead.
 #[deprecated(
     since = "0.9.9",
     note = "Use X64V1Token instead. Sse2Token is misleading — this is an x86_64-only token (SSE2 is the x86_64 baseline). On 32-bit x86, summon() returns None."
@@ -694,7 +712,7 @@ pub type Sse2Token = X64V1Token;
 /// Type alias for [`X64V3Token`].
 pub type Desktop64 = X64V3Token;
 
-/// Type alias for [`X64V3Token`].
+/// **Deprecated:** Use [`X64V3Token`] instead.
 #[deprecated(
     since = "0.9.9",
     note = "Use X64V3Token or Desktop64 instead. Avx2FmaToken is misleading — V3 includes BMI1/2, F16C, and more, not just AVX2+FMA."

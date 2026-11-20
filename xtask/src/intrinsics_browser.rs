@@ -790,6 +790,7 @@ fn generate_per_token_markdown(
 
 fn build_usage_example(token_def: &crate::registry::TokenDef, arch: &str) -> String {
     let primary_name = &token_def.name;
+    let tier = token_def.short_name.as_deref().unwrap_or("v3");
 
     match arch {
         "x86_64" => {
@@ -801,16 +802,16 @@ fn build_usage_example(token_def: &crate::registry::TokenDef, arch: &str) -> Str
                         process(token, &mut data);
                     }}
 
-                    #[arcane(import_intrinsics)]  // Entry point only
-                    fn process(token: {primary_name}, data: &mut [f32]) {{
+                    #[attune(wrap, import_intrinsics)]  // Entry point only
+                    fn process(_token: {primary_name}, data: &mut [f32]) {{
                         for chunk in data.chunks_exact_mut(16) {{
-                            process_chunk(token, chunk.try_into().unwrap());
+                            process_chunk(chunk.try_into().unwrap());
                         }}
                     }}
 
-                    #[rite(import_intrinsics)]  // All inner helpers
-                    fn process_chunk(_: {primary_name}, chunk: &mut [f32; 16]) {{
-                        let v = _mm512_loadu_ps(&*chunk);  // safe inside #[rite]
+                    #[attune({tier}, import_intrinsics)]  // All inner helpers
+                    fn process_chunk(chunk: &mut [f32; 16]) {{
+                        let v = _mm512_loadu_ps(&*chunk);  // safe inside #[attune({tier})]
                         let doubled = _mm512_add_ps(v, v);
                         _mm512_storeu_ps(chunk, doubled);
                     }}
@@ -823,17 +824,17 @@ fn build_usage_example(token_def: &crate::registry::TokenDef, arch: &str) -> Str
                         process(token, &mut data);
                     }}
 
-                    #[arcane(import_intrinsics)]  // Entry point only
-                    fn process(token: {primary_name}, data: &mut [f32]) {{
+                    #[attune(wrap, import_intrinsics)]  // Entry point only
+                    fn process(_token: {primary_name}, data: &mut [f32]) {{
                         for chunk in data.chunks_exact_mut(8) {{
-                            process_chunk(token, chunk.try_into().unwrap());
+                            process_chunk(chunk.try_into().unwrap());
                         }}
                     }}
 
-                    #[rite(import_intrinsics)]  // All inner helpers
-                    fn process_chunk(_: {primary_name}, chunk: &mut [f32; 8]) {{
+                    #[attune({tier}, import_intrinsics)]  // All inner helpers
+                    fn process_chunk(chunk: &mut [f32; 8]) {{
                         let v = _mm256_loadu_ps(chunk);  // safe!
-                        let doubled = _mm256_add_ps(v, v);    // value intrinsic (safe inside #[rite])
+                        let doubled = _mm256_add_ps(v, v);  // value intrinsic (safe inside #[attune({tier})])
                         _mm256_storeu_ps(chunk, doubled);  // safe!
                     }}
                     // No unsafe anywhere. Use #![forbid(unsafe_code)] in your crate."#}
@@ -845,17 +846,17 @@ fn build_usage_example(token_def: &crate::registry::TokenDef, arch: &str) -> Str
                         process(token, &mut data);
                     }}
 
-                    #[arcane(import_intrinsics)]  // Entry point only
-                    fn process(token: {primary_name}, data: &mut [f32]) {{
+                    #[attune(wrap, import_intrinsics)]  // Entry point only
+                    fn process(_token: {primary_name}, data: &mut [f32]) {{
                         for chunk in data.chunks_exact_mut(4) {{
-                            process_chunk(token, chunk.try_into().unwrap());
+                            process_chunk(chunk.try_into().unwrap());
                         }}
                     }}
 
-                    #[rite(import_intrinsics)]  // All inner helpers
-                    fn process_chunk(_: {primary_name}, chunk: &mut [f32; 4]) {{
+                    #[attune({tier}, import_intrinsics)]  // All inner helpers
+                    fn process_chunk(chunk: &mut [f32; 4]) {{
                         let v = _mm_loadu_ps(chunk);  // safe!
-                        let doubled = _mm_add_ps(v, v);  // value intrinsic (safe inside #[rite])
+                        let doubled = _mm_add_ps(v, v);  // value intrinsic (safe inside #[attune({tier})])
                         _mm_storeu_ps(chunk, doubled);  // safe!
                     }}
                     // No unsafe anywhere. Use #![forbid(unsafe_code)] in your crate."#}
@@ -868,38 +869,38 @@ fn build_usage_example(token_def: &crate::registry::TokenDef, arch: &str) -> Str
                 process(token, &mut data);
             }}
 
-            #[arcane(import_intrinsics)]  // Entry point only
-            fn process(token: {primary_name}, data: &mut [f32]) {{
+            #[attune(wrap, import_intrinsics)]  // Entry point only
+            fn process(_token: {primary_name}, data: &mut [f32]) {{
                 for chunk in data.chunks_exact_mut(4) {{
-                    process_chunk(token, chunk.try_into().unwrap());
+                    process_chunk(chunk.try_into().unwrap());
                 }}
             }}
 
-            #[rite(import_intrinsics)]  // All inner helpers
-            fn process_chunk(_: {primary_name}, chunk: &mut [f32; 4]) {{
+            #[attune({tier}, import_intrinsics)]  // All inner helpers
+            fn process_chunk(chunk: &mut [f32; 4]) {{
                 let v = vld1q_f32(chunk);  // safe!
-                let doubled = vaddq_f32(v, v);  // value intrinsic (safe inside #[rite])
+                let doubled = vaddq_f32(v, v);  // value intrinsic (safe inside #[attune({tier})])
                 vst1q_f32(chunk, doubled);  // safe!
             }}
             // No unsafe anywhere. Use #![forbid(unsafe_code)] in your crate."#},
         "wasm32" => formatdoc! {r#"
             use archmage::prelude::*;
 
-            if let Some(token) = Wasm128Token::summon() {{
+            if let Some(token) = {primary_name}::summon() {{
                 process(token, &mut data);
             }}
 
-            #[arcane(import_intrinsics)]  // Entry point only
-            fn process(token: Wasm128Token, data: &mut [f32]) {{
+            #[attune(wrap, import_intrinsics)]  // Entry point only
+            fn process(_token: {primary_name}, data: &mut [f32]) {{
                 for chunk in data.chunks_exact_mut(4) {{
-                    process_chunk(token, chunk.try_into().unwrap());
+                    process_chunk(chunk.try_into().unwrap());
                 }}
             }}
 
-            #[rite(import_intrinsics)]  // All inner helpers
-            fn process_chunk(_: Wasm128Token, chunk: &mut [f32; 4]) {{
+            #[attune({tier}, import_intrinsics)]  // All inner helpers
+            fn process_chunk(chunk: &mut [f32; 4]) {{
                 let v = v128_load(chunk);  // safe!
-                let doubled = f32x4_add(v, v);  // value intrinsic (safe inside #[rite])
+                let doubled = f32x4_add(v, v);  // value intrinsic (safe inside #[attune({tier})])
                 v128_store(chunk, doubled);  // safe!
             }}
             // No unsafe anywhere. Use #![forbid(unsafe_code)] in your crate."#},
