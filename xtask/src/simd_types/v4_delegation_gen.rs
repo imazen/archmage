@@ -22,28 +22,28 @@ const TOKENS: &[(&str, &str)] = &[
 const OVERRIDES: &[(&str, &str, &str)] = &[
     ("F32x4Backend", "to_u8_bytes", "to_u8_bytes_x4_v4"),
     (
-        "F32x4Backend",
+        "F32x4Internal",
         "store_rgba_u8_into",
         "store_rgba_u8_into_x4_v4",
     ),
     (
-        "F32x4Backend",
+        "F32x4Internal",
         "store_rgb_u8_into",
         "store_rgb_u8_into_x4_v4",
     ),
     ("F32x8Backend", "to_u8_bytes", "to_u8_bytes_x8_v4"),
     ("F32x4Backend", "min", "min_x4_v4"),
     ("F32x4Backend", "max", "max_x4_v4"),
-    ("F32x4Backend", "to_u16_lanes", "to_u16_lanes_x4_v4"),
-    ("F32x4Backend", "to_u8_lanes", "to_u8_lanes_x4_v4"),
-    ("F32x4Backend", "to_u32_lanes", "to_u32_lanes_x4_v4"),
-    ("F32x4Backend", "from_u32_lanes", "from_u32_lanes_x4_v4"),
+    ("F32x4Internal", "to_u16_lanes", "to_u16_lanes_x4_v4"),
+    ("F32x4Internal", "to_u8_lanes", "to_u8_lanes_x4_v4"),
+    ("F32x4Internal", "to_u32_lanes", "to_u32_lanes_x4_v4"),
+    ("F32x4Internal", "from_u32_lanes", "from_u32_lanes_x4_v4"),
     ("F32x8Backend", "min", "min_x8_v4"),
     ("F32x8Backend", "max", "max_x8_v4"),
-    ("F32x8Backend", "to_u16_lanes", "to_u16_lanes_x8_v4"),
-    ("F32x8Backend", "to_u8_lanes", "to_u8_lanes_x8_v4"),
-    ("F32x8Backend", "to_u32_lanes", "to_u32_lanes_x8_v4"),
-    ("F32x8Backend", "from_u32_lanes", "from_u32_lanes_x8_v4"),
+    ("F32x8Internal", "to_u16_lanes", "to_u16_lanes_x8_v4"),
+    ("F32x8Internal", "to_u8_lanes", "to_u8_lanes_x8_v4"),
+    ("F32x8Internal", "to_u32_lanes", "to_u32_lanes_x8_v4"),
+    ("F32x8Internal", "from_u32_lanes", "from_u32_lanes_x8_v4"),
 ];
 
 /// Generate the delegation file from the two trait sources.
@@ -51,7 +51,9 @@ pub(crate) fn generate(f32x4_trait_src: &str, f32x8_trait_src: &str) -> String {
     let mut body = String::new();
     for (trait_name, src) in [
         ("F32x4Backend", f32x4_trait_src),
+        ("F32x4Internal", f32x4_trait_src),
         ("F32x8Backend", f32x8_trait_src),
+        ("F32x8Internal", f32x8_trait_src),
     ] {
         let trait_item = find_trait(src, trait_name);
         for (token, v4_expr) in TOKENS {
@@ -93,7 +95,7 @@ pub(crate) fn generate(f32x4_trait_src: &str, f32x8_trait_src: &str) -> String {
 
         #![cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
 
-        use crate::simd::backends::{{F32x4Backend, F32x8Backend}};
+        use crate::simd::backends::{{F32x4Backend, F32x4Internal, F32x8Backend, F32x8Internal}};
         use super::x86_v4_f32_overrides as overrides;
 
         {body}
@@ -255,12 +257,12 @@ fn delegating_impl(
     // `type Repr` exists on the backend traits but not on the
     // float↔int conversion traits (whose methods name supertrait Reprs
     // in signature position) — emit it only when the trait declares it.
-    let has_repr = trait_item
-        .items
-        .iter()
-        .any(|item| matches!(item, TraitItem::Type(_)));
-    let repr_impl = has_repr.then(|| {
-        quote! { type Repr = <archmage::X64V3Token as #trait_ident>::Repr; }
+    let assoc_ty = trait_item.items.iter().find_map(|item| match item {
+        TraitItem::Type(ty) => Some(&ty.ident),
+        _ => None,
+    });
+    let repr_impl = assoc_ty.map(|assoc| {
+        quote! { type #assoc = <archmage::X64V3Token as #trait_ident>::#assoc; }
     });
     let tokens = quote! {
         impl #trait_ident for #token_path {

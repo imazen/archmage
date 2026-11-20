@@ -6,7 +6,7 @@
 # impls omitted; re-export duplicates annotated `[also: path]`.
 # DO NOT EDIT BY HAND — commit regenerated changes with the code.
 #
-# files: magetypes.txt 2940 lines (supported surface) | magetypes.features.txt 12 added (features: avx512,std,w512) | magetypes.internal.txt 245 lines (255 hidden + 0 excluded-feature)
+# files: magetypes.txt 2940 lines (supported surface) | magetypes.features.txt 12 added (features: avx512,std,w512) | magetypes.internal.txt 60 lines (72 hidden + 0 excluded-feature)
 
 ## summary
 #
@@ -1099,8 +1099,8 @@ pub fn prelude::F32x8FromHalves::from_halves(self, <Self as simd::backends::F32x
 pub fn prelude::F32x8FromHalves::high(self, <Self as simd::backends::F32x8Backend>::Repr) -> <Self as simd::backends::F32x4Backend>::Repr
 pub fn prelude::F32x8FromHalves::low(self, <Self as simd::backends::F32x8Backend>::Repr) -> <Self as simd::backends::F32x4Backend>::Repr
 pub mod scalar
-pub trait scalar::F32ScalarBackend: archmage::tokens::IntoConcreteToken + archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
-pub trait scalar::F64ScalarBackend: archmage::tokens::IntoConcreteToken + archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
+pub trait scalar::F32ScalarBackend: archmage::tokens::IntoConcreteToken + archmage::tokens::SimdToken + simd::backends::sealed::Sealed + F32ScalarInternal + core::marker::Copy + 'static
+pub trait scalar::F64ScalarBackend: archmage::tokens::IntoConcreteToken + archmage::tokens::SimdToken + simd::backends::sealed::Sealed + F64ScalarInternal + core::marker::Copy + 'static
 pub fn scalar::ceil_f32(f32) -> f32
 pub fn scalar::ceil_f64(f64) -> f64
 pub fn scalar::clamp_f32<T: scalar::F32ScalarBackend>(T, f32, f32, f32) -> f32
@@ -1156,7 +1156,7 @@ pub fn scalar::trunc_f32(f32) -> f32
 pub fn scalar::trunc_f64(f64) -> f64
 pub mod simd
 pub mod simd::backends
-pub trait simd::backends::F32x16Backend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + scalar::F32ScalarBackend + core::marker::Copy + 'static
+pub trait simd::backends::F32x16Backend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + F32x16Internal<InternalRepr = <Self as simd::backends::F32x16Backend>::Repr> + scalar::F32ScalarBackend + core::marker::Copy + 'static
 pub type simd::backends::F32x16Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync + crate::simd_storage::Pod
 pub fn simd::backends::F32x16Backend::abs(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x16Backend::add(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -1214,7 +1214,7 @@ pub fn simd::backends::F32x16Convert::convert_f32_to_i32_fast(self, <Self as sim
 pub fn simd::backends::F32x16Convert::convert_f32_to_i32_round(self, <Self as simd::backends::F32x16Backend>::Repr) -> <Self as simd::backends::I32x16Backend>::Repr
 pub fn simd::backends::F32x16Convert::convert_f32_to_i32_saturating(self, <Self as simd::backends::F32x16Backend>::Repr) -> <Self as simd::backends::I32x16Backend>::Repr
 pub fn simd::backends::F32x16Convert::convert_i32_to_f32(self, <Self as simd::backends::I32x16Backend>::Repr) -> <Self as simd::backends::F32x16Backend>::Repr
-pub trait simd::backends::F32x4Backend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + scalar::F32ScalarBackend + core::marker::Copy + 'static
+pub trait simd::backends::F32x4Backend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + F32x4Internal<InternalRepr = <Self as simd::backends::F32x4Backend>::Repr> + scalar::F32ScalarBackend + core::marker::Copy + 'static
 pub type simd::backends::F32x4Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync + crate::simd_storage::Pod
 pub fn simd::backends::F32x4Backend::abs(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x4Backend::add(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -1274,7 +1274,7 @@ pub fn simd::backends::F32x4Convert::convert_f32_to_i32_fast(self, <Self as simd
 pub fn simd::backends::F32x4Convert::convert_f32_to_i32_round(self, <Self as simd::backends::F32x4Backend>::Repr) -> <Self as simd::backends::I32x4Backend>::Repr
 pub fn simd::backends::F32x4Convert::convert_f32_to_i32_saturating(self, <Self as simd::backends::F32x4Backend>::Repr) -> <Self as simd::backends::I32x4Backend>::Repr
 pub fn simd::backends::F32x4Convert::convert_i32_to_f32(self, <Self as simd::backends::I32x4Backend>::Repr) -> <Self as simd::backends::F32x4Backend>::Repr
-pub trait simd::backends::F32x8Backend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + scalar::F32ScalarBackend + core::marker::Copy + 'static
+pub trait simd::backends::F32x8Backend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + F32x8Internal<InternalRepr = <Self as simd::backends::F32x8Backend>::Repr> + scalar::F32ScalarBackend + core::marker::Copy + 'static
 pub type simd::backends::F32x8Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync + crate::simd_storage::Pod
 pub fn simd::backends::F32x8Backend::abs(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x8Backend::add(self, Self::Repr, Self::Repr) -> Self::Repr

@@ -354,6 +354,10 @@ impl F32x4Backend for X64V3Token {
         let u8s = _mm_packus_epi16(i16s, i16s);
         (_mm_cvtsi128_si32(u8s) as u32).to_ne_bytes()
     }
+}
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
+impl F32x4Internal for X64V3Token {
+    type InternalRepr = __m128;
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn store_rgba_u8_into(self, r: __m128, g: __m128, b: __m128, a: __m128, out: &mut [u8; 16]) {
@@ -971,6 +975,40 @@ impl F32x8Backend for X64V3Token {
     }
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn transpose_8x8_repr(self, rows: [__m256; 8]) -> [__m256; 8] {
+        let t0 = _mm256_unpacklo_ps(rows[0], rows[1]);
+        let t1 = _mm256_unpackhi_ps(rows[0], rows[1]);
+        let t2 = _mm256_unpacklo_ps(rows[2], rows[3]);
+        let t3 = _mm256_unpackhi_ps(rows[2], rows[3]);
+        let t4 = _mm256_unpacklo_ps(rows[4], rows[5]);
+        let t5 = _mm256_unpackhi_ps(rows[4], rows[5]);
+        let t6 = _mm256_unpacklo_ps(rows[6], rows[7]);
+        let t7 = _mm256_unpackhi_ps(rows[6], rows[7]);
+        let s0 = _mm256_shuffle_ps::<0x44>(t0, t2);
+        let s1 = _mm256_shuffle_ps::<0xEE>(t0, t2);
+        let s2 = _mm256_shuffle_ps::<0x44>(t1, t3);
+        let s3 = _mm256_shuffle_ps::<0xEE>(t1, t3);
+        let s4 = _mm256_shuffle_ps::<0x44>(t4, t6);
+        let s5 = _mm256_shuffle_ps::<0xEE>(t4, t6);
+        let s6 = _mm256_shuffle_ps::<0x44>(t5, t7);
+        let s7 = _mm256_shuffle_ps::<0xEE>(t5, t7);
+        [
+            _mm256_permute2f128_ps::<0x20>(s0, s4),
+            _mm256_permute2f128_ps::<0x20>(s1, s5),
+            _mm256_permute2f128_ps::<0x20>(s2, s6),
+            _mm256_permute2f128_ps::<0x20>(s3, s7),
+            _mm256_permute2f128_ps::<0x31>(s0, s4),
+            _mm256_permute2f128_ps::<0x31>(s1, s5),
+            _mm256_permute2f128_ps::<0x31>(s2, s6),
+            _mm256_permute2f128_ps::<0x31>(s3, s7),
+        ]
+    }
+}
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
+impl F32x8Internal for X64V3Token {
+    type InternalRepr = __m256;
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
     fn store_rgba_u8_into(self, r: __m256, g: __m256, b: __m256, a: __m256, out: &mut [u8; 32]) {
         // AVX2 packs are lane-wise: lane0 holds pixels 0-3, lane1 4-7.
         let max = _mm256_set1_ps(255.0);
@@ -1259,36 +1297,6 @@ impl F32x8Backend for X64V3Token {
             _mm_cvtsi128_si64(hi8) as u64,
             out.last_chunk_mut::<8>().unwrap(),
         );
-    }
-
-    #[arcane(suppress_const_test, _self = X64V3Token)]
-    fn transpose_8x8_repr(self, rows: [__m256; 8]) -> [__m256; 8] {
-        let t0 = _mm256_unpacklo_ps(rows[0], rows[1]);
-        let t1 = _mm256_unpackhi_ps(rows[0], rows[1]);
-        let t2 = _mm256_unpacklo_ps(rows[2], rows[3]);
-        let t3 = _mm256_unpackhi_ps(rows[2], rows[3]);
-        let t4 = _mm256_unpacklo_ps(rows[4], rows[5]);
-        let t5 = _mm256_unpackhi_ps(rows[4], rows[5]);
-        let t6 = _mm256_unpacklo_ps(rows[6], rows[7]);
-        let t7 = _mm256_unpackhi_ps(rows[6], rows[7]);
-        let s0 = _mm256_shuffle_ps::<0x44>(t0, t2);
-        let s1 = _mm256_shuffle_ps::<0xEE>(t0, t2);
-        let s2 = _mm256_shuffle_ps::<0x44>(t1, t3);
-        let s3 = _mm256_shuffle_ps::<0xEE>(t1, t3);
-        let s4 = _mm256_shuffle_ps::<0x44>(t4, t6);
-        let s5 = _mm256_shuffle_ps::<0xEE>(t4, t6);
-        let s6 = _mm256_shuffle_ps::<0x44>(t5, t7);
-        let s7 = _mm256_shuffle_ps::<0xEE>(t5, t7);
-        [
-            _mm256_permute2f128_ps::<0x20>(s0, s4),
-            _mm256_permute2f128_ps::<0x20>(s1, s5),
-            _mm256_permute2f128_ps::<0x20>(s2, s6),
-            _mm256_permute2f128_ps::<0x20>(s3, s7),
-            _mm256_permute2f128_ps::<0x31>(s0, s4),
-            _mm256_permute2f128_ps::<0x31>(s1, s5),
-            _mm256_permute2f128_ps::<0x31>(s2, s6),
-            _mm256_permute2f128_ps::<0x31>(s3, s7),
-        ]
     }
 }
 
@@ -5567,117 +5575,6 @@ impl F32x16Backend for X64V3Token {
             <X64V3Token as F32x8Backend>::max(self, a[1], b[1]),
         ]
     }
-    #[inline(always)]
-    fn from_u16_lanes(self, lanes: &[u16; 16]) -> [__m256; 2] {
-        let (chunks, _) = lanes.as_chunks::<8>();
-        core::array::from_fn(|i| <Self as F32x8Backend>::from_u16_lanes(self, &chunks[i]))
-    }
-
-    #[arcane(suppress_const_test, _self = X64V3Token)]
-    fn to_u16_lanes<const CFG: u32>(self, value: [__m256; 2]) -> [u16; 16] {
-        let opts = const { crate::numerics::IntConvert::decode(CFG) };
-        let convert = |v| {
-            let v = if opts.saturates_all() {
-                _mm256_min_ps(_mm256_set1_ps(65535.0), v)
-            } else {
-                v
-            };
-            if opts.rounds() {
-                _mm256_cvtps_epi32(v)
-            } else {
-                _mm256_cvttps_epi32(v)
-            }
-        };
-        let packed = _mm256_packus_epi32(convert(value[0]), convert(value[1]));
-        crate::simd_storage::cast(_mm256_permute4x64_epi64::<0xd8>(packed))
-    }
-
-    #[inline(always)]
-    fn to_u8_lanes<const CFG: u32>(self, value: [__m256; 2]) -> [u8; 16] {
-        let parts = value.map(|v| <Self as F32x8Backend>::to_u8_lanes::<CFG>(self, v));
-        crate::simd_storage::cast(parts)
-    }
-
-    #[inline(always)]
-    fn to_u32_lanes<const CFG: u32>(self, value: [__m256; 2]) -> [__m256; 2] {
-        value.map(|part| <Self as F32x8Backend>::to_u32_lanes::<CFG>(self, part))
-    }
-
-    #[inline(always)]
-    fn from_u32_lanes(self, value: [__m256; 2]) -> [__m256; 2] {
-        value.map(|part| <Self as F32x8Backend>::from_u32_lanes(self, part))
-    }
-
-    #[inline(always)]
-    fn from_f16_lanes<const CFG: u32>(self, lanes: &[u16; 16]) -> [__m256; 2] {
-        let (chunks, _) = lanes.as_chunks::<8>();
-        core::array::from_fn(|i| <Self as F32x8Backend>::from_f16_lanes::<CFG>(self, &chunks[i]))
-    }
-
-    #[inline(always)]
-    fn to_f16_lanes<const CFG: u32>(self, value: [__m256; 2]) -> [u16; 16] {
-        crate::simd_storage::cast(
-            value.map(|part| <Self as F32x8Backend>::to_f16_lanes::<CFG>(self, part)),
-        )
-    }
-
-    #[inline(always)]
-    fn from_bf16_lanes(self, lanes: &[u16; 16]) -> [__m256; 2] {
-        let (chunks, _) = lanes.as_chunks::<8>();
-        core::array::from_fn(|i| <Self as F32x8Backend>::from_bf16_lanes(self, &chunks[i]))
-    }
-
-    #[inline(always)]
-    fn to_bf16_lanes<const CFG: u32>(self, value: [__m256; 2]) -> [u16; 16] {
-        crate::simd_storage::cast(
-            value.map(|part| <Self as F32x8Backend>::to_bf16_lanes::<CFG>(self, part)),
-        )
-    }
-
-    #[inline(always)]
-    fn from_u8_lanes_wide(self, lanes: &[u8; 16]) -> [__m256; 2] {
-        use crate::simd::generic::f32x8 as V;
-        let (parts, _) = lanes.as_chunks::<8>();
-        core::array::from_fn(|i| V::from_u8_t(self, &parts[i]).into_repr())
-    }
-
-    #[inline(always)]
-    fn deinterleave_rgba_wide(self, rgba: [[__m256; 2]; 4]) -> [[__m256; 2]; 4] {
-        use crate::simd::generic::f32x8 as V;
-        let groups: [[V<Self>; 4]; 2] = core::array::from_fn(|i| {
-            V::deinterleave_4ch(core::array::from_fn(|j| {
-                let block = 4 * i + j;
-                V::from_repr_unchecked(self, rgba[block / 2][block % 2])
-            }))
-        });
-        core::array::from_fn(|c| core::array::from_fn(|i| groups[i][c].into_repr()))
-    }
-
-    #[inline(always)]
-    fn interleave_rgba_wide(self, channels: [[__m256; 2]; 4]) -> [[__m256; 2]; 4] {
-        use crate::simd::generic::f32x8 as V;
-        let groups: [[V<Self>; 4]; 2] = core::array::from_fn(|i| {
-            V::interleave_4ch(channels.map(|c| V::from_repr_unchecked(self, c[i])))
-        });
-        core::array::from_fn(|i| {
-            core::array::from_fn(|j| {
-                let block = i * 2 + j;
-                groups[block / 4][block % 4].into_repr()
-            })
-        })
-    }
-
-    #[inline(always)]
-    fn broadcast_rgba_alpha_repr(self, value: [__m256; 2]) -> [__m256; 2] {
-        value.map(|v| <Self as F32x8Backend>::broadcast_rgba_alpha_repr(self, v))
-    }
-
-    #[inline(always)]
-    fn with_rgba_alpha_repr(self, value: [__m256; 2], src: [__m256; 2]) -> [__m256; 2] {
-        core::array::from_fn(|i| {
-            <Self as F32x8Backend>::with_rgba_alpha_repr(self, value[i], src[i])
-        })
-    }
 
     #[inline(always)]
     fn minimum(self, a: [__m256; 2], b: [__m256; 2]) -> [__m256; 2] {
@@ -5938,6 +5835,123 @@ impl F32x16Backend for X64V3Token {
             <X64V3Token as F32x8Backend>::bitxor(self, a[0], b[0]),
             <X64V3Token as F32x8Backend>::bitxor(self, a[1], b[1]),
         ]
+    }
+}
+
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
+#[cfg(feature = "w512")]
+impl F32x16Internal for X64V3Token {
+    type InternalRepr = [__m256; 2];
+    #[inline(always)]
+    fn from_u16_lanes(self, lanes: &[u16; 16]) -> [__m256; 2] {
+        let (chunks, _) = lanes.as_chunks::<8>();
+        core::array::from_fn(|i| <Self as F32x8Internal>::from_u16_lanes(self, &chunks[i]))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn to_u16_lanes<const CFG: u32>(self, value: [__m256; 2]) -> [u16; 16] {
+        let opts = const { crate::numerics::IntConvert::decode(CFG) };
+        let convert = |v| {
+            let v = if opts.saturates_all() {
+                _mm256_min_ps(_mm256_set1_ps(65535.0), v)
+            } else {
+                v
+            };
+            if opts.rounds() {
+                _mm256_cvtps_epi32(v)
+            } else {
+                _mm256_cvttps_epi32(v)
+            }
+        };
+        let packed = _mm256_packus_epi32(convert(value[0]), convert(value[1]));
+        crate::simd_storage::cast(_mm256_permute4x64_epi64::<0xd8>(packed))
+    }
+
+    #[inline(always)]
+    fn to_u8_lanes<const CFG: u32>(self, value: [__m256; 2]) -> [u8; 16] {
+        let parts = value.map(|v| <Self as F32x8Internal>::to_u8_lanes::<CFG>(self, v));
+        crate::simd_storage::cast(parts)
+    }
+
+    #[inline(always)]
+    fn to_u32_lanes<const CFG: u32>(self, value: [__m256; 2]) -> [__m256; 2] {
+        value.map(|part| <Self as F32x8Internal>::to_u32_lanes::<CFG>(self, part))
+    }
+
+    #[inline(always)]
+    fn from_u32_lanes(self, value: [__m256; 2]) -> [__m256; 2] {
+        value.map(|part| <Self as F32x8Internal>::from_u32_lanes(self, part))
+    }
+
+    #[inline(always)]
+    fn from_f16_lanes<const CFG: u32>(self, lanes: &[u16; 16]) -> [__m256; 2] {
+        let (chunks, _) = lanes.as_chunks::<8>();
+        core::array::from_fn(|i| <Self as F32x8Internal>::from_f16_lanes::<CFG>(self, &chunks[i]))
+    }
+
+    #[inline(always)]
+    fn to_f16_lanes<const CFG: u32>(self, value: [__m256; 2]) -> [u16; 16] {
+        crate::simd_storage::cast(
+            value.map(|part| <Self as F32x8Internal>::to_f16_lanes::<CFG>(self, part)),
+        )
+    }
+
+    #[inline(always)]
+    fn from_bf16_lanes(self, lanes: &[u16; 16]) -> [__m256; 2] {
+        let (chunks, _) = lanes.as_chunks::<8>();
+        core::array::from_fn(|i| <Self as F32x8Internal>::from_bf16_lanes(self, &chunks[i]))
+    }
+
+    #[inline(always)]
+    fn to_bf16_lanes<const CFG: u32>(self, value: [__m256; 2]) -> [u16; 16] {
+        crate::simd_storage::cast(
+            value.map(|part| <Self as F32x8Internal>::to_bf16_lanes::<CFG>(self, part)),
+        )
+    }
+
+    #[inline(always)]
+    fn from_u8_lanes_wide(self, lanes: &[u8; 16]) -> [__m256; 2] {
+        use crate::simd::generic::f32x8 as V;
+        let (parts, _) = lanes.as_chunks::<8>();
+        core::array::from_fn(|i| V::from_u8_t(self, &parts[i]).into_repr())
+    }
+
+    #[inline(always)]
+    fn deinterleave_rgba_wide(self, rgba: [[__m256; 2]; 4]) -> [[__m256; 2]; 4] {
+        use crate::simd::generic::f32x8 as V;
+        let groups: [[V<Self>; 4]; 2] = core::array::from_fn(|i| {
+            V::deinterleave_4ch(core::array::from_fn(|j| {
+                let block = 4 * i + j;
+                V::from_repr_unchecked(self, rgba[block / 2][block % 2])
+            }))
+        });
+        core::array::from_fn(|c| core::array::from_fn(|i| groups[i][c].into_repr()))
+    }
+
+    #[inline(always)]
+    fn interleave_rgba_wide(self, channels: [[__m256; 2]; 4]) -> [[__m256; 2]; 4] {
+        use crate::simd::generic::f32x8 as V;
+        let groups: [[V<Self>; 4]; 2] = core::array::from_fn(|i| {
+            V::interleave_4ch(channels.map(|c| V::from_repr_unchecked(self, c[i])))
+        });
+        core::array::from_fn(|i| {
+            core::array::from_fn(|j| {
+                let block = i * 2 + j;
+                groups[block / 4][block % 4].into_repr()
+            })
+        })
+    }
+
+    #[inline(always)]
+    fn broadcast_rgba_alpha_repr(self, value: [__m256; 2]) -> [__m256; 2] {
+        value.map(|v| <Self as F32x8Internal>::broadcast_rgba_alpha_repr(self, v))
+    }
+
+    #[inline(always)]
+    fn with_rgba_alpha_repr(self, value: [__m256; 2], src: [__m256; 2]) -> [__m256; 2] {
+        core::array::from_fn(|i| {
+            <Self as F32x8Internal>::with_rgba_alpha_repr(self, value[i], src[i])
+        })
     }
 }
 

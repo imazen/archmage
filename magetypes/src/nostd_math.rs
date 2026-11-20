@@ -428,7 +428,7 @@ pub fn fmaf_soft(a: f32, b: f32, c: f32) -> f32 {
 /// IEEE 754-2019 `minimum` for `f32`: propagates `NaN` (returning quiet `NaN`)
 /// and orders `-0.0 < +0.0`.
 #[inline(always)]
-pub const fn minimumf(a: f32, b: f32) -> f32 {
+pub(crate) const fn minimumf(a: f32, b: f32) -> f32 {
     if a.is_nan() || b.is_nan() {
         f32::NAN
     } else if a < b || (a == 0.0 && b == 0.0 && a.is_sign_negative()) {
@@ -441,7 +441,7 @@ pub const fn minimumf(a: f32, b: f32) -> f32 {
 /// IEEE 754-2019 `maximum` for `f32`: propagates `NaN` (returning quiet `NaN`)
 /// and orders `-0.0 < +0.0`.
 #[inline(always)]
-pub const fn maximumf(a: f32, b: f32) -> f32 {
+pub(crate) const fn maximumf(a: f32, b: f32) -> f32 {
     if a.is_nan() || b.is_nan() {
         f32::NAN
     } else if a > b || (a == 0.0 && b == 0.0 && a.is_sign_positive()) {
@@ -454,7 +454,7 @@ pub const fn maximumf(a: f32, b: f32) -> f32 {
 /// IEEE 754-2019 `minimum` for `f64`: propagates `NaN` (returning quiet `NaN`)
 /// and orders `-0.0 < +0.0`.
 #[inline(always)]
-pub const fn minimum(a: f64, b: f64) -> f64 {
+pub(crate) const fn minimum(a: f64, b: f64) -> f64 {
     if a.is_nan() || b.is_nan() {
         f64::NAN
     } else if a < b || (a == 0.0 && b == 0.0 && a.is_sign_negative()) {
@@ -467,7 +467,7 @@ pub const fn minimum(a: f64, b: f64) -> f64 {
 /// IEEE 754-2019 `maximum` for `f64`: propagates `NaN` (returning quiet `NaN`)
 /// and orders `-0.0 < +0.0`.
 #[inline(always)]
-pub const fn maximum(a: f64, b: f64) -> f64 {
+pub(crate) const fn maximum(a: f64, b: f64) -> f64 {
     if a.is_nan() || b.is_nan() {
         f64::NAN
     } else if a > b || (a == 0.0 && b == 0.0 && a.is_sign_positive()) {

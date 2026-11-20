@@ -2,159 +2,311 @@
 
 use indoc::formatdoc;
 
-pub(super) fn trait_methods(elem: &str, lanes: usize, backend: &str) -> String {
+pub(super) fn internal_trait(elem: &str, lanes: usize) -> String {
     if elem != "f32" {
         return String::new();
     }
+    let internal_name = format!("F32x{lanes}Internal");
     let transpose = if lanes == 4 {
         formatdoc! {r#"
             /// Transpose four vectors without changing any lane bits.
-            #[doc(hidden)]
-            #[inline(always)]
-            fn transpose_4x4_repr(self, rows: [Self::Repr; 4]) -> [Self::Repr; 4] {{
-                let rows = rows.map(|r| <Self as {backend}>::to_array(self, r));
-                core::array::from_fn(|col| <Self as {backend}>::from_array(self, rows.map(|r| r[col])))
-            }}
+            fn transpose_4x4_repr(self, rows: [Self::InternalRepr; 4]) -> [Self::InternalRepr; 4];
         "#}
     } else {
         String::new()
     };
-    let rgba_pack = if lanes <= 8 {
+    let rgb_and_rgba = if lanes <= 8 {
         formatdoc! {r#"
+            /// Quantize and store planar channels into packed RGBA bytes.
+            fn store_rgba_u8_into(
+                self,
+                r: Self::InternalRepr,
+                g: Self::InternalRepr,
+                b: Self::InternalRepr,
+                a: Self::InternalRepr,
+                out: &mut [u8; {rgba_bytes}],
+            );
+
             /// Quantize and pack planar RGBA with the encoded integer policy.
-            #[doc(hidden)]
             #[inline(always)]
-            fn store_rgba_u8_with_into<const CFG: u32>(self, r: Self::Repr, g: Self::Repr, b: Self::Repr, a: Self::Repr, out: &mut [u8; {rgba_bytes}]) {{
-                let channels = [r, g, b, a].map(|v| <Self as {backend}>::to_u8_lanes::<CFG>(self, v));
+            fn store_rgba_u8_with_into<const CFG: u32>(
+                self,
+                r: Self::InternalRepr,
+                g: Self::InternalRepr,
+                b: Self::InternalRepr,
+                a: Self::InternalRepr,
+                out: &mut [u8; {rgba_bytes}],
+            ) {{
+                let channels = [r, g, b, a].map(|v| Self::to_u8_lanes::<CFG>(self, v));
                 for (i, byte) in out.iter_mut().enumerate() {{
                     *byte = channels[i % 4][i / 4];
                 }}
             }}
-        "#, rgba_bytes = lanes * 4}
+
+            /// Deinterleave {lanes} packed RGB pixels from AoS into planar `[R, G, B]`.
+            fn deinterleave_3ch_repr(self, rgb: [Self::InternalRepr; 3]) -> [Self::InternalRepr; 3];
+
+            /// Interleave 3 planar `[R, G, B]` vectors into 3 AoS RGB vectors.
+            fn interleave_3ch_repr(self, channels: [Self::InternalRepr; 3]) -> [Self::InternalRepr; 3];
+
+            /// Load {lanes} packed RGB `u8` pixels into planar `f32` `(R, G, B)`.
+            fn load_rgb_bytes(
+                self,
+                rgb: &[u8; {rgb_bytes}],
+            ) -> (Self::InternalRepr, Self::InternalRepr, Self::InternalRepr);
+
+            /// Round-to-nearest-even, clamp to `0..=255`, and interleave into {lanes} RGB pixels.
+            fn store_rgb_u8_into(
+                self,
+                r: Self::InternalRepr,
+                g: Self::InternalRepr,
+                b: Self::InternalRepr,
+                out: &mut [u8; {rgb_bytes}],
+            );
+        "#, rgba_bytes = lanes * 4, rgb_bytes = lanes * 3}
     } else {
         String::new()
     };
     let wide = if lanes == 16 {
         formatdoc! {r#"
             /// Widen sixteen consecutive bytes to float.
-            #[doc(hidden)]
-            #[inline(always)]
-            fn from_u8_lanes_wide(self, lanes: &[u8; 16]) -> Self::Repr {{
-                <Self as {backend}>::from_array(self, lanes.map(f32::from))
-            }}
+            fn from_u8_lanes_wide(self, lanes: &[u8; 16]) -> Self::InternalRepr;
 
             /// Deinterleave sixteen RGBA pixels into planar float storage.
-            #[doc(hidden)]
-            #[inline(always)]
-            fn deinterleave_rgba_wide(self, rgba: [Self::Repr; 4]) -> [Self::Repr; 4] {{
-                let pixels = rgba.map(|r| <Self as {backend}>::to_array(self, r));
-                core::array::from_fn(|c| {{
-                    <Self as {backend}>::from_array(self, core::array::from_fn(|i| pixels[i / 4][4 * (i % 4) + c]))
-                }})
-            }}
+            fn deinterleave_rgba_wide(self, rgba: [Self::InternalRepr; 4]) -> [Self::InternalRepr; 4];
 
             /// Interleave sixteen planar float pixels into RGBA storage.
-            #[doc(hidden)]
+            fn interleave_rgba_wide(self, channels: [Self::InternalRepr; 4]) -> [Self::InternalRepr; 4];
+        "#}
+    } else {
+        String::new()
+    };
+    formatdoc! {r#"
+        /// Crate-private layout and conversion hooks for `{lanes}`-lane `f32` backends.
+        pub(crate) trait {internal_name}: SimdToken + Sealed + Copy + 'static {{
+            type InternalRepr: Copy + Clone + Send + Sync;
+
+            /// Load unsigned lanes and convert them exactly, without normalization.
+            fn from_u16_lanes(self, lanes: &[u16; {lanes}]) -> Self::InternalRepr;
+
+            /// Convert lanes to u16 using the encoded policy.
+            fn to_u16_lanes<const CFG: u32>(self, value: Self::InternalRepr) -> [u16; {lanes}];
+
+            /// Convert lanes to u8 using the encoded policy.
+            fn to_u8_lanes<const CFG: u32>(self, value: Self::InternalRepr) -> [u8; {lanes}];
+
+            /// Convert f32 lanes to unsigned u32 stored in the float representation.
+            fn to_u32_lanes<const CFG: u32>(self, value: Self::InternalRepr) -> Self::InternalRepr;
+
+            /// Widen unsigned u32 bit patterns stored in the float representation.
+            fn from_u32_lanes(self, value: Self::InternalRepr) -> Self::InternalRepr;
+
+            /// Decode binary16 using the encoded policy.
+            fn from_f16_lanes<const CFG: u32>(self, lanes: &[u16; {lanes}]) -> Self::InternalRepr;
+
+            /// Encode binary16 using the encoded policy.
+            fn to_f16_lanes<const CFG: u32>(self, value: Self::InternalRepr) -> [u16; {lanes}];
+
+            /// Widen bfloat16 bit patterns.
+            fn from_bf16_lanes(self, lanes: &[u16; {lanes}]) -> Self::InternalRepr;
+
+            /// Encode bfloat16 using the encoded policy.
+            fn to_bf16_lanes<const CFG: u32>(self, value: Self::InternalRepr) -> [u16; {lanes}];
+
+            /// Broadcast lane 3 in each consecutive group of four lanes.
+            fn broadcast_rgba_alpha_repr(self, value: Self::InternalRepr) -> Self::InternalRepr;
+
+            /// Replace lane 3 in each consecutive group of four lanes.
+            fn with_rgba_alpha_repr(
+                self,
+                value: Self::InternalRepr,
+                src: Self::InternalRepr,
+            ) -> Self::InternalRepr;
+
+            {transpose}
+            {rgb_and_rgba}
+            {wide}
+        }}
+
+    "#}
+}
+
+pub(super) fn scalar_internal_impl(lanes: usize) -> String {
+    let internal_name = format!("F32x{lanes}Internal");
+    let backend_name = format!("F32x{lanes}Backend");
+    let transpose = if lanes == 4 {
+        formatdoc! {r#"
             #[inline(always)]
-            fn interleave_rgba_wide(self, channels: [Self::Repr; 4]) -> [Self::Repr; 4] {{
-                let channels = channels.map(|r| <Self as {backend}>::to_array(self, r));
-                core::array::from_fn(|group| {{
-                    <Self as {backend}>::from_array(self, core::array::from_fn(|i| channels[i % 4][4 * group + i / 4]))
-                }})
+            fn transpose_4x4_repr(self, rows: [[f32; 4]; 4]) -> [[f32; 4]; 4] {{
+                core::array::from_fn(|col| rows.map(|r| r[col]))
+            }}
+        "#}
+    } else {
+        String::new()
+    };
+    let rgb_and_rgba = if lanes <= 8 {
+        let (deinterleave_body, interleave_body) = if lanes == 4 {
+            (
+                "[[v0[0], v0[3], v1[2], v2[1]], [v0[1], v1[0], v1[3], v2[2]], [v0[2], v1[1], v2[0], v2[3]]]",
+                "[[r[0], g[0], b[0], r[1]], [g[1], b[1], r[2], g[2]], [b[2], r[3], g[3], b[3]]]",
+            )
+        } else {
+            (
+                "[[v0[0], v0[3], v0[6], v1[1], v1[4], v1[7], v2[2], v2[5]], [v0[1], v0[4], v0[7], v1[2], v1[5], v2[0], v2[3], v2[6]], [v0[2], v0[5], v1[0], v1[3], v1[6], v2[1], v2[4], v2[7]]]",
+                "[[r[0], g[0], b[0], r[1], g[1], b[1], r[2], g[2]], [b[2], r[3], g[3], b[3], r[4], g[4], b[4], r[5]], [g[5], b[5], r[6], g[6], b[6], r[7], g[7], b[7]]]",
+            )
+        };
+        formatdoc! {r#"
+            #[inline(always)]
+            fn store_rgba_u8_into(
+                self,
+                r: [f32; {lanes}],
+                g: [f32; {lanes}],
+                b: [f32; {lanes}],
+                a: [f32; {lanes}],
+                out: &mut [u8; {rgba_bytes}],
+            ) {{
+                let rb = <Self as {backend_name}>::to_u8_bytes(self, r);
+                let gb = <Self as {backend_name}>::to_u8_bytes(self, g);
+                let bb = <Self as {backend_name}>::to_u8_bytes(self, b);
+                let ab = <Self as {backend_name}>::to_u8_bytes(self, a);
+                for i in 0..{lanes} {{
+                    out[i * 4] = rb[i];
+                    out[i * 4 + 1] = gb[i];
+                    out[i * 4 + 2] = bb[i];
+                    out[i * 4 + 3] = ab[i];
+                }}
+            }}
+
+            #[inline(always)]
+            fn deinterleave_3ch_repr(self, rgb: [[f32; {lanes}]; 3]) -> [[f32; {lanes}]; 3] {{
+                let [v0, v1, v2] = rgb;
+                {deinterleave_body}
+            }}
+
+            #[inline(always)]
+            fn interleave_3ch_repr(self, channels: [[f32; {lanes}]; 3]) -> [[f32; {lanes}]; 3] {{
+                let [r, g, b] = channels;
+                {interleave_body}
+            }}
+
+            #[inline(always)]
+            fn load_rgb_bytes(
+                self,
+                rgb: &[u8; {rgb_bytes}],
+            ) -> ([f32; {lanes}], [f32; {lanes}], [f32; {lanes}]) {{
+                let ch = |c| core::array::from_fn(|i| rgb[i * 3 + c] as f32);
+                (ch(0), ch(1), ch(2))
+            }}
+
+            #[inline(always)]
+            fn store_rgb_u8_into(
+                self,
+                r: [f32; {lanes}],
+                g: [f32; {lanes}],
+                b: [f32; {lanes}],
+                out: &mut [u8; {rgb_bytes}],
+            ) {{
+                let [rb, gb, bb] = [r, g, b].map(|v| <Self as {backend_name}>::to_u8_bytes(self, v));
+                for (pixel, ((r, g), b)) in out.as_chunks_mut::<3>().0.iter_mut().zip(rb.into_iter().zip(gb).zip(bb)) {{
+                    *pixel = [r, g, b];
+                }}
+            }}
+        "#, rgba_bytes = lanes * 4, rgb_bytes = lanes * 3}
+    } else {
+        String::new()
+    };
+    let wide = if lanes == 16 {
+        formatdoc! {r#"
+            #[inline(always)]
+            fn from_u8_lanes_wide(self, lanes: &[u8; 16]) -> [f32; 16] {{
+                lanes.map(f32::from)
+            }}
+
+            #[inline(always)]
+            fn deinterleave_rgba_wide(self, rgba: [[f32; 16]; 4]) -> [[f32; 16]; 4] {{
+                core::array::from_fn(|c| core::array::from_fn(|i| rgba[i / 4][4 * (i % 4) + c]))
+            }}
+
+            #[inline(always)]
+            fn interleave_rgba_wide(self, channels: [[f32; 16]; 4]) -> [[f32; 16]; 4] {{
+                core::array::from_fn(|group| core::array::from_fn(|i| channels[i % 4][4 * group + i / 4]))
             }}
         "#}
     } else {
         String::new()
     };
     formatdoc! {r#"
-        /// Load unsigned lanes and convert them exactly, without normalization.
-        #[doc(hidden)]
-        #[inline(always)]
-        fn from_u16_lanes(self, lanes: &[u16; {lanes}]) -> Self::Repr {{
-            <Self as {backend}>::from_array(self, lanes.map(f32::from))
-        }}
 
-        /// Convert lanes to u16 using the encoded policy.
-        #[doc(hidden)]
-        #[inline(always)]
-        fn to_u16_lanes<const CFG: u32>(self, value: Self::Repr) -> [u16; {lanes}] {{
-            <Self as {backend}>::to_array(self, value).map(crate::scalar::to_u16_with::<CFG>)
-        }}
+        impl crate::simd::backends::{internal_name} for archmage::ScalarToken {{
+            type InternalRepr = [f32; {lanes}];
 
-        /// Convert lanes to u8 using the encoded policy.
-        #[doc(hidden)]
-        #[inline(always)]
-        fn to_u8_lanes<const CFG: u32>(self, value: Self::Repr) -> [u8; {lanes}] {{
-            <Self as {backend}>::to_array(self, value).map(crate::scalar::to_u8_with::<CFG>)
-        }}
-
-        /// Convert f32 lanes to unsigned u32 stored in the float representation.
-        #[doc(hidden)]
-        #[inline(always)]
-        fn to_u32_lanes<const CFG: u32>(self, value: Self::Repr) -> Self::Repr {{
-            let lanes = <Self as {backend}>::to_array(self, value);
-            <Self as {backend}>::from_array(self, lanes.map(|x| f32::from_bits(crate::scalar::to_u32_with::<CFG>(x))))
-        }}
-
-        /// Widen unsigned u32 bit patterns stored in the float representation.
-        #[doc(hidden)]
-        #[inline(always)]
-        fn from_u32_lanes(self, value: Self::Repr) -> Self::Repr {{
-            let lanes = <Self as {backend}>::to_array(self, value);
-            <Self as {backend}>::from_array(self, lanes.map(|x| x.to_bits() as f32))
-        }}
-
-        /// Decode binary16 using the encoded policy.
-        #[doc(hidden)]
-        #[inline(always)]
-        fn from_f16_lanes<const CFG: u32>(self, lanes: &[u16; {lanes}]) -> Self::Repr {{
-            <Self as {backend}>::from_array(self, lanes.map(crate::scalar::from_f16_with::<CFG>))
-        }}
-
-        /// Encode binary16 using the encoded policy.
-        #[doc(hidden)]
-        #[inline(always)]
-        fn to_f16_lanes<const CFG: u32>(self, value: Self::Repr) -> [u16; {lanes}] {{
-            <Self as {backend}>::to_array(self, value).map(crate::scalar::to_f16_bits_with::<CFG>)
-        }}
-
-        /// Widen bfloat16 bit patterns.
-        #[doc(hidden)]
-        #[inline(always)]
-        fn from_bf16_lanes(self, lanes: &[u16; {lanes}]) -> Self::Repr {{
-            <Self as {backend}>::from_array(self, lanes.map(crate::scalar::from_bf16))
-        }}
-
-        /// Encode bfloat16 using the encoded policy.
-        #[doc(hidden)]
-        #[inline(always)]
-        fn to_bf16_lanes<const CFG: u32>(self, value: Self::Repr) -> [u16; {lanes}] {{
-            <Self as {backend}>::to_array(self, value).map(crate::scalar::to_bf16_with::<CFG>)
-        }}
-
-        /// Broadcast lane 3 in each consecutive group of four lanes.
-        #[doc(hidden)]
-        #[inline(always)]
-        fn broadcast_rgba_alpha_repr(self, value: Self::Repr) -> Self::Repr {{
-            let value = <Self as {backend}>::to_array(self, value);
-            <Self as {backend}>::from_array(self, core::array::from_fn(|i| value[i | 3]))
-        }}
-
-        /// Replace lane 3 in each consecutive group of four lanes.
-        #[doc(hidden)]
-        #[inline(always)]
-        fn with_rgba_alpha_repr(self, value: Self::Repr, src: Self::Repr) -> Self::Repr {{
-            let mut value = <Self as {backend}>::to_array(self, value);
-            let src = <Self as {backend}>::to_array(self, src);
-            for i in (3..{lanes}).step_by(4) {{
-                value[i] = src[i];
+            #[inline(always)]
+            fn from_u16_lanes(self, lanes: &[u16; {lanes}]) -> [f32; {lanes}] {{
+                lanes.map(f32::from)
             }}
-            <Self as {backend}>::from_array(self, value)
-        }}
 
-        {transpose}
-        {rgba_pack}
-        {wide}
+            #[inline(always)]
+            fn to_u16_lanes<const CFG: u32>(self, value: [f32; {lanes}]) -> [u16; {lanes}] {{
+                value.map(crate::scalar::to_u16_with::<CFG>)
+            }}
+
+            #[inline(always)]
+            fn to_u8_lanes<const CFG: u32>(self, value: [f32; {lanes}]) -> [u8; {lanes}] {{
+                value.map(crate::scalar::to_u8_with::<CFG>)
+            }}
+
+            #[inline(always)]
+            fn to_u32_lanes<const CFG: u32>(self, value: [f32; {lanes}]) -> [f32; {lanes}] {{
+                value.map(|x| f32::from_bits(crate::scalar::to_u32_with::<CFG>(x)))
+            }}
+
+            #[inline(always)]
+            fn from_u32_lanes(self, value: [f32; {lanes}]) -> [f32; {lanes}] {{
+                value.map(|x| x.to_bits() as f32)
+            }}
+
+            #[inline(always)]
+            fn from_f16_lanes<const CFG: u32>(self, lanes: &[u16; {lanes}]) -> [f32; {lanes}] {{
+                lanes.map(crate::scalar::from_f16_with::<CFG>)
+            }}
+
+            #[inline(always)]
+            fn to_f16_lanes<const CFG: u32>(self, value: [f32; {lanes}]) -> [u16; {lanes}] {{
+                value.map(crate::scalar::to_f16_bits_with::<CFG>)
+            }}
+
+            #[inline(always)]
+            fn from_bf16_lanes(self, lanes: &[u16; {lanes}]) -> [f32; {lanes}] {{
+                lanes.map(crate::scalar::from_bf16)
+            }}
+
+            #[inline(always)]
+            fn to_bf16_lanes<const CFG: u32>(self, value: [f32; {lanes}]) -> [u16; {lanes}] {{
+                value.map(crate::scalar::to_bf16_with::<CFG>)
+            }}
+
+            #[inline(always)]
+            fn broadcast_rgba_alpha_repr(self, value: [f32; {lanes}]) -> [f32; {lanes}] {{
+                core::array::from_fn(|i| value[i | 3])
+            }}
+
+            #[inline(always)]
+            fn with_rgba_alpha_repr(
+                self,
+                mut value: [f32; {lanes}],
+                src: [f32; {lanes}],
+            ) -> [f32; {lanes}] {{
+                for i in (3..{lanes}).step_by(4) {{
+                    value[i] = src[i];
+                }}
+                value
+            }}
+
+            {transpose}
+            {rgb_and_rgba}
+            {wide}
+        }}
     "#}
 }
 
@@ -396,7 +548,7 @@ pub(super) fn neon(attr: &str) -> String {
                 crate::simd_storage::store(vsliq_n_u32::<24>(rgb, convert(a)), out);
                 return;
             }}
-            let channels = [r, g, b, a].map(|v| <Self as F32x4Backend>::to_u8_lanes::<CFG>(self, v));
+            let channels = [r, g, b, a].map(|v| <Self as F32x4Internal>::to_u8_lanes::<CFG>(self, v));
             for (i, byte) in out.iter_mut().enumerate() {{
                 *byte = channels[i % 4][i / 4];
             }}
@@ -596,7 +748,7 @@ pub(super) fn wasm() -> String {
 }
 
 pub(super) fn polyfill(lanes: usize, part: usize, repr: &str) -> String {
-    let backend = format!("F32x{part}Backend");
+    let backend = format!("F32x{part}Internal");
     let wide = if lanes == 16 {
         polyfill_rgba_wide(part, repr)
     } else {

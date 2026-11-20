@@ -259,6 +259,58 @@ impl F32x16Backend for X64V4Token {
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn recip(self, a: __m512) -> __m512 {
+        // token nibbles: QNAN->2 SNAN->2 ZERO->6 ONE->0 -INF->7 +INF->8 NEG->0 POS->0
+        const RECIP_FIXUP_TBL: i32 = 0x0087_0622u32 as i32;
+        {
+            let r = _mm512_rcp14_ps(a);
+            let e = _mm512_fnmadd_ps(a, r, _mm512_set1_ps(1.0));
+            let refined = _mm512_fmadd_ps(r, e, r);
+            _mm512_fixupimm_ps::<0>(refined, a, _mm512_set1_epi32(RECIP_FIXUP_TBL))
+        }
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn rsqrt(self, a: __m512) -> __m512 {
+        // token nibbles: QNAN->2 SNAN->2 ZERO->6 ONE->0 -INF->3 +INF->8 NEG->3 POS->0
+        const RSQRT_FIXUP_TBL: i32 = 0x0383_0622u32 as i32;
+        {
+            let y = _mm512_rsqrt14_ps(a);
+            let t = _mm512_mul_ps(a, _mm512_mul_ps(y, y));
+            let refined = _mm512_mul_ps(
+                y,
+                _mm512_fnmadd_ps(_mm512_set1_ps(0.5), t, _mm512_set1_ps(1.5)),
+            );
+            _mm512_fixupimm_ps::<0>(refined, a, _mm512_set1_epi32(RSQRT_FIXUP_TBL))
+        }
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn not(self, a: __m512) -> __m512 {
+        let all_ones = _mm512_castsi512_ps(_mm512_set1_epi32(-1));
+        _mm512_xor_ps(a, all_ones)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn bitand(self, a: __m512, b: __m512) -> __m512 {
+        _mm512_and_ps(a, b)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn bitor(self, a: __m512, b: __m512) -> __m512 {
+        _mm512_or_ps(a, b)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn bitxor(self, a: __m512, b: __m512) -> __m512 {
+        _mm512_xor_ps(a, b)
+    }
+}
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
+#[cfg(feature = "w512")]
+impl F32x16Internal for X64V4Token {
+    type InternalRepr = __m512;
+    #[arcane(suppress_const_test, _self = X64V4Token)]
     fn from_u16_lanes(self, lanes: &[u16; 16]) -> __m512 {
         _mm512_cvtepi32_ps(_mm512_cvtepu16_epi32(crate::simd_storage::cast(*lanes)))
     }
@@ -467,54 +519,6 @@ impl F32x16Backend for X64V4Token {
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn with_rgba_alpha_repr(self, value: __m512, src: __m512) -> __m512 {
         _mm512_mask_blend_ps(0x8888, value, src)
-    }
-
-    #[arcane(suppress_const_test, _self = X64V4Token)]
-    fn recip(self, a: __m512) -> __m512 {
-        // token nibbles: QNAN->2 SNAN->2 ZERO->6 ONE->0 -INF->7 +INF->8 NEG->0 POS->0
-        const RECIP_FIXUP_TBL: i32 = 0x0087_0622u32 as i32;
-        {
-            let r = _mm512_rcp14_ps(a);
-            let e = _mm512_fnmadd_ps(a, r, _mm512_set1_ps(1.0));
-            let refined = _mm512_fmadd_ps(r, e, r);
-            _mm512_fixupimm_ps::<0>(refined, a, _mm512_set1_epi32(RECIP_FIXUP_TBL))
-        }
-    }
-
-    #[arcane(suppress_const_test, _self = X64V4Token)]
-    fn rsqrt(self, a: __m512) -> __m512 {
-        // token nibbles: QNAN->2 SNAN->2 ZERO->6 ONE->0 -INF->3 +INF->8 NEG->3 POS->0
-        const RSQRT_FIXUP_TBL: i32 = 0x0383_0622u32 as i32;
-        {
-            let y = _mm512_rsqrt14_ps(a);
-            let t = _mm512_mul_ps(a, _mm512_mul_ps(y, y));
-            let refined = _mm512_mul_ps(
-                y,
-                _mm512_fnmadd_ps(_mm512_set1_ps(0.5), t, _mm512_set1_ps(1.5)),
-            );
-            _mm512_fixupimm_ps::<0>(refined, a, _mm512_set1_epi32(RSQRT_FIXUP_TBL))
-        }
-    }
-
-    #[arcane(suppress_const_test, _self = X64V4Token)]
-    fn not(self, a: __m512) -> __m512 {
-        let all_ones = _mm512_castsi512_ps(_mm512_set1_epi32(-1));
-        _mm512_xor_ps(a, all_ones)
-    }
-
-    #[arcane(suppress_const_test, _self = X64V4Token)]
-    fn bitand(self, a: __m512, b: __m512) -> __m512 {
-        _mm512_and_ps(a, b)
-    }
-
-    #[arcane(suppress_const_test, _self = X64V4Token)]
-    fn bitor(self, a: __m512, b: __m512) -> __m512 {
-        _mm512_or_ps(a, b)
-    }
-
-    #[arcane(suppress_const_test, _self = X64V4Token)]
-    fn bitxor(self, a: __m512, b: __m512) -> __m512 {
-        _mm512_xor_ps(a, b)
     }
 }
 
@@ -2706,6 +2710,58 @@ impl F32x16Backend for X64V4xToken {
     }
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn recip(self, a: __m512) -> __m512 {
+        // token nibbles: QNAN->2 SNAN->2 ZERO->6 ONE->0 -INF->7 +INF->8 NEG->0 POS->0
+        const RECIP_FIXUP_TBL: i32 = 0x0087_0622u32 as i32;
+        {
+            let r = _mm512_rcp14_ps(a);
+            let e = _mm512_fnmadd_ps(a, r, _mm512_set1_ps(1.0));
+            let refined = _mm512_fmadd_ps(r, e, r);
+            _mm512_fixupimm_ps::<0>(refined, a, _mm512_set1_epi32(RECIP_FIXUP_TBL))
+        }
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn rsqrt(self, a: __m512) -> __m512 {
+        // token nibbles: QNAN->2 SNAN->2 ZERO->6 ONE->0 -INF->3 +INF->8 NEG->3 POS->0
+        const RSQRT_FIXUP_TBL: i32 = 0x0383_0622u32 as i32;
+        {
+            let y = _mm512_rsqrt14_ps(a);
+            let t = _mm512_mul_ps(a, _mm512_mul_ps(y, y));
+            let refined = _mm512_mul_ps(
+                y,
+                _mm512_fnmadd_ps(_mm512_set1_ps(0.5), t, _mm512_set1_ps(1.5)),
+            );
+            _mm512_fixupimm_ps::<0>(refined, a, _mm512_set1_epi32(RSQRT_FIXUP_TBL))
+        }
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn not(self, a: __m512) -> __m512 {
+        let all_ones = _mm512_castsi512_ps(_mm512_set1_epi32(-1));
+        _mm512_xor_ps(a, all_ones)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn bitand(self, a: __m512, b: __m512) -> __m512 {
+        _mm512_and_ps(a, b)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn bitor(self, a: __m512, b: __m512) -> __m512 {
+        _mm512_or_ps(a, b)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn bitxor(self, a: __m512, b: __m512) -> __m512 {
+        _mm512_xor_ps(a, b)
+    }
+}
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
+#[cfg(feature = "w512")]
+impl F32x16Internal for X64V4xToken {
+    type InternalRepr = __m512;
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn from_u16_lanes(self, lanes: &[u16; 16]) -> __m512 {
         _mm512_cvtepi32_ps(_mm512_cvtepu16_epi32(crate::simd_storage::cast(*lanes)))
     }
@@ -2914,54 +2970,6 @@ impl F32x16Backend for X64V4xToken {
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn with_rgba_alpha_repr(self, value: __m512, src: __m512) -> __m512 {
         _mm512_mask_blend_ps(0x8888, value, src)
-    }
-
-    #[arcane(suppress_const_test, _self = X64V4xToken)]
-    fn recip(self, a: __m512) -> __m512 {
-        // token nibbles: QNAN->2 SNAN->2 ZERO->6 ONE->0 -INF->7 +INF->8 NEG->0 POS->0
-        const RECIP_FIXUP_TBL: i32 = 0x0087_0622u32 as i32;
-        {
-            let r = _mm512_rcp14_ps(a);
-            let e = _mm512_fnmadd_ps(a, r, _mm512_set1_ps(1.0));
-            let refined = _mm512_fmadd_ps(r, e, r);
-            _mm512_fixupimm_ps::<0>(refined, a, _mm512_set1_epi32(RECIP_FIXUP_TBL))
-        }
-    }
-
-    #[arcane(suppress_const_test, _self = X64V4xToken)]
-    fn rsqrt(self, a: __m512) -> __m512 {
-        // token nibbles: QNAN->2 SNAN->2 ZERO->6 ONE->0 -INF->3 +INF->8 NEG->3 POS->0
-        const RSQRT_FIXUP_TBL: i32 = 0x0383_0622u32 as i32;
-        {
-            let y = _mm512_rsqrt14_ps(a);
-            let t = _mm512_mul_ps(a, _mm512_mul_ps(y, y));
-            let refined = _mm512_mul_ps(
-                y,
-                _mm512_fnmadd_ps(_mm512_set1_ps(0.5), t, _mm512_set1_ps(1.5)),
-            );
-            _mm512_fixupimm_ps::<0>(refined, a, _mm512_set1_epi32(RSQRT_FIXUP_TBL))
-        }
-    }
-
-    #[arcane(suppress_const_test, _self = X64V4xToken)]
-    fn not(self, a: __m512) -> __m512 {
-        let all_ones = _mm512_castsi512_ps(_mm512_set1_epi32(-1));
-        _mm512_xor_ps(a, all_ones)
-    }
-
-    #[arcane(suppress_const_test, _self = X64V4xToken)]
-    fn bitand(self, a: __m512, b: __m512) -> __m512 {
-        _mm512_and_ps(a, b)
-    }
-
-    #[arcane(suppress_const_test, _self = X64V4xToken)]
-    fn bitor(self, a: __m512, b: __m512) -> __m512 {
-        _mm512_or_ps(a, b)
-    }
-
-    #[arcane(suppress_const_test, _self = X64V4xToken)]
-    fn bitxor(self, a: __m512, b: __m512) -> __m512 {
-        _mm512_xor_ps(a, b)
     }
 }
 

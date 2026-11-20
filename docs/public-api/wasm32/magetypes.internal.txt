@@ -10,137 +10,20 @@
 ## summary
 #
 #   pub modules                                 2
-#   pub types (struct/enum/trait/alias)         3
-#   pub consts/statics                          4
+#   pub types (struct/enum/trait/alias)         1
 #   free functions                             29
-#   inherent methods                          191
+#   inherent methods                           12
 #   trait roster entries (type × trait)        26
 #
 # per-module pub lines:
-#   (root)                            6
-#   archmage                        108
-#   bypass_adversarial                3
+#   (root)                            2
+#   bypass_adversarial                1
 #   nostd_math                       21
 #   numerics                         12
-#   scalar                           10
-#   simd                             69
+#   simd                              8
 
-## items (222 lines)
+## items (37 lines)
 
-pub const fn nostd_math::maximum(f64, f64) -> f64
-pub const fn nostd_math::maximumf(f32, f32) -> f32
-pub const fn nostd_math::minimum(f64, f64) -> f64
-pub const fn nostd_math::minimumf(f32, f32) -> f32
-pub fn archmage::tokens::ScalarToken::broadcast_rgba_alpha_repr(self, Self::Repr) -> Self::Repr
-pub fn archmage::tokens::ScalarToken::deinterleave_3ch_repr(self, [Self::Repr; 3]) -> [Self::Repr; 3]
-pub fn archmage::tokens::ScalarToken::deinterleave_rgba_wide(self, [Self::Repr; 4]) -> [Self::Repr; 4]
-pub fn archmage::tokens::ScalarToken::from_bf16_lanes(self, &[u16; 16]) -> Self::Repr
-pub fn archmage::tokens::ScalarToken::from_bf16_lanes(self, &[u16; 4]) -> Self::Repr
-pub fn archmage::tokens::ScalarToken::from_bf16_lanes(self, &[u16; 8]) -> Self::Repr
-pub fn archmage::tokens::ScalarToken::from_f16_lanes<const CFG: u32>(self, &[u16; 16]) -> Self::Repr
-pub fn archmage::tokens::ScalarToken::from_f16_lanes<const CFG: u32>(self, &[u16; 4]) -> Self::Repr
-pub fn archmage::tokens::ScalarToken::from_f16_lanes<const CFG: u32>(self, &[u16; 8]) -> Self::Repr
-pub fn archmage::tokens::ScalarToken::from_u16_lanes(self, &[u16; 16]) -> Self::Repr
-pub fn archmage::tokens::ScalarToken::from_u16_lanes(self, &[u16; 4]) -> Self::Repr
-pub fn archmage::tokens::ScalarToken::from_u16_lanes(self, &[u16; 8]) -> Self::Repr
-pub fn archmage::tokens::ScalarToken::from_u32_lanes(self, Self::Repr) -> Self::Repr
-pub fn archmage::tokens::ScalarToken::from_u8_lanes_wide(self, &[u8; 16]) -> Self::Repr
-pub fn archmage::tokens::ScalarToken::interleave_3ch_repr(self, [Self::Repr; 3]) -> [Self::Repr; 3]
-pub fn archmage::tokens::ScalarToken::interleave_rgba_wide(self, [Self::Repr; 4]) -> [Self::Repr; 4]
-pub fn archmage::tokens::ScalarToken::load_rgb_bytes(self, &[u8; 12]) -> (Self::Repr, Self::Repr, Self::Repr)
-pub fn archmage::tokens::ScalarToken::load_rgb_bytes(self, &[u8; 24]) -> (Self::Repr, Self::Repr, Self::Repr)
-pub fn archmage::tokens::ScalarToken::max_fast_f32(self, f32, f32) -> f32
-pub fn archmage::tokens::ScalarToken::max_fast_f64(self, f64, f64) -> f64
-pub fn archmage::tokens::ScalarToken::min_fast_f32(self, f32, f32) -> f32
-pub fn archmage::tokens::ScalarToken::min_fast_f64(self, f64, f64) -> f64
-pub fn archmage::tokens::ScalarToken::mul_add_relaxed_f32(self, f32, f32, f32) -> f32
-pub fn archmage::tokens::ScalarToken::mul_add_relaxed_f64(self, f64, f64, f64) -> f64
-pub fn archmage::tokens::ScalarToken::mul_sub_relaxed_f32(self, f32, f32, f32) -> f32
-pub fn archmage::tokens::ScalarToken::mul_sub_relaxed_f64(self, f64, f64, f64) -> f64
-pub fn archmage::tokens::ScalarToken::store_rgb_u8_into(self, Self::Repr, Self::Repr, Self::Repr, &mut [u8; 12])
-pub fn archmage::tokens::ScalarToken::store_rgb_u8_into(self, Self::Repr, Self::Repr, Self::Repr, &mut [u8; 24])
-pub fn archmage::tokens::ScalarToken::store_rgba_u8_into(self, Self::Repr, Self::Repr, Self::Repr, Self::Repr, &mut [u8; 16])
-pub fn archmage::tokens::ScalarToken::store_rgba_u8_into(self, Self::Repr, Self::Repr, Self::Repr, Self::Repr, &mut [u8; 32])
-pub fn archmage::tokens::ScalarToken::store_rgba_u8_with_into<const CFG: u32>(self, Self::Repr, Self::Repr, Self::Repr, Self::Repr, &mut [u8; 16])
-pub fn archmage::tokens::ScalarToken::store_rgba_u8_with_into<const CFG: u32>(self, Self::Repr, Self::Repr, Self::Repr, Self::Repr, &mut [u8; 32])
-pub fn archmage::tokens::ScalarToken::to_bf16_lanes<const CFG: u32>(self, Self::Repr) -> [u16; 16]
-pub fn archmage::tokens::ScalarToken::to_bf16_lanes<const CFG: u32>(self, Self::Repr) -> [u16; 4]
-pub fn archmage::tokens::ScalarToken::to_bf16_lanes<const CFG: u32>(self, Self::Repr) -> [u16; 8]
-pub fn archmage::tokens::ScalarToken::to_f16_lanes<const CFG: u32>(self, Self::Repr) -> [u16; 16]
-pub fn archmage::tokens::ScalarToken::to_f16_lanes<const CFG: u32>(self, Self::Repr) -> [u16; 4]
-pub fn archmage::tokens::ScalarToken::to_f16_lanes<const CFG: u32>(self, Self::Repr) -> [u16; 8]
-pub fn archmage::tokens::ScalarToken::to_i32_fast_scalar(self, f32) -> i32
-pub fn archmage::tokens::ScalarToken::to_i32_scalar(self, f32) -> i32
-pub fn archmage::tokens::ScalarToken::to_u16_lanes<const CFG: u32>(self, Self::Repr) -> [u16; 16]
-pub fn archmage::tokens::ScalarToken::to_u16_lanes<const CFG: u32>(self, Self::Repr) -> [u16; 4]
-pub fn archmage::tokens::ScalarToken::to_u16_lanes<const CFG: u32>(self, Self::Repr) -> [u16; 8]
-pub fn archmage::tokens::ScalarToken::to_u32_lanes<const CFG: u32>(self, Self::Repr) -> Self::Repr
-pub fn archmage::tokens::ScalarToken::to_u8_lanes<const CFG: u32>(self, Self::Repr) -> [u8; 16]
-pub fn archmage::tokens::ScalarToken::to_u8_lanes<const CFG: u32>(self, Self::Repr) -> [u8; 4]
-pub fn archmage::tokens::ScalarToken::to_u8_lanes<const CFG: u32>(self, Self::Repr) -> [u8; 8]
-pub fn archmage::tokens::ScalarToken::transpose_4x4_repr(self, [Self::Repr; 4]) -> [Self::Repr; 4]
-pub fn archmage::tokens::ScalarToken::with_rgba_alpha_repr(self, Self::Repr, Self::Repr) -> Self::Repr
-pub fn archmage::tokens::generated::wasm::Wasm128Token::broadcast_rgba_alpha_repr(self, [core::core_arch::wasm32::simd128::v128; 2]) -> [core::core_arch::wasm32::simd128::v128; 2]
-pub fn archmage::tokens::generated::wasm::Wasm128Token::broadcast_rgba_alpha_repr(self, [core::core_arch::wasm32::simd128::v128; 4]) -> [core::core_arch::wasm32::simd128::v128; 4]
-pub fn archmage::tokens::generated::wasm::Wasm128Token::broadcast_rgba_alpha_repr(self, core::core_arch::wasm32::simd128::v128) -> core::core_arch::wasm32::simd128::v128
-pub fn archmage::tokens::generated::wasm::Wasm128Token::deinterleave_3ch_repr(self, [[core::core_arch::wasm32::simd128::v128; 2]; 3]) -> [[core::core_arch::wasm32::simd128::v128; 2]; 3]
-pub fn archmage::tokens::generated::wasm::Wasm128Token::deinterleave_3ch_repr(self, [core::core_arch::wasm32::simd128::v128; 3]) -> [core::core_arch::wasm32::simd128::v128; 3]
-pub fn archmage::tokens::generated::wasm::Wasm128Token::deinterleave_rgba_wide(self, [[core::core_arch::wasm32::simd128::v128; 4]; 4]) -> [[core::core_arch::wasm32::simd128::v128; 4]; 4]
-pub fn archmage::tokens::generated::wasm::Wasm128Token::from_bf16_lanes(self, &[u16; 16]) -> [core::core_arch::wasm32::simd128::v128; 4]
-pub fn archmage::tokens::generated::wasm::Wasm128Token::from_bf16_lanes(self, &[u16; 4]) -> core::core_arch::wasm32::simd128::v128
-pub fn archmage::tokens::generated::wasm::Wasm128Token::from_bf16_lanes(self, &[u16; 8]) -> [core::core_arch::wasm32::simd128::v128; 2]
-pub fn archmage::tokens::generated::wasm::Wasm128Token::from_f16_lanes<const CFG: u32>(self, &[u16; 16]) -> [core::core_arch::wasm32::simd128::v128; 4]
-pub fn archmage::tokens::generated::wasm::Wasm128Token::from_f16_lanes<const CFG: u32>(self, &[u16; 4]) -> core::core_arch::wasm32::simd128::v128
-pub fn archmage::tokens::generated::wasm::Wasm128Token::from_f16_lanes<const CFG: u32>(self, &[u16; 8]) -> [core::core_arch::wasm32::simd128::v128; 2]
-pub fn archmage::tokens::generated::wasm::Wasm128Token::from_u16_lanes(self, &[u16; 16]) -> [core::core_arch::wasm32::simd128::v128; 4]
-pub fn archmage::tokens::generated::wasm::Wasm128Token::from_u16_lanes(self, &[u16; 4]) -> core::core_arch::wasm32::simd128::v128
-pub fn archmage::tokens::generated::wasm::Wasm128Token::from_u16_lanes(self, &[u16; 8]) -> [core::core_arch::wasm32::simd128::v128; 2]
-pub fn archmage::tokens::generated::wasm::Wasm128Token::from_u32_lanes(self, [core::core_arch::wasm32::simd128::v128; 2]) -> [core::core_arch::wasm32::simd128::v128; 2]
-pub fn archmage::tokens::generated::wasm::Wasm128Token::from_u32_lanes(self, [core::core_arch::wasm32::simd128::v128; 4]) -> [core::core_arch::wasm32::simd128::v128; 4]
-pub fn archmage::tokens::generated::wasm::Wasm128Token::from_u32_lanes(self, core::core_arch::wasm32::simd128::v128) -> core::core_arch::wasm32::simd128::v128
-pub fn archmage::tokens::generated::wasm::Wasm128Token::from_u8_lanes_wide(self, &[u8; 16]) -> [core::core_arch::wasm32::simd128::v128; 4]
-pub fn archmage::tokens::generated::wasm::Wasm128Token::interleave_3ch_repr(self, [[core::core_arch::wasm32::simd128::v128; 2]; 3]) -> [[core::core_arch::wasm32::simd128::v128; 2]; 3]
-pub fn archmage::tokens::generated::wasm::Wasm128Token::interleave_3ch_repr(self, [core::core_arch::wasm32::simd128::v128; 3]) -> [core::core_arch::wasm32::simd128::v128; 3]
-pub fn archmage::tokens::generated::wasm::Wasm128Token::interleave_rgba_wide(self, [[core::core_arch::wasm32::simd128::v128; 4]; 4]) -> [[core::core_arch::wasm32::simd128::v128; 4]; 4]
-pub fn archmage::tokens::generated::wasm::Wasm128Token::load_rgb_bytes(self, &[u8; 12]) -> (core::core_arch::wasm32::simd128::v128, core::core_arch::wasm32::simd128::v128, core::core_arch::wasm32::simd128::v128)
-pub fn archmage::tokens::generated::wasm::Wasm128Token::load_rgb_bytes(self, &[u8; 24]) -> ([core::core_arch::wasm32::simd128::v128; 2], [core::core_arch::wasm32::simd128::v128; 2], [core::core_arch::wasm32::simd128::v128; 2])
-pub fn archmage::tokens::generated::wasm::Wasm128Token::max_fast_f32(self, f32, f32) -> f32
-pub fn archmage::tokens::generated::wasm::Wasm128Token::max_fast_f64(self, f64, f64) -> f64
-pub fn archmage::tokens::generated::wasm::Wasm128Token::min_fast_f32(self, f32, f32) -> f32
-pub fn archmage::tokens::generated::wasm::Wasm128Token::min_fast_f64(self, f64, f64) -> f64
-pub fn archmage::tokens::generated::wasm::Wasm128Token::mul_add_relaxed_f32(self, f32, f32, f32) -> f32
-pub fn archmage::tokens::generated::wasm::Wasm128Token::mul_add_relaxed_f64(self, f64, f64, f64) -> f64
-pub fn archmage::tokens::generated::wasm::Wasm128Token::mul_sub_relaxed_f32(self, f32, f32, f32) -> f32
-pub fn archmage::tokens::generated::wasm::Wasm128Token::mul_sub_relaxed_f64(self, f64, f64, f64) -> f64
-pub fn archmage::tokens::generated::wasm::Wasm128Token::store_rgb_u8_into(self, [core::core_arch::wasm32::simd128::v128; 2], [core::core_arch::wasm32::simd128::v128; 2], [core::core_arch::wasm32::simd128::v128; 2], &mut [u8; 24])
-pub fn archmage::tokens::generated::wasm::Wasm128Token::store_rgb_u8_into(self, core::core_arch::wasm32::simd128::v128, core::core_arch::wasm32::simd128::v128, core::core_arch::wasm32::simd128::v128, &mut [u8; 12])
-pub fn archmage::tokens::generated::wasm::Wasm128Token::store_rgba_u8_into(self, [core::core_arch::wasm32::simd128::v128; 2], [core::core_arch::wasm32::simd128::v128; 2], [core::core_arch::wasm32::simd128::v128; 2], [core::core_arch::wasm32::simd128::v128; 2], &mut [u8; 32])
-pub fn archmage::tokens::generated::wasm::Wasm128Token::store_rgba_u8_into(self, core::core_arch::wasm32::simd128::v128, core::core_arch::wasm32::simd128::v128, core::core_arch::wasm32::simd128::v128, core::core_arch::wasm32::simd128::v128, &mut [u8; 16])
-pub fn archmage::tokens::generated::wasm::Wasm128Token::store_rgba_u8_with_into<const CFG: u32>(self, Self::Repr, Self::Repr, Self::Repr, Self::Repr, &mut [u8; 16])
-pub fn archmage::tokens::generated::wasm::Wasm128Token::store_rgba_u8_with_into<const CFG: u32>(self, Self::Repr, Self::Repr, Self::Repr, Self::Repr, &mut [u8; 32])
-pub fn archmage::tokens::generated::wasm::Wasm128Token::to_bf16_lanes<const CFG: u32>(self, [core::core_arch::wasm32::simd128::v128; 2]) -> [u16; 8]
-pub fn archmage::tokens::generated::wasm::Wasm128Token::to_bf16_lanes<const CFG: u32>(self, [core::core_arch::wasm32::simd128::v128; 4]) -> [u16; 16]
-pub fn archmage::tokens::generated::wasm::Wasm128Token::to_bf16_lanes<const CFG: u32>(self, core::core_arch::wasm32::simd128::v128) -> [u16; 4]
-pub fn archmage::tokens::generated::wasm::Wasm128Token::to_f16_lanes<const CFG: u32>(self, [core::core_arch::wasm32::simd128::v128; 2]) -> [u16; 8]
-pub fn archmage::tokens::generated::wasm::Wasm128Token::to_f16_lanes<const CFG: u32>(self, [core::core_arch::wasm32::simd128::v128; 4]) -> [u16; 16]
-pub fn archmage::tokens::generated::wasm::Wasm128Token::to_f16_lanes<const CFG: u32>(self, core::core_arch::wasm32::simd128::v128) -> [u16; 4]
-pub fn archmage::tokens::generated::wasm::Wasm128Token::to_i32_fast_scalar(self, f32) -> i32
-pub fn archmage::tokens::generated::wasm::Wasm128Token::to_i32_scalar(self, f32) -> i32
-pub fn archmage::tokens::generated::wasm::Wasm128Token::to_u16_lanes<const CFG: u32>(self, [core::core_arch::wasm32::simd128::v128; 2]) -> [u16; 8]
-pub fn archmage::tokens::generated::wasm::Wasm128Token::to_u16_lanes<const CFG: u32>(self, [core::core_arch::wasm32::simd128::v128; 4]) -> [u16; 16]
-pub fn archmage::tokens::generated::wasm::Wasm128Token::to_u16_lanes<const CFG: u32>(self, core::core_arch::wasm32::simd128::v128) -> [u16; 4]
-pub fn archmage::tokens::generated::wasm::Wasm128Token::to_u32_lanes<const CFG: u32>(self, [core::core_arch::wasm32::simd128::v128; 2]) -> [core::core_arch::wasm32::simd128::v128; 2]
-pub fn archmage::tokens::generated::wasm::Wasm128Token::to_u32_lanes<const CFG: u32>(self, [core::core_arch::wasm32::simd128::v128; 4]) -> [core::core_arch::wasm32::simd128::v128; 4]
-pub fn archmage::tokens::generated::wasm::Wasm128Token::to_u32_lanes<const CFG: u32>(self, core::core_arch::wasm32::simd128::v128) -> core::core_arch::wasm32::simd128::v128
-pub fn archmage::tokens::generated::wasm::Wasm128Token::to_u8_lanes<const CFG: u32>(self, [core::core_arch::wasm32::simd128::v128; 2]) -> [u8; 8]
-pub fn archmage::tokens::generated::wasm::Wasm128Token::to_u8_lanes<const CFG: u32>(self, [core::core_arch::wasm32::simd128::v128; 4]) -> [u8; 16]
-pub fn archmage::tokens::generated::wasm::Wasm128Token::to_u8_lanes<const CFG: u32>(self, core::core_arch::wasm32::simd128::v128) -> [u8; 4]
-pub fn archmage::tokens::generated::wasm::Wasm128Token::transpose_4x4_repr(self, [core::core_arch::wasm32::simd128::v128; 4]) -> [core::core_arch::wasm32::simd128::v128; 4]
-pub fn archmage::tokens::generated::wasm::Wasm128Token::with_rgba_alpha_repr(self, [core::core_arch::wasm32::simd128::v128; 2], [core::core_arch::wasm32::simd128::v128; 2]) -> [core::core_arch::wasm32::simd128::v128; 2]
-pub fn archmage::tokens::generated::wasm::Wasm128Token::with_rgba_alpha_repr(self, [core::core_arch::wasm32::simd128::v128; 4], [core::core_arch::wasm32::simd128::v128; 4]) -> [core::core_arch::wasm32::simd128::v128; 4]
-pub fn archmage::tokens::generated::wasm::Wasm128Token::with_rgba_alpha_repr(self, core::core_arch::wasm32::simd128::v128, core::core_arch::wasm32::simd128::v128) -> core::core_arch::wasm32::simd128::v128
-pub fn bypass_adversarial::BypassAdversarialProofs::clone(&self) -> bypass_adversarial::BypassAdversarialProofs
-pub fn bypass_adversarial::BypassAdversarialProofs::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn nostd_math::cbrt_lowp_f32(f32) -> f32
 pub fn nostd_math::cbrt_midp_f32(f32) -> f32
 pub fn nostd_math::ceil(f64) -> f64
@@ -174,81 +57,10 @@ pub fn numerics::IntRounding::assert_fields_are_eq(&self)
 pub fn numerics::RecipDomain::assert_fields_are_eq(&self)
 pub fn numerics::RecipOptions::assert_fields_are_eq(&self)
 pub fn numerics::RecipPrecision::assert_fields_are_eq(&self)
-pub fn scalar::F32ScalarBackend::max_fast_f32(self, f32, f32) -> f32
-pub fn scalar::F32ScalarBackend::min_fast_f32(self, f32, f32) -> f32
-pub fn scalar::F32ScalarBackend::mul_add_relaxed_f32(self, f32, f32, f32) -> f32
-pub fn scalar::F32ScalarBackend::mul_sub_relaxed_f32(self, f32, f32, f32) -> f32
-pub fn scalar::F32ScalarBackend::to_i32_fast_scalar(self, f32) -> i32
-pub fn scalar::F32ScalarBackend::to_i32_scalar(self, f32) -> i32
-pub fn scalar::F64ScalarBackend::max_fast_f64(self, f64, f64) -> f64
-pub fn scalar::F64ScalarBackend::min_fast_f64(self, f64, f64) -> f64
-pub fn scalar::F64ScalarBackend::mul_add_relaxed_f64(self, f64, f64, f64) -> f64
-pub fn scalar::F64ScalarBackend::mul_sub_relaxed_f64(self, f64, f64, f64) -> f64
-pub fn simd::backends::F32ScalarBackend::max_fast_f32(self, f32, f32) -> f32
-pub fn simd::backends::F32ScalarBackend::min_fast_f32(self, f32, f32) -> f32
-pub fn simd::backends::F32ScalarBackend::mul_add_relaxed_f32(self, f32, f32, f32) -> f32
-pub fn simd::backends::F32ScalarBackend::mul_sub_relaxed_f32(self, f32, f32, f32) -> f32
-pub fn simd::backends::F32ScalarBackend::to_i32_fast_scalar(self, f32) -> i32
-pub fn simd::backends::F32ScalarBackend::to_i32_scalar(self, f32) -> i32
-pub fn simd::backends::F32x16Backend::broadcast_rgba_alpha_repr(self, Self::Repr) -> Self::Repr
-pub fn simd::backends::F32x16Backend::deinterleave_rgba_wide(self, [Self::Repr; 4]) -> [Self::Repr; 4]
-pub fn simd::backends::F32x16Backend::from_bf16_lanes(self, &[u16; 16]) -> Self::Repr
-pub fn simd::backends::F32x16Backend::from_f16_lanes<const CFG: u32>(self, &[u16; 16]) -> Self::Repr
-pub fn simd::backends::F32x16Backend::from_u16_lanes(self, &[u16; 16]) -> Self::Repr
-pub fn simd::backends::F32x16Backend::from_u32_lanes(self, Self::Repr) -> Self::Repr
-pub fn simd::backends::F32x16Backend::from_u8_lanes_wide(self, &[u8; 16]) -> Self::Repr
-pub fn simd::backends::F32x16Backend::interleave_rgba_wide(self, [Self::Repr; 4]) -> [Self::Repr; 4]
-pub fn simd::backends::F32x16Backend::to_bf16_lanes<const CFG: u32>(self, Self::Repr) -> [u16; 16]
-pub fn simd::backends::F32x16Backend::to_f16_lanes<const CFG: u32>(self, Self::Repr) -> [u16; 16]
-pub fn simd::backends::F32x16Backend::to_u16_lanes<const CFG: u32>(self, Self::Repr) -> [u16; 16]
-pub fn simd::backends::F32x16Backend::to_u32_lanes<const CFG: u32>(self, Self::Repr) -> Self::Repr
-pub fn simd::backends::F32x16Backend::to_u8_lanes<const CFG: u32>(self, Self::Repr) -> [u8; 16]
-pub fn simd::backends::F32x16Backend::with_rgba_alpha_repr(self, Self::Repr, Self::Repr) -> Self::Repr
-pub fn simd::backends::F32x4Backend::broadcast_rgba_alpha_repr(self, Self::Repr) -> Self::Repr
-pub fn simd::backends::F32x4Backend::deinterleave_3ch_repr(self, [Self::Repr; 3]) -> [Self::Repr; 3]
-pub fn simd::backends::F32x4Backend::from_bf16_lanes(self, &[u16; 4]) -> Self::Repr
-pub fn simd::backends::F32x4Backend::from_f16_lanes<const CFG: u32>(self, &[u16; 4]) -> Self::Repr
-pub fn simd::backends::F32x4Backend::from_u16_lanes(self, &[u16; 4]) -> Self::Repr
-pub fn simd::backends::F32x4Backend::from_u32_lanes(self, Self::Repr) -> Self::Repr
-pub fn simd::backends::F32x4Backend::interleave_3ch_repr(self, [Self::Repr; 3]) -> [Self::Repr; 3]
-pub fn simd::backends::F32x4Backend::load_rgb_bytes(self, &[u8; 12]) -> (Self::Repr, Self::Repr, Self::Repr)
-pub fn simd::backends::F32x4Backend::store_rgb_u8_into(self, Self::Repr, Self::Repr, Self::Repr, &mut [u8; 12])
-pub fn simd::backends::F32x4Backend::store_rgba_u8_into(self, Self::Repr, Self::Repr, Self::Repr, Self::Repr, &mut [u8; 16])
-pub fn simd::backends::F32x4Backend::store_rgba_u8_with_into<const CFG: u32>(self, Self::Repr, Self::Repr, Self::Repr, Self::Repr, &mut [u8; 16])
-pub fn simd::backends::F32x4Backend::to_bf16_lanes<const CFG: u32>(self, Self::Repr) -> [u16; 4]
-pub fn simd::backends::F32x4Backend::to_f16_lanes<const CFG: u32>(self, Self::Repr) -> [u16; 4]
-pub fn simd::backends::F32x4Backend::to_u16_lanes<const CFG: u32>(self, Self::Repr) -> [u16; 4]
-pub fn simd::backends::F32x4Backend::to_u32_lanes<const CFG: u32>(self, Self::Repr) -> Self::Repr
-pub fn simd::backends::F32x4Backend::to_u8_lanes<const CFG: u32>(self, Self::Repr) -> [u8; 4]
-pub fn simd::backends::F32x4Backend::transpose_4x4_repr(self, [Self::Repr; 4]) -> [Self::Repr; 4]
-pub fn simd::backends::F32x4Backend::with_rgba_alpha_repr(self, Self::Repr, Self::Repr) -> Self::Repr
-pub fn simd::backends::F32x8Backend::broadcast_rgba_alpha_repr(self, Self::Repr) -> Self::Repr
-pub fn simd::backends::F32x8Backend::deinterleave_3ch_repr(self, [Self::Repr; 3]) -> [Self::Repr; 3]
-pub fn simd::backends::F32x8Backend::from_bf16_lanes(self, &[u16; 8]) -> Self::Repr
-pub fn simd::backends::F32x8Backend::from_f16_lanes<const CFG: u32>(self, &[u16; 8]) -> Self::Repr
-pub fn simd::backends::F32x8Backend::from_u16_lanes(self, &[u16; 8]) -> Self::Repr
-pub fn simd::backends::F32x8Backend::from_u32_lanes(self, Self::Repr) -> Self::Repr
-pub fn simd::backends::F32x8Backend::interleave_3ch_repr(self, [Self::Repr; 3]) -> [Self::Repr; 3]
-pub fn simd::backends::F32x8Backend::load_rgb_bytes(self, &[u8; 24]) -> (Self::Repr, Self::Repr, Self::Repr)
-pub fn simd::backends::F32x8Backend::store_rgb_u8_into(self, Self::Repr, Self::Repr, Self::Repr, &mut [u8; 24])
-pub fn simd::backends::F32x8Backend::store_rgba_u8_into(self, Self::Repr, Self::Repr, Self::Repr, Self::Repr, &mut [u8; 32])
-pub fn simd::backends::F32x8Backend::store_rgba_u8_with_into<const CFG: u32>(self, Self::Repr, Self::Repr, Self::Repr, Self::Repr, &mut [u8; 32])
-pub fn simd::backends::F32x8Backend::to_bf16_lanes<const CFG: u32>(self, Self::Repr) -> [u16; 8]
-pub fn simd::backends::F32x8Backend::to_f16_lanes<const CFG: u32>(self, Self::Repr) -> [u16; 8]
-pub fn simd::backends::F32x8Backend::to_u16_lanes<const CFG: u32>(self, Self::Repr) -> [u16; 8]
-pub fn simd::backends::F32x8Backend::to_u32_lanes<const CFG: u32>(self, Self::Repr) -> Self::Repr
-pub fn simd::backends::F32x8Backend::to_u8_lanes<const CFG: u32>(self, Self::Repr) -> [u8; 8]
-pub fn simd::backends::F32x8Backend::with_rgba_alpha_repr(self, Self::Repr, Self::Repr) -> Self::Repr
-pub fn simd::backends::F64ScalarBackend::max_fast_f64(self, f64, f64) -> f64
-pub fn simd::backends::F64ScalarBackend::min_fast_f64(self, f64, f64) -> f64
-pub fn simd::backends::F64ScalarBackend::mul_add_relaxed_f64(self, f64, f64, f64) -> f64
-pub fn simd::backends::F64ScalarBackend::mul_sub_relaxed_f64(self, f64, f64, f64) -> f64
 pub fn simd::i8x1::assert_fields_are_eq(&self) [also: simd::i16x1, simd::i32x1, simd::i64x1, simd::u16x1, simd::u32x1, simd::u64x1, simd::u8x1]
 pub mod bypass_adversarial
 pub mod nostd_math
 pub struct bypass_adversarial::BypassAdversarialProofs
-pub trait simd::backends::F32ScalarBackend: archmage::tokens::IntoConcreteToken + archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
-pub trait simd::backends::F64ScalarBackend: archmage::tokens::IntoConcreteToken + archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
 
 ## trait impls (23 types)
 

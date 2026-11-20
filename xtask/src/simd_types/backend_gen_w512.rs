@@ -386,7 +386,7 @@ fn generate_float_backend_trait(ty: &W512Type) -> String {
     let elem = ty.elem;
     let lanes = ty.lanes;
     let array = ty.array_type();
-    let float_layout = super::float_layout::trait_methods(elem, lanes, &trait_name);
+    let internal_trait = super::float_layout::internal_trait(elem, lanes);
     let min_max_fast_trait = formatdoc! {r#"
 
         /// IEEE 754-2019 minimum (`NaN`-propagating, `-0.0 < +0.0`).
@@ -409,9 +409,11 @@ fn generate_float_backend_trait(ty: &W512Type) -> String {
     "#};
 
     let scalar_bound = if elem == "f32" {
-        " + crate::scalar::F32ScalarBackend"
+        format!(
+            " + F32x{lanes}Internal<InternalRepr = <Self as {trait_name}>::Repr> + crate::scalar::F32ScalarBackend"
+        )
     } else {
-        " + crate::scalar::F64ScalarBackend"
+        " + crate::scalar::F64ScalarBackend".to_string()
     };
 
     formatdoc! {r#"
@@ -425,7 +427,7 @@ fn generate_float_backend_trait(ty: &W512Type) -> String {
         use super::sealed::Sealed;
         use archmage::SimdToken;
 
-        /// Backend implementation for {lanes}-lane {elem} SIMD vectors.
+        {internal_trait}/// Backend implementation for {lanes}-lane {elem} SIMD vectors.
         ///
         /// Trait methods take `self` (the token) as receiver — the token value
         /// is the proof of CPU support, and requiring it as the receiver means
@@ -438,6 +440,7 @@ fn generate_float_backend_trait(ty: &W512Type) -> String {
         ///
         /// This trait is sealed — only archmage token types can implement it.
         /// The token proves CPU support was verified via `summon()`.
+        #[allow(private_bounds)]
         pub trait {trait_name}: SimdToken + Sealed{scalar_bound} + Copy + 'static {{
             /// Platform-native SIMD representation.
             #[allow(private_bounds)]
@@ -629,8 +632,6 @@ fn generate_float_backend_trait(ty: &W512Type) -> String {
             /// Precise reciprocal square root — see [`recip`](Self::recip).
             #[inline(always)]
             fn rsqrt(self, a: Self::Repr) -> Self::Repr {{ Self::rsqrt_approx(self, a) }}
-
-            {float_layout}
         }}
     "#,
         name = ty.name(),
@@ -1246,8 +1247,13 @@ fn generate_scalar_float_impl(ty: &W512Type) -> String {
 
             #[inline(always)]
             fn bitxor(self, a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| {elem}::from_bits(a[i].to_bits() ^ b[i].to_bits())) }}
-        }}
+        }}{scalar_internal}
     "#,
+        scalar_internal = if elem == "f32" {
+            super::float_layout::scalar_internal_impl(16)
+        } else {
+            String::new()
+        },
         elem_name = zero_lit.to_string(),
         uint = if elem == "f32" { "u32" } else { "u64" },
         min_ieee = if elem == "f32" { "minimumf" } else { "minimum" },
@@ -1666,10 +1672,6 @@ fn generate_v3_polyfill_impl(ty: &W512Type) -> String {
             }}
     "#});
 
-    if ty.elem == "f32" {
-        code.push_str(&super::float_layout::polyfill(16, 8, &v3_repr));
-    }
-
     // Float math ops
     if ty.is_float() {
         code.push_str(&formatdoc! {r#"
@@ -2014,6 +2016,18 @@ fn generate_v3_polyfill_impl(ty: &W512Type) -> String {
         }}
     "#});
 
+    if ty.elem == "f32" {
+        let poly = super::float_layout::polyfill(16, 8, &v3_repr);
+        code.push_str(&formatdoc! {r#"
+
+            #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
+            impl crate::simd::backends::F32x16Internal for archmage::X64V3Token {{
+                type InternalRepr = {v3_repr};
+            {poly}
+            }}
+        "#});
+    }
+
     code
 }
 
@@ -2160,10 +2174,6 @@ fn generate_4way_polyfill_impl(
         q2_val = q_lanes * 2,
         q3_val = q_lanes * 3,
     };
-
-    if ty.elem == "f32" {
-        code.push_str(&super::float_layout::polyfill(16, 4, &repr));
-    }
 
     // Float: mul, div
     if ty.is_float() {
@@ -2504,6 +2514,18 @@ fn generate_4way_polyfill_impl(
         {integer_methods}
         }}
     "#});
+
+    if ty.elem == "f32" {
+        let poly = super::float_layout::polyfill(16, 4, &repr);
+        code.push_str(&formatdoc! {r#"
+
+            #[cfg(target_arch = "{arch}")]
+            impl crate::simd::backends::F32x16Internal for archmage::{token} {{
+                type InternalRepr = {repr};
+            {poly}
+            }}
+        "#});
+    }
 
     code
 }
@@ -2847,7 +2869,6 @@ fn generate_x86_v4_float_impl_for_token(ty: &W512Type, token: &str) -> String {
                 _mm512_rsqrt14_{s}(a)
             }}
 
-            {float_layout}
             {working_recip_512}
 
             {arcane}
@@ -2870,8 +2891,20 @@ fn generate_x86_v4_float_impl_for_token(ty: &W512Type, token: &str) -> String {
             fn bitxor(self, a: {inner}, b: {inner}) -> {inner} {{
                 _mm512_xor_{s}(a, b)
             }}
-        }}
-    "#}
+        }}{internal_impl}
+    "#,
+        internal_impl = if elem == "f32" {
+            formatdoc! {r#"
+
+                #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
+                impl crate::simd::backends::F32x16Internal for archmage::{token} {{
+                    type InternalRepr = {inner};
+                {float_layout}
+                }}"#}
+        } else {
+            String::new()
+        },
+    }
 }
 
 /// Generate V4 native implementation for a W512 integer type.

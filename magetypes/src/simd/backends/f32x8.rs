@@ -8,6 +8,95 @@
 use super::sealed::Sealed;
 use archmage::SimdToken;
 
+/// Crate-private layout and conversion hooks for `8`-lane `f32` backends.
+pub(crate) trait F32x8Internal: SimdToken + Sealed + Copy + 'static {
+    type InternalRepr: Copy + Clone + Send + Sync;
+
+    /// Load unsigned lanes and convert them exactly, without normalization.
+    fn from_u16_lanes(self, lanes: &[u16; 8]) -> Self::InternalRepr;
+
+    /// Convert lanes to u16 using the encoded policy.
+    fn to_u16_lanes<const CFG: u32>(self, value: Self::InternalRepr) -> [u16; 8];
+
+    /// Convert lanes to u8 using the encoded policy.
+    fn to_u8_lanes<const CFG: u32>(self, value: Self::InternalRepr) -> [u8; 8];
+
+    /// Convert f32 lanes to unsigned u32 stored in the float representation.
+    fn to_u32_lanes<const CFG: u32>(self, value: Self::InternalRepr) -> Self::InternalRepr;
+
+    /// Widen unsigned u32 bit patterns stored in the float representation.
+    fn from_u32_lanes(self, value: Self::InternalRepr) -> Self::InternalRepr;
+
+    /// Decode binary16 using the encoded policy.
+    fn from_f16_lanes<const CFG: u32>(self, lanes: &[u16; 8]) -> Self::InternalRepr;
+
+    /// Encode binary16 using the encoded policy.
+    fn to_f16_lanes<const CFG: u32>(self, value: Self::InternalRepr) -> [u16; 8];
+
+    /// Widen bfloat16 bit patterns.
+    fn from_bf16_lanes(self, lanes: &[u16; 8]) -> Self::InternalRepr;
+
+    /// Encode bfloat16 using the encoded policy.
+    fn to_bf16_lanes<const CFG: u32>(self, value: Self::InternalRepr) -> [u16; 8];
+
+    /// Broadcast lane 3 in each consecutive group of four lanes.
+    fn broadcast_rgba_alpha_repr(self, value: Self::InternalRepr) -> Self::InternalRepr;
+
+    /// Replace lane 3 in each consecutive group of four lanes.
+    fn with_rgba_alpha_repr(
+        self,
+        value: Self::InternalRepr,
+        src: Self::InternalRepr,
+    ) -> Self::InternalRepr;
+
+    /// Quantize and store planar channels into packed RGBA bytes.
+    fn store_rgba_u8_into(
+        self,
+        r: Self::InternalRepr,
+        g: Self::InternalRepr,
+        b: Self::InternalRepr,
+        a: Self::InternalRepr,
+        out: &mut [u8; 32],
+    );
+
+    /// Quantize and pack planar RGBA with the encoded integer policy.
+    #[inline(always)]
+    fn store_rgba_u8_with_into<const CFG: u32>(
+        self,
+        r: Self::InternalRepr,
+        g: Self::InternalRepr,
+        b: Self::InternalRepr,
+        a: Self::InternalRepr,
+        out: &mut [u8; 32],
+    ) {
+        let channels = [r, g, b, a].map(|v| Self::to_u8_lanes::<CFG>(self, v));
+        for (i, byte) in out.iter_mut().enumerate() {
+            *byte = channels[i % 4][i / 4];
+        }
+    }
+
+    /// Deinterleave 8 packed RGB pixels from AoS into planar `[R, G, B]`.
+    fn deinterleave_3ch_repr(self, rgb: [Self::InternalRepr; 3]) -> [Self::InternalRepr; 3];
+
+    /// Interleave 3 planar `[R, G, B]` vectors into 3 AoS RGB vectors.
+    fn interleave_3ch_repr(self, channels: [Self::InternalRepr; 3]) -> [Self::InternalRepr; 3];
+
+    /// Load 8 packed RGB `u8` pixels into planar `f32` `(R, G, B)`.
+    fn load_rgb_bytes(
+        self,
+        rgb: &[u8; 24],
+    ) -> (Self::InternalRepr, Self::InternalRepr, Self::InternalRepr);
+
+    /// Round-to-nearest-even, clamp to `0..=255`, and interleave into 8 RGB pixels.
+    fn store_rgb_u8_into(
+        self,
+        r: Self::InternalRepr,
+        g: Self::InternalRepr,
+        b: Self::InternalRepr,
+        out: &mut [u8; 24],
+    );
+}
+
 /// Backend implementation for 8-lane f32 SIMD vectors.
 ///
 /// Trait methods take `self` (the token) as receiver — the token value
@@ -21,8 +110,14 @@ use archmage::SimdToken;
 ///
 /// This trait is sealed — only archmage token types can implement it.
 /// The token proves CPU support was verified via `summon()`.
+#[allow(private_bounds)]
 pub trait F32x8Backend:
-    SimdToken + Sealed + crate::scalar::F32ScalarBackend + Copy + 'static
+    SimdToken
+    + Sealed
+    + F32x8Internal<InternalRepr = <Self as F32x8Backend>::Repr>
+    + crate::scalar::F32ScalarBackend
+    + Copy
+    + 'static
 {
     /// Platform-native SIMD representation.
     #[allow(private_bounds)]
@@ -282,194 +377,8 @@ pub trait F32x8Backend:
         a: Self::Repr,
     ) -> [u8; 32] {
         let mut out = [0u8; 32];
-        Self::store_rgba_u8_into(self, r, g, b, a, &mut out);
+        <Self as F32x8Internal>::store_rgba_u8_into(self, r, g, b, a, &mut out);
         out
-    }
-
-    /// Quantize and store planar channels into packed RGBA bytes.
-    #[doc(hidden)]
-    #[inline(always)]
-    fn store_rgba_u8_into(
-        self,
-        r: Self::Repr,
-        g: Self::Repr,
-        b: Self::Repr,
-        a: Self::Repr,
-        out: &mut [u8; 32],
-    ) {
-        let rb = <Self as F32x8Backend>::to_u8_bytes(self, r);
-        let gb = <Self as F32x8Backend>::to_u8_bytes(self, g);
-        let bb = <Self as F32x8Backend>::to_u8_bytes(self, b);
-        let ab = <Self as F32x8Backend>::to_u8_bytes(self, a);
-        let mut i = 0;
-        while i < 8 {
-            out[i * 4] = rb[i];
-            out[i * 4 + 1] = gb[i];
-            out[i * 4 + 2] = bb[i];
-            out[i * 4 + 3] = ab[i];
-            i += 1;
-        }
-    }
-
-    /// Load unsigned lanes and convert them exactly, without normalization.
-    #[doc(hidden)]
-    #[inline(always)]
-    fn from_u16_lanes(self, lanes: &[u16; 8]) -> Self::Repr {
-        <Self as F32x8Backend>::from_array(self, lanes.map(f32::from))
-    }
-
-    /// Convert lanes to u16 using the encoded policy.
-    #[doc(hidden)]
-    #[inline(always)]
-    fn to_u16_lanes<const CFG: u32>(self, value: Self::Repr) -> [u16; 8] {
-        <Self as F32x8Backend>::to_array(self, value).map(crate::scalar::to_u16_with::<CFG>)
-    }
-
-    /// Convert lanes to u8 using the encoded policy.
-    #[doc(hidden)]
-    #[inline(always)]
-    fn to_u8_lanes<const CFG: u32>(self, value: Self::Repr) -> [u8; 8] {
-        <Self as F32x8Backend>::to_array(self, value).map(crate::scalar::to_u8_with::<CFG>)
-    }
-
-    /// Convert f32 lanes to unsigned u32 stored in the float representation.
-    #[doc(hidden)]
-    #[inline(always)]
-    fn to_u32_lanes<const CFG: u32>(self, value: Self::Repr) -> Self::Repr {
-        let lanes = <Self as F32x8Backend>::to_array(self, value);
-        <Self as F32x8Backend>::from_array(
-            self,
-            lanes.map(|x| f32::from_bits(crate::scalar::to_u32_with::<CFG>(x))),
-        )
-    }
-
-    /// Widen unsigned u32 bit patterns stored in the float representation.
-    #[doc(hidden)]
-    #[inline(always)]
-    fn from_u32_lanes(self, value: Self::Repr) -> Self::Repr {
-        let lanes = <Self as F32x8Backend>::to_array(self, value);
-        <Self as F32x8Backend>::from_array(self, lanes.map(|x| x.to_bits() as f32))
-    }
-
-    /// Decode binary16 using the encoded policy.
-    #[doc(hidden)]
-    #[inline(always)]
-    fn from_f16_lanes<const CFG: u32>(self, lanes: &[u16; 8]) -> Self::Repr {
-        <Self as F32x8Backend>::from_array(self, lanes.map(crate::scalar::from_f16_with::<CFG>))
-    }
-
-    /// Encode binary16 using the encoded policy.
-    #[doc(hidden)]
-    #[inline(always)]
-    fn to_f16_lanes<const CFG: u32>(self, value: Self::Repr) -> [u16; 8] {
-        <Self as F32x8Backend>::to_array(self, value).map(crate::scalar::to_f16_bits_with::<CFG>)
-    }
-
-    /// Widen bfloat16 bit patterns.
-    #[doc(hidden)]
-    #[inline(always)]
-    fn from_bf16_lanes(self, lanes: &[u16; 8]) -> Self::Repr {
-        <Self as F32x8Backend>::from_array(self, lanes.map(crate::scalar::from_bf16))
-    }
-
-    /// Encode bfloat16 using the encoded policy.
-    #[doc(hidden)]
-    #[inline(always)]
-    fn to_bf16_lanes<const CFG: u32>(self, value: Self::Repr) -> [u16; 8] {
-        <Self as F32x8Backend>::to_array(self, value).map(crate::scalar::to_bf16_with::<CFG>)
-    }
-
-    /// Broadcast lane 3 in each consecutive group of four lanes.
-    #[doc(hidden)]
-    #[inline(always)]
-    fn broadcast_rgba_alpha_repr(self, value: Self::Repr) -> Self::Repr {
-        let value = <Self as F32x8Backend>::to_array(self, value);
-        <Self as F32x8Backend>::from_array(self, core::array::from_fn(|i| value[i | 3]))
-    }
-
-    /// Replace lane 3 in each consecutive group of four lanes.
-    #[doc(hidden)]
-    #[inline(always)]
-    fn with_rgba_alpha_repr(self, value: Self::Repr, src: Self::Repr) -> Self::Repr {
-        let mut value = <Self as F32x8Backend>::to_array(self, value);
-        let src = <Self as F32x8Backend>::to_array(self, src);
-        for i in (3..8).step_by(4) {
-            value[i] = src[i];
-        }
-        <Self as F32x8Backend>::from_array(self, value)
-    }
-
-    /// Quantize and pack planar RGBA with the encoded integer policy.
-    #[doc(hidden)]
-    #[inline(always)]
-    fn store_rgba_u8_with_into<const CFG: u32>(
-        self,
-        r: Self::Repr,
-        g: Self::Repr,
-        b: Self::Repr,
-        a: Self::Repr,
-        out: &mut [u8; 32],
-    ) {
-        let channels = [r, g, b, a].map(|v| <Self as F32x8Backend>::to_u8_lanes::<CFG>(self, v));
-        for (i, byte) in out.iter_mut().enumerate() {
-            *byte = channels[i % 4][i / 4];
-        }
-    }
-
-    /// Deinterleave 8 packed RGB pixels (24 floats) from AoS into planar `[R, G, B]`.
-    #[doc(hidden)]
-    #[inline(always)]
-    fn deinterleave_3ch_repr(self, rgb: [Self::Repr; 3]) -> [Self::Repr; 3] {
-        let [v0, v1, v2] = rgb.map(|v| Self::to_array(self, v));
-        [
-            Self::from_array(
-                self,
-                [v0[0], v0[3], v0[6], v1[1], v1[4], v1[7], v2[2], v2[5]],
-            ),
-            Self::from_array(
-                self,
-                [v0[1], v0[4], v0[7], v1[2], v1[5], v2[0], v2[3], v2[6]],
-            ),
-            Self::from_array(
-                self,
-                [v0[2], v0[5], v1[0], v1[3], v1[6], v2[1], v2[4], v2[7]],
-            ),
-        ]
-    }
-
-    /// Interleave 3 planar `[R, G, B]` vectors (8 pixels) into 3 AoS RGB vectors.
-    #[doc(hidden)]
-    #[inline(always)]
-    fn interleave_3ch_repr(self, channels: [Self::Repr; 3]) -> [Self::Repr; 3] {
-        let [r, g, b] = channels.map(|c| Self::to_array(self, c));
-        [
-            Self::from_array(self, [r[0], g[0], b[0], r[1], g[1], b[1], r[2], g[2]]),
-            Self::from_array(self, [b[2], r[3], g[3], b[3], r[4], g[4], b[4], r[5]]),
-            Self::from_array(self, [g[5], b[5], r[6], g[6], b[6], r[7], g[7], b[7]]),
-        ]
-    }
-
-    /// Load 8 packed RGB `u8` pixels (24 bytes) into planar `f32` `(R, G, B)`.
-    #[doc(hidden)]
-    #[inline(always)]
-    fn load_rgb_bytes(self, rgb: &[u8; 24]) -> (Self::Repr, Self::Repr, Self::Repr) {
-        let ch = |c| Self::from_array(self, core::array::from_fn(|i| rgb[i * 3 + c] as f32));
-        (ch(0), ch(1), ch(2))
-    }
-
-    /// Round-to-nearest-even, clamp to `0..=255`, and interleave into 8 RGB pixels.
-    #[doc(hidden)]
-    #[inline(always)]
-    fn store_rgb_u8_into(self, r: Self::Repr, g: Self::Repr, b: Self::Repr, out: &mut [u8; 24]) {
-        let [rb, gb, bb] = [r, g, b].map(|v| Self::to_u8_bytes(self, v));
-        for (pixel, ((r, g), b)) in out
-            .as_chunks_mut::<3>()
-            .0
-            .iter_mut()
-            .zip(rb.into_iter().zip(gb).zip(bb))
-        {
-            *pixel = [r, g, b];
-        }
     }
 
     // ====== 8x8 transpose (f32x8 only) ======

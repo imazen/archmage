@@ -21,6 +21,7 @@ use archmage::SimdToken;
 ///
 /// This trait is sealed — only archmage token types can implement it.
 /// The token proves CPU support was verified via `summon()`.
+#[allow(private_bounds)]
 pub trait F64x4Backend:
     SimdToken + Sealed + crate::scalar::F64ScalarBackend + Copy + 'static
 {

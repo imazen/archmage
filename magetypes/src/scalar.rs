@@ -201,6 +201,22 @@ pub fn mul_sub_fused_f64(a: f64, b: f64, c: f64) -> f64 {
 // Token-matched backend-dependent scalar traits & functions
 // ============================================================================
 
+pub(crate) trait F32ScalarInternal: Copy + 'static {
+    fn min_fast_f32(self, a: f32, b: f32) -> f32;
+    fn max_fast_f32(self, a: f32, b: f32) -> f32;
+    fn mul_add_relaxed_f32(self, a: f32, b: f32, c: f32) -> f32;
+    fn mul_sub_relaxed_f32(self, a: f32, b: f32, c: f32) -> f32;
+    fn to_i32_scalar(self, a: f32) -> i32;
+    fn to_i32_fast_scalar(self, a: f32) -> i32;
+}
+
+pub(crate) trait F64ScalarInternal: Copy + 'static {
+    fn min_fast_f64(self, a: f64, b: f64) -> f64;
+    fn max_fast_f64(self, a: f64, b: f64) -> f64;
+    fn mul_add_relaxed_f64(self, a: f64, b: f64, c: f64) -> f64;
+    fn mul_sub_relaxed_f64(self, a: f64, b: f64, c: f64) -> f64;
+}
+
 /// Token-gated scalar operations for backend-dependent `f32` primitives.
 ///
 /// Sealed — implemented only for `archmage` SIMD tokens, and required as a
@@ -208,30 +224,10 @@ pub fn mul_sub_fused_f64(a: f64, b: f64, c: f64) -> f64 {
 /// kernels can call [`min_fast_f32`], [`max_fast_f32`], [`clamp_f32`],
 /// [`mul_add_relaxed_f32`], [`mul_sub_relaxed_f32`], [`to_i32`], and
 /// [`to_i32_fast`] directly in their scalar tails.
-pub trait F32ScalarBackend: IntoConcreteToken + SimdToken + Sealed + Copy + 'static {
-    /// Fast scalar minimum matching `f32xN::<Self>::min_fast`.
-    #[doc(hidden)]
-    fn min_fast_f32(self, a: f32, b: f32) -> f32;
-
-    /// Fast scalar maximum matching `f32xN::<Self>::max_fast`.
-    #[doc(hidden)]
-    fn max_fast_f32(self, a: f32, b: f32) -> f32;
-
-    /// Relaxed scalar multiply-add `a * b + c` matching `f32xN::<Self>::mul_add_relaxed`.
-    #[doc(hidden)]
-    fn mul_add_relaxed_f32(self, a: f32, b: f32, c: f32) -> f32;
-
-    /// Relaxed scalar multiply-sub `a * b - c` matching `f32xN::<Self>::mul_sub_relaxed`.
-    #[doc(hidden)]
-    fn mul_sub_relaxed_f32(self, a: f32, b: f32, c: f32) -> f32;
-
-    /// Scalar truncation matching `f32xN::<Self>::to_i32`.
-    #[doc(hidden)]
-    fn to_i32_scalar(self, a: f32) -> i32;
-
-    /// Fast unchecked scalar truncation matching `f32xN::<Self>::to_i32_fast`.
-    #[doc(hidden)]
-    fn to_i32_fast_scalar(self, a: f32) -> i32;
+#[allow(private_bounds)]
+pub trait F32ScalarBackend:
+    IntoConcreteToken + SimdToken + Sealed + F32ScalarInternal + Copy + 'static
+{
 }
 
 /// Token-gated scalar operations for backend-dependent `f64` primitives.
@@ -241,25 +237,14 @@ pub trait F32ScalarBackend: IntoConcreteToken + SimdToken + Sealed + Copy + 'sta
 /// kernels can call [`min_fast_f64`], [`max_fast_f64`], [`clamp_f64`],
 /// [`mul_add_relaxed_f64`], and [`mul_sub_relaxed_f64`] directly in their
 /// scalar tails.
-pub trait F64ScalarBackend: IntoConcreteToken + SimdToken + Sealed + Copy + 'static {
-    /// Fast scalar minimum matching `f64xN::<Self>::min_fast`.
-    #[doc(hidden)]
-    fn min_fast_f64(self, a: f64, b: f64) -> f64;
-
-    /// Fast scalar maximum matching `f64xN::<Self>::max_fast`.
-    #[doc(hidden)]
-    fn max_fast_f64(self, a: f64, b: f64) -> f64;
-
-    /// Relaxed scalar multiply-add `a * b + c` matching `f64xN::<Self>::mul_add_relaxed`.
-    #[doc(hidden)]
-    fn mul_add_relaxed_f64(self, a: f64, b: f64, c: f64) -> f64;
-
-    /// Relaxed scalar multiply-sub `a * b - c` matching `f64xN::<Self>::mul_sub_relaxed`.
-    #[doc(hidden)]
-    fn mul_sub_relaxed_f64(self, a: f64, b: f64, c: f64) -> f64;
+#[allow(private_bounds)]
+pub trait F64ScalarBackend:
+    IntoConcreteToken + SimdToken + Sealed + F64ScalarInternal + Copy + 'static
+{
 }
 
-impl F32ScalarBackend for archmage::ScalarToken {
+impl F32ScalarBackend for archmage::ScalarToken {}
+impl F32ScalarInternal for archmage::ScalarToken {
     #[inline(always)]
     fn min_fast_f32(self, a: f32, b: f32) -> f32 {
         if a < b { a } else { b }
@@ -291,7 +276,8 @@ impl F32ScalarBackend for archmage::ScalarToken {
     }
 }
 
-impl F64ScalarBackend for archmage::ScalarToken {
+impl F64ScalarBackend for archmage::ScalarToken {}
+impl F64ScalarInternal for archmage::ScalarToken {
     #[inline(always)]
     fn min_fast_f64(self, a: f64, b: f64) -> f64 {
         if a < b { a } else { b }
@@ -364,7 +350,9 @@ mod x86_hw {
 }
 
 #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
-impl F32ScalarBackend for archmage::X64V3Token {
+impl F32ScalarBackend for archmage::X64V3Token {}
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
+impl F32ScalarInternal for archmage::X64V3Token {
     #[inline(always)]
     fn min_fast_f32(self, a: f32, b: f32) -> f32 {
         x86_hw::min_ss(self, a, b)
@@ -397,7 +385,9 @@ impl F32ScalarBackend for archmage::X64V3Token {
 }
 
 #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
-impl F64ScalarBackend for archmage::X64V3Token {
+impl F64ScalarBackend for archmage::X64V3Token {}
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
+impl F64ScalarInternal for archmage::X64V3Token {
     #[inline(always)]
     fn min_fast_f64(self, a: f64, b: f64) -> f64 {
         x86_hw::min_sd(self, a, b)
@@ -423,7 +413,8 @@ impl F64ScalarBackend for archmage::X64V3Token {
 macro_rules! impl_x86_v3_scalar_delegate {
     ($($token:ty),+ $(,)?) => {
         $(
-            impl F32ScalarBackend for $token {
+            impl F32ScalarBackend for $token {}
+            impl F32ScalarInternal for $token {
                 #[inline(always)]
                 fn min_fast_f32(self, a: f32, b: f32) -> f32 {
                     self.v3().min_fast_f32(a, b)
@@ -455,7 +446,8 @@ macro_rules! impl_x86_v3_scalar_delegate {
                 }
             }
 
-            impl F64ScalarBackend for $token {
+            impl F64ScalarBackend for $token {}
+            impl F64ScalarInternal for $token {
                 #[inline(always)]
                 fn min_fast_f64(self, a: f64, b: f64) -> f64 {
                     self.v3().min_fast_f64(a, b)
@@ -523,7 +515,9 @@ mod arm_hw {
 }
 
 #[cfg(target_arch = "aarch64")]
-impl F32ScalarBackend for archmage::NeonToken {
+impl F32ScalarBackend for archmage::NeonToken {}
+#[cfg(target_arch = "aarch64")]
+impl F32ScalarInternal for archmage::NeonToken {
     #[inline(always)]
     fn min_fast_f32(self, a: f32, b: f32) -> f32 {
         arm_hw::minnm_f32(self, a, b)
@@ -556,7 +550,9 @@ impl F32ScalarBackend for archmage::NeonToken {
 }
 
 #[cfg(target_arch = "aarch64")]
-impl F64ScalarBackend for archmage::NeonToken {
+impl F64ScalarBackend for archmage::NeonToken {}
+#[cfg(target_arch = "aarch64")]
+impl F64ScalarInternal for archmage::NeonToken {
     #[inline(always)]
     fn min_fast_f64(self, a: f64, b: f64) -> f64 {
         arm_hw::minnm_f64(self, a, b)
@@ -579,7 +575,9 @@ impl F64ScalarBackend for archmage::NeonToken {
 }
 
 #[cfg(target_arch = "wasm32")]
-impl F32ScalarBackend for archmage::Wasm128Token {
+impl F32ScalarBackend for archmage::Wasm128Token {}
+#[cfg(target_arch = "wasm32")]
+impl F32ScalarInternal for archmage::Wasm128Token {
     #[inline(always)]
     fn min_fast_f32(self, a: f32, b: f32) -> f32 {
         #[cfg(target_feature = "relaxed-simd")]
@@ -649,7 +647,9 @@ impl F32ScalarBackend for archmage::Wasm128Token {
 }
 
 #[cfg(target_arch = "wasm32")]
-impl F64ScalarBackend for archmage::Wasm128Token {
+impl F64ScalarBackend for archmage::Wasm128Token {}
+#[cfg(target_arch = "wasm32")]
+impl F64ScalarInternal for archmage::Wasm128Token {
     #[inline(always)]
     fn min_fast_f64(self, a: f64, b: f64) -> f64 {
         #[cfg(target_feature = "relaxed-simd")]
