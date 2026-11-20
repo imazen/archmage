@@ -43,7 +43,7 @@ pub fn dequant_block_dct8(
     output_y: &mut [f32; 64],
     output_b: &mut [f32; 64],
 ) {
-    #[cfg(target_arch = "x86_64")]
+    #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
     {
         use archmage::SimdToken;
         if let Some(token) = archmage::X64V3Token::summon() {
@@ -144,7 +144,7 @@ pub fn dequant_dct8_scalar(
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[inline]
 #[archmage::arcane]
 #[allow(clippy::too_many_arguments)]
@@ -251,7 +251,7 @@ pub fn dequant_dct8_avx2(
 ///   elif |q| == 1: result = sign(q) * channel_bias
 ///   else: result = q - 0.145/q
 ///   output = result * weight / (qac * qm_mul)
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[archmage::arcane]
 #[inline(always)]
 #[allow(clippy::too_many_arguments)]

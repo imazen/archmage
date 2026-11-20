@@ -3,7 +3,7 @@ use archmage::autoversion;
 fn probe(__archmage_arg_0: (f32, f32), x: f32) -> f32 {
     #[allow(unused_imports)]
     use archmage::SimdToken;
-    #[cfg(target_arch = "x86_64")]
+    #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
     {
         if let Some(__t) = archmage::X64V3Token::summon() {
             return probe_v3(__t, __archmage_arg_0, x);
@@ -11,7 +11,7 @@ fn probe(__archmage_arg_0: (f32, f32), x: f32) -> f32 {
     }
     probe_scalar(archmage::ScalarToken, __archmage_arg_0, x)
 }
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[doc(hidden)]
 #[target_feature(
     enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
@@ -20,7 +20,7 @@ fn probe(__archmage_arg_0: (f32, f32), x: f32) -> f32 {
 fn __arcane_probe_v3(_token: archmage::X64V3Token, (lo, hi): (f32, f32), x: f32) -> f32 {
     lo + hi + x
 }
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[allow(dead_code)]
 #[inline(always)]
 fn probe_v3(

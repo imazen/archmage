@@ -305,12 +305,7 @@ fn selection_condition(caller: Option<Context<'_>>, selection: &Selection) -> Op
     } else {
         selection.tier.target_arch
     };
-    match (arch, selection.gate.as_deref()) {
-        (Some(a), Some(f)) => Some(quote!(all(target_arch = #a, feature = #f))),
-        (Some(a), None) => Some(quote!(target_arch = #a)),
-        (None, Some(f)) => Some(quote!(feature = #f)),
-        (None, None) => None,
-    }
+    crate::common::cfg_condition(arch, selection.gate.as_deref())
 }
 
 fn branch_guard(condition: &Option<TokenStream>, guarantees: &[TokenStream]) -> TokenStream {

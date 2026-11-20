@@ -7,7 +7,7 @@ impl P {
     fn apply(&self, x: f32) -> f32 {
         #[allow(unused_imports)]
         use archmage::SimdToken;
-        #[cfg(target_arch = "x86_64")]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
         {
             if let Some(__t) = archmage::X64V4Token::summon() {
                 return self.apply_v4(__t, x);
@@ -30,7 +30,7 @@ impl P {
         }
         self.apply_scalar(archmage::ScalarToken, x)
     }
-    #[cfg(target_arch = "x86_64")]
+    #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
     #[allow(dead_code)]
     #[inline(always)]
     fn apply_v4(&self, __archmage_token: archmage::X64V4Token, x: f32) -> f32 {
@@ -48,7 +48,7 @@ impl P {
         let _: () = <archmage::X64V4Token>::__ARCHMAGE_ASSERT_TIER_FE1B900C;
         unsafe { __simd_inner_apply_v4(self, __archmage_token, x) }
     }
-    #[cfg(target_arch = "x86_64")]
+    #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
     #[allow(dead_code)]
     #[inline(always)]
     fn apply_v3(&self, __archmage_token: archmage::X64V3Token, x: f32) -> f32 {

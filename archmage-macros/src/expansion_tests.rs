@@ -1156,3 +1156,230 @@ fn forwarding_layers_rename_underscore_params() {
         assert!(!output.contains("used_underscore_binding"), "{output}");
     }
 }
+
+/// Issue #154: coverage tools drop a function whose body braces carry the
+/// macro call-site span. Every expansion that places author code in a
+/// function body must reuse the author's brace span.
+#[test]
+fn author_body_braces_keep_their_source_span() {
+    fn marker_groups(tokens: Tokens, found: &mut Vec<Group>) {
+        for tree in tokens {
+            if let TokenTree::Group(group) = tree {
+                let direct = group
+                    .stream()
+                    .into_iter()
+                    .any(|t| matches!(&t, TokenTree::Ident(i) if i == "__coverage_marker"));
+                if direct && group.delimiter() == Delimiter::Brace {
+                    found.push(group.clone());
+                }
+                marker_groups(group.stream(), found);
+            }
+        }
+    }
+    fn body_brace(item: &Tokens) -> proc_macro2::LineColumn {
+        let mut found = Vec::new();
+        marker_groups(item.clone(), &mut found);
+        assert_eq!(found.len(), 1, "fixture must have one marked body");
+        found[0].span().start()
+    }
+    let cases: &[(&str, &str, &str)] = &[
+        (
+            "arcane",
+            "",
+            "fn f(_t: X64V3Token, v: &mut [u8]) { __coverage_marker(v); }",
+        ),
+        (
+            "arcane",
+            "",
+            "fn f(_t: NeonToken, v: &mut [u8]) { __coverage_marker(v); }",
+        ),
+        (
+            "arcane",
+            "",
+            "fn f(_t: Wasm128Token, v: &mut [u8]) { __coverage_marker(v); }",
+        ),
+        (
+            "arcane",
+            "",
+            "fn f(_t: ScalarToken, v: &mut [u8]) { __coverage_marker(v); }",
+        ),
+        (
+            "arcane",
+            "nested",
+            "fn f(_t: X64V3Token, v: &mut [u8]) { __coverage_marker(v); }",
+        ),
+        (
+            "arcane",
+            "_self = S",
+            "fn f(&self, _t: X64V3Token, v: &mut [u8]) { __coverage_marker(v); }",
+        ),
+        (
+            "arcane",
+            "in_trait, _self = S",
+            "fn f(&self, _t: X64V3Token, v: &mut [u8]) { __coverage_marker(v); }",
+        ),
+        (
+            "rite",
+            "",
+            "fn f(_t: X64V3Token, v: &mut [u8]) { __coverage_marker(v); }",
+        ),
+        ("rite", "v3", "fn f(v: &mut [u8]) { __coverage_marker(v); }"),
+        (
+            "rite",
+            "scalar",
+            "fn f(v: &mut [u8]) { __coverage_marker(v); }",
+        ),
+        (
+            "rite",
+            "v3, neon, wasm128, scalar",
+            "fn f(v: &mut [u8]) { __coverage_marker(v); }",
+        ),
+        (
+            "autoversion",
+            "v3, neon, scalar",
+            "fn f(v: &mut [u8]) { __coverage_marker(v); }",
+        ),
+        (
+            "magetypes",
+            "define(f32x8), v3, neon, scalar",
+            "fn f(token: Token, v: &mut [u8]) { __coverage_marker(v); }",
+        ),
+        (
+            "attune",
+            "_v3, _neon, _scalar, dispatch",
+            "fn f(v: &mut [u8]) { __coverage_marker(v); }",
+        ),
+        (
+            "attune",
+            "_*_t",
+            "fn f(token: Token, v: &mut [u8]) { __coverage_marker(v); }",
+        ),
+        (
+            "attune",
+            "v3",
+            "fn f(v: &mut [u8]) { __coverage_marker(v); }",
+        ),
+        (
+            "attune",
+            "wrap",
+            "fn f(_t: X64V3Token, v: &mut [u8]) { __coverage_marker(v); }",
+        ),
+        (
+            "attune",
+            "",
+            "fn f_v3_t(_t: X64V3Token, v: &mut [u8]) { __coverage_marker(v); }",
+        ),
+    ];
+    for &(name, args, source) in cases {
+        // Leading lines keep the author's brace away from line 1, column 0.
+        let item: Tokens = format!("\n\n    {source}").parse().unwrap();
+        let expected = body_brace(&item);
+        let args: Tokens = args.parse().unwrap();
+        let output = expand(name, args.clone(), item).unwrap();
+        let mut found = Vec::new();
+        marker_groups(output.clone(), &mut found);
+        assert!(
+            !found.is_empty(),
+            "#[{name}({args})] lost the body\n{output}"
+        );
+        for group in found {
+            let start = group.span().start();
+            assert_eq!(
+                (start.line, start.column),
+                (expected.line, expected.column),
+                "#[{name}({args})] rebuilt the author's body braces\n{output}"
+            );
+        }
+    }
+}
+
+#[test]
+fn x86_variants_and_dispatch_arms_require_baseline_sse2() {
+    let token_body = quote!(
+        fn kernel(_token: X64V3Token, x: f32) -> f32 {
+            x
+        }
+    );
+    let default_body = quote!(
+        fn kernel(x: f32) -> f32 {
+            x
+        }
+    );
+    let generic_body = quote!(
+        fn kernel(_token: Token, x: f32) -> f32 {
+            x
+        }
+    );
+    let expansions = [
+        ("arcane", expand("arcane", quote!(), token_body).unwrap()),
+        (
+            "rite",
+            expand("rite", quote!(v3), default_body.clone()).unwrap(),
+        ),
+        (
+            "attune",
+            expand(
+                "attune",
+                quote!(make(_v3_t, _scalar_t)),
+                default_body.clone(),
+            )
+            .unwrap(),
+        ),
+        (
+            "magetypes",
+            expand("magetypes", quote!(v3, scalar), generic_body).unwrap(),
+        ),
+        (
+            "autoversion",
+            expand("autoversion", quote!(v3), default_body).unwrap(),
+        ),
+        (
+            "incant",
+            incant_impl(syn::parse_quote!(kernel(x), [v3, scalar])),
+        ),
+        (
+            "attuned",
+            syn::parse_quote!(kernel(x), [_v4_t(cfg(avx512)), _v3_t, _scalar_t]),
+        ),
+    ];
+    for (name, tokens) in expansions {
+        let tokens = if name == "attuned" {
+            let call: crate::attune::call::Call = syn::parse2(tokens).unwrap();
+            call.expand(None, false)
+        } else {
+            tokens
+        };
+        let output = tokens.to_string();
+        let x86 = quote!(target_arch = "x86_64").to_string();
+        let guard = quote!(all(target_arch = "x86_64", target_feature = "sse2")).to_string();
+        let guarded = guard.strip_suffix(')').unwrap();
+        let x86_count = output.matches(&x86).count();
+        assert!(
+            x86_count > 0,
+            "{name} did not emit an x86 variant or arm\n{output}"
+        );
+        assert_eq!(
+            output.matches(guarded).count(),
+            x86_count,
+            "{name}\n{output}"
+        );
+    }
+}
+
+#[test]
+fn x86_cfg_stripping_keeps_independent_user_gates() {
+    let legacy_arch: syn::Attribute = syn::parse_quote!(#[cfg(target_arch = "x86_64")]);
+    let same_feature: syn::Attribute =
+        syn::parse_quote!(#[cfg(all(target_arch = "x86_64", feature = "avx512"))]);
+    let other_feature: syn::Attribute =
+        syn::parse_quote!(#[cfg(all(target_arch = "x86_64", feature = "other"))]);
+    let mut attrs = vec![legacy_arch, same_feature, other_feature.clone()];
+
+    let _ = drop_attrs_equal_to(&mut attrs, Some("x86_64"), Some("avx512"));
+
+    assert_eq!(attrs.len(), 1);
+    assert_eq!(
+        attrs[0].to_token_stream().to_string(),
+        other_feature.to_token_stream().to_string()
+    );
+}

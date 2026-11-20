@@ -10,7 +10,7 @@ impl Process for Filter {
     fn process(&self, data: &[f32; 4]) -> f32 {
         #[allow(unused_imports)]
         use archmage::SimdToken;
-        #[cfg(target_arch = "x86_64")]
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
         {
             if let Some(__t) = archmage::X64V4Token::summon() {
                 return self.process_v4(__t, data);
@@ -33,7 +33,7 @@ impl Process for Filter {
         }
         self.process_scalar(archmage::ScalarToken, data)
     }
-    #[cfg(target_arch = "x86_64")]
+    #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
     #[allow(dead_code)]
     #[inline(always)]
     fn process_v4(
@@ -61,7 +61,7 @@ impl Process for Filter {
         let _: () = <archmage::X64V4Token>::__ARCHMAGE_ASSERT_TIER_FE1B900C;
         unsafe { __simd_inner_process_v4(self, __archmage_token, data) }
     }
-    #[cfg(target_arch = "x86_64")]
+    #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
     #[allow(dead_code)]
     #[inline(always)]
     fn process_v3(

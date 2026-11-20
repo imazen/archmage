@@ -174,17 +174,19 @@ pub(crate) fn emit(
 
     // Emit the function behind its cfg guard (empty for trait bounds and the
     // default tier, which have no architecture).
-    let cfg_guard = gen_cfg_guard(tier.target_arch, options.cfg_feature.as_deref());
-    drop_attrs_equal_to(&mut variant_fn.attrs, &cfg_guard);
+    let cfg_guard = drop_attrs_equal_to(
+        &mut variant_fn.attrs,
+        tier.target_arch,
+        options.cfg_feature.as_deref(),
+    );
+    mark_emitted_fn_header(&mut variant_fn.vis, &mut variant_fn.sig);
     let vis = &variant_fn.vis;
     let sig = &variant_fn.sig;
     let attrs = &variant_fn.attrs;
-    let body = &variant_fn.body;
+    let body = braced_body(&variant_fn.brace_token, &variant_fn.body);
     Ok(quote! {
         #cfg_guard
         #(#attrs)*
-        #vis #sig {
-            #body
-        }
+        #vis #sig #body
     })
 }

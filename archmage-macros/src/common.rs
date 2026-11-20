@@ -132,49 +132,80 @@ pub(crate) fn expect_as_allow<'a>(
         .collect()
 }
 
-/// Generate a cfg guard combining target_arch and an optional feature gate.
+/// The target predicate for a tier, with its optional Cargo feature gate.
+pub(crate) fn cfg_condition(
+    target_arch: Option<&str>,
+    cfg_feature: Option<&str>,
+) -> Option<proc_macro2::TokenStream> {
+    match (target_arch, cfg_feature) {
+        // Soft-float x86_64 cannot enable SSE in a per-function feature context.
+        (Some("x86_64"), Some(feat)) => Some(quote! {
+            all(target_arch = "x86_64", target_feature = "sse2", feature = #feat)
+        }),
+        (Some("x86_64"), None) => Some(quote! {
+            all(target_arch = "x86_64", target_feature = "sse2")
+        }),
+        (Some(arch), Some(feat)) => Some(quote! { all(target_arch = #arch, feature = #feat) }),
+        (Some(arch), None) => Some(quote! { target_arch = #arch }),
+        (None, Some(feat)) => Some(quote! { feature = #feat }),
+        (None, None) => None,
+    }
+}
+
+/// Generate the cfg attribute for a SIMD variant or dispatch arm.
 pub(crate) fn gen_cfg_guard(
     target_arch: Option<&str>,
     cfg_feature: Option<&str>,
 ) -> proc_macro2::TokenStream {
-    match (target_arch, cfg_feature) {
-        (Some(arch), Some(feat)) => {
-            quote! { #[cfg(all(target_arch = #arch, feature = #feat))] }
-        }
-        (Some(arch), None) => quote! { #[cfg(target_arch = #arch)] },
-        (None, Some(feat)) => quote! { #[cfg(feature = #feat)] },
-        (None, None) => quote! {},
-    }
+    cfg_condition(target_arch, cfg_feature)
+        .map(|condition| quote! { #[cfg(#condition)] })
+        .unwrap_or_default()
 }
 
-/// Drop from `attrs` any `#[cfg]` equal to the guard the macro emits on both
-/// halves of its output (a `#[magetypes]` variant arrives with its
-/// `#[cfg(target_arch = ...)]` already on it), so the wrapper, which copies
-/// the input's attributes, is not gated twice.
-pub(crate) fn drop_attrs_equal_to(attrs: &mut Vec<Attribute>, guard: &proc_macro2::TokenStream) {
-    let wanted = guard.to_string();
-    if wanted.is_empty() {
-        return;
+/// Generate a tier guard and remove identical or weaker x86 guards from
+/// attributes that would otherwise be copied to both halves of the expansion.
+pub(crate) fn drop_attrs_equal_to(
+    attrs: &mut Vec<Attribute>,
+    target_arch: Option<&str>,
+    cfg_feature: Option<&str>,
+) -> proc_macro2::TokenStream {
+    let guard = gen_cfg_guard(target_arch, cfg_feature);
+    if guard.is_empty() || !attrs.iter().any(|a| a.path().is_ident("cfg")) {
+        return guard;
     }
-    attrs.retain(|a| a.to_token_stream().to_string() != wanted);
+    let wanted = guard.to_string();
+    let legacy_arch = (target_arch == Some("x86_64"))
+        .then(|| quote! { #[cfg(target_arch = "x86_64")] }.to_string());
+    let legacy_gated = cfg_feature
+        .filter(|_| legacy_arch.is_some())
+        .map(|feat| quote! { #[cfg(all(target_arch = "x86_64", feature = #feat))] }.to_string());
+    attrs.retain(|attr| {
+        if !attr.path().is_ident("cfg") {
+            return true;
+        }
+        let cfg = attr.to_token_stream().to_string();
+        cfg != wanted
+            && legacy_arch.as_deref() != Some(cfg.as_str())
+            && legacy_gated.as_deref() != Some(cfg.as_str())
+    });
+    guard
 }
 
 /// Build a turbofish token stream from a function's generics.
 pub(crate) fn build_turbofish(generics: &syn::Generics) -> proc_macro2::TokenStream {
-    let params: Vec<_> = generics
+    if !generics
         .params
         .iter()
-        .filter_map(|param| match param {
-            GenericParam::Type(tp) => Some(&tp.ident),
-            GenericParam::Const(cp) => Some(&cp.ident),
-            GenericParam::Lifetime(_) => None,
-        })
-        .collect();
-    if params.is_empty() {
-        quote! {}
-    } else {
-        quote! { ::<#(#params),*> }
+        .any(|p| matches!(p, GenericParam::Type(_) | GenericParam::Const(_)))
+    {
+        return quote! {};
     }
+    let params = generics.params.iter().filter_map(|param| match param {
+        GenericParam::Type(tp) => Some(&tp.ident),
+        GenericParam::Const(cp) => Some(&cp.ident),
+        GenericParam::Lifetime(_) => None,
+    });
+    quote! { ::<#(#params),*> }
 }
 
 /// Conservative token-level presence check. Literals and partial identifier
@@ -725,6 +756,48 @@ pub(crate) fn rename_wildcard_token(sig: &mut Signature) -> Option<Ident> {
     None
 }
 
+/// Wrap `body` in braces that carry the author's original body span.
+///
+/// Coverage instrumentation keys a function's records to its body block span.
+/// A brace group built by `quote! { ... }` gets the macro call-site span, and
+/// rustc then emits no coverage records for the author's statements (issue
+/// #154). Every emitter that places author code in a function body must use
+/// this instead of writing literal braces.
+pub(crate) fn braced_body(brace: &token::Brace, body: impl ToTokens) -> proc_macro2::TokenStream {
+    let mut tokens = proc_macro2::TokenStream::new();
+    brace.surround(&mut tokens, |tokens| body.to_tokens(tokens));
+    tokens
+}
+
+/// Give the leading keyword token of an emitted function item `Span::call_site()`
+/// so `item.span` (`lo.to(hi)`) stays macro-expanded (`from_expansion() == true`)
+/// when `braced_body` keeps the author's body brace span (#154).
+pub(crate) fn mark_emitted_fn_header(vis: &mut syn::Visibility, sig: &mut Signature) {
+    let span = proc_macro2::Span::call_site();
+    match vis {
+        syn::Visibility::Public(pub_tok) => {
+            pub_tok.span = span;
+            return;
+        }
+        syn::Visibility::Restricted(restr) => {
+            restr.pub_token.span = span;
+            return;
+        }
+        syn::Visibility::Inherited => {}
+    }
+    if let Some(tok) = &mut sig.constness {
+        tok.span = span;
+    } else if let Some(tok) = &mut sig.asyncness {
+        tok.span = span;
+    } else if let syn::Safety::Unsafe(tok) = &mut sig.safety {
+        tok.span = span;
+    } else if let Some(abi) = &mut sig.abi {
+        abi.extern_token.span = span;
+    } else {
+        sig.fn_token.span = span;
+    }
+}
+
 /// Prepend statements to a function body.
 pub(crate) fn prepend_to_body(
     body: &mut proc_macro2::TokenStream,
@@ -791,7 +864,13 @@ pub(crate) fn replace_self_value_in_tokens(
                 result.extend([proc_macro2::TokenTree::Group(group)]);
             }
             proc_macro2::TokenTree::Group(group) => {
-                let inner = replace_self_value_in_tokens(group.stream(), replacement);
+                let stream = group.stream();
+                // A subtree without `self` is unchanged; keep it as written.
+                if !tokens_contain_ident(&stream, &["self"]) {
+                    result.extend([proc_macro2::TokenTree::Group(group)]);
+                    continue;
+                }
+                let inner = replace_self_value_in_tokens(stream, replacement);
                 let mut new_group = proc_macro2::Group::new(group.delimiter(), inner);
                 new_group.set_span(group.span());
                 result.extend([proc_macro2::TokenTree::Group(new_group)]);

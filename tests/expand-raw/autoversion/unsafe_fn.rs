@@ -3,7 +3,7 @@ use archmage::autoversion;
 unsafe fn process(ptr: *const f32, len: usize) -> f32 {
     #[allow(unused_imports)]
     use archmage::SimdToken;
-    #[cfg(target_arch = "x86_64")]
+    #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
     {
         if let Some(__t) = archmage::X64V4Token::summon() {
             return unsafe { process_v4(__t, ptr, len) };
@@ -26,7 +26,7 @@ unsafe fn process(ptr: *const f32, len: usize) -> f32 {
     }
     unsafe { process_scalar(archmage::ScalarToken, ptr, len) }
 }
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[doc(hidden)]
 #[target_feature(
     enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
@@ -43,7 +43,7 @@ unsafe fn __arcane_process_v4(
     }
     s
 }
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[allow(dead_code)]
 #[inline(always)]
 unsafe fn process_v4(
@@ -54,7 +54,7 @@ unsafe fn process_v4(
     let _: () = <archmage::X64V4Token>::__ARCHMAGE_ASSERT_TIER_FE1B900C;
     unsafe { __arcane_process_v4(__archmage_token, ptr, len) }
 }
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[doc(hidden)]
 #[target_feature(
     enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
@@ -71,7 +71,7 @@ unsafe fn __arcane_process_v3(
     }
     s
 }
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[allow(dead_code)]
 #[inline(always)]
 unsafe fn process_v3(

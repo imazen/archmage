@@ -3,7 +3,7 @@ use archmage::{ScalarToken, autoversion};
 fn sum(x: u32, __archmage_arg_0: ScalarToken) -> u32 {
     #[allow(unused_imports)]
     use archmage::SimdToken;
-    #[cfg(target_arch = "x86_64")]
+    #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
     {
         if let Some(__t) = archmage::X64V3Token::summon() {
             return sum_v3(x, __t);
@@ -11,7 +11,7 @@ fn sum(x: u32, __archmage_arg_0: ScalarToken) -> u32 {
     }
     sum_scalar(x, archmage::ScalarToken)
 }
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[doc(hidden)]
 #[target_feature(
     enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
@@ -20,7 +20,7 @@ fn sum(x: u32, __archmage_arg_0: ScalarToken) -> u32 {
 fn __arcane_sum_v3(x: u32, __archmage_token: archmage::X64V3Token) -> u32 {
     x
 }
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 #[allow(dead_code)]
 #[inline(always)]
 fn sum_v3(x: u32, __archmage_arg_0: archmage::X64V3Token) -> u32 {

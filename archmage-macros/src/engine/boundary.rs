@@ -224,6 +224,7 @@ pub(crate) fn expand(
     // Scalar has no instruction-set boundary. Preserve its signature and body
     // without emitting the invalid #[target_feature(enable = "")].
     if features_csv.is_empty() {
+        mark_emitted_fn_header(&mut input_fn.vis, &mut input_fn.sig);
         let vis = &input_fn.vis;
         let sig = &input_fn.sig;
         let attrs = filter_inline_attrs(&input_fn.attrs);
@@ -233,7 +234,8 @@ pub(crate) fn expand(
             .as_ref()
             .map(|_| quote! { let _self = self; });
         let cfg = gen_cfg_guard(None, args.shared.cfg_feature.as_deref());
-        return quote! { #cfg #(#attrs)* #inline_attr #vis #sig { #self_binding #body } };
+        let body = braced_body(&input_fn.brace_token, quote! { #self_binding #body });
+        return quote! { #cfg #(#attrs)* #inline_attr #vis #sig #body };
     }
     let target_feature_attrs: Vec<Attribute> =
         vec![parse_quote!(#[target_feature(enable = #features_csv)])];
@@ -245,8 +247,11 @@ pub(crate) fn expand(
         return arcane_impl_wasm_safe(input_fn, &args, target_feature_attrs, inline_attr);
     }
 
-    let cfg_guard = gen_cfg_guard(target_arch, args.shared.cfg_feature.as_deref());
-    drop_attrs_equal_to(&mut input_fn.attrs, &cfg_guard);
+    let cfg_guard = drop_attrs_equal_to(
+        &mut input_fn.attrs,
+        target_arch,
+        args.shared.cfg_feature.as_deref(),
+    );
     let parts = BoundaryParts {
         cfg_guard,
         target_feature_attrs,
@@ -322,10 +327,12 @@ pub(crate) fn arcane_impl_wasm_safe(
     target_feature_attrs: Vec<Attribute>,
     inline_attr: Option<Attribute>,
 ) -> TokenStream {
-    drop_attrs_equal_to(
+    let cfg_guard = drop_attrs_equal_to(
         &mut input_fn.attrs,
-        &gen_cfg_guard(Some("wasm32"), args.shared.cfg_feature.as_deref()),
+        Some("wasm32"),
+        args.shared.cfg_feature.as_deref(),
     );
+    mark_emitted_fn_header(&mut input_fn.vis, &mut input_fn.sig);
     let vis = &input_fn.vis;
     let sig = &input_fn.sig;
     let attrs = &input_fn.attrs;
@@ -352,13 +359,11 @@ pub(crate) fn arcane_impl_wasm_safe(
         new_attrs.push(attr.clone());
     }
 
-    let cfg_guard = gen_cfg_guard(Some("wasm32"), args.shared.cfg_feature.as_deref());
+    let body = braced_body(&input_fn.brace_token, body);
     quote! {
         #cfg_guard
         #(#new_attrs)*
-        #vis #sig {
-            #body
-        }
+        #vis #sig #body
     }
 }
 
@@ -381,7 +386,10 @@ fn emit_boundary(input: LightFn, options: &BoundaryOptions, parts: BoundaryParts
     } else {
         format_ident!("__arcane_{}", sig.ident)
     };
-    let unsafety = &sig.safety;
+    let mut unsafety = sig.safety.clone();
+    if let syn::Safety::Unsafe(tok) = &mut unsafety {
+        tok.span = proc_macro2::Span::call_site();
+    }
     let attrs = if options.nested {
         filter_inline_attrs(&input.attrs)
             .into_iter()
@@ -462,9 +470,10 @@ fn emit_boundary(input: LightFn, options: &BoundaryOptions, parts: BoundaryParts
     } else {
         quote!()
     };
+    let body = braced_body(&input.brace_token, body);
     let inner = quote! {
         #before #(#target_feature_attrs)* #inline_attr #after
-        #unsafety fn #name #generics (#params) #output #where_clause { #body }
+        #unsafety fn #name #generics (#params) #output #where_clause #body
     };
     let proof_call = proof_call(call);
     let sibling = (!options.nested).then_some(&inner);

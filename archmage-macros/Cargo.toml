@@ -35,3 +35,5 @@ proc-macro2 = "1.0.107"
 [dev-dependencies]
 # Pretty-prints raw macro output for the cfg-complete expansion snapshots.
 prettyplease = "0.3.0"
+# Real token locations let unit tests assert that author spans survive (#154).
+proc-macro2 = { version = "1.0.107", features = ["span-locations"] }

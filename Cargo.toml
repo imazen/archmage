@@ -7,7 +7,7 @@ members = [".", "archmage-macros", "magetypes", "xtask", "tests/no-features-crat
 exclude = ["apidoc", "experiments/artisanal-dispatch"]
 
 [workspace.package]
-version = "0.9.31"
+version = "0.9.32"
 edition = "2024"
 rust-version = "1.89"
 license = "MIT OR Apache-2.0"
@@ -51,7 +51,7 @@ macros = []
 # AVX-512 token support (Avx512Token, X64V4xToken, X64V4Token, etc.)
 # Also enables AVX-512 safe memory ops from safe_unaligned_simd.
 avx512 = ["safe_unaligned_simd/avx512", "archmage-macros/avx512"]
-# Backwards-compat: safe_unaligned_simd is now always included (no longer optional).
+# Backwards-compat: safe_unaligned_simd is included on supported targets.
 # This feature exists so `features = ["safe_unaligned_simd"]` doesn't break.
 safe_unaligned_simd = []
 # Make token disabling work even when compiled with -Ctarget-cpu=native.
@@ -74,8 +74,9 @@ forge-token-api = []
 
 [dependencies]
 # Proc-macro output references this crate's internal API; release the pair together.
-archmage-macros = { version = "=0.9.31", path = "archmage-macros" }
-# Safe unaligned SIMD load/store (reference-based, no raw pointers)
+archmage-macros = { version = "=0.9.32", path = "archmage-macros" }
+# Reference-based memory operations require native SIMD on x86.
+[target.'cfg(any(all(target_arch = "x86_64", target_feature = "sse2"), all(target_arch = "x86", target_feature = "sse2"), target_arch = "aarch64", target_arch = "arm64ec", target_arch = "wasm32"))'.dependencies]
 safe_unaligned_simd = { version = "0.2.5" }
 
 # Windows-on-ARM aarch64 detection. Pulled in unconditionally on this
@@ -98,6 +99,8 @@ rustversion = "1.0.23"
 zenbench = { version = "0.1.10", features = ["criterion-compat"] }
 trybuild = "1.0.121"
 macrotest = "1.2.1"
+
+[target.'cfg(any(all(target_arch = "x86_64", target_feature = "sse2"), all(target_arch = "x86", target_feature = "sse2"), target_arch = "aarch64", target_arch = "arm64ec"))'.dev-dependencies]
 safe_unaligned_simd = { version = "0.2.5", features = ["avx512"] }
 
 [[bench]]
