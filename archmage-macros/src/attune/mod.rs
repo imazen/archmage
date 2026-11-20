@@ -398,15 +398,6 @@ fn proof_entry(
     args: &Args,
 ) -> syn::Result<TokenStream> {
     let mut wrapper = input.clone();
-    // Check the author's names before forwarding renames them; the renamed
-    // `__archmage_*` names cannot collide with the `__attune_*` callee.
-    if let Some(error) = crate::engine::boundary::reserved_param_error(
-        &wrapper.sig,
-        &direct_name.to_string(),
-        "attune",
-    ) {
-        return Ok(error);
-    }
     crate::common::rename_underscore_params(&mut wrapper.sig);
     let invocation = forward(&wrapper.sig, direct_name, args.options.in_impl, None);
     let token: syn::Path = syn::parse_str(&format!("::{}", tier.token_path))?;
@@ -419,6 +410,15 @@ fn proof_entry(
             .sig
             .inputs
             .insert(position, parse_quote!(__attune_token: #token));
+    }
+    // Check after `_name` -> `__archmage_name` renaming and `__attune_token`
+    // insertion so `names(...)` overrides cannot collide with either binding.
+    if let Some(error) = crate::engine::boundary::reserved_param_error(
+        &wrapper.sig,
+        &direct_name.to_string(),
+        "attune",
+    ) {
+        return Ok(error);
     }
     specialize_syntax(&mut wrapper.sig, &quote!(#token))?;
     wrapper.sig.ident = name.clone();

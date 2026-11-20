@@ -132,6 +132,32 @@ pub(crate) fn expect_as_allow<'a>(
         .collect()
 }
 
+fn meta_has_target_feature(meta: &syn::Meta) -> bool {
+    if meta.path().is_ident("target_feature") {
+        return true;
+    }
+    if let syn::Meta::List(list) = meta
+        && list.path.is_ident("cfg_attr")
+        && let Ok(nested) = list.parse_args_with(
+            syn::punctuated::Punctuated::<syn::Meta, syn::Token![,]>::parse_terminated,
+        )
+    {
+        return nested.iter().skip(1).any(meta_has_target_feature);
+    }
+    false
+}
+
+/// Reject manual `#[target_feature]` (direct or inside `#[cfg_attr]`) so
+/// feature preconditions are derived solely from the token or tier.
+pub(crate) fn reject_manual_target_feature(attrs: &[Attribute]) -> Option<syn::Error> {
+    attrs.iter().find(|a| meta_has_target_feature(&a.meta)).map(|attr| {
+        syn::Error::new_spanned(
+            attr,
+            "archmage derives #[target_feature] from the token or tier; remove manual #[target_feature]",
+        )
+    })
+}
+
 /// The target predicate for a tier, with its optional Cargo feature gate.
 pub(crate) fn cfg_condition(
     target_arch: Option<&str>,
@@ -678,7 +704,9 @@ pub(crate) fn rename_non_ident_params(sig: &mut Signature) -> Vec<proc_macro2::T
         let syn::FnArg::Typed(pat_type) = arg else {
             continue;
         };
-        if matches!(pat_type.pat.as_ref(), syn::Pat::Ident(_)) {
+        if let syn::Pat::Ident(pat_ident) = pat_type.pat.as_ref()
+            && pat_ident.subpat.is_none()
+        {
             continue;
         }
         let generated = format_ident!("__archmage_arg_{}", counter);
