@@ -1249,7 +1249,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        crate: [archmage, magetypes]
+        crate: [archmage, magetypes, magemath]
     steps:
       - uses: actions/checkout@v7
 
