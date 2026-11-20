@@ -9,6 +9,12 @@ fn location() -> u32 {
     std::panic::Location::caller().line()
 }
 
+#[attune(make(_))]
+#[track_caller]
+fn location_hidden_wrappers() -> u32 {
+    std::panic::Location::caller().line()
+}
+
 #[attune(make(_v3_t, _))]
 #[expect(unused_variables, reason = "the body intentionally ignores this input")]
 fn ignored_input(value: u32) -> u32 {
@@ -34,6 +40,8 @@ declare!(from_template);
 fn attributes_follow_the_operation_and_forwarding_chain() {
     let line = line!() + 1;
     assert_eq!(location(), line);
+    let hidden_line = line!() + 1;
+    assert_eq!(location_hidden_wrappers(), hidden_line);
     assert_eq!(ignored_input(9), 42);
     assert_eq!(dispatcher_only(9), 10);
     assert_eq!(from_template(9), 11);

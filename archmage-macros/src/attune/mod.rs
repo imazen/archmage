@@ -341,7 +341,7 @@ fn family(mut input: LightFn, args: Args) -> syn::Result<TokenStream> {
         let mut body = input.clone();
         body.sig.ident = direct_name.clone();
         if direct_selection.is_none() {
-            body.attrs = body_attrs(&input.attrs, true);
+            body.attrs.retain(|attr| !is_symbol_export_attr(attr));
         }
         // No lint levels here: this function holds the author's body, and an
         // allow would also cover items nested in it. Unused wildcard bodies are
@@ -494,13 +494,11 @@ fn proof_entry(
     wrapper.vis = selection
         .map(|s| s.visibility.clone().unwrap_or_else(|| input.vis.clone()))
         .unwrap_or(syn::Visibility::Inherited);
-    if selection.is_some() {
-        wrapper
-            .attrs
-            .retain(|attr| !attr.path().is_ident("inline") && !attr.path().is_ident("expect"));
-    } else {
-        wrapper.attrs.clear();
-    }
+    wrapper.attrs.retain(|attr| {
+        !attr.path().is_ident("inline")
+            && !attr.path().is_ident("expect")
+            && (selection.is_some() || !is_symbol_export_attr(attr))
+    });
     let explicit_inline = selection.and_then(|s| s.inline);
     wrapper.attrs.extend(
         explicit_inline

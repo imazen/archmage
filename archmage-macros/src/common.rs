@@ -134,6 +134,39 @@ pub(crate) fn expect_as_allow<'a>(
         .collect()
 }
 
+fn meta_has_symbol_export(meta: &syn::Meta) -> bool {
+    if let Some(ident) = meta.path().get_ident()
+        && matches!(
+            ident.unraw().to_string().as_str(),
+            "no_mangle" | "export_name" | "link_section"
+        )
+    {
+        return true;
+    }
+    if let syn::Meta::List(list) = meta {
+        if list.path.is_ident("unsafe")
+            && let Ok(inner) = list.parse_args::<syn::Meta>()
+        {
+            return meta_has_symbol_export(&inner);
+        }
+        if list.path.is_ident("cfg_attr")
+            && let Ok(nested) = list.parse_args_with(
+                syn::punctuated::Punctuated::<syn::Meta, Token![,]>::parse_terminated,
+            )
+        {
+            return nested.iter().skip(1).any(meta_has_symbol_export);
+        }
+    }
+    false
+}
+
+/// True when `attr` exports or pins a linker symbol (`no_mangle`,
+/// `export_name`, `link_section`, bare or wrapped in `#[unsafe(...)]` /
+/// `#[cfg_attr(...)]`). Hidden sibling helpers must never inherit these.
+pub(crate) fn is_symbol_export_attr(attr: &Attribute) -> bool {
+    meta_has_symbol_export(&attr.meta)
+}
+
 fn check_meta_for_conflicting_attrs(
     meta: &syn::Meta,
     span_tokens: &dyn ToTokens,
