@@ -37,6 +37,10 @@ pub(crate) fn magetypes_impl(
     in_impl: bool,
     defines: &[String],
 ) -> TokenStream {
+    if let Some(err) = reject_conflicting_unsafe_attrs(&input_fn.attrs, "magetypes", true) {
+        return err.to_compile_error();
+    }
+    let unsafe_guard = unsafe_fn_lint_guard(&input_fn.sig, &input_fn.brace_token);
     // Propagate ordinary attributes once; these macro attributes are consumed
     // or supplied per tier below.
     input_fn.attrs.retain(|attr| {
@@ -66,6 +70,7 @@ pub(crate) fn magetypes_impl(
         &input_fn.body,
         &["incant", "dispatch_variant", "attuned", "reattune"],
     );
+    prepend_to_body(&mut input_fn.body, unsafe_guard);
     // Token is still a placeholder here. Use the same type inspection as the
     // other tier macros, also recognizing that placeholder before substitution.
     // Do not mistake a vector parameter such as V<Token> for a token parameter.
@@ -124,6 +129,9 @@ pub(crate) fn magetypes_impl(
         // Fallbacks need no feature emitter. Substitute their output directly,
         // without reparsing syntax that no later stage will inspect.
         if tier.is_fallback() {
+            if let syn::Safety::Unsafe(tok) = &mut variant_fn.sig.safety {
+                tok.span = proc_macro2::Span::call_site();
+            }
             let mut function = variant_fn.to_token_stream();
             if let Some(token) = &token {
                 function = replace_ident_in_tokens(function, "Token", token);
@@ -158,6 +166,7 @@ pub(crate) fn magetypes_impl(
                 },
                 None,
                 false,
+                false,
                 context,
             )
             .unwrap_or_else(|diagnostic| diagnostic)
@@ -167,6 +176,7 @@ pub(crate) fn magetypes_impl(
                 "arcane",
                 crate::engine::boundary::BoundaryOptions {
                     in_impl,
+                    skip_unsafe_fn_guard: true,
                     shared: SharedOptions {
                         cfg_feature: tier.feature_gate.clone(),
                         ..Default::default()

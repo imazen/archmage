@@ -1,8 +1,10 @@
 //! Shared utilities for all proc-macros.
 
 use proc_macro2::Ident;
-use quote::{ToTokens, format_ident, quote};
-use syn::{Attribute, GenericParam, Signature, Type, parse::ParseStream, token};
+use quote::{ToTokens, format_ident, quote, quote_spanned};
+use syn::{
+    Attribute, GenericParam, Signature, Token, Type, ext::IdentExt as _, parse::ParseStream, token,
+};
 
 /// A function parsed with the body left as an opaque TokenStream.
 ///
@@ -130,6 +132,77 @@ pub(crate) fn expect_as_allow<'a>(
             attr
         })
         .collect()
+}
+
+fn check_meta_for_conflicting_attrs(
+    meta: &syn::Meta,
+    span_tokens: &dyn ToTokens,
+    macro_name: &str,
+    multi_output: bool,
+) -> Option<syn::Error> {
+    if meta.path().is_ident("target_feature") {
+        return Some(syn::Error::new_spanned(
+            span_tokens,
+            format!(
+                "#[{macro_name}] derives #[target_feature] from its token or tier; \
+                 remove manual #[target_feature] so feature obligations cannot be conflated"
+            ),
+        ));
+    }
+    if multi_output
+        && let Some(ident) = meta.path().get_ident()
+        && matches!(
+            ident.unraw().to_string().as_str(),
+            "no_mangle" | "export_name"
+        )
+    {
+        return Some(syn::Error::new_spanned(
+            span_tokens,
+            format!(
+                "#[{macro_name}] generates multiple functions; `#[{ident}]` cannot be shared across variants"
+            ),
+        ));
+    }
+    if let syn::Meta::List(list) = meta {
+        if list.path.is_ident("unsafe")
+            && let Ok(inner) = list.parse_args::<syn::Meta>()
+        {
+            return check_meta_for_conflicting_attrs(&inner, span_tokens, macro_name, multi_output);
+        }
+        if list.path.is_ident("cfg_attr")
+            && let Ok(nested) = list.parse_args_with(
+                syn::punctuated::Punctuated::<syn::Meta, Token![,]>::parse_terminated,
+            )
+        {
+            for item in nested.iter().skip(1) {
+                if let Some(err) =
+                    check_meta_for_conflicting_attrs(item, span_tokens, macro_name, multi_output)
+                {
+                    return Some(err);
+                }
+            }
+        }
+    }
+    None
+}
+
+/// Reject manual `#[target_feature]` (which would conflate with token-derived
+/// target features) and, when `multi_output` is true, symbol-exporting
+/// attributes (`no_mangle` / `export_name`, bare or `#[unsafe(...)]`) that
+/// cannot be duplicated across generated siblings.
+pub(crate) fn reject_conflicting_unsafe_attrs(
+    attrs: &[Attribute],
+    macro_name: &str,
+    multi_output: bool,
+) -> Option<syn::Error> {
+    for attr in attrs {
+        if let Some(err) =
+            check_meta_for_conflicting_attrs(&attr.meta, attr, macro_name, multi_output)
+        {
+            return Some(err);
+        }
+    }
+    None
 }
 
 /// The target predicate for a tier, with its optional Cargo feature gate.
@@ -678,7 +751,9 @@ pub(crate) fn rename_non_ident_params(sig: &mut Signature) -> Vec<proc_macro2::T
         let syn::FnArg::Typed(pat_type) = arg else {
             continue;
         };
-        if matches!(pat_type.pat.as_ref(), syn::Pat::Ident(_)) {
+        if let syn::Pat::Ident(pat_ident) = pat_type.pat.as_ref()
+            && pat_ident.subpat.is_none()
+        {
             continue;
         }
         let generated = format_ident!("__archmage_arg_{}", counter);
@@ -795,6 +870,47 @@ pub(crate) fn mark_emitted_fn_header(vis: &mut syn::Visibility, sig: &mut Signat
         abi.extern_token.span = span;
     } else {
         sig.fn_token.span = span;
+    }
+}
+
+/// Strip `ref` and `mut` modifiers on forwarding wrapper parameter bindings so
+/// parameters forward cleanly by value without `unused_mut` warnings.
+pub(crate) fn strip_forwarding_pat_modifiers(sig: &mut Signature) {
+    for arg in &mut sig.inputs {
+        if let syn::FnArg::Typed(pat_type) = arg
+            && let syn::Pat::Ident(pat) = pat_type.pat.as_mut()
+        {
+            pat.by_ref = None;
+            pat.mutability = None;
+        }
+    }
+}
+
+/// Preserve rustc's `unsafe_code` lint (`#![forbid(unsafe_code)]` /
+/// `#![deny(unsafe_code)]`) when an author writes `unsafe fn`.
+///
+/// Outer `#[cfg]` / `#[target_feature]` / `#[inline]` attributes emitted by
+/// our macros start the outer `Item::Fn` span at `Span::call_site()`, which
+/// makes `fn_span.from_expansion()` true and causes `rustc`'s `UnsafeCode`
+/// lint to skip checking `unsafe fn` declarations. Emitting an attribute-free
+/// dead `unsafe fn` whose `unsafe` keyword and `{}` braces both carry the
+/// author's spans keeps `lo.to(hi)` in the user's syntax context
+/// (`from_expansion() == false`) with zero MIR, symbols, or warnings when
+/// `unsafe_code` is allowed.
+pub(crate) fn unsafe_fn_lint_guard(
+    sig: &Signature,
+    brace: &token::Brace,
+) -> proc_macro2::TokenStream {
+    let syn::Safety::Unsafe(unsafe_tok) = &sig.safety else {
+        return proc_macro2::TokenStream::new();
+    };
+    let ident = Ident::new("__archmage_unsafe_fn", unsafe_tok.span);
+    let empty_body = braced_body(brace, quote!());
+    let decl = quote_spanned! { unsafe_tok.span =>
+        #unsafe_tok fn #ident()
+    };
+    quote! {
+        const _: () = { #decl #empty_body };
     }
 }
 

@@ -1,5 +1,8 @@
 use archmage::autoversion;
 unsafe fn process(ptr: *const f32, len: usize) -> f32 {
+    const _: () = {
+        unsafe fn __archmage_unsafe_fn() {}
+    };
     #[allow(unused_imports)]
     use archmage::SimdToken;
     {
