@@ -617,7 +617,7 @@ fn check_token_fp16(token: archmage::Avx512Fp16Token) {
             CBRT_FULL_EXTRA[7],
             CBRT_FULL_EXTRA[9]
         ],
-        f32::from_bits(1),
+        f32::NAN,
         f32::MAX,
         no
     );
