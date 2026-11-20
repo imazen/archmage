@@ -13,6 +13,18 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 
 - Remove `guaranteed()` from `SimdToken` trait — use `compiled_with()` instead (deprecated since 0.6.0, zero callers)
 - Remove width traits `Has128BitSimd`, `Has256BitSimd`, `Has512BitSimd` — use concrete tokens or tier traits (`HasX64V2`, `HasX64V4`) instead (deprecated since 0.9.9; `Has256BitSimd` only enables AVX, not AVX2/FMA)
+- Planned 0.10: add "adx" and "sha" target features to `X64V3GfniCryptoToken`, `X64V4xToken`, and `Avx512Fp16Token` to match real shipping CPUs at those tiers (Alder Lake+, Ice Lake+, Sapphire Rapids+, Zen 4+); deferred from 0.9.x because adding required `#[target_feature]` gates breaks semver on existing `from_context` and `magetypes` `from_raw` signatures (#174).
+
+### [0.9.32] - 2026-11-19
+
+#### Fixed
+
+- Support soft-float `x86_64-unknown-none` and `x86_64-unknown-uefi`. Archmage token detection and macro-generated x86-64 SIMD require baseline SSE2, while 32-bit `x86` retains runtime CPUID when `std` is enabled and non-Windows AArch64 runtime detection resolves `std` hygienically inside `archmage`. Magetypes and Magemath use their scalar backends when the target lacks SSE2.
+
+#### Changed
+
+- Support Rust `1.100.0` (Cargo 1.100 build-dir layout compatibility in SDE, codegen, and UI tests).
+- Pin matching `archmage-macros = "=0.9.32"`.
 
 ### [0.9.31] - 2026-11-07
 
@@ -63,6 +75,20 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 - Deprecate `incant!` passthrough mode (`with token`) — zero downstream uses; `#[rite]` multi-tier or direct `IntoConcreteToken` dispatch are better alternatives
 - Require `scalar` or `default` in explicit `incant!` tier lists (currently auto-appended with a deprecation warning)
 - Require explicit `tier(cfg(feature))` syntax — remove implicit `cfg_feature` auto-gating on v4/v4x
+
+### [0.9.32] - 2026-11-19
+
+#### Added
+
+- Support `#[attune(..., suppress_const_test)]` on proof boundaries (`docs/ATTUNE.md`).
+
+#### Fixed
+
+- Preserve author body brace spans across macro expansion (`#[arcane]`, `#[rite]`) so `cargo llvm-cov` counts annotated function bodies (#154).
+
+#### Changed
+
+- Skip provably no-op attribute, `Self`-value, and turbofish rewrites during macro expansion.
 
 ### [0.9.31] - 2026-11-07
 
@@ -136,12 +162,48 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 
 #### QUEUED BREAKING CHANGES
 
+- Remove the numbered `load_{4,8}_rgba_u8[_t]` and `store_{4,8}_rgba_u8` wrappers and `F32x{4,8}Backend::store_rgba_bytes` in 0.10. Use `load_rgba_u8_t` and `store_rgba_u8(..., out)`.
+
 - Planned: `mul_add`/`mul_sub` become the fused, single-rounding operations, matching `f32::mul_add`. Step one is in this release: `mul_add_relaxed`/`mul_sub_relaxed` (the previous `mul_add`: fused where the hardware fuses, multiply then add on the scalar backend and strict WASM, the engine's madd with relaxed SIMD) and `mul_add_fused`/`mul_sub_fused` (the same operation as `mul_add_portable`/`mul_sub_portable`, which stay), with `mul_add`/`mul_sub` deprecated pointing at both (#138). After the deprecation has shipped through a full release (0.10), `mul_add`/`mul_sub` return undeprecated as the fused forms (0.11). Calls still on `mul_add` then round once everywhere, at software-FMA cost on the scalar backend without FMA hardware and on strict WASM. Neither form is fastest everywhere: separate multiply-add is faster for single-accumulator reductions, fused for Horner chains (`benchmarks/fused_vs_separate_2026-10-25.md`).
-- Planned magetypes 0.10: deprecate the one-lane wrappers `f32x1`, `f64x1`, `i8x1`, `u8x1`, `i16x1`, `u16x1`, `i32x1`, `u32x1`, `i64x1`, `u64x1` (no production users across the zen checkouts; the scalar tier uses the generic `*<ScalarToken>` types and tails get plain slices), the comparison traits `SimdEq`, `SimdNe`, `SimdLt`, `SimdLe`, `SimdGt`, `SimdGe` (never implemented; the vector types have inherent `simd_*` methods), and `SimdTypes` and `WidthDispatch` (no users, tests or docs). Removal follows in a later breaking release.
+- Planned magetypes 0.10: deprecate the one-lane wrappers `f32x1`, `f64x1`, `i8x1`, `u8x1`, `i16x1`, `u16x1`, `i32x1`, `u32x1`, `i64x1`, `u64x1` (no production users across the zen checkouts; the scalar tier uses the generic `*<ScalarToken>` types and tails use plain Rust or `magetypes::scalar`), the comparison traits `SimdEq`, `SimdNe`, `SimdLt`, `SimdLe`, `SimdGt`, `SimdGe` (never implemented; the vector types have inherent `simd_*` methods), and `SimdTypes` and `WidthDispatch` (no users, tests or docs). Removal follows in a later breaking release.
 - Planned magetypes 0.10: reserve short constructor names for matching feature contexts; `_t(token, ...)` provides the preparatory migration spelling in 0.9. No constructor signatures change in this patch (772ef504).
 - Remove the six no-op `*_midp_precise` aliases (`exp2`/`exp`/`ln`/`log2`/`log10`/`pow` — each is literally `self.*_midp()`); `cbrt_midp_precise` stays, it does real denormal/zero handling. With the reciprocal tiers settling on `_portable` as the precise tier, a `_precise` suffix that does nothing is a naming lie.
 - Planned: make `w512` non-default in magetypes; users who need 512-bit types would add `features = ["w512"]`. This patch keeps the existing default features.
 - Remove `cast::Upcast` and `cast::Downcast`, and with them the `cast` module, which holds nothing else. Both are deprecated in 0.9.30 and were never implemented (b1b2ff67).
+
+### [0.9.32] - 2026-11-19
+
+#### Added
+
+- Add const-configured `magetypes::numerics::{IntConvert, HalfConvert, RecipOptions, ExtremaOptions}` (with distinct per-family encoding tags) for register operations and scalar tails. The new `u16` conversion accepts nearest-even or truncating policies with explicit saturation bounds. Add binary16 and bfloat16 register conversions, unsigned `u32` widening and narrowing, `trunc`, and fused and relaxed multiply-negate-add.
+- Add exact raw `u16` loads for generic `f32x4`, `f32x8` and `f32x16`, `load_rgb_u16_t` at widths 4 and 8, and bit-preserving RGBA alpha operations at all three widths.
+- Add width-polymorphic `load_rgba_u8_t` and `store_rgba_u8[_with](..., out)` for `f32x4`, `f32x8` and `f32x16`. Add `f32x16` RGBA block operations and use native SIMD shuffles for `f32x4` transpose and WASM128 RGB deinterleave.
+- Add `minimum` / `maximum` (IEEE 754-2019 `NaN`-propagating) and `min_fast` / `max_fast` (single-instruction, `NaN`/signed-zero-agnostic) alongside the existing `min` / `max` across `f32x4`, `f32x8`, `f32x16`, `f64x2`, `f64x4`, `f64x8` (and `f32x1` / `f64x1`; `f64x1` also gains `min`, `max`, `clamp`, and `reduce_*`) (#156):
+  - `min` / `max`: now return the numeric operand over a quiet `NaN`, like `f32::min` / `f32::max` (`f64::min` / `f64::max`), on all backends (see Fixed); signalling `NaN` is unspecified per backend; scalar tails use `a.min(b)` / `a.max(b)`.
+  - `minimum` / `maximum`: IEEE 754-2019 conformant (`NaN`-propagating to quiet `NaN`, strictly ordering `-0.0 < +0.0`); scalar tails use `magetypes::scalar::{minimum_f32, maximum_f32, minimum_f64, maximum_f64}`.
+  - `min_fast` / `max_fast`: fastest single-instruction lane-wise operation per platform ignoring `NaN` and signed-zero ordering (`vminps`/`vminpd` on x86, `vminnmq` on NEON, `f32x4.pmin`/`f64x2.pmin` or `relaxed_min` with `relaxed-simd` on WASM, compare+select on `ScalarToken`); scalar tails use `magetypes::scalar::{min_fast_f32, max_fast_f32, min_fast_f64, max_fast_f64}`.
+- Add a flat `magetypes::scalar` module with `#![no_std]` portable helpers (`minimum_f{32,64}`, `maximum_f{32,64}`, ties-to-even `round_f{32,64}`, `floor_f{32,64}`, `ceil_f{32,64}`, `sqrt_f{32,64}`, `mul_add_fused_f{32,64}`, `mul_sub_fused_f{32,64}`) and token-matched 1-instruction helpers (`F32ScalarBackend` / `F64ScalarBackend` supertraits: `min_fast_f{32,64}`, `max_fast_f{32,64}`, `clamp_f{32,64}`, `mul_add_relaxed_f{32,64}`, `mul_sub_relaxed_f{32,64}`, `to_i32`, `to_i32_fast`), with `archmage::IntoConcreteToken` as a supertrait on the sealed scalar backend traits.
+- Add unchecked in-range truncation `to_i32_fast` on `f32x4`, `f32x8`, and `f32x16` (plus `f32x1::to_i32_fast`, `magetypes::scalar::to_i32_fast`, and `convert_f32_to_i32_fast` on `F32x4Convert`, `F32x8Convert`, and `F32x16Convert`), omitting x86 saturation fixups and using `i32x4.relaxed_trunc_f32x4_s` on `Wasm128Token` when compiled with `relaxed-simd` (#158).
+- Add `deinterleave_3ch`, `interleave_3ch`, `load_rgb_u8_t` and destination-buffer `store_rgb_u8[_with]` for `f32x4` and `f32x8` across x86, NEON, WASM SIMD128 and scalar (#169).
+- Add `load_padded_t(token, slice, pad)` and `store_prefix(out)` across all 30 generic vector types (`f32x4`..`u64x8`) for branchless single-vector remainder handling paired with `partition_slice_t` / `partition_slice_mut_t`.
+- Add `pub fn token(self) -> T` across all 30 generic vector types (`f32x4`..`u64x8`) to recover the capability token proof carried inside a vector without passing a separate token argument.
+
+#### Deprecated
+
+- Deprecate width-numbered `f32x{4,8}::{load_{4,8}_rgba_u8, load_{4,8}_rgba_u8_t, store_{4,8}_rgba_u8}` and `F32x{4,8}Backend::store_rgba_bytes` in favor of width-polymorphic `load_rgba_u8_t` and destination-buffer `store_rgba_u8(..., out)`.
+
+#### Fixed
+
+- `min` and `max` on float vectors (`f32x{4,8,16}`, `f64x{2,4,8}`) now return the numeric operand when the other is a quiet `NaN`, like Rust `f32::min`/`f64::min`, on every backend (x86 and `ScalarToken`'s W512 float `min`/`max` returned the second operand; NEON and WASM propagated `NaN`). Signalling `NaN` handling is unspecified and differs by backend, as Rust leaves it: NEON and AVX-512 `f32` (`vrangeps`) return a quiet `NaN`, while x86 V3, AVX-512 `f64`, WASM and `ScalarToken` return the numeric operand. Cost: on x86 V3 `min`/`max` go from one `minps`/`minpd`/`maxps`/`maxpd` to that op plus an unordered compare and a blend (3 instructions); on AVX-512 `f32` one `vrangeps` handles quiet `NaN` in 1 instruction; on NEON one `vminq`/`vmaxq` becomes one `vminnmq`/`vmaxnmq` (1 instruction, the same lowering as `min_fast`/`max_fast`). `min_fast`/`max_fast` keep the single-instruction cost on x86 V3. Not benchmarked.
+- `log2_midp`, `ln_midp`, `log10_midp`, `log2_midp_precise`, `exp2_midp`, `exp2_lowp`, `exp_midp`, `exp_lowp`, `pow_midp`, and `sigmoid_midp` now preserve quiet `NaN` inputs across all backends while keeping 1-instruction per-bound clamping in `exp2_midp` / `exp2_lowp`.
+- `silu_midp(-inf)` now returns `-0.0` (matching large finite negative inputs) instead of `NaN` from `(-inf) * 0.0`; adds one splat+compare+select per call (small constant-factor cost, not benchmarked).
+
+#### Changed
+
+- Depend on `archmage = "0.9.32"`.
+- Float `clamp` (`f32x{4,8,16}`, `f64x{2,4,8}`, and newly added `f64x1::clamp`) is `min_fast(max_fast(self, lo), hi)`, two instructions on native backends; x86 output is bit-identical to 0.9.31. A quiet `NaN` lane becomes `lo` on x86, NEON, strict WASM, and `ScalarToken` (0.9.31 propagated `NaN` on NEON and WASM); a signalling `NaN` lane and WASM `relaxed-simd` `NaN` lanes are unspecified per backend. `NaN` bounds and `lo > hi` give an unspecified lane and never panic; `f32::clamp` differs on both counts, so scalar tails use `magetypes::scalar::clamp_f32` / `clamp_f64`. Existing `f32x1::clamp` keeps `f32::clamp` semantics.
+- NEON `bitmask` lowering rewritten from per-lane extracts to weighted-lane reductions on the wider integer and float vector types (two-lane types keep extraction; generator and generated code together). Measured neutral through the public API on Apple M4 Pro — `i32x4` +0.1%, `i16x8` -4.2%, `u8x16` +1.9% (`benchmarks/neon_bitmask_apple-m4-pro_2026-09-08.md`); isolated raw-NEON microbenchmarks showed up to 1.94x but do not reproduce through the generic types, so this is a code-shape change, not a perf win.
+- Clarify positive-normal domain documentation on `rcp_approx_portable` and `rsqrt_approx_portable` and unconditional zero masking in `pow_lowp`. Flat `magetypes` transcendental approximations keep their arithmetic and are not deprecated.
 
 ### [0.9.31] - 2026-11-07
 
@@ -225,6 +287,18 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 - The package includes the MIT and Apache-2.0 license texts (683bef73).
 - The docs of `log2_midp_precise`, `ln_midp_precise`, `log10_midp_precise` and `pow_midp_precise` promised subnormal handling that they do not have: each is its plain `_midp` form, so `log2_midp_precise(1e-42)` returns about -127 (true -139.5). The docs now say so; only `cbrt_midp_precise` handles subnormal inputs. Behavior is unchanged (780e205c).
 
+## magemath
+
+### [0.1.0] - 2026-11-19
+
+#### Added
+
+- Add the `magemath` (`0.1.0`) crate (`no_std` by default, optional `std`, `w512`, `avx512`) providing configurable `f32` `powf`, `expf` (`exp2`, `exp`), `logf` (`log2`, `ln`, `log10`), `log1pf` (`log1p`), and `cbrtf` approximations with explicit domain, subnormal, precision, portability, and execution options plus matching scalar and `*_with_token` entry points for SIMD tails (`docs/MAGEMATH-MIGRATION.md`, `magemath/VALIDATION.md`).
+- Configure each family through one fluent `const` options builder (`PowfOptions`, `ExpfOptions`, `LogfOptions`, `Log1pfOptions`, `CbrtfOptions`) with discrete `#[non_exhaustive]` per-family `*Domain` enums (`PowfDomain`, `ExpfDomain`, `LogfDomain`, `Log1pfDomain`, `CbrtfDomain`), outward-rounded `bf16` custom range/clamp bounds (`bf16::{MAX_BF16, MAX_CBRT_BF16, expand_bf16, floor_bf16, ceil_bf16}`), and compile-time `PowfOptions::const_exponent(n: f32)` specialization (`Powf::<CFG>::{scalar_const, scalar_const_infallible, scalar_const_with_token, array_const, slice_const, slice_const_with_token, simd_const}`, `PowfRuntime::*_const`, and `SimdMath::{try_powf_const, powf_const}`, with IEEE hardware algebraic fast-paths for `0, 0.25, ±0.5, ±1, 1.5, ±2, 3, 4`). Encode options into `const CFG: u128` via `.bits()` (with distinct per-family tags, 38–76 reserved expansion bits, and `from_bits` round-trip) for compile-time specialization on `Powf<CFG>`, `Expf<CFG>`, `Logf<CFG>`, `Log1pf<CFG>`, `Cbrtf<CFG>`, and inline vector chaining via `SimdMath` (reusing `v.token()`), plus `.runtime()` dynamic evaluators and shared root enums (`Execution::{Upgrade, Caller}`, `Portability`, `Validation::{Checked, ClampOutOfBounds, AssumeValid, ClampFinite}`, `Subnormals::{Reject, FlushOrClamp, Normalize}`). Bounded domains use `Subnormals::FlushOrClamp` by default, with explicit `.reject_subnormals()` and `.admit_subnormals()` opt-ins. `.clamp_finite()` skips NaN save and restore in clamped evaluation.
+- Mark policy-axis enums, `*Domain` enums, and `*ErrorKind` enums `#[non_exhaustive]` so future approximation families, domains, and option axes remain minor-compatible.
+- Add single-dispatch slice entry points (`Powf::<CFG>::{slice, slice_const}`, `Expf::<CFG>::{exp2_slice, exp_slice}`, `Logf::<CFG>::{log2_slice, ln_slice, log10_slice}`, `Log1pf::<CFG>::slice`, `Cbrtf::<CFG>::slice`, `*_slice_with_token`, and default `try_*_slice` helpers), including native 16-lane AVX-512 `zmm` slice loops and `Execution::Upgrade` `X64V3Token -> X64V4xToken/X64V4Token` widening on slices, 16-lane vectors, and 8-lane `Highp` `powf`, single-pass SIMD range checks with `tail[0]` padding, hoisted WASM `relaxed-simd` fusion probing with probe-free `WASM_SOFTWARE` fallback across `powf`, `expf`, and `logf`/`log1pf`, and `magemath::SliceError { kind, index }` naming the exact first rejected element. At the 8-lane baseline (`1cb042ba3741`, Zen 4) per-chunk 8-element array calls took 4.6x to 12x as long as slice entries; on Zen 5 with 16-lane AVX-512 `Execution::Upgrade` they take 2.68x to 19.2x as long (1.48x to 2.35x as long as an 8-lane `#[attune]` loop; `benchmarks/magemath_slices_2026-11-17/RESULTS.md`).
+- Replace `core::any::Any` / `TypeId` downcasts inside `magemath` with static `archmage::IntoConcreteToken` selection, enforce compile-time memory/symbol budgets via `xtask/check_compile_budget.py`, and pin bit-exact hashes across 11 configurations in `magemath/tests/portable_hashes.rs`.
+
 ## Workspace
 
 ### [Unreleased]
@@ -232,6 +306,17 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 #### QUEUED BREAKING CHANGES
 
 (none)
+
+### [0.9.32] - 2026-11-19
+
+#### Added
+
+- Add `tests/zen-patterns/` consumer pattern suites split into `released` (`published` 0.9.31 vs workspace `candidate`) and `unreleased` (`just zen-patterns-check`).
+- Wire `magemath` (`0.1.0`) into `apidoc` public API snapshots, `xtask` Miri contract runs, warning sweep, package license/packaging checks, and CI.
+
+#### Changed
+
+- Update package and documentation install examples to `0.9.32` and add Cargo `1.100.0` build-dir support across CI and verification harnesses.
 
 ### [0.9.31] - 2026-11-07
 

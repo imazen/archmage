@@ -1,0 +1,21 @@
+[package]
+name = "archmage-zen-patterns-released-candidate"
+version = "0.0.0"
+edition = "2024"
+publish = false
+description = "Archmage/Magetypes usage patterns from zen* crates that published 0.9.31 supports, compiled against this workspace."
+
+# Shared sources; ../published/Cargo.toml builds the same files against crates.io 0.9.31.
+[lib]
+path = "../src/lib.rs"
+
+[features]
+default = []
+# The consumer-side `avx512` feature that `cfg(avx512)` tier gates refer to.
+avx512 = ["archmage/avx512", "magetypes/avx512"]
+
+[dependencies]
+archmage = { path = "../../../..", features = ["testable_dispatch"] }
+magetypes = { path = "../../../../magetypes" }
+
+[workspace]

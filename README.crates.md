@@ -8,11 +8,14 @@ You pick a CPU tier, prove it's present once with `summon()`, and the type syste
 
 It runs on x86-64, AArch64 and WASM, is `no_std + alloc`, and needs Rust 1.89 or later.
 
-## 0.9.31: unified macros
+## 0.9.32: Cargo 1.100, attune proof opt-out, #154 coverage spans, and magemath
 
-This release adds `#[attune]`, `attuned!`, and `reattune!`. Existing attributes
-and `incant!` remain supported. Use matching versions of archmage and
-magetypes so their tokens come from the same archmage package.
+This release follows `0.9.31` with Cargo 1.100 build-dir compatibility,
+`#[attune(..., suppress_const_test)]`, preserved author body brace spans for
+line coverage (#154), and the new [Magemath crate](magemath) alongside
+bug fixes in `magetypes` midp logs and `silu_midp(-inf)`. Existing macro names
+and constructor signatures remain supported; use matching versions of archmage
+and magetypes so their tokens come from the same archmage package.
 
 ```rust
 use archmage::prelude::*;
@@ -37,12 +40,19 @@ The [unified macro guide](https://github.com/imazen/archmage/blob/main/docs/ATTU
 covers the selector grammar, call and proof rules, inline policies, a legacy-attribute
 mapping, and current restrictions.
 
+Configurable f32 power, exponential, logarithm and cube-root approximations,
+with explicit domains and scalar entry points for SIMD tails, live in the
+[Magemath crate](https://github.com/imazen/archmage/tree/main/magemath). The flat
+Magetypes transcendental methods remain supported; the
+[Magemath guide](https://github.com/imazen/archmage/blob/main/docs/MAGEMATH-MIGRATION.md)
+says when to switch.
+
 ## Quick start
 
 ```toml
 [dependencies]
-archmage = "=0.9.31"
-magetypes = "=0.9.31"   # vector types such as f32x8
+archmage = "=0.9.32"
+magetypes = "=0.9.32"   # vector types such as f32x8
 ```
 
 Multiply a buffer by a gain, using AVX2, NEON or WASM SIMD where available:
@@ -51,7 +61,7 @@ Multiply a buffer by a gain, using AVX2, NEON or WASM SIMD where available:
 #![forbid(unsafe_code)]
 use archmage::prelude::*;
 
-#[magetypes(define(f32x8), v3, neon, wasm128, scalar)]
+#[attune(_*_t, define(f32x8))]
 fn gain_impl(token: Token, plane: &mut [f32], gain: f32) {
     let factor = f32x8::splat_t(token, gain);
     let (chunks, tail) = f32x8::partition_slice_mut_t(token, plane);
@@ -64,7 +74,7 @@ fn gain_impl(token: Token, plane: &mut [f32], gain: f32) {
 }
 
 pub fn apply_gain(plane: &mut [f32], gain: f32) {
-    incant!(gain_impl(plane, gain), [v3, neon, wasm128, scalar])
+    attuned!(gain_impl(plane, gain))
 }
 
 let mut plane = [2.0; 11];
@@ -72,12 +82,12 @@ apply_gain(&mut plane, 0.5);
 assert_eq!(plane, [1.0; 11]);
 ```
 
-- `#[magetypes]` compiles `gain_impl` once per tier in its list and names each
-  copy for its tier: `gain_impl_v3` (AVX2 and FMA), `gain_impl_neon`,
-  `gain_impl_wasm128` and `gain_impl_scalar`. In each copy, `Token` is that
-  tier's token type and `f32x8` is that tier's vector.
-- `incant!` finds the copies by those names. It calls `summon()` for each tier,
-  best first, and runs the first copy the CPU supports. Call it around your
+- `#[attune(_*_t, define(f32x8))]` compiles `gain_impl` once per default
+  portable tier and emits proof-taking wrappers: `gain_impl_v3_t` (AVX2 and
+  FMA), `gain_impl_neon_t`, `gain_impl_wasm128_t` and `gain_impl_scalar_t`. In
+  each copy, `Token` is that tier's token type and `f32x8` is `f32x8<Token>`.
+- `attuned!(gain_impl(plane, gain))` dispatches across those default tiers, best
+  first via `summon()`, and falls back to scalar. Dispatch once around your
   loop, as here, not inside it.
 - Constructors ending in `_t` take the token as their first argument.
 
@@ -90,75 +100,75 @@ has the mapping.
 
 ## Calling intrinsics directly
 
-For code tied to one instruction set, write a function per tier and let
-`incant!` choose:
+For code tied to one instruction set, write a proof wrapper per tier and let
+`attuned!` choose:
 
 ```rust
 use archmage::prelude::*;
 
-#[arcane(import_intrinsics)]
-fn multiply_v3(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
+#[attune(import_intrinsics)]
+fn multiply_v3_t(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
     let v = _mm256_loadu_ps(data);
     let mut out = [0.0; 8];
     _mm256_storeu_ps(&mut out, _mm256_mul_ps(v, _mm256_set1_ps(2.0)));
     out
 }
 
-fn multiply_scalar(_token: ScalarToken, data: &[f32; 8]) -> [f32; 8] {
+fn multiply_scalar_t(_token: ScalarToken, data: &[f32; 8]) -> [f32; 8] {
     data.map(|v| v * 2.0)
 }
 
 pub fn multiply(data: &[f32; 8]) -> [f32; 8] {
-    incant!(multiply(data), [v3, scalar])
+    attuned!(multiply(data), [_v3, _scalar])
 }
 
 assert_eq!(multiply(&[3.0; 8]), [6.0; 8]);
 ```
 
-- `#[arcane]` compiles the function with its token's CPU features and makes it
-  safe to call from ordinary code.
-- `import_intrinsics` brings the architecture's intrinsics into scope. Loads and
-  stores take references instead of raw pointers.
-- The names do the dispatch. `incant!(multiply(data), [v3, scalar])` calls
-  `multiply_v3` where the CPU has the `v3` features and `multiply_scalar`
-  everywhere else.
+- The `_v3_t` suffix tells `#[attune]` to emit a safe `X64V3Token` proof wrapper
+  that enables AVX2 + FMA features inside the inner implementation.
+- `import_intrinsics` brings the architecture's intrinsics into scope, with safe
+  loads and stores taking references instead of raw pointers.
+- `attuned!(multiply(data), [_v3, _scalar])` calls `multiply_v3_t` where the CPU
+  supports `v3` and `multiply_scalar_t` everywhere else.
 
-Mark helper functions with `#[rite]` instead. They get the same features and
-inline into the kernel that calls them. The
+For helper functions called from code that already holds matching target
+features, mark them `#[attune(v3)]` (zero wrapper overhead; use
+`X64V3Token::from_context()` if you need a token inside the body). The
 [intrinsics browser](https://imazen.github.io/archmage/intrinsics/) shows which
 intrinsics each token unlocks.
 
-## Naming: `<name>_<tier>`
+## Naming: `<name>_<tier>` and `<name>_<tier>_t`
 
-`incant!(gain_impl(…), [v3, scalar])` calls `gain_impl_v3(token, …)` or
-`gain_impl_scalar(token, …)`. That is the whole contract: the tier as a suffix,
-and that tier's token as the first argument. `#[magetypes]` and `#[autoversion]`
-generate functions of that shape.
+- Direct feature bodies end in `_<tier>` (`gain_impl_v3`) and are safe to call
+  only inside a function whose features already cover `<tier>`.
+- Proof wrappers end in `_<tier>_t` (`gain_impl_v3_t`) and take that tier's token
+  as their first argument so any ordinary caller with a summoned token can call
+  them safely.
 
-Name your own tier functions the same way:
+Name your own functions the same way:
 
-- They join the same family. Leave `v3` out of a `#[magetypes]` list, write
-  `gain_impl_v3` by hand, and `incant!` still finds it:
-  [hand-tuned variants](https://imazen.github.io/archmage/archmage/dispatch/incant/#hand-tuned-variants).
-- Inside a tier function, `incant!` needs no CPU check. In a `v3` function,
-  `incant!(helper(…), [v3, scalar])` compiles to a direct call to `helper_v3`:
-  [calls inside a tier](https://imazen.github.io/archmage/archmage/dispatch/incant/#calls-inside-a-tier).
+- Leave `v3` out and write `gain_impl_v3_t` by hand, and `attuned!` still finds
+  it in the same family.
+- Inside an annotated feature body, `attuned!(helper(…), [_v3, _scalar])`
+  resolves direct `_v3` helpers with no runtime probe and no token check.
 - The suffix shows, at every call site, which CPU features a function needs.
 
-## Which macro
+## Which `#[attune]` form
 
 | You want | Write | Call it |
 |---|---|---|
-| One kernel with vector types, for every CPU | [`#[magetypes(v3, neon, scalar)]`](https://imazen.github.io/archmage/archmage/dispatch/magetypes-macro/) on `fn kernel(token: Token, …)` | [`incant!(kernel(…), [v3, neon, scalar])`](https://imazen.github.io/archmage/archmage/dispatch/incant/) |
-| A plain loop the compiler vectorizes for each tier | [`#[autoversion]`](https://imazen.github.io/archmage/archmage/dispatch/autoversion/) on `fn sum(data: &[f32]) -> f32` | `sum(data)`. The macro writes the dispatcher |
-| The intrinsics of one instruction set | [`#[arcane]`](https://imazen.github.io/archmage/archmage/concepts/arcane/) on `fn kernel_v3(token: X64V3Token, …)` | `incant!(kernel(…), [v3, scalar])` |
-| A helper inside SIMD code | [`#[rite(v3)]`](https://imazen.github.io/archmage/archmage/concepts/rite/) on `fn helper(…)` | `helper(…)`, from a function that has the `v3` features |
-| An algorithm shared between kernels | [A generic helper](https://imazen.github.io/archmage/magetypes/examples/generic-kernels/): `#[inline(always)] fn helper<T: F32x8Backend>(token: T, …)` | `helper(token, …)`, from a `#[magetypes]` kernel |
-| The tier chosen by hand | `X64V3Token::summon()` and an `if let` | `kernel_v3(token, …)`, behind `#[cfg(target_arch = "x86_64")]`: [manual dispatch](https://imazen.github.io/archmage/archmage/dispatch/manual/) |
+| One kernel with vector types, for every CPU | `#[attune(_*_t, define(f32x8))]` on `fn kernel(token: Token, …)` | `attuned!(kernel(…))` (or explicit tier list) |
+| A plain loop the compiler vectorizes per tier | `#[attune(dispatch)]` on `fn sum(data: &[f32]) -> f32` | `sum(data)` (macro writes the dispatcher) |
+| The intrinsics of one instruction set | `#[attune(import_intrinsics)]` on `fn kernel_v3_t(token: X64V3Token, …)` (or `#[attune(wrap)]`) | `attuned!(kernel(…), [_v3, _scalar])` |
+| A helper called inside SIMD code | `#[attune(v3)]` on `fn helper(…)` | `helper(…)` from a context covering `v3` |
+| An algorithm shared across widths/backends | [A generic helper](https://imazen.github.io/archmage/magetypes/examples/generic-kernels/): `#[inline(always)] fn helper<T: F32x8Backend>(token: T, …)` | `helper(token, …)` from a `#[attune]` kernel |
+| The tier chosen by hand | `X64V3Token::summon()` and an `if let` | `kernel_v3_t(token, …)` behind `#[cfg(target_arch = "x86_64")]`: [manual dispatch](https://imazen.github.io/archmage/archmage/dispatch/manual/) |
 
-The guide also covers
-[tokens and tiers](https://imazen.github.io/archmage/archmage/getting-started/tokens/),
-[testing every tier](https://imazen.github.io/archmage/archmage/testing/dispatch-testing/)
+Earlier attributes (`#[magetypes]`, `#[arcane]`, `#[rite]`, `#[autoversion]`,
+`incant!`) remain supported; see [docs/ATTUNE.md](https://github.com/imazen/archmage/blob/main/docs/ATTUNE.md)
+for the spelling-by-spelling migration table, [tokens and tiers](https://imazen.github.io/archmage/archmage/getting-started/tokens/),
+[testing every tier](https://imazen.github.io/archmage/archmage/testing/dispatch-testing/),
 and [AVX-512](https://imazen.github.io/archmage/archmage/advanced/avx512/).
 
 ## Features
@@ -176,12 +186,12 @@ AVX-512 is opt-in from your own crate. Give it an `avx512` feature:
 avx512 = ["archmage/avx512", "magetypes/avx512"]
 ```
 
-Then write the kernel with a 512-bit type and name the tier in both lists. Its
-copy is compiled only when that feature is on:
+Then write the kernel with a 512-bit type (or use a per-tier width split to
+keep 8 lanes on V3/NEON/WASM) and list the gated AVX-512 tier explicitly:
 
 ```text
-#[magetypes(define(f32x16), v4(cfg(avx512)), v3, neon, wasm128, scalar)]
-incant!(gain_impl(plane, gain), [v4(cfg(avx512)), v3, neon, wasm128, scalar])
+#[attune(_*_t, +v4(cfg(avx512)), define(f32x16))]
+attuned!(gain_impl(plane, gain), [_v4(cfg(avx512)), _v3, _neon, _wasm128, _scalar])
 ```
 
 The other tiers run the same `f32x16` as a polyfill: two 256-bit operations on
@@ -221,8 +231,9 @@ lists every `unsafe` in both crates.
 
 - There is no SVE tier: stable Rust has no SVE intrinsics yet. Targets other
   than x86-64, AArch64 and WASM, including 32-bit x86, run the scalar fallback.
-- Calling an `#[arcane]` function once per loop iteration is slow. On two small
-  kernels it measured 4.1× and 6.2× slower than one call around the whole loop
+- Safe Rust calls into `#[target_feature]` helpers (`#[attune(v3)]`) inline with zero wrapper overhead inside a matching tier context.
+- Dispatching or crossing a proof wrapper once per loop iteration is slow. On two small
+  kernels an `#[arcane]` proof boundary per iteration measured 4.1× and 6.2× slower than one call around the whole loop
   ([docs/PERFORMANCE.md](https://github.com/imazen/archmage/blob/main/docs/PERFORMANCE.md)).
   Dispatch once, outside the loop.
 - A vector wider than the CPU's registers is a polyfill. It runs as two or
@@ -230,8 +241,9 @@ lists every `unsafe` in both crates.
   on NEON is two `f32x4`s.
   [Polyfills](https://imazen.github.io/archmage/magetypes/cross-platform/polyfills/) has the measured costs.
 - With the `avx512` feature, AVX-512 tokens also support the 128- and
-  256-bit float and integer types. These narrower backend, conversion and
-  bitcast implementations delegate to V3; 512-bit types use AVX-512.
+  256-bit float and integer types. Narrower integer, f64, conversion and
+  bitcast operations delegate to V3 (with AVX-512VL overrides where faster on
+  `f32x4`/`f32x8`); 512-bit types use AVX-512.
 - Some floating-point results differ between backends. `mul_add_relaxed`
   rounds once where the hardware fuses (x86 v3/v4, NEON) and twice on the scalar
   backend and strict WASM; `mul_add_fused` rounds once everywhere, in software

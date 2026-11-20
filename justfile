@@ -326,7 +326,7 @@ verify-asm-update:
 
 # Check rustdoc builds cleanly (catches broken doc links)
 doc-check:
-    RUSTDOCFLAGS="-Dwarnings" cargo doc --features "std avx512" --no-deps
+    RUSTDOCFLAGS="-Dwarnings" cargo doc -p archmage -p magetypes -p magemath --features "std avx512" --no-deps
 
 # Compile and execute website and README Rust examples directly
 docs-test:
@@ -544,3 +544,26 @@ release-compat-recheck source output inventory:
 
 release-compat-audit directory source *options:
     python3 xtask/release_compat/audit.py {{directory}} --source {{source}} {{options}}
+
+# Magemath: std/no_std tests, release contracts and strict clippy.
+magemath-check:
+    cargo test -p magemath --features "std avx512"
+    cargo test -p magemath --no-default-features --features w512
+    cargo test -p magemath --release --features "std avx512" --test contracts
+    cargo clippy -p magemath --all-targets --features "std avx512" -- -D warnings
+    cargo fmt -p magemath -- --check
+    python3 xtask/check_compile_budget.py
+
+# Magemath on strict SIMD WASM (needs wasmtime).
+magemath-check-wasm:
+    RUSTFLAGS="-C target-feature=+simd128" CARGO_TARGET_WASM32_WASIP1_RUNNER=wasmtime cargo test -p magemath --features "std w512" --target wasm32-wasip1
+    RUSTFLAGS="-C target-feature=+simd128" CARGO_TARGET_WASM32_WASIP1_RUNNER=wasmtime cargo test -p magemath --no-default-features --features w512 --target wasm32-wasip1
+
+# Consumer patterns from zen* crates split by published 0.9.31 vs workspace additions.
+zen-patterns-check:
+    cargo test --manifest-path tests/zen-patterns/released/published/Cargo.toml
+    cargo test --manifest-path tests/zen-patterns/released/published/Cargo.toml --features avx512
+    cargo test --manifest-path tests/zen-patterns/released/candidate/Cargo.toml
+    cargo test --manifest-path tests/zen-patterns/released/candidate/Cargo.toml --features avx512
+    cargo test --manifest-path tests/zen-patterns/unreleased/Cargo.toml
+    cargo test --manifest-path tests/zen-patterns/unreleased/Cargo.toml --features avx512
