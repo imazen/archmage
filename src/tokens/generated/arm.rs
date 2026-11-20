@@ -119,7 +119,7 @@ impl NeonToken {
         Self { _private: () }
     }
 
-    /// Deprecated alias for [`NeonToken::from_context`].
+    /// **Deprecated:** Use [`NeonToken::from_context`] instead.
     ///
     /// Identical in every respect — same `#[target_feature]` gate, same
     /// safe-call rules. The name predates the compiler-checked design
@@ -339,7 +339,7 @@ impl NeonAesToken {
         Self { _private: () }
     }
 
-    /// Deprecated alias for [`NeonAesToken::from_context`].
+    /// **Deprecated:** Use [`NeonAesToken::from_context`] instead.
     ///
     /// Identical in every respect — same `#[target_feature]` gate, same
     /// safe-call rules. The name predates the compiler-checked design
@@ -576,7 +576,7 @@ impl NeonSha3Token {
         Self { _private: () }
     }
 
-    /// Deprecated alias for [`NeonSha3Token::from_context`].
+    /// **Deprecated:** Use [`NeonSha3Token::from_context`] instead.
     ///
     /// Identical in every respect — same `#[target_feature]` gate, same
     /// safe-call rules. The name predates the compiler-checked design
@@ -814,7 +814,7 @@ impl NeonCrcToken {
         Self { _private: () }
     }
 
-    /// Deprecated alias for [`NeonCrcToken::from_context`].
+    /// **Deprecated:** Use [`NeonCrcToken::from_context`] instead.
     ///
     /// Identical in every respect — same `#[target_feature]` gate, same
     /// safe-call rules. The name predates the compiler-checked design
@@ -1076,7 +1076,7 @@ impl Arm64V2Token {
         Self { _private: () }
     }
 
-    /// Deprecated alias for [`Arm64V2Token::from_context`].
+    /// **Deprecated:** Use [`Arm64V2Token::from_context`] instead.
     ///
     /// Identical in every respect — same `#[target_feature]` gate, same
     /// safe-call rules. The name predates the compiler-checked design
@@ -1412,7 +1412,7 @@ impl Arm64V3Token {
         Self { _private: () }
     }
 
-    /// Deprecated alias for [`Arm64V3Token::from_context`].
+    /// **Deprecated:** Use [`Arm64V3Token::from_context`] instead.
     ///
     /// Identical in every respect — same `#[target_feature]` gate, same
     /// safe-call rules. The name predates the compiler-checked design

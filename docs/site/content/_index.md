@@ -12,14 +12,15 @@ description = "Safely invoke your intrinsic power, using the tokens granted to y
 badge = "Rust 1.89+"
 gradient_opacity = 15
 cta_buttons = [
-    { text = "Path of Attunement (beta)", url = "/attunement/", style = "primary" },
+    { text = "Path of Attunement", url = "/attunement/", style = "primary" },
     { text = "Arcane Spellcraft", url = "/archmage/", style = "secondary" },
     { text = "Magetypes", url = "/magetypes/", style = "secondary" },
+    { text = "Magemath", url = "/magemath/", style = "secondary" },
 ]
 
 [[extra.features]]
 title = "No Unsafe in Your Code"
-desc = "Capability tokens prove CPU features at the type level. #[arcane] compiles your function with those features, so its intrinsic calls need no unsafe, and your crate can keep #![forbid(unsafe_code)]."
+desc = "Capability tokens prove CPU features at the type level. #[attune] compiles your function with those features, so its intrinsic calls need no unsafe, and your crate can keep #![forbid(unsafe_code)]."
 icon = "fa-solid fa-shield-halved"
 
 [[extra.features]]
@@ -34,7 +35,7 @@ icon = "fa-solid fa-globe"
 
 [[extra.features]]
 title = "Runtime Dispatch"
-desc = "incant! dispatches to the best available SIMD tier at runtime. Generate _v3, _neon, _wasm128, and _scalar variants with #[magetypes] — the macro handles detection, cfg guards, and fallback."
+desc = "attuned! dispatches to the best available SIMD tier at runtime. Generate _v3_t, _neon_t, _wasm128_t, and _scalar_t variants with #[attune(_*_t, define(f32x8))] — or emit a direct callable dispatcher with #[attune(dispatch)]."
 icon = "fa-solid fa-route"
 
 [[extra.features]]
@@ -51,8 +52,9 @@ icon = "fa-solid fa-magnifying-glass"
 title = "Quick Start"
 description = "Add archmage to your project and start writing safe SIMD."
 tabs = [
-    { name = "Cargo.toml", command = "[dependencies]\narchmage = \"0.9\"" },
-    { name = "With Magetypes", command = "[dependencies]\narchmage = \"0.9\"\nmagetypes = \"0.9\"" },
+    { name = "Cargo.toml", command = "[dependencies]\narchmage = \"=0.9.32\"" },
+    { name = "With Magetypes", command = "[dependencies]\narchmage = \"=0.9.32\"\nmagetypes = \"=0.9.32\"" },
+    { name = "With Magemath", command = "[dependencies]\narchmage = \"=0.9.32\"\nmagetypes = \"=0.9.32\"\nmagemath = \"0.1\"" },
     { name = "docs.rs", link = "https://docs.rs/archmage" },
 ]
 

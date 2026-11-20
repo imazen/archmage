@@ -16,9 +16,6 @@ magetypes = "=0.9.32"
 for its tier. Obtain that tier's proof locally with `Token::from_context()`.
 The caller still passes only data.
 
-*Legacy equivalent:* `#[magetypes(define(f32x8), ...)]` supplies the aliases and
-variants; an `incant!` dispatcher provides the ordinary calling interface.
-
 ```rust
 #![forbid(unsafe_code)]
 use archmage::prelude::*;
@@ -65,6 +62,6 @@ allocation as contiguous pixels.
 - [Full attunement reference](@/attunement/reference.md): explicit AVX-512 gates, generic signatures, proof wrappers, and output visibility.
 - [Vector expansion](@/attunement/expansions.md#vectors): the concrete aliases and feature bodies generated for each target.
 
-The shared Magetypes chapters include examples using the existing spellcraft
-attributes. The vector operations are the same; the attuned kernel above is the
-starting pattern for this path.
+The [Magetypes chapters](@/magetypes/memory/load-store.md) build on this same
+`#[attune]` pattern with generic helpers, multi-width algorithms, and real-world
+codec and image kernels.

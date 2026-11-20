@@ -5,12 +5,13 @@ weight = 1
 
 ## Real call chain: gamma decoding in linear-srgb
 
-The following complete chain is taken from `zen/linear-srgb` at
-`6bae33ee657d0cc29eaae6fd869894ec78a41b1c`:
-[`gamma_to_linear_slice` → `incant!` → `gamma_to_linear_slice_tier`](https://github.com/imazen/linear-srgb/blob/6bae33ee657d0cc29eaae6fd869894ec78a41b1c/src/simd.rs#L1313),
-then `pow_midp` for full vectors and the
-[scalar tail helper](https://github.com/imazen/linear-srgb/blob/6bae33ee657d0cc29eaae6fd869894ec78a41b1c/src/scalar.rs#L300).
-Only the scalar helper's name/path is changed to make this excerpt standalone.
+> **Need configurable domains, subnormal policies, `BitExact` rounding, or matching scalar tails?** See [Magemath](@/magemath/_index.md) and [Tuning Performance & Subnormals](@/magemath/tuning-and-subnormals.md). The flat `magetypes` methods below remain supported and unchanged; [Magetypes Fast Paths & Contract Tiers](@/magemath/magetypes-fast-paths.md#5-flat-magetypes-transcendentals-vs-magemath) compares when to pick each.
+
+The following complete chain is adapted from `zen/linear-srgb` at
+`6bae33ee657d0cc29eaae6fd869894ec78a41b1c`
+([`gamma_to_linear_slice` → `gamma_to_linear_slice_tier`](https://github.com/imazen/linear-srgb/blob/6bae33ee657d0cc29eaae6fd869894ec78a41b1c/src/simd.rs#L1313)
+and the [scalar tail helper](https://github.com/imazen/linear-srgb/blob/6bae33ee657d0cc29eaae6fd869894ec78a41b1c/src/scalar.rs#L300)),
+written with the unified `#[attune]` and `attuned!` macros.
 This example requires the default `w512` feature; `avx512` enables its native V4
 variant. The other tiers polyfill the same logical 16-lane shape.
 
@@ -27,7 +28,7 @@ fn gamma_to_linear_scalar(encoded: f32, gamma: f32) -> f32 {
     }
 }
 
-#[archmage::magetypes(define(f32x16), v4(cfg(avx512)), v3, neon, wasm128, scalar)]
+#[attune(_*_t, +v4(cfg(avx512)), define(f32x16))]
 fn gamma_to_linear_slice_tier(token: Token, values: &mut [f32], gamma: f32) {
     let (chunks, remainder) = values.as_chunks_mut::<16>();
     for chunk in chunks {
@@ -41,9 +42,9 @@ fn gamma_to_linear_slice_tier(token: Token, values: &mut [f32], gamma: f32) {
 }
 
 pub fn gamma_to_linear_slice(values: &mut [f32], gamma: f32) {
-    incant!(
+    attuned!(
         gamma_to_linear_slice_tier(values, gamma),
-        [v4, v3, neon, wasm128, scalar]
+        [_v4(cfg(avx512)), _v3, _neon, _wasm128, _scalar]
     )
 }
 
@@ -56,16 +57,16 @@ for value in values { assert!((value - 0.5_f32.powf(2.2)).abs() < 1e-4); }
 For finite normalized samples and positive gamma, this decodes a simple power
 transfer curve. It is not the piecewise sRGB transfer function. The vector body
 uses a polynomial approximation, while the tail uses scalar `powf`: do not
-promise bit identity between them. Test the consumer's error budget, especially
-around chunk boundaries. The code and all lengths through two chunks plus a
-tail are tested in `magetypes/tests/doc_examples.rs`.
+promise bit identity between them (for bit-identical SIMD bodies and scalar
+tails, use [`magemath`](@/magemath/_index.md#inline-vector-kernels-and-matching-scalar-tails)).
+Test the consumer's error budget, especially around chunk boundaries.
 
 ## Exact calls and runtime repair
 
 | Call | Additional work versus its unchecked polynomial | Domain / behavior |
 |---|---|---|
-| `v.log2_midp()` | Three compare/blend stages | Repair zero to negative infinity, negatives to NaN, positive infinity to infinity. This is not a universal guarantee of NaN payload or subnormal accuracy. |
-| `v.exp2_midp()` | Two min/max clamps, two comparisons, two blends | Clamp the polynomial input, return zero below −126 and infinity at/above 128. Subnormal outputs are deliberately not constructed. NaN behavior inherits backend min/max differences. |
+| `v.log2_midp()` | Three compare/blend stages | Repair zero to negative infinity, negatives and NaN to NaN, positive infinity to infinity. Subnormal inputs are not rescaled. |
+| `v.exp2_midp()` | Two min/max clamps, two comparisons, two blends | Clamp the polynomial input (preserving quiet NaN across all backends as of 0.9.32), return zero below −126 and infinity at/above 128. Subnormal outputs are deliberately not constructed. |
 | `v.ln_midp()` / `v.log10_midp()` | `log2_midp` repairs plus scaling | Same logarithm domain restrictions. |
 | `v.exp_midp()` | Input scaling plus `exp2_midp` repairs | Same clamping policy after scaling. |
 | `v.pow_midp(gamma)` | Composes repaired log/exp and scaling | Not a full scalar `powf` replacement over all negative bases, exponents, NaNs and infinities. |

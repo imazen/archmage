@@ -4,6 +4,8 @@
 
 use crate::tokens::SimdToken;
 
+/// **Deprecated:** Use concrete tier tokens ([`X64V3Token`](crate::X64V3Token), [`X64V4Token`](crate::X64V4Token), [`NeonToken`](crate::NeonToken)) or tier traits ([`HasX64V2`], [`HasX64V4`], [`HasNeon`]) instead.
+///
 /// Marker trait for tokens that provide 128-bit SIMD.
 #[allow(deprecated)]
 #[deprecated(
@@ -12,6 +14,8 @@ use crate::tokens::SimdToken;
 )]
 pub trait Has128BitSimd: SimdToken {}
 
+/// **Deprecated:** Use concrete tier tokens ([`X64V3Token`](crate::X64V3Token), [`X64V4Token`](crate::X64V4Token), [`NeonToken`](crate::NeonToken)) or tier traits ([`HasX64V2`], [`HasX64V4`], [`HasNeon`]) instead.
+///
 /// Marker trait for tokens that provide 256-bit SIMD.
 #[allow(deprecated)]
 #[deprecated(
@@ -20,6 +24,8 @@ pub trait Has128BitSimd: SimdToken {}
 )]
 pub trait Has256BitSimd: Has128BitSimd {}
 
+/// **Deprecated:** Use concrete tier tokens ([`X64V3Token`](crate::X64V3Token), [`X64V4Token`](crate::X64V4Token), [`NeonToken`](crate::NeonToken)) or tier traits ([`HasX64V2`], [`HasX64V4`], [`HasNeon`]) instead.
+///
 /// Marker trait for tokens that provide 512-bit SIMD.
 #[allow(deprecated)]
 #[deprecated(

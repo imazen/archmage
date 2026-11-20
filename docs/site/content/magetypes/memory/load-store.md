@@ -9,7 +9,7 @@ The image-plane example handles every length, including the scalar tail:
 ```rust
 use archmage::prelude::*;
 
-#[magetypes(define(f32x8), v3, neon, wasm128, scalar)]
+#[attune(_*_t, define(f32x8))]
 fn square_impl(token: Token, plane: &mut [f32]) {
     let (chunks, tail) = f32x8::partition_slice_mut_t(token, plane);
     for chunk in chunks {
@@ -20,7 +20,7 @@ fn square_impl(token: Token, plane: &mut [f32]) {
 }
 
 pub fn square(plane: &mut [f32]) {
-    incant!(square_impl(plane), [v3, neon, wasm128, scalar])
+    attuned!(square_impl(plane));
 }
 
 let mut values = [3.0; 11];
@@ -44,7 +44,7 @@ methods. Do not substitute a raw pointer cast for these reference-based calls.
 
 For reusable `T: F32x8Backend` helpers, see
 [generic kernels](@/magetypes/examples/generic-kernels.md). Such helpers inline
-into the `#[magetypes]` context; an inline attribute alone does not enable ISA
+into the `#[attune]` context; an inline attribute alone does not enable ISA
 features.
 
 ## Alignment and non-temporal stores

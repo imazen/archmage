@@ -63,16 +63,17 @@ one-argument conversions such as `f32x4::from_i32x4(v)`. The generic types take
 the token first, like the constructors: `f32x4::from_i32x4_t(token, v)`.
 
 Keep function token parameters, dispatch calls, and public vector signatures
-unchanged during this rename. Existing `#[magetypes(define(...), ...)]` aliases
-refer to the same types and support both method spellings.
+unchanged during this rename. `#[attune(..., define(...))]` aliases (and legacy
+`#[magetypes(define(...), ...)]` aliases) refer to the same types and support
+both method spellings.
 
-## The unified-macro beta does not change constructors
+## The unified macros do not change constructors
 
-The 0.9.31 beta archmage macros (`#[attune]`, `attuned!`, `reattune!`) add
-definition and dispatch syntax but change no constructor signature: `_t(token,
-...)` remains the token-first spelling, and the short names have not become
-tokenless. See [the unified macro guide](ATTUNE.md) for that beta's API and its
-own migration mapping.
+The unified archmage macros (`#[attune]`, `attuned!`, `reattune!`, stable in
+0.9.32+) replace legacy definition and dispatch syntax without changing any
+constructor signature: `_t(token, ...)` remains the token-first spelling, and
+the short names have not become tokenless. See [the unified macro
+guide](ATTUNE.md) for the API and migration mapping.
 
 ## Planned 0.10 boundary
 

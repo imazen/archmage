@@ -1,6 +1,6 @@
 //! # magetypes
 //!
-//! [Guide](https://imazen.github.io/archmage/) · [Intrinsics browser](https://imazen.github.io/archmage/intrinsics/) · [Archmage API](https://docs.rs/archmage/latest/archmage/) · [Magetypes API](https://docs.rs/magetypes/latest/magetypes/)
+//! [Guide](https://imazen.github.io/archmage/) · [Intrinsics browser](https://imazen.github.io/archmage/intrinsics/) · [Archmage API](https://docs.rs/archmage/latest/archmage/) · [Magetypes API](https://docs.rs/magetypes/latest/magetypes/) · [Magemath API](https://docs.rs/magemath/latest/magemath/)
 //!
 //! Token-gated SIMD vectors with natural operators. This complete kernel is adapted
 //! from zenfilters; its generated caller establishes the target-feature context.
@@ -9,7 +9,7 @@
 //! #![forbid(unsafe_code)]
 //! use archmage::prelude::*;
 //!
-//! #[magetypes(define(f32x8), v3, neon, wasm128, scalar)]
+//! #[attune(_*_t, define(f32x8))]
 //! fn gain_impl(token: Token, plane: &mut [f32], gain: f32) {
 //!     let factor = f32x8::splat_t(token, gain);
 //!     let (chunks, tail) = f32x8::partition_slice_mut_t(token, plane);
@@ -22,9 +22,8 @@
 //! }
 //!
 //! pub fn apply_gain(plane: &mut [f32], gain: f32) {
-//!     incant!(gain_impl(plane, gain), [v3, neon, wasm128, scalar])
+//!     attuned!(gain_impl(plane, gain))
 //! }
-//!
 //!
 //! let mut plane = [2.0; 11];
 //! apply_gain(&mut plane, 0.5);

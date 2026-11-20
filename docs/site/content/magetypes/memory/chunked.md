@@ -5,7 +5,7 @@ weight = 4
 
 The standard pattern for processing large arrays with SIMD: iterate in fixed-size chunks, handle the remainder with scalar code.
 
-See the complete [`#[magetypes]` image-plane loop](@/magetypes/memory/load-store.md)
+See the complete [`#[attune]` image-plane loop](@/magetypes/memory/load-store.md)
 and [reusable generic helper](@/magetypes/examples/generic-kernels.md).
 Dispatch once, iterate array chunks, and handle the remainder explicitly.
 For a reduction, accumulate in a vector inside that same context and call

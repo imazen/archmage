@@ -49,7 +49,7 @@ pub(super) static AVX512_FP16_DISABLED: AtomicBool = AtomicBool::new(false);
 ///
 /// SSE2 is the x86_64 ABI baseline — every x86_64 CPU has it. However, Rust
 /// still requires #[target_feature(enable = "sse2")] for SSE2 intrinsics to
-/// be safe. This token provides that via `#[arcane]`.
+/// be safe. This token provides that via `#[attune]`.
 ///
 /// On x86_64 with baseline SSE2, summon() returns Some. Soft-float x86_64 targets
 /// (including x86_64-unknown-none and x86_64-unknown-uefi) and 32-bit x86 use stub
@@ -131,7 +131,7 @@ impl X64V1Token {
         Self { _private: () }
     }
 
-    /// Deprecated alias for [`X64V1Token::from_context`].
+    /// **Deprecated:** Use [`X64V1Token::from_context`] instead.
     ///
     /// Identical in every respect — same `#[target_feature]` gate, same
     /// safe-call rules. The name predates the compiler-checked design
@@ -368,7 +368,7 @@ impl X64V2Token {
         Self { _private: () }
     }
 
-    /// Deprecated alias for [`X64V2Token::from_context`].
+    /// **Deprecated:** Use [`X64V2Token::from_context`] instead.
     ///
     /// Identical in every respect — same `#[target_feature]` gate, same
     /// safe-call rules. The name predates the compiler-checked design
@@ -690,7 +690,7 @@ impl X64CryptoToken {
         Self { _private: () }
     }
 
-    /// Deprecated alias for [`X64CryptoToken::from_context`].
+    /// **Deprecated:** Use [`X64CryptoToken::from_context`] instead.
     ///
     /// Identical in every respect — same `#[target_feature]` gate, same
     /// safe-call rules. The name predates the compiler-checked design
@@ -1051,7 +1051,7 @@ impl X64V3Token {
         Self { _private: () }
     }
 
-    /// Deprecated alias for [`X64V3Token::from_context`].
+    /// **Deprecated:** Use [`X64V3Token::from_context`] instead.
     ///
     /// Identical in every respect — same `#[target_feature]` gate, same
     /// safe-call rules. The name predates the compiler-checked design
@@ -1468,7 +1468,7 @@ impl X64V3CryptoToken {
         Self { _private: () }
     }
 
-    /// Deprecated alias for [`X64V3CryptoToken::from_context`].
+    /// **Deprecated:** Use [`X64V3CryptoToken::from_context`] instead.
     ///
     /// Identical in every respect — same `#[target_feature]` gate, same
     /// safe-call rules. The name predates the compiler-checked design
@@ -1930,7 +1930,7 @@ impl X64V3GfniCryptoToken {
         Self { _private: () }
     }
 
-    /// Deprecated alias for [`X64V3GfniCryptoToken::from_context`].
+    /// **Deprecated:** Use [`X64V3GfniCryptoToken::from_context`] instead.
     ///
     /// Identical in every respect — same `#[target_feature]` gate, same
     /// safe-call rules. The name predates the compiler-checked design
@@ -2406,7 +2406,7 @@ impl X64V4Token {
         Self { _private: () }
     }
 
-    /// Deprecated alias for [`X64V4Token::from_context`].
+    /// **Deprecated:** Use [`X64V4Token::from_context`] instead.
     ///
     /// Identical in every respect — same `#[target_feature]` gate, same
     /// safe-call rules. The name predates the compiler-checked design
@@ -2924,7 +2924,7 @@ impl X64V4xToken {
         Self { _private: () }
     }
 
-    /// Deprecated alias for [`X64V4xToken::from_context`].
+    /// **Deprecated:** Use [`X64V4xToken::from_context`] instead.
     ///
     /// Identical in every respect — same `#[target_feature]` gate, same
     /// safe-call rules. The name predates the compiler-checked design
@@ -3493,7 +3493,7 @@ impl Avx512Fp16Token {
         Self { _private: () }
     }
 
-    /// Deprecated alias for [`Avx512Fp16Token::from_context`].
+    /// **Deprecated:** Use [`Avx512Fp16Token::from_context`] instead.
     ///
     /// Identical in every respect — same `#[target_feature]` gate, same
     /// safe-call rules. The name predates the compiler-checked design
@@ -3807,7 +3807,7 @@ fn avx512_fp16_detect() -> Option<Avx512Fp16Token> {
     }
 }
 
-/// Type alias for [`X64V1Token`].
+/// **Deprecated:** Use [`X64V1Token`] instead.
 #[deprecated(
     since = "0.9.9",
     note = "Use X64V1Token instead. Sse2Token is misleading — this is an x86_64-only token (SSE2 is the x86_64 baseline). On 32-bit x86, summon() returns None."
@@ -3817,7 +3817,7 @@ pub type Sse2Token = X64V1Token;
 /// Type alias for [`X64V3Token`].
 pub type Desktop64 = X64V3Token;
 
-/// Type alias for [`X64V3Token`].
+/// **Deprecated:** Use [`X64V3Token`] instead.
 #[deprecated(
     since = "0.9.9",
     note = "Use X64V3Token or Desktop64 instead. Avx2FmaToken is misleading — V3 includes BMI1/2, F16C, and more, not just AVX2+FMA."

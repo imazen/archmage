@@ -1,6 +1,6 @@
 # Intrinsics Guide for archmage/magetypes Implementers
 
-> **For users**: Use `#[arcane]`/`#[rite]` instead of manual `#[target_feature]`. This guide is an implementer reference for raw intrinsics.
+> **For users**: Use `#[attune]` (with `attuned!` / `reattune!`; see [`ATTUNE.md`](ATTUNE.md)) instead of manual `#[target_feature]`. This guide is an implementer reference for raw intrinsics.
 
 This guide covers platform differences, naming conventions, and performance pitfalls when implementing SIMD types using raw intrinsics.
 

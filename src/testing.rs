@@ -2,8 +2,8 @@
 //!
 //! [`for_each_token_permutation`] runs a closure once for every unique
 //! combination of SIMD tokens disabled on the current CPU. This verifies
-//! that dispatch code (via `incant!` or manual `summon()` checks) correctly
-//! handles all fallback tiers.
+//! that dispatch code (via [`crate::attuned!`], [`#[attune(dispatch)]`](crate::attune), or manual
+//! `summon()` checks) correctly handles all fallback tiers.
 //!
 //! Token disabling is process-wide, so a mutex serializes all permutation
 //! runs and manual disable/enable calls. Use [`lock_token_testing`] when

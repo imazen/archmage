@@ -7,12 +7,12 @@ weight = 2
 This is the real SrcOver helper from `zen/zenblend` at
 `636c847989a4c662d3a56c7ddd3f7e04387c0b53`.
 The production chain is [`blend.rs`'s SrcOver arm](https://github.com/imazen/zenblend/blob/636c847989a4c662d3a56c7ddd3f7e04387c0b53/src/blend.rs#L13)
-→ [`simd::blend_src_over_row` / `incant!`](https://github.com/imazen/zenblend/blob/636c847989a4c662d3a56c7ddd3f7e04387c0b53/src/simd/mod.rs#L212)
+→ [`simd::blend_src_over_row` dispatch](https://github.com/imazen/zenblend/blob/636c847989a4c662d3a56c7ddd3f7e04387c0b53/src/simd/mod.rs#L212)
 → the NEON/WASM/scalar entry →
 [`portable::blend_src_over_row<T: F32x4Backend>`](https://github.com/imazen/zenblend/blob/636c847989a4c662d3a56c7ddd3f7e04387c0b53/src/simd/portable.rs#L12).
 
 For this standalone version, the helper is renamed `blend_kernel`, and one
-`#[magetypes]` wrapper replaces the separate forwarding functions. The helper
+`#[attune(_*_t)]` family replaces the separate forwarding functions. The helper
 body is unchanged; the production x86 specialization is omitted in favor of
 the same generic body. This makes every part of the call chain visible:
 
@@ -34,13 +34,13 @@ fn blend_kernel<T: F32x4Backend>(token: T, fg: &mut [f32], bg: &[f32]) {
     }
 }
 
-#[magetypes(v3, neon, wasm128, scalar)]
+#[attune(_*_t)]
 fn blend_entry(token: Token, fg: &mut [f32], bg: &[f32]) {
     blend_kernel(token, fg, bg);
 }
 
 pub fn blend_row(fg: &mut [f32], bg: &[f32]) {
-    incant!(blend_entry(fg, bg), [v3, neon, wasm128, scalar])
+    attuned!(blend_entry(fg, bg));
 }
 
 
@@ -59,8 +59,8 @@ shorter buffer; unmatched pixels and trailing incomplete pixels are left alone,
 matching the source helper. This is not an image-stride or color-conversion API.
 
 The `#[inline]` helper is generic over a statically resolved backend. The
-`#[magetypes]` caller supplies the concrete target features. An inline attribute
-alone does not do that. `incant!` runs once per row, outside the pixel loop.
+`#[attune]` caller supplies the concrete target features. An inline attribute
+alone does not do that. `attuned!` runs once per row, outside the pixel loop.
 A performance-sensitive extracted helper can use `#[inline(always)]` when
 required by measured codegen; it still needs the generated caller.
 

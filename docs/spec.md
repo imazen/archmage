@@ -1,5 +1,7 @@
 # Archmage Specification
 
+> **Primary macro interface (`0.9.32+`):** [`docs/ATTUNE.md`](ATTUNE.md) specifies the unified `#[attune]`, `attuned!`, and `reattune!` macros for feature bodies, proof wrappers, families, and dispatch. Legacy `#[arcane]`, `#[rite]`, `#[magetypes]`, `#[autoversion]`, and `incant!` remain supported and share the same token registry and boundary emitters described below.
+
 This document is the authoritative reference for archmage's token architecture, safety model, and intrinsic classification. It captures design decisions and open questions so context survives across sessions.
 
 ## 1. Token Architecture
@@ -132,11 +134,11 @@ HasArm64V3 → HasNeonSha3
 
 ### 1.5 Cross-Platform Behavior
 
-All token types are defined on all architectures. On unsupported architectures, `summon()` returns `None`. This enables cross-platform code that compiles everywhere but only dispatches on the right arch.
+All token types are defined on all architectures. On unsupported architectures, `summon()` returns `None`. This enables cross-platform code that compiles everywhere and dispatches only on matching hardware.
 
-**Cfg-out default:** `#[arcane]` and `#[rite]` only emit code on the matching architecture. On wrong architectures, no function is generated — less dead code, cleaner binaries. Direct call sites referencing the function by name must use `#[cfg(target_arch)]` guards or `incant!` (which cfg-gates automatically). No `#[cfg]` is needed on the function *definitions* — the macros handle that.
+**Cfg-out default:** `#[attune]` (and legacy `#[arcane]` / `#[rite]`) emits architecture-specific functions only on the matching `target_arch`. On unsupported architectures, no function is generated — less dead code, cleaner binaries. Direct call sites referencing a single-architecture function by name must use `#[cfg(target_arch)]` guards, or dispatch through `attuned!` / `#[attune(dispatch)]` (or legacy `incant!`), which cfg-gate candidate calls automatically. No manual `#[cfg(target_arch)]` is needed on `#[attune]` function definitions.
 
-**`incant!` is the recommended dispatch mechanism** — it wraps each tier call in `#[cfg(target_arch)]` blocks, so it works correctly with cfg'd-out functions. No manual `#[cfg]` guards needed at call sites.
+**`attuned!` and `#[attune(dispatch)]` are the primary dispatch mechanisms** — they wrap each candidate call in `#[cfg(target_arch)]` blocks automatically, so portable call sites need no manual `#[cfg]` guards.
 
 Stub modules for token types (not macro-generated functions): `x86_stubs.rs`, `arm_stubs.rs`, `wasm_stubs.rs`.
 
@@ -150,9 +152,9 @@ For every token `T`:
 target_features_in_macro(T) ⊆ features_checked_in_summon(T)
 ```
 
-The `#[arcane]` / `#[rite]` macros read the token type, look up its features via `token_to_features()`, and generate `#[target_feature(enable = "...")]`. If `summon()` checked fewer features than the macro enables, it would hand out tokens on CPUs that lack an enabled feature, and the compiler could emit instructions the CPU does not support — **undefined behavior** (illegal instructions, crashes, silent data corruption).
+`#[attune]` (and legacy `#[arcane]` / `#[rite]`) resolves the token type or tier selector against `token-registry.toml` and generates `#[target_feature(enable = "...")]`. If `summon()` checked fewer features than the macro enables, it would hand out tokens on CPUs that lack an enabled feature, and the compiler could emit instructions the CPU does not support — **undefined behavior** (illegal instructions, crashes, silent data corruption).
 
-The reverse direction (summon checks more than the macro enables) is safe but wasteful.
+The reverse direction (summon checks more than the macro enables) is safe, only conservative.
 
 ### 2.2 Rust 1.86-1.87 Intrinsic Safety
 
@@ -161,8 +163,8 @@ Rust 1.86 stabilized `target_feature_11` (safe `fn` with `#[target_feature]`, sa
 ```rust
 use archmage::prelude::*;
 
-#[arcane(import_intrinsics)]
-fn example(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
+#[attune(wrap, import_intrinsics)]
+fn example(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
     let a = _mm256_loadu_ps(data);
     let b = _mm256_add_ps(a, a);
     let mut out = [0.0; 8];
@@ -171,7 +173,7 @@ fn example(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 }
 ```
 
-This means archmage doesn't need to wrap most intrinsics. The `#[arcane]` macro generates `#[target_feature]` inner functions; value-based intrinsics are automatically safe inside them.
+This means archmage doesn't need to wrap value intrinsics. `#[attune(wrap)]` (and `_tier_t` proof wrappers) generate `#[target_feature]` inner functions; value-based intrinsics are safe inside them.
 
 Only pointer-based operations and processor-state access remain unsafe:
 - Loads from `*const T` (`_mm256_loadu_ps`, etc.)
@@ -179,64 +181,60 @@ Only pointer-based operations and processor-state access remain unsafe:
 - Gather/scatter operations
 - MXCSR, transactional-memory and state save/restore intrinsics
 
-`_mm_prefetch` takes a pointer but is safe: a prefetch never faults.
+`_mm_prefetch` takes a pointer and is safe: a prefetch never faults.
 
 For safe memory access, use `import_intrinsics` which provides reference-based alternatives (accepts `&[T; N]`/`&mut [T; N]` instead of raw pointers).
 
-### 2.3 How `#[arcane]` and `#[rite]` Work
+### 2.3 How `#[attune]` (and Legacy `#[arcane]` / `#[rite]`) Work
 
-Both macros parse the token type from your function signature to determine which `#[target_feature]` attributes to emit. The token type *is* the feature selector — `X64V3Token` maps to `avx2,fma,...`, `X64V4Token` maps to `avx512f,avx512bw,...`, and so on. This mapping is maintained in `token-registry.toml` and compiled into the proc macro via `token_to_features()`.
+`#[attune]` determines `#[target_feature]` attributes from an explicit tier (`#[attune(v3)]`), a tier suffix (`#[attune] fn work_v3(...)` or `work_v3_t(...)`), a family selector (`#[attune(_*_t, ...)]`, `#[attune(dispatch)]`), or a proof parameter with `wrap` (`#[attune(wrap)] fn work(token: X64V3Token, ...)`). Legacy `#[arcane]` and `#[rite]` parse the token parameter or tier directly. All mappings come from `token-registry.toml` (see [`docs/ATTUNE.md`](ATTUNE.md) for the full grammar).
 
-Passing the same token type through a call hierarchy means every function gets the same `#[target_feature]` attributes. LLVM sees matching targets and inlines freely — no optimization boundary. When a callee needs features its caller lacks — a stronger token, or a caller bounded by a tier trait and so compiled at that lower tier — LLVM hits a target-feature boundary and can't optimize across it, costing 4-6x (see `docs/PERFORMANCE.md`).
+Passing matching features through a call hierarchy lets LLVM inline freely with no optimization boundary. When a callee requires features its caller lacks — a stronger token, or a caller bounded by a tier trait and compiled at that lower tier — LLVM hits a target-feature boundary and cannot inline across it, costing 4–6x in hot loops (see `docs/PERFORMANCE.md`).
 
-#### Sibling Expansion (default)
+#### Sibling Expansion (default for proof wrappers)
 
-`#[arcane]` generates two functions at the same scope:
+`#[attune(wrap)]` (and `_tier_t` proof wrappers, plus legacy `#[arcane]`) generates two functions at the same scope:
 
 ```rust
+use archmage::prelude::*;
+
 // Input:
-#[arcane(import_intrinsics)]
-fn kernel(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
-    let v = _mm256_setzero_ps();  // In scope from import_intrinsics
-    // ...
+#[attune(wrap, import_intrinsics)]
+fn kernel(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
+    let v = _mm256_loadu_ps(data);
+    let mut out = [0.0; 8];
+    _mm256_storeu_ps(&mut out, v);
+    out
 }
 ```
 
-The macro generates the target-feature boundary and its justified internal call.
+The macro generates the `#[inline(always)]` safe outer wrapper and a private `#[doc(hidden)]` `__arcane_*` sibling carrying `#[target_feature]`.
 User code does not implement that boundary; see the expansion tests for exact output.
 
-Both functions live at the same scope level. For methods, both are in the same `impl` block, so `self`, `Self`, and associated constants resolve naturally.
+Both functions live at the same scope level. For inherent receiver methods, both are in the same `impl` block, so `self`, `Self`, and associated constants resolve naturally; receiverless associated functions pass `in_impl` so sibling calls resolve as `Self::name`.
 
-#### Nested Expansion (`nested` or `_self = Type`)
+#### Nested Expansion (`in_trait`, `nested`, or `_self = Type`)
 
-For trait impls (where sibling would add methods not in the trait definition), use `#[arcane(nested)]` or `#[arcane(_self = Type)]`:
+For trait impls (where sibling expansion would add methods not in the trait definition), use `#[attune(wrap, in_trait)]` (receiverless) or `#[attune(wrap, _self = Type)]` (with receiver; legacy `#[arcane(nested)]` / `#[arcane(_self = Type)]`):
 
-The macro emits a target-feature function plus a token-justified boundary
-call. That implementation belongs to archmage; callers use `#[arcane]` or
-`#[magetypes]`, and helpers use a matching `#[rite]` context.
+The macro emits a block-local `#[target_feature]` function plus a token-justified boundary call. Callers use `#[attune]` (or legacy `#[arcane]` / `#[magetypes]`), and helpers use a matching direct feature context.
 
-#### Options
+#### Key `#[attune]` forms
 
-| Option | Effect |
-|--------|--------|
-| `#[arcane]` | Sibling expansion, cfg-out on wrong arch |
-| `#[arcane(nested)]` | Nested inner function |
-| `#[arcane(_self = Type)]` | Implies nested, replaces `self`→`_self` |
-| `#[arcane(inline_always)]` | Force `#[inline(always)]` (nightly only) |
+| Form | Effect |
+|------|--------|
+| `#[attune(wrap)]` | Proof wrapper from parameter token/trait bound; sibling expansion, cfg-out on wrong arch |
+| `#[attune] fn f_v3_t(...)` | Inferred V3 proof wrapper (inserts token parameter if omitted) |
+| `#[attune(v3)]` / `#[attune] fn f_v3(...)` | Direct V3 feature body (`#[target_feature]` + `#[inline]`, no wrapper) |
+| `#[attune(_*, _*_t, dispatch)]` | Portable family generation (`v3`, `neon`, `wasm128`, `scalar`; add AVX-512 with `+v4(cfg(avx512))`) |
+| `#[attune(wrap, in_impl)]` | Receiverless associated function inside an inherent `impl` |
+| `#[attune(wrap, _self = Type)]` | Trait impl method with receiver (implies nested expansion) |
 
-#### `#[rite]`
+#### Direct Feature Bodies (`#[attune(v3)]`, `_*`, and legacy `#[rite]`)
 
-`#[rite]` applies `#[target_feature]` + `#[inline]` directly to the function, with no wrapper. When the caller already has matching features, LLVM inlines freely — no boundary. **`#[rite]` should be the default.** Use `#[arcane]` only at entry points (the first call from non-SIMD code), and `#[rite]` for everything called from within SIMD code.
+Direct feature bodies apply `#[target_feature]` + `#[inline]` directly to the function, with no wrapper. When the caller already has matching or superset features, LLVM inlines freely — no boundary. Use proof wrappers (`#[attune(wrap)]` / `_tier_t`) at entry points from non-SIMD code, and direct feature bodies (`#[attune(v3)]` / `#[attune(_v3, _neon)]` / `#[attune(_*)]`) for helpers called within SIMD code.
 
-`#[rite]` works in three modes:
-
-1. **Token-based** (`#[rite]`): reads the token type from the function signature
-2. **Tier-based** (`#[rite(v3)]`): specifies features via tier name, no token parameter needed
-3. **Multi-tier** (`#[rite(v3, v4, neon)]`): generates a suffixed variant for each tier (`fn_v3`, `fn_v4`, `fn_neon`), each with its own `#[target_feature]` and `#[cfg(target_arch)]`
-
-Token-based and tier-based produce identical output. Multi-tier generates one function per tier. Since Rust 1.86+, all variants are safe to call from matching `#[arcane]` or `#[rite]` contexts.
-
-Token-based `#[rite]` also accepts `impl Trait` bounds and generic token parameters. It does not work on trait impl methods, because Rust rejects `#[target_feature]` on a safe trait method; use `#[arcane(_self = Type)]` there.
+Direct feature bodies cannot be applied directly to safe trait impl methods because Rust rejects `#[target_feature]` on safe trait methods; use `#[attune(wrap, _self = Type)]` or delegate to a free function there.
 
 ## 3. Intrinsic Safety Classification
 
@@ -290,7 +288,7 @@ Token detection combines compile-time and runtime checks:
 1. `compiled_with()` — returns `Some(true)` if the features are enabled for the whole crate (`-Ctarget-cpu`, `-Ctarget-feature`) and `testable_dispatch` is off, `Some(false)` on the wrong architecture, and `None` when only runtime detection can tell. A function's own `#[target_feature]` attribute does not change it: `cfg(target_feature)` is evaluated per crate.
 2. `summon()` — returns `Some(token)` if the CPU supports the required features. Uses atomic caching for fast repeated calls (~1.3 ns). When `compiled_with()` returns `Some(true)`, `summon()` compiles away entirely.
 
-Inside an `#[arcane]` function, `summon()` is still a cached runtime check. To get a token for the function's own tier, call `from_context()`, which rustc accepts there and which compiles to nothing.
+Inside an `#[attune]` feature body (or legacy `#[arcane]` / `#[rite]`), `summon()` is still a cached runtime check. To get a token for the function's own tier, call `from_context()`, which rustc accepts there and which compiles to nothing.
 
 ### 4.2 WASM Special Case
 

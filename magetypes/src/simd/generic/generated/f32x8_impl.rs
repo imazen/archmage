@@ -1034,7 +1034,7 @@ impl f32x8<archmage::X64V3Token> {
         self.0
     }
 
-    /// Deprecated spelling of [`Self::from_raw_t`].
+    /// **Deprecated:** Use [`Self::from_raw_t`] (or [`Self::from_raw`] in a matching feature context) instead.
     #[deprecated(
         note = "Use from_raw_t(token, v), or from_raw(v) in a matching feature context; from_m256 is removed in magetypes 0.10."
     )]
@@ -1073,7 +1073,7 @@ impl f32x8<archmage::X64V3Token> {
     /// Wrap a raw `__m256` in a matching target-feature context.
     ///
     /// Rust requires the caller to enable the `v3` tier's features.
-    /// Use an archmage `#[rite(v3)]` helper or `#[arcane]` entry point.
+    /// Use an archmage `#[attune(v3)]` helper or `#[attune(wrap)]` entry point.
     #[forbid(unsafe_code)]
     /// # Safety
     /// The CPU must support the enabled target features. Safe calls require a

@@ -1,6 +1,8 @@
 # Transcendental Functions for SIMD Types
 
-This document describes the algorithms, accuracy, and benchmark results for transcendental function implementations in archmage's SIMD types.
+This document describes the algorithms, accuracy, and benchmark results for the flat transcendental methods on `magetypes` SIMD vector types (`f32x4`, `f32x8`, `f32x16`).
+
+> **Looking for configurable domains, subnormal policies, `BitExact` cross-ISA rounding, `Highp` `powf`, dedicated `log1p`, or matching scalar tails?** Use the [`magemath`](../magemath/README.md) crate (`0.1.0`) — see [`docs/MAGEMATH-MIGRATION.md`](MAGEMATH-MIGRATION.md) and the [Magemath guide](https://imazen.github.io/archmage/magemath/). The flat `magetypes` methods below remain supported and unchanged.
 
 ## Accuracy Summary
 
@@ -118,17 +120,17 @@ log and pow functions also have `_unchecked`; the midp tier adds `_precise`.
 
 **Edge cases**: 0 → -inf, negative → NaN, +inf → +inf for the midp log functions. The lowp logs have no edge handling: results for 0 and negatives are finite and meaningless.
 
-**NaN inputs are not handled, and the results differ by backend** (measured 2026-11-05): among the operations listed below, only `cbrt_midp` returns NaN on all four measured backends.
+**NaN handling (updated in 0.9.32)**: as of `magetypes 0.9.32`, all checked `midp` functions, `exp2_lowp` / `exp_lowp`, `sigmoid_midp` / `silu_midp`, and all `cbrt` variants propagate quiet `NaN` inputs across every backend (`ScalarToken`, x86 V3/V4, NEON, WASM SIMD128). Only the unmasked bit-hack logarithm paths (`log2_lowp`, `ln_lowp`, `log10_lowp`, `pow_lowp`, and `*_midp_unchecked` log/pow) interpret `NaN` bit patterns as integers and return finite artifacts:
 
-| Function, NaN input | Scalar, x86 V3 | NEON, WASM |
-|---------------------|----------------|------------|
-| `exp2_midp`, `exp_midp`, `exp2_lowp` | 2^-126 | NaN |
-| `log2_midp` | -383.4 | -383.4 |
-| `ln_midp` | -265.8 | -265.8 |
-| `log10_midp` | -115.4 | -115.4 |
-| `log2_lowp` | 128.6 | 128.6 |
-| `pow_midp(NaN, 2.4)` | 0 | 0 |
-| `cbrt_midp` | NaN | NaN |
+| Function, quiet `NaN` input (`0x7fc0_0000`) | Scalar, x86 V3/V4, NEON, WASM |
+|---------------------------------------------|-------------------------------|
+| `log2_midp`, `ln_midp`, `log10_midp` | `NaN` |
+| `exp2_midp`, `exp_midp`, `exp2_lowp`, `exp_lowp` | `NaN` |
+| `pow_midp(NaN, 2.4)`, `pow_midp(0.5, NaN)` | `NaN` |
+| `sigmoid_midp`, `silu_midp` | `NaN` |
+| `cbrt_midp`, `cbrt_lowp`, `cbrt_midp_precise` | `NaN` |
+| `log2_lowp`, `ln_lowp`, `log10_lowp`, `pow_lowp(NaN, 2.4)` | finite bit-hack artifact (`~128.6` for `log2_lowp`, `~3.36e38` for `pow_lowp`) |
+| `log2_midp_unchecked`, `ln_midp_unchecked`, `log10_midp_unchecked` | finite bit-hack artifact (`~ -383.4` for `log2_midp_unchecked`) |
 
 **Denormals**: only `cbrt_midp_precise` handles subnormal inputs, by rescaling. The other `_midp_precise` functions are the plain forms under another name, queued for removal, and do not: for 1e-42, `log2_midp_precise` returns about -127 instead of -139.5.
 
@@ -421,38 +423,44 @@ Benchmarked using `examples/sleef_comparison.rs` (required nightly for `portable
 - Higher accuracy (~1 ULP; midp exp2 is 1.9 ULP below x = 127.5 and 134.1 above)
 - Required for scientific computing or highest-precision work
 
-**CRITICAL: Use `#[arcane]` for proper inlining**
+**CRITICAL: Place vector loops inside `#[attune]` target-feature contexts**
 
-archmage SIMD types **must** be used within functions annotated with `#[arcane]` (at the entry point) or `#[rite]` (for internal helpers). Without this, every vector operation becomes a call across a `#[target_feature]` boundary (7.4× slower for the small kernel measured in [PERFORMANCE.md](PERFORMANCE.md)).
+`magetypes` SIMD operations must run inside functions compiled with matching CPU target features via `#[attune(_*_t, define(f32x8))]` (for multi-tier families dispatched by `attuned!`) or `#[attune(wrap)]` (for a single concrete token boundary). Without a target-feature boundary, every vector operation crosses a function call boundary instead of inlining (`7.4×` slower on the small kernel measured in [PERFORMANCE.md](PERFORMANCE.md)).
 
 ```rust
-use archmage::{arcane, X64V3Token, SimdToken};
+use archmage::prelude::*;
 use magetypes::simd::generic::f32x8;
 
-// WRONG - intrinsics won't inline
+// WRONG - intrinsics cannot inline into a baseline function
 fn slow_version(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
-    let v = f32x8::load_t(token, data);  // Function call overhead!
+    let v = f32x8::load_t(token, data);  // Cross-feature call per op!
     v.exp2_lowp().to_array()
 }
 
-// CORRECT - use #[arcane] macro
-#[arcane(import_intrinsics)]
-fn fast_version(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
-    let v = f32x8::load_t(token, data);  // Inline SIMD instructions!
+// CORRECT (single tier) - #[attune(wrap)] compiles the body with V3 features
+#[attune(wrap)]
+fn fast_v3(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
+    let v = f32x8::load_t(token, data);  // Inlined AVX2 + FMA instructions
     v.exp2_lowp().to_array()
 }
 
-// Usage
-if let Some(token) = X64V3Token::summon() {
-    let result = fast_version(token, &input);
+// CORRECT (portable family) - generates _v3_t, _neon_t, _wasm128_t, _scalar_t
+#[attune(_*_t, define(f32x8))]
+fn fast_portable_tier(token: Token, data: &[f32; 8]) -> [f32; 8] {
+    f32x8::load_t(token, data).exp2_lowp().to_array()
+}
+
+pub fn fast_portable(data: &[f32; 8]) -> [f32; 8] {
+    attuned!(fast_portable_tier(data))
 }
 ```
 
 **Recommendations:**
 - For preview/thumbnails: use `_lowp` functions (fastest)
 - For 8-12 bit color processing: use `_midp` functions (fast + accurate)
-- For 16-bit+ or scientific: consider sleef-rs or std::f32
-- Always wrap archmage code in `#[arcane]` functions
+- For configurable domains, subnormals, `BitExact` cross-ISA rounding, `Highp`, or matching scalar tails: use [`magemath`](MAGEMATH-MIGRATION.md)
+- For 16-bit+ scientific `< 1 ULP` across all floats: consider `sleef-rs` or `std::f32`
+- Always place vector loops inside `#[attune]` functions
 
 ## References
 

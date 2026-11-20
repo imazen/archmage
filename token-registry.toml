@@ -36,7 +36,7 @@ traits = ["Has128BitSimd"]
 display_name = "x86-64-v1"
 short_name = "v1"
 magetypes_namespace = "v3"
-doc = "Proof that SSE + SSE2 are available (x86-64-v1 baseline level).\n\nSSE2 is the x86_64 ABI baseline — every x86_64 CPU has it. However, Rust\nstill requires #[target_feature(enable = \"sse2\")] for SSE2 intrinsics to\nbe safe. This token provides that via `#[arcane]`.\n\nOn x86_64 with baseline SSE2, summon() returns Some. Soft-float x86_64 targets\n(including x86_64-unknown-none and x86_64-unknown-uefi) and 32-bit x86 use stub\ntokens whose summon() returns None."
+doc = "Proof that SSE + SSE2 are available (x86-64-v1 baseline level).\n\nSSE2 is the x86_64 ABI baseline — every x86_64 CPU has it. However, Rust\nstill requires #[target_feature(enable = \"sse2\")] for SSE2 intrinsics to\nbe safe. This token provides that via `#[attune]`.\n\nOn x86_64 with baseline SSE2, summon() returns Some. Soft-float x86_64 targets\n(including x86_64-unknown-none and x86_64-unknown-uefi) and 32-bit x86 use stub\ntokens whose summon() returns None."
 
 [[token]]
 name = "X64V2Token"
@@ -313,7 +313,7 @@ name = "Has128BitSimd"
 arch = "x86_64"
 x86_features = ["sse", "sse2"]
 magetypes_namespace = "v3"
-doc = "Marker trait for tokens that provide 128-bit SIMD."
+doc = "**Deprecated:** Use concrete tier tokens ([`X64V3Token`](crate::X64V3Token), [`X64V4Token`](crate::X64V4Token), [`NeonToken`](crate::NeonToken)) or tier traits ([`HasX64V2`], [`HasX64V4`], [`HasNeon`]) instead.\n\nMarker trait for tokens that provide 128-bit SIMD."
 deprecated = "Width traits are misleading (Has256BitSimd enables AVX, not AVX2). Use concrete tokens (X64V3Token) or tier traits (HasX64V2, HasX64V4) instead. Will be removed in v1.0."
 
 [[trait]]
@@ -322,7 +322,7 @@ arch = "x86_64"
 x86_features = ["sse", "sse2", "avx"]
 parents = ["Has128BitSimd"]
 magetypes_namespace = "v3"
-doc = "Marker trait for tokens that provide 256-bit SIMD."
+doc = "**Deprecated:** Use concrete tier tokens ([`X64V3Token`](crate::X64V3Token), [`X64V4Token`](crate::X64V4Token), [`NeonToken`](crate::NeonToken)) or tier traits ([`HasX64V2`], [`HasX64V4`], [`HasNeon`]) instead.\n\nMarker trait for tokens that provide 256-bit SIMD."
 deprecated = "Has256BitSimd only enables AVX, NOT AVX2 or FMA — causes suboptimal codegen. Use X64V3Token or HasX64V2 instead. Will be removed in v1.0."
 
 [[trait]]
@@ -331,7 +331,7 @@ arch = "x86_64"
 x86_features = ["sse", "sse2", "avx", "avx2", "avx512f"]
 parents = ["Has256BitSimd"]
 magetypes_namespace = "v4"
-doc = "Marker trait for tokens that provide 512-bit SIMD."
+doc = "**Deprecated:** Use concrete tier tokens ([`X64V3Token`](crate::X64V3Token), [`X64V4Token`](crate::X64V4Token), [`NeonToken`](crate::NeonToken)) or tier traits ([`HasX64V2`], [`HasX64V4`], [`HasNeon`]) instead.\n\nMarker trait for tokens that provide 512-bit SIMD."
 deprecated = "Width traits are misleading. Use X64V4Token or HasX64V4 instead. Will be removed in v1.0."
 
 [[trait]]

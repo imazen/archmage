@@ -1,3 +1,5 @@
+**Superseded (queued for deprecation):** Use [`#[attune(wrap)]`](attune) (to keep the unsuffixed name) or `#[attune] fn name_<tier>_t(...)` instead.
+
 Mark a function as an arcane SIMD function.
 
 This macro generates a safe wrapper around a `#[target_feature]` function.
@@ -162,7 +164,7 @@ Works with concrete tokens, `impl Trait` bounds, and generic parameters.
 #![feature(target_feature_inline_always)]
 
 #[arcane(inline_always)]
-fn fast_kernel(token: Avx2Token, data: &mut [f32]) {
+fn fast_kernel(token: X64V3Token, data: &mut [f32]) {
     // Inner function will use #[inline(always)]
 }
 ```

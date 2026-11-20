@@ -34,7 +34,7 @@ the current machine:
 ```rust
 use archmage::prelude::*;
 use archmage::testing::{for_each_token_permutation, CompileTimePolicy};
-#[magetypes(define(f32x8), v3, neon, wasm128, scalar)]
+#[attune(_*_t, define(f32x8))]
 fn gain_impl(token: Token, data: &mut [f32], gain: f32) {
     let (chunks, tail) = f32x8::partition_slice_mut_t(token, data);
     let factor = f32x8::splat_t(token, gain);
@@ -42,7 +42,7 @@ fn gain_impl(token: Token, data: &mut [f32], gain: f32) {
     for value in tail { *value *= gain; }
 }
 fn gain(data: &mut [f32], factor: f32) {
-    incant!(gain_impl(data, factor), [v3, neon, wasm128, scalar])
+    attuned!(gain_impl(data, factor))
 }
 let report = for_each_token_permutation(CompileTimePolicy::Warn, |perm| {
     for len in [0, 1, 7, 8, 9, 31, 32, 33] {

@@ -1,6 +1,6 @@
 # archmage [![CI](https://img.shields.io/github/actions/workflow/status/imazen/archmage/ci.yml?style=flat-square&label=CI)](https://github.com/imazen/archmage/actions/workflows/ci.yml) [![crates.io](https://img.shields.io/crates/v/archmage?style=flat-square)](https://crates.io/crates/archmage) [![lib.rs](https://img.shields.io/crates/v/archmage?style=flat-square&label=lib.rs&color=blue)](https://lib.rs/crates/archmage) [![docs.rs](https://img.shields.io/docsrs/archmage?style=flat-square)](https://docs.rs/archmage) [![MSRV](https://img.shields.io/badge/MSRV-1.89-blue?style=flat-square)](https://github.com/imazen/archmage/blob/main/MSRV.md) [![license](https://img.shields.io/crates/l/archmage?style=flat-square)](#license)
 
-[Guide](https://imazen.github.io/archmage/) · [Intrinsics browser](https://imazen.github.io/archmage/intrinsics/) · [Archmage API](https://docs.rs/archmage/latest/archmage/) · [Magetypes API](https://docs.rs/magetypes/latest/magetypes/)
+[Guide](https://imazen.github.io/archmage/) · [Intrinsics browser](https://imazen.github.io/archmage/intrinsics/) · [Archmage API](https://docs.rs/archmage/latest/archmage/) · [Magetypes API](https://docs.rs/magetypes/latest/magetypes/) · [Magemath API](https://docs.rs/magemath/latest/magemath/)
 
 Archmage lets you write SIMD code in Rust **without `unsafe`** — your crate can keep `#![forbid(unsafe_code)]` while calling intrinsics directly.
 
@@ -8,14 +8,17 @@ You pick a CPU tier, prove it's present once with `summon()`, and the type syste
 
 It runs on x86-64, AArch64 and WASM, is `no_std + alloc`, and needs Rust 1.89 or later.
 
-## 0.9.32: Cargo 1.100, attune proof opt-out, #154 coverage spans, and magemath
+## 0.9.32: Cargo 1.100, attune proof opt-out, #154/#193 macro fixes, and magemath
 
 This release follows `0.9.31` with Cargo 1.100 build-dir compatibility,
-`#[attune(..., suppress_const_test)]`, preserved author body brace spans for
-line coverage (#154), and the new [Magemath crate](magemath) alongside
-bug fixes in `magetypes` midp logs and `silu_midp(-inf)`. Existing macro names
-and constructor signatures remain supported; use matching versions of archmage
-and magetypes so their tokens come from the same archmage package.
+`#[attune(..., suppress_const_test)]`, safe-Rust callee shadowing and manual
+`#[target_feature]` soundness hardening (#193), preserved author body brace
+spans for line coverage (#154), and the new [Magemath crate](https://github.com/imazen/archmage/tree/main/magemath)
+alongside bug fixes in `magetypes` midp logs and `silu_midp(-inf)`. Earlier
+macro names (`#[arcane]`, `#[rite]`, `#[magetypes]`, `#[autoversion]`,
+`incant!`) remain warning-free in `0.9.32` and are queued for deprecation in
+the next release; use matching versions of archmage and magetypes so their
+tokens come from the same archmage package.
 
 ```rust
 use archmage::prelude::*;
@@ -166,7 +169,8 @@ Name your own functions the same way:
 | The tier chosen by hand | `X64V3Token::summon()` and an `if let` | `kernel_v3_t(token, …)` behind `#[cfg(target_arch = "x86_64")]`: [manual dispatch](https://imazen.github.io/archmage/archmage/dispatch/manual/) |
 
 Earlier attributes (`#[magetypes]`, `#[arcane]`, `#[rite]`, `#[autoversion]`,
-`incant!`) remain supported; see [docs/ATTUNE.md](https://github.com/imazen/archmage/blob/main/docs/ATTUNE.md)
+`incant!`) are superseded by `#[attune]` and `attuned!` and queued for
+deprecation in the next release; see [docs/ATTUNE.md](https://github.com/imazen/archmage/blob/main/docs/ATTUNE.md)
 for the spelling-by-spelling migration table, [tokens and tiers](https://imazen.github.io/archmage/archmage/getting-started/tokens/),
 [testing every tier](https://imazen.github.io/archmage/archmage/testing/dispatch-testing/),
 and [AVX-512](https://imazen.github.io/archmage/archmage/advanced/avx512/).
@@ -233,7 +237,7 @@ lists every `unsafe` in both crates.
   than x86-64, AArch64 and WASM, including 32-bit x86, run the scalar fallback.
 - Safe Rust calls into `#[target_feature]` helpers (`#[attune(v3)]`) inline with zero wrapper overhead inside a matching tier context.
 - Dispatching or crossing a proof wrapper once per loop iteration is slow. On two small
-  kernels an `#[arcane]` proof boundary per iteration measured 4.1× and 6.2× slower than one call around the whole loop
+  kernels a proof-wrapper boundary (`#[attune(wrap)]` / `_<tier>_t`) per iteration measured 4.1× and 6.2× slower than one call around the whole loop
   ([docs/PERFORMANCE.md](https://github.com/imazen/archmage/blob/main/docs/PERFORMANCE.md)).
   Dispatch once, outside the loop.
 - A vector wider than the CPU's registers is a polyfill. It runs as two or
@@ -274,7 +278,7 @@ MIT OR Apache-2.0
 
 ### General Rust awesomeness
 
-[zenbench] · **archmage** · [magetypes] · [enough] · [whereat] · [cargo-copter]
+[zenbench] · **archmage** · [magetypes] · [magemath] · [enough] · [whereat] · [cargo-copter]
 
 [Open source](https://www.imazen.io/open-source) · [@imazen](https://github.com/imazen) · [@lilith](https://github.com/lilith) · [lib.rs/~lilith](https://lib.rs/~lilith)
 
@@ -327,7 +331,8 @@ MIT OR Apache-2.0
 [zenpredict]: https://github.com/imazen/zenanalyze
 [zenpicker]: https://github.com/imazen/zenanalyze
 [zenbench]: https://github.com/imazen/zenbench
-[magetypes]: https://github.com/imazen/archmage
+[magetypes]: https://github.com/imazen/archmage/tree/main/magetypes
+[magemath]: https://github.com/imazen/archmage/tree/main/magemath
 [enough]: https://github.com/imazen/enough
 [whereat]: https://github.com/lilith/whereat
 [cargo-copter]: https://github.com/imazen/cargo-copter

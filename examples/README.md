@@ -16,7 +16,7 @@ cargo run --example alpha_blend --release
 
 ## magetypes examples
 
-For examples using the higher-level `f32x8` / `i32x8` types (from the [magetypes](https://docs.rs/magetypes) crate) alongside `#[arcane]`, see [`magetypes/examples/`](https://github.com/imazen/archmage/tree/main/magetypes/examples):
+For examples using the higher-level `f32x8` / `i32x8` types (from the [magetypes](https://docs.rs/magetypes) crate) with `#[attune]`, `attuned!`, and `*_t` constructors (see [`docs/ATTUNE.md`](../docs/ATTUNE.md)), see [`magetypes/examples/`](https://github.com/imazen/archmage/tree/main/magetypes/examples):
 
 | Example | Description |
 |---------|-------------|

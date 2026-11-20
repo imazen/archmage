@@ -17,7 +17,7 @@ vfmaq_f32(b.0, self.0, a.0)  // Rearranged to get self*a + b
 f32x4_relaxed_madd(self.0, a.0, b.0)
 ```
 
-**Magetypes `mul_add`:** Handles the argument order automatically. `v.mul_add(a, b)` always means `v*a + b`. It rounds once where the hardware fuses (x86 v3/v4, NEON) and twice on the scalar backend and strict WASM; `mul_add_portable` rounds once everywhere.
+**Magetypes `mul_add_relaxed` and `mul_add_fused`:** Both normalize argument order so `v.mul_add_relaxed(a, b)` and `v.mul_add_fused(a, b)` mean `v * a + b` (`mul_add` is deprecated). `mul_add_relaxed` rounds once where the hardware fuses (x86 v3/v4, NEON) and twice on the scalar backend and strict WASM; `mul_add_fused` (alias `mul_add_portable`) rounds once on every backend.
 
 ## Blend/Select Argument Order
 
@@ -66,13 +66,13 @@ vreinterpretq_f32_u32(vandq_u32(a_u, b_u))
 v128_and(a, b)
 ```
 
-**Magetypes integer types:** Use `.and()`, `.or()`, `.xor()` methods for portable bitwise ops. On x86, operator traits (`&`, `|`, `^`) also work for integers. On ARM and WASM, only methods are available.
+**Magetypes:** Both float and integer generic vector types implement `&`, `|`, `^` (and `&=` / `|=` / `^=`) across all backends, handling integer reinterprets internally on NEON.
 
 ## Shift Semantics (signed integers)
 
 ```rust
-// x86 i32x4 shr: logical shift (zero-fill) — WRONG for negative numbers
-_mm_srli_epi32(v, n)  // Shifts in zeros regardless of sign
+// x86 i32x4 logical right shift (zero-fill) — does not preserve sign
+_mm_srli_epi32(v, n)  // Shifts in zeros; use _mm_srai_epi32 for arithmetic shift
 
 // ARM i32x4 shr: arithmetic shift (sign-extending)
 vshrq_n_s32(v, n)     // Preserves sign bit
@@ -81,7 +81,7 @@ vshrq_n_s32(v, n)     // Preserves sign bit
 i32x4_shr(v, n)       // Preserves sign bit
 ```
 
-**Magetypes:** Use `shr_arithmetic()` for portable sign-extending right shift across all platforms.
+**Magetypes:** Use `shr_arithmetic_const::<N>()` / `shr_arithmetic_uniform(count)` for sign-extending right shifts and `shr_logical_const::<N>()` / `shr_logical_uniform(count)` for zero-filling right shifts across all platforms.
 
 ## Reciprocal/Rsqrt Precision
 
@@ -142,35 +142,46 @@ is needed.
 
 ## Min/Max NaN Propagation
 
-```rust
-// x86: minps returns SECOND operand when FIRST is NaN
-_mm_min_ps(NaN, x)  // → x (returns second)
-_mm_min_ps(x, NaN)  // → NaN (returns second)
+Raw hardware instructions differ in how they treat `NaN` and `±0.0`:
 
-// NEON/WASM/Scalar: always returns non-NaN
-fminq_f32(NaN, x)   // → x
-fminq_f32(x, NaN)   // → x
+```rust
+// x86: _mm_min_ps returns the SECOND operand when either operand is NaN
+_mm_min_ps(NaN, x)    // → x   (second operand)
+_mm_min_ps(x, NaN)    // → NaN (second operand)
+
+// NEON: two instruction families
+vminnmq_f32(NaN, x)   // → x   (returns numeric lane for quiet NaN)
+vminq_f32(x, NaN)     // → NaN (IEEE 754-2019 minimum, propagates NaN)
+
+// WASM: two instruction families
+f32x4_min(x, NaN)     // → NaN (propagates NaN, orders -0.0 < +0.0)
+f32x4_pmin(b, a)      // → b < a ? b : a
 ```
 
-**Magetypes:** `min()`/`max()` use the native instruction. If your data may contain NaN, filter it first or use `simd_lt` + `blend` for consistent behavior.
+**Magetypes float vectors** provide three explicit pairs so callers pick the contract they need:
+
+- `min()` / `max()` match `f32::min` / `f32::max` (`f64::min` / `f64::max`): if one lane is quiet `NaN` and the other is numeric (including `±inf`), they return the numeric lane across backends. `(-0.0, +0.0)` tie-breaking is unspecified, and signalling-`NaN` handling differs by backend (NEON `fminnm` and AVX-512 `f32` `vrangeps` quiet the signalling `NaN`; x86 V3, AVX-512 `f64`, WASM, and `ScalarToken` return the numeric lane).
+- `minimum()` / `maximum()` implement IEEE 754-2019 semantics on every backend: they propagate `NaN` and order `-0.0 < +0.0`.
+- `min_fast()` / `max_fast()` emit the single native instruction ignoring `NaN` and `±0.0` (`vminps`/`vminpd` on x86, `fminnm`/`fmaxnm` on NEON, `pmin(other, self)`/`pmax(other, self)` on WASM, and `a < b ? a : b` on `ScalarToken`).
 
 ## FMA vs Separate Multiply-Add
 
-x86 (AVX2+) and ARM use hardware FMA (one rounding), while WASM and the scalar fallback compute `a*b+c` with two roundings. Near-zero cancellation (when `a*b ≈ -c`) can produce differences of many ULPs. This is inherent to IEEE 754 — fused and unfused operations are both correct but produce different results.
+`mul_add_relaxed` uses hardware FMA (one rounding) on x86 V3/V4 and AArch64 NEON, and two roundings (`a * b` then `+ c`) on `ScalarToken` and strict WASM (with `relaxed-simd`, WASM engines may round once or twice). Near-zero cancellation (when `a * b ≈ -c`) can differ by many ULPs between one-rounding and two-rounding backends. Use `mul_add_fused` when every backend must round once like `f32::mul_add`.
 
 ## Rounding Consistency (Fixed in 0.9.16)
 
 Prior to 0.9.16, the scalar backend's `round()` used ties-away-from-zero (`f32::round()` semantics), while all hardware backends used ties-to-even (IEEE 754 default). This caused dispatch parity failures. Fixed by implementing `roundevenf` using the 2^23 magic-number trick. All backends now produce identical rounding results.
 
-**Magetypes:** `reduce_add()`, `reduce_max()`, `reduce_min()` use the optimal sequence for each platform.
+**Magetypes:** `reduce_add()`, `reduce_max()`, `reduce_min()` use the native sequence for each platform.
 
-## Known Behavioral Differences Table
+## Summary of Intentional Cross-Backend Differences
 
-From the project CLAUDE.md, these are documented and tests account for them:
+API surface parity across x86, ARM, and WASM generic types is enforced by `cargo xtask parity` (0 surface differences). The remaining runtime differences are explicit in method contracts:
 
-| Issue | x86 | ARM | WASM |
-|-------|-----|-----|------|
-| Integer bitwise operators (`&`, `\|`, `^`) | Trait impls (operators) | Methods only | Methods only |
-| `shr` for signed integers | Logical (zero-fill) | Arithmetic (sign-extend) | Arithmetic (sign-extend) |
-| `blend` signature | `(mask, true, false)` | `(mask, true, false)` | `(self, other, mask)` |
-| `interleave_lo/hi` | f32x4 only | f32x4 only | f32x4 only |
+| Method | Contract across backends | Exact / portable alternative |
+|--------|--------------------------|------------------------------|
+| `mul_add_relaxed` / `mul_sub_relaxed` | Fused on x86 V3/V4 and NEON; two roundings on scalar and strict WASM; engine-defined on relaxed WASM | `mul_add_fused` / `mul_sub_fused` |
+| `rcp_approx` / `rsqrt_approx` | Platform-fastest estimate (~12–17 bits; unspecified at `±0`, `±inf`, `NaN`) | `recip` / `rsqrt` (≤4 ULP) or `recip_portable` / `rsqrt_portable` (0 ULP) |
+| `min_fast` / `max_fast` | Single native instruction; `NaN` and `±0.0` behavior differs per ISA | `min` / `max` (numeric over quiet `NaN`) or `minimum` / `maximum` (propagates `NaN`) |
+| `min` / `max` on signalling `NaN` | Quiet `NaN` on NEON and AVX-512 `f32`; numeric lane on x86 V3, AVX-512 `f64`, WASM, scalar | `minimum` / `maximum` if `NaN` propagation is required |
+| `reduce_add` (floats) | Tree vs sequential order can differ by ~1e-6 relative error on mixed-magnitude inputs | Explicit pairwise or Kahan accumulation |

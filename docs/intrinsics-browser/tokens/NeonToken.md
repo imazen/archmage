@@ -14,17 +14,17 @@ if let Some(token) = NeonToken::summon() {
     process(token, &mut data);
 }
 
-#[arcane(import_intrinsics)]  // Entry point only
-fn process(token: NeonToken, data: &mut [f32]) {
+#[attune(wrap, import_intrinsics)]  // Entry point only
+fn process(_token: NeonToken, data: &mut [f32]) {
     for chunk in data.chunks_exact_mut(4) {
-        process_chunk(token, chunk.try_into().unwrap());
+        process_chunk(chunk.try_into().unwrap());
     }
 }
 
-#[rite(import_intrinsics)]  // All inner helpers
-fn process_chunk(_: NeonToken, chunk: &mut [f32; 4]) {
+#[attune(neon, import_intrinsics)]  // All inner helpers
+fn process_chunk(chunk: &mut [f32; 4]) {
     let v = vld1q_f32(chunk);  // safe!
-    let doubled = vaddq_f32(v, v);  // value intrinsic (safe inside #[rite])
+    let doubled = vaddq_f32(v, v);  // value intrinsic (safe inside #[attune(neon)])
     vst1q_f32(chunk, doubled);  // safe!
 }
 // No unsafe anywhere. Use #![forbid(unsafe_code)] in your crate.

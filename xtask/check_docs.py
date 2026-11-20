@@ -25,7 +25,7 @@ def main():
     args = parser.parse_args()
     pages = [ROOT / p for p in args.pages] if args.pages else [
         *sorted(CONTENT.rglob('*.md')),
-        *(ROOT / p for p in ('README.md', 'README.crates.md', 'magetypes/README.md', 'magetypes/README.crates.md', 'archmage-macros/README.md', 'docs/ATTUNE.md')),
+        *(ROOT / p for p in ('README.md', 'README.crates.md', 'magetypes/README.md', 'magetypes/README.crates.md', 'magemath/README.md', 'archmage-macros/README.md', 'docs/ATTUNE.md')),
     ]
     scratch = ROOT / 'target/docs-check'
     scratch.mkdir(parents=True, exist_ok=True)
@@ -38,11 +38,12 @@ publish = false
 [workspace]
 [features]
 default = []
-avx512 = ["archmage/avx512", "magetypes/avx512"]
+avx512 = ["archmage/avx512", "magetypes/avx512", "magemath/avx512"]
 [dependencies]
 '''
     manifest += f'archmage = {{ path = {json.dumps(str(ROOT))}, features = ["testable_dispatch"] }}\n'
     manifest += f'magetypes = {{ path = {json.dumps(str(ROOT / "magetypes"))} }}\n'
+    manifest += f'magemath = {{ path = {json.dumps(str(ROOT / "magemath"))}, features = ["std"] }}\n'
     (scratch / 'Cargo.toml').write_text(manifest)
     (scratch / 'src/lib.rs').write_text('\n'.join(
         f'#[doc = include_str!({json.dumps(str(p.resolve()))})]\npub mod page_{i} {{}}'

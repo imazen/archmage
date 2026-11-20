@@ -9,7 +9,7 @@ its arithmetic in a generated SIMD context:
 ```rust
 use archmage::prelude::*;
 
-#[magetypes(define(f32x8), v3, neon, wasm128, scalar)]
+#[attune(_*_t, define(f32x8))]
 fn lookup_impl(token: Token, table: &[f32], indices: &[usize; 8], gain: f32) -> [f32; 8] {
     let values = core::array::from_fn(|lane| table[indices[lane]]);
     let v = f32x8::from_array_t(token, values);
@@ -17,7 +17,7 @@ fn lookup_impl(token: Token, table: &[f32], indices: &[usize; 8], gain: f32) -> 
 }
 
 pub fn lookup(table: &[f32], indices: &[usize; 8], gain: f32) -> [f32; 8] {
-    incant!(lookup_impl(table, indices, gain), [v3, neon, wasm128, scalar])
+    attuned!(lookup_impl(table, indices, gain))
 }
 
 assert_eq!(lookup(&[2.0, 3.0], &[0, 1, 0, 1, 0, 1, 0, 1], 2.0),

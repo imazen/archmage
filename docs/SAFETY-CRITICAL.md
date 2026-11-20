@@ -1,5 +1,7 @@
 # Safety-Critical Code Audit
 
+> **Macro interface note:** User-facing SIMD definitions and dispatch use the unified `#[attune]`, `attuned!`, and `reattune!` macros (see [`ATTUNE.md`](ATTUNE.md)). Both `#[attune]` and the legacy `#[arcane]` / `#[rite]` attributes share the token-extraction, boundary-wrapper, and registry invariants audited below.
+
 This document identifies non-generated code that is safety-critical. Changes to these
 areas require extra scrutiny as they can lead to undefined behavior if incorrect.
 
@@ -40,20 +42,21 @@ within four lines); `tests/from_context.rs` and the `from_context_*` cases in
 
 ### 2. Macro Token Extraction (CRITICAL)
 
-**Files**: `archmage-macros/src/token_discovery.rs`, `arcane.rs`, `rite.rs`, `common.rs`
+**Files**: `archmage-macros/src/attune/`, `archmage-macros/src/engine/`, `token_discovery.rs`, `arcane.rs`, `rite.rs`, `common.rs`
 
-`#[arcane]` and `#[rite]` choose `#[target_feature(enable = "...")]` from the token's
-type name or tier-trait bound. A wrong mapping executes SIMD instructions without
-CPU support; a lying name (a shadowed or aliased type) does the same.
+`#[attune]` (in `wrap` and `_t` proof-wrapper modes) and legacy `#[arcane]` / `#[rite]`
+choose `#[target_feature(enable = "...")]` from the token's type name, tier-trait bound,
+or tier selector. A wrong mapping executes SIMD instructions without CPU support; a
+lying name (a shadowed or aliased type) does the same.
 
 **Invariants**: name → features matches `token-registry.toml`; the token is
 archmage's own type.
 
 **Verified by**: `just check-generated` (CI's Generation Check) for drift between
 the registry and `archmage-macros/src/generated/registry.rs`; the tier-constant and
-`::archmage::` tier-trait assertions in every expansion; `tests/soundness_exploits.rs`
-(shadowing, aliasing, trait shadowing, sealed-trait bypass); the expansion snapshots
-in `tests/expand/`.
+`::archmage::` tier-trait assertions in every proof wrapper; `tests/soundness_exploits.rs`
+(shadowing, aliasing, trait shadowing, sealed-trait bypass); the expansion suites in
+`tests/attune_expansion/` and `tests/expand/`.
 
 ---
 
@@ -101,7 +104,7 @@ including code cfg'd out for the host.
 
 **File**: `archmage-macros/src/generated/registry.rs`
 
-Maps token names to their required target features. If wrong, `#[arcane]` generates
+Maps token names and tiers to their required target features. If wrong, `#[attune]` and `#[arcane]`/`#[rite]` generate
 incorrect `#[target_feature]` attributes.
 
 **Invariant**: Must match `token-registry.toml` exactly.
@@ -197,7 +200,7 @@ and `from_context` call. It reports and never fails; enforcement is in
 | Area | Static Check | Runtime Test | Miri | Fuzzing |
 |------|-------------|--------------|------|---------|
 | Token construction | rustc E0133; `xtask soundness` (SAFETY comments) | `tests/from_context.rs`, `tests/soundness_exploits.rs` | ✓ (`tests/miri_safe.rs`) | N/A |
-| Macro extraction | `just check-generated`; tier assertions | `tests/soundness_exploits.rs`, `tests/expand/` | N/A | N/A |
+| Macro extraction | `just check-generated`; tier assertions | `tests/soundness_exploits.rs`, `tests/attune_expansion/`, `tests/expand/` | N/A | N/A |
 | summon() checks | `xtask validate` | `tests/feature_consistency.rs`, hardware CI | N/A | N/A |
 | Memory ops | `xtask soundness` (placement rules) | `simd_storage` unit tests, `miri_boundary_tests.rs` | ✓ | TODO |
 | Intrinsic mapping | `xtask soundness`, rustc | N/A | N/A | N/A |

@@ -10,7 +10,7 @@ Rust mechanism and is not the normal magetypes kernel pattern.
 | Trait family | Use |
 |---|---|
 | `SimdToken` | Common token operations such as detection and naming |
-| `HasX64V2`, `HasX64V3`, etc. | Proof of a tier's CPU capabilities; understood by archmage's feature macros |
+| `HasX64V2`, `HasX64V4`, `HasNeon`, `HasNeonAes`, `HasNeonSha3`, `HasArm64V2`, `HasArm64V3` | Proof of a tier's CPU capabilities; understood by `#[attune(wrap)]` |
 | `F32x8Backend`, `I32x4Backend`, etc. | Operations and storage for a particular logical vector shape |
 | Published conversion traits such as `F32x8Convert` | Additional cross-type conversions required by a generic body |
 | `IntoConcreteToken` | Exact token-type identity checks, not feature upgrades |
@@ -24,8 +24,8 @@ The complete [zenblend helper](@/magetypes/examples/pixel-blending.md) needs onl
 `T: F32x4Backend`. The [zenfilters blur walkthrough](@/magetypes/examples/convolution.md)
 uses additional conversions. Neither needs hand-written wrappers for every tier.
 
-A backend bound alone does not enable target features. Call the helper from a
-`#[magetypes]` context and verify inlining. A tier bound used with `#[arcane]`
+A backend bound alone does not enable target features. Call the helper from an
+`#[attune]` context and verify inlining. A tier bound used with `#[attune(wrap)]`
 enables that declared tier, not every capability of a stronger concrete caller.
 
 Width capability traits are compatibility APIs, not the preferred way to select

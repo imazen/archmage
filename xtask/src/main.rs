@@ -704,7 +704,7 @@ fn generate_memory_ops_reference(safe_simd_ops: &[SafeMemOp]) -> String {
     doc.push_str(&format!(
         "# Safe Memory Operations Reference\n\n\
          Safe unaligned load/store operations from `safe_unaligned_simd` v{SAFE_SIMD_VERSION},\n\
-         organized by the archmage token required to use them inside `#[arcane]` functions.\n\n\
+         organized by the archmage token required to use them inside `#[attune(..., import_intrinsics)]` functions.\n\n\
          Regenerate: `cargo xtask generate`\n\n"
     ));
 

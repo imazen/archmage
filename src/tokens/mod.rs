@@ -58,7 +58,7 @@ use alloc::vec::Vec;
 ///
 /// 1. Optionally check `compiled_with()` to see if runtime check is needed
 /// 2. Call `summon()` at runtime to detect CPU support
-/// 3. Pass the token through to `#[arcane]` functions — don't forge new ones
+/// 3. Pass the token through to `#[attune(wrap)]` / `_<tier>_t` functions — don't forge new ones
 ///
 /// # Example
 ///
@@ -136,7 +136,7 @@ pub trait SimdToken: Sealed + Copy + Clone + Send + Sync + 'static {
     /// ```
     fn compiled_with() -> Option<bool>;
 
-    /// Deprecated alias for [`compiled_with()`](Self::compiled_with).
+    /// **Deprecated:** Use [`SimdToken::compiled_with`] instead.
     #[inline(always)]
     #[deprecated(since = "0.6.0", note = "Use compiled_with() instead")]
     fn guaranteed() -> Option<bool> {
@@ -158,17 +158,13 @@ pub trait SimdToken: Sealed + Copy + Clone + Send + Sync + 'static {
     /// ```
     fn summon() -> Option<Self>;
 
-    /// Attempt to create a token with runtime feature detection.
-    ///
-    /// This is an alias for [`summon()`](Self::summon).
+    /// **Superseded (queued for deprecation):** Use [`SimdToken::summon`] instead.
     #[inline(always)]
     fn attempt() -> Option<Self> {
         Self::summon()
     }
 
-    /// Legacy alias for [`summon()`](Self::summon).
-    ///
-    /// **Deprecated:** Use `summon()` instead.
+    /// **Superseded (queued for deprecation):** Use [`SimdToken::summon`] instead.
     #[inline(always)]
     #[doc(hidden)]
     fn try_new() -> Option<Self> {
@@ -233,7 +229,7 @@ impl ScalarToken {
         Self
     }
 
-    /// Deprecated alias for [`ScalarToken::from_context`].
+    /// **Deprecated:** Use [`ScalarToken::from_context`] instead.
     #[deprecated(
         since = "0.9.29",
         note = "Renamed to from_context() — the constructor is checked against the caller's target-feature context"
@@ -247,7 +243,7 @@ impl ScalarToken {
 impl ScalarToken {
     /// Tier tag for compile-time token identity assertion.
     ///
-    /// Used by `#[arcane]` to verify that a `ScalarToken` parameter is genuinely
+    /// Used by `#[attune]` to verify that a `ScalarToken` parameter is genuinely
     /// `archmage::ScalarToken` and not a shadowed or aliased type.
     /// Must match `expected_tier_tag("ScalarToken")` in the proc-macro registry.
     #[doc(hidden)]

@@ -322,13 +322,13 @@ impl<T: U16x8Backend> u16x8<T> {
         Self(T::shr_logical_const::<N>(self.1, self.0), self.1)
     }
 
-    /// Alias for [`shl_const`](Self::shl_const).
+    /// **Superseded (queued for deprecation):** Use [`shl_const`](Self::shl_const) instead.
     #[inline(always)]
     pub fn shl<const N: i32>(self) -> Self {
         self.shl_const::<N>()
     }
 
-    /// Alias for [`shr_logical_const`](Self::shr_logical_const).
+    /// **Superseded (queued for deprecation):** Use [`shr_logical_const`](Self::shr_logical_const) instead.
     #[inline(always)]
     pub fn shr_logical<const N: i32>(self) -> Self {
         self.shr_logical_const::<N>()
@@ -668,7 +668,7 @@ impl u16x8<archmage::X64V3Token> {
         self.0
     }
 
-    /// Deprecated spelling of [`Self::from_raw_t`].
+    /// **Deprecated:** Use [`Self::from_raw_t`] (or [`Self::from_raw`] in a matching feature context) instead.
     #[deprecated(
         note = "Use from_raw_t(token, v), or from_raw(v) in a matching feature context; from_m128i is removed in magetypes 0.10."
     )]
@@ -707,7 +707,7 @@ impl u16x8<archmage::X64V3Token> {
     /// Wrap a raw `__m128i` in a matching target-feature context.
     ///
     /// Rust requires the caller to enable the `v3` tier's features.
-    /// Use an archmage `#[rite(v3)]` helper or `#[arcane]` entry point.
+    /// Use an archmage `#[attune(v3)]` helper or `#[attune(wrap)]` entry point.
     #[forbid(unsafe_code)]
     /// # Safety
     /// The CPU must support the enabled target features. Safe calls require a
@@ -740,7 +740,7 @@ impl u16x8<archmage::NeonToken> {
     /// Wrap a raw `uint16x8_t` in a matching target-feature context.
     ///
     /// Rust requires the caller to enable the `neon` tier's features.
-    /// Use an archmage `#[rite(neon)]` helper or `#[arcane]` entry point.
+    /// Use an archmage `#[attune(neon)]` helper or `#[attune(wrap)]` entry point.
     #[forbid(unsafe_code)]
     /// # Safety
     /// The CPU must support the enabled target features. Safe calls require a
@@ -771,7 +771,7 @@ impl u16x8<archmage::Wasm128Token> {
     /// Wrap a raw `v128` in a matching target-feature context.
     ///
     /// Rust requires the caller to enable the `wasm128` tier's features.
-    /// Use an archmage `#[rite(wasm128)]` helper or `#[arcane]` entry point.
+    /// Use an archmage `#[attune(wasm128)]` helper or `#[attune(wrap)]` entry point.
     #[forbid(unsafe_code)]
     /// # Safety
     /// The CPU must support the enabled target features. Safe calls require a

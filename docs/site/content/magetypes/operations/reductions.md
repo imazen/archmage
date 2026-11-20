@@ -78,7 +78,7 @@ use archmage::prelude::*;
 
 /// One accumulator: the chain runs through the addend, so a separate
 /// multiply and add is the faster form.
-#[magetypes(define(f32x8), v3, neon, wasm128, scalar)]
+#[attune(_*_t, define(f32x8))]
 fn dot_one_impl(token: Token, a: &[f32], b: &[f32]) -> f32 {
     let (ac, at) = a.as_chunks::<8>();
     let (bc, bt) = b.as_chunks::<8>();
@@ -95,7 +95,7 @@ fn dot_one_impl(token: Token, a: &[f32], b: &[f32]) -> f32 {
 
 /// Four independent accumulators hide the add latency; either form is then
 /// equally fast.
-#[magetypes(define(f32x8), v3, neon, wasm128, scalar)]
+#[attune(_*_t, define(f32x8))]
 fn dot_four_impl(token: Token, a: &[f32], b: &[f32]) -> f32 {
     let (ac, at) = a.as_chunks::<32>();
     let (bc, bt) = b.as_chunks::<32>();
@@ -116,7 +116,7 @@ fn dot_four_impl(token: Token, a: &[f32], b: &[f32]) -> f32 {
 /// Horner chain: each step multiplies the previous result, so one fused
 /// instruction per step is the faster form. `mul_add_relaxed` fuses where the
 /// hardware does; use `mul_add_fused` if every backend must give the same bits.
-#[magetypes(define(f32x8), v3, neon, wasm128, scalar)]
+#[attune(_*_t, define(f32x8))]
 fn horner_impl(token: Token, x: &[f32; 8], coefficients: &[f32]) -> [f32; 8] {
     let x = f32x8::load_t(token, x);
     let mut p = f32x8::zero_t(token);
@@ -127,13 +127,13 @@ fn horner_impl(token: Token, x: &[f32; 8], coefficients: &[f32]) -> [f32; 8] {
 }
 
 pub fn dot_one(a: &[f32], b: &[f32]) -> f32 {
-    incant!(dot_one_impl(a, b), [v3, neon, wasm128, scalar])
+    attuned!(dot_one_impl(a, b))
 }
 pub fn dot_four(a: &[f32], b: &[f32]) -> f32 {
-    incant!(dot_four_impl(a, b), [v3, neon, wasm128, scalar])
+    attuned!(dot_four_impl(a, b))
 }
 pub fn horner(x: &[f32; 8], coefficients: &[f32]) -> [f32; 8] {
-    incant!(horner_impl(x, coefficients), [v3, neon, wasm128, scalar])
+    attuned!(horner_impl(x, coefficients))
 }
 
 // Small integers keep every product and sum exact, so all forms agree here.

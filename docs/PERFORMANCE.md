@@ -2,7 +2,7 @@
 
 Archmage generates identical assembly to hand-written `#[target_feature]` + `unsafe` code. The safety abstractions compile away. At runtime, you get raw SIMD instructions.
 
-Calling `#[arcane]` across a target-feature boundary can prevent optimization. Compile-time costs are measured separately in the proc-macro section below.
+Calling a proof wrapper (`#[attune(wrap)]` / `_tier_t`, or legacy `#[arcane]`) across a target-feature mismatch prevents inlining across that boundary. Compile-time costs are measured separately in the proc-macro section below.
 
 ## Zero overhead: archmage = bare `#[target_feature]`
 
@@ -10,57 +10,62 @@ Every benchmark pattern shows archmage and bare `#[target_feature]` producing th
 
 | What you write | Time (1000 x 8-float add) | What LLVM sees |
 |----------------|---------------------------|----------------|
-| `#[arcane]` calling `#[arcane]` (matching features) | 547 ns | Features match — LLVM inlines wrapper |
+| Proof wrapper calling proof wrapper (matching features) | 547 ns | Features match — LLVM inlines wrapper |
 | Bare `#[target_feature]` (no archmage) | 544 ns | Same |
-| `#[arcane]` per loop iteration from non-SIMD code | 2209 ns (4x) | Boundary crossing per call |
+| Proof wrapper per loop iteration from non-SIMD code | 2209 ns (4x) | Boundary crossing per call |
 | Bare `#[target_feature]` per loop iteration | 2222 ns (4x) | Same boundary, same cost |
 
-The 4x penalty comes from LLVM, not archmage. Read on.
+The 4x penalty comes from LLVM, not archmage.
 
 ## The target-feature boundary
 
-`#[arcane]` reads the token type from your function signature to decide which `#[target_feature]` to emit. A function taking `X64V3Token` gets `#[target_feature(enable = "avx2,fma,...")]`.
+`#[attune(wrap)]` (like legacy `#[arcane]`) reads the token type from your function signature to decide which `#[target_feature]` to emit. A function taking `X64V3Token` gets `#[target_feature(enable = "avx2,fma,...")]`.
 
-`#[arcane]` generates a wrapper: an outer function that calls an inner `#[target_feature]` function via `unsafe`. This is how you cross into SIMD code without writing `unsafe` yourself. When an `#[arcane]` function calls another `#[arcane]` function with matching features, LLVM inlines the wrapper away — no boundary. The boundary only exists when the caller has fewer features than the callee (e.g., non-SIMD code calling an `#[arcane]` function).
+A proof wrapper (`#[attune(wrap)]` or `#[attune] fn work_v3_t(...)`) emits an outer safe function that calls a private `#[target_feature]` inner function (`__arcane_*`) via `unsafe`. That is how you cross into SIMD code without writing `unsafe` yourself. When one V3 wrapper calls another V3 wrapper, LLVM inlines the wrapper away — no boundary. The boundary exists only when the caller has fewer features than the callee (for example, baseline code calling an AVX2 proof wrapper).
 
-LLVM won't inline across mismatched `#[target_feature]` attributes: no load hoisting, no store sinking, no cross-iteration vectorization. But matching features = no mismatch = full inlining.
+LLVM cannot inline a stronger-feature callee into a weaker-feature caller: no load hoisting, no store sinking, no cross-iteration vectorization across the mismatch. Matching or superset caller features inline normally.
 
-The boundary has nothing to do with archmage. A bare `#[target_feature]` function has the same cost. `#[arcane]` just makes the wrapper safe; the boundary is LLVM's.
+A bare `#[target_feature]` function has the exact same cost. Archmage makes the wrapper safe; the boundary is LLVM's.
 
-**The fix:** enter `#[arcane]` once from non-SIMD code, put the loop inside, and write the helpers as `#[rite]` (`#[target_feature]` + `#[inline]` directly, no wrapper). An `#[arcane]` helper with matching features also inlines, as the cross-token table below shows, but it generates a wrapper that LLVM then has to remove.
+**The fix:** enter `#[attune(wrap)]` once from non-SIMD code, put the loop inside, and write internal helpers as direct feature bodies (`#[attune(v3)]` or `#[attune] fn helper_v3(...)`, which emit `#[target_feature]` + `#[inline]` directly with no wrapper). A proof-wrapper helper with matching features also inlines, as the cross-token table below shows, without saving the extra wrapper generation.
 
 ```rust
+use archmage::prelude::*;
+
 // WRONG: boundary every iteration (4x slower)
-fn process_all(points: &[[f32; 8]]) {
-    let token = X64V3Token::summon().unwrap();
-    for p in points {
-        process_one(token, p);  // #[arcane] — boundary crossing
+fn process_all_slow(points: &[[f32; 8]]) {
+    #[cfg(target_arch = "x86_64")]
+    if let Some(token) = X64V3Token::summon() {
+        for p in points {
+            let _ = process_one_wrapped(token, p); // #[attune(wrap)] — boundary crossing
+        }
     }
 }
 
 // RIGHT: one boundary, loop inside
 fn process_all(points: &[[f32; 8]]) {
+    #[cfg(target_arch = "x86_64")]
     if let Some(token) = X64V3Token::summon() {
-        process_all_simd(token, points);  // one #[arcane] entry
+        process_all_simd(token, points); // one #[attune(wrap)] entry
     }
 }
 
-#[arcane(import_intrinsics)]
-fn process_all_simd(token: X64V3Token, points: &[[f32; 8]]) {
+#[attune(wrap, import_intrinsics)]
+fn process_all_simd(_token: X64V3Token, points: &[[f32; 8]]) {
     for p in points {
-        process_one(p);  // #[rite(v3)] — inlines, no boundary
+        let _ = process_one(p); // #[attune(v3)] — inlines, no boundary
     }
 }
 
-#[rite(v3, import_intrinsics)]
-fn process_one(p: &[f32; 8]) {
-    // ...
+#[attune(v3, import_intrinsics)]
+fn process_one(p: &[f32; 8]) -> __m256 {
+    _mm256_loadu_ps(p)
 }
 ```
 
 ## Benchmark results
 
-All benchmarks from `cargo bench --bench asm_inspection --features "std avx512"`, run on x86-64 with AVX-512 support. Source: [`benches/asm_inspection.rs`](../benches/asm_inspection.rs).
+All benchmarks from `cargo bench --bench asm_inspection --features "std avx512"`, run on x86-64 with AVX-512 support. Source: [`benches/asm_inspection.rs`](../benches/asm_inspection.rs) (the benchmark harness uses the legacy `#[arcane]` / `#[rite]` spellings, which expand through the same proof-wrapper and direct-body emitters as `#[attune(wrap)]` and `#[attune(v3)]`).
 
 ### Simple vector add (1000 iterations, 8-float add)
 
@@ -107,44 +112,47 @@ Every downgrade pattern matched its bare `#[target_feature]` equivalent exactly.
 
 **The rule:** downgrades are free (caller's superset features enable inlining), upgrades hit the boundary (callee needs features the caller doesn't have).
 
-### Generic magetypes types: zero overhead inside `#[arcane]` (with `#[inline(always)]`)
+### Generic magetypes types: zero overhead inside `#[attune]` (with `#[inline(always)]`)
 
-A common concern: does using `f32x8::<T>` with a generic `T: F32x8Backend` produce worse code than concrete `f32x8::<x64v3>`? **No — but only if the generic function can inline into the `#[arcane]` caller.**
+A common concern: does using `f32x8::<T>` with a generic `T: F32x8Backend` produce worse code than concrete `f32x8::<X64V3Token>`? **No — provided the generic function inlines into the `#[attune]` caller.**
 
-The backend trait methods are all `#[inline(always)]`, but that's not enough on its own. **Your generic helper function must also inline** into the `#[arcane]` caller so LLVM compiles it within the `#[target_feature]` region. The generic function itself has no `#[target_feature]` — it gets the right features only by being inlined into a function that does.
+The backend trait methods are all `#[inline(always)]`, which is necessary but not sufficient on its own. **Your generic helper function must also inline** into the `#[attune]` caller so LLVM compiles it within the `#[target_feature]` region. The generic function itself has no `#[target_feature]` — it inherits target features only by inlining into a function that has them.
 
 Source: [`magetypes/benches/generic_vs_concrete.rs`](../magetypes/benches/generic_vs_concrete.rs). Measured 2026-10-05 on a Ryzen 9 9950X3D with Rust 1.99.0, median of three runs; record in [`benchmarks/generic_vs_concrete_zen5-9950x3d_2026-10-05.md`](../benchmarks/generic_vs_concrete_zen5-9950x3d_2026-10-05.md).
 
 | Pattern | Time | Assembly |
 |---------|------|----------|
-| `f32x8::<T>` generic `#[inline(always)]` inside `#[arcane]` | 1.08 ns | `vmovups` + `vaddps` + horizontal sum |
-| `f32x8::<T>` generic (no annotation) inside `#[arcane]` | 1.09 ns | identical — LLVM chose to inline (not guaranteed) |
-| `f32x8::<X64V3Token>` concrete inside `#[arcane]` | 1.09 ns | identical instructions |
-| Concrete via `#[rite]` in `#[arcane]` | 1.06 ns | identical |
-| `f32x8::<T>` generic `#[inline(never)]` inside `#[arcane]` | **8.13 ns (7.5x)** | SSE loads, stack spills, a call per backend method |
+| `f32x8::<T>` generic `#[inline(always)]` inside V3 wrapper | 1.08 ns | `vmovups` + `vaddps` + horizontal sum |
+| `f32x8::<T>` generic (no annotation) inside V3 wrapper | 1.09 ns | identical — LLVM chose to inline (not guaranteed) |
+| `f32x8::<X64V3Token>` concrete inside V3 wrapper | 1.09 ns | identical instructions |
+| Concrete via direct V3 helper in V3 wrapper | 1.06 ns | identical |
+| `f32x8::<T>` generic `#[inline(never)]` inside V3 wrapper | **8.13 ns (7.5x)** | SSE loads, stack spills, a call per backend method |
 | `f32x8::<T>` generic **without** `#[target_feature]` | **7.95 ns (7.4x)** | the same calls |
 
-The `#[inline(never)]` row is the smoking gun: even inside `#[arcane]`, a generic function that can't inline is just as slow as having no `#[target_feature]` at all. The generic function body is compiled without target features — it only gets them by being inlined into the `#[arcane]` caller's `#[target_feature]` region. The multiplier belongs to this 8-lane kernel, where the calls dominate; the bench's first version, in February 2026, measured 18x on an older build.
+The `#[inline(never)]` row isolates the cause: even when called from a V3 wrapper, a generic function that cannot inline is as slow as having no `#[target_feature]` at all. The generic function body is compiled without target features — it gets them only by inlining into the caller's `#[target_feature]` region. The multiplier belongs to this 8-lane kernel, where the calls dominate; the bench's first version, in February 2026, measured 18x on an older build.
 
-**Mark generic SIMD helpers `#[inline(always)]`.** For small same-crate functions, LLVM usually inlines without annotation (the "no annotation" row above). But this is an LLVM heuristic, not a guarantee — LLVM can decline to inline any function without `#[inline(always)]`. Cross-crate, without at least `#[inline]`, the function body isn't even available to the caller's compilation unit. `#[inline(always)]` removes all ambiguity: the function will always inline, and the generic code will always get the caller's target features.
+**Mark generic SIMD helpers `#[inline(always)]`.** For small same-crate functions, LLVM usually inlines without annotation (the "no annotation" row above). That is an LLVM heuristic, not a guarantee. Cross-crate, without at least `#[inline]`, the function body isn't available to the caller's compilation unit. `#[inline(always)]` guarantees inlining so the generic body compiles with the caller's target features.
 
 ```rust
+use archmage::{X64V3Token, attune};
+use magetypes::simd::{backends::F32x8Backend, generic::f32x8};
+
 // CORRECT: #[inline(always)] guarantees the generic body inlines into the caller
 #[inline(always)]
 fn generic_sum<T: F32x8Backend>(token: T, data: &[f32; 8]) -> f32 {
     let v = f32x8::<T>::from_array_t(token, *data);
-    (v + v).reduce_add()  // ~1.1 ns from #[arcane(import_intrinsics)]
+    (v + v).reduce_add()  // ~1.1 ns from #[attune(wrap)]
 }
 
-// The #[arcane] caller provides #[target_feature] — generic_sum inlines into it
-#[arcane(import_intrinsics)]
+// The #[attune(wrap)] caller provides #[target_feature] — generic_sum inlines into it
+#[attune(wrap)]
 fn entry(token: X64V3Token, data: &[f32; 8]) -> f32 {
     generic_sum(token, data)  // Inlines → full AVX2 codegen
 }
 ```
 
 ```asm
-; #[inline(always)] generic inside #[arcane] — identical to concrete:
+; #[inline(always)] generic inside #[attune(wrap)] — identical to concrete:
 vmovups ymm0, ymmword ptr [rdi]   ; load 8 floats
 vaddps ymm0, ymm0, ymm0           ; v + v
 vextractf128 xmm1, ymm0, 1        ; horizontal sum...
@@ -154,7 +162,7 @@ vaddps xmm0, xmm0, xmm1
 vshufpd xmm1, xmm0, xmm0, 1
 vaddss xmm0, xmm0, xmm1
 
-; #[inline(never)] generic inside #[arcane]:
+; #[inline(never)] generic inside #[attune(wrap)]:
 movups xmm0, xmmword ptr [rdi]    ; SSE loads, not AVX
 movups xmm1, xmmword ptr [rdi + 16]
 ; ... both halves spilled to the stack ...
@@ -162,23 +170,23 @@ call <X64V3Token as F32x8Backend>::add::__simd_inner_add
 call <X64V3Token as F32x8Backend>::reduce_add::__simd_inner_reduce_add
 ```
 
-**The rule:** generic magetypes code is zero-cost when it inlines into an `#[arcane]` or `#[rite]` caller. Mark generic SIMD helpers `#[inline(always)]` to guarantee this. The generic function has no `#[target_feature]` of its own — it inherits the caller's features through inlining.
+**The rule:** generic magetypes code is zero-cost when it inlines into an `#[attune]` feature region (for example `#[attune(_*_t, define(f32x8))]`, `#[attune(wrap)]`, or `#[attune(v3)]`). Mark generic SIMD helpers `#[inline(always)]` to guarantee this.
 
 ## Rules
 
 These are distilled from the benchmark data above.
 
-1. **Enter `#[arcane]` once.** Put loops inside it. Each call from non-SIMD code crosses the boundary.
+1. **Enter a proof wrapper (`#[attune(wrap)]` / `_tier_t`) once.** Put loops inside it. Each call from non-SIMD code crosses the target-feature boundary.
 
-2. **Use `#[rite]` for helpers.** It adds `#[target_feature]` + `#[inline]` directly, with no wrapper. An `#[arcane]` helper with matching features also inlines (V3→V3 = 1.0x below), and so does a plain `#[inline(always)]` function.
+2. **Use direct feature bodies (`#[attune(v3)]` / `_*`) for helpers.** They add `#[target_feature]` + `#[inline]` directly, with no wrapper. A proof-wrapper helper with matching features also inlines (V3→V3 = 1.0x above), as does a plain `#[inline(always)]` function.
 
-3. **Don't cross feature boundaries in hot loops.** Calling `#[arcane]` from `#[arcane]` with matching features is free — LLVM inlines the wrapper (benchmark: V3→V3 = 1.0x). The boundary only hurts when the caller has fewer features than the callee (V3→V4 = 4x).
+3. **Don't cross feature mismatches in hot loops.** Calling a V3 wrapper from a V3 context is free — LLVM inlines the wrapper (V3→V3 = 1.0x). The boundary hurts when the caller has fewer features than the callee (V3→V4 = 4x).
 
 4. **Downcasting is free.** A V4 function calling a V3 helper inlines because V4 is a superset of V3. Same for V3 calling V2.
 
-5. **Upcasting hits the boundary.** A V3 function calling a V4 helper can't inline because the caller lacks AVX-512 features. Dispatch at the entry point, not deep in hot code.
+5. **Upcasting hits the boundary.** A V3 function calling a V4 wrapper (`reattune!`) cannot inline because the caller lacks AVX-512 features. Dispatch at the entry point, not deep in hot code.
 
-6. **Generic magetypes types are zero-cost inside `#[arcane]` — if they inline.** `f32x8::<T>` and `f32x8::<X64V3Token>` produce identical assembly when the generic function inlines into the `#[arcane]` caller. Mark generic SIMD helpers `#[inline(always)]` to ensure this. The generic function has no `#[target_feature]` of its own — if it doesn't inline, every backend method becomes a call (7.4x slower for the 8-lane kernel above; the cost depends on the kernel). The backend methods are `#[inline(always)]`, but that only helps once the generic body is inside the `#[target_feature]` region.
+6. **Generic magetypes types are zero-cost inside `#[attune]` — if they inline.** `f32x8::<T>` and `f32x8::<X64V3Token>` produce identical assembly when the generic function inlines into the `#[attune]` caller. Mark generic SIMD helpers `#[inline(always)]` to ensure this. The generic function has no `#[target_feature]` of its own — if it doesn't inline, every backend method becomes a call (7.4x slower for the 8-lane kernel above; the cost depends on the kernel).
 
 ## Reproducing
 

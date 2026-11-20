@@ -3,9 +3,10 @@ title = "Manual Dispatch"
 weight = 1
 +++
 
-Prefer `incant!` for routine dispatch. Manual dispatch is useful when a caller
-has an additional algorithm or workload decision. It must guard references to
-architecture-specific functions, even though token types exist on all targets.
+Prefer `attuned!` or `#[attune(dispatch)]` for routine dispatch. Manual dispatch
+is useful when a caller has an additional algorithm or workload decision. It
+must guard references to architecture-specific functions, even though token
+types exist on all targets.
 
 This is a manual-dispatch adaptation of the
 [zenfilters gain loop](@/magetypes/examples/generic-kernels.md). The source uses
@@ -15,7 +16,7 @@ requirements, not a second recommended production framework.
 ```rust
 use archmage::prelude::*;
 
-#[magetypes(define(f32x8), v3, neon, wasm128, scalar)]
+#[attune(_*_t, define(f32x8))]
 fn gain_impl(token: Token, plane: &mut [f32], gain: f32) {
     let factor = f32x8::splat_t(token, gain);
     let (chunks, tail) = f32x8::partition_slice_mut_t(token, plane);
@@ -28,24 +29,24 @@ fn gain_impl(token: Token, plane: &mut [f32], gain: f32) {
 pub fn apply_gain(plane: &mut [f32], gain: f32) {
     #[cfg(target_arch = "x86_64")]
     if let Some(t) = X64V3Token::summon() {
-        return gain_impl_v3(t, plane, gain);
+        return gain_impl_v3_t(t, plane, gain);
     }
     #[cfg(target_arch = "aarch64")]
     if let Some(t) = NeonToken::summon() {
-        return gain_impl_neon(t, plane, gain);
+        return gain_impl_neon_t(t, plane, gain);
     }
     #[cfg(target_arch = "wasm32")]
     if let Some(t) = Wasm128Token::summon() {
-        return gain_impl_wasm128(t, plane, gain);
+        return gain_impl_wasm128_t(t, plane, gain);
     }
-    gain_impl_scalar(ScalarToken, plane, gain);
+    gain_impl_scalar_t(ScalarToken, plane, gain);
 }
 let mut plane = [2.0; 11];
 apply_gain(&mut plane, 0.5);
 assert_eq!(plane, [1.0; 11]);
 ```
 
-`stub` has been removed and is rejected by the macro parser. Use `incant!`
+`stub` has been removed and is rejected by the macro parser. Use `attuned!`
 or explicit call-site guards; do not resurrect unreachable stubs as fallback code.
 
 Do not add a second detection cache or a cached enum solely to avoid `summon()`:

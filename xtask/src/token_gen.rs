@@ -362,7 +362,7 @@ fn gen_from_context(token: &TokenDef) -> String {
                 Self {{ _private: () }}
             }}
 
-            /// Deprecated alias for [`{name}::from_context`].
+            /// **Deprecated:** Use [`{name}::from_context`] instead.
             ///
             /// Identical in every respect — same `#[target_feature]` gate, same
             /// safe-call rules. The name predates the compiler-checked design
@@ -1043,6 +1043,8 @@ fn gen_stub_token_struct(out: &mut String, token: &TokenDef) {
         }}
 
         impl {name} {{
+            /// **Deprecated:** Use `from_context()` on native architectures (or [`SimdToken::summon`] for cross-platform runtime detection) instead.
+            ///
             /// Construct a proof for a foreign architecture. Always `unsafe`.
             ///
             /// On this token's native architecture the constructor is
@@ -1091,7 +1093,7 @@ fn gen_aliases(out: &mut String, token: &TokenDef) {
         if let Some(msg) = token.deprecated_aliases.get(alias) {
             let escaped = msg.replace('"', "\\\"");
             out.push_str(&formatdoc! {"
-                /// Type alias for [`{name}`].
+                /// **Deprecated:** Use [`{name}`] instead.
                 #[deprecated(since = \"0.9.9\", note = \"{escaped}\")]
                 pub type {alias} = {name};
 

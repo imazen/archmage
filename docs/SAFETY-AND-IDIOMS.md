@@ -2,9 +2,9 @@
 
 Authoritative reference for understanding and teaching archmage. Read before writing docs or examples.
 
-> **`#![forbid(unsafe_code)]` compatible.** Downstream crates can use `#![forbid(unsafe_code)]` when combining archmage tokens + `#[arcane(import_intrinsics)]`/`#[rite(import_intrinsics)]` macros. The `unsafe` lives inside archmage's generated code, not yours.
+> **`#![forbid(unsafe_code)]` compatible.** Downstream crates can use `#![forbid(unsafe_code)]` when combining archmage tokens with `#[attune]` (`import_intrinsics` or `define(...)`), `attuned!`, and `reattune!`. The `unsafe` lives inside archmage's generated boundary wrappers, not yours.
 
-> **Descriptive aliases.** `#[token_target_features_boundary]` = `#[arcane]`, `#[token_target_features]` = `#[rite]`, `dispatch_variant!` = `incant!`. These help AI tools and newcomers infer what the macros do from the name alone.
+> **Unified macros and legacy aliases.** [`docs/ATTUNE.md`](ATTUNE.md) documents `#[attune]`, `attuned!`, and `reattune!`. Legacy `#[arcane]`, `#[rite]`, `#[magetypes]`, `#[autoversion]`, and `incant!` (plus descriptive aliases `#[token_target_features_boundary]`, `#[token_target_features]`, and `dispatch_variant!`) remain supported.
 
 > **Source of truth.** All token-to-feature mappings are defined in [`token-registry.toml`](../token-registry.toml). Everything else (generated code, macro registries, docs) is derived from it.
 
@@ -17,7 +17,7 @@ Authoritative reference for understanding and teaching archmage. Read before wri
 | **sound** | Cannot cause UB when used as documented |
 | **unsound** | CAN cause UB even when used correctly |
 
-These are orthogonal. Archmage's `#[arcane]` generates unsafe code that IS sound — the token proves features exist.
+These are orthogonal. Archmage's `#[attune(wrap)]` (and `_tier_t` proof wrappers) generate an internal `unsafe` boundary call that is sound because the authenticated token proves the CPU features exist.
 
 ## The Core Safety Model
 
@@ -45,31 +45,33 @@ extraction from a stronger token (`v4.v3()`); or `from_context()` inside a
 function whose `#[target_feature]` set covers the token's, where rustc checks
 the claim. If you have a token, the features are available.
 
-### 2. `#[arcane]` Generates Safe-to-Call Code
+### 2. Proof Wrappers Generate Safe-to-Call Code
 
 ```rust
+use archmage::prelude::*;
+
 // What you write:
-#[arcane(import_intrinsics)]
-fn kernel(token: X64V3Token, data: &[f32; 8]) -> f32 {
-    let v = _mm256_setzero_ps();  // Safe inside #[target_feature]!
-    // ...
+#[attune(wrap, import_intrinsics)]
+fn kernel(_token: X64V3Token, data: &[f32; 8]) -> f32 {
+    let v = _mm256_loadu_ps(data);  // Safe inside #[target_feature]
+    _mm256_cvtss_f32(_mm256_castps256_ps128(v))
 }
 ```
 
-The macro generates the target-feature boundary and its justified internal call.
-User code does not implement that boundary; see the expansion tests for exact output.
+`#[attune(wrap)]` (or `#[attune] fn kernel_v3_t(...)`) generates the `#[target_feature]` boundary and its token-justified internal call.
+User code does not implement that boundary; see [`docs/ATTUNE.md`](ATTUNE.md) and the expansion tests for exact output.
 
 The outer function is safe. The `unsafe` is an implementation detail justified by the token.
 
-### 3. Rust 1.86-1.87 Changed Everything
+### 3. Rust 1.86-1.87 Intrinsic Safety
 
 Value-based intrinsics are safe inside `#[target_feature]` functions:
 
 ```rust
 use archmage::prelude::*;
 
-#[arcane(import_intrinsics)]
-fn example(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
+#[attune(wrap, import_intrinsics)]
+fn example(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
     let a = _mm256_loadu_ps(data);
     let b = _mm256_add_ps(a, a);
     let mut out = [0.0; 8];
@@ -82,68 +84,77 @@ fn example(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 
 **Archmage** provides tokens, macros, and detection. Minimal.
 
-**Magetypes** provides SIMD types (`f32x8`, `i32x4`), operators, methods, transcendentals, and cross-platform polyfills. Maximal.
+**Magetypes** provides SIMD types (`f32x8`, `i32x4`), token-first `*_t` constructors, operators, methods, transcendentals, and cross-platform polyfills.
 
 ## Idiomatic Patterns
 
-### `#[rite]` inside, `#[arcane]` at the boundary
+### Direct `#[attune(v3)]` inside, `#[attune(wrap)]` at the boundary
 
-`#[rite]` adds `#[target_feature]` + `#[inline]` directly, so LLVM inlines it into callers with matching features. `#[arcane]` generates an inner `#[target_feature]` function called from a safe outer function (needed when transitioning from non-SIMD code — this crossing is the target-feature boundary).
+Direct feature bodies (`#[attune(v3)]`, `#[attune] fn helper_v3(...)`, or multi-tier `#[attune(_v3, _neon)]` / `#[attune(_*)]`) add `#[target_feature]` + `#[inline]` directly, so LLVM inlines them into callers with matching or superset features. Proof wrappers (`#[attune(wrap)]`, `#[attune] fn entry_v3_t(...)`, or `#[attune(_*_t, ...)]`) wrap a private `#[target_feature]` body in a safe outer function for calls from non-SIMD code.
 
-`#[rite]` works three ways: **token-based** (`#[rite]` with a token parameter), **tier-based** (`#[rite(v3)]` with no token), and **multi-tier** (`#[rite(v3, v4, neon)]` generating suffixed variants). Token-based and tier-based produce identical code — the token form can be easier to remember if you already have the token. Multi-tier generates one function per tier (`fn_v3`, `fn_v4`, `fn_neon`), each compiled with different features. Use tier-based when the token is just being threaded through unused. Use multi-tier when you want the same body compiled for multiple architectures.
+Use direct bodies when no wrapper is needed inside an already-attuned context. Use `#[attune(_*_t, define(f32x8))]` + `attuned!` (or `#[attune(dispatch)]`) when compiling the same kernel across portable architectures.
 
 ```rust
+use archmage::prelude::*;
+
 pub fn public_api(data: &[f32]) -> f32 {
+    #[cfg(target_arch = "x86_64")]
     if let Some(token) = X64V3Token::summon() {
-        process_simd(token, data)
-    } else {
-        data.iter().sum()
+        return process_simd(token, data);
     }
+    data.iter().sum()
 }
 
-#[arcane(import_intrinsics)]  // Boundary: called from non-SIMD code
-fn process_simd(token: X64V3Token, data: &[f32]) -> f32 {
+#[attune(wrap, import_intrinsics)]  // Boundary: called from non-SIMD code
+fn process_simd(_token: X64V3Token, data: &[f32]) -> f32 {
+    let (chunks, remainder) = data.as_chunks::<8>();
     let mut sum = 0.0;
-    for chunk in data.as_chunks::<8>().0 {
-        sum += process_chunk(chunk);  // no token needed!
+    for chunk in chunks {
+        sum += process_chunk(chunk);  // direct V3 call, no token needed
     }
-    sum
+    sum + remainder.iter().copied().sum::<f32>()
 }
 
-#[rite(v3, import_intrinsics)]  // Tier-based: inlines, no token parameter
+#[attune(v3, import_intrinsics)]  // Direct V3 body: inlines, no wrapper
 fn process_chunk(chunk: &[f32; 8]) -> f32 {
     let v = _mm256_loadu_ps(chunk);
-    // horizontal sum...
-    let sum = _mm256_hadd_ps(v, v);
-    let sum = _mm256_hadd_ps(sum, sum);
-    let low = _mm256_castps256_ps128(sum);
-    let high = _mm256_extractf128_ps::<1>(sum);
-    _mm_cvtss_f32(_mm_add_ss(low, high))
+    let hi = _mm256_extractf128_ps::<1>(v);
+    let sum128 = _mm_add_ps(_mm256_castps256_ps128(v), hi);
+    let shuf = _mm_movehdup_ps(sum128);
+    let sums = _mm_add_ps(sum128, shuf);
+    let shuf2 = _mm_movehl_ps(sums, sums);
+    _mm_cvtss_f32(_mm_add_ss(sums, shuf2))
 }
 ```
 
-Calling `#[arcane]` from a hot loop crosses the `#[target_feature]` boundary every iteration (4-6x slower depending on workload; see [benchmark data](PERFORMANCE.md)). `#[rite]` inlines into callers with matching features — no boundary.
+Calling a proof wrapper per iteration from non-SIMD code crosses the `#[target_feature]` boundary every iteration (4–6x slower depending on workload; see [benchmark data](PERFORMANCE.md)). Direct `#[attune(v3)]` helpers share the caller's features and inline with zero boundary overhead.
 
-### Enter `#[arcane]` once, use `#[rite]` inside
+### Enter the proof wrapper once, use direct helpers inside
 
-The cost isn't `summon()` (~1.3 ns cached) — it's the `#[target_feature]` boundary. Each `#[arcane]` call from non-SIMD code crosses a boundary that LLVM can't inline across. Even hoisting the token outside the loop doesn't help — you need the loop *inside* `#[arcane]` with `#[rite]` helpers.
+The cost isn't `summon()` (~1.3 ns cached) — it's the `#[target_feature]` boundary. Each wrapper call from non-SIMD code crosses a feature mismatch that LLVM cannot inline across. Hoisting the token outside the loop doesn't help — put the loop inside the `#[attune]` entry point and keep helpers in matching feature contexts.
 
 ### Concrete tokens for hot paths
 
-`#[arcane]` enables the features its signature names. With a tier-trait bound,
-that is the bound's tier, whichever token the caller passes:
+`#[attune(wrap)]` enables the features its proof parameter names. With a tier-trait bound,
+that is the bound's tier, whichever concrete token the caller passes:
 
 ```rust
+use archmage::prelude::*;
+
 // Compiled with V2 features (SSE4.2), even when called with an X64V4Token
-#[arcane(import_intrinsics)]
-fn process<T: HasX64V2>(token: T, data: &[f32]) -> f32 { ... }
+#[attune(wrap, import_intrinsics)]
+fn process<T: HasX64V2>(_token: T, data: &[f32]) -> f32 {
+    data.iter().sum()
+}
 
 // Compiled with V3 features (AVX2, FMA)
-#[arcane(import_intrinsics)]
-fn process_v3(token: X64V3Token, data: &[f32]) -> f32 { ... }
+#[attune(wrap, import_intrinsics)]
+fn process_v3(_token: X64V3Token, data: &[f32]) -> f32 {
+    data.iter().sum()
+}
 ```
 
-Generics are not the cost: they monomorphize, and a generic helper inlines into
+Generics are not the cost: they monomorphize, and a generic helper marked `#[inline(always)]` inlines into
 a caller whose features cover it. The cost is the feature set of the region the
 hot loop runs in, and any call from it into a stronger-feature function, which
 is a boundary. Passing a stronger token down is free (`v4.v3()`). Dispatch once
@@ -156,19 +167,19 @@ at the entry point, with the concrete token for the tier you want.
 ```rust
 use archmage::prelude::*;
 
-#[arcane(import_intrinsics)]
-fn load_and_square(token: X64V3Token, data: &[f32; 8]) -> __m256 {
+#[attune(wrap, import_intrinsics)]
+fn load_and_square(_token: X64V3Token, data: &[f32; 8]) -> __m256 {
     let v = _mm256_loadu_ps(data);  // Takes &[f32; 8], not *const f32
     _mm256_mul_ps(v, v)
 }
 ```
 
-For high-level code, prefer magetypes (which uses safe memory ops internally).
+For high-level portable code, prefer magetypes (`#[attune(_*_t, define(f32x8))]` + `f32x8::load_t(token, data)`).
 
 ## The Soundness Invariant
 
-```
-features_enabled_by_arcane(Token) ⊆ features_checked_by_summon(Token)
+```text
+features_enabled_by_attune(Token) ⊆ features_checked_by_summon(Token)
 ```
 
 `cargo xtask validate` checks the right side: each `summon()` tests every
@@ -181,22 +192,22 @@ When explaining archmage:
 
 1. Tokens are zero-sized proofs of CPU features
 2. `summon()` does the runtime check, returns `Option<Token>`
-3. `#[arcane]` generates `#[target_feature]` code
-4. Inside `#[target_feature]`, most intrinsics are safe (Rust 1.87+)
-5. `#[arcane]` at the boundary, `#[rite]` for everything else
-6. `#[rite]` has three modes: token-based, tier-based (`#[rite(v3)]`), multi-tier (`#[rite(v3, v4, neon)]`)
-7. Enter `#[arcane]` once, `#[rite]` for everything inside
-8. A trait bound compiles the body with the bound's tier; take a concrete token for the tier you want
+3. `#[attune(wrap)]` and `_tier_t` generate safe `#[target_feature]` boundary wrappers; `#[attune(v3)]` and `_*` generate direct feature bodies
+4. Inside `#[target_feature]`, value-based intrinsics are safe (Rust 1.87+)
+5. Enter a proof wrapper once at the boundary, and use direct `#[attune]` bodies (or `#[inline(always)]` generic helpers) inside
+6. `#[attune(_*_t, define(f32x8))]` + `attuned!` (or `#[attune(dispatch)]`) generates and dispatches portable multi-tier families (explicitly adding `+v4(cfg(avx512))` when AVX-512 is wanted)
+7. Token-first magetypes constructors use `*_t(token, ...)` (`splat_t`, `load_t`, `zero_t`, `from_array_t`, `from_slice_t`); receiver methods (`v.store(out)`, `v.mul_add_relaxed(b, c)`, `v.mul_add_fused(b, c)`) take no token
+8. A trait bound on `#[attune(wrap)]` compiles the body with the bound's tier; take a concrete token for the tier you want
 9. `import_intrinsics` provides safe memory operations (references, not pointers)
-10. magetypes provides high-level SIMD types
+10. magetypes provides high-level portable SIMD types
 
 When showing examples:
 
-1. Show the simple path first (magetypes + `#[arcane]`)
-2. Explain what the macro generates (for understanding)
-3. Memory ops use references (via `import_intrinsics`), not raw pointers
-4. Include the `summon()` call in context
-5. Show `#[rite(v3)]` for internal helpers, `#[rite]` with token for magetypes, `#[rite(v3, v4, neon)]` for multi-tier
+1. Show the portable path first (`#[attune(_*_t, define(f32x8))]` + `attuned!` + `*_t` constructors) or `#[attune(wrap)]` for single-arch raw intrinsics
+2. Explain what the boundary wrapper generates (for understanding)
+3. Memory ops use references (via `import_intrinsics` or magetypes `load_t`/`store`), not raw pointers
+4. Include the `summon()` or `attuned!` call in context (with `#[cfg(target_arch)]` on manual single-arch call sites)
+5. Show `#[attune(v3)]` for single-tier helpers and `#[attune(_*)]` / `#[attune(_v3, _neon)]` for multi-tier helpers
 
 ## Banned from Docs
 
@@ -206,28 +217,30 @@ These historical prelude aliases were removed in 0.9.27 and must not appear in c
 |-------|-------------|
 | `F32Vec`, `I32Vec`, etc. | `f32x8`, `f32x4`, `i32x8`, `i32x4` |
 | `RecommendedToken` | `X64V3Token`, `Arm64`, `Wasm128Token` |
-| `LANES` (outside `#[magetypes]`) | Explicit: `8`, `4`, or width in type name |
+| `LANES` (outside tier namespaces) | Explicit: `8`, `4`, or width in type name |
 
-Fixed-width examples should make the lane count explicit. `#[magetypes]` substitutes
-`Token`; its old `f32xN` and `LANES` substitutions were removed in `36c8caf`.
+Fixed-width examples should make the lane count explicit. `#[attune(..., define(f32x8))]` (and legacy `#[magetypes]`) substitutes
+`Token`; the old `f32xN` and `LANES` substitutions were removed in `36c8caf`.
 Tier namespaces still provide natural-width `f32xN` aliases and `LANES_F32`
-constants, imported with `rite(import_magetypes)` or `arcane(import_magetypes)`.
+constants, imported with `#[attune(..., import_magetypes)]`.
 
 ## Cross-Architecture
 
-All tokens exist on all architectures. On wrong arch, `summon()` returns `None`. `#[arcane]` and `#[rite]` cfg-out the function on wrong architectures (no code emitted), so use `incant!` or `#[cfg(target_arch)]` guards at call sites:
+All tokens exist on all architectures. On unsupported architectures, `summon()` returns `None`. `#[attune]` omits inapplicable target-architecture functions via `#[cfg(target_arch)]`, so use `attuned!` / `#[attune(dispatch)]` or `#[cfg(target_arch)]` guards at manual call sites:
 
 ```rust
-#[arcane(import_intrinsics)]
-fn x86_kernel(token: X64V3Token, data: &[f32; 8]) -> f32 {
-    // On ARM: this function is not emitted (cfg'd out)
-    // ...
+use archmage::prelude::*;
+
+#[attune(wrap, import_intrinsics)]
+fn x86_kernel(_token: X64V3Token, data: &[f32; 8]) -> f32 {
+    // On ARM/WASM: this function is omitted via #[cfg(target_arch)]
+    _mm256_cvtss_f32(_mm256_castps256_ps128(_mm256_loadu_ps(data)))
 }
 
-// Use cfg guard at the call site, or use incant! for multi-arch dispatch
+// Guard manual single-arch call sites, or use attuned! for multi-arch dispatch
 #[cfg(target_arch = "x86_64")]
 if let Some(token) = X64V3Token::summon() {
-    x86_kernel(token, &data);  // Only exists on x86
+    let _ = x86_kernel(token, &data);  // Only exists on x86_64
 }
 ```
 
@@ -273,8 +286,9 @@ MIT OR Apache-2.0
 The public guides now lead with complete call chains adapted from `zenfilters`,
 `zenblend`, `zenwebp`, and `linear-srgb`, with pinned source links and explicit
 adaptation notes. Their executable counterparts are in
-`magetypes/tests/doc_examples.rs`. Entry points use `#[magetypes]` or `#[arcane]`;
-`#[inline(always)]` on a generic helper does not establish target features.
+`magetypes/tests/doc_examples.rs`. Entry points use `#[attune]` (or legacy
+`#[magetypes]` / `#[arcane]`); `#[inline(always)]` on a generic helper does not
+establish target features.
 
 Authored Markdown and browser examples no longer contain explicit unsafe blocks.
 Macro expansion internals are explained in prose. The intrinsic registry retains

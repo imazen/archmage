@@ -170,6 +170,14 @@ pub fn dispatch_add_one(x: f32) -> f32 {
     incant!(add_one(x), [v3, scalar])
 }
 
+pub fn no_features_magemath_smoke(x: f32) -> f32 {
+    const EXP_CFG: u128 = magemath::expf::ExpfOptions::new()
+        .domain(magemath::expf::ExpfDomain::SignedUnit)
+        .assume_in_bounds()
+        .bits();
+    magemath::expf::Expf::<EXP_CFG>::exp2_infallible(x)
+}
+
 #[cfg(all(target_arch = "x86_64", not(target_feature = "sse2")))]
 pub fn soft_float_smoke(x: f32) -> f32 {
     use magetypes::simd::f32x8;
@@ -269,5 +277,6 @@ mod tests {
         let data = [1.0f32, 2.0, 3.0, 4.0];
         let result = sum_squares_scalar(ScalarToken, &data);
         assert!((result - 30.0).abs() < 1e-6);
+        assert!((no_features_magemath_smoke(0.5) - core::f32::consts::SQRT_2).abs() < 1e-5);
     }
 }

@@ -7,7 +7,7 @@
 **Register width:** 128-bit
 
 ```rust
-use archmage::{Wasm128Token, SimdToken, arcane};
+use archmage::{SimdToken, Wasm128Token, attune};
 
 if let Some(token) = Wasm128Token::summon() {
     process_wasm(token, &data);
@@ -46,11 +46,11 @@ Like NEON, WASM only has 128-bit registers. `f32x8` and wider types use polyfill
 
 WASM Relaxed SIMD provides operations where the exact result may vary between engines (browsers/runtimes). `Wasm128RelaxedToken` proves `simd128` and `relaxed-simd`, and like `Wasm128Token` it is compile-time only (`-Ctarget-feature=+simd128,+relaxed-simd`).
 
-In a build with `relaxed-simd` enabled, magetypes' `mul_add` and `mul_sub` emit relaxed multiply-add, which an engine may fuse or not; the transcendentals, built on `mul_add`, inherit that. Without it, `mul_add` is a multiply then an add. `mul_add_portable` never uses relaxed SIMD: it fuses in software in every WASM build.
+In a build with `relaxed-simd` enabled, magetypes' `mul_add_relaxed` and `mul_sub_relaxed` emit relaxed multiply-add, which an engine may fuse or round twice; the `lowp` and `midp` transcendentals, built on `mul_add_relaxed`, inherit that. Without `relaxed-simd`, `mul_add_relaxed` multiplies then adds. `mul_add_fused` (alias `mul_add_portable`) guarantees one rounding in every WASM build: it fuses in software by default, or uses relaxed multiply-add when a cached probe shows the engine rounds once.
 
 ### ScalarToken
 
-`ScalarToken` is always available on all platforms, including WASM. It's the fallback used by `incant!` when no SIMD token is available:
+`ScalarToken` is always available on all platforms, including WASM. It is the fallback used by `attuned!` and `#[attune(dispatch)]` when no SIMD token is available:
 
 ```rust
 use archmage::ScalarToken;

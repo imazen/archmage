@@ -5,6 +5,46 @@ holds configurable `f32` power, exponential, logarithm and cube-root
 approximations. It depends on Magetypes vectors and Archmage proofs; Magetypes
 does not depend on Magemath.
 
+Full guides on the documentation site:
+
+- [Magemath overview & API](https://imazen.github.io/archmage/magemath/)
+- [Tuning Performance & Subnormals](https://imazen.github.io/archmage/magemath/tuning-and-subnormals/)
+- [Magetypes Fast Paths & Contract Tiers](https://imazen.github.io/archmage/magemath/magetypes-fast-paths/)
+
+## Two opposite configurations: why explicit domains pay off
+
+On `4,096` normalized `f32` samples (`x^(1.0 / 2.4)` on AMD Ryzen 9 9950X3D, Zen 5, single core pinned via `taskset -c 8`, no `-C target-cpu`, 16-lane AVX-512 slice loop via `Execution::Upgrade`; full data in [`benchmarks/magemath_slices_2026-11-17/RESULTS.md`](../benchmarks/magemath_slices_2026-11-17/RESULTS.md)):
+
+```rust
+use magemath::powf::{Powf, PowfDomain, PowfOptions};
+
+// 1. Broad defensive config: unranged [0, MAX], runtime exponent validation,
+//    * 2^23 subnormal normalization, internal y*log2(x) range check -> 1.52 µs ± 2 ns
+const DEFENSIVE: u128 = PowfOptions::new()
+    .domain(PowfDomain::NonNegative)
+    .admit_subnormals()
+    .bits();
+
+// 2. Tight domain-proven config: [0, 1] unit domain, compile-time exponent 1/2.4
+//    (range-check elision proven at compile time), unchecked -> 666.5 ns ± 2 ns (2.28x faster)
+const FAST: u128 = PowfOptions::new()
+    .domain(PowfDomain::Unit)
+    .const_exponent(1.0 / 2.4)
+    .assume_in_bounds()
+    .bits();
+
+let src: Vec<f32> = (0..4096).map(|i| (i as f32) / 4095.0).collect();
+let mut wide_out = vec![0.0_f32; 4096];
+let mut fast_out = vec![0.0_f32; 4096];
+Powf::<DEFENSIVE>::slice(&src, &mut wide_out, 1.0 / 2.4).unwrap();
+Powf::<FAST>::slice_const(&src, &mut fast_out).unwrap();
+assert_eq!(wide_out, fast_out);
+```
+
+Keeping `Validation::Checked` on `[0, 1]` with `.const_exponent(1.0 / 2.4).reject_subnormals()` still runs in **`827.1 ns ± 3 ns`** (**`1.84x` faster** while rejecting `< 0`, `> 1`, `±inf`, and `NaN` with exact index), and algebraic `.const_exponent(0.5)` lowers to `vsqrtps` in **`251.8 ns ± 1 ns`** (**`6.0x` faster**). Across all five families (`powf`, `exp2`, `log2`, `log1p`, `cbrt`), tightening domains and skipping unneeded checks yields **`1.72x` to `3.15x`** speedups (`2.28x` on `powf`, `2.56x`–`3.15x` on `exp2`, `2.65x` on `log2`, `2.45x` on `log1p`, `1.72x` on `cbrt`).
+
+## When to keep Magetypes vs migrate to Magemath
+
 **Nothing in Magetypes changes or is deprecated by this crate.** The flat
 methods published in 0.9.31 (`pow_midp`, `exp2_lowp`, `log2_midp`, `cbrt_midp`,
 their `_unchecked` / `_precise` spellings, and the rest) keep their arithmetic
@@ -104,9 +144,11 @@ special-value and subnormal behavior.
 - **cbrtf (`CbrtfOptions`, `CbrtfDomain`):** `Bounded` (`±0.0` and normal
   `|x| < f32::MAX / 3`) by default, plus `Unit` (`[0, 1]`), `SignedUnit`
   (`.unit_range()`, `[-1, 1]`), `PositiveNormals`, `AllFloats`, and custom `bf16`
-  `.input_range(lo, hi)` (`|bound| <= MAX_CBRT_BF16 = 0x7eaa_0000`). Subnormals
-  remain opt-in on `Unit` and `SignedUnit` unless `.admit_subnormals()` or
-  `.flush_or_clamp_subnormals()` is enabled.
+  `.input_range(lo, hi)` (`|bound| <= MAX_CBRT_BF16 = 0x7eaa_0000`). Like `powf`,
+  `logf`, and `log1pf`, `CbrtfOptions::new()` defaults to
+  `Subnormals::FlushOrClamp` (flushing nonzero subnormals to `±0.0` when `0.0` is
+  in range or to the nearest normal endpoint otherwise); `.reject_subnormals()`
+  and `.admit_subnormals()` (`* 2^24` / `* 2^-8` exact rescaling) are explicit opt-ins.
 
 All guarantees assume round-to-nearest with gradual underflow. NaN payloads and
 floating-point exception flags are not part of any contract.

@@ -7,7 +7,7 @@
 **Register width:** 128-bit, 32 registers (V0-V31)
 
 ```rust
-use archmage::{Arm64, SimdToken, arcane};
+use archmage::{Arm64, SimdToken, attune};
 
 // Always succeeds on AArch64 — NEON is baseline
 if let Some(token) = Arm64::summon() {
@@ -34,9 +34,12 @@ NEON is always available on AArch64. Unlike x86 where you need to check for AVX2
 On x86, FMA requires V3 (Haswell+). On ARM, FMA is part of baseline NEON:
 
 ```rust
-#[arcane(import_intrinsics)]
-fn fma_neon(token: Arm64, a: f32x4, b: f32x4, c: f32x4) -> f32x4 {
-    a.mul_add(b, c)  // Uses native vfmaq_f32
+use archmage::{Arm64, attune};
+use magetypes::simd::generic::f32x4;
+
+#[attune(wrap)]
+fn fma_neon(_token: Arm64, a: f32x4<Arm64>, b: f32x4<Arm64>, c: f32x4<Arm64>) -> f32x4<Arm64> {
+    a.mul_add_relaxed(b, c)  // Uses native vfmaq_f32
 }
 ```
 
@@ -45,12 +48,13 @@ fn fma_neon(token: Arm64, a: f32x4, b: f32x4, c: f32x4) -> f32x4 {
 NEON only has 128-bit registers. For `f32x8` and wider types, magetypes uses polyfills — two 128-bit operations per 256-bit operation:
 
 ```rust
+use archmage::{Arm64, attune};
 use magetypes::simd::generic::f32x8;
 
-#[arcane(import_intrinsics)]
+#[attune(wrap)]
 fn process(token: Arm64, data: &[f32; 8]) -> f32 {
     let v = f32x8::load_t(token, data);  // 2× vld1q_f32 internally
-    v.reduce_add()                      // 2× horizontal sum + scalar add
+    v.reduce_add()                       // 2× horizontal sum + scalar add
 }
 ```
 
@@ -100,14 +104,16 @@ if let Some(token) = NeonCrcToken::summon() {
 The broadest modern ARM compute tier. Covers virtually all ARM chips shipping since 2017.
 
 ```rust
-use archmage::{Arm64V2Token, SimdToken, arcane};
+use archmage::{Arm64V2Token, SimdToken, attune};
 
+#[cfg(target_arch = "aarch64")]
 if let Some(token) = Arm64V2Token::summon() {
     process_v2(token, &data);
 }
 
-#[arcane(import_intrinsics)]
+#[attune(wrap, import_intrinsics)]
 fn process_v2(token: Arm64V2Token, data: &[f32]) {
+    let _ = (token, data);
     // DotProd (vdotq), FP16 (vcvt), CRC, AES, SHA2 all available
     // RDM (rounding doubling multiply) for fixed-point DSP
 }
@@ -139,14 +145,16 @@ fn process_v2(token: Arm64V2Token, data: &[f32]) {
 The full modern feature set. Requires A510+ LITTLE cores.
 
 ```rust
-use archmage::{Arm64V3Token, SimdToken, arcane};
+use archmage::{Arm64V3Token, SimdToken, attune};
 
+#[cfg(target_arch = "aarch64")]
 if let Some(token) = Arm64V3Token::summon() {
     process_v3(token, &data);
 }
 
-#[arcane(import_intrinsics)]
+#[attune(wrap, import_intrinsics)]
 fn process_v3(token: Arm64V3Token, data: &[f32]) {
+    let _ = (token, data);
     // I8MM (matrix multiply), BF16, SHA3, FCMA, FHM all available
     // Plus everything from V2
 }

@@ -3,7 +3,7 @@ title = "WASM SIMD"
 weight = 4
 +++
 
-Keep the same portable `#[magetypes]` and `incant!` source used on x86 and ARM.
+Keep the same portable `#[attune]` and `attuned!` source used on x86 and ARM.
 For a SIMD128 WebAssembly artifact:
 
 ```sh
@@ -23,7 +23,8 @@ The [gain](@/archmage/getting-started/first-simd.md),
 [generic luma](@/magetypes/dispatch/types-and-dispatch.md) examples carry complete
 portable call chains. Fixed [`f32x8`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.f32x8.html) shapes use multiple SIMD128 vectors.
 
-For raw intrinsics, use `#[arcane(import_intrinsics)]` with `Wasm128Token` and
+For raw intrinsics, use `#[attune(wrap, import_intrinsics)]` with `Wasm128Token`
+(or `#[attune(wasm128, import_intrinsics)]` on an internal helper) and
 consult the combined intrinsic namespace. Available safe memory wrappers take
 references, not raw pointer casts. Not every pointer intrinsic has a wrapper.
 

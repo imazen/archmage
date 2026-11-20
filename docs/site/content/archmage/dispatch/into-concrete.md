@@ -22,7 +22,7 @@ These extraction methods are infallible and do not repeat CPU detection.
 Use `summon()` when you need evidence for additional features.
 
 For ordinary portable kernels, use a generated entry and a backend-generic
-helper. For a family of concrete variants, use [incant!](@/archmage/dispatch/incant.md).
+helper. For a family of concrete variants, use [attuned!](@/archmage/dispatch/incant.md).
 Manual branching on exact token types must handle unrecognized token types and cfg-gate
 architecture-specific calls. Falling through without doing the work is not a
 valid scalar fallback.
@@ -30,6 +30,7 @@ valid scalar fallback.
 This is a low-level reference facility. The reviewed zen kernel patterns do not
 justify introducing exact-token-type dispatch into the beginner call chain.
 
-With `incant!(... with token)`, a `scalar` tier only matches an actual
-`ScalarToken`; an unrecognized held token can panic. Use a tokenless `default`
-fallback if every unrecognized token must still run the operation.
+With `attuned!(work(data), [_v3, _scalar], using(token))`, non-scalar tiers
+check `IntoConcreteToken` without probing the CPU, and any unrecognized token
+type falls through to the guaranteed `_scalar` arm (`work_scalar_t(ScalarToken,
+data)`).

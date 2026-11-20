@@ -19,12 +19,12 @@ This reference check exercises values for which the distinction matters:
 
 ```rust
 use archmage::prelude::*;
-#[magetypes(define(f32x8), v3, neon, wasm128, scalar)]
+#[attune(_*_t, define(f32x8))]
 fn convert_impl(token: Token, values: [f32; 8]) -> [i32; 8] {
     f32x8::from_array_t(token, values).to_i32_saturating().to_array()
 }
 pub fn convert(values: [f32; 8]) -> [i32; 8] {
-    incant!(convert_impl(values), [v3, neon, wasm128, scalar])
+    attuned!(convert_impl(values))
 }
 let values = [f32::NAN, f32::INFINITY, f32::NEG_INFINITY, 3e9, -3e9, 1.9, -1.9, 0.0];
 assert_eq!(convert(values), values.map(|x| x as i32));
@@ -36,9 +36,10 @@ x86. See the exact [ISA fixup table](@/magetypes/isa-quirks.md) for instructions
 and measured costs. Do not pay for a fixup unnecessarily when a proved input
 domain makes the native operation equivalent, but document and test that proof.
 
-Width-specific names such as `to_i32x8` remain aliases. They do not change the
-exceptional-value contract. For quantization, also define tie handling and the
-range before narrowing; saturating the final store cannot repair earlier overflow.
+Prefer `to_i32`, `to_i32_saturating`, and `to_i32_round`; width-specific
+compatibility aliases do not change the exceptional-value contract. For
+quantization, also define tie handling and the range before narrowing;
+saturating the final store cannot repair earlier overflow.
 
 ## Half-precision storage
 
@@ -49,12 +50,12 @@ input holds IEEE binary16 bits.
 ```rust
 use archmage::prelude::*;
 use magetypes::simd::F16Convert;
-#[magetypes(v3, neon, wasm128, scalar)]
+#[attune(_*_t)]
 fn decode_half_impl(token: Token, input: &[u16], output: &mut [f32]) {
     token.f16_to_f32_slice(input, output);
 }
 pub fn decode_half(input: &[u16], output: &mut [f32]) {
-    incant!(decode_half_impl(input, output), [v3, neon, wasm128, scalar])
+    attuned!(decode_half_impl(input, output));
 }
 let mut output = [0.0; 3];
 decode_half(&[0x0000, 0x3c00, 0xc000], &mut output);

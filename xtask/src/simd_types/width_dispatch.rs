@@ -198,7 +198,9 @@ fn generate_trait_def() -> String {
     let mut code = String::with_capacity(4096);
 
     code.push_str(
-        "/// Trait providing access to all SIMD sizes from a capability token.\n\
+        "/// **Superseded (queued for deprecation):** Use `#[attune(_*_t, define(...))]` or backend-generic bounds (such as [`F32x8Backend`](crate::simd::backends::F32x8Backend) on [`f32x8<T>`](crate::simd::generic::f32x8)) instead.\n\
+         ///\n\
+         /// Trait providing access to all SIMD sizes from a capability token.\n\
          ///\n\
          /// Every token implementing this trait can construct vectors of any size.\n\
          /// The associated types determine whether native or polyfilled implementations\n\
@@ -410,7 +412,9 @@ pub fn generate_width_dispatch(_reg: &Registry) -> String {
     let mut code = String::with_capacity(32768);
 
     code.push_str(
-        r#"//! Width dispatch trait for token-based SIMD type construction.
+        r#"//! **Superseded (queued for deprecation):** Use `#[attune(_*_t, define(...))]` or backend-generic bounds (such as [`F32x8Backend`](crate::simd::backends::F32x8Backend) on [`f32x8<T>`](crate::simd::generic::f32x8)) instead.
+//!
+//! Width dispatch trait for token-based SIMD type construction.
 //!
 //! **Auto-generated** by `cargo xtask generate` - do not edit manually.
 //!

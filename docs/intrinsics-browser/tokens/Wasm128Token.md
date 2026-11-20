@@ -14,17 +14,17 @@ if let Some(token) = Wasm128Token::summon() {
     process(token, &mut data);
 }
 
-#[arcane(import_intrinsics)]  // Entry point only
-fn process(token: Wasm128Token, data: &mut [f32]) {
+#[attune(wrap, import_intrinsics)]  // Entry point only
+fn process(_token: Wasm128Token, data: &mut [f32]) {
     for chunk in data.chunks_exact_mut(4) {
-        process_chunk(token, chunk.try_into().unwrap());
+        process_chunk(chunk.try_into().unwrap());
     }
 }
 
-#[rite(import_intrinsics)]  // All inner helpers
-fn process_chunk(_: Wasm128Token, chunk: &mut [f32; 4]) {
+#[attune(wasm128, import_intrinsics)]  // All inner helpers
+fn process_chunk(chunk: &mut [f32; 4]) {
     let v = v128_load(chunk);  // safe!
-    let doubled = f32x4_add(v, v);  // value intrinsic (safe inside #[rite])
+    let doubled = f32x4_add(v, v);  // value intrinsic (safe inside #[attune(wasm128)])
     v128_store(chunk, doubled);  // safe!
 }
 // No unsafe anywhere. Use #![forbid(unsafe_code)] in your crate.

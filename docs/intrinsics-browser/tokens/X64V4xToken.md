@@ -14,16 +14,16 @@ if let Some(token) = X64V4xToken::summon() {
     process(token, &mut data);
 }
 
-#[arcane(import_intrinsics)]  // Entry point only
-fn process(token: X64V4xToken, data: &mut [f32]) {
+#[attune(wrap, import_intrinsics)]  // Entry point only
+fn process(_token: X64V4xToken, data: &mut [f32]) {
     for chunk in data.chunks_exact_mut(16) {
-        process_chunk(token, chunk.try_into().unwrap());
+        process_chunk(chunk.try_into().unwrap());
     }
 }
 
-#[rite(import_intrinsics)]  // All inner helpers
-fn process_chunk(_: X64V4xToken, chunk: &mut [f32; 16]) {
-    let v = _mm512_loadu_ps(&*chunk);  // safe inside #[rite]
+#[attune(v4x, import_intrinsics)]  // All inner helpers
+fn process_chunk(chunk: &mut [f32; 16]) {
+    let v = _mm512_loadu_ps(&*chunk);  // safe inside #[attune(v4x)]
     let doubled = _mm512_add_ps(v, v);
     _mm512_storeu_ps(chunk, doubled);
 }
