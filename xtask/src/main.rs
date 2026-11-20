@@ -1043,48 +1043,24 @@ fn run_miri() -> Result<()> {
         }
         println!("  miri: {bin} {:.0} s", started.elapsed().as_secs_f64());
     }
-    // The unpublished numerical framework moved out of Magetypes. Preserve
-    // its previous unit/highp/error coverage at the actual owner.
-    let migrated = Command::new("cargo")
+    let started = std::time::Instant::now();
+    // Cargo cannot mix --doc with explicit targets, so the doctests that the
+    // former all-targets invocation covered get their own run.
+    let doc = Command::new("cargo")
         .args([
             &toolchain,
             "miri",
             "test",
             "-p",
-            "magemath",
+            "magetypes",
             "--features",
-            "std avx512",
-            "--lib",
-            "--test",
-            "powf_highp",
-            "--test",
-            "expf_logf_contracts",
+            "avx512",
+            "--doc",
         ])
         .status()
-        .context("Failed to run migrated Magemath Miri contracts")?;
-    if !migrated.success() {
-        bail!("Migrated Magemath Miri contracts failed");
-    }
-    let started = std::time::Instant::now();
-    // Cargo cannot mix --doc with explicit targets, so the doctests that the
-    // former all-targets invocation covered get their own run.
-    for (package, features) in [("magetypes", "avx512"), ("magemath", "std avx512")] {
-        let doc = Command::new("cargo")
-            .args([
-                &toolchain,
-                "miri",
-                "test",
-                "-p",
-                package,
-                "--features",
-                features,
-                "--doc",
-            ])
-            .status()
-            .with_context(|| format!("Failed to run {package} Miri doctests"))?;
-        if !doc.success() {
-            bail!("{package} Miri doctests failed; see diagnostics above");
-        }
+        .context("Failed to run Miri doctests")?;
+    if !doc.success() {
+        bail!("Miri doctests failed; see diagnostics above");
     }
     println!("  miri: doctests {:.0} s", started.elapsed().as_secs_f64());
     println!("Miri tests passed for native raw interop, the baseline suite, and the doctests");
