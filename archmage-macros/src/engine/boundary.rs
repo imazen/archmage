@@ -60,9 +60,6 @@ pub(crate) struct BoundaryOptions {
     /// wrapper holds no author code, so lint levels here never reach the
     /// author's body; on wasm32 (one function) and in nested mode they do.
     pub(crate) wrapper_attrs: Vec<Attribute>,
-    /// Set by `#[autoversion]`, whose dispatcher already emits the user-spanned
-    /// `unsafe fn` lint guard once.
-    pub(crate) skip_unsafe_fn_guard: bool,
 }
 
 /// Shared implementation for arcane/arcane macros.
@@ -71,14 +68,6 @@ pub(crate) fn expand(
     macro_name: &str,
     args: BoundaryOptions,
 ) -> TokenStream {
-    if let Some(err) = reject_conflicting_unsafe_attrs(&input_fn.attrs, macro_name, false) {
-        return err.to_compile_error();
-    }
-    let unsafe_guard = if args.skip_unsafe_fn_guard {
-        TokenStream::new()
-    } else {
-        unsafe_fn_lint_guard(&input_fn.sig, &input_fn.brace_token)
-    };
     // Check for self receiver
     let has_self_receiver = input_fn
         .sig
@@ -176,7 +165,6 @@ pub(crate) fn expand(
         let mut sig = input_fn.sig.clone();
         rename_non_ident_params(&mut sig);
         crate::common::rename_underscore_params(&mut sig);
-        crate::common::strip_forwarding_pat_modifiers(&mut sig);
         sig
     };
     let wrapper_token_ident = find_token_param(&wrapper_sig)
@@ -246,10 +234,7 @@ pub(crate) fn expand(
             .as_ref()
             .map(|_| quote! { let _self = self; });
         let cfg = gen_cfg_guard(None, args.shared.cfg_feature.as_deref());
-        let body = braced_body(
-            &input_fn.brace_token,
-            quote! { #unsafe_guard #self_binding #body },
-        );
+        let body = braced_body(&input_fn.brace_token, quote! { #self_binding #body });
         return quote! { #cfg #(#attrs)* #inline_attr #vis #sig #body };
     }
     let target_feature_attrs: Vec<Attribute> =
@@ -259,13 +244,7 @@ pub(crate) fn expand(
     // The wasm validation model guarantees unsupported instructions trap deterministically,
     // so there's no UB from feature mismatch. Skip the unsafe wrapper entirely.
     if target_arch == Some("wasm32") {
-        return arcane_impl_wasm_safe(
-            input_fn,
-            &args,
-            target_feature_attrs,
-            inline_attr,
-            unsafe_guard,
-        );
+        return arcane_impl_wasm_safe(input_fn, &args, target_feature_attrs, inline_attr);
     }
 
     let cfg_guard = drop_attrs_equal_to(
@@ -273,16 +252,6 @@ pub(crate) fn expand(
         target_arch,
         args.shared.cfg_feature.as_deref(),
     );
-    let callee = if args.nested {
-        format!("__simd_inner_{}", input_fn.sig.ident)
-    } else {
-        format!("__arcane_{}", input_fn.sig.ident)
-    };
-    for sig in [&input_fn.sig, &wrapper_sig] {
-        if let Some(err) = reserved_param_error(sig, &callee, macro_name) {
-            return err;
-        }
-    }
     let parts = BoundaryParts {
         cfg_guard,
         target_feature_attrs,
@@ -293,78 +262,41 @@ pub(crate) fn expand(
             args.suppress_const_test,
         ),
         tier_trait_assertion: gen_tier_trait_assertion(&tier_traits, &wrapper_token_ident),
-        unsafe_guard,
         wrapper_sig,
     };
+    let callee = if args.nested {
+        format!("__simd_inner_{}", input_fn.sig.ident)
+    } else {
+        format!("__arcane_{}", input_fn.sig.ident)
+    };
+    if let Some(err) = reserved_param_error(&input_fn.sig, &callee, macro_name) {
+        return err;
+    }
     emit_boundary(input_fn, &args, parts)
 }
 
-fn pat_binds_ident<'a>(pat: &'a syn::Pat, target: &str) -> Option<&'a syn::Ident> {
-    use syn::ext::IdentExt as _;
-    match pat {
-        syn::Pat::Ident(p) => {
-            if p.ident.unraw() == target {
-                Some(&p.ident)
-            } else if let Some((_, sub)) = &p.subpat {
-                pat_binds_ident(sub, target)
-            } else {
-                None
-            }
-        }
-        syn::Pat::Tuple(t) => t.elems.iter().find_map(|e| pat_binds_ident(e, target)),
-        syn::Pat::TupleStruct(ts) => ts.elems.iter().find_map(|e| pat_binds_ident(e, target)),
-        syn::Pat::Struct(s) => s
-            .fields
-            .iter()
-            .find_map(|f| pat_binds_ident(&f.pat, target)),
-        syn::Pat::Slice(s) => s.elems.iter().find_map(|e| pat_binds_ident(e, target)),
-        syn::Pat::Or(o) => o.cases.iter().find_map(|c| pat_binds_ident(c, target)),
-        syn::Pat::Reference(r) => pat_binds_ident(&r.pat, target),
-        syn::Pat::Type(t) => pat_binds_ident(&t.pat, target),
-        syn::Pat::Paren(p) => pat_binds_ident(&p.pat, target),
-        _ => None,
-    }
-}
-
-/// Reject a parameter or const generic named like the generated callee (or
-/// internal proof binding), comparing unraw symbol names so `r#...` and
-/// post-rename `__archmage_*` bindings cannot shadow the `unsafe` call.
+/// Reject a parameter named like the generated callee, so nothing a caller
+/// writes can stand between the wrapper's `unsafe` call and that function.
 pub(crate) fn reserved_param_error(
     sig: &syn::Signature,
     callee: &str,
     macro_name: &str,
 ) -> Option<TokenStream> {
-    use syn::ext::IdentExt as _;
-    let target = callee.strip_prefix("r#").unwrap_or(callee);
-    for param in &sig.generics.params {
-        if let syn::GenericParam::Const(c) = param
-            && c.ident.unraw() == target
-        {
-            return Some(
+    sig.inputs.iter().find_map(|arg| match arg {
+        FnArg::Typed(pat_type) => match pat_type.pat.as_ref() {
+            syn::Pat::Ident(pat) if pat.ident == callee => Some(
                 syn::Error::new_spanned(
-                    &c.ident,
+                    &pat.ident,
                     format!(
-                        "const generic `{target}` shadows an identifier #[{macro_name}] generates \
-                         for `{}`; rename the parameter",
+                        "parameter `{callee}` shadows the function #[{macro_name}] generates for \
+                         `{}` and would receive its `unsafe` call; rename the parameter",
                         sig.ident
                     ),
                 )
                 .to_compile_error(),
-            );
-        }
-    }
-    sig.inputs.iter().find_map(|arg| match arg {
-        FnArg::Typed(pat_type) => pat_binds_ident(&pat_type.pat, target).map(|ident| {
-            syn::Error::new_spanned(
-                ident,
-                format!(
-                    "parameter `{target}` shadows the function #[{macro_name}] generates for \
-                     `{}` and would receive its `unsafe` call; rename the parameter",
-                    sig.ident
-                ),
-            )
-            .to_compile_error()
-        }),
+            ),
+            _ => None,
+        },
         FnArg::Receiver(_) => None,
     })
 }
@@ -378,7 +310,6 @@ struct BoundaryParts {
     inline_attr: Option<Attribute>,
     token_assertion: TokenStream,
     tier_trait_assertion: TokenStream,
-    unsafe_guard: TokenStream,
     wrapper_sig: syn::Signature,
 }
 
@@ -395,7 +326,6 @@ pub(crate) fn arcane_impl_wasm_safe(
     args: &BoundaryOptions,
     target_feature_attrs: Vec<Attribute>,
     inline_attr: Option<Attribute>,
-    unsafe_guard: TokenStream,
 ) -> TokenStream {
     let cfg_guard = drop_attrs_equal_to(
         &mut input_fn.attrs,
@@ -410,18 +340,14 @@ pub(crate) fn arcane_impl_wasm_safe(
     // If _self = Type is set, inject `let _self = self;` at top of body so user code
     // referencing `_self` works. The function remains in impl scope, so `Self` resolves
     // naturally — no Self replacement needed (unlike nested mode's inner fn).
-    let original_body = &input_fn.body;
     let body = if args.self_type.is_some() {
+        let original_body = &input_fn.body;
         quote! {
-            #unsafe_guard
             let _self = self;
             #original_body
         }
     } else {
-        quote! {
-            #unsafe_guard
-            #original_body
-        }
+        input_fn.body.clone()
     };
 
     // Prepend target_feature + inline attrs, filtering user #[inline] to avoid duplicates
@@ -450,7 +376,6 @@ fn emit_boundary(input: LightFn, options: &BoundaryOptions, parts: BoundaryParts
         inline_attr,
         token_assertion,
         tier_trait_assertion,
-        unsafe_guard,
         wrapper_sig,
     } = parts;
     let sig = &input.sig;
@@ -564,7 +489,7 @@ fn emit_boundary(input: LightFn, options: &BoundaryOptions, parts: BoundaryParts
         #sibling_cfg #sibling
         #cfg_guard #(#attrs)* #(#wrapper_attrs)* #[inline(always)]
         #vis #wrapper_sig {
-            #unsafe_guard #nested #token_assertion #tier_trait_assertion #proof_call
+            #nested #token_assertion #tier_trait_assertion #proof_call
         }
     }
 }

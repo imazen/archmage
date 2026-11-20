@@ -4,9 +4,6 @@ use archmage::{rite, X64V3Token};
 )]
 #[inline]
 unsafe fn helper(token: X64V3Token, ptr: *const f32) -> f32 {
-    const _: () = {
-        unsafe fn __archmage_unsafe_fn() {}
-    };
     unsafe { *ptr }
 }
 fn main() {}

@@ -167,11 +167,6 @@ impl Parse for RiteArgs {
 
 /// Implementation for the `#[rite]` macro.
 pub(crate) fn rite_impl(input_fn: LightFn, args: RiteArgs) -> TokenStream {
-    if let Some(err) =
-        reject_conflicting_unsafe_attrs(&input_fn.attrs, "rite", args.tier_tokens.len() > 1)
-    {
-        return err.to_compile_error();
-    }
     // Multi-tier mode: generate suffixed variants for each tier
     if args.tier_tokens.len() > 1 {
         return rite_multi_tier_impl(input_fn, &args);
@@ -213,7 +208,7 @@ pub(crate) fn rite_single_impl(mut input_fn: LightFn, args: RiteArgs) -> TokenSt
             return multiple_tokens_error(&input_fn.sig, "rite", &token_params);
         }
     }
-    match crate::engine::feature::emit(input_fn, &args.shared, None, false, true, tier) {
+    match crate::engine::feature::emit(input_fn, &args.shared, None, false, tier) {
         Ok(tokens) => tokens,
         Err(err) => err,
     }
@@ -254,7 +249,7 @@ pub(crate) fn rite_multi_tier_impl(input_fn: LightFn, args: &RiteArgs) -> TokenS
             },
             None => tier,
         };
-        match crate::engine::feature::emit(variant_fn, &args.shared, None, false, true, tier) {
+        match crate::engine::feature::emit(variant_fn, &args.shared, None, false, tier) {
             Ok(tokens) => variants.extend(tokens),
             Err(err) => return err,
         }

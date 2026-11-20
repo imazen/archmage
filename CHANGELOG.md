@@ -85,7 +85,6 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 #### Fixed
 
 - Preserve author body brace spans across macro expansion (`#[arcane]`, `#[rite]`) so `cargo llvm-cov` counts annotated function bodies (#154).
-- Isolate token-discharged `#[target_feature]` unsafety from user-written unsafety across `#[arcane]`, `#[rite]`, `#[attune]`, `#[autoversion]`, and `#[magetypes]`: preserve `rustc`'s `unsafe_code` lint (`#![forbid(unsafe_code)]` / `#![deny(unsafe_code)]`) on user-written `unsafe fn` declarations across Edition 2021 and Edition 2024; close `@`-subpattern, raw-identifier, `const` generic, and `_name` + `names(...)` shadowing of generated callees and proof bindings; reject manual `#[target_feature]` (including inside `#[cfg_attr]`) and multi-output `#[unsafe(export_name / no_mangle)]`; and keep single-output export attributes off hidden `__attune_*` siblings.
 
 #### Changed
 

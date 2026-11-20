@@ -163,10 +163,6 @@ pub(crate) fn find_autoversion_token_param(
 /// Generates suffixed SIMD variants (like `#[magetypes]`) and a runtime
 /// dispatcher function (like `incant!`) from a single annotated function.
 pub(crate) fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> TokenStream {
-    if let Some(err) = reject_conflicting_unsafe_attrs(&input_fn.attrs, "autoversion", true) {
-        return err.to_compile_error();
-    }
-    let unsafe_guard = unsafe_fn_lint_guard(&input_fn.sig, &input_fn.brace_token);
     // Check for self receiver
     let has_self = input_fn
         .sig
@@ -389,7 +385,6 @@ pub(crate) fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> 
                 self_type,
                 in_impl: !args.in_trait && args.in_impl,
                 wrapper_attrs: vec![parse_quote!(#[allow(dead_code)])],
-                skip_unsafe_fn_guard: true,
                 shared: SharedOptions {
                     cfg_feature: tier.feature_gate.clone(),
                     ..Default::default()
@@ -402,9 +397,6 @@ pub(crate) fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> 
             // The fallback is one function holding the body; it needs the allow
             // itself. Its nested items are still reported from the SIMD copies
             // wherever a SIMD tier compiles.
-            if let syn::Safety::Unsafe(tok) = &mut variant_fn.sig.safety {
-                tok.span = proc_macro2::Span::call_site();
-            }
             variants.push(quote! {
                 #cfg_guard
                 #[allow(dead_code)]
@@ -434,23 +426,6 @@ pub(crate) fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> 
     dispatcher_sig.inputs = dispatcher_inputs.into_iter().collect();
     rename_non_ident_params(&mut dispatcher_sig);
     crate::common::rename_underscore_params(&mut dispatcher_sig);
-    crate::common::strip_forwarding_pat_modifiers(&mut dispatcher_sig);
-    for sig in [&input_fn.sig, &dispatcher_sig] {
-        if let Some(err) = crate::engine::boundary::reserved_param_error(sig, "__t", "autoversion")
-        {
-            return err;
-        }
-        if matches!(input_fn.sig.safety, syn::Safety::Unsafe(_)) {
-            for tier in &tiers {
-                let callee = format!("{}_{}", fn_name, tier.suffix);
-                if let Some(err) =
-                    crate::engine::boundary::reserved_param_error(sig, &callee, "autoversion")
-                {
-                    return err;
-                }
-            }
-        }
-    }
     let dispatcher_inputs: Vec<FnArg> = dispatcher_sig.inputs.into_iter().collect();
 
     // Collect argument idents for dispatch calls (exclude self receiver
@@ -567,7 +542,6 @@ pub(crate) fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> 
             #cfg
             #(#fn_attrs)*
             #vis #unsafety fn #fn_name #generics (#dispatcher_inputs_punct) #output #where_clause {
-                #unsafe_guard
                 #body
             }
         }

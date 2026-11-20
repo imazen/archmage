@@ -21,17 +21,6 @@ use syntax::{Args, Form, Inline, Selection};
 pub(crate) fn expand(attr: TokenStream, item: TokenStream) -> syn::Result<TokenStream> {
     let mut args: Args = syn::parse2(attr)?;
     let mut input: LightFn = syn::parse2(item)?;
-    let output_count = args
-        .selections
-        .iter()
-        .filter(|s| s.form != Form::Hidden)
-        .count()
-        + usize::from(args.dispatcher.is_some());
-    if let Some(err) =
-        reject_conflicting_unsafe_attrs(&input.attrs, "attune", args.family && output_count > 1)
-    {
-        return Err(err);
-    }
     if args.family {
         family(input, args)
     } else if args.options.wrap {
@@ -74,13 +63,6 @@ pub(crate) fn expand(attr: TokenStream, item: TokenStream) -> syn::Result<TokenS
                 if placeholder {
                     specialize_syntax(&mut input.sig, &quote!(#token))?;
                 } else {
-                    if let Some(error) = crate::engine::boundary::reserved_param_error(
-                        &input.sig,
-                        "__attune_token",
-                        "attune",
-                    ) {
-                        return Ok(error);
-                    }
                     let position =
                         usize::from(matches!(input.sig.inputs.first(), Some(FnArg::Receiver(_))));
                     input
@@ -181,15 +163,8 @@ fn direct(
     {
         specialize_syntax(&mut input.sig, &quote!(::#token_path))?;
     }
-    let function = crate::engine::feature::emit(
-        input,
-        &options,
-        inline,
-        true,
-        args.dispatcher.is_none(),
-        context,
-    )
-    .unwrap_or_else(|diagnostic| diagnostic);
+    let function = crate::engine::feature::emit(input, &options, inline, true, context)
+        .unwrap_or_else(|diagnostic| diagnostic);
     // A single raw context preserves the written signature and identifiers.
     // Token is a substitution placeholder only for generated families.
     Ok(
@@ -290,23 +265,11 @@ fn family(mut input: LightFn, args: Args) -> syn::Result<TokenStream> {
             "a dispatcher cannot combine distinct opaque return types; return a named type or generate direct variants only",
         ));
     }
-    let unsafe_guard = unsafe_fn_lint_guard(&input.sig, &input.brace_token);
-    let orig_sig = input.sig.clone();
     let rebinds = rename_non_ident_params(&mut input.sig);
     prepend_to_body(&mut input.body, quote!(#(#rebinds)*));
     // The dispatcher forwards; it takes reserved names for `_name` params.
     let mut forward_sig = input.sig.clone();
     crate::common::rename_underscore_params(&mut forward_sig);
-    crate::common::strip_forwarding_pat_modifiers(&mut forward_sig);
-    if args.dispatcher.is_some() {
-        for sig in [&orig_sig, &input.sig, &forward_sig] {
-            if let Some(error) =
-                crate::engine::boundary::reserved_param_error(sig, "__attune_proof", "attune")
-            {
-                return Ok(error);
-            }
-        }
-    }
     let base = input.sig.ident.clone();
     let mut tiers: Vec<_> = args.selections.iter().map(|s| s.tier).collect();
     if args.dispatcher.is_some() && !tiers.iter().any(|t| t.name == "scalar") {
@@ -332,17 +295,12 @@ fn family(mut input: LightFn, args: Args) -> syn::Result<TokenStream> {
         });
         let gate = implementation.and_then(|s| s.gate.as_deref());
         let direct_name = if direct_selection.is_some() {
-            let named = output_name(&base, tier, Form::Direct, &args)?;
-            reject_reserved_attune_output(&named)?;
-            named
+            output_name(&base, tier, Form::Direct, &args)?
         } else {
             format_ident!("__attune_{}_{}", base, tier.suffix)
         };
         let mut body = input.clone();
         body.sig.ident = direct_name.clone();
-        if direct_selection.is_none() {
-            body.attrs.retain(|attr| !is_symbol_export_attr(attr));
-        }
         // No lint levels here: this function holds the author's body, and an
         // allow would also cover items nested in it. Unused wildcard bodies are
         // not reported anyway: the proof wrappers that call them allow
@@ -365,20 +323,10 @@ fn family(mut input: LightFn, args: Args) -> syn::Result<TokenStream> {
         output.extend(direct(body, tier, &args, gate, body_inline)?);
         if proof_selection.is_some() || args.dispatcher.is_some() {
             let proof_name = if proof_selection.is_some() {
-                let named = output_name(&base, tier, Form::Proof, &args)?;
-                reject_reserved_attune_output(&named)?;
-                named
+                output_name(&base, tier, Form::Proof, &args)?
             } else {
                 format_ident!("__attune_{}_{}_t", base, tier.suffix)
             };
-            let direct_callee = direct_name.to_string();
-            for reserved in [direct_callee.as_str(), "__attune_token"] {
-                if let Some(error) =
-                    crate::engine::boundary::reserved_param_error(&orig_sig, reserved, "attune")
-                {
-                    return Ok(error);
-                }
-            }
             output.extend(proof_entry(
                 &input,
                 tier,
@@ -388,16 +336,6 @@ fn family(mut input: LightFn, args: Args) -> syn::Result<TokenStream> {
                 gate,
                 &args,
             )?);
-            if args.dispatcher.is_some() {
-                let proof_callee = proof_name.to_string();
-                for sig in [&orig_sig, &input.sig, &forward_sig] {
-                    if let Some(error) =
-                        crate::engine::boundary::reserved_param_error(sig, &proof_callee, "attune")
-                    {
-                        return Ok(error);
-                    }
-                }
-            }
             let token: syn::Path = syn::parse_str(&format!("::{}", tier.token_path))?;
             let invocation = forward(
                 &forward_sig,
@@ -442,9 +380,9 @@ fn family(mut input: LightFn, args: Args) -> syn::Result<TokenStream> {
                 }
             })
             .collect();
-        dispatcher.body = quote! { #unsafe_guard #(let _ = #proofs;)* '__attune_dispatch: { #(#dispatch_arms)* } };
+        dispatcher.body =
+            quote! { #(let _ = #proofs;)* '__attune_dispatch: { #(#dispatch_arms)* } };
         specialize_syntax(&mut dispatcher.sig, &quote!(::archmage::ScalarToken))?;
-        mark_emitted_fn_header(&mut dispatcher.vis, &mut dispatcher.sig);
         output.extend(dispatcher.to_token_stream());
     }
     Ok(output)
@@ -460,23 +398,16 @@ fn proof_entry(
     args: &Args,
 ) -> syn::Result<TokenStream> {
     let mut wrapper = input.clone();
-    let direct_callee = direct_name.to_string();
-    for reserved in [direct_callee.as_str(), "__attune_token"] {
-        if let Some(error) =
-            crate::engine::boundary::reserved_param_error(&wrapper.sig, reserved, "attune")
-        {
-            return Ok(error);
-        }
+    // Check the author's names before forwarding renames them; the renamed
+    // `__archmage_*` names cannot collide with the `__attune_*` callee.
+    if let Some(error) = crate::engine::boundary::reserved_param_error(
+        &wrapper.sig,
+        &direct_name.to_string(),
+        "attune",
+    ) {
+        return Ok(error);
     }
     crate::common::rename_underscore_params(&mut wrapper.sig);
-    crate::common::strip_forwarding_pat_modifiers(&mut wrapper.sig);
-    for reserved in [direct_callee.as_str(), "__attune_token"] {
-        if let Some(error) =
-            crate::engine::boundary::reserved_param_error(&wrapper.sig, reserved, "attune")
-        {
-            return Ok(error);
-        }
-    }
     let invocation = forward(&wrapper.sig, direct_name, args.options.in_impl, None);
     let token: syn::Path = syn::parse_str(&format!("::{}", tier.token_path))?;
     let position = usize::from(matches!(
@@ -494,11 +425,9 @@ fn proof_entry(
     wrapper.vis = selection
         .map(|s| s.visibility.clone().unwrap_or_else(|| input.vis.clone()))
         .unwrap_or(syn::Visibility::Inherited);
-    wrapper.attrs.retain(|attr| {
-        !attr.path().is_ident("inline")
-            && !attr.path().is_ident("expect")
-            && (selection.is_some() || !is_symbol_export_attr(attr))
-    });
+    wrapper
+        .attrs
+        .retain(|attr| !attr.path().is_ident("inline") && !attr.path().is_ident("expect"));
     let explicit_inline = selection.and_then(|s| s.inline);
     wrapper.attrs.extend(
         explicit_inline
@@ -525,7 +454,6 @@ fn proof_entry(
         // proof, and the sibling exists in the same definition scope.
         crate::engine::boundary::proof_call(invocation)
     };
-    mark_emitted_fn_header(&mut wrapper.vis, &mut wrapper.sig);
     let guard = gen_cfg_guard(
         tier.target_arch,
         gate.or(args.options.imports.cfg_feature.as_deref()),
@@ -544,18 +472,4 @@ fn wrap(input: LightFn, args: Args) -> syn::Result<TokenStream> {
         ..Default::default()
     };
     Ok(crate::engine::boundary::expand(input, "attune", options))
-}
-
-fn reject_reserved_attune_output(name: &syn::Ident) -> syn::Result<()> {
-    use syn::ext::IdentExt as _;
-    let unraw = name.unraw();
-    if unraw == "__attune_token" || unraw == "__attune_proof" {
-        return Err(syn::Error::new_spanned(
-            name,
-            format!(
-                "output name `{unraw}` collides with #[attune]'s internal proof binding; choose a different name"
-            ),
-        ));
-    }
-    Ok(())
 }

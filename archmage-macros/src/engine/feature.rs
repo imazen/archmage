@@ -75,14 +75,8 @@ pub(crate) fn emit(
     options: &SharedOptions,
     inline: Option<InlinePolicy>,
     preserve_inline: bool,
-    emit_unsafe_guard: bool,
     tier: FeatureContext,
 ) -> Result<TokenStream, TokenStream> {
-    let unsafe_guard = if emit_unsafe_guard {
-        unsafe_fn_lint_guard(&variant_fn.sig, &variant_fn.brace_token)
-    } else {
-        TokenStream::new()
-    };
     let token_desc = tier.token.as_deref().unwrap_or("an AVX-512 token");
     if let Some(err) = avx512_import_error(
         &variant_fn.sig,
@@ -175,7 +169,7 @@ pub(crate) fn emit(
     };
     prepend_to_body(
         &mut variant_fn.body,
-        quote! { #unsafe_guard #body_imports #tier_trait_assertion },
+        quote! { #body_imports #tier_trait_assertion },
     );
 
     // Emit the function behind its cfg guard (empty for trait bounds and the
