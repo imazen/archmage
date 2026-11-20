@@ -151,6 +151,36 @@ pub fn covered_statement_start(x: u32) -> u32 {
     attuned!(bump(x)) + attuned!(bump(x)).wrapping_mul(2)
 }
 
+// Give both build targets concrete calls to the emitted dispatchers.
+#[arcane]
+pub fn add_one_v3(_token: X64V3Token, x: f32) -> f32 {
+    add_one(x)
+}
+
+#[rite(v3)]
+fn add_one(x: f32) -> f32 {
+    x + 1.0
+}
+
+fn add_one_scalar(_token: ScalarToken, x: f32) -> f32 {
+    x + 1.0
+}
+
+pub fn dispatch_add_one(x: f32) -> f32 {
+    incant!(add_one(x), [v3, scalar])
+}
+
+#[cfg(all(target_arch = "x86_64", not(target_feature = "sse2")))]
+pub fn soft_float_smoke(x: f32) -> f32 {
+    use magetypes::simd::f32x8;
+    assert!(!archmage::is_x86_feature_available!("sse2"));
+    assert!(!archmage::is_x86_feature_available!("avx2"));
+    assert!(X64V1Token::summon().is_none());
+    let lanes = f32x8::splat_t(ScalarToken, dispatch_add_one(x));
+    let _ = magetypes::simd::i64x8::splat_t(ScalarToken, 1);
+    magemath::expf::try_exp(lanes.to_array()[0]).unwrap()
+}
+
 // ============================================================================
 // Smoke tests
 // ============================================================================

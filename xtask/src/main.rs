@@ -1043,24 +1043,47 @@ fn run_miri() -> Result<()> {
         }
         println!("  miri: {bin} {:.0} s", started.elapsed().as_secs_f64());
     }
-    let started = std::time::Instant::now();
-    // Cargo cannot mix --doc with explicit targets, so the doctests that the
-    // former all-targets invocation covered get their own run.
-    let doc = Command::new("cargo")
+    // Cover the configurable math contracts and high-precision powf path under Miri.
+    let migrated = Command::new("cargo")
         .args([
             &toolchain,
             "miri",
             "test",
             "-p",
-            "magetypes",
+            "magemath",
             "--features",
-            "avx512",
-            "--doc",
+            "std avx512",
+            "--lib",
+            "--test",
+            "powf_highp",
+            "--test",
+            "expf_logf_contracts",
         ])
         .status()
-        .context("Failed to run Miri doctests")?;
-    if !doc.success() {
-        bail!("Miri doctests failed; see diagnostics above");
+        .context("Failed to run Magemath Miri contracts")?;
+    if !migrated.success() {
+        bail!("Magemath Miri contracts failed");
+    }
+    let started = std::time::Instant::now();
+    // Cargo cannot mix --doc with explicit targets, so the doctests that the
+    // former all-targets invocation covered get their own run.
+    for (package, features) in [("magetypes", "avx512"), ("magemath", "std avx512")] {
+        let doc = Command::new("cargo")
+            .args([
+                &toolchain,
+                "miri",
+                "test",
+                "-p",
+                package,
+                "--features",
+                features,
+                "--doc",
+            ])
+            .status()
+            .with_context(|| format!("Failed to run {package} Miri doctests"))?;
+        if !doc.success() {
+            bail!("{package} Miri doctests failed; see diagnostics above");
+        }
     }
     println!("  miri: doctests {:.0} s", started.elapsed().as_secs_f64());
     println!("Miri tests passed for native raw interop, the baseline suite, and the doctests");
@@ -1198,7 +1221,7 @@ const COMPILE_BUDGETS: &[(&str, &[&str], usize)] = &[
             "magetypes/src/simd/impls/scalar.rs",
             "magetypes/src/simd/backends/",
         ],
-        31_700, // measured 30 197
+        34_708, // measured 34 456
     ),
     (
         "aarch64",
@@ -1207,7 +1230,7 @@ const COMPILE_BUDGETS: &[(&str, &[&str], usize)] = &[
             "magetypes/src/simd/impls/scalar.rs",
             "magetypes/src/simd/backends/",
         ],
-        26_100, // measured 24 890
+        26_997, // measured 26 700
     ),
     (
         "wasm32",
@@ -1216,7 +1239,7 @@ const COMPILE_BUDGETS: &[(&str, &[&str], usize)] = &[
             "magetypes/src/simd/impls/scalar.rs",
             "magetypes/src/simd/backends/",
         ],
-        25_700, // measured 24 442
+        26_532, // measured 26 236
     ),
 ];
 
@@ -1296,7 +1319,7 @@ fn validate_after_soundness(reg: &registry::Registry) -> Result<()> {
 /// archmage-macros and magetypes keep copies; the root crate includes `/LICENSE*`.
 fn check_package_licenses() -> Result<()> {
     println!("\n=== License texts in the published sub-crates ===");
-    for crate_dir in ["archmage-macros", "magetypes"] {
+    for crate_dir in ["archmage-macros", "magetypes", "magemath"] {
         for name in ["LICENSE-MIT", "LICENSE-APACHE"] {
             let root = std::fs::read(name).with_context(|| format!("reading {name}"))?;
             let copy = PathBuf::from(crate_dir).join(name);
@@ -1326,7 +1349,7 @@ fn check_package_licenses() -> Result<()> {
 /// sources as one workspace, once per `--target` (host when none is given).
 fn check_packages(targets: &[String]) -> Result<()> {
     use std::process::Command;
-    const CRATES: [&str; 3] = ["archmage", "archmage-macros", "magetypes"];
+    const CRATES: [&str; 4] = ["archmage", "archmage-macros", "magetypes", "magemath"];
 
     let metadata: serde_json::Value = serde_json::from_slice(
         &Command::new("cargo")
@@ -1369,6 +1392,17 @@ fn check_packages(targets: &[String]) -> Result<()> {
     for crate_name in CRATES {
         let member = format!("{crate_name}-{}", version(crate_name)?);
         let archive = target_dir.join("package").join(format!("{member}.crate"));
+        let archive_bytes = fs::metadata(&archive)
+            .with_context(|| format!("stat {}", archive.display()))?
+            .len();
+        println!("  packaged {member}.crate: {archive_bytes} bytes");
+        if crate_name == "magetypes" {
+            const MAGETYPES_MAX_BYTES: u64 = 350 * 1024;
+            anyhow::ensure!(
+                archive_bytes <= MAGETYPES_MAX_BYTES,
+                "magetypes package size ({archive_bytes} bytes) exceeds 350 KiB budget ({MAGETYPES_MAX_BYTES} bytes)"
+            );
+        }
         let status = Command::new("tar")
             .arg("-xzf")
             .arg(&archive)
@@ -1388,6 +1422,7 @@ fn check_packages(targets: &[String]) -> Result<()> {
     };
     let archmage = manifest(&members[0])?;
     let magetypes = manifest(&members[2])?;
+    let magemath = manifest(&members[3])?;
     anyhow::ensure!(
         archmage["dependencies"]["archmage-macros"]["version"].as_str()
             == Some(&format!("={}", version("archmage-macros")?)),
@@ -1396,6 +1431,12 @@ fn check_packages(targets: &[String]) -> Result<()> {
     anyhow::ensure!(
         magetypes["dependencies"]["archmage"]["version"].as_str() == Some(&version("archmage")?),
         "packaged magetypes must require the workspace archmage version"
+    );
+    anyhow::ensure!(
+        magemath["dependencies"]["archmage"]["version"].as_str() == Some(&version("archmage")?)
+            && magemath["dependencies"]["magetypes"]["version"].as_str()
+                == Some(&version("magetypes")?),
+        "packaged magemath must require the workspace archmage and magetypes versions"
     );
 
     let mut workspace = format!(
@@ -1663,8 +1704,13 @@ fn generate_intrinsics_module(arch: &str, functions: &[SafeSimdFn]) -> String {
 
     "#};
 
+    let x86 = matches!(arch, "x86_64" | "x86");
+
     // Ungated imports
     if !ungated.is_empty() {
+        if x86 {
+            code.push_str("#[cfg(target_feature = \"sse2\")]\n");
+        }
         let imports = ungated
             .iter()
             .map(|n| format!("    {},", n))
@@ -1686,8 +1732,13 @@ fn generate_intrinsics_module(arch: &str, functions: &[SafeSimdFn]) -> String {
             .map(|n| format!("    {},", n))
             .collect::<Vec<_>>()
             .join("\n");
+        let cfg = if x86 {
+            format!(r#"all(target_feature = "sse2", feature = "{feature}")"#)
+        } else {
+            format!(r#"feature = "{feature}""#)
+        };
         code.push_str(&formatdoc! {r#"
-            #[cfg(feature = "{feature}")]
+            #[cfg({cfg})]
             #[allow(unused_imports)]
             pub use safe_unaligned_simd::{arch}::{{
             {imports}
@@ -2642,7 +2693,18 @@ fn run_ci() -> Result<()> {
     // Step 14: Documentation build (catches broken doc links)
     timer.begin("Step 14/19: Building documentation");
     let doc = std::process::Command::new("cargo")
-        .args(["doc", "--features", "std avx512", "--no-deps"])
+        .args([
+            "doc",
+            "-p",
+            "archmage",
+            "-p",
+            "magetypes",
+            "-p",
+            "magemath",
+            "--features",
+            "std avx512",
+            "--no-deps",
+        ])
         .env("RUSTDOCFLAGS", "-Dwarnings")
         .status()
         .context("Failed to run cargo doc")?;

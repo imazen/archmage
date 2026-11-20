@@ -11,4 +11,6 @@ publish = false
 # Compiled with deny(warnings) to catch dead code, unreachable patterns, etc.
 
 [dependencies]
-archmage = { path = "../.." }
+archmage = { path = "../..", default-features = false }
+magetypes = { path = "../../magetypes", default-features = false, features = ["w512"] }
+magemath = { path = "../../magemath", default-features = false }
