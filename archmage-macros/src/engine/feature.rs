@@ -77,6 +77,9 @@ pub(crate) fn emit(
     preserve_inline: bool,
     tier: FeatureContext,
 ) -> Result<TokenStream, TokenStream> {
+    if let Some(err) = reject_manual_target_feature(&variant_fn.attrs) {
+        return Err(err.to_compile_error());
+    }
     let token_desc = tier.token.as_deref().unwrap_or("an AVX-512 token");
     if let Some(err) = avx512_import_error(
         &variant_fn.sig,

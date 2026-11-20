@@ -68,6 +68,9 @@ pub(crate) fn expand(
     macro_name: &str,
     args: BoundaryOptions,
 ) -> TokenStream {
+    if let Some(err) = reject_manual_target_feature(&input_fn.attrs) {
+        return err.to_compile_error();
+    }
     // Check for self receiver
     let has_self_receiver = input_fn
         .sig
@@ -252,6 +255,16 @@ pub(crate) fn expand(
         target_arch,
         args.shared.cfg_feature.as_deref(),
     );
+    let callee = if args.nested {
+        format!("__simd_inner_{}", input_fn.sig.ident)
+    } else {
+        format!("__arcane_{}", input_fn.sig.ident)
+    };
+    for sig in [&input_fn.sig, &wrapper_sig] {
+        if let Some(err) = reserved_param_error(sig, &callee, macro_name) {
+            return err;
+        }
+    }
     let parts = BoundaryParts {
         cfg_guard,
         target_feature_attrs,
@@ -264,31 +277,41 @@ pub(crate) fn expand(
         tier_trait_assertion: gen_tier_trait_assertion(&tier_traits, &wrapper_token_ident),
         wrapper_sig,
     };
-    let callee = if args.nested {
-        format!("__simd_inner_{}", input_fn.sig.ident)
-    } else {
-        format!("__arcane_{}", input_fn.sig.ident)
-    };
-    if let Some(err) = reserved_param_error(&input_fn.sig, &callee, macro_name) {
-        return err;
-    }
     emit_boundary(input_fn, &args, parts)
 }
 
-/// Reject a parameter named like the generated callee, so nothing a caller
-/// writes can stand between the wrapper's `unsafe` call and that function.
+/// Reject a parameter or const generic named like the generated callee, so
+/// nothing in the value namespace can shadow the wrapper's `unsafe` call.
 pub(crate) fn reserved_param_error(
     sig: &syn::Signature,
     callee: &str,
     macro_name: &str,
 ) -> Option<TokenStream> {
+    use syn::ext::IdentExt as _;
+    let target = callee.strip_prefix("r#").unwrap_or(callee);
+    for param in &sig.generics.params {
+        if let syn::GenericParam::Const(c) = param
+            && c.ident.unraw() == target
+        {
+            return Some(
+                syn::Error::new_spanned(
+                    &c.ident,
+                    format!(
+                        "const generic `{target}` shadows the function #[{macro_name}] generates for `{}`; rename the parameter",
+                        sig.ident
+                    ),
+                )
+                .to_compile_error(),
+            );
+        }
+    }
     sig.inputs.iter().find_map(|arg| match arg {
         FnArg::Typed(pat_type) => match pat_type.pat.as_ref() {
-            syn::Pat::Ident(pat) if pat.ident == callee => Some(
+            syn::Pat::Ident(pat) if pat.ident.unraw() == target => Some(
                 syn::Error::new_spanned(
                     &pat.ident,
                     format!(
-                        "parameter `{callee}` shadows the function #[{macro_name}] generates for \
+                        "parameter `{target}` shadows the function #[{macro_name}] generates for \
                          `{}` and would receive its `unsafe` call; rename the parameter",
                         sig.ident
                     ),
