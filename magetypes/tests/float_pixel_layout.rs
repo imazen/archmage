@@ -126,19 +126,88 @@ macro_rules! check_lanes {
             v.to_u8_with::<NONNEGATIVE>(),
             lanes.map(scalar::to_u8_with::<NONNEGATIVE>)
         );
-        // Carry into the first half normal when rounded to nearest.
+        // Carry into the first half normal when rounded to nearest, under both
+        // the default finite policy (`to_f16_bits()`) and `AllFloats` (`FLUSH`).
         let just_normal = f32::from_bits(0x387f_e000);
         let halves = [
             just_normal,
             just_normal.next_down(),
             -just_normal,
-            -just_normal.next_down(),
+            f32::from_bits(0x387f_efff),
         ];
         let v = $vec::from_array_t($token, core::array::from_fn(|i| halves[i % 4]));
+        let want_halves = core::array::from_fn(|i| [0x0400, 0, 0x8400, 0x0400][i % 4]);
+        assert_eq!(v.to_f16_bits(), want_halves);
+        assert_eq!(v.to_f16_bits_with::<FLUSH>(), want_halves);
+
+        // `to_bf16()` preserves bf16 subnormals while `HalfConvert::new()` flushes them.
+        const BF16_FLUSH_FINITE: u32 = HalfConvert::new().bits();
+        let bf16_sub = [
+            f32::from_bits(0x0040_0000),
+            f32::from_bits(0x8040_0000),
+            1.0,
+            -2.5,
+        ];
+        let v_bf16 = $vec::from_array_t($token, core::array::from_fn(|i| bf16_sub[i % 4]));
         assert_eq!(
-            v.to_f16_bits_with::<FLUSH>(),
-            core::array::from_fn(|i| [0x0400, 0, 0x8400, 0x8000][i % 4])
+            v_bf16.to_bf16(),
+            core::array::from_fn(|i| [0x0040, 0x8040, 0x3f80, 0xc020][i % 4])
         );
+        assert_eq!(
+            v_bf16.to_bf16_with::<BF16_FLUSH_FINITE>(),
+            core::array::from_fn(|i| [0x0000, 0x8000, 0x3f80, 0xc020][i % 4])
+        );
+
+        // `Nr1Ceil` must upper-bound mathematical 1/x, including V3's 2-ULP downward witness.
+        const NR1_CEIL: u32 = RecipOptions::new().nr1_ceil().bits();
+        const NR1_CEIL_ALL: u32 = RecipOptions::new().nr1_ceil().all_floats().bits();
+        let ceil_inputs = [
+            f32::from_bits(0x3f80_8020), // 1.0039101 (V3 rcpps+NR is 2 ULPs below ceil)
+            -f32::from_bits(0x3f80_8020),
+            3.0,
+            -7.0,
+        ];
+        let v_ceil = $vec::from_array_t($token, core::array::from_fn(|i| ceil_inputs[i % 4]));
+        let got_ceil = v_ceil.recip_with::<NR1_CEIL>().to_array();
+        for lane in 0..$n {
+            let exact = 1.0_f64 / f64::from(ceil_inputs[lane % 4]);
+            assert!(
+                f64::from(got_ceil[lane]) >= exact,
+                "Nr1Ceil failed upper bound at {}: {} < {}",
+                ceil_inputs[lane % 4],
+                got_ceil[lane],
+                exact
+            );
+        }
+        let ceil_rails = [0.0_f32, -0.0, f32::INFINITY, f32::NEG_INFINITY];
+        let v_rails = $vec::from_array_t($token, core::array::from_fn(|i| ceil_rails[i % 4]));
+        let got_rails = v_rails.recip_with::<NR1_CEIL_ALL>().to_array();
+        assert_eq!(
+            got_rails.map(f32::to_bits),
+            core::array::from_fn(|i| {
+                [
+                    f32::INFINITY.to_bits(),
+                    f32::NEG_INFINITY.to_bits(),
+                    0.0_f32.to_bits(),
+                    (-0.0_f32).to_bits(),
+                ][i % 4]
+            })
+        );
+
+        // Quiet NaNs must propagate through exp2_midp, exp2_lowp, exp_midp, pow_midp, sigmoid_midp.
+        let qnan = $vec::splat_t($token, f32::NAN);
+        let neg_base = $vec::splat_t($token, -1.0);
+        for (label, out) in [
+            ("exp2_midp(NaN)", qnan.exp2_midp().to_array()),
+            ("exp2_lowp(NaN)", qnan.exp2_lowp().to_array()),
+            ("exp_midp(NaN)", qnan.exp_midp().to_array()),
+            ("sigmoid_midp(NaN)", qnan.sigmoid_midp().to_array()),
+            ("pow_midp(-1, 0.5)", neg_base.pow_midp(0.5).to_array()),
+        ] {
+            for lane in 0..$n {
+                assert!(out[lane].is_nan(), "{label}[{lane}] = {}", out[lane]);
+            }
+        }
         let a = $vec::splat_t($token, 1.0_f32.next_up());
         let b = $vec::splat_t($token, 1.0 - f32::EPSILON);
         let c = $vec::splat_t($token, 1.0);
@@ -327,6 +396,56 @@ fn check_wide<
         f32x16::from_array_t(token, bytes).to_u8(),
         [0, 0, 0, 2, 2, 4, 255, 255, 254, 0, 255, 0, 0, 255, 3, 255],
     );
+}
+
+#[test]
+fn policy_families_reject_foreign_bits() {
+    let i = IntConvert::new().bits();
+    let h = HalfConvert::new().bits();
+    let r = RecipOptions::new().bits();
+    let e = ExtremaOptions::new().bits();
+    assert!(IntConvert::from_bits(i).is_some());
+    assert!(IntConvert::from_bits(h).is_none());
+    assert!(IntConvert::from_bits(r).is_none());
+    assert!(IntConvert::from_bits(e).is_none());
+    assert!(HalfConvert::from_bits(i).is_none());
+    assert!(RecipOptions::from_bits(h).is_none());
+    assert!(ExtremaOptions::from_bits(r).is_none());
+}
+
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[test]
+fn narrow_v4_f64_approx_preserves_exact_division_and_wide_nr1_refines() {
+    use magetypes::simd::generic::{f64x2, f64x4, f64x8};
+    const NR1: u32 = RecipOptions::new().bits();
+    const NR1_CEIL: u32 = RecipOptions::new().nr1_ceil().bits();
+    if let Some(token) = archmage::X64V4Token::summon() {
+        let v2 = f64x2::splat_t(token, 3.0);
+        let v4 = f64x4::splat_t(token, 3.0);
+        let exact_rcp = (1.0_f64 / 3.0).to_bits();
+        let exact_rsqrt = (1.0_f64 / 3.0_f64.sqrt()).to_bits();
+        assert_eq!(v2.rcp_approx().to_array().map(f64::to_bits), [exact_rcp; 2]);
+        assert_eq!(
+            v2.rsqrt_approx().to_array().map(f64::to_bits),
+            [exact_rsqrt; 2]
+        );
+        assert_eq!(v4.rcp_approx().to_array().map(f64::to_bits), [exact_rcp; 4]);
+        assert_eq!(
+            v4.rsqrt_approx().to_array().map(f64::to_bits),
+            [exact_rsqrt; 4]
+        );
+
+        let v8 = f64x8::splat_t(token, 3.0);
+        let nr = v8.recip_with::<NR1>().to_array()[0];
+        assert!(
+            nr.to_bits().abs_diff(exact_rcp) <= 2,
+            "f64x8 V4 Nr1 ULP error too high: {:#x} vs {:#x}",
+            nr.to_bits(),
+            exact_rcp
+        );
+        let ceil = v8.recip_with::<NR1_CEIL>().to_array()[0];
+        assert!(ceil >= 1.0_f64 / 3.0);
+    }
 }
 
 #[test]

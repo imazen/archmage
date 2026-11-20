@@ -21,6 +21,12 @@
 //! assert_eq!(scalar::to_u16_with::<CFG>(1.9), 1);
 //! ```
 
+const FAMILY_MASK: u32 = 0xff00_0000;
+const INT_FAMILY: u32 = 0x0100_0000;
+const HALF_FAMILY: u32 = 0x0200_0000;
+const RECIP_FAMILY: u32 = 0x0300_0000;
+const EXTREMA_FAMILY: u32 = 0x0400_0000;
+
 /// Rounding before conversion to an integer.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 #[non_exhaustive]
@@ -101,19 +107,23 @@ impl IntConvert {
     }
     /// Encode a policy for use as a const generic.
     pub const fn bits(self) -> u32 {
-        (self.bounds as u32) << 1 | self.rounding as u32
+        INT_FAMILY | (self.bounds as u32) << 1 | self.rounding as u32
     }
-    /// Decode an option word, rejecting reserved bits.
+    /// Decode an option word, rejecting reserved or foreign-family bits.
     pub const fn from_bits(bits: u32) -> Option<Self> {
-        if bits > 7 {
+        if bits & FAMILY_MASK != INT_FAMILY {
             return None;
         }
-        let rounding = if bits & 1 == 0 {
+        let payload = bits & !FAMILY_MASK;
+        if payload > 7 {
+            return None;
+        }
+        let rounding = if payload & 1 == 0 {
             IntRounding::NearestEven
         } else {
             IntRounding::Trunc
         };
-        let bounds = match bits >> 1 {
+        let bounds = match payload >> 1 {
             0 => IntBounds::Finite,
             1 => IntBounds::InRange,
             2 => IntBounds::NonNegativeFinite,
@@ -233,24 +243,31 @@ impl HalfConvert {
     }
     /// Encode a policy for use as a const generic.
     pub const fn bits(self) -> u32 {
-        self.domain as u32 | (self.subnormals as u32) << 1 | (self.rounding as u32) << 2
+        HALF_FAMILY
+            | self.domain as u32
+            | (self.subnormals as u32) << 1
+            | (self.rounding as u32) << 2
     }
-    /// Decode a policy, rejecting reserved bits.
+    /// Decode a policy, rejecting reserved or foreign-family bits.
     pub const fn from_bits(bits: u32) -> Option<Self> {
-        if bits > 7 {
+        if bits & FAMILY_MASK != HALF_FAMILY {
             return None;
         }
-        let domain = if bits & 1 == 0 {
+        let payload = bits & !FAMILY_MASK;
+        if payload > 7 {
+            return None;
+        }
+        let domain = if payload & 1 == 0 {
             HalfDomain::Finite
         } else {
             HalfDomain::AllFloats
         };
-        let subnormals = if bits & 2 == 0 {
+        let subnormals = if payload & 2 == 0 {
             HalfSubnormals::FlushOrClamp
         } else {
             HalfSubnormals::Normalize
         };
-        let rounding = if bits & 4 == 0 {
+        let rounding = if payload & 4 == 0 {
             HalfRounding::NearestEven
         } else {
             HalfRounding::Trunc
@@ -285,11 +302,13 @@ impl HalfConvert {
 pub enum RecipPrecision {
     /// Native estimate where available, division otherwise.
     Approx = 1,
-    /// One Newton refinement where a backend provides an estimate.
+    /// Newton-refined reciprocal or reciprocal square root (`1` step on `f32`,
+    /// `2` steps on `f64` where hardware estimates exist).
     #[default]
     Nr1 = 0,
-    /// One Newton refinement, then bias a finite nonzero reciprocal by one ULP
-    /// toward positive infinity. Reciprocal square root uses the Nr1 path.
+    /// Refined reciprocal biased toward positive infinity so finite non-zero
+    /// results satisfy `result >= 1 / x` (`1` ULP on exact scalar division,
+    /// `|r| * (2 * EPSILON)` on SIMD). Reciprocal square root uses the `Nr1` path.
     Nr1Ceil = 2,
     /// Division, or division following square root.
     Exact = 3,
@@ -299,8 +318,9 @@ pub enum RecipPrecision {
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 #[non_exhaustive]
 pub enum RecipDomain {
-    /// Finite normal inputs with a normal reciprocal (positive for reciprocal
-    /// square root). Estimates and refinements may vary by backend.
+    /// Finite normal inputs strictly below the reciprocal underflow threshold:
+    /// `MIN_POSITIVE <= |x| < 1.0 / MIN_POSITIVE` (`[2^-126, 2^126)` for `f32`,
+    /// `[2^-1022, 2^1022)` for `f64`; positive for reciprocal square root).
     #[default]
     FiniteNormal,
     /// IEEE special values, zeros and subnormal values are supported.
@@ -340,7 +360,7 @@ impl RecipOptions {
     pub const fn nr1(self) -> Self {
         self.precision(RecipPrecision::Nr1)
     }
-    /// Bias one ULP upward after the Newton step for reciprocal.
+    /// Bias finite non-zero reciprocals toward `+inf` so `result >= 1 / x`.
     pub const fn nr1_ceil(self) -> Self {
         self.precision(RecipPrecision::Nr1Ceil)
     }
@@ -354,20 +374,24 @@ impl RecipOptions {
     }
     /// Encode a policy for use as a const generic.
     pub const fn bits(self) -> u32 {
-        self.precision as u32 | (self.domain as u32) << 2
+        RECIP_FAMILY | self.precision as u32 | (self.domain as u32) << 2
     }
-    /// Decode a policy, rejecting reserved bits.
+    /// Decode a policy, rejecting reserved or foreign-family bits.
     pub const fn from_bits(bits: u32) -> Option<Self> {
-        if bits > 7 {
+        if bits & FAMILY_MASK != RECIP_FAMILY {
             return None;
         }
-        let precision = match bits & 3 {
+        let payload = bits & !FAMILY_MASK;
+        if payload > 7 {
+            return None;
+        }
+        let precision = match payload & 3 {
             0 => RecipPrecision::Nr1,
             1 => RecipPrecision::Approx,
             2 => RecipPrecision::Nr1Ceil,
             _ => RecipPrecision::Exact,
         };
-        let domain = if bits & 4 == 0 {
+        let domain = if payload & 4 == 0 {
             RecipDomain::FiniteNormal
         } else {
             RecipDomain::AllFloats
@@ -433,11 +457,14 @@ impl ExtremaOptions {
     }
     /// Encode a policy for use as a const generic.
     pub const fn bits(self) -> u32 {
-        self.0 as u32
+        EXTREMA_FAMILY | self.0 as u32
     }
-    /// Decode a policy, rejecting reserved bits.
+    /// Decode a policy, rejecting reserved or foreign-family bits.
     pub const fn from_bits(bits: u32) -> Option<Self> {
-        let domain = match bits {
+        if bits & FAMILY_MASK != EXTREMA_FAMILY {
+            return None;
+        }
+        let domain = match bits & !FAMILY_MASK {
             0 => ExtremaDomain::Finite,
             1 => ExtremaDomain::NonNanRhs,
             2 => ExtremaDomain::DropNan,

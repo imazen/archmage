@@ -18,7 +18,7 @@
 #![cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
 
 use crate::numerics::IntConvert;
-use core::arch::x86_64::{__m128, __m128d, __m256, __m256d};
+use core::arch::x86_64::{__m128, __m256};
 
 /// `f32x4::to_u8`: `max(x, 0)`, round-to-nearest-even `cvtps`, `vpmovusdb`.
 #[archmage::arcane(import_intrinsics)]
@@ -152,6 +152,8 @@ pub(super) fn to_u32_lanes_x4_v4<const CFG: u32>(
     _mm_castsi128_ps(i)
 }
 
+// stdarch (MSRV 1.89) exposes only `_mm512_cvtepu32_ps` (`simd_cast`); under
+// AVX-512VL LLVM folds cast+convert+extract to `vcvtudq2ps xmm, xmm` (no ZMM).
 #[archmage::arcane(import_intrinsics)]
 pub(super) fn from_u32_lanes_x4_v4(_token: archmage::X64V4Token, value: __m128) -> __m128 {
     _mm512_castps512_ps128(_mm512_cvtepu32_ps(_mm512_castsi128_si512(
@@ -229,29 +231,10 @@ pub(super) fn to_u32_lanes_x8_v4<const CFG: u32>(
     _mm256_castsi256_ps(i)
 }
 
+// Lowered by LLVM under AVX-512VL to `vcvtudq2ps ymm, ymm` (no ZMM).
 #[archmage::arcane(import_intrinsics)]
 pub(super) fn from_u32_lanes_x8_v4(_token: archmage::X64V4Token, value: __m256) -> __m256 {
     _mm512_castps512_ps256(_mm512_cvtepu32_ps(_mm512_castsi256_si512(
         _mm256_castps_si256(value),
     )))
-}
-
-#[archmage::arcane(import_intrinsics)]
-pub(super) fn rcp_approx_f64x2_v4(_token: archmage::X64V4Token, value: __m128d) -> __m128d {
-    _mm_rcp14_pd(value)
-}
-
-#[archmage::arcane(import_intrinsics)]
-pub(super) fn rsqrt_approx_f64x2_v4(_token: archmage::X64V4Token, value: __m128d) -> __m128d {
-    _mm_rsqrt14_pd(value)
-}
-
-#[archmage::arcane(import_intrinsics)]
-pub(super) fn rcp_approx_f64x4_v4(_token: archmage::X64V4Token, value: __m256d) -> __m256d {
-    _mm256_rcp14_pd(value)
-}
-
-#[archmage::arcane(import_intrinsics)]
-pub(super) fn rsqrt_approx_f64x4_v4(_token: archmage::X64V4Token, value: __m256d) -> __m256d {
-    _mm256_rsqrt14_pd(value)
 }

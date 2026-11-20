@@ -27,30 +27,45 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.version.outputs.version }}
+      packages: ${{ steps.version.outputs.packages }}
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
           ref: ${{ github.sha }}
 
-      - name: Extract version from tag
+      - name: Extract version and package selection from tag
         id: version
         run: |
           TAG="${{ github.event.release.tag_name }}"
           if [[ "$TAG" =~ ^v([0-9]+\.[0-9]+\.[0-9]+(-beta(\.[0-9]+)?)?)$ ]]; then
             VERSION="${BASH_REMATCH[1]}"
+            PACKAGES="-p archmage-macros -p archmage -p magetypes"
+            MODE="core"
+          elif [[ "$TAG" =~ ^magemath-v([0-9]+\.[0-9]+\.[0-9]+(-beta(\.[0-9]+)?)?)$ ]]; then
+            VERSION="${BASH_REMATCH[1]}"
+            PACKAGES="-p magemath"
+            MODE="magemath"
           else
-            echo "::error::Release tag '$TAG' does not match expected format v{version}"
+            echo "::error::Release tag '$TAG' does not match v{version} or magemath-v{version}"
             exit 1
           fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "Publishing version: $VERSION"
+          echo "packages=$PACKAGES" >> "$GITHUB_OUTPUT"
+          echo "mode=$MODE" >> "$GITHUB_OUTPUT"
+          echo "Publishing ($MODE) version: $VERSION ($PACKAGES)"
 
       - name: Verify all required tags exist and match
         run: |
           VERSION="${{ steps.version.outputs.version }}"
+          MODE="${{ steps.version.outputs.mode }}"
           FIRST_COMMIT=$(git rev-parse HEAD)
-          for TAG in "v${VERSION}" "archmage-macros-v${VERSION}" "magetypes-v${VERSION}"; do
+          if [ "$MODE" = "magemath" ]; then
+            TAGS=("magemath-v${VERSION}")
+          else
+            TAGS=("v${VERSION}" "archmage-macros-v${VERSION}" "magetypes-v${VERSION}")
+          fi
+          for TAG in "${TAGS[@]}"; do
             if git rev-parse "$TAG" >/dev/null 2>&1; then
               COMMIT=$(git rev-parse "${TAG}^{commit}")
               echo "✓ $TAG -> $COMMIT"
@@ -60,16 +75,20 @@ jobs:
               fi
             else
               echo "::error::Tag $TAG is MISSING"
-              echo "Required: v${VERSION}, archmage-macros-v${VERSION}, magetypes-v${VERSION}"
               exit 1
             fi
           done
 
-      - name: Verify workspace version matches tag
+      - name: Verify crate versions match tag
         run: |
           VERSION="${{ steps.version.outputs.version }}"
-          # cargo metadata is the source of truth — reads workspace inheritance
-          for CRATE in archmage archmage-macros magetypes; do
+          MODE="${{ steps.version.outputs.mode }}"
+          if [ "$MODE" = "magemath" ]; then
+            CRATES=(magemath)
+          else
+            CRATES=(archmage archmage-macros magetypes)
+          fi
+          for CRATE in "${CRATES[@]}"; do
             CRATE_VERSION=$(cargo metadata --no-deps --format-version 1 \
               | jq -r ".packages[] | select(.name==\"$CRATE\") | .version")
             if [ "$CRATE_VERSION" != "$VERSION" ]; then
@@ -97,11 +116,11 @@ jobs:
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
 
-      - name: Verify all crates package and build
-        run: cargo publish --workspace --dry-run
+      - name: Verify selected crates package and build
+        run: cargo publish ${{ needs.check-tags.outputs.packages }} --dry-run
 
   # ==========================================================================
-  # Publish all workspace crates in dependency order
+  # Publish selected workspace crates in dependency order
   # cargo handles: ordering, temp registry for workspace deps, index polling
   # ==========================================================================
   publish:
@@ -120,7 +139,7 @@ jobs:
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
 
-      - name: Publish workspace
+      - name: Publish selected crates
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-        run: cargo publish --workspace
+        run: cargo publish ${{ needs.check-tags.outputs.packages }}

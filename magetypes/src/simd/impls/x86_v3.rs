@@ -512,24 +512,37 @@ impl F32x4Backend for X64V3Token {
         } else {
             raw
         };
+        let rounded = if opts.is_finite() {
+            rounded
+        } else {
+            _mm_blendv_epi8(
+                rounded,
+                _mm_or_si128(raw, _mm_set1_epi32(0x0040_0000)),
+                _mm_cmpgt_epi32(
+                    _mm_and_si128(raw, _mm_set1_epi32(0x7fff_ffff)),
+                    _mm_set1_epi32(0x7f80_0000),
+                ),
+            )
+        };
         let i = _mm_srli_epi32::<16>(rounded);
-        let out: [u16; 4] = crate::simd_storage::cast::<_, [u16; 8]>(_mm_packus_epi32(i, i))
+        let i = if opts.flushes() {
+            _mm_andnot_si128(
+                _mm_and_si128(
+                    _mm_cmpeq_epi32(
+                        _mm_and_si128(i, _mm_set1_epi32(0x7f80)),
+                        _mm_setzero_si128(),
+                    ),
+                    _mm_set1_epi32(0x7fff),
+                ),
+                i,
+            )
+        } else {
+            i
+        };
+        crate::simd_storage::cast::<_, [u16; 8]>(_mm_packus_epi32(i, i))
             .first_chunk::<4>()
             .copied()
-            .unwrap();
-        if opts.is_finite() && !opts.flushes() {
-            out
-        } else {
-            // Special and signed-subnormal handling is shared with scalar.
-            let original: [f32; 4] = crate::simd_storage::cast(value);
-            core::array::from_fn(|i| {
-                if original[i].is_nan() || (opts.flushes() && out[i] & 0x7f80 == 0) {
-                    crate::scalar::to_bf16_with::<CFG>(original[i])
-                } else {
-                    out[i]
-                }
-            })
-        }
+            .unwrap()
     }
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
@@ -1118,24 +1131,37 @@ impl F32x8Backend for X64V3Token {
         } else {
             raw
         };
+        let rounded = if opts.is_finite() {
+            rounded
+        } else {
+            _mm256_blendv_epi8(
+                rounded,
+                _mm256_or_si256(raw, _mm256_set1_epi32(0x0040_0000)),
+                _mm256_cmpgt_epi32(
+                    _mm256_and_si256(raw, _mm256_set1_epi32(0x7fff_ffff)),
+                    _mm256_set1_epi32(0x7f80_0000),
+                ),
+            )
+        };
         let i = _mm256_srli_epi32::<16>(rounded);
-        let out: [u16; 8] = crate::simd_storage::cast(_mm_packus_epi32(
+        let i = if opts.flushes() {
+            _mm256_andnot_si256(
+                _mm256_and_si256(
+                    _mm256_cmpeq_epi32(
+                        _mm256_and_si256(i, _mm256_set1_epi32(0x7f80)),
+                        _mm256_setzero_si256(),
+                    ),
+                    _mm256_set1_epi32(0x7fff),
+                ),
+                i,
+            )
+        } else {
+            i
+        };
+        crate::simd_storage::cast(_mm_packus_epi32(
             _mm256_castsi256_si128(i),
             _mm256_extracti128_si256::<1>(i),
-        ));
-        if opts.is_finite() && !opts.flushes() {
-            out
-        } else {
-            // Special and signed-subnormal handling is shared with scalar.
-            let original: [f32; 8] = crate::simd_storage::cast(value);
-            core::array::from_fn(|i| {
-                if original[i].is_nan() || (opts.flushes() && out[i] & 0x7f80 == 0) {
-                    crate::scalar::to_bf16_with::<CFG>(original[i])
-                } else {
-                    out[i]
-                }
-            })
-        }
+        ))
     }
 
     #[arcane(suppress_const_test, _self = X64V3Token)]

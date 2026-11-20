@@ -269,9 +269,10 @@ impl<T: F64x8Backend> f64x8<T> {
     /// equivalent: `f64::min`.
     ///
     /// Signalling `NaN` handling is unspecified and differs by backend, as
-    /// Rust leaves it for `f64::min`: NEON returns a quiet `NaN` (one
-    /// `fminnm`, the same instruction as [`min_fast`](Self::min_fast)); x86,
-    /// WASM and `ScalarToken` return the numeric lane.
+    /// Rust leaves it for `f64::min`: NEON (one `fminnm`, the same
+    /// instruction as [`min_fast`](Self::min_fast)) and AVX-512 `f32`
+    /// (`vrangeps`) return a quiet `NaN`; x86 V3, AVX-512 `f64`, WASM and
+    /// `ScalarToken` return the numeric lane.
     #[inline(always)]
     pub fn min(self, other: Self) -> Self {
         Self(T::min(self.1, self.0, other.0), self.1)
@@ -284,9 +285,10 @@ impl<T: F64x8Backend> f64x8<T> {
     /// equivalent: `f64::max`.
     ///
     /// Signalling `NaN` handling is unspecified and differs by backend, as
-    /// Rust leaves it for `f64::max`: NEON returns a quiet `NaN` (one
-    /// `fmaxnm`, the same instruction as [`max_fast`](Self::max_fast)); x86,
-    /// WASM and `ScalarToken` return the numeric lane.
+    /// Rust leaves it for `f64::max`: NEON (one `fmaxnm`, the same
+    /// instruction as [`max_fast`](Self::max_fast)) and AVX-512 `f32`
+    /// (`vrangeps`) return a quiet `NaN`; x86 V3, AVX-512 `f64`, WASM and
+    /// `ScalarToken` return the numeric lane.
     #[inline(always)]
     pub fn max(self, other: Self) -> Self {
         Self(T::max(self.1, self.0, other.0), self.1)
@@ -549,7 +551,8 @@ impl<T: F64x8Backend> f64x8<T> {
     // ====== Approximations ======
 
     /// Fast reciprocal approximation (1/x): the backend's native estimate
-    /// (exact division on f64 — no hardware estimate exists).
+    /// (~14 bits on 512-bit AVX-512 `f64x8`, ~16 bits on NEON; exact IEEE
+    /// division on x86 V3, narrow AVX-512, WASM and scalar).
     #[inline(always)]
     pub fn rcp_approx(self) -> Self {
         Self(T::rcp_approx(self.1, self.0), self.1)
@@ -565,8 +568,9 @@ impl<T: F64x8Backend> f64x8<T> {
         Self(T::recip(self.1, self.0), self.1)
     }
 
-    /// Fast reciprocal square root approximation (exact division +
-    /// sqrt on f64 — no hardware estimate exists).
+    /// Fast reciprocal square root approximation (~14 bits on 512-bit
+    /// AVX-512 `f64x8`, ~16 bits on NEON; exact division + `sqrt` on x86 V3,
+    /// narrow AVX-512, WASM and scalar).
     #[inline(always)]
     pub fn rsqrt_approx(self) -> Self {
         Self(T::rsqrt_approx(self.1, self.0), self.1)

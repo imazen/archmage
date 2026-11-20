@@ -42,8 +42,10 @@ mapping, and current restrictions.
 
 Configurable f32 power, exponential, logarithm and cube-root approximations,
 with explicit domains and scalar entry points for SIMD tails, live in the
-[Magemath crate](magemath). The flat Magetypes methods are unchanged; the
-[Magemath guide](docs/MAGEMATH-MIGRATION.md) says when to switch.
+[Magemath crate](https://github.com/imazen/archmage/tree/main/magemath). The flat
+Magetypes transcendental methods remain supported; the
+[Magemath guide](https://github.com/imazen/archmage/blob/main/docs/MAGEMATH-MIGRATION.md)
+says when to switch.
 
 ## Quick start
 
@@ -239,8 +241,9 @@ lists every `unsafe` in both crates.
   on NEON is two `f32x4`s.
   [Polyfills](https://imazen.github.io/archmage/magetypes/cross-platform/polyfills/) has the measured costs.
 - With the `avx512` feature, AVX-512 tokens also support the 128- and
-  256-bit float and integer types. These narrower backend, conversion and
-  bitcast implementations delegate to V3; 512-bit types use AVX-512.
+  256-bit float and integer types. Narrower integer, f64, conversion and
+  bitcast operations delegate to V3 (with AVX-512VL overrides where faster on
+  `f32x4`/`f32x8`); 512-bit types use AVX-512.
 - Some floating-point results differ between backends. `mul_add_relaxed`
   rounds once where the hardware fuses (x86 v3/v4, NEON) and twice on the scalar
   backend and strict WASM; `mul_add_fused` rounds once everywhere, in software

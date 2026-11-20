@@ -9,8 +9,9 @@
 //! - Arithmetic: `a + b`, `a - b`, `a * b`, `a / b`, `-a`
 //! - Magnitude / sign: `x.abs()`, `x.copysign(y)`
 //! - Rust numeric min/max (`1.0` over a single quiet `NaN`): `a.min(b)`,
-//!   `a.max(b)`. Signalling `NaN` handling is unspecified in both: NEON vectors
-//!   return a quiet `NaN`, the other backends the numeric operand.
+//!   `a.max(b)`. Signalling `NaN` handling is unspecified in both: NEON and
+//!   AVX-512 `f32` vectors return a quiet `NaN`, the other backends the numeric
+//!   operand.
 //!
 //! `x.clamp(lo, hi)` is **not** vector `clamp`: `f32::clamp` keeps a `NaN` input
 //! and panics on `lo > hi` or `NaN` bounds, while vector `clamp` is

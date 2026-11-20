@@ -90,9 +90,14 @@ impl<T: F32x16Convert> f32x16<T> {
 
         // floor(x) <= 127 keeps the bit trick (n+127)<<23 in range; at 127.99
         // the result stays below f32::MAX despite the polynomial's error.
+        // Preserve quiet NaNs in one instruction per bound across all backends.
+        #[cfg(any(target_arch = "aarch64", target_arch = "wasm32"))]
         let x = self
-            .max_fast(splat_f32::<T>(self.1, -126.0))
-            .min_fast(splat_f32::<T>(self.1, 127.99));
+            .maximum(splat_f32::<T>(self.1, -126.0))
+            .minimum(splat_f32::<T>(self.1, 127.99));
+        #[cfg(not(any(target_arch = "aarch64", target_arch = "wasm32")))]
+        let x =
+            splat_f32::<T>(self.1, 127.99).min_fast(splat_f32::<T>(self.1, -126.0).max_fast(self));
         let xi = x.floor();
         let xf = x - xi;
 
@@ -252,7 +257,11 @@ impl<T: F32x16Convert> f32x16<T> {
         // polynomial's range: up to 134.1 ULP there. Folding in the missing
         // factor of two measured 7-12% slower for exp2/exp/pow with AVX2 and
         // 4-8% slower on the scalar backend.
-        let xi = self.round().min_fast(splat_f32::<T>(self.1, 127.0));
+        let rounded = self.round();
+        #[cfg(any(target_arch = "aarch64", target_arch = "wasm32"))]
+        let xi = rounded.minimum(splat_f32::<T>(self.1, 127.0));
+        #[cfg(not(any(target_arch = "aarch64", target_arch = "wasm32")))]
+        let xi = splat_f32::<T>(self.1, 127.0).min_fast(rounded);
         let xf = self - xi;
 
         let poly = splat_f32::<T>(self.1, C6).mul_add_relaxed(xf, splat_f32::<T>(self.1, C5));
@@ -277,8 +286,12 @@ impl<T: F32x16Convert> f32x16<T> {
         let underflow_limit = splat_f32::<T>(self.1, -126.0);
         let overflow_limit = splat_f32::<T>(self.1, 128.0);
 
-        // Clamp to prevent overflow in intermediate calculations
-        let clamped = self.max_fast(underflow_limit).min_fast(overflow_limit);
+        // Clamp to prevent overflow in intermediate calculations while
+        // preserving quiet NaNs in one instruction per bound.
+        #[cfg(any(target_arch = "aarch64", target_arch = "wasm32"))]
+        let clamped = self.maximum(underflow_limit).minimum(overflow_limit);
+        #[cfg(not(any(target_arch = "aarch64", target_arch = "wasm32")))]
+        let clamped = overflow_limit.min_fast(underflow_limit.max_fast(self));
         let result = clamped.exp2_midp_unchecked();
 
         // Handle edge cases: large negative → 0, large positive → inf

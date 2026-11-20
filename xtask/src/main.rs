@@ -1392,6 +1392,17 @@ fn check_packages(targets: &[String]) -> Result<()> {
     for crate_name in CRATES {
         let member = format!("{crate_name}-{}", version(crate_name)?);
         let archive = target_dir.join("package").join(format!("{member}.crate"));
+        let archive_bytes = fs::metadata(&archive)
+            .with_context(|| format!("stat {}", archive.display()))?
+            .len();
+        println!("  packaged {member}.crate: {archive_bytes} bytes");
+        if crate_name == "magetypes" {
+            const MAGETYPES_MAX_BYTES: u64 = 350 * 1024;
+            anyhow::ensure!(
+                archive_bytes <= MAGETYPES_MAX_BYTES,
+                "magetypes package size ({archive_bytes} bytes) exceeds 350 KiB budget ({MAGETYPES_MAX_BYTES} bytes)"
+            );
+        }
         let status = Command::new("tar")
             .arg("-xzf")
             .arg(&archive)

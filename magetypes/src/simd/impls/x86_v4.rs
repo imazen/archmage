@@ -388,24 +388,32 @@ impl F32x16Backend for X64V4Token {
         } else {
             raw
         };
+        let rounded = if opts.is_finite() {
+            rounded
+        } else {
+            _mm512_mask_blend_epi32(
+                _mm512_cmpgt_epi32_mask(
+                    _mm512_and_si512(raw, _mm512_set1_epi32(0x7fff_ffff)),
+                    _mm512_set1_epi32(0x7f80_0000),
+                ),
+                rounded,
+                _mm512_or_si512(raw, _mm512_set1_epi32(0x0040_0000)),
+            )
+        };
         let i = _mm512_srli_epi32::<16>(rounded);
-        let out: [u16; 16] = crate::simd_storage::cast(_mm512_cvtusepi32_epi16(_mm512_max_epi32(
+        let i = if opts.flushes() {
+            _mm512_mask_blend_epi32(
+                _mm512_test_epi32_mask(i, _mm512_set1_epi32(0x7f80)),
+                _mm512_and_si512(i, _mm512_set1_epi32(0x8000)),
+                i,
+            )
+        } else {
+            i
+        };
+        crate::simd_storage::cast(_mm512_cvtusepi32_epi16(_mm512_max_epi32(
             i,
             _mm512_setzero_si512(),
-        )));
-        if opts.is_finite() && !opts.flushes() {
-            out
-        } else {
-            // Special and signed-subnormal handling is shared with scalar.
-            let original: [f32; 16] = crate::simd_storage::cast(value);
-            core::array::from_fn(|i| {
-                if original[i].is_nan() || (opts.flushes() && out[i] & 0x7f80 == 0) {
-                    crate::scalar::to_bf16_with::<CFG>(original[i])
-                } else {
-                    out[i]
-                }
-            })
-        }
+        )))
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
@@ -2827,24 +2835,32 @@ impl F32x16Backend for X64V4xToken {
         } else {
             raw
         };
+        let rounded = if opts.is_finite() {
+            rounded
+        } else {
+            _mm512_mask_blend_epi32(
+                _mm512_cmpgt_epi32_mask(
+                    _mm512_and_si512(raw, _mm512_set1_epi32(0x7fff_ffff)),
+                    _mm512_set1_epi32(0x7f80_0000),
+                ),
+                rounded,
+                _mm512_or_si512(raw, _mm512_set1_epi32(0x0040_0000)),
+            )
+        };
         let i = _mm512_srli_epi32::<16>(rounded);
-        let out: [u16; 16] = crate::simd_storage::cast(_mm512_cvtusepi32_epi16(_mm512_max_epi32(
+        let i = if opts.flushes() {
+            _mm512_mask_blend_epi32(
+                _mm512_test_epi32_mask(i, _mm512_set1_epi32(0x7f80)),
+                _mm512_and_si512(i, _mm512_set1_epi32(0x8000)),
+                i,
+            )
+        } else {
+            i
+        };
+        crate::simd_storage::cast(_mm512_cvtusepi32_epi16(_mm512_max_epi32(
             i,
             _mm512_setzero_si512(),
-        )));
-        if opts.is_finite() && !opts.flushes() {
-            out
-        } else {
-            // Special and signed-subnormal handling is shared with scalar.
-            let original: [f32; 16] = crate::simd_storage::cast(value);
-            core::array::from_fn(|i| {
-                if original[i].is_nan() || (opts.flushes() && out[i] & 0x7f80 == 0) {
-                    crate::scalar::to_bf16_with::<CFG>(original[i])
-                } else {
-                    out[i]
-                }
-            })
-        }
+        )))
     }
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]

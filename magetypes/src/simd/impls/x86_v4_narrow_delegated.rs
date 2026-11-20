@@ -32,7 +32,6 @@
 // `F32x8Convert` impl, `<Self as U8x16Backend>::Repr` inside an
 // `I8x16Bitcast` impl, …) — every sibling backend trait must be
 // in scope, not just the implemented set.
-use super::x86_v4_f32_overrides as overrides;
 use crate::simd::backends::*;
 
 impl F64x2Backend for archmage::X64V4Token {
@@ -195,11 +194,11 @@ impl F64x2Backend for archmage::X64V4Token {
     }
     #[inline(always)]
     fn rcp_approx(self, a: Self::Repr) -> Self::Repr {
-        overrides::rcp_approx_f64x2_v4(self, a)
+        <archmage::X64V3Token as F64x2Backend>::rcp_approx(self.v3(), a)
     }
     #[inline(always)]
     fn rsqrt_approx(self, a: Self::Repr) -> Self::Repr {
-        overrides::rsqrt_approx_f64x2_v4(self, a)
+        <archmage::X64V3Token as F64x2Backend>::rsqrt_approx(self.v3(), a)
     }
     #[inline(always)]
     fn not(self, a: Self::Repr) -> Self::Repr {
@@ -391,11 +390,11 @@ impl F64x2Backend for archmage::X64V4xToken {
     }
     #[inline(always)]
     fn rcp_approx(self, a: Self::Repr) -> Self::Repr {
-        overrides::rcp_approx_f64x2_v4(self.v4(), a)
+        <archmage::X64V3Token as F64x2Backend>::rcp_approx(self.v3(), a)
     }
     #[inline(always)]
     fn rsqrt_approx(self, a: Self::Repr) -> Self::Repr {
-        overrides::rsqrt_approx_f64x2_v4(self.v4(), a)
+        <archmage::X64V3Token as F64x2Backend>::rsqrt_approx(self.v3(), a)
     }
     #[inline(always)]
     fn not(self, a: Self::Repr) -> Self::Repr {
@@ -587,11 +586,11 @@ impl F64x2Backend for archmage::Avx512Fp16Token {
     }
     #[inline(always)]
     fn rcp_approx(self, a: Self::Repr) -> Self::Repr {
-        overrides::rcp_approx_f64x2_v4(self.v4(), a)
+        <archmage::X64V3Token as F64x2Backend>::rcp_approx(self.v3(), a)
     }
     #[inline(always)]
     fn rsqrt_approx(self, a: Self::Repr) -> Self::Repr {
-        overrides::rsqrt_approx_f64x2_v4(self.v4(), a)
+        <archmage::X64V3Token as F64x2Backend>::rsqrt_approx(self.v3(), a)
     }
     #[inline(always)]
     fn not(self, a: Self::Repr) -> Self::Repr {
@@ -783,11 +782,11 @@ impl F64x4Backend for archmage::X64V4Token {
     }
     #[inline(always)]
     fn rcp_approx(self, a: Self::Repr) -> Self::Repr {
-        overrides::rcp_approx_f64x4_v4(self, a)
+        <archmage::X64V3Token as F64x4Backend>::rcp_approx(self.v3(), a)
     }
     #[inline(always)]
     fn rsqrt_approx(self, a: Self::Repr) -> Self::Repr {
-        overrides::rsqrt_approx_f64x4_v4(self, a)
+        <archmage::X64V3Token as F64x4Backend>::rsqrt_approx(self.v3(), a)
     }
     #[inline(always)]
     fn not(self, a: Self::Repr) -> Self::Repr {
@@ -979,11 +978,11 @@ impl F64x4Backend for archmage::X64V4xToken {
     }
     #[inline(always)]
     fn rcp_approx(self, a: Self::Repr) -> Self::Repr {
-        overrides::rcp_approx_f64x4_v4(self.v4(), a)
+        <archmage::X64V3Token as F64x4Backend>::rcp_approx(self.v3(), a)
     }
     #[inline(always)]
     fn rsqrt_approx(self, a: Self::Repr) -> Self::Repr {
-        overrides::rsqrt_approx_f64x4_v4(self.v4(), a)
+        <archmage::X64V3Token as F64x4Backend>::rsqrt_approx(self.v3(), a)
     }
     #[inline(always)]
     fn not(self, a: Self::Repr) -> Self::Repr {
@@ -1175,11 +1174,11 @@ impl F64x4Backend for archmage::Avx512Fp16Token {
     }
     #[inline(always)]
     fn rcp_approx(self, a: Self::Repr) -> Self::Repr {
-        overrides::rcp_approx_f64x4_v4(self.v4(), a)
+        <archmage::X64V3Token as F64x4Backend>::rcp_approx(self.v3(), a)
     }
     #[inline(always)]
     fn rsqrt_approx(self, a: Self::Repr) -> Self::Repr {
-        overrides::rsqrt_approx_f64x4_v4(self.v4(), a)
+        <archmage::X64V3Token as F64x4Backend>::rsqrt_approx(self.v3(), a)
     }
     #[inline(always)]
     fn not(self, a: Self::Repr) -> Self::Repr {

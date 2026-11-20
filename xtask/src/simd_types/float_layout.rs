@@ -254,6 +254,21 @@ pub(super) fn x86(lanes: usize, repr: &str, attr: &str) -> String {
     } else {
         String::new()
     };
+    let (bf16_nan, bf16_flush) = if lanes == 16 {
+        (
+            "_mm512_mask_blend_epi32(_mm512_cmpgt_epi32_mask(_mm512_and_si512(raw, _mm512_set1_epi32(0x7fff_ffff)), _mm512_set1_epi32(0x7f80_0000)), rounded, _mm512_or_si512(raw, _mm512_set1_epi32(0x0040_0000)))".to_string(),
+            "_mm512_mask_blend_epi32(_mm512_test_epi32_mask(i, _mm512_set1_epi32(0x7f80)), _mm512_and_si512(i, _mm512_set1_epi32(0x8000)), i)".to_string(),
+        )
+    } else {
+        (
+            format!(
+                "{prefix}_blendv_epi8(rounded, {prefix}_or_si{bits}(raw, {prefix}_set1_epi32(0x0040_0000)), {prefix}_cmpgt_epi32({prefix}_and_si{bits}(raw, {prefix}_set1_epi32(0x7fff_ffff)), {prefix}_set1_epi32(0x7f80_0000)))"
+            ),
+            format!(
+                "{prefix}_andnot_si{bits}({prefix}_and_si{bits}({prefix}_cmpeq_epi32({prefix}_and_si{bits}(i, {prefix}_set1_epi32(0x7f80)), {prefix}_setzero_si{bits}()), {prefix}_set1_epi32(0x7fff)), i)"
+            ),
+        )
+    };
     formatdoc! {r#"
         {attr}
         fn from_u16_lanes(self, lanes: &[u16; {lanes}]) -> {repr} {{
@@ -324,19 +339,10 @@ pub(super) fn x86(lanes: usize, repr: &str, attr: &str) -> String {
                 let lsb = {prefix}_and_si{bits}({prefix}_srli_epi32::<16>(raw), {prefix}_set1_epi32(1));
                 {prefix}_add_epi32(raw, {prefix}_add_epi32(lsb, {prefix}_set1_epi32(0x7fff)))
             }} else {{ raw }};
+            let rounded = if opts.is_finite() {{ rounded }} else {{ {bf16_nan} }};
             let i = {prefix}_srli_epi32::<16>(rounded);
-            let out: [u16; {lanes}] = {convert};
-            if opts.is_finite() && !opts.flushes() {{
-                out
-            }} else {{
-                // Special and signed-subnormal handling is shared with scalar.
-                let original: [f32; {lanes}] = crate::simd_storage::cast(value);
-                core::array::from_fn(|i| {{
-                    if original[i].is_nan() || (opts.flushes() && out[i] & 0x7f80 == 0) {{
-                        crate::scalar::to_bf16_with::<CFG>(original[i])
-                    }} else {{ out[i] }}
-                }})
-            }}
+            let i = if opts.flushes() {{ {bf16_flush} }} else {{ i }};
+            {convert}
         }}
 
         {wide}

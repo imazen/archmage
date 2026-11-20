@@ -44,10 +44,6 @@ const OVERRIDES: &[(&str, &str, &str)] = &[
     ("F32x8Backend", "to_u8_lanes", "to_u8_lanes_x8_v4"),
     ("F32x8Backend", "to_u32_lanes", "to_u32_lanes_x8_v4"),
     ("F32x8Backend", "from_u32_lanes", "from_u32_lanes_x8_v4"),
-    ("F64x2Backend", "rcp_approx", "rcp_approx_f64x2_v4"),
-    ("F64x2Backend", "rsqrt_approx", "rsqrt_approx_f64x2_v4"),
-    ("F64x4Backend", "rcp_approx", "rcp_approx_f64x4_v4"),
-    ("F64x4Backend", "rsqrt_approx", "rsqrt_approx_f64x4_v4"),
 ];
 
 /// Generate the delegation file from the two trait sources.
@@ -159,7 +155,6 @@ pub(crate) fn generate_narrow(specs: &[(String, String)]) -> String {
         // `I8x16Bitcast` impl, …) — every sibling backend trait must be
         // in scope, not just the implemented set.
         use crate::simd::backends::*;
-        use super::x86_v4_f32_overrides as overrides;
 
         {body}
     "#}

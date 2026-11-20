@@ -45,11 +45,17 @@ macro_rules! float_numerics {
                     seed
                 } else {
                     let residual = self.mul_neg_add_relaxed(seed, one);
-                    seed.mul_add_relaxed(residual, seed)
+                    let refined = seed.mul_add_relaxed(residual, seed);
+                    if core::mem::size_of::<$elem>() == 8 {
+                        let residual2 = self.mul_neg_add_relaxed(refined, one);
+                        refined.mul_add_relaxed(residual2, refined)
+                    } else {
+                        refined
+                    }
                 };
                 if opts.admits_all() {
-                    // Estimates accept normal inputs with normal reciprocal
-                    // intermediates. Use division on IEEE rails and tiny outputs.
+                    // Estimates accept normal inputs below 1 / MIN_POSITIVE.
+                    // Use division on IEEE rails, subnormals, and ±(1 / MIN_POSITIVE).
                     let valid = self
                         .abs()
                         .simd_ge(Self::splat_t(self.1, <$elem>::MIN_POSITIVE))
@@ -59,14 +65,18 @@ macro_rules! float_numerics {
                     result = Self::blend(valid, result, one / self);
                 }
                 if matches!(precision, RecipPrecision::Nr1Ceil) {
-                    let bits = result.to_array().map(|x| {
-                        if x.is_finite() && x != 0.0 {
-                            x.next_up()
-                        } else {
-                            x
-                        }
-                    });
-                    result = Self::from_array_t(self.1, bits);
+                    let biased = result
+                        .abs()
+                        .mul_add_relaxed(Self::splat_t(self.1, 2.0 * <$elem>::EPSILON), result);
+                    result = if opts.admits_all() {
+                        let finite_nz = result.abs().simd_gt(Self::splat_t(self.1, 0.0))
+                            & result
+                                .abs()
+                                .simd_lt(Self::splat_t(self.1, <$elem>::INFINITY));
+                        Self::blend(finite_nz, biased, result)
+                    } else {
+                        biased
+                    };
                 }
                 result
             }
@@ -90,9 +100,15 @@ macro_rules! float_numerics {
                 } else {
                     let half = Self::splat_t(self.1, 0.5);
                     let half_seed = half * seed;
-                    let residual =
-                        (self * seed).mul_neg_add_relaxed(seed, Self::splat_t(self.1, 1.0));
-                    half_seed.mul_add_relaxed(residual, seed)
+                    let residual = (self * seed).mul_neg_add_relaxed(seed, one);
+                    let refined = half_seed.mul_add_relaxed(residual, seed);
+                    if core::mem::size_of::<$elem>() == 8 {
+                        let half_ref = half * refined;
+                        let residual2 = (self * refined).mul_neg_add_relaxed(refined, one);
+                        half_ref.mul_add_relaxed(residual2, refined)
+                    } else {
+                        refined
+                    }
                 };
                 if opts.admits_all() {
                     let valid = self.simd_ge(Self::splat_t(self.1, <$elem>::MIN_POSITIVE))

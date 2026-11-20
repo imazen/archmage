@@ -85,7 +85,9 @@ macro_rules! float_layout {
                 Self(T::from_bf16_lanes(token, bits), token)
             }
 
-            /// Encode finite bfloat16 lanes, rounding ties to even.
+            /// Encode finite bfloat16 lanes, rounding ties to even and preserving
+            /// bfloat16 subnormals (`HalfConvert::new().normalize()`, since bfloat16
+            /// shares binary32's exponent range).
             #[inline(always)]
             pub fn to_bf16(self) -> [u16; $lanes] {
                 self.to_bf16_with::<{ HalfConvert::new().normalize().bits() }>()
@@ -243,7 +245,9 @@ pub(crate) mod half4 {
             } else {
                 (0x3880_0000, 0x7bff, mag)
             };
-            let packed = (rounded.shr_logical_const::<13>() - splat(112 << 10)).min(splat(cap));
+            let packed = (rounded.shr_logical_const::<13>() - splat(112 << 10))
+                .max(splat(0x0400))
+                .min(splat(cap));
             return (packed & mag.simd_ge(splat(low))) | sign;
         }
         if opts.rounds() {

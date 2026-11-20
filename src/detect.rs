@@ -355,10 +355,13 @@ macro_rules! __impl_feature_check {
 }
 
 // Select the macro definition in Archmage so the caller's Cargo features
-// cannot accidentally enable or disable runtime detection.
+// cannot accidentally enable or disable runtime detection. Soft-float x86_64
+// uses stub tokens and returns false; 32-bit x86 (e.g. i586) retains CPUID.
 #[cfg(all(
-    any(target_arch = "x86_64", target_arch = "x86"),
-    target_feature = "sse2",
+    any(
+        all(target_arch = "x86_64", target_feature = "sse2"),
+        target_arch = "x86"
+    ),
     feature = "std"
 ))]
 #[doc(hidden)]
@@ -371,8 +374,10 @@ macro_rules! __impl_runtime_only_check {
 }
 
 #[cfg(not(all(
-    any(target_arch = "x86_64", target_arch = "x86"),
-    target_feature = "sse2",
+    any(
+        all(target_arch = "x86_64", target_feature = "sse2"),
+        target_arch = "x86"
+    ),
     feature = "std"
 )))]
 #[doc(hidden)]
@@ -658,41 +663,33 @@ macro_rules! __impl_aarch64_apple_or_runtime_check {
     }};
 }
 
-/// Runtime-only AArch64 feature check. Used when compile-time detection not possible.
+/// Runtime-only AArch64 feature check. Selected at Archmage compile time so
+/// the caller's `std` feature cannot alter runtime detection.
+#[cfg(all(target_os = "windows", target_arch = "aarch64"))]
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __impl_aarch64_runtime_only_check {
+    ($feature:tt) => {{ $crate::__winarm_cpufeatures_detected!($feature) }};
+}
+
+#[cfg(all(not(target_os = "windows"), target_arch = "aarch64", feature = "std"))]
 #[doc(hidden)]
 #[macro_export]
 macro_rules! __impl_aarch64_runtime_only_check {
     ($feature:tt) => {{
-        // Windows-on-ARM: route through `winarm-cpufeatures`'s
-        // registry-backed ID_AA64*_EL1 decoder + IPFP, recovering the
-        // ~30 feature names that stdarch's IPFP-only Windows backend
-        // cannot see. Always on; opt out at runtime via
-        // `winarm_cpufeatures::set_registry_enabled(false)`.
-        #[cfg(all(target_os = "windows", target_arch = "aarch64"))]
-        {
-            $crate::__winarm_cpufeatures_detected!($feature)
-        }
-        #[cfg(not(all(target_os = "windows", target_arch = "aarch64")))]
-        {
-            #[cfg(target_arch = "aarch64")]
-            {
-                #[cfg(feature = "std")]
-                {
-                    std::arch::is_aarch64_feature_detected!($feature)
-                }
-                #[cfg(not(feature = "std"))]
-                {
-                    // In no_std, we can't do runtime detection without std
-                    // Fall back to compile-time only
-                    false
-                }
-            }
-            #[cfg(not(target_arch = "aarch64"))]
-            {
-                false
-            }
-        }
+        extern crate std as __archmage_std;
+        __archmage_std::arch::is_aarch64_feature_detected!($feature)
     }};
+}
+
+#[cfg(not(any(
+    all(target_os = "windows", target_arch = "aarch64"),
+    all(not(target_os = "windows"), target_arch = "aarch64", feature = "std")
+)))]
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __impl_aarch64_runtime_only_check {
+    ($feature:tt) => {{ false }};
 }
 
 /// Bridge to the `winarm-cpufeatures` crate. Only instantiated on

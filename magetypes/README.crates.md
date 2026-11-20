@@ -54,10 +54,11 @@ assert_eq!(plane, [1.0; 11]);
 
 `0.9.32` is the matching release for `archmage = "=0.9.32"`:
 existing vector and constructor signatures are preserved, `_t(token, ...)`
-remains token-first, and the flat transcendental methods keep their behavior
+remains token-first, and the flat transcendental methods remain supported
 (fixing `NaN` propagation in `log2_midp`/`ln_midp`/`log10_midp` and `-0.0` at
 `silu_midp(-inf)`). Configurable domain-checked `powf`/`expf`/`logf`/`cbrtf`
-with matching scalar tail helpers live in [Magemath](../magemath). Unified
+with matching scalar tail helpers live in
+[Magemath](https://github.com/imazen/archmage/tree/main/magemath). Unified
 macros (`#[attune]`, `attuned!`, `reattune!`) are documented in the
 [unified macro guide](https://github.com/imazen/archmage/blob/main/docs/ATTUNE.md).
 
@@ -309,8 +310,9 @@ has the details.
 - SIMD tiers cover x86-64, AArch64 and WASM. Other targets run the scalar
   backend.
 - With the `avx512` feature, AVX-512 tokens also support the 128- and
-  256-bit float and integer types. These narrower backend, conversion and
-  bitcast implementations delegate to V3; 512-bit types use AVX-512.
+  256-bit float and integer types. Narrower integer, f64, conversion and
+  bitcast operations delegate to V3 (with AVX-512VL overrides where faster on
+  `f32x4`/`f32x8`); 512-bit types use AVX-512.
 - Transcendentals are approximations with documented error:
   [Transcendentals](https://imazen.github.io/archmage/magetypes/math/transcendentals/)
   gives each function's domain and precision.

@@ -311,7 +311,10 @@ impl F32x4Backend for NeonToken {
             vorrq_u32(ri, vshlq_n_u32::<8>(gi)),
             vorrq_u32(vshlq_n_u32::<16>(bi), vshlq_n_u32::<24>(ai)),
         );
-        crate::simd_storage::store(vreinterpretq_u8_u32(pixels), out);
+        let bytes = vreinterpretq_u8_u32(pixels);
+        #[cfg(target_endian = "big")]
+        let bytes = vrev32q_u8(bytes);
+        crate::simd_storage::store(bytes, out);
     }
 
     #[arcane(suppress_const_test, _self = NeonToken)]
@@ -974,7 +977,11 @@ impl F32x8Backend for NeonToken {
             vorrq_u32(r1, vshlq_n_u32::<8>(g1)),
             vorrq_u32(vshlq_n_u32::<16>(b1), vshlq_n_u32::<24>(a1)),
         );
-        crate::simd_storage::store([vreinterpretq_u8_u32(p0), vreinterpretq_u8_u32(p1)], out);
+        let b0 = vreinterpretq_u8_u32(p0);
+        let b1 = vreinterpretq_u8_u32(p1);
+        #[cfg(target_endian = "big")]
+        let (b0, b1) = (vrev32q_u8(b0), vrev32q_u8(b1));
+        crate::simd_storage::store([b0, b1], out);
     }
 
     #[inline(always)]

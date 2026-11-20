@@ -15,11 +15,11 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 - Remove width traits `Has128BitSimd`, `Has256BitSimd`, `Has512BitSimd` — use concrete tokens or tier traits (`HasX64V2`, `HasX64V4`) instead (deprecated since 0.9.9; `Has256BitSimd` only enables AVX, not AVX2/FMA)
 - Planned 0.10: add "adx" and "sha" target features to `X64V3GfniCryptoToken`, `X64V4xToken`, and `Avx512Fp16Token` to match real shipping CPUs at those tiers (Alder Lake+, Ice Lake+, Sapphire Rapids+, Zen 4+); deferred from 0.9.x because adding required `#[target_feature]` gates breaks semver on existing `from_context` and `magetypes` `from_raw` signatures (#174).
 
-### [0.9.32] - 2026-11-16
+### [0.9.32] - 2026-11-19
 
 #### Fixed
 
-- Support soft-float `x86_64-unknown-none` and `x86_64-unknown-uefi`. Archmage token detection and macro-generated x86 SIMD require baseline SSE2. Magetypes and Magemath use their scalar backends when the target lacks it.
+- Support soft-float `x86_64-unknown-none` and `x86_64-unknown-uefi`. Archmage token detection and macro-generated x86-64 SIMD require baseline SSE2, while 32-bit `x86` retains runtime CPUID when `std` is enabled and non-Windows AArch64 runtime detection resolves `std` hygienically inside `archmage`. Magetypes and Magemath use their scalar backends when the target lacks SSE2.
 
 #### Changed
 
@@ -76,7 +76,7 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 - Require `scalar` or `default` in explicit `incant!` tier lists (currently auto-appended with a deprecation warning)
 - Require explicit `tier(cfg(feature))` syntax — remove implicit `cfg_feature` auto-gating on v4/v4x
 
-### [0.9.32] - 2026-11-16
+### [0.9.32] - 2026-11-19
 
 #### Added
 
@@ -171,21 +171,14 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 - Planned: make `w512` non-default in magetypes; users who need 512-bit types would add `features = ["w512"]`. This patch keeps the existing default features.
 - Remove `cast::Upcast` and `cast::Downcast`, and with them the `cast` module, which holds nothing else. Both are deprecated in 0.9.30 and were never implemented (b1b2ff67).
 
+### [0.9.32] - 2026-11-19
+
 #### Added
 
-- Add const-configured `magetypes::numerics::{IntConvert, HalfConvert, RecipOptions, ExtremaOptions}` for register operations and scalar tails. The new u16 conversion accepts nearest-even or truncating policies with explicit saturation bounds. Add binary16 and bfloat16 register conversions, unsigned u32 widening and narrowing, `trunc`, and fused and relaxed multiply-negate-add.
+- Add const-configured `magetypes::numerics::{IntConvert, HalfConvert, RecipOptions, ExtremaOptions}` (with distinct per-family encoding tags) for register operations and scalar tails. The new `u16` conversion accepts nearest-even or truncating policies with explicit saturation bounds. Add binary16 and bfloat16 register conversions, unsigned `u32` widening and narrowing, `trunc`, and fused and relaxed multiply-negate-add.
 - Add exact raw `u16` loads for generic `f32x4`, `f32x8` and `f32x16`, `load_rgb_u16_t` at widths 4 and 8, and bit-preserving RGBA alpha operations at all three widths.
 - Add width-polymorphic `load_rgba_u8_t` and `store_rgba_u8[_with](..., out)` for `f32x4`, `f32x8` and `f32x16`. Add `f32x16` RGBA block operations and use native SIMD shuffles for `f32x4` transpose and WASM128 RGB deinterleave.
-
-#### Queued for after 0.9.32
-
-- Share generated AVX-512 float implementations through the V4 proof for V4x wide floats and narrow AVX-512 subtokens. Verify the shared paths with the consumer codegen comparison.
-
-### [0.9.32] - 2026-11-16
-
-#### Added
-
-- Add `minimum` / `maximum` (IEEE 754-2019 `NaN`-propagating) and `min_fast` / `max_fast` (single-instruction, `NaN`/signed-zero-agnostic) alongside the existing `min` / `max` across `f32x4`, `f32x8`, `f32x16`, `f64x2`, `f64x4`, `f64x8` (and `f32x1` / `f64x1`) (#156):
+- Add `minimum` / `maximum` (IEEE 754-2019 `NaN`-propagating) and `min_fast` / `max_fast` (single-instruction, `NaN`/signed-zero-agnostic) alongside the existing `min` / `max` across `f32x4`, `f32x8`, `f32x16`, `f64x2`, `f64x4`, `f64x8` (and `f32x1` / `f64x1`; `f64x1` also gains `min`, `max`, `clamp`, and `reduce_*`) (#156):
   - `min` / `max`: now return the numeric operand over a quiet `NaN`, like `f32::min` / `f32::max` (`f64::min` / `f64::max`), on all backends (see Fixed); signalling `NaN` is unspecified per backend; scalar tails use `a.min(b)` / `a.max(b)`.
   - `minimum` / `maximum`: IEEE 754-2019 conformant (`NaN`-propagating to quiet `NaN`, strictly ordering `-0.0 < +0.0`); scalar tails use `magetypes::scalar::{minimum_f32, maximum_f32, minimum_f64, maximum_f64}`.
   - `min_fast` / `max_fast`: fastest single-instruction lane-wise operation per platform ignoring `NaN` and signed-zero ordering (`vminps`/`vminpd` on x86, `vminnmq` on NEON, `f32x4.pmin`/`f64x2.pmin` or `relaxed_min` with `relaxed-simd` on WASM, compare+select on `ScalarToken`); scalar tails use `magetypes::scalar::{min_fast_f32, max_fast_f32, min_fast_f64, max_fast_f64}`.
@@ -195,16 +188,20 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 - Add `load_padded_t(token, slice, pad)` and `store_prefix(out)` across all 30 generic vector types (`f32x4`..`u64x8`) for branchless single-vector remainder handling paired with `partition_slice_t` / `partition_slice_mut_t`.
 - Add `pub fn token(self) -> T` across all 30 generic vector types (`f32x4`..`u64x8`) to recover the capability token proof carried inside a vector without passing a separate token argument.
 
+#### Deprecated
+
+- Deprecate width-numbered `f32x{4,8}::{load_{4,8}_rgba_u8, load_{4,8}_rgba_u8_t, store_{4,8}_rgba_u8}` and `F32x{4,8}Backend::store_rgba_bytes` in favor of width-polymorphic `load_rgba_u8_t` and destination-buffer `store_rgba_u8(..., out)`.
+
 #### Fixed
 
-- `min` and `max` on float vectors (`f32x{4,8,16}`, `f64x{2,4,8}`) now return the numeric operand when the other is a quiet `NaN`, like Rust `f32::min`/`f64::min`, on every backend (x86 and `ScalarToken`'s W512 float `min`/`max` returned the second operand; NEON and WASM propagated `NaN`). Signalling `NaN` handling is unspecified and differs by backend, as Rust leaves it: NEON returns a quiet `NaN`, x86, WASM and `ScalarToken` the numeric operand. Cost: on x86 V3 `min`/`max` go from one `minps`/`minpd`/`maxps`/`maxpd` to that op plus an unordered compare and a blend (3 instructions); on NEON one `vminq`/`vmaxq` becomes one `vminnmq`/`vmaxnmq` (1 instruction, the same lowering as `min_fast`/`max_fast`). `min_fast`/`max_fast` keep the single-instruction cost on x86. Not benchmarked.
-- `log2_midp`, `ln_midp`, `log10_midp`, and `log2_midp_precise` now preserve `NaN` inputs instead of falling through to finite negative outputs, while still mapping `±0.0` to `-inf` and negative inputs to `NaN`; the change swaps blend predicate operands at the same instruction count.
+- `min` and `max` on float vectors (`f32x{4,8,16}`, `f64x{2,4,8}`) now return the numeric operand when the other is a quiet `NaN`, like Rust `f32::min`/`f64::min`, on every backend (x86 and `ScalarToken`'s W512 float `min`/`max` returned the second operand; NEON and WASM propagated `NaN`). Signalling `NaN` handling is unspecified and differs by backend, as Rust leaves it: NEON and AVX-512 `f32` (`vrangeps`) return a quiet `NaN`, while x86 V3, AVX-512 `f64`, WASM and `ScalarToken` return the numeric operand. Cost: on x86 V3 `min`/`max` go from one `minps`/`minpd`/`maxps`/`maxpd` to that op plus an unordered compare and a blend (3 instructions); on AVX-512 `f32` one `vrangeps` handles quiet `NaN` in 1 instruction; on NEON one `vminq`/`vmaxq` becomes one `vminnmq`/`vmaxnmq` (1 instruction, the same lowering as `min_fast`/`max_fast`). `min_fast`/`max_fast` keep the single-instruction cost on x86 V3. Not benchmarked.
+- `log2_midp`, `ln_midp`, `log10_midp`, `log2_midp_precise`, `exp2_midp`, `exp2_lowp`, `exp_midp`, `exp_lowp`, `pow_midp`, and `sigmoid_midp` now preserve quiet `NaN` inputs across all backends while keeping 1-instruction per-bound clamping in `exp2_midp` / `exp2_lowp`.
 - `silu_midp(-inf)` now returns `-0.0` (matching large finite negative inputs) instead of `NaN` from `(-inf) * 0.0`; adds one splat+compare+select per call (small constant-factor cost, not benchmarked).
 
 #### Changed
 
 - Depend on `archmage = "0.9.32"`.
-- Float `clamp` (`f32x{4,8,16}`, `f64x{2,4,8}`, and `f64x1`) is now `min_fast(max_fast(self, lo), hi)`, two instructions on native backends; x86 output is bit-identical to 0.9.31. A quiet `NaN` lane becomes `lo` on x86, NEON, strict WASM, and `ScalarToken` (0.9.31 propagated `NaN` on NEON and WASM); a signalling `NaN` lane (`lo` on x86, `hi` on NEON) and WASM `relaxed-simd` `NaN` lanes are unspecified per backend. `NaN` bounds and `lo > hi` give an unspecified lane and never panic; `f32::clamp` differs on both counts, so scalar tails use `magetypes::scalar::clamp_f32` / `clamp_f64`. `f32x1::clamp` keeps `f32::clamp` semantics.
+- Float `clamp` (`f32x{4,8,16}`, `f64x{2,4,8}`, and newly added `f64x1::clamp`) is `min_fast(max_fast(self, lo), hi)`, two instructions on native backends; x86 output is bit-identical to 0.9.31. A quiet `NaN` lane becomes `lo` on x86, NEON, strict WASM, and `ScalarToken` (0.9.31 propagated `NaN` on NEON and WASM); a signalling `NaN` lane and WASM `relaxed-simd` `NaN` lanes are unspecified per backend. `NaN` bounds and `lo > hi` give an unspecified lane and never panic; `f32::clamp` differs on both counts, so scalar tails use `magetypes::scalar::clamp_f32` / `clamp_f64`. Existing `f32x1::clamp` keeps `f32::clamp` semantics.
 - NEON `bitmask` lowering rewritten from per-lane extracts to weighted-lane reductions on the wider integer and float vector types (two-lane types keep extraction; generator and generated code together). Measured neutral through the public API on Apple M4 Pro — `i32x4` +0.1%, `i16x8` -4.2%, `u8x16` +1.9% (`benchmarks/neon_bitmask_apple-m4-pro_2026-09-08.md`); isolated raw-NEON microbenchmarks showed up to 1.94x but do not reproduce through the generic types, so this is a code-shape change, not a perf win.
 - Clarify positive-normal domain documentation on `rcp_approx_portable` and `rsqrt_approx_portable` and unconditional zero masking in `pow_lowp`. Flat `magetypes` transcendental approximations keep their arithmetic and are not deprecated.
 
@@ -292,7 +289,7 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 
 ## magemath
 
-### [0.1.0] - 2026-11-16
+### [0.1.0] - 2026-11-19
 
 #### Added
 
@@ -310,7 +307,7 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 
 (none)
 
-### [0.9.32] - 2026-11-16
+### [0.9.32] - 2026-11-19
 
 #### Added
 
