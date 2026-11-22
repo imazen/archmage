@@ -128,6 +128,12 @@ macro_rules! is_x86_feature_available {
     ("aes") => {
         $crate::__impl_feature_check!("aes")
     };
+    ("avxvnni") => {
+        $crate::__impl_feature_check!("avxvnni")
+    };
+    ("adx") => {
+        $crate::__impl_feature_check!("adx")
+    };
     ("sha") => {
         $crate::__impl_feature_check!("sha")
     };
@@ -340,6 +346,26 @@ macro_rules! __impl_feature_check {
         #[cfg(not(target_feature = "aes"))]
         {
             $crate::__impl_runtime_only_check!("aes")
+        }
+    }};
+    ("avxvnni") => {{
+        #[cfg(target_feature = "avxvnni")]
+        {
+            true
+        }
+        #[cfg(not(target_feature = "avxvnni"))]
+        {
+            $crate::__impl_runtime_only_check!("avxvnni")
+        }
+    }};
+    ("adx") => {{
+        #[cfg(target_feature = "adx")]
+        {
+            true
+        }
+        #[cfg(not(target_feature = "adx"))]
+        {
+            $crate::__impl_runtime_only_check!("adx")
         }
     }};
     ("sha") => {{

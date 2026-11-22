@@ -642,8 +642,12 @@ pub fn generate_backend_files() -> BTreeMap<String, String> {
             specs.push((name.to_string(), files["backends/convert_int.rs"].clone()));
         }
         files.insert(
-            "impls/x86_v4_narrow_delegated.rs".to_string(),
-            super::v4_delegation_gen::generate_narrow(&specs),
+            "impls/x86_v3_delegated.rs".to_string(),
+            super::v4_delegation_gen::generate_v3_delegated(
+                &files["backends/f32x4.rs"],
+                &files["backends/f32x8.rs"],
+                &specs,
+            ),
         );
     }
 
@@ -669,6 +673,7 @@ fn generate_sealed() -> String {
         impl Sealed for archmage::X64V1Token {{}}
         impl Sealed for archmage::X64V2Token {{}}
         impl Sealed for archmage::X64V3Token {{}}
+        impl Sealed for archmage::X64V3VnniToken {{}}
         impl Sealed for archmage::X64V4Token {{}}
         impl Sealed for archmage::X64V4xToken {{}}
         impl Sealed for archmage::Avx512Fp16Token {{}}
@@ -1155,6 +1160,12 @@ fn generate_impls_mod() -> String {
         #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
         mod x86_v3;
 
+        // Pure-V3 W128 / W256 backend delegation: all 34 narrow traits for
+        // `X64V3VnniToken` (independent of `feature = "avx512"`) plus the 30
+        // non-f32 narrow traits for the AVX-512 tokens under `feature = "avx512"`.
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
+        mod x86_v3_delegated;
+
         #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
         mod x86_v4;
 
@@ -1165,10 +1176,6 @@ fn generate_impls_mod() -> String {
         mod x86_v4_f32_delegated;
         #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
         mod x86_v4_f32_overrides;
-        // The remaining W128 / W256 backends (f64 + int families) and the
-        // float↔int convert/bitcast traits, forwarded to V3's the same way.
-        #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
-        mod x86_v4_narrow_delegated;
 
         #[cfg(target_arch = "aarch64")]
         mod arm_neon;

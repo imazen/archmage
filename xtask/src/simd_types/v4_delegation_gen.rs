@@ -69,8 +69,9 @@ pub(crate) struct DelegatedToken {
     pub(crate) v4_mode: V4ProofMode,
 }
 
-/// The AVX-512 tokens that delegate narrow W128/W256 backends to V3.
-const TOKENS: &[DelegatedToken] = &[
+/// The AVX-512 tokens that delegate narrow W128/W256 backends to V3
+/// (gated on `feature = "avx512"`).
+const AVX512_TOKENS: &[DelegatedToken] = &[
     DelegatedToken {
         ident: "X64V4Token",
         v4_mode: V4ProofMode::Identity,
@@ -84,6 +85,11 @@ const TOKENS: &[DelegatedToken] = &[
         v4_mode: V4ProofMode::ViaV4,
     },
 ];
+
+/// Pure-V3 extension tokens that delegate ALL 34 W128/W256 backends (including
+/// f32 without AVX-512VL overrides) to `X64V3Token`, independent of
+/// `feature = "avx512"`.
+const V3_ONLY_TOKENS: &[&str] = &["X64V3VnniToken"];
 
 /// Methods that take the AVX-512VL path in `impls/x86_v4_f32_overrides.rs`:
 /// `(trait_name, method_name, helper_fn)`.
@@ -137,7 +143,7 @@ pub(crate) fn generate(f32x4_trait_src: &str, f32x8_trait_src: &str) -> String {
     let macro_and_invocations = build_delegation_body(
         "delegate_v3_f32_backend",
         &specs,
-        TOKENS,
+        AVX512_TOKENS,
         OVERRIDES,
         DEFAULT_BODY_EXCEPTIONS,
         true,
@@ -216,28 +222,88 @@ pub(crate) fn generate(f32x4_trait_src: &str, f32x8_trait_src: &str) -> String {
     "#}
 }
 
-/// Generate `impls/x86_v4_narrow_delegated.rs`: every other W128/W256 backend
-/// the AVX-512 tokens lack — f64x2/f64x4, the i8/i16/i32/i64 and
-/// u8/u16/u32/u64 families — plus the float↔int `*Convert` and `*Bitcast`
-/// traits. Same delegation proof as the f32 file; no overrides — every method
-/// forwards to `X64V3Token`.
+/// Generate `impls/x86_v3_delegated.rs`: pure-V3 W128/W256 delegation without
+/// AVX-512VL overrides.
 ///
-/// `specs` is `(trait_name, trait_source)` pairs read from the generated
-/// `backends/*.rs` sources, so a new method cannot fall back to its scalar
-/// default body (issue #60).
-pub(crate) fn generate_narrow(specs: &[(String, String)]) -> String {
-    let borrowed: Vec<(&str, &str)> = specs
+/// - `V3_ONLY_TOKENS` (`X64V3VnniToken`) receive concrete impls for all 34
+///   traits (4 f32 + 30 f64/integer/convert/bitcast) unconditionally under
+///   `all(target_arch = "x86_64", target_feature = "sse2")`, with no dependency
+///   on `feature = "avx512"`.
+/// - `AVX512_TOKENS` (`X64V4Token`, `X64V4xToken`, `Avx512Fp16Token`) receive
+///   concrete impls for the 30 non-f32 traits under `#[cfg(feature = "avx512")]`
+///   (their 4 f32 traits with AVX-512VL overrides live in
+///   `x86_v4_f32_delegated.rs`).
+///
+/// All macro arms are derived from the generated `backends/*.rs` sources, so a
+/// new method cannot fall back to its scalar default body (issue #60).
+pub(crate) fn generate_v3_delegated(
+    f32x4_trait_src: &str,
+    f32x8_trait_src: &str,
+    narrow_specs: &[(String, String)],
+) -> String {
+    let mut all_specs: Vec<(&str, &str)> = Vec::with_capacity(4 + narrow_specs.len());
+    all_specs.extend([
+        ("F32x4Backend", f32x4_trait_src),
+        ("F32x4Internal", f32x4_trait_src),
+        ("F32x8Backend", f32x8_trait_src),
+        ("F32x8Internal", f32x8_trait_src),
+    ]);
+    all_specs.extend(
+        narrow_specs
+            .iter()
+            .map(|(name, src)| (name.as_str(), src.as_str())),
+    );
+
+    let narrow_names: Vec<&str> = narrow_specs.iter().map(|(n, _)| n.as_str()).collect();
+    let v3_only_tokens: Vec<DelegatedToken> = V3_ONLY_TOKENS
         .iter()
-        .map(|(name, src)| (name.as_str(), src.as_str()))
+        .map(|&ident| DelegatedToken {
+            ident,
+            v4_mode: V4ProofMode::Identity,
+        })
         .collect();
-    let macro_and_invocations = build_delegation_body(
-        "delegate_v3_narrow_backend",
-        &borrowed,
-        TOKENS,
+
+    let macro_def = build_delegation_macro_arms(
+        "delegate_v3_backend",
+        &all_specs,
         &[],
-        &[],
+        DEFAULT_BODY_EXCEPTIONS,
         false,
     );
+
+    let mut invocations = String::new();
+    let v3_only_total = v3_only_tokens.len() * all_specs.len();
+    invocations.push_str(&format!(
+        "// Pure-V3 extension tokens ({} token(s) × {} traits = {v3_only_total} impls, no `avx512` feature required).\n",
+        v3_only_tokens.len(),
+        all_specs.len(),
+    ));
+    validate_tokens(&v3_only_tokens);
+    for token in &v3_only_tokens {
+        let ident = token.ident;
+        invocations.push_str(&format!("\n// archmage::{ident}\n"));
+        for &(trait_name, _) in &all_specs {
+            invocations.push_str(&format!("delegate_v3_backend!({trait_name} => {ident});\n"));
+        }
+    }
+
+    let avx512_total = AVX512_TOKENS.len() * narrow_names.len();
+    invocations.push_str(&format!(
+        "\n// AVX-512 tokens' non-f32 narrow traits ({} tokens × {} traits = {avx512_total} impls;\n\
+         // their 4 f32 traits with AVX-512VL overrides live in `x86_v4_f32_delegated.rs`).\n",
+        AVX512_TOKENS.len(),
+        narrow_names.len(),
+    ));
+    validate_tokens(AVX512_TOKENS);
+    for token in AVX512_TOKENS {
+        let ident = token.ident;
+        invocations.push_str(&format!("\n// archmage::{ident}\n"));
+        for &trait_name in &narrow_names {
+            invocations.push_str(&format!(
+                "#[cfg(feature = \"avx512\")]\ndelegate_v3_backend!({trait_name} => {ident});\n"
+            ));
+        }
+    }
 
     let code_body = formatdoc! {r#"
         // Wildcard: the impls' signatures name supertraits of the
@@ -247,33 +313,38 @@ pub(crate) fn generate_narrow(specs: &[(String, String)]) -> String {
         // in scope, not just the implemented set.
         use crate::simd::backends::*;
 
-        {macro_and_invocations}
+        {macro_def}
+        {invocations}
     "#};
     assert_source_audit_invariants(&code_body);
 
     formatdoc! {r#"
-        //! W128 / W256 f64 and integer backends plus the float↔int
-        //! conversion traits for `X64V4Token` / `X64V4xToken` /
-        //! `Avx512Fp16Token`, delegated to `X64V3Token`'s. Generated by
-        //! xtask from the backend trait definitions; do not edit.
+        //! W128 / W256 backend delegation to `X64V3Token` for V3-superset x86-64
+        //! tokens (`X64V3VnniToken`, and under `feature = "avx512"` the non-f32
+        //! narrow traits of `X64V4Token` / `X64V4xToken` / `Avx512Fp16Token`).
+        //! Generated by xtask from the backend trait definitions; do not edit.
         //!
         //! ## Why this file exists
         //!
-        //! The AVX-512 tokens implement the W512 backends natively and
-        //! delegate the W128/W256 f32 backends (`x86_v4_f32_delegated.rs`),
-        //! but the matching f64 and integer traits — and the `*Convert` /
-        //! `*Bitcast` traits built on them — were missing, so generic code
-        //! parameterized on (say) `T: F64x4Backend` or `T: F32x8Convert`
-        //! could not accept a V4 token at all.
+        //! `X64V3VnniToken` extends `X64V3Token` without requiring AVX-512, so it
+        //! needs concrete W128/W256 f32, f64, integer, conversion, and bitcast
+        //! backend impls outside `feature = "avx512"`. The AVX-512 tokens share the
+        //! same 30 non-f32 narrow arms under `#[cfg(feature = "avx512")]` (while
+        //! their 4 f32 traits with AVX-512VL overrides live in
+        //! `x86_v4_f32_delegated.rs`).
         //!
         //! ## Deductive safety proof
         //!
-        //! `X64V3Token`'s feature set is a strict subset of `X64V4Token`'s,
-        //! so every instruction the V3 impls execute is safe under V4's
-        //! proof; `Self::Repr` stays the V3 representation, so callers see
-        //! no change. `X64V4xToken` / `Avx512Fp16Token` are V4 supersets.
-        //! The `*Convert` / `*Bitcast` impls forward to the V3 impls of the
-        //! same traits, whose `Repr` types are likewise unchanged.
+        //! `X64V3Token`'s feature set is a strict subset of every delegated token's
+        //! feature set (`X64V3VnniToken` extends `X64V3GfniCryptoToken` ⊃ `X64V3Token`,
+        //! and `X64V4Token` / `X64V4xToken` / `Avx512Fp16Token` extend `X64V3Token`),
+        //! so every instruction the V3 impls execute is safe under the child token's
+        //! proof. `Self::Repr` stays the V3 representation, and each method forwards
+        //! explicitly via `self.v3()`.
+        //!
+        //! `F32x4Backend::store_rgba_bytes` and `F32x8Backend::store_rgba_bytes`
+        //! are intentionally left to their trait default bodies, which dispatch to
+        //! `Self::store_rgba_u8_into`.
         //!
         //! Popcnt extension backends are NOT delegated: they exist only
         //! for `X64V4xToken` (native AVX-512 VPOPCNTDQ) and have no V3
@@ -281,32 +352,24 @@ pub(crate) fn generate_narrow(specs: &[(String, String)]) -> String {
         //!
         //! ## Concrete-impl macro auditability
         //!
-        //! `delegate_v3_narrow_backend!` is crate-private and expands only to
-        //! plain concrete `impl Trait for archmage::$child` blocks — zero
-        //! `unsafe`, zero raw pointers, zero target-feature boundaries, and no
-        //! blanket impls.
+        //! `delegate_v3_backend!` is crate-private and expands only to plain
+        //! concrete `impl Trait for archmage::$child` blocks — zero `unsafe`,
+        //! zero raw pointers, zero target-feature boundaries, and no blanket impls.
 
-        #![cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
+        #![cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 
         {code_body}
     "#}
 }
 
-fn build_delegation_body(
+fn build_delegation_macro_arms(
     macro_name: &str,
     specs: &[(&str, &str)],
-    tokens: &[DelegatedToken],
     overrides: &[(&str, &str, &str)],
     default_exceptions: &[(&str, &str)],
     with_v4_overrides: bool,
 ) -> String {
-    validate_inputs(
-        specs,
-        tokens,
-        overrides,
-        default_exceptions,
-        with_v4_overrides,
-    );
+    validate_specs_and_overrides(specs, overrides, default_exceptions, with_v4_overrides);
 
     let mut used_overrides: BTreeSet<(&str, &str)> = BTreeSet::new();
     let mut used_exceptions: BTreeSet<(&str, &str)> = BTreeSet::new();
@@ -366,7 +429,27 @@ fn build_delegation_body(
         }
         out.push_str("    };\n");
     }
-    out.push_str("}\n\n");
+    out.push_str("}\n");
+    out
+}
+
+fn build_delegation_body(
+    macro_name: &str,
+    specs: &[(&str, &str)],
+    tokens: &[DelegatedToken],
+    overrides: &[(&str, &str, &str)],
+    default_exceptions: &[(&str, &str)],
+    with_v4_overrides: bool,
+) -> String {
+    validate_tokens(tokens);
+    let mut out = build_delegation_macro_arms(
+        macro_name,
+        specs,
+        overrides,
+        default_exceptions,
+        with_v4_overrides,
+    );
+    out.push('\n');
 
     let total_impls = tokens.len() * specs.len();
     out.push_str(&format!(
@@ -396,9 +479,32 @@ fn build_delegation_body(
     out
 }
 
-fn validate_inputs(
+fn validate_tokens(tokens: &[DelegatedToken]) {
+    assert!(
+        !tokens.is_empty(),
+        "delegation token list must not be empty"
+    );
+    let mut seen_tokens = BTreeSet::new();
+    for token in tokens {
+        assert!(
+            !token.ident.is_empty()
+                && token
+                    .ident
+                    .chars()
+                    .all(|c| c.is_ascii_alphanumeric() || c == '_'),
+            "invalid token identifier `{}` in delegation list",
+            token.ident
+        );
+        assert!(
+            seen_tokens.insert(token.ident),
+            "duplicate token `{}` in delegation token list",
+            token.ident
+        );
+    }
+}
+
+fn validate_specs_and_overrides(
     specs: &[(&str, &str)],
-    tokens: &[DelegatedToken],
     overrides: &[(&str, &str, &str)],
     default_exceptions: &[(&str, &str)],
     with_v4_overrides: bool,
@@ -406,10 +512,6 @@ fn validate_inputs(
     assert!(
         !specs.is_empty(),
         "delegation trait spec list must not be empty"
-    );
-    assert!(
-        !tokens.is_empty(),
-        "delegation token list must not be empty"
     );
     if !with_v4_overrides {
         assert!(
@@ -427,24 +529,6 @@ fn validate_inputs(
         assert!(
             seen_traits.insert(trait_name),
             "duplicate trait `{trait_name}` in delegation spec list"
-        );
-    }
-
-    let mut seen_tokens = BTreeSet::new();
-    for token in tokens {
-        assert!(
-            !token.ident.is_empty()
-                && token
-                    .ident
-                    .chars()
-                    .all(|c| c.is_ascii_alphanumeric() || c == '_'),
-            "invalid token identifier `{}` in delegation list",
-            token.ident
-        );
-        assert!(
-            seen_tokens.insert(token.ident),
-            "duplicate token `{}` in delegation token list",
-            token.ident
         );
     }
 

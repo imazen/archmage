@@ -533,6 +533,12 @@ fn generate_x86_reference(db: &HashMap<String, IntrinsicEntry>) -> String {
             intrinsics: BTreeMap::new(),
         },
         TierInfo {
+            name: "X64V3VnniToken (AVX-VNNI + ADX/SHA)",
+            token: "X64V3VnniToken",
+            features: &["avxvnni", "adx", "sha"],
+            intrinsics: BTreeMap::new(),
+        },
+        TierInfo {
             name: "X64V4Token (AVX-512)",
             token: "X64V4Token / Server64",
             features: &["avx512f", "avx512bw", "avx512cd", "avx512dq", "avx512vl"],
@@ -1215,17 +1221,17 @@ const COMPILE_BUDGETS: &[(&str, &[&str], usize)] = &[
         "x86_64",
         &[
             "magetypes/src/simd/impls/x86_v3.rs",
+            "magetypes/src/simd/impls/x86_v3_delegated.rs",
             "magetypes/src/simd/impls/x86_v4.rs",
             "magetypes/src/simd/impls/x86_v4_f32_delegated.rs",
             "magetypes/src/simd/impls/x86_v4_f32_overrides.rs",
-            "magetypes/src/simd/impls/x86_v4_narrow_delegated.rs",
             "magetypes/src/simd/impls/scalar.rs",
             "magetypes/src/simd/backends/",
         ],
-        // Includes `x86_v4_narrow_delegated.rs` (previously omitted; complete
-        // pre-macro count was 43 767 lines, reduced to 37 002 via concrete
-        // delegation macros).
-        37_300,
+        // Includes `x86_v3_delegated.rs` (34 plain-V3 arms for `X64V3VnniToken`
+        // + 30 narrow arms for the AVX-512 tokens; complete pre-macro count for
+        // the 3 AVX-512 tokens alone was 43 767 lines).
+        38_000,
     ),
     (
         "aarch64",

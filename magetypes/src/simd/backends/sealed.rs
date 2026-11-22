@@ -8,6 +8,7 @@ pub trait Sealed {}
 impl Sealed for archmage::X64V1Token {}
 impl Sealed for archmage::X64V2Token {}
 impl Sealed for archmage::X64V3Token {}
+impl Sealed for archmage::X64V3VnniToken {}
 impl Sealed for archmage::X64V4Token {}
 impl Sealed for archmage::X64V4xToken {}
 impl Sealed for archmage::Avx512Fp16Token {}
