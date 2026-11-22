@@ -54,3 +54,16 @@ fn assume_valid_specials_retains_valid_zero_semantics() {
     const UNCHECKED_FULL: u128 = LogfOptions::new().full_domain().unchecked().bits();
     assert_eq!(Logf::<UNCHECKED_FULL>::log2(0.0), Ok(f32::NEG_INFINITY));
 }
+
+#[test]
+fn lowp_exp2_joins_at_integers() {
+    const LOWP: u128 = ExpfOptions::new().lowp().bits();
+    for n in -125..=127 {
+        let x = n as f32;
+        let [left, center, right, _] =
+            Expf::<LOWP>::exp2_array([x.next_down(), x, x.next_up(), x]).unwrap();
+        assert_eq!(center.to_bits(), ((n + 127) as u32) << 23);
+        assert!(left <= center && center <= right);
+        assert!((right - left) / center < 2e-5);
+    }
+}

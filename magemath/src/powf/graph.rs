@@ -341,6 +341,13 @@ macro_rules! eval_powf {
                     $V::from_array_t($token, crate::soft_fma::fmaf_soft_lanes(a, b, c))
                 }
             };
+            let max_lower = |x: $V<T>, lo| {
+                if $clamp_oob && !$preserve_clamped_nan {
+                    x.max(lo)
+                } else {
+                    x.max_fast(lo)
+                }
+            };
             if $lowp {
                 let log = {
                     let xb = x.bitcast_to_i32();
@@ -371,15 +378,13 @@ macro_rules! eval_powf {
                     }
                 }
                 let t = if ($zero && !$elide) || clamp_eff {
-                    t.max(sp(-126.0)).min(sp(127.99))
+                    max_lower(t, sp(-126.0)).min_fast(sp(127.99))
                 } else {
                     t
                 };
                 let xi = t.floor();
                 let xf = t - xi;
-                let p = madd(sp(0.055_504_11), xf, sp(0.240_226_5));
-                let p = madd(p, xf, sp(core::f32::consts::LN_2));
-                let p = madd(p, xf, sp(1.0));
+                let p = crate::expf::graph::exp2_lowp!(xf, sp, madd);
                 let integer = if $token.as_scalar().is_some() {
                     xi.to_i32()
                 } else {
@@ -417,14 +422,14 @@ macro_rules! eval_powf {
                 let underflow_limit = sp(-126.0);
                 let overflow_limit = sp(128.0);
                 let reduced = if clamp_eff {
-                    t.max(underflow_limit).min(overflow_limit)
+                    max_lower(t, underflow_limit).min_fast(overflow_limit)
                 } else {
                     t
                 };
                 let xi = if $elide {
                     reduced.round()
                 } else {
-                    reduced.round().min(sp(127.0))
+                    reduced.round().min_fast(sp(127.0))
                 };
                 let xf = reduced - xi;
                 let p = madd(sp(0.000_154_47), xf, sp(0.001_333_37));

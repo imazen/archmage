@@ -58,13 +58,11 @@ pub enum Log1pfDomain {
     OpenSignedUnit,
     /// Closed signed unit interval `[-1.0, 1.0]` (`-1.0 -> -inf`).
     SignedUnit,
-    /// Small symmetric interval `[-0.25, 0.25]` (`1 + x` in `[0.75, 1.25]`),
-    /// eliding integer exponent extraction and the `1 + x >= 2` Kahan branch on
-    /// both `Midp` and `Lowp`.
+    /// Small symmetric interval `[-0.25, 0.25]` with a direct polynomial in `x`
+    /// for both `Midp` and `Lowp`.
     AroundZero,
     /// Fundamental single octave around `0.0` (`[-0.29289323, 0.41421342]` on `Midp`,
-    /// `[-0.3333333, 0.3333333]` on `Lowp`), eliding integer exponent extraction
-    /// and the `1 + x >= 2` Kahan branch.
+    /// `[-0.3333333, 0.3333333]` on `Lowp`).
     SingleOctave,
     /// Every `f32` input (`-1.0 -> -inf`, `< -1.0 -> NaN`, `±0.0 -> ±0.0`,
     /// subnormals preserved, `+inf -> +inf`, `NaN -> NaN`).
@@ -75,10 +73,12 @@ pub enum Log1pfDomain {
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 #[non_exhaustive]
 pub enum Log1pfPrecision {
-    /// Kahan-compensated `Midp` polynomial (`<= 2.9 ULP` around zero).
+    /// Direct polynomial around zero, within 0.88 ULP in BitExact mode.
+    /// Larger magnitudes use power-of-two range reduction.
     #[default]
     Midp,
-    /// Kahan-compensated `Lowp` rational `P2/Q2` approximation.
+    /// Shorter direct polynomial around zero. Larger magnitudes use
+    /// the same polynomial after power-of-two range reduction.
     Lowp,
 }
 
@@ -447,8 +447,8 @@ impl Log1pfOptions {
     }
 
     /// Whether `log1p(x)` keeps `1 + x` inside the fundamental single octave
-    /// without `-1.0 -> -inf`, eliding integer exponent extraction and the
-    /// `1 + x >= 2` Kahan branch.
+    /// without `-1.0 -> -inf`. Restricted ranges around zero can use the
+    /// polynomial directly.
     #[doc(hidden)]
     pub const fn elides_reduction(&self) -> bool {
         if self.is_specials() || self.admits_neg_one() {

@@ -69,8 +69,9 @@ pub enum ExpfPrecision {
     /// `[-126, 127.5)`, `<= 0.78 ULP` on `[-0.5, 0.5]`).
     #[default]
     Midp,
-    /// Shorter LOWP degree-3 graph with refitted coefficients (`<= 0.030%`
-    /// relative error on `[-126, 127.99]`; up to `1.23%` when clamped at `127.99`).
+    /// Degree-three polynomial anchored at both ends of the reduced octave.
+    /// BitExact `exp2` has under `0.011%` relative error on `[-126, 127.99]`.
+    /// The upper clamp at `127.99` still limits accuracy near overflow.
     Lowp,
 }
 

@@ -1,4 +1,4 @@
-use archmage::{ScalarToken, attune};
+use archmage::{IntoConcreteToken, ScalarToken, attune};
 use magetypes::numerics::{NumericsError, NumericsErrorKind, RecipOptions};
 use magetypes::scalar;
 use magetypes::simd::generic::{f32x4, f32x8, f64x2, f64x4};
@@ -62,7 +62,10 @@ macro_rules! check_operation {
                     same_bits(scalar, scalar::$bare_scalar::<CFG>(x));
                     let vector = repeated.$try_vec::<CFG>().unwrap().to_array()[0];
                     same_bits(vector, repeated.$bare_vec::<CFG>().to_array()[0]);
-                    if CFG == RecipOptions::new().exact().bits() {
+                    let division_seed = $token.as_scalar().is_some();
+                    #[cfg(target_arch = "wasm32")]
+                    let division_seed = division_seed || $token.as_wasm128().is_some();
+                    if CFG == RecipOptions::new().exact().bits() || (!$root && division_seed) {
                         same_bits(vector, scalar);
                     }
                 } else {
@@ -157,6 +160,30 @@ macro_rules! check_width {
             $lanes,
             false,
             RecipOptions::new().nr1_ceil().all_floats()
+        );
+        check_operation!(
+            $token,
+            $vec,
+            $float,
+            try_recip_with,
+            recip_with,
+            $cr,
+            $r,
+            $lanes,
+            false,
+            RecipOptions::new().approx().all_floats()
+        );
+        check_operation!(
+            $token,
+            $vec,
+            $float,
+            try_recip_with,
+            recip_with,
+            $cr,
+            $r,
+            $lanes,
+            false,
+            RecipOptions::new().nr1().all_floats()
         );
         check_operation!(
             $token,

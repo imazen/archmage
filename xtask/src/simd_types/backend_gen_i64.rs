@@ -1122,7 +1122,11 @@ fn generate_neon_polyfill_i64_impl(ty: &I64VecType) -> String {
 
             #[inline(always)]
             fn load(self, data: &{array}) -> {repr} {{
-                crate::simd_storage::copy(data)
+                let chunks = data.as_chunks::<2>().0;
+                [
+                    <Self as I64x2Backend>::load(self, &chunks[0]),
+                    <Self as I64x2Backend>::load(self, &chunks[1]),
+                ]
             }}
 
             #[inline(always)]
@@ -1132,7 +1136,9 @@ fn generate_neon_polyfill_i64_impl(ty: &I64VecType) -> String {
 
             #[inline(always)]
             fn store(self, repr: {repr}, out: &mut {array}) {{
-                crate::simd_storage::store(repr, out);
+                let chunks = out.as_chunks_mut::<2>().0;
+                <Self as I64x2Backend>::store(self, repr[0], &mut chunks[0]);
+                <Self as I64x2Backend>::store(self, repr[1], &mut chunks[1]);
             }}
 
             #[inline(always)]

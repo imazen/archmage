@@ -264,7 +264,7 @@ macro_rules! eval_cbrtf {
             let p23 = madd(sp(-0.010_966_721), delta, sp(0.044_462_245));
             let p123 = madd(p23, delta, sp(-0.106_520_32));
             let p = madd(p123, delta, sp(0.332_932_38));
-            delta.mul_add_fused(p, sp(1.0)) * scale
+            madd(delta, p, sp(1.0)) * scale
         } else {
             // Estrin in the centered mantissa. The final FMA scales the
             // correction before rounding, without rounding cbrt(m) first.
@@ -277,7 +277,7 @@ macro_rules! eval_cbrtf {
             let p03 = madd(p23, t2, p01);
             let p47 = madd(p67, t2, p45);
             let p = madd(p47, t2 * t2, p03);
-            (delta * scale).mul_add_fused(p, scale)
+            madd(delta * scale, p, scale)
         };
 
         if $full {

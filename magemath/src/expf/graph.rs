@@ -100,6 +100,19 @@ pub(super) const fn cfg_of<K: Kernel>() -> KernelCfg {
     }
 }
 
+// Relative minimax cubic, constrained to 1 and 2 at the octave endpoints.
+pub(crate) const LOWP_COEFFICIENTS: [f32; 3] = [0.6954243475, 0.2263076823, 0.07826797018];
+
+macro_rules! exp2_lowp {
+    ($x:ident, $sp:ident, $madd:ident) => {{
+        let [c1, c2, c3] = $crate::expf::graph::LOWP_COEFFICIENTS;
+        let p = $madd($sp(c3), $x, $sp(c2));
+        let p = $madd(p, $x, $sp(c1));
+        $madd(p, $x, $sp(1.0))
+    }};
+}
+pub(crate) use exp2_lowp;
+
 macro_rules! eval_expf {
     (
         $V:ident,
@@ -215,33 +228,27 @@ macro_rules! eval_expf {
                 $V::from_array_t($token, crate::soft_fma::fmaf_soft_lanes(a, b, c))
             }
         };
+        let max_lower = |x: $V<T>, lo| {
+            if $clamp_oob && !$full && !$preserve_clamped_nan {
+                x.max(lo)
+            } else {
+                x.max_fast(lo)
+            }
+        };
         let result = if $lowp {
             if elide_red {
-                let xf = arg;
-                let p = madd(
-                    sp(0.071_916_997_023_492_97),
-                    xf,
-                    sp(0.234_336_384_644_832_92),
-                );
-                let p = madd(p, xf, sp(core::f32::consts::LN_2));
-                madd(p, xf, sp(1.0))
+                exp2_lowp!(arg, sp, madd)
             } else {
                 let x = if elide_clamp {
                     arg
                 } else if elide_overflow {
-                    arg.max(sp(-126.0))
+                    max_lower(arg, sp(-126.0))
                 } else {
-                    arg.max(sp(-126.0)).min(sp(127.99))
+                    max_lower(arg, sp(-126.0)).min_fast(sp(127.99))
                 };
                 let xi = x.floor();
                 let xf = x - xi;
-                let p = madd(
-                    sp(0.071_916_997_023_492_97),
-                    xf,
-                    sp(0.234_336_384_644_832_92),
-                );
-                let p = madd(p, xf, sp(core::f32::consts::LN_2));
-                let p = madd(p, xf, sp(1.0));
+                let p = exp2_lowp!(xf, sp, madd);
                 let integer = if $token.as_scalar().is_some() {
                     xi.to_i32()
                 } else {
@@ -267,14 +274,14 @@ macro_rules! eval_expf {
             let reduced = if elide_clamp {
                 arg
             } else if elide_overflow {
-                arg.max(underflow_limit)
+                max_lower(arg, underflow_limit)
             } else {
-                arg.max(underflow_limit).min(overflow_limit)
+                max_lower(arg, underflow_limit).min_fast(overflow_limit)
             };
             let xi = if elide_clamp || elide_overflow {
                 reduced.round()
             } else {
-                reduced.round().min(sp(127.0))
+                reduced.round().min_fast(sp(127.0))
             };
             let xf = reduced - xi;
             let p = madd(

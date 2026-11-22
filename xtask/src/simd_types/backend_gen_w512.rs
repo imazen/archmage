@@ -2089,6 +2089,47 @@ fn generate_4way_polyfill_impl(
         "v128".to_string()
     };
 
+    let load_body = if token == "NeonToken" {
+        formatdoc! {r#"
+                let chunks = data.as_chunks::<{q_lanes}>().0;
+                [
+                    <archmage::{token} as {quarter_trait}>::load(self, &chunks[0]),
+                    <archmage::{token} as {quarter_trait}>::load(self, &chunks[1]),
+                    <archmage::{token} as {quarter_trait}>::load(self, &chunks[2]),
+                    <archmage::{token} as {quarter_trait}>::load(self, &chunks[3]),
+                ]
+        "#}
+    } else {
+        formatdoc! {r#"
+                [
+                    <archmage::{token} as {quarter_trait}>::load(self, data[0..{q_lanes}].try_into().unwrap()),
+                    <archmage::{token} as {quarter_trait}>::load(self, data[{q_lanes}..{q2_val}].try_into().unwrap()),
+                    <archmage::{token} as {quarter_trait}>::load(self, data[{q2_val}..{q3_val}].try_into().unwrap()),
+                    <archmage::{token} as {quarter_trait}>::load(self, data[{q3_val}..{lanes}].try_into().unwrap()),
+                ]
+        "#, q2_val = q_lanes * 2, q3_val = q_lanes * 3}
+    };
+
+    let store_body = if token == "NeonToken" {
+        formatdoc! {r#"
+                let chunks = out.as_chunks_mut::<{q_lanes}>().0;
+                <archmage::{token} as {quarter_trait}>::store(self, repr[0], &mut chunks[0]);
+                <archmage::{token} as {quarter_trait}>::store(self, repr[1], &mut chunks[1]);
+                <archmage::{token} as {quarter_trait}>::store(self, repr[2], &mut chunks[2]);
+                <archmage::{token} as {quarter_trait}>::store(self, repr[3], &mut chunks[3]);
+        "#}
+    } else {
+        formatdoc! {r#"
+                let (o01, o23) = out.split_at_mut({q2_val});
+                let (o0, o1) = o01.split_at_mut({q_lanes});
+                let (o2, o3) = o23.split_at_mut({q_lanes});
+                <archmage::{token} as {quarter_trait}>::store(self, repr[0], o0.try_into().unwrap());
+                <archmage::{token} as {quarter_trait}>::store(self, repr[1], o1.try_into().unwrap());
+                <archmage::{token} as {quarter_trait}>::store(self, repr[2], o2.try_into().unwrap());
+                <archmage::{token} as {quarter_trait}>::store(self, repr[3], o3.try_into().unwrap());
+        "#, q2_val = q_lanes * 2}
+    };
+
     let mut code = formatdoc! {r#"
         #[cfg(target_arch = "{arch}")]
         impl {trait_name} for archmage::{token} {{
@@ -2108,12 +2149,7 @@ fn generate_4way_polyfill_impl(
 
             #[inline(always)]
             fn load(self, data: &{array}) -> {repr} {{
-                [
-                    <archmage::{token} as {quarter_trait}>::load(self, data[0..{q_lanes}].try_into().unwrap()),
-                    <archmage::{token} as {quarter_trait}>::load(self, data[{q_lanes}..{q2}].try_into().unwrap()),
-                    <archmage::{token} as {quarter_trait}>::load(self, data[{q2}..{q3}].try_into().unwrap()),
-                    <archmage::{token} as {quarter_trait}>::load(self, data[{q3}..{lanes}].try_into().unwrap()),
-                ]
+                {load_body}
             }}
 
             #[inline(always)]
@@ -2136,13 +2172,7 @@ fn generate_4way_polyfill_impl(
 
             #[inline(always)]
             fn store(self, repr: {repr}, out: &mut {array}) {{
-                let (o01, o23) = out.split_at_mut({q2_val});
-                let (o0, o1) = o01.split_at_mut({q_lanes});
-                let (o2, o3) = o23.split_at_mut({q_lanes});
-                <archmage::{token} as {quarter_trait}>::store(self, repr[0], o0.try_into().unwrap());
-                <archmage::{token} as {quarter_trait}>::store(self, repr[1], o1.try_into().unwrap());
-                <archmage::{token} as {quarter_trait}>::store(self, repr[2], o2.try_into().unwrap());
-                <archmage::{token} as {quarter_trait}>::store(self, repr[3], o3.try_into().unwrap());
+                {store_body}
             }}
 
             #[inline(always)]
@@ -2169,8 +2199,6 @@ fn generate_4way_polyfill_impl(
                 core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::sub(self, a[i], b[i]))
             }}
     "#,
-        q2 = q_lanes * 2,
-        q3 = q_lanes * 3,
         q2_val = q_lanes * 2,
         q3_val = q_lanes * 3,
     };
