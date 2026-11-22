@@ -1213,6 +1213,12 @@ Documented accuracy limits, left unfixed because every fix measured slower on ev
 
 ### Resolved (each with its regression coverage)
 
+- **Highp `opt-z` gamma slice size:** The checked error closure could keep
+  replay code in infallible const-specialized consumers. Handle the error
+  directly so compilation can remove that replay while retaining the selected
+  SIMD plan for checked slices. `xtask/magemath_codegen.py` checks reachable
+  code size for one and four gamma configurations on all three ISAs.
+
 - **Powf slice first-error replay:** Highp keeps the selected backend across
   replay, including when SIMD token availability changes after a chunk fails.
   Midp bounds replay to the selected slice width. The `slices` tests cover an
