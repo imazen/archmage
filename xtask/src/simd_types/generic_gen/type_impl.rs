@@ -541,8 +541,10 @@ fn gen_construction(ty_name: &str, elem: &str, lanes: usize) -> String {
             /// Create from slice. Panics if `slice.len() < {lanes}`.
             #[inline(always)]
             pub fn from_slice_t(token: T, slice: &[{elem}]) -> Self {{
-                let arr: [{elem}; {lanes}] = slice[..{lanes}].try_into().unwrap();
-                Self(T::from_array(token, arr), token)
+                let Some(lanes) = slice.first_chunk::<{lanes}>() else {{
+                    panic!(\"{ty_name}::from_slice_t requires slice.len() >= {lanes}\");
+                }};
+                Self::load_t(token, lanes)
             }}
 
             /// Load up to `{lanes}` elements from `slice`, filling remaining high lanes with `pad`.
@@ -555,13 +557,11 @@ fn gen_construction(ty_name: &str, elem: &str, lanes: usize) -> String {
             /// Panics if `slice.len() > {lanes}`.
             #[inline(always)]
             pub fn load_padded_t(token: T, slice: &[{elem}], pad: {elem}) -> Self {{
-                assert!(
-                    slice.len() <= {lanes},
-                    \"{ty_name}::load_padded_t requires slice.len() <= {lanes}, got {{}}\",
-                    slice.len(),
-                );
                 let mut arr = [pad; {lanes}];
-                arr[..slice.len()].copy_from_slice(slice);
+                let Some(prefix) = arr.get_mut(..slice.len()) else {{
+                    panic!(\"{ty_name}::load_padded_t requires slice.len() <= {lanes}\");
+                }};
+                prefix.copy_from_slice(slice);
                 Self(T::from_array(token, arr), token)
             }}
 
@@ -586,13 +586,11 @@ fn gen_accessors(ty_name: &str, elem: &str, lanes: usize) -> String {
             /// Panics if `out.len() > {lanes}`.
             #[inline(always)]
             pub fn store_prefix(self, out: &mut [{elem}]) {{
-                assert!(
-                    out.len() <= {lanes},
-                    \"{ty_name}::store_prefix requires out.len() <= {lanes}, got {{}}\",
-                    out.len(),
-                );
                 let arr = T::to_array(self.1, self.0);
-                out.copy_from_slice(&arr[..out.len()]);
+                let Some(prefix) = arr.get(..out.len()) else {{
+                    panic!(\"{ty_name}::store_prefix requires out.len() <= {lanes}\");
+                }};
+                out.copy_from_slice(prefix);
             }}
 
             /// Convert to array.

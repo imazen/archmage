@@ -712,7 +712,7 @@ fn generate_float_backend_trait(ty: &FloatVecType) -> String {
             #[inline(always)]
             fn to_u8_bytes(self, a: Self::Repr) -> [u8; {lanes}] {{
                 let arr = <Self as {trait_name}>::to_array(self, a);
-                core::array::from_fn(|i| crate::nostd_math::roundevenf(arr[i]).clamp(0.0, 255.0) as u8)
+                arr.map(|x| crate::nostd_math::round_to_small_uint(x, 255.0) as u8)
             }}
 
             /// Round/clamp 4 planar channels and interleave into RGBA bytes
@@ -2282,31 +2282,29 @@ fn generate_scalar_impls(types: &[FloatVecType]) -> String {
     "#};
 
     // Emit helper functions once per element type (not per vector type).
-    // These use crate::nostd_math for no_std compatibility — the scalar backend
-    // runs on platforms without hardware SIMD or std math intrinsics.
+    // The scalar helpers select hardware where the build guarantees it.
     let mut seen_elems = std::collections::BTreeSet::new();
     for ty in types {
         if seen_elems.insert(ty.elem) {
             let (sqrt_fn, floor_fn, ceil_fn, round_fn) = if ty.elem == "f32" {
                 (
                     "crate::scalar_sqrt::sqrtf",
-                    "crate::nostd_math::floorf",
-                    "crate::nostd_math::ceilf",
-                    "crate::nostd_math::roundevenf",
+                    "crate::scalar::floor_f32",
+                    "crate::scalar::ceil_f32",
+                    "crate::scalar::round_f32",
                 )
             } else {
                 (
                     "crate::scalar_sqrt::sqrt",
-                    "crate::nostd_math::floor",
-                    "crate::nostd_math::ceil",
-                    "crate::nostd_math::roundeven",
+                    "crate::scalar::floor_f64",
+                    "crate::scalar::ceil_f64",
+                    "crate::scalar::round_f64",
                 )
             };
             code.push_str(&formatdoc! {r#"
                 // Helpers to avoid trait method name shadowing inside the impl block.
                 // Inside `impl XxxBackend`, names like `sqrt`, `floor`, etc. resolve to
                 // the trait's associated functions instead of {elem}'s inherent methods.
-                // Uses crate::nostd_math for no_std compatibility.
                 #[inline(always)]
                 fn {elem}_sqrt(x: {elem}) -> {elem} {{
                     {sqrt_fn}(x)
@@ -6012,10 +6010,6 @@ fn generate_scalar_convert_impls() -> String {
             .map(|i| format!("a[{i}] as i32"))
             .collect::<Vec<_>>()
             .join(", ");
-        let cvt_f2i_round = (0..lanes)
-            .map(|i| format!("f32_round(a[{i}]) as i32"))
-            .collect::<Vec<_>>()
-            .join(", ");
         let cvt_i2f = (0..lanes)
             .map(|i| format!("a[{i}] as f32"))
             .collect::<Vec<_>>()
@@ -6047,7 +6041,7 @@ fn generate_scalar_convert_impls() -> String {
 
                 #[inline(always)]
                 fn convert_f32_to_i32_round(self, a: {f_array}) -> {i_array} {{
-                    [{cvt_f2i_round}]
+                    a.map(|x| f32_round(x) as i32)
                 }}
 
                 #[inline(always)]

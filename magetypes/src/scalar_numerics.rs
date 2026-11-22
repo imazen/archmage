@@ -12,7 +12,11 @@ macro_rules! to_int {
         pub fn $name<const CFG: u32>(x: f32) -> $output {
             let opts = const { IntConvert::decode(CFG) };
             let rounded = if opts.rounds() {
-                super::round_f32(x)
+                if const { $lo == 0.0 && $hi <= 65535.0 } {
+                    crate::nostd_math::round_to_small_uint(x, $hi)
+                } else {
+                    super::round_f32(x)
+                }
             } else {
                 x
             };
@@ -198,17 +202,19 @@ macro_rules! scalar_float {
         /// Bit-preserving truncation toward zero, including the sign of zero.
         #[inline(always)]
         pub fn $trunc(x: $f) -> $f {
-            let bits = x.to_bits();
-            let exponent = ((bits >> $mantissa) as i32 & $mask) - $bias;
-            if exponent < 0 {
-                <$f>::from_bits(0).copysign(x)
-            } else if exponent >= $mantissa {
-                x
-            } else {
-                let one: $bits = 1;
-                let fraction = (one << ($mantissa - exponent)) - 1;
-                <$f>::from_bits(bits & !fraction)
-            }
+            round_scalar!(x, trunc, {
+                let bits = x.to_bits();
+                let exponent = ((bits >> $mantissa) as i32 & $mask) - $bias;
+                if exponent < 0 {
+                    <$f>::from_bits(0).copysign(x)
+                } else if exponent >= $mantissa {
+                    x
+                } else {
+                    let one: $bits = 1;
+                    let fraction = (one << ($mantissa - exponent)) - 1;
+                    <$f>::from_bits(bits & !fraction)
+                }
+            })
         }
 
         /// Compute `c - a * b` with one rounding.

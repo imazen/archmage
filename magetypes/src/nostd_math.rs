@@ -57,7 +57,7 @@ static RSQRT_TAB: [u16; 128] = [
 /// Goldschmidt iteration in u32 integer arithmetic: table lookup for initial
 /// `1/sqrt(m)` estimate, then 3 iterations computing `sqrt(m)` and `1/sqrt(m)`
 /// simultaneously. No floating-point division required.
-#[inline(always)]
+#[inline]
 pub fn sqrtf(x: f32) -> f32 {
     let mut ix = x.to_bits();
 
@@ -148,7 +148,7 @@ pub fn sqrtf(x: f32) -> f32 {
 ///
 /// Goldschmidt iteration: 2 rounds at u32 width, then 2 rounds at u64 width.
 /// Uses a 128-entry reciprocal sqrt lookup table for the initial estimate.
-#[inline(always)]
+#[inline]
 pub fn sqrt(x: f64) -> f64 {
     let mut ix = x.to_bits();
 
@@ -238,54 +238,27 @@ pub fn sqrt(x: f64) -> f64 {
 }
 
 /// f32 floor: largest integer ≤ x.
-#[inline(always)]
+#[inline]
 pub fn floorf(x: f32) -> f32 {
-    if x.is_nan() || x.is_infinite() {
-        return x;
-    }
-    // Preserve sign of zero (i32 cast loses -0.0)
-    if x == 0.0 {
-        return x;
-    }
-
-    // For values beyond i32 range, f32 can't represent fractional parts anyway
-    // (f32 has 24 mantissa bits, so |x| >= 2^23 means x is already integral)
-    const LIMIT: f32 = (1u32 << 23) as f32; // 8388608.0
-    if x >= LIMIT || x <= -LIMIT {
-        return x;
-    }
-
-    let trunc = x as i32 as f32;
-    if trunc > x { trunc - 1.0 } else { trunc }
+    let nearest = roundevenf(x);
+    if nearest > x { nearest - 1.0 } else { nearest }
 }
 
 /// f64 floor: largest integer ≤ x.
-#[inline(always)]
+#[inline]
 pub fn floor(x: f64) -> f64 {
-    if x.is_nan() || x.is_infinite() {
-        return x;
-    }
-    if x == 0.0 {
-        return x;
-    }
-
-    const LIMIT: f64 = (1u64 << 52) as f64;
-    if x >= LIMIT || x <= -LIMIT {
-        return x;
-    }
-
-    let trunc = x as i64 as f64;
-    if trunc > x { trunc - 1.0 } else { trunc }
+    let nearest = roundeven(x);
+    if nearest > x { nearest - 1.0 } else { nearest }
 }
 
 /// f32 ceil: smallest integer ≥ x.
-#[inline(always)]
+#[inline]
 pub fn ceilf(x: f32) -> f32 {
     -floorf(-x)
 }
 
 /// f64 ceil: smallest integer ≥ x.
-#[inline(always)]
+#[inline]
 pub fn ceil(x: f64) -> f64 {
     -floor(-x)
 }
@@ -294,7 +267,7 @@ pub fn ceil(x: f64) -> f64 {
 ///
 /// Uses truncation + fractional comparison to avoid the precision issue where
 /// `x + 0.5` rounds up incorrectly at the boundary (e.g., 0.49999997 + 0.5 = 1.0).
-#[inline(always)]
+#[inline]
 pub fn roundf(x: f32) -> f32 {
     if x.is_nan() || x.is_infinite() {
         return x;
@@ -315,7 +288,7 @@ pub fn roundf(x: f32) -> f32 {
 }
 
 /// f64 round: round to nearest, ties away from zero.
-#[inline(always)]
+#[inline]
 pub fn round(x: f64) -> f64 {
     if x.is_nan() || x.is_infinite() {
         return x;
@@ -342,60 +315,31 @@ pub fn round(x: f64) -> f64 {
 /// integer (IEEE 754 addition uses round-to-nearest-even by default), then
 /// subtracting 2^23 recovers the original scale. For |x| >= 2^23, f32 values
 /// are already exact integers.
-#[inline(always)]
+#[inline]
 pub fn roundevenf(x: f32) -> f32 {
-    const MAGIC: f32 = 8_388_608.0; // 2^23
-    if x.is_nan() || x.is_infinite() {
-        return x;
-    }
-    if x == 0.0 {
-        return x; // preserve sign of zero
-    }
-    let abs_x = f32::from_bits(x.to_bits() & 0x7FFF_FFFF);
-    if abs_x >= MAGIC {
-        return x; // already an integer
-    }
-    let result = if x > 0.0 {
-        (x + MAGIC) - MAGIC
-    } else {
-        (x - MAGIC) + MAGIC
-    };
-    // Preserve the sign of the input when the result is zero.
-    // The magic-number trick can produce +0.0 for negative values that round to zero
-    // (e.g., -0.5 → 0.0), but IEEE 754 roundToIntegralTiesToEven preserves the sign.
-    if result == 0.0 {
-        f32::from_bits(result.to_bits() | (x.to_bits() & 0x8000_0000))
-    } else {
-        result
-    }
+    const MAGIC: f32 = 8_388_608.0;
+    let magnitude = x.abs();
+    let rounded = ((magnitude + MAGIC) - MAGIC).copysign(x);
+    if magnitude < MAGIC { rounded } else { x }
 }
 
 /// f64 round to nearest, ties to even (IEEE 754 default rounding mode).
 ///
 /// See [`roundevenf`] for the f32 version and design rationale.
-#[inline(always)]
+#[inline]
 pub fn roundeven(x: f64) -> f64 {
-    const MAGIC: f64 = 4_503_599_627_370_496.0; // 2^52
-    if x.is_nan() || x.is_infinite() {
-        return x;
-    }
-    if x == 0.0 {
-        return x; // preserve sign of zero
-    }
-    let abs_x = f64::from_bits(x.to_bits() & 0x7FFF_FFFF_FFFF_FFFF);
-    if abs_x >= MAGIC {
-        return x; // already an integer
-    }
-    let result = if x > 0.0 {
-        (x + MAGIC) - MAGIC
-    } else {
-        (x - MAGIC) + MAGIC
-    };
-    if result == 0.0 {
-        f64::from_bits(result.to_bits() | (x.to_bits() & 0x8000_0000_0000_0000))
-    } else {
-        result
-    }
+    const MAGIC: f64 = 4_503_599_627_370_496.0;
+    let magnitude = x.abs();
+    let rounded = ((magnitude + MAGIC) - MAGIC).copysign(x);
+    if magnitude < MAGIC { rounded } else { x }
+}
+
+// Adding 2^23 rounds the clamped value to an integer. The final cast at
+// each caller maps NaN to zero and discards the sign of zero.
+#[inline(always)]
+pub(crate) fn round_to_small_uint(x: f32, max: f32) -> f32 {
+    const MAGIC: f32 = 8_388_608.0;
+    (x.clamp(0.0, max) + MAGIC) - MAGIC
 }
 
 /// Correctly rounded fused multiply-add, without runtime CPU detection.
@@ -427,53 +371,57 @@ pub fn fmaf_soft(a: f32, b: f32, c: f32) -> f32 {
 
 /// IEEE 754-2019 `minimum` for `f32`: propagates `NaN` (returning quiet `NaN`)
 /// and orders `-0.0 < +0.0`.
-#[inline(always)]
+#[inline]
 pub(crate) const fn minimumf(a: f32, b: f32) -> f32 {
-    if a.is_nan() || b.is_nan() {
+    let ordered = if a < b { a } else { b };
+    let tied = f32::from_bits(a.to_bits() | b.to_bits());
+    let result = if a == b { tied } else { ordered };
+    if a.is_nan() | b.is_nan() {
         f32::NAN
-    } else if a < b || (a == 0.0 && b == 0.0 && a.is_sign_negative()) {
-        a
     } else {
-        b
+        result
     }
 }
 
 /// IEEE 754-2019 `maximum` for `f32`: propagates `NaN` (returning quiet `NaN`)
 /// and orders `-0.0 < +0.0`.
-#[inline(always)]
+#[inline]
 pub(crate) const fn maximumf(a: f32, b: f32) -> f32 {
-    if a.is_nan() || b.is_nan() {
+    let ordered = if a > b { a } else { b };
+    let tied = f32::from_bits(a.to_bits() & b.to_bits());
+    let result = if a == b { tied } else { ordered };
+    if a.is_nan() | b.is_nan() {
         f32::NAN
-    } else if a > b || (a == 0.0 && b == 0.0 && a.is_sign_positive()) {
-        a
     } else {
-        b
+        result
     }
 }
 
 /// IEEE 754-2019 `minimum` for `f64`: propagates `NaN` (returning quiet `NaN`)
 /// and orders `-0.0 < +0.0`.
-#[inline(always)]
+#[inline]
 pub(crate) const fn minimum(a: f64, b: f64) -> f64 {
-    if a.is_nan() || b.is_nan() {
+    let ordered = if a < b { a } else { b };
+    let tied = f64::from_bits(a.to_bits() | b.to_bits());
+    let result = if a == b { tied } else { ordered };
+    if a.is_nan() | b.is_nan() {
         f64::NAN
-    } else if a < b || (a == 0.0 && b == 0.0 && a.is_sign_negative()) {
-        a
     } else {
-        b
+        result
     }
 }
 
 /// IEEE 754-2019 `maximum` for `f64`: propagates `NaN` (returning quiet `NaN`)
 /// and orders `-0.0 < +0.0`.
-#[inline(always)]
+#[inline]
 pub(crate) const fn maximum(a: f64, b: f64) -> f64 {
-    if a.is_nan() || b.is_nan() {
+    let ordered = if a > b { a } else { b };
+    let tied = f64::from_bits(a.to_bits() & b.to_bits());
+    let result = if a == b { tied } else { ordered };
+    if a.is_nan() | b.is_nan() {
         f64::NAN
-    } else if a > b || (a == 0.0 && b == 0.0 && a.is_sign_positive()) {
-        a
     } else {
-        b
+        result
     }
 }
 

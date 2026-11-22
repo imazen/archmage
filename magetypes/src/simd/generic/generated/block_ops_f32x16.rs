@@ -95,29 +95,9 @@ impl<T: F32x16Backend> f32x16<T> {
     /// Transpose a 16x16 block, returning the transposed rows.
     #[inline(always)]
     pub fn transpose_16x16_copy(rows: [Self; 16]) -> [Self; 16] {
-        let (halves, _) = rows.as_chunks::<8>();
-        let top = Self::transpose_dual_8x8_copy(halves[0]);
-        let bottom = Self::transpose_dual_8x8_copy(halves[1]);
-        const LO: [i32; 16] = [0, 1, 2, 3, 4, 5, 6, 7, 16, 17, 18, 19, 20, 21, 22, 23];
-        const HI: [i32; 16] = [8, 9, 10, 11, 12, 13, 14, 15, 24, 25, 26, 27, 28, 29, 30, 31];
-        [
-            top[0].permute2(bottom[0], LO),
-            top[1].permute2(bottom[1], LO),
-            top[2].permute2(bottom[2], LO),
-            top[3].permute2(bottom[3], LO),
-            top[4].permute2(bottom[4], LO),
-            top[5].permute2(bottom[5], LO),
-            top[6].permute2(bottom[6], LO),
-            top[7].permute2(bottom[7], LO),
-            top[0].permute2(bottom[0], HI),
-            top[1].permute2(bottom[1], HI),
-            top[2].permute2(bottom[2], HI),
-            top[3].permute2(bottom[3], HI),
-            top[4].permute2(bottom[4], HI),
-            top[5].permute2(bottom[5], HI),
-            top[6].permute2(bottom[6], HI),
-            top[7].permute2(bottom[7], HI),
-        ]
+        let token = rows[0].1;
+        T::transpose_16x16_repr(token, rows.map(Self::into_repr))
+            .map(|v| Self::from_repr_unchecked(token, v))
     }
 
     /// Load eight contiguous rows of sixteen floats as two adjacent 8x8 blocks.

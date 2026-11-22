@@ -16,43 +16,41 @@ use crate::simd::backends::*;
 // Helpers to avoid trait method name shadowing inside the impl block.
 // Inside `impl XxxBackend`, names like `sqrt`, `floor`, etc. resolve to
 // the trait's associated functions instead of f32's inherent methods.
-// Uses crate::nostd_math for no_std compatibility.
 #[inline(always)]
 fn f32_sqrt(x: f32) -> f32 {
     crate::scalar_sqrt::sqrtf(x)
 }
 #[inline(always)]
 fn f32_floor(x: f32) -> f32 {
-    crate::nostd_math::floorf(x)
+    crate::scalar::floor_f32(x)
 }
 #[inline(always)]
 fn f32_ceil(x: f32) -> f32 {
-    crate::nostd_math::ceilf(x)
+    crate::scalar::ceil_f32(x)
 }
 #[inline(always)]
 fn f32_round(x: f32) -> f32 {
-    crate::nostd_math::roundevenf(x)
+    crate::scalar::round_f32(x)
 }
 
 // Helpers to avoid trait method name shadowing inside the impl block.
 // Inside `impl XxxBackend`, names like `sqrt`, `floor`, etc. resolve to
 // the trait's associated functions instead of f64's inherent methods.
-// Uses crate::nostd_math for no_std compatibility.
 #[inline(always)]
 fn f64_sqrt(x: f64) -> f64 {
     crate::scalar_sqrt::sqrt(x)
 }
 #[inline(always)]
 fn f64_floor(x: f64) -> f64 {
-    crate::nostd_math::floor(x)
+    crate::scalar::floor_f64(x)
 }
 #[inline(always)]
 fn f64_ceil(x: f64) -> f64 {
-    crate::nostd_math::ceil(x)
+    crate::scalar::ceil_f64(x)
 }
 #[inline(always)]
 fn f64_round(x: f64) -> f64 {
-    crate::nostd_math::roundeven(x)
+    crate::scalar::round_f64(x)
 }
 
 impl F32x4Backend for archmage::ScalarToken {
@@ -529,20 +527,20 @@ impl F32x4Internal for archmage::ScalarToken {
 
     #[inline(always)]
     fn load_rgb_bytes(self, rgb: &[u8; 12]) -> ([f32; 4], [f32; 4], [f32; 4]) {
-        let ch = |c| core::array::from_fn(|i| rgb[i * 3 + c] as f32);
-        (ch(0), ch(1), ch(2))
+        let (mut r, mut g, mut b) = ([0.0; 4], [0.0; 4], [0.0; 4]);
+        for (i, &[red, green, blue]) in rgb.as_chunks::<3>().0.iter().enumerate() {
+            r[i] = f32::from(red);
+            g[i] = f32::from(green);
+            b[i] = f32::from(blue);
+        }
+        (r, g, b)
     }
 
     #[inline(always)]
     fn store_rgb_u8_into(self, r: [f32; 4], g: [f32; 4], b: [f32; 4], out: &mut [u8; 12]) {
         let [rb, gb, bb] = [r, g, b].map(|v| <Self as F32x4Backend>::to_u8_bytes(self, v));
-        for (pixel, ((r, g), b)) in out
-            .as_chunks_mut::<3>()
-            .0
-            .iter_mut()
-            .zip(rb.into_iter().zip(gb).zip(bb))
-        {
-            *pixel = [r, g, b];
+        for (i, pixel) in out.as_chunks_mut::<3>().0.iter_mut().enumerate() {
+            *pixel = [rb[i], gb[i], bb[i]];
         }
     }
 }
@@ -1092,20 +1090,20 @@ impl F32x8Internal for archmage::ScalarToken {
 
     #[inline(always)]
     fn load_rgb_bytes(self, rgb: &[u8; 24]) -> ([f32; 8], [f32; 8], [f32; 8]) {
-        let ch = |c| core::array::from_fn(|i| rgb[i * 3 + c] as f32);
-        (ch(0), ch(1), ch(2))
+        let (mut r, mut g, mut b) = ([0.0; 8], [0.0; 8], [0.0; 8]);
+        for (i, &[red, green, blue]) in rgb.as_chunks::<3>().0.iter().enumerate() {
+            r[i] = f32::from(red);
+            g[i] = f32::from(green);
+            b[i] = f32::from(blue);
+        }
+        (r, g, b)
     }
 
     #[inline(always)]
     fn store_rgb_u8_into(self, r: [f32; 8], g: [f32; 8], b: [f32; 8], out: &mut [u8; 24]) {
         let [rb, gb, bb] = [r, g, b].map(|v| <Self as F32x8Backend>::to_u8_bytes(self, v));
-        for (pixel, ((r, g), b)) in out
-            .as_chunks_mut::<3>()
-            .0
-            .iter_mut()
-            .zip(rb.into_iter().zip(gb).zip(bb))
-        {
-            *pixel = [r, g, b];
+        for (i, pixel) in out.as_chunks_mut::<3>().0.iter_mut().enumerate() {
+            *pixel = [rb[i], gb[i], bb[i]];
         }
     }
 }
@@ -4045,62 +4043,21 @@ impl I8x16Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn all_true(self, a: [i8; 16]) -> bool {
-        (a[0] >> 7) != 0
-            && (a[1] >> 7) != 0
-            && (a[2] >> 7) != 0
-            && (a[3] >> 7) != 0
-            && (a[4] >> 7) != 0
-            && (a[5] >> 7) != 0
-            && (a[6] >> 7) != 0
-            && (a[7] >> 7) != 0
-            && (a[8] >> 7) != 0
-            && (a[9] >> 7) != 0
-            && (a[10] >> 7) != 0
-            && (a[11] >> 7) != 0
-            && (a[12] >> 7) != 0
-            && (a[13] >> 7) != 0
-            && (a[14] >> 7) != 0
-            && (a[15] >> 7) != 0
+        a.iter().all(|&v| (v >> 7) != 0)
     }
 
     #[inline(always)]
     fn any_true(self, a: [i8; 16]) -> bool {
-        (a[0] >> 7) != 0
-            || (a[1] >> 7) != 0
-            || (a[2] >> 7) != 0
-            || (a[3] >> 7) != 0
-            || (a[4] >> 7) != 0
-            || (a[5] >> 7) != 0
-            || (a[6] >> 7) != 0
-            || (a[7] >> 7) != 0
-            || (a[8] >> 7) != 0
-            || (a[9] >> 7) != 0
-            || (a[10] >> 7) != 0
-            || (a[11] >> 7) != 0
-            || (a[12] >> 7) != 0
-            || (a[13] >> 7) != 0
-            || (a[14] >> 7) != 0
-            || (a[15] >> 7) != 0
+        a.iter().any(|&v| (v >> 7) != 0)
     }
 
     #[inline(always)]
     fn bitmask(self, a: [i8; 16]) -> u32 {
-        ((a[0] >> 7) as u32 & 1)
-            | ((a[1] >> 7) as u32 & 1) << 1
-            | ((a[2] >> 7) as u32 & 1) << 2
-            | ((a[3] >> 7) as u32 & 1) << 3
-            | ((a[4] >> 7) as u32 & 1) << 4
-            | ((a[5] >> 7) as u32 & 1) << 5
-            | ((a[6] >> 7) as u32 & 1) << 6
-            | ((a[7] >> 7) as u32 & 1) << 7
-            | ((a[8] >> 7) as u32 & 1) << 8
-            | ((a[9] >> 7) as u32 & 1) << 9
-            | ((a[10] >> 7) as u32 & 1) << 10
-            | ((a[11] >> 7) as u32 & 1) << 11
-            | ((a[12] >> 7) as u32 & 1) << 12
-            | ((a[13] >> 7) as u32 & 1) << 13
-            | ((a[14] >> 7) as u32 & 1) << 14
-            | ((a[15] >> 7) as u32 & 1) << 15
+        let mut mask = 0u32;
+        for (i, &v) in a.iter().enumerate() {
+            mask |= ((v >> 7) as u32 & 1) << i;
+        }
+        mask
     }
     #[inline(always)]
     fn widen_low_i8_to_i16(self, a: [i8; 16]) -> [i16; 8] {
@@ -5031,110 +4988,21 @@ impl I8x32Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn all_true(self, a: [i8; 32]) -> bool {
-        (a[0] >> 7) != 0
-            && (a[1] >> 7) != 0
-            && (a[2] >> 7) != 0
-            && (a[3] >> 7) != 0
-            && (a[4] >> 7) != 0
-            && (a[5] >> 7) != 0
-            && (a[6] >> 7) != 0
-            && (a[7] >> 7) != 0
-            && (a[8] >> 7) != 0
-            && (a[9] >> 7) != 0
-            && (a[10] >> 7) != 0
-            && (a[11] >> 7) != 0
-            && (a[12] >> 7) != 0
-            && (a[13] >> 7) != 0
-            && (a[14] >> 7) != 0
-            && (a[15] >> 7) != 0
-            && (a[16] >> 7) != 0
-            && (a[17] >> 7) != 0
-            && (a[18] >> 7) != 0
-            && (a[19] >> 7) != 0
-            && (a[20] >> 7) != 0
-            && (a[21] >> 7) != 0
-            && (a[22] >> 7) != 0
-            && (a[23] >> 7) != 0
-            && (a[24] >> 7) != 0
-            && (a[25] >> 7) != 0
-            && (a[26] >> 7) != 0
-            && (a[27] >> 7) != 0
-            && (a[28] >> 7) != 0
-            && (a[29] >> 7) != 0
-            && (a[30] >> 7) != 0
-            && (a[31] >> 7) != 0
+        a.iter().all(|&v| (v >> 7) != 0)
     }
 
     #[inline(always)]
     fn any_true(self, a: [i8; 32]) -> bool {
-        (a[0] >> 7) != 0
-            || (a[1] >> 7) != 0
-            || (a[2] >> 7) != 0
-            || (a[3] >> 7) != 0
-            || (a[4] >> 7) != 0
-            || (a[5] >> 7) != 0
-            || (a[6] >> 7) != 0
-            || (a[7] >> 7) != 0
-            || (a[8] >> 7) != 0
-            || (a[9] >> 7) != 0
-            || (a[10] >> 7) != 0
-            || (a[11] >> 7) != 0
-            || (a[12] >> 7) != 0
-            || (a[13] >> 7) != 0
-            || (a[14] >> 7) != 0
-            || (a[15] >> 7) != 0
-            || (a[16] >> 7) != 0
-            || (a[17] >> 7) != 0
-            || (a[18] >> 7) != 0
-            || (a[19] >> 7) != 0
-            || (a[20] >> 7) != 0
-            || (a[21] >> 7) != 0
-            || (a[22] >> 7) != 0
-            || (a[23] >> 7) != 0
-            || (a[24] >> 7) != 0
-            || (a[25] >> 7) != 0
-            || (a[26] >> 7) != 0
-            || (a[27] >> 7) != 0
-            || (a[28] >> 7) != 0
-            || (a[29] >> 7) != 0
-            || (a[30] >> 7) != 0
-            || (a[31] >> 7) != 0
+        a.iter().any(|&v| (v >> 7) != 0)
     }
 
     #[inline(always)]
     fn bitmask(self, a: [i8; 32]) -> u32 {
-        ((a[0] >> 7) as u32 & 1)
-            | ((a[1] >> 7) as u32 & 1) << 1
-            | ((a[2] >> 7) as u32 & 1) << 2
-            | ((a[3] >> 7) as u32 & 1) << 3
-            | ((a[4] >> 7) as u32 & 1) << 4
-            | ((a[5] >> 7) as u32 & 1) << 5
-            | ((a[6] >> 7) as u32 & 1) << 6
-            | ((a[7] >> 7) as u32 & 1) << 7
-            | ((a[8] >> 7) as u32 & 1) << 8
-            | ((a[9] >> 7) as u32 & 1) << 9
-            | ((a[10] >> 7) as u32 & 1) << 10
-            | ((a[11] >> 7) as u32 & 1) << 11
-            | ((a[12] >> 7) as u32 & 1) << 12
-            | ((a[13] >> 7) as u32 & 1) << 13
-            | ((a[14] >> 7) as u32 & 1) << 14
-            | ((a[15] >> 7) as u32 & 1) << 15
-            | ((a[16] >> 7) as u32 & 1) << 16
-            | ((a[17] >> 7) as u32 & 1) << 17
-            | ((a[18] >> 7) as u32 & 1) << 18
-            | ((a[19] >> 7) as u32 & 1) << 19
-            | ((a[20] >> 7) as u32 & 1) << 20
-            | ((a[21] >> 7) as u32 & 1) << 21
-            | ((a[22] >> 7) as u32 & 1) << 22
-            | ((a[23] >> 7) as u32 & 1) << 23
-            | ((a[24] >> 7) as u32 & 1) << 24
-            | ((a[25] >> 7) as u32 & 1) << 25
-            | ((a[26] >> 7) as u32 & 1) << 26
-            | ((a[27] >> 7) as u32 & 1) << 27
-            | ((a[28] >> 7) as u32 & 1) << 28
-            | ((a[29] >> 7) as u32 & 1) << 29
-            | ((a[30] >> 7) as u32 & 1) << 30
-            | ((a[31] >> 7) as u32 & 1) << 31
+        let mut mask = 0u32;
+        for (i, &v) in a.iter().enumerate() {
+            mask |= ((v >> 7) as u32 & 1) << i;
+        }
+        mask
     }
     #[inline(always)]
     fn widen_low_i8_to_i16(self, a: [i8; 32]) -> [i16; 16] {
@@ -5627,62 +5495,21 @@ impl U8x16Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn all_true(self, a: [u8; 16]) -> bool {
-        (a[0] >> 7) != 0
-            && (a[1] >> 7) != 0
-            && (a[2] >> 7) != 0
-            && (a[3] >> 7) != 0
-            && (a[4] >> 7) != 0
-            && (a[5] >> 7) != 0
-            && (a[6] >> 7) != 0
-            && (a[7] >> 7) != 0
-            && (a[8] >> 7) != 0
-            && (a[9] >> 7) != 0
-            && (a[10] >> 7) != 0
-            && (a[11] >> 7) != 0
-            && (a[12] >> 7) != 0
-            && (a[13] >> 7) != 0
-            && (a[14] >> 7) != 0
-            && (a[15] >> 7) != 0
+        a.iter().all(|&v| (v >> 7) != 0)
     }
 
     #[inline(always)]
     fn any_true(self, a: [u8; 16]) -> bool {
-        (a[0] >> 7) != 0
-            || (a[1] >> 7) != 0
-            || (a[2] >> 7) != 0
-            || (a[3] >> 7) != 0
-            || (a[4] >> 7) != 0
-            || (a[5] >> 7) != 0
-            || (a[6] >> 7) != 0
-            || (a[7] >> 7) != 0
-            || (a[8] >> 7) != 0
-            || (a[9] >> 7) != 0
-            || (a[10] >> 7) != 0
-            || (a[11] >> 7) != 0
-            || (a[12] >> 7) != 0
-            || (a[13] >> 7) != 0
-            || (a[14] >> 7) != 0
-            || (a[15] >> 7) != 0
+        a.iter().any(|&v| (v >> 7) != 0)
     }
 
     #[inline(always)]
     fn bitmask(self, a: [u8; 16]) -> u32 {
-        ((a[0] >> 7) as u32 & 1)
-            | ((a[1] >> 7) as u32 & 1) << 1
-            | ((a[2] >> 7) as u32 & 1) << 2
-            | ((a[3] >> 7) as u32 & 1) << 3
-            | ((a[4] >> 7) as u32 & 1) << 4
-            | ((a[5] >> 7) as u32 & 1) << 5
-            | ((a[6] >> 7) as u32 & 1) << 6
-            | ((a[7] >> 7) as u32 & 1) << 7
-            | ((a[8] >> 7) as u32 & 1) << 8
-            | ((a[9] >> 7) as u32 & 1) << 9
-            | ((a[10] >> 7) as u32 & 1) << 10
-            | ((a[11] >> 7) as u32 & 1) << 11
-            | ((a[12] >> 7) as u32 & 1) << 12
-            | ((a[13] >> 7) as u32 & 1) << 13
-            | ((a[14] >> 7) as u32 & 1) << 14
-            | ((a[15] >> 7) as u32 & 1) << 15
+        let mut mask = 0u32;
+        for (i, &v) in a.iter().enumerate() {
+            mask |= ((v >> 7) as u32 & 1) << i;
+        }
+        mask
     }
     #[inline(always)]
     fn widen_low_u8_to_u16(self, a: [u8; 16]) -> [u16; 8] {
@@ -6521,110 +6348,21 @@ impl U8x32Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn all_true(self, a: [u8; 32]) -> bool {
-        (a[0] >> 7) != 0
-            && (a[1] >> 7) != 0
-            && (a[2] >> 7) != 0
-            && (a[3] >> 7) != 0
-            && (a[4] >> 7) != 0
-            && (a[5] >> 7) != 0
-            && (a[6] >> 7) != 0
-            && (a[7] >> 7) != 0
-            && (a[8] >> 7) != 0
-            && (a[9] >> 7) != 0
-            && (a[10] >> 7) != 0
-            && (a[11] >> 7) != 0
-            && (a[12] >> 7) != 0
-            && (a[13] >> 7) != 0
-            && (a[14] >> 7) != 0
-            && (a[15] >> 7) != 0
-            && (a[16] >> 7) != 0
-            && (a[17] >> 7) != 0
-            && (a[18] >> 7) != 0
-            && (a[19] >> 7) != 0
-            && (a[20] >> 7) != 0
-            && (a[21] >> 7) != 0
-            && (a[22] >> 7) != 0
-            && (a[23] >> 7) != 0
-            && (a[24] >> 7) != 0
-            && (a[25] >> 7) != 0
-            && (a[26] >> 7) != 0
-            && (a[27] >> 7) != 0
-            && (a[28] >> 7) != 0
-            && (a[29] >> 7) != 0
-            && (a[30] >> 7) != 0
-            && (a[31] >> 7) != 0
+        a.iter().all(|&v| (v >> 7) != 0)
     }
 
     #[inline(always)]
     fn any_true(self, a: [u8; 32]) -> bool {
-        (a[0] >> 7) != 0
-            || (a[1] >> 7) != 0
-            || (a[2] >> 7) != 0
-            || (a[3] >> 7) != 0
-            || (a[4] >> 7) != 0
-            || (a[5] >> 7) != 0
-            || (a[6] >> 7) != 0
-            || (a[7] >> 7) != 0
-            || (a[8] >> 7) != 0
-            || (a[9] >> 7) != 0
-            || (a[10] >> 7) != 0
-            || (a[11] >> 7) != 0
-            || (a[12] >> 7) != 0
-            || (a[13] >> 7) != 0
-            || (a[14] >> 7) != 0
-            || (a[15] >> 7) != 0
-            || (a[16] >> 7) != 0
-            || (a[17] >> 7) != 0
-            || (a[18] >> 7) != 0
-            || (a[19] >> 7) != 0
-            || (a[20] >> 7) != 0
-            || (a[21] >> 7) != 0
-            || (a[22] >> 7) != 0
-            || (a[23] >> 7) != 0
-            || (a[24] >> 7) != 0
-            || (a[25] >> 7) != 0
-            || (a[26] >> 7) != 0
-            || (a[27] >> 7) != 0
-            || (a[28] >> 7) != 0
-            || (a[29] >> 7) != 0
-            || (a[30] >> 7) != 0
-            || (a[31] >> 7) != 0
+        a.iter().any(|&v| (v >> 7) != 0)
     }
 
     #[inline(always)]
     fn bitmask(self, a: [u8; 32]) -> u32 {
-        ((a[0] >> 7) as u32 & 1)
-            | ((a[1] >> 7) as u32 & 1) << 1
-            | ((a[2] >> 7) as u32 & 1) << 2
-            | ((a[3] >> 7) as u32 & 1) << 3
-            | ((a[4] >> 7) as u32 & 1) << 4
-            | ((a[5] >> 7) as u32 & 1) << 5
-            | ((a[6] >> 7) as u32 & 1) << 6
-            | ((a[7] >> 7) as u32 & 1) << 7
-            | ((a[8] >> 7) as u32 & 1) << 8
-            | ((a[9] >> 7) as u32 & 1) << 9
-            | ((a[10] >> 7) as u32 & 1) << 10
-            | ((a[11] >> 7) as u32 & 1) << 11
-            | ((a[12] >> 7) as u32 & 1) << 12
-            | ((a[13] >> 7) as u32 & 1) << 13
-            | ((a[14] >> 7) as u32 & 1) << 14
-            | ((a[15] >> 7) as u32 & 1) << 15
-            | ((a[16] >> 7) as u32 & 1) << 16
-            | ((a[17] >> 7) as u32 & 1) << 17
-            | ((a[18] >> 7) as u32 & 1) << 18
-            | ((a[19] >> 7) as u32 & 1) << 19
-            | ((a[20] >> 7) as u32 & 1) << 20
-            | ((a[21] >> 7) as u32 & 1) << 21
-            | ((a[22] >> 7) as u32 & 1) << 22
-            | ((a[23] >> 7) as u32 & 1) << 23
-            | ((a[24] >> 7) as u32 & 1) << 24
-            | ((a[25] >> 7) as u32 & 1) << 25
-            | ((a[26] >> 7) as u32 & 1) << 26
-            | ((a[27] >> 7) as u32 & 1) << 27
-            | ((a[28] >> 7) as u32 & 1) << 28
-            | ((a[29] >> 7) as u32 & 1) << 29
-            | ((a[30] >> 7) as u32 & 1) << 30
-            | ((a[31] >> 7) as u32 & 1) << 31
+        let mut mask = 0u32;
+        for (i, &v) in a.iter().enumerate() {
+            mask |= ((v >> 7) as u32 & 1) << i;
+        }
+        mask
     }
     #[inline(always)]
     fn widen_low_u8_to_u16(self, a: [u8; 32]) -> [u16; 16] {
@@ -7060,38 +6798,21 @@ impl I16x8Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn all_true(self, a: [i16; 8]) -> bool {
-        (a[0] >> 15) != 0
-            && (a[1] >> 15) != 0
-            && (a[2] >> 15) != 0
-            && (a[3] >> 15) != 0
-            && (a[4] >> 15) != 0
-            && (a[5] >> 15) != 0
-            && (a[6] >> 15) != 0
-            && (a[7] >> 15) != 0
+        a.iter().all(|&v| (v >> 15) != 0)
     }
 
     #[inline(always)]
     fn any_true(self, a: [i16; 8]) -> bool {
-        (a[0] >> 15) != 0
-            || (a[1] >> 15) != 0
-            || (a[2] >> 15) != 0
-            || (a[3] >> 15) != 0
-            || (a[4] >> 15) != 0
-            || (a[5] >> 15) != 0
-            || (a[6] >> 15) != 0
-            || (a[7] >> 15) != 0
+        a.iter().any(|&v| (v >> 15) != 0)
     }
 
     #[inline(always)]
     fn bitmask(self, a: [i16; 8]) -> u32 {
-        ((a[0] >> 15) as u32 & 1)
-            | ((a[1] >> 15) as u32 & 1) << 1
-            | ((a[2] >> 15) as u32 & 1) << 2
-            | ((a[3] >> 15) as u32 & 1) << 3
-            | ((a[4] >> 15) as u32 & 1) << 4
-            | ((a[5] >> 15) as u32 & 1) << 5
-            | ((a[6] >> 15) as u32 & 1) << 6
-            | ((a[7] >> 15) as u32 & 1) << 7
+        let mut mask = 0u32;
+        for (i, &v) in a.iter().enumerate() {
+            mask |= ((v >> 15) as u32 & 1) << i;
+        }
+        mask
     }
     #[inline(always)]
     fn widen_low_i16_to_i32(self, a: [i16; 8]) -> [i32; 4] {
@@ -7727,62 +7448,21 @@ impl I16x16Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn all_true(self, a: [i16; 16]) -> bool {
-        (a[0] >> 15) != 0
-            && (a[1] >> 15) != 0
-            && (a[2] >> 15) != 0
-            && (a[3] >> 15) != 0
-            && (a[4] >> 15) != 0
-            && (a[5] >> 15) != 0
-            && (a[6] >> 15) != 0
-            && (a[7] >> 15) != 0
-            && (a[8] >> 15) != 0
-            && (a[9] >> 15) != 0
-            && (a[10] >> 15) != 0
-            && (a[11] >> 15) != 0
-            && (a[12] >> 15) != 0
-            && (a[13] >> 15) != 0
-            && (a[14] >> 15) != 0
-            && (a[15] >> 15) != 0
+        a.iter().all(|&v| (v >> 15) != 0)
     }
 
     #[inline(always)]
     fn any_true(self, a: [i16; 16]) -> bool {
-        (a[0] >> 15) != 0
-            || (a[1] >> 15) != 0
-            || (a[2] >> 15) != 0
-            || (a[3] >> 15) != 0
-            || (a[4] >> 15) != 0
-            || (a[5] >> 15) != 0
-            || (a[6] >> 15) != 0
-            || (a[7] >> 15) != 0
-            || (a[8] >> 15) != 0
-            || (a[9] >> 15) != 0
-            || (a[10] >> 15) != 0
-            || (a[11] >> 15) != 0
-            || (a[12] >> 15) != 0
-            || (a[13] >> 15) != 0
-            || (a[14] >> 15) != 0
-            || (a[15] >> 15) != 0
+        a.iter().any(|&v| (v >> 15) != 0)
     }
 
     #[inline(always)]
     fn bitmask(self, a: [i16; 16]) -> u32 {
-        ((a[0] >> 15) as u32 & 1)
-            | ((a[1] >> 15) as u32 & 1) << 1
-            | ((a[2] >> 15) as u32 & 1) << 2
-            | ((a[3] >> 15) as u32 & 1) << 3
-            | ((a[4] >> 15) as u32 & 1) << 4
-            | ((a[5] >> 15) as u32 & 1) << 5
-            | ((a[6] >> 15) as u32 & 1) << 6
-            | ((a[7] >> 15) as u32 & 1) << 7
-            | ((a[8] >> 15) as u32 & 1) << 8
-            | ((a[9] >> 15) as u32 & 1) << 9
-            | ((a[10] >> 15) as u32 & 1) << 10
-            | ((a[11] >> 15) as u32 & 1) << 11
-            | ((a[12] >> 15) as u32 & 1) << 12
-            | ((a[13] >> 15) as u32 & 1) << 13
-            | ((a[14] >> 15) as u32 & 1) << 14
-            | ((a[15] >> 15) as u32 & 1) << 15
+        let mut mask = 0u32;
+        for (i, &v) in a.iter().enumerate() {
+            mask |= ((v >> 15) as u32 & 1) << i;
+        }
+        mask
     }
     #[inline(always)]
     fn widen_low_i16_to_i32(self, a: [i16; 16]) -> [i32; 8] {
@@ -8175,38 +7855,21 @@ impl U16x8Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn all_true(self, a: [u16; 8]) -> bool {
-        (a[0] >> 15) != 0
-            && (a[1] >> 15) != 0
-            && (a[2] >> 15) != 0
-            && (a[3] >> 15) != 0
-            && (a[4] >> 15) != 0
-            && (a[5] >> 15) != 0
-            && (a[6] >> 15) != 0
-            && (a[7] >> 15) != 0
+        a.iter().all(|&v| (v >> 15) != 0)
     }
 
     #[inline(always)]
     fn any_true(self, a: [u16; 8]) -> bool {
-        (a[0] >> 15) != 0
-            || (a[1] >> 15) != 0
-            || (a[2] >> 15) != 0
-            || (a[3] >> 15) != 0
-            || (a[4] >> 15) != 0
-            || (a[5] >> 15) != 0
-            || (a[6] >> 15) != 0
-            || (a[7] >> 15) != 0
+        a.iter().any(|&v| (v >> 15) != 0)
     }
 
     #[inline(always)]
     fn bitmask(self, a: [u16; 8]) -> u32 {
-        ((a[0] >> 15) as u32 & 1)
-            | ((a[1] >> 15) as u32 & 1) << 1
-            | ((a[2] >> 15) as u32 & 1) << 2
-            | ((a[3] >> 15) as u32 & 1) << 3
-            | ((a[4] >> 15) as u32 & 1) << 4
-            | ((a[5] >> 15) as u32 & 1) << 5
-            | ((a[6] >> 15) as u32 & 1) << 6
-            | ((a[7] >> 15) as u32 & 1) << 7
+        let mut mask = 0u32;
+        for (i, &v) in a.iter().enumerate() {
+            mask |= ((v >> 15) as u32 & 1) << i;
+        }
+        mask
     }
     #[inline(always)]
     fn widen_low_u16_to_u32(self, a: [u16; 8]) -> [u32; 4] {
@@ -8747,62 +8410,21 @@ impl U16x16Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn all_true(self, a: [u16; 16]) -> bool {
-        (a[0] >> 15) != 0
-            && (a[1] >> 15) != 0
-            && (a[2] >> 15) != 0
-            && (a[3] >> 15) != 0
-            && (a[4] >> 15) != 0
-            && (a[5] >> 15) != 0
-            && (a[6] >> 15) != 0
-            && (a[7] >> 15) != 0
-            && (a[8] >> 15) != 0
-            && (a[9] >> 15) != 0
-            && (a[10] >> 15) != 0
-            && (a[11] >> 15) != 0
-            && (a[12] >> 15) != 0
-            && (a[13] >> 15) != 0
-            && (a[14] >> 15) != 0
-            && (a[15] >> 15) != 0
+        a.iter().all(|&v| (v >> 15) != 0)
     }
 
     #[inline(always)]
     fn any_true(self, a: [u16; 16]) -> bool {
-        (a[0] >> 15) != 0
-            || (a[1] >> 15) != 0
-            || (a[2] >> 15) != 0
-            || (a[3] >> 15) != 0
-            || (a[4] >> 15) != 0
-            || (a[5] >> 15) != 0
-            || (a[6] >> 15) != 0
-            || (a[7] >> 15) != 0
-            || (a[8] >> 15) != 0
-            || (a[9] >> 15) != 0
-            || (a[10] >> 15) != 0
-            || (a[11] >> 15) != 0
-            || (a[12] >> 15) != 0
-            || (a[13] >> 15) != 0
-            || (a[14] >> 15) != 0
-            || (a[15] >> 15) != 0
+        a.iter().any(|&v| (v >> 15) != 0)
     }
 
     #[inline(always)]
     fn bitmask(self, a: [u16; 16]) -> u32 {
-        ((a[0] >> 15) as u32 & 1)
-            | ((a[1] >> 15) as u32 & 1) << 1
-            | ((a[2] >> 15) as u32 & 1) << 2
-            | ((a[3] >> 15) as u32 & 1) << 3
-            | ((a[4] >> 15) as u32 & 1) << 4
-            | ((a[5] >> 15) as u32 & 1) << 5
-            | ((a[6] >> 15) as u32 & 1) << 6
-            | ((a[7] >> 15) as u32 & 1) << 7
-            | ((a[8] >> 15) as u32 & 1) << 8
-            | ((a[9] >> 15) as u32 & 1) << 9
-            | ((a[10] >> 15) as u32 & 1) << 10
-            | ((a[11] >> 15) as u32 & 1) << 11
-            | ((a[12] >> 15) as u32 & 1) << 12
-            | ((a[13] >> 15) as u32 & 1) << 13
-            | ((a[14] >> 15) as u32 & 1) << 14
-            | ((a[15] >> 15) as u32 & 1) << 15
+        let mut mask = 0u32;
+        for (i, &v) in a.iter().enumerate() {
+            mask |= ((v >> 15) as u32 & 1) << i;
+        }
+        mask
     }
     #[inline(always)]
     fn widen_low_u16_to_u32(self, a: [u16; 16]) -> [u32; 8] {
@@ -8985,17 +8607,21 @@ impl U64x2Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn all_true(self, a: [u64; 2]) -> bool {
-        (a[0] >> 63) != 0 && (a[1] >> 63) != 0
+        a.iter().all(|&v| (v >> 63) != 0)
     }
 
     #[inline(always)]
     fn any_true(self, a: [u64; 2]) -> bool {
-        (a[0] >> 63) != 0 || (a[1] >> 63) != 0
+        a.iter().any(|&v| (v >> 63) != 0)
     }
 
     #[inline(always)]
     fn bitmask(self, a: [u64; 2]) -> u32 {
-        ((a[0] >> 63) as u32 & 1) | ((a[1] >> 63) as u32 & 1) << 1
+        let mut mask = 0u32;
+        for (i, &v) in a.iter().enumerate() {
+            mask |= ((v >> 63) as u32 & 1) << i;
+        }
+        mask
     }
 }
 
@@ -9205,20 +8831,21 @@ impl U64x4Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn all_true(self, a: [u64; 4]) -> bool {
-        (a[0] >> 63) != 0 && (a[1] >> 63) != 0 && (a[2] >> 63) != 0 && (a[3] >> 63) != 0
+        a.iter().all(|&v| (v >> 63) != 0)
     }
 
     #[inline(always)]
     fn any_true(self, a: [u64; 4]) -> bool {
-        (a[0] >> 63) != 0 || (a[1] >> 63) != 0 || (a[2] >> 63) != 0 || (a[3] >> 63) != 0
+        a.iter().any(|&v| (v >> 63) != 0)
     }
 
     #[inline(always)]
     fn bitmask(self, a: [u64; 4]) -> u32 {
-        ((a[0] >> 63) as u32 & 1)
-            | ((a[1] >> 63) as u32 & 1) << 1
-            | ((a[2] >> 63) as u32 & 1) << 2
-            | ((a[3] >> 63) as u32 & 1) << 3
+        let mut mask = 0u32;
+        for (i, &v) in a.iter().enumerate() {
+            mask |= ((v >> 63) as u32 & 1) << i;
+        }
+        mask
     }
 }
 
@@ -9250,12 +8877,7 @@ impl F32x4Convert for archmage::ScalarToken {
 
     #[inline(always)]
     fn convert_f32_to_i32_round(self, a: [f32; 4]) -> [i32; 4] {
-        [
-            f32_round(a[0]) as i32,
-            f32_round(a[1]) as i32,
-            f32_round(a[2]) as i32,
-            f32_round(a[3]) as i32,
-        ]
+        a.map(|x| f32_round(x) as i32)
     }
 
     #[inline(always)]
@@ -9309,16 +8931,7 @@ impl F32x8Convert for archmage::ScalarToken {
 
     #[inline(always)]
     fn convert_f32_to_i32_round(self, a: [f32; 8]) -> [i32; 8] {
-        [
-            f32_round(a[0]) as i32,
-            f32_round(a[1]) as i32,
-            f32_round(a[2]) as i32,
-            f32_round(a[3]) as i32,
-            f32_round(a[4]) as i32,
-            f32_round(a[5]) as i32,
-            f32_round(a[6]) as i32,
-            f32_round(a[7]) as i32,
-        ]
+        a.map(|x| f32_round(x) as i32)
     }
 
     #[inline(always)]
@@ -9406,24 +9019,7 @@ impl F32x16Convert for archmage::ScalarToken {
 
     #[inline(always)]
     fn convert_f32_to_i32_round(self, a: [f32; 16]) -> [i32; 16] {
-        [
-            f32_round(a[0]) as i32,
-            f32_round(a[1]) as i32,
-            f32_round(a[2]) as i32,
-            f32_round(a[3]) as i32,
-            f32_round(a[4]) as i32,
-            f32_round(a[5]) as i32,
-            f32_round(a[6]) as i32,
-            f32_round(a[7]) as i32,
-            f32_round(a[8]) as i32,
-            f32_round(a[9]) as i32,
-            f32_round(a[10]) as i32,
-            f32_round(a[11]) as i32,
-            f32_round(a[12]) as i32,
-            f32_round(a[13]) as i32,
-            f32_round(a[14]) as i32,
-            f32_round(a[15]) as i32,
-        ]
+        a.map(|x| f32_round(x) as i32)
     }
 
     #[inline(always)]
@@ -9762,17 +9358,17 @@ impl F32x16Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn floor(self, a: [f32; 16]) -> [f32; 16] {
-        core::array::from_fn(|i| crate::nostd_math::floorf(a[i]))
+        a.map(crate::scalar::floor_f32)
     }
 
     #[inline(always)]
     fn ceil(self, a: [f32; 16]) -> [f32; 16] {
-        core::array::from_fn(|i| crate::nostd_math::ceilf(a[i]))
+        a.map(crate::scalar::ceil_f32)
     }
 
     #[inline(always)]
     fn round(self, a: [f32; 16]) -> [f32; 16] {
-        core::array::from_fn(|i| crate::nostd_math::roundevenf(a[i]))
+        a.map(crate::scalar::round_f32)
     }
 
     #[inline(always)]
@@ -9976,6 +9572,43 @@ impl F32x16Internal for archmage::ScalarToken {
         value
     }
 
+    #[inline]
+    fn transpose_16x16_repr(self, rows: [[f32; 16]; 16]) -> [[f32; 16]; 16] {
+        let mut out = [[0.0; 16]; 16];
+        for (i, row) in rows.iter().enumerate() {
+            for (col, &lane) in out.iter_mut().zip(row) {
+                col[i & 15] = lane;
+            }
+        }
+        out
+    }
+
+    #[inline]
+    fn deinterleave_3ch_repr(self, rgb: [[f32; 16]; 3]) -> [[f32; 16]; 3] {
+        let [mut r, mut g, mut b] = [[0.0; 16]; 3];
+        for (i, &[red, green, blue]) in rgb.as_flattened().as_chunks::<3>().0.iter().enumerate() {
+            r[i] = red;
+            g[i] = green;
+            b[i] = blue;
+        }
+        [r, g, b]
+    }
+
+    #[inline]
+    fn interleave_3ch_repr(self, [r, g, b]: [[f32; 16]; 3]) -> [[f32; 16]; 3] {
+        let mut rgb = [[0.0; 16]; 3];
+        for (i, pixel) in rgb
+            .as_flattened_mut()
+            .as_chunks_mut::<3>()
+            .0
+            .iter_mut()
+            .enumerate()
+        {
+            *pixel = [r[i], g[i], b[i]];
+        }
+        rgb
+    }
+
     #[inline(always)]
     fn from_u8_lanes_wide(self, lanes: &[u8; 16]) -> [f32; 16] {
         lanes.map(f32::from)
@@ -10110,17 +9743,17 @@ impl F64x8Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn floor(self, a: [f64; 8]) -> [f64; 8] {
-        core::array::from_fn(|i| crate::nostd_math::floor(a[i]))
+        a.map(crate::scalar::floor_f64)
     }
 
     #[inline(always)]
     fn ceil(self, a: [f64; 8]) -> [f64; 8] {
-        core::array::from_fn(|i| crate::nostd_math::ceil(a[i]))
+        a.map(crate::scalar::ceil_f64)
     }
 
     #[inline(always)]
     fn round(self, a: [f64; 8]) -> [f64; 8] {
-        core::array::from_fn(|i| crate::nostd_math::roundeven(a[i]))
+        a.map(crate::scalar::round_f64)
     }
 
     #[inline(always)]

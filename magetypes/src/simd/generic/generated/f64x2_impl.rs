@@ -126,8 +126,10 @@ impl<T: F64x2Backend> f64x2<T> {
     /// Create from slice. Panics if `slice.len() < 2`.
     #[inline(always)]
     pub fn from_slice_t(token: T, slice: &[f64]) -> Self {
-        let arr: [f64; 2] = slice[..2].try_into().unwrap();
-        Self(T::from_array(token, arr), token)
+        let Some(lanes) = slice.first_chunk::<2>() else {
+            panic!("f64x2::from_slice_t requires slice.len() >= 2");
+        };
+        Self::load_t(token, lanes)
     }
 
     /// Load up to `2` elements from `slice`, filling remaining high lanes with `pad`.
@@ -140,13 +142,11 @@ impl<T: F64x2Backend> f64x2<T> {
     /// Panics if `slice.len() > 2`.
     #[inline(always)]
     pub fn load_padded_t(token: T, slice: &[f64], pad: f64) -> Self {
-        assert!(
-            slice.len() <= 2,
-            "f64x2::load_padded_t requires slice.len() <= 2, got {}",
-            slice.len(),
-        );
         let mut arr = [pad; 2];
-        arr[..slice.len()].copy_from_slice(slice);
+        let Some(prefix) = arr.get_mut(..slice.len()) else {
+            panic!("f64x2::load_padded_t requires slice.len() <= 2");
+        };
+        prefix.copy_from_slice(slice);
         Self(T::from_array(token, arr), token)
     }
 
@@ -186,13 +186,11 @@ impl<T: F64x2Backend> f64x2<T> {
     /// Panics if `out.len() > 2`.
     #[inline(always)]
     pub fn store_prefix(self, out: &mut [f64]) {
-        assert!(
-            out.len() <= 2,
-            "f64x2::store_prefix requires out.len() <= 2, got {}",
-            out.len(),
-        );
         let arr = T::to_array(self.1, self.0);
-        out.copy_from_slice(&arr[..out.len()]);
+        let Some(prefix) = arr.get(..out.len()) else {
+            panic!("f64x2::store_prefix requires out.len() <= 2");
+        };
+        out.copy_from_slice(prefix);
     }
 
     /// Convert to array.

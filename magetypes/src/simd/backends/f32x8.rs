@@ -358,7 +358,7 @@ pub trait F32x8Backend:
     #[inline(always)]
     fn to_u8_bytes(self, a: Self::Repr) -> [u8; 8] {
         let arr = <Self as F32x8Backend>::to_array(self, a);
-        core::array::from_fn(|i| crate::nostd_math::roundevenf(arr[i]).clamp(0.0, 255.0) as u8)
+        arr.map(|x| crate::nostd_math::round_to_small_uint(x, 255.0) as u8)
     }
 
     /// Round/clamp 4 planar channels and interleave into RGBA bytes

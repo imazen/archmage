@@ -1309,31 +1309,6 @@ fn generate_scalar_int_impl(ty: &IntVecType) -> String {
 
     // Sign-bit contract: top bit set, not merely nonzero.
     let sign_shift = ty.elem_bits - 1;
-    let all_true_check: Vec<String> = (0..lanes)
-        .map(|i| format!("(a[{i}] >> {sign_shift}) != 0"))
-        .collect();
-    let all_true_body = all_true_check.join(" && ");
-
-    let any_true_check: Vec<String> = (0..lanes)
-        .map(|i| format!("(a[{i}] >> {sign_shift}) != 0"))
-        .collect();
-    let any_true_body = any_true_check.join(" || ");
-
-    let bitmask_items: Vec<String> = (0..lanes)
-        .map(|i| {
-            let shift_by = match ty.elem_bits {
-                8 | 16 | 64 => ty.elem_bits - 1,
-                _ => unreachable!(),
-            };
-            if i == 0 {
-                format!("((a[0] >> {shift_by}) as u32 & 1)")
-            } else {
-                format!("((a[{i}] >> {shift_by}) as u32 & 1) << {i}")
-            }
-        })
-        .collect();
-    let bitmask_body = bitmask_items.join(" | ");
-
     let shl_items: Vec<String> = (0..lanes)
         .map(|i| format!("a[{i}].wrapping_shl(N as u32)"))
         .collect();
@@ -1569,13 +1544,19 @@ fn generate_scalar_int_impl(ty: &IntVecType) -> String {
     body.push_str(&formatdoc! {r#"
 
             #[inline(always)]
-            fn all_true(self, a: {array}) -> bool {{ {all_true_body} }}
+            fn all_true(self, a: {array}) -> bool {{ a.iter().all(|&v| (v >> {sign_shift}) != 0) }}
 
             #[inline(always)]
-            fn any_true(self, a: {array}) -> bool {{ {any_true_body} }}
+            fn any_true(self, a: {array}) -> bool {{ a.iter().any(|&v| (v >> {sign_shift}) != 0) }}
 
             #[inline(always)]
-            fn bitmask(self, a: {array}) -> u32 {{ {bitmask_body} }}
+            fn bitmask(self, a: {array}) -> u32 {{
+                let mut mask = 0u32;
+                for (i, &v) in a.iter().enumerate() {{
+                    mask |= ((v >> {sign_shift}) as u32 & 1) << i;
+                }}
+                mask
+            }}
         {integer_methods}
         }}
     "#});

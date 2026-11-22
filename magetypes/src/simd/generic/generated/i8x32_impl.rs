@@ -126,8 +126,10 @@ impl<T: I8x32Backend> i8x32<T> {
     /// Create from slice. Panics if `slice.len() < 32`.
     #[inline(always)]
     pub fn from_slice_t(token: T, slice: &[i8]) -> Self {
-        let arr: [i8; 32] = slice[..32].try_into().unwrap();
-        Self(T::from_array(token, arr), token)
+        let Some(lanes) = slice.first_chunk::<32>() else {
+            panic!("i8x32::from_slice_t requires slice.len() >= 32");
+        };
+        Self::load_t(token, lanes)
     }
 
     /// Load up to `32` elements from `slice`, filling remaining high lanes with `pad`.
@@ -140,13 +142,11 @@ impl<T: I8x32Backend> i8x32<T> {
     /// Panics if `slice.len() > 32`.
     #[inline(always)]
     pub fn load_padded_t(token: T, slice: &[i8], pad: i8) -> Self {
-        assert!(
-            slice.len() <= 32,
-            "i8x32::load_padded_t requires slice.len() <= 32, got {}",
-            slice.len(),
-        );
         let mut arr = [pad; 32];
-        arr[..slice.len()].copy_from_slice(slice);
+        let Some(prefix) = arr.get_mut(..slice.len()) else {
+            panic!("i8x32::load_padded_t requires slice.len() <= 32");
+        };
+        prefix.copy_from_slice(slice);
         Self(T::from_array(token, arr), token)
     }
 
@@ -186,13 +186,11 @@ impl<T: I8x32Backend> i8x32<T> {
     /// Panics if `out.len() > 32`.
     #[inline(always)]
     pub fn store_prefix(self, out: &mut [i8]) {
-        assert!(
-            out.len() <= 32,
-            "i8x32::store_prefix requires out.len() <= 32, got {}",
-            out.len(),
-        );
         let arr = T::to_array(self.1, self.0);
-        out.copy_from_slice(&arr[..out.len()]);
+        let Some(prefix) = arr.get(..out.len()) else {
+            panic!("i8x32::store_prefix requires out.len() <= 32");
+        };
+        out.copy_from_slice(prefix);
     }
 
     /// Convert to array.
