@@ -8,6 +8,15 @@
 use archmage::Wasm128Token;
 use core::arch::wasm32::{self as w, v128};
 
+// Feature detection folds away in normal builds and honors token suppression
+// in testable_dispatch builds.
+#[cfg(target_feature = "relaxed-simd")]
+#[inline(always)]
+fn relaxed_token() -> Option<archmage::Wasm128RelaxedToken> {
+    use archmage::SimdToken;
+    archmage::Wasm128RelaxedToken::summon()
+}
+
 #[cfg(not(target_feature = "relaxed-simd"))]
 #[archmage::rite]
 pub(crate) fn madd_f32x4(_token: Wasm128Token, a: v128, b: v128, c: v128) -> v128 {
@@ -33,27 +42,43 @@ pub(crate) fn msub_f64x2(_token: Wasm128Token, a: v128, b: v128, c: v128) -> v12
 }
 
 #[cfg(target_feature = "relaxed-simd")]
-#[archmage::rite]
+#[archmage::attune(wasm128)]
 pub(crate) fn madd_f32x4(_token: Wasm128Token, a: v128, b: v128, c: v128) -> v128 {
-    w::f32x4_relaxed_madd(a, b, c)
+    if relaxed_token().is_some() {
+        w::f32x4_relaxed_madd(a, b, c)
+    } else {
+        w::f32x4_add(w::f32x4_mul(a, b), c)
+    }
 }
 
 #[cfg(target_feature = "relaxed-simd")]
-#[archmage::rite]
+#[archmage::attune(wasm128)]
 pub(crate) fn msub_f32x4(_token: Wasm128Token, a: v128, b: v128, c: v128) -> v128 {
-    w::f32x4_relaxed_madd(a, b, w::f32x4_neg(c))
+    if relaxed_token().is_some() {
+        w::f32x4_relaxed_madd(a, b, w::f32x4_neg(c))
+    } else {
+        w::f32x4_sub(w::f32x4_mul(a, b), c)
+    }
 }
 
 #[cfg(target_feature = "relaxed-simd")]
-#[archmage::rite]
+#[archmage::attune(wasm128)]
 pub(crate) fn madd_f64x2(_token: Wasm128Token, a: v128, b: v128, c: v128) -> v128 {
-    w::f64x2_relaxed_madd(a, b, c)
+    if relaxed_token().is_some() {
+        w::f64x2_relaxed_madd(a, b, c)
+    } else {
+        w::f64x2_add(w::f64x2_mul(a, b), c)
+    }
 }
 
 #[cfg(target_feature = "relaxed-simd")]
-#[archmage::rite]
+#[archmage::attune(wasm128)]
 pub(crate) fn msub_f64x2(_token: Wasm128Token, a: v128, b: v128, c: v128) -> v128 {
-    w::f64x2_relaxed_madd(a, b, w::f64x2_neg(c))
+    if relaxed_token().is_some() {
+        w::f64x2_relaxed_madd(a, b, w::f64x2_neg(c))
+    } else {
+        w::f64x2_sub(w::f64x2_mul(a, b), c)
+    }
 }
 
 #[cfg(not(target_feature = "relaxed-simd"))]
@@ -63,9 +88,13 @@ pub(crate) fn trunc_f32x4_fast(_token: Wasm128Token, a: v128) -> v128 {
 }
 
 #[cfg(target_feature = "relaxed-simd")]
-#[archmage::rite]
+#[archmage::attune(wasm128)]
 pub(crate) fn trunc_f32x4_fast(_token: Wasm128Token, a: v128) -> v128 {
-    w::i32x4_relaxed_trunc_f32x4(a)
+    if relaxed_token().is_some() {
+        w::i32x4_relaxed_trunc_f32x4(a)
+    } else {
+        w::i32x4_trunc_sat_f32x4(a)
+    }
 }
 
 #[cfg(not(target_feature = "relaxed-simd"))]
@@ -93,39 +122,63 @@ pub(crate) fn max_f64x2_fast(_token: Wasm128Token, a: v128, b: v128) -> v128 {
 }
 
 #[cfg(target_feature = "relaxed-simd")]
-#[archmage::rite]
+#[archmage::attune(wasm128)]
 pub(crate) fn min_f32x4_fast(_token: Wasm128Token, a: v128, b: v128) -> v128 {
-    w::f32x4_relaxed_min(a, b)
+    if relaxed_token().is_some() {
+        w::f32x4_relaxed_min(a, b)
+    } else {
+        w::f32x4_pmin(b, a)
+    }
 }
 
 #[cfg(target_feature = "relaxed-simd")]
-#[archmage::rite]
+#[archmage::attune(wasm128)]
 pub(crate) fn max_f32x4_fast(_token: Wasm128Token, a: v128, b: v128) -> v128 {
-    w::f32x4_relaxed_max(a, b)
+    if relaxed_token().is_some() {
+        w::f32x4_relaxed_max(a, b)
+    } else {
+        w::f32x4_pmax(b, a)
+    }
 }
 
 #[cfg(target_feature = "relaxed-simd")]
-#[archmage::rite]
+#[archmage::attune(wasm128)]
 pub(crate) fn min_f64x2_fast(_token: Wasm128Token, a: v128, b: v128) -> v128 {
-    w::f64x2_relaxed_min(a, b)
+    if relaxed_token().is_some() {
+        w::f64x2_relaxed_min(a, b)
+    } else {
+        w::f64x2_pmin(b, a)
+    }
 }
 
 #[cfg(target_feature = "relaxed-simd")]
-#[archmage::rite]
+#[archmage::attune(wasm128)]
 pub(crate) fn max_f64x2_fast(_token: Wasm128Token, a: v128, b: v128) -> v128 {
-    w::f64x2_relaxed_max(a, b)
+    if relaxed_token().is_some() {
+        w::f64x2_relaxed_max(a, b)
+    } else {
+        w::f64x2_pmax(b, a)
+    }
 }
 
 #[cfg(target_feature = "relaxed-simd")]
-#[archmage::rite]
+#[archmage::attune(wasm128)]
 pub(crate) fn min_f32_fast_scalar(token: Wasm128Token, a: f32, b: f32) -> f32 {
-    w::f32x4_extract_lane::<0>(min_f32x4_fast(token, w::f32x4_splat(a), w::f32x4_splat(b)))
+    if relaxed_token().is_some() {
+        w::f32x4_extract_lane::<0>(min_f32x4_fast(token, w::f32x4_splat(a), w::f32x4_splat(b)))
+    } else {
+        w::f32x4_extract_lane::<0>(min_f32x4_fast(token, w::f32x4_splat(a), w::f32x4_splat(b)))
+    }
 }
 
 #[cfg(target_feature = "relaxed-simd")]
-#[archmage::rite]
+#[archmage::attune(wasm128)]
 pub(crate) fn max_f32_fast_scalar(token: Wasm128Token, a: f32, b: f32) -> f32 {
-    w::f32x4_extract_lane::<0>(max_f32x4_fast(token, w::f32x4_splat(a), w::f32x4_splat(b)))
+    if relaxed_token().is_some() {
+        w::f32x4_extract_lane::<0>(max_f32x4_fast(token, w::f32x4_splat(a), w::f32x4_splat(b)))
+    } else {
+        w::f32x4_extract_lane::<0>(max_f32x4_fast(token, w::f32x4_splat(a), w::f32x4_splat(b)))
+    }
 }
 
 #[cfg(target_feature = "relaxed-simd")]
@@ -151,21 +204,33 @@ pub(crate) fn msub_f32_scalar(token: Wasm128Token, a: f32, b: f32, c: f32) -> f3
 }
 
 #[cfg(target_feature = "relaxed-simd")]
-#[archmage::rite]
+#[archmage::attune(wasm128)]
 pub(crate) fn trunc_f32_fast_scalar(token: Wasm128Token, a: f32) -> i32 {
-    w::i32x4_extract_lane::<0>(trunc_f32x4_fast(token, w::f32x4_splat(a)))
+    if relaxed_token().is_some() {
+        w::i32x4_extract_lane::<0>(trunc_f32x4_fast(token, w::f32x4_splat(a)))
+    } else {
+        w::i32x4_extract_lane::<0>(trunc_f32x4_fast(token, w::f32x4_splat(a)))
+    }
 }
 
 #[cfg(target_feature = "relaxed-simd")]
-#[archmage::rite]
+#[archmage::attune(wasm128)]
 pub(crate) fn min_f64_fast_scalar(token: Wasm128Token, a: f64, b: f64) -> f64 {
-    w::f64x2_extract_lane::<0>(min_f64x2_fast(token, w::f64x2_splat(a), w::f64x2_splat(b)))
+    if relaxed_token().is_some() {
+        w::f64x2_extract_lane::<0>(min_f64x2_fast(token, w::f64x2_splat(a), w::f64x2_splat(b)))
+    } else {
+        w::f64x2_extract_lane::<0>(min_f64x2_fast(token, w::f64x2_splat(a), w::f64x2_splat(b)))
+    }
 }
 
 #[cfg(target_feature = "relaxed-simd")]
-#[archmage::rite]
+#[archmage::attune(wasm128)]
 pub(crate) fn max_f64_fast_scalar(token: Wasm128Token, a: f64, b: f64) -> f64 {
-    w::f64x2_extract_lane::<0>(max_f64x2_fast(token, w::f64x2_splat(a), w::f64x2_splat(b)))
+    if relaxed_token().is_some() {
+        w::f64x2_extract_lane::<0>(max_f64x2_fast(token, w::f64x2_splat(a), w::f64x2_splat(b)))
+    } else {
+        w::f64x2_extract_lane::<0>(max_f64x2_fast(token, w::f64x2_splat(a), w::f64x2_splat(b)))
+    }
 }
 
 #[cfg(target_feature = "relaxed-simd")]
@@ -253,7 +318,7 @@ mod relaxed_probe {
 #[archmage::rite]
 pub(crate) fn fused_f32x4(token: Wasm128Token, a: v128, b: v128, c: v128) -> v128 {
     #[cfg(target_feature = "relaxed-simd")]
-    if relaxed_probe::fuses_f32() {
+    if relaxed_token().is_some() && relaxed_probe::fuses_f32() {
         return w::f32x4_relaxed_madd(a, b, c);
     }
     let lo = wide_sum(token, a, b, c);
@@ -291,7 +356,7 @@ fn wide_sum(_token: Wasm128Token, a: v128, b: v128, c: v128) -> v128 {
 #[archmage::rite]
 pub(crate) fn fused_f64x2(_token: Wasm128Token, a: v128, b: v128, c: v128) -> v128 {
     #[cfg(target_feature = "relaxed-simd")]
-    if relaxed_probe::fuses_f64() {
+    if relaxed_token().is_some() && relaxed_probe::fuses_f64() {
         return w::f64x2_relaxed_madd(a, b, c);
     }
     #[cfg(target_feature = "relaxed-simd")]
@@ -324,6 +389,7 @@ fn soft_f64x2_inline(a: v128, b: v128, c: v128) -> v128 {
 mod tests {
     #[test]
     fn relaxed_probe_matches_engine() {
+        let _guard = archmage::testing::lock_token_testing();
         let (f32_fuses, f64_fuses) = (
             super::relaxed_probe::fuses_f32(),
             super::relaxed_probe::fuses_f64(),
@@ -338,6 +404,49 @@ mod tests {
             assert_eq!((f32_fuses, f64_fuses), (expected, expected));
         }
     }
+
+    #[test]
+    fn relaxed_selection_respects_token_disabling() {
+        use archmage::{SimdToken, Wasm128RelaxedToken};
+        if Wasm128RelaxedToken::compiled_with().is_some() {
+            return;
+        }
+        let _guard = archmage::testing::lock_token_testing();
+        let token = super::relaxed_token().unwrap().wasm128();
+        Wasm128RelaxedToken::dangerously_disable_token_process_wide(true).unwrap();
+        assert!(super::relaxed_token().is_none());
+        disabled_results(token);
+        Wasm128RelaxedToken::dangerously_disable_token_process_wide(false).unwrap();
+        assert!(super::relaxed_token().is_some());
+    }
+
+    #[archmage::attune(wrap)]
+    fn disabled_results(token: archmage::Wasm128Token) {
+        use core::arch::wasm32 as w;
+        let e = 1.0 / 4096.0;
+        let x = w::f32x4_splat(1.0 + e);
+        let c = w::f32x4_splat(1.0 + 2.0 * e);
+        assert_eq!(
+            w::f32x4_extract_lane::<0>(super::msub_f32x4(token, x, x, c)),
+            0.0
+        );
+        assert_eq!(
+            w::f32x4_extract_lane::<0>(super::fused_f32x4(token, x, x, w::f32x4_neg(c))),
+            e * e
+        );
+
+        let e = 1.0 / 134_217_728.0;
+        let x = w::f64x2_splat(1.0 + e);
+        let c = w::f64x2_splat(-(1.0 + 2.0 * e));
+        assert_eq!(
+            w::f64x2_extract_lane::<0>(super::madd_f64x2(token, x, x, c)),
+            0.0
+        );
+        assert_eq!(
+            w::f64x2_extract_lane::<0>(super::fused_f64x2(token, x, x, c)),
+            e * e
+        );
+    }
 }
 
 #[cfg(not(target_feature = "relaxed-simd"))]
@@ -349,7 +458,11 @@ pub(crate) fn nmadd_f32x4(_token: Wasm128Token, a: v128, b: v128, c: v128) -> v1
 #[cfg(target_feature = "relaxed-simd")]
 #[archmage::rite]
 pub(crate) fn nmadd_f32x4(_token: Wasm128Token, a: v128, b: v128, c: v128) -> v128 {
-    w::f32x4_relaxed_nmadd(a, b, c)
+    if relaxed_token().is_some() {
+        w::f32x4_relaxed_nmadd(a, b, c)
+    } else {
+        w::f32x4_add(w::f32x4_mul(w::f32x4_neg(a), b), c)
+    }
 }
 
 #[cfg(not(target_feature = "relaxed-simd"))]
@@ -361,11 +474,19 @@ pub(crate) fn nmadd_f64x2(_token: Wasm128Token, a: v128, b: v128, c: v128) -> v1
 #[cfg(target_feature = "relaxed-simd")]
 #[archmage::rite]
 pub(crate) fn nmadd_f64x2(_token: Wasm128Token, a: v128, b: v128, c: v128) -> v128 {
-    w::f64x2_relaxed_nmadd(a, b, c)
+    if relaxed_token().is_some() {
+        w::f64x2_relaxed_nmadd(a, b, c)
+    } else {
+        w::f64x2_add(w::f64x2_mul(w::f64x2_neg(a), b), c)
+    }
 }
 
 #[cfg(target_feature = "relaxed-simd")]
-#[archmage::rite]
+#[archmage::attune(wasm128)]
 pub(crate) fn trunc_u32_f32x4_fast(_token: Wasm128Token, a: v128) -> v128 {
-    w::u32x4_relaxed_trunc_f32x4(a)
+    if relaxed_token().is_some() {
+        w::u32x4_relaxed_trunc_f32x4(a)
+    } else {
+        w::u32x4_trunc_sat_f32x4(a)
+    }
 }

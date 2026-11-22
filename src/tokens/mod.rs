@@ -30,6 +30,9 @@
 //! Disabling returns `Err(CompileTimeGuaranteedError)` when the features are
 //! compile-time enabled (e.g., via `-Ctarget-cpu=native`), since the compiler
 //! has already elided the runtime checks.
+//! With `testable_dispatch`, WASM tokens also support disabling: availability
+//! remains compile-time, while an atomic flag suppresses selection. Disabling
+//! does not remove module feature requirements or revoke existing proof tokens.
 
 mod sealed {
     /// Sealed trait preventing external implementations of [`SimdToken`](super::SimdToken).

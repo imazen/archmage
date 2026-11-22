@@ -563,6 +563,11 @@ fn structural_rules(rel: &str, text: &str, errors: &mut Vec<String>) {
             "f16c_encode_select",
         ],
         "magetypes/src/soft_fma.rs" => &["token"],
+        // Approved 2026-11-10: compile-time-proven baseline sqrt selectors,
+        // no runtime upgrades; token disabling exercises software fallbacks.
+        "magetypes/src/scalar_sqrt.rs" => &["sqrtf", "sqrt"],
+        // Compile-time relaxed-SIMD availability with test-only suppression.
+        "magetypes/src/wasm_fma.rs" => &["relaxed_token"],
         _ => &[],
     };
     for m in detection.find_iter(text) {

@@ -332,7 +332,11 @@ impl<T: F32x8Backend> f32x8<T> {
         Self(T::clamp(self.1, self.0, lo.0, hi.0), self.1)
     }
 
-    /// Square root.
+    /// Correctly rounded square root under round-to-nearest with gradual underflow.
+    /// Preserves signed zero. NaN inputs and negative nonzero inputs yield NaN.
+    ///
+    /// ScalarToken uses std when enabled, otherwise compile-time-proven
+    /// hardware or integer software. NaN sign and payload may vary.
     #[inline(always)]
     pub fn sqrt(self) -> Self {
         Self(T::sqrt(self.1, self.0), self.1)
