@@ -9,6 +9,10 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 
 ### [Unreleased]
 
+#### Added
+
+- Add `X64V3VnniToken` (`v3_vnni`, `dispatch_priority = 38`, parent `X64V3GfniCryptoToken`) proving pure-VEX `avxvnni`, `adx`, and `sha` on top of `X64V3GfniCryptoToken` without requiring AVX-512, along with `IntoConcreteToken::as_x64v3_vnni`, `is_x86_feature_available!` support for `"avxvnni"` and `"adx"`, and `for_each_token_permutation` coverage (#161, #199, 0b933aee).
+
 #### QUEUED DEPRECATIONS (next 0.9.x)
 
 - Use `SimdToken::summon()` instead of `SimdToken::attempt()` and `SimdToken::try_new()`.
@@ -74,6 +78,10 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 ## archmage-macros
 
 ### [Unreleased]
+
+#### Added
+
+- Support the `v3_vnni` tier (`X64V3VnniToken`, dispatch priority `38`) across `#[attune]`, `attuned!`, `reattune!`, `#[autoversion]`, `#[magetypes]`, and `incant!` (#161, #199, 0b933aee).
 
 #### QUEUED DEPRECATIONS (next 0.9.x)
 
@@ -197,7 +205,12 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 
 #### Added
 
-- `f32x16<T>` supports lane interleave, dual 8×8 and 16×16 matrix transposes, zero-copy signed bitcast references, and packed RGB loads and stores for sixteen pixels.
+- `f32x16<T>` supports lane interleave, dual 8×8 and 16×16 matrix transposes, zero-copy signed bitcast references, and packed RGB loads and stores for sixteen pixels (#197, 4be34f89).
+- Add concrete W128/W256 V3 delegation for `X64V3VnniToken` across all 34 backend, conversion, and bitcast traits plus `F32ScalarBackend`/`F64ScalarBackend`, `F32x8FromHalves`, and `SimdTypes`, available outside `feature = "avx512"` (#161, #199, 0b933aee).
+
+#### Changed
+
+- Replace verbatim AVX-512 narrow forwarding with crate-private concrete-impl delegation macros (`x86_v4_f32_delegated.rs`, `x86_v3_delegated.rs`), reducing complete `x86_64` generated backend source from `43,767` to `37,827` lines while preserving all concrete impls, AVX-512VL overrides, and assembly (#198, 55f48029, 0b933aee).
 
 #### QUEUED DEPRECATIONS (next 0.9.x)
 
@@ -349,6 +362,11 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 ## Workspace
 
 ### [Unreleased]
+
+#### Added
+
+- Add 512-pattern regression coverage for 256-bit integer `all_true`/`any_true` reductions across NEON, WASM128, x86, and scalar (#196, 7894b86c).
+- Add generation-time audit and completeness checks for concrete delegation macros and include narrow delegation in `xtask` `COMPILE_BUDGETS` (#198, 55f48029).
 
 #### QUEUED BREAKING CHANGES
 
