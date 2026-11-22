@@ -692,7 +692,10 @@ pub(super) fn gen_mod_rs(all_types: &[SimdType]) -> String {
     }
 
     code.push_str("\n// Block layout operations\n");
-    for (name, _, _) in super::block_ops_types() {
+    for (name, _, width) in super::block_ops_types() {
+        if width == SimdWidth::W512 {
+            code.push_str("#[cfg(feature = \"w512\")]\n");
+        }
         code.push_str(&format!("mod block_ops_{name};\n"));
     }
 

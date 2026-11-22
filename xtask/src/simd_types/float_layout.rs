@@ -77,6 +77,16 @@ pub(super) fn internal_trait(elem: &str, lanes: usize) -> String {
 
             /// Interleave sixteen planar float pixels into RGBA storage.
             fn interleave_rgba_wide(self, channels: [Self::InternalRepr; 4]) -> [Self::InternalRepr; 4];
+
+            /// Select lanes from the concatenated pair using indices in `0..32`.
+            #[inline(always)]
+            fn permute2_wide(self, pair: [Self::InternalRepr; 2], idx: [i32; 16]) -> Self::InternalRepr
+            where
+                Self: F32x16Backend,
+            {{
+                let lanes = pair.map(|v| self.to_array(v));
+                self.from_array(idx.map(|i| lanes[i as usize / 16][i as usize % 16]))
+            }}
         "#}
     } else {
         String::new()
@@ -892,6 +902,10 @@ fn x86_unsigned(lanes: usize, prefix: &str, repr: &str, attr: &str) -> String {
 
 fn x86_rgba_wide(attr: &str) -> String {
     formatdoc! {r#"
+        {attr}
+        fn permute2_wide(self, inputs: [__m512; 2], indices: [i32; 16]) -> __m512 {{
+            _mm512_permutex2var_ps(inputs[0], crate::simd_storage::cast(indices), inputs[1])
+        }}
         {attr}
         fn from_u8_lanes_wide(self, lanes: &[u8; 16]) -> __m512 {{
             _mm512_cvtepi32_ps(_mm512_cvtepu8_epi32(crate::simd_storage::cast(*lanes)))

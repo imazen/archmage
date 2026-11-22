@@ -469,6 +469,10 @@ impl F32x16Internal for X64V4Token {
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn permute2_wide(self, inputs: [__m512; 2], indices: [i32; 16]) -> __m512 {
+        _mm512_permutex2var_ps(inputs[0], crate::simd_storage::cast(indices), inputs[1])
+    }
+    #[arcane(suppress_const_test, _self = X64V4Token)]
     fn from_u8_lanes_wide(self, lanes: &[u8; 16]) -> __m512 {
         _mm512_cvtepi32_ps(_mm512_cvtepu8_epi32(crate::simd_storage::cast(*lanes)))
     }
@@ -2919,6 +2923,10 @@ impl F32x16Internal for X64V4xToken {
         )))
     }
 
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn permute2_wide(self, inputs: [__m512; 2], indices: [i32; 16]) -> __m512 {
+        _mm512_permutex2var_ps(inputs[0], crate::simd_storage::cast(indices), inputs[1])
+    }
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn from_u8_lanes_wide(self, lanes: &[u8; 16]) -> __m512 {
         _mm512_cvtepi32_ps(_mm512_cvtepu8_epi32(crate::simd_storage::cast(*lanes)))

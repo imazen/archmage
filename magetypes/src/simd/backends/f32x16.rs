@@ -57,6 +57,16 @@ pub(crate) trait F32x16Internal: SimdToken + Sealed + Copy + 'static {
 
     /// Interleave sixteen planar float pixels into RGBA storage.
     fn interleave_rgba_wide(self, channels: [Self::InternalRepr; 4]) -> [Self::InternalRepr; 4];
+
+    /// Select lanes from the concatenated pair using indices in `0..32`.
+    #[inline(always)]
+    fn permute2_wide(self, pair: [Self::InternalRepr; 2], idx: [i32; 16]) -> Self::InternalRepr
+    where
+        Self: F32x16Backend,
+    {
+        let lanes = pair.map(|v| self.to_array(v));
+        self.from_array(idx.map(|i| lanes[i as usize / 16][i as usize % 16]))
+    }
 }
 
 /// Backend implementation for 16-lane f32 SIMD vectors.

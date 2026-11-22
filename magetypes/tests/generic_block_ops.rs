@@ -1,4 +1,4 @@
-//! Tests for generic block operations on f32x4<T> and f32x8<T>.
+//! Tests for generic block operations on f32x4<T>, f32x8<T>, and f32x16<T>.
 //!
 //! Covers: array/byte views, slice casting, u8 conversions, interleave/deinterleave,
 //! RGBA load/store, matrix transpose, and cross-type bitcast references.
@@ -8,6 +8,28 @@
 use archmage::{ScalarToken, SimdToken, X64V3Token};
 use magetypes::simd::backends::F32x8Backend;
 use magetypes::simd::generic::{f32x4, f32x8};
+
+#[cfg(feature = "w512")]
+#[path = "support/f32x16_block.rs"]
+mod f32x16_block;
+
+#[cfg(feature = "w512")]
+#[test]
+fn f32x16_blocks_all_backends() {
+    f32x16_block::check(ScalarToken, "scalar");
+    if let Some(token) = X64V3Token::summon() {
+        f32x16_block::check(token, "x86-v3");
+    }
+    #[cfg(feature = "avx512")]
+    {
+        if let Some(token) = archmage::X64V4Token::summon() {
+            f32x16_block::check(token, "x86-v4");
+        }
+        if let Some(token) = archmage::X64V4xToken::summon() {
+            f32x16_block::check(token, "x86-v4x");
+        }
+    }
+}
 
 // ============================================================================
 // f32x8 — Array/Byte Views
