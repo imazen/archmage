@@ -44,7 +44,7 @@ const fn is_nonzero_subnormal_only_interval(lo: f32, hi: f32) -> bool {
 
 /// Discrete input domain for [`CbrtfOptions`].
 ///
-/// Subnormal rescaling (`* 2^24` / `* 2^-8`) is **off by default** on every
+/// Subnormal normalization is **off by default** on every
 /// domain except [`CbrtfDomain::AllFloats`]; opt in explicitly via
 /// [`CbrtfOptions::admit_subnormals`] or shove subnormals to `0` / `MIN_POSITIVE`
 /// via [`CbrtfOptions::flush_or_clamp_subnormals`].
@@ -61,7 +61,7 @@ pub enum CbrtfDomain {
     /// Strictly positive normal floats `[f32::MIN_POSITIVE, f32::MAX / 3.0)`,
     /// eliding subnormal checks and zero restoration.
     PositiveNormals,
-    /// Every `f32` input (`±0`, subnormals, `>= 1e36`, `±inf`, `NaN`).
+    /// Every `f32` input, including signed zeros, subnormals, infinities, and NaNs.
     AllFloats,
 }
 
@@ -69,10 +69,12 @@ pub enum CbrtfDomain {
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 #[non_exhaustive]
 pub enum CbrtfPrecision {
-    /// Two Halley iterations after the SIMD Kahan seed (`<= 3.2 ULP`).
+    /// Degree-seven polynomial for the factored mantissa correction (1.47 ULP
+    /// maximum measured error with [`Portability::BitExact`]).
     #[default]
     Midp,
-    /// One Halley iteration after the SIMD Kahan seed (`<= 259 ULP`, `~3e-5` rel err).
+    /// Degree-three polynomial for the factored mantissa correction (180.67 ULP
+    /// maximum measured error with [`Portability::BitExact`]).
     Lowp,
 }
 
@@ -155,8 +157,8 @@ impl CbrtfOptions {
         self.subnormals(Subnormals::FlushOrClamp)
     }
 
-    /// Opt in to exact subnormal rescaling (`* 2^24` before the Kahan seed and
-    /// `* 2^-8` afterward; `Subnormals::Normalize`).
+    /// Opt in to exact subnormal normalization before the polynomial and
+    /// compensation in the output exponent (`Subnormals::Normalize`).
     pub const fn admit_subnormals(self) -> Self {
         self.subnormals(Subnormals::Normalize)
     }

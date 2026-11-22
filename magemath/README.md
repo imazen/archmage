@@ -121,7 +121,7 @@ assert_eq!(dst[0].to_bits(), dst[10].to_bits());
 
 ## Limitations and when to use an alternative
 
-- **Bounded approximations, not universal `< 1 ULP` libm:** `Midp` and `Lowp` trade full-range `< 1 ULP` rounding for deterministic SIMD polynomials and Halley steps (`PowfPrecision::Highp` adds a binary64 table path or `std` `f32::powf` delegation for `powf`). When you need `< 1 ULP` IEEE-754 libm behavior across arbitrary `f32` or `f64` inputs, use `std::f32` / `libm` or `sleef`.
+- **Bounded approximations, not universal `< 1 ULP` libm:** `Midp` and `Lowp` trade full-range `< 1 ULP` rounding for deterministic SIMD approximations (`PowfPrecision::Highp` adds a binary64 table path or `std` `f32::powf` delegation for `powf`). When you need `< 1 ULP` IEEE-754 libm behavior across arbitrary `f32` or `f64` inputs, use `std::f32` / `libm` or `sleef`.
 - **`f32` only:** `f64` transcendentals are not implemented here, and hardware `sqrt` stays directly on [Magetypes](https://docs.rs/magetypes/latest/magetypes/).
 - **Flat Magetypes methods remain supported:** if you only need an inline unchecked polynomial inside an existing `magetypes` loop without cross-ISA bit identity, `const_exponent` lowering, or scalar tail helpers, the flat methods on `magetypes` (`pow_midp`, `exp2_lowp`, `cbrt_midp`, ...) are unchanged and not deprecated. See [choosing and migrating](https://github.com/imazen/archmage/blob/main/docs/MAGEMATH-MIGRATION.md) and [Magetypes Fast Paths](https://imazen.github.io/archmage/magemath/magetypes-fast-paths/).
 

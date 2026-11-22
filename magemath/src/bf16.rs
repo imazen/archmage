@@ -6,7 +6,7 @@ pub const MAX_BF16: f32 = f32::from_bits(0x7f7f_0000);
 
 /// Largest finite `bf16` magnitude strictly below `f32::MAX / 3.0` (`0x7eaa_0000`, `~1.129842e38`,
 /// below `f32::MAX / 3.0 = 0x7eaa_aaaa`), used as the upper magnitude limit for custom
-/// [`crate::cbrtf::CbrtfOptions::input_range`] bounds so bounded Halley `2y³ + |x|` never overflows.
+/// [`crate::cbrtf::CbrtfOptions::input_range`] bounds.
 pub const MAX_CBRT_BF16: f32 = f32::from_bits(0x7eaa_0000);
 
 const _: () = {
