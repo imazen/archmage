@@ -8,7 +8,7 @@
 use crate::simd::backends::{F32x4Backend, F32x8Backend};
 use crate::simd::generic::{f32x4, f32x8};
 #[cfg(feature = "w512")]
-use crate::{numerics::IntConvert, simd::backends::F32x16Backend, simd::generic::f32x16};
+use crate::simd::{backends::F32x16Backend, generic::f32x16};
 
 /// ### Packed RGB layout
 impl<T: F32x4Backend> f32x4<T> {
@@ -285,13 +285,15 @@ impl<T: F32x16Backend> f32x16<T> {
     /// [`Self::store_rgba_u8`] and [`Self::to_u8`].
     #[inline(always)]
     pub fn store_rgb_u8(r: Self, g: Self, b: Self, out: &mut [u8; 48]) {
+        use crate::numerics::IntConvert;
+
         Self::store_rgb_u8_with::<{ IntConvert::new().saturate_all().bits() }>(r, g, b, out);
     }
 
     /// Store 16 packed RGB pixels with the configured rounding and bounds.
     ///
-    /// Configure with [`IntConvert`]. Policies for other conversion families
-    /// are rejected at compile time.
+    /// Configure with [`IntConvert`](crate::numerics::IntConvert). Policies for
+    /// other conversion families are rejected at compile time.
     ///
     /// ```compile_fail
     /// use archmage::ScalarToken;
