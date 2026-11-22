@@ -1257,86 +1257,35 @@ fn generate_scalar_int_impl(ty: &IntVecType) -> String {
     let elem = ty.elem;
     let lanes = ty.lanes;
 
-    let binary_wrapping = |method: &str| -> String {
-        let items: Vec<String> = (0..lanes)
-            .map(|i| format!("a[{i}].{method}(b[{i}])"))
-            .collect();
-        format!("[{}]", items.join(", "))
+    let mask_true = match ty.elem {
+        "i8" => "-1",
+        "u8" => "0xFF",
+        "i16" => "-1",
+        "u16" => "0xFFFF",
+        "u64" => "u64::MAX",
+        _ => unreachable!(),
     };
-
-    let min_lanes = || -> String {
-        let cmp = "<";
-        let items: Vec<String> = (0..lanes)
-            .map(|i| format!("if a[{i}] {cmp} b[{i}] {{ a[{i}] }} else {{ b[{i}] }}"))
-            .collect();
-        format!("[{}]", items.join(", "))
-    };
-
-    let max_lanes = || -> String {
-        let cmp = ">";
-        let items: Vec<String> = (0..lanes)
-            .map(|i| format!("if a[{i}] {cmp} b[{i}] {{ a[{i}] }} else {{ b[{i}] }}"))
-            .collect();
-        format!("[{}]", items.join(", "))
-    };
-
-    let mask_val = |val: &str| -> String {
-        // All-1s mask for this element type
-        match ty.elem {
-            "i8" => format!("-1{val}"),
-            "u8" => format!("0xFF{val}"),
-            "i16" => format!("-1{val}"),
-            "u16" => format!("0xFFFF{val}"),
-            "u64" => format!("u64::MAX{val}"),
-            _ => unreachable!(),
-        }
-    };
-
-    let cmp_op = |op: &str| -> String {
-        let items: Vec<String> = (0..lanes)
-            .map(|i| {
-                let true_val = mask_val("");
-                format!("if a[{i}] {op} b[{i}] {{ {true_val} }} else {{ 0 }}")
-            })
-            .collect();
-        format!("[{}]", items.join(", "))
-    };
-
-    let blend_items: Vec<String> = (0..lanes)
-        .map(|i| format!("if mask[{i}] != 0 {{ if_true[{i}] }} else {{ if_false[{i}] }}"))
-        .collect();
-    let blend_body = format!("[{}]", blend_items.join(", "));
 
     // Sign-bit contract: top bit set, not merely nonzero.
     let sign_shift = ty.elem_bits - 1;
-    let shl_items: Vec<String> = (0..lanes)
-        .map(|i| format!("a[{i}].wrapping_shl(N as u32)"))
-        .collect();
-    let shl_body = format!("[{}]", shl_items.join(", "));
-
-    let shr_logical_items: Vec<String> = (0..lanes)
-        .map(|i| {
-            if ty.signed {
-                // For signed types, logical shift right needs cast to unsigned
-                let unsigned = match ty.elem_bits {
-                    8 => "u8",
-                    16 => "u16",
-                    _ => unreachable!(),
-                };
-                format!("(a[{i}] as {unsigned}).wrapping_shr(N as u32) as {elem}")
-            } else {
-                format!("a[{i}].wrapping_shr(N as u32)")
-            }
-        })
-        .collect();
-    let shr_logical_body = format!("[{}]", shr_logical_items.join(", "));
+    let shr_logical_body = if ty.signed {
+        // For signed types, logical shift right needs cast to unsigned
+        let unsigned = match ty.elem_bits {
+            8 => "u8",
+            16 => "u16",
+            _ => unreachable!(),
+        };
+        format!("core::array::from_fn(|i| (a[i] as {unsigned}).wrapping_shr(N as u32) as {elem})")
+    } else {
+        "core::array::from_fn(|i| a[i].wrapping_shr(N as u32))".to_string()
+    };
 
     let mut body = formatdoc! {r#"
         impl {trait_name} for archmage::ScalarToken {{
             type Repr = {array};
 
             #[inline(always)]
-            fn splat(self, v: {elem}) -> {array} {{ [{splat_items}] }}
+            fn splat(self, v: {elem}) -> {array} {{ [v; {lanes}] }}
 
             #[inline(always)]
             fn zero(self) -> {array} {{ [0{elem}; {lanes}] }}
@@ -1354,83 +1303,94 @@ fn generate_scalar_int_impl(ty: &IntVecType) -> String {
             fn to_array(self, repr: {array}) -> {array} {{ repr }}
 
             #[inline(always)]
-            fn add(self, a: {array}, b: {array}) -> {array} {{ {add} }}
+            fn add(self, a: {array}, b: {array}) -> {array} {{
+                core::array::from_fn(|i| a[i].wrapping_add(b[i]))
+            }}
 
             #[inline(always)]
-            fn sub(self, a: {array}, b: {array}) -> {array} {{ {sub} }}
-    "#,
-        splat_items = (0..lanes).map(|_| "v").collect::<Vec<_>>().join(", "),
-        add = binary_wrapping("wrapping_add"),
-        sub = binary_wrapping("wrapping_sub"),
-    };
+            fn sub(self, a: {array}, b: {array}) -> {array} {{
+                core::array::from_fn(|i| a[i].wrapping_sub(b[i]))
+            }}
+    "#};
 
     if ty.has_native_mul() {
         body.push_str(&formatdoc! {r#"
 
             #[inline(always)]
-            fn mul(self, a: {array}, b: {array}) -> {array} {{ {mul} }}
-        "#,
-            mul = binary_wrapping("wrapping_mul"),
-        });
+            fn mul(self, a: {array}, b: {array}) -> {array} {{
+                core::array::from_fn(|i| a[i].wrapping_mul(b[i]))
+            }}
+        "#});
     }
 
     if ty.signed {
-        let neg_items: Vec<String> = (0..lanes)
-            .map(|i| format!("a[{i}].wrapping_neg()"))
-            .collect();
         body.push_str(&formatdoc! {r#"
 
             #[inline(always)]
-            fn neg(self, a: {array}) -> {array} {{ [{neg}] }}
-        "#, neg = neg_items.join(", ")});
+            fn neg(self, a: {array}) -> {array} {{
+                core::array::from_fn(|i| a[i].wrapping_neg())
+            }}
+        "#});
     }
 
     body.push_str(&formatdoc! {r#"
 
             #[inline(always)]
-            fn min(self, a: {array}, b: {array}) -> {array} {{ {min} }}
+            fn min(self, a: {array}, b: {array}) -> {array} {{
+                core::array::from_fn(|i| if a[i] < b[i] {{ a[i] }} else {{ b[i] }})
+            }}
 
             #[inline(always)]
-            fn max(self, a: {array}, b: {array}) -> {array} {{ {max} }}
-    "#,
-        min = min_lanes(),
-        max = max_lanes(),
-    });
+            fn max(self, a: {array}, b: {array}) -> {array} {{
+                core::array::from_fn(|i| if a[i] > b[i] {{ a[i] }} else {{ b[i] }})
+            }}
+    "#});
 
     if ty.signed {
-        let abs_items: Vec<String> = (0..lanes)
-            .map(|i| format!("a[{i}].wrapping_abs()"))
-            .collect();
         body.push_str(&formatdoc! {r#"
 
             #[inline(always)]
-            fn abs(self, a: {array}) -> {array} {{ [{abs}] }}
-        "#, abs = abs_items.join(", ")});
+            fn abs(self, a: {array}) -> {array} {{
+                core::array::from_fn(|i| a[i].wrapping_abs())
+            }}
+        "#});
     }
 
     body.push_str(&formatdoc! {r#"
 
             #[inline(always)]
-            fn simd_eq(self, a: {array}, b: {array}) -> {array} {{ {eq} }}
+            fn simd_eq(self, a: {array}, b: {array}) -> {array} {{
+                core::array::from_fn(|i| if a[i] == b[i] {{ {mask_true} }} else {{ 0 }})
+            }}
 
             #[inline(always)]
-            fn simd_ne(self, a: {array}, b: {array}) -> {array} {{ {ne} }}
+            fn simd_ne(self, a: {array}, b: {array}) -> {array} {{
+                core::array::from_fn(|i| if a[i] != b[i] {{ {mask_true} }} else {{ 0 }})
+            }}
 
             #[inline(always)]
-            fn simd_lt(self, a: {array}, b: {array}) -> {array} {{ {lt} }}
+            fn simd_lt(self, a: {array}, b: {array}) -> {array} {{
+                core::array::from_fn(|i| if a[i] < b[i] {{ {mask_true} }} else {{ 0 }})
+            }}
 
             #[inline(always)]
-            fn simd_le(self, a: {array}, b: {array}) -> {array} {{ {le} }}
+            fn simd_le(self, a: {array}, b: {array}) -> {array} {{
+                core::array::from_fn(|i| if a[i] <= b[i] {{ {mask_true} }} else {{ 0 }})
+            }}
 
             #[inline(always)]
-            fn simd_gt(self, a: {array}, b: {array}) -> {array} {{ {gt} }}
+            fn simd_gt(self, a: {array}, b: {array}) -> {array} {{
+                core::array::from_fn(|i| if a[i] > b[i] {{ {mask_true} }} else {{ 0 }})
+            }}
 
             #[inline(always)]
-            fn simd_ge(self, a: {array}, b: {array}) -> {array} {{ {ge} }}
+            fn simd_ge(self, a: {array}, b: {array}) -> {array} {{
+                core::array::from_fn(|i| if a[i] >= b[i] {{ {mask_true} }} else {{ 0 }})
+            }}
 
             #[inline(always)]
             fn blend(self, mask: {array}, if_true: {array}, if_false: {array}) -> {array} {{
-                {blend_body}
+                core::array::from_fn(|i| if mask[i] != 0 {{ if_true[i] }} else {{ if_false[i] }})
             }}
 
             #[inline(always)]
@@ -1439,46 +1399,42 @@ fn generate_scalar_int_impl(ty: &IntVecType) -> String {
             }}
 
             #[inline(always)]
-            fn not(self, a: {array}) -> {array} {{ [{not}] }}
+            fn not(self, a: {array}) -> {array} {{
+                core::array::from_fn(|i| !a[i])
+            }}
 
             #[inline(always)]
-            fn bitand(self, a: {array}, b: {array}) -> {array} {{ [{and}] }}
+            fn bitand(self, a: {array}, b: {array}) -> {array} {{
+                core::array::from_fn(|i| a[i] & b[i])
+            }}
 
             #[inline(always)]
-            fn bitor(self, a: {array}, b: {array}) -> {array} {{ [{or}] }}
+            fn bitor(self, a: {array}, b: {array}) -> {array} {{
+                core::array::from_fn(|i| a[i] | b[i])
+            }}
 
             #[inline(always)]
-            fn bitxor(self, a: {array}, b: {array}) -> {array} {{ [{xor}] }}
+            fn bitxor(self, a: {array}, b: {array}) -> {array} {{
+                core::array::from_fn(|i| a[i] ^ b[i])
+            }}
 
             #[inline(always)]
-            fn shl_const<const N: i32>(self, a: {array}) -> {array} {{ {shl_body} }}
+            fn shl_const<const N: i32>(self, a: {array}) -> {array} {{
+                core::array::from_fn(|i| a[i].wrapping_shl(N as u32))
+            }}
 
             #[inline(always)]
             fn shr_logical_const<const N: i32>(self, a: {array}) -> {array} {{ {shr_logical_body} }}
-    "#,
-        eq = cmp_op("=="),
-        ne = cmp_op("!="),
-        lt = cmp_op("<"),
-        le = cmp_op("<="),
-        gt = cmp_op(">"),
-        ge = cmp_op(">="),
-        not = (0..lanes).map(|i| format!("!a[{i}]")).collect::<Vec<_>>().join(", "),
-        and = (0..lanes).map(|i| format!("a[{i}] & b[{i}]")).collect::<Vec<_>>().join(", "),
-        or = (0..lanes).map(|i| format!("a[{i}] | b[{i}]")).collect::<Vec<_>>().join(", "),
-        xor = (0..lanes).map(|i| format!("a[{i}] ^ b[{i}]")).collect::<Vec<_>>().join(", "),
-    });
+    "#});
 
     if ty.signed {
-        let shr_arith_items: Vec<String> = (0..lanes)
-            .map(|i| format!("a[{i}].wrapping_shr(N as u32)"))
-            .collect();
         body.push_str(&formatdoc! {r#"
 
             #[inline(always)]
             fn shr_arithmetic_const<const N: i32>(self, a: {array}) -> {array} {{
-                [{shr_arith}]
+                core::array::from_fn(|i| a[i].wrapping_shr(N as u32))
             }}
-        "#, shr_arith = shr_arith_items.join(", ")});
+        "#});
     }
 
     // Uniform variable shifts. The scalar backend is the reference the

@@ -240,6 +240,7 @@ const COMPILE_BUDGETS: &[(&str, &[&str], usize)] = &[
             "magetypes/src/simd/impls/x86_v3.rs",
             "magetypes/src/simd/impls/x86_v3_delegated.rs",
             "magetypes/src/simd/impls/x86_v4.rs",
+            "magetypes/src/simd/impls/x86_v4_w512_delegated.rs",
             "magetypes/src/simd/impls/x86_v4_f32_delegated.rs",
             "magetypes/src/simd/impls/x86_v4_f32_overrides.rs",
             "magetypes/src/simd/impls/scalar.rs",

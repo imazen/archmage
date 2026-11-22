@@ -594,6 +594,36 @@ pub fn generate_backend_files() -> BTreeMap<String, String> {
         gate_w512_impls(generate_x86_v4_impls_file(&w512_types)),
     );
 
+    // 10b2. `X64V4xToken`'s 12 base W512 backends delegated to `X64V4Token`
+    // via `self.v4()`. `X64V4xToken` retains only its native VPOPCNTDQ/BITALG
+    // popcnt extension impls in `x86_v4.rs`.
+    {
+        let mut w512_specs: Vec<(String, String)> = vec![
+            (
+                "F32x16Backend".to_string(),
+                files["backends/f32x16.rs"].clone(),
+            ),
+            (
+                "F32x16Internal".to_string(),
+                files["backends/f32x16.rs"].clone(),
+            ),
+        ];
+        for name in [
+            "f64x8", "i8x64", "u8x64", "i16x32", "u16x32", "i32x16", "u32x16", "i64x8", "u64x8",
+        ] {
+            let trait_name = format!("{}Backend", name[..1].to_uppercase() + &name[1..]);
+            w512_specs.push((trait_name, files[&format!("backends/{name}.rs")].clone()));
+        }
+        w512_specs.push((
+            "F32x16Convert".to_string(),
+            files["backends/convert.rs"].clone(),
+        ));
+        files.insert(
+            "impls/x86_v4_w512_delegated.rs".to_string(),
+            super::v4_delegation_gen::generate_v4_w512_delegated(&w512_specs),
+        );
+    }
+
     // 10c. The AVX-512 tokens' W128/W256 f32 backends, forwarded to V3's,
     // derived from the trait definitions generated above so no method can be
     // left to its scalar default body.
@@ -1169,6 +1199,16 @@ fn generate_impls_mod() -> String {
         #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
         mod x86_v4;
 
+        // `X64V4xToken`'s base W512 backends, forwarded to `X64V4Token` via
+        // `self.v4()` (V4x ⊃ V4, zero `unsafe`).
+        #[cfg(all(
+            target_arch = "x86_64",
+            target_feature = "sse2",
+            feature = "avx512",
+            feature = "w512"
+        ))]
+        mod x86_v4_w512_delegated;
+
         // The AVX-512 tokens' W128 / W256 f32 backends, forwarded to V3's
         // (generated from the trait definitions; V4 ⊃ V3, so delegating is
         // sound), plus the hand-written AVX-512VL pixel-packing overrides.
@@ -1220,24 +1260,23 @@ fn impls_safety_contract(token_desc: &str) -> String {
     "#}
 }
 
-/// Contains W512 backend impls for both X64V4Token and X64V4xToken,
-/// plus Modern-specific extension impls (popcnt).
-/// W128 and W256 types use X64V3Token (V4 downcasts to V3 for narrower widths).
+/// Contains native W512 backend impls for X64V4Token, plus Modern-specific
+/// extension impls (popcnt) for X64V4xToken.
+/// X64V4xToken's base W512 backends are delegated to X64V4Token in
+/// `x86_v4_w512_delegated.rs`; W128 and W256 types delegate to X64V3Token.
 fn generate_x86_v4_impls_file(w512_types: &[super::backend_gen_w512::W512Type]) -> String {
-    use super::backend_gen_w512::{
-        generate_popcnt_impls, generate_x86_modern_w512_impls, generate_x86_v4_w512_impls,
-    };
+    use super::backend_gen_w512::{generate_popcnt_impls, generate_x86_v4_w512_impls};
 
     let safety = impls_safety_contract("X64V4Token / X64V4xToken");
     let mut code = formatdoc! {r#"
         //! Backend implementations for X64V4Token and X64V4xToken (native AVX-512).
         //!
         //! Implements the W512 backend traits using native 512-bit AVX-512 intrinsics
-        //! for both X64V4Token (base AVX-512) and X64V4xToken (+ VPOPCNTDQ, BITALG, etc.).
+        //! for X64V4Token (base AVX-512), plus extension trait impls (popcnt) for
+        //! X64V4xToken (+ VPOPCNTDQ, BITALG).
         //!
-        //! X64V4xToken also gets extension trait impls (popcnt) for Modern-only features.
-        //!
-        //! W128 and W256 types use X64V3Token (V4 downcasts to V3 for narrower widths).
+        //! X64V4xToken's base W512 backends forward to X64V4Token via `self.v4()` in
+        //! `x86_v4_w512_delegated.rs`. W128 and W256 types delegate to X64V3Token.
         //!
         //! **Auto-generated** by `cargo xtask generate` - do not edit manually.
         //!
@@ -1262,16 +1301,6 @@ fn generate_x86_v4_impls_file(w512_types: &[super::backend_gen_w512::W512Type]) 
     );
     code.push_str(&generate_x86_v4_w512_impls(w512_types));
 
-    // Base backend impls for X64V4xToken (identical intrinsics, different token)
-    code.push_str(
-        "\n// ============================================================================\n",
-    );
-    code.push_str("// X64V4xToken — base AVX-512 (same intrinsics as V4)\n");
-    code.push_str(
-        "// ============================================================================\n\n",
-    );
-    code.push_str(&generate_x86_modern_w512_impls(w512_types));
-
     // Extension impls: popcnt (X64V4xToken only)
     code.push_str(
         "\n// ============================================================================\n",
@@ -1282,7 +1311,7 @@ fn generate_x86_v4_impls_file(w512_types: &[super::backend_gen_w512::W512Type]) 
     );
     code.push_str(&generate_popcnt_impls(w512_types));
 
-    // F32x16Convert impls for V4 and V4x (native 512-bit)
+    // F32x16Convert impl for V4 (V4x delegates in `x86_v4_w512_delegated.rs`)
     code.push_str(
         "\n// ============================================================================\n",
     );
@@ -1290,9 +1319,7 @@ fn generate_x86_v4_impls_file(w512_types: &[super::backend_gen_w512::W512Type]) 
     code.push_str(
         "// ============================================================================\n\n",
     );
-    for token in ["X64V4Token", "X64V4xToken"] {
-        code.push_str(&generate_x86_v4_f32x16_convert(token));
-    }
+    code.push_str(&generate_x86_v4_f32x16_convert("X64V4Token"));
 
     code
 }
