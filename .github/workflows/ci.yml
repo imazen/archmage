@@ -123,6 +123,27 @@ jobs:
       - name: Compare integer primitives to handwritten intrinsic kernels
         run: python3 xtask/codegen.py --integer-ops
 
+  magemath-codegen:
+    name: Magemath and ScalarToken codegen
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-unknown-linux-gnu,wasm32-unknown-unknown,i686-unknown-linux-gnu
+      - name: Test the codegen guard
+        run: python3 xtask/magemath_codegen.py --self-test
+      - name: Check the versioned codegen baseline
+        run: python3 xtask/magemath_codegen.py --check-baseline
+      - name: Compare optimized code against PR base
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: python3 xtask/magemath_codegen.py --compare "$BASE_SHA" "$HEAD_SHA"
+
   # ==========================================================================
   # Primary: Native x64 testing (stable only - MSRV tested separately)
   # ==========================================================================
@@ -1276,6 +1297,7 @@ jobs:
       - workflow-contracts
       - website-examples
       - storage-codegen
+      - magemath-codegen
       - attune-expansion
       - test-x64
       - test-aarch64

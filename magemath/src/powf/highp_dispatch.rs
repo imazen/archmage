@@ -93,17 +93,21 @@ fn slice_with_options(
         return std_slice(cfg, src, dst, n);
     }
     let (plan, in_context) = select(t, opts.is_caller(), true);
-    eval_slice(plan, in_context, cfg, src, dst, n).map_err(|(base, error)| {
-        let width = plan.midp_slice_width().min(8);
-        if opts.is_infallible() || width == 1 || src.len() - base < width {
-            SliceError {
-                kind: error.kind,
-                index: base,
-            }
-        } else {
-            refine_highp_chunk(plan, in_context, cfg, src, base, error, n)
-        }
-    })
+    let Err((base, error)) = eval_slice(plan, in_context, cfg, src, dst, n) else {
+        return Ok(());
+    };
+    // Keep the known infallibility on this side of the cold call. At opt-z an
+    // out-of-line map_err closure can retain replay in infallible consumers.
+    let width = plan.midp_slice_width().min(8);
+    if opts.is_infallible() || width == 1 || src.len() - base < width {
+        return Err(SliceError {
+            kind: error.kind,
+            index: base,
+        });
+    }
+    Err(refine_highp_chunk(
+        plan, in_context, cfg, src, base, error, n,
+    ))
 }
 
 #[inline(always)]
