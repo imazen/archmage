@@ -90,13 +90,13 @@ impl f32x1 {
     /// IEEE 754-2019 lane-wise minimum (propagates `NaN` and orders `-0.0 < +0.0`).
     #[inline(always)]
     pub fn minimum(self, other: Self) -> Self {
-        Self(crate::nostd_math::minimumf(self.0, other.0))
+        Self(crate::scalar_extrema::minimumf(self.0, other.0))
     }
 
     /// IEEE 754-2019 lane-wise maximum (propagates `NaN` and orders `-0.0 < +0.0`).
     #[inline(always)]
     pub fn maximum(self, other: Self) -> Self {
-        Self(crate::nostd_math::maximumf(self.0, other.0))
+        Self(crate::scalar_extrema::maximumf(self.0, other.0))
     }
 
     /// Fast lane-wise minimum ignoring `NaN` and signed-zero ordering.
@@ -139,19 +139,19 @@ impl f32x1 {
     /// Element-wise floor.
     #[inline(always)]
     pub fn floor(self) -> Self {
-        Self(crate::nostd_math::floorf(self.0))
+        Self(crate::scalar_round::floorf(self.0))
     }
 
     /// Element-wise ceiling.
     #[inline(always)]
     pub fn ceil(self) -> Self {
-        Self(crate::nostd_math::ceilf(self.0))
+        Self(crate::scalar_round::ceilf(self.0))
     }
 
     /// Element-wise round to nearest (ties to even, matching hardware SIMD).
     #[inline(always)]
     pub fn round(self) -> Self {
-        Self(crate::nostd_math::roundevenf(self.0))
+        Self(crate::scalar_round::roundevenf(self.0))
     }
 
     /// Multiply-add: `self * b + c`, computed as a multiply then an add (two
@@ -343,13 +343,13 @@ impl f64x1 {
     /// IEEE 754-2019 lane-wise minimum (propagates `NaN` and orders `-0.0 < +0.0`).
     #[inline(always)]
     pub fn minimum(self, other: Self) -> Self {
-        Self(crate::nostd_math::minimum(self.0, other.0))
+        Self(crate::scalar_extrema::minimum(self.0, other.0))
     }
 
     /// IEEE 754-2019 lane-wise maximum (propagates `NaN` and orders `-0.0 < +0.0`).
     #[inline(always)]
     pub fn maximum(self, other: Self) -> Self {
-        Self(crate::nostd_math::maximum(self.0, other.0))
+        Self(crate::scalar_extrema::maximum(self.0, other.0))
     }
 
     /// Fast lane-wise minimum ignoring `NaN` and signed-zero ordering.

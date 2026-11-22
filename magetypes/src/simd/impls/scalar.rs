@@ -139,12 +139,12 @@ impl F32x4Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn minimum(self, a: [f32; 4], b: [f32; 4]) -> [f32; 4] {
-        core::array::from_fn(|i| crate::nostd_math::minimumf(a[i], b[i]))
+        core::array::from_fn(|i| crate::scalar_extrema::minimumf(a[i], b[i]))
     }
 
     #[inline(always)]
     fn maximum(self, a: [f32; 4], b: [f32; 4]) -> [f32; 4] {
-        core::array::from_fn(|i| crate::nostd_math::maximumf(a[i], b[i]))
+        core::array::from_fn(|i| crate::scalar_extrema::maximumf(a[i], b[i]))
     }
 
     #[inline(always)]
@@ -675,12 +675,12 @@ impl F32x8Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn minimum(self, a: [f32; 8], b: [f32; 8]) -> [f32; 8] {
-        core::array::from_fn(|i| crate::nostd_math::minimumf(a[i], b[i]))
+        core::array::from_fn(|i| crate::scalar_extrema::minimumf(a[i], b[i]))
     }
 
     #[inline(always)]
     fn maximum(self, a: [f32; 8], b: [f32; 8]) -> [f32; 8] {
-        core::array::from_fn(|i| crate::nostd_math::maximumf(a[i], b[i]))
+        core::array::from_fn(|i| crate::scalar_extrema::maximumf(a[i], b[i]))
     }
 
     #[inline(always)]
@@ -1184,12 +1184,12 @@ impl F64x2Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn minimum(self, a: [f64; 2], b: [f64; 2]) -> [f64; 2] {
-        core::array::from_fn(|i| crate::nostd_math::minimum(a[i], b[i]))
+        core::array::from_fn(|i| crate::scalar_extrema::minimum(a[i], b[i]))
     }
 
     #[inline(always)]
     fn maximum(self, a: [f64; 2], b: [f64; 2]) -> [f64; 2] {
-        core::array::from_fn(|i| crate::nostd_math::maximum(a[i], b[i]))
+        core::array::from_fn(|i| crate::scalar_extrema::maximum(a[i], b[i]))
     }
 
     #[inline(always)]
@@ -1524,12 +1524,12 @@ impl F64x4Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn minimum(self, a: [f64; 4], b: [f64; 4]) -> [f64; 4] {
-        core::array::from_fn(|i| crate::nostd_math::minimum(a[i], b[i]))
+        core::array::from_fn(|i| crate::scalar_extrema::minimum(a[i], b[i]))
     }
 
     #[inline(always)]
     fn maximum(self, a: [f64; 4], b: [f64; 4]) -> [f64; 4] {
-        core::array::from_fn(|i| crate::nostd_math::maximum(a[i], b[i]))
+        core::array::from_fn(|i| crate::scalar_extrema::maximum(a[i], b[i]))
     }
 
     #[inline(always)]
@@ -9305,12 +9305,12 @@ impl F32x16Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn minimum(self, a: [f32; 16], b: [f32; 16]) -> [f32; 16] {
-        core::array::from_fn(|i| crate::nostd_math::minimumf(a[i], b[i]))
+        core::array::from_fn(|i| crate::scalar_extrema::minimumf(a[i], b[i]))
     }
 
     #[inline(always)]
     fn maximum(self, a: [f32; 16], b: [f32; 16]) -> [f32; 16] {
-        core::array::from_fn(|i| crate::nostd_math::maximumf(a[i], b[i]))
+        core::array::from_fn(|i| crate::scalar_extrema::maximumf(a[i], b[i]))
     }
 
     #[inline(always)]
@@ -9696,12 +9696,12 @@ impl F64x8Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn minimum(self, a: [f64; 8], b: [f64; 8]) -> [f64; 8] {
-        core::array::from_fn(|i| crate::nostd_math::minimum(a[i], b[i]))
+        core::array::from_fn(|i| crate::scalar_extrema::minimum(a[i], b[i]))
     }
 
     #[inline(always)]
     fn maximum(self, a: [f64; 8], b: [f64; 8]) -> [f64; 8] {
-        core::array::from_fn(|i| crate::nostd_math::maximum(a[i], b[i]))
+        core::array::from_fn(|i| crate::scalar_extrema::maximum(a[i], b[i]))
     }
 
     #[inline(always)]

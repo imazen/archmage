@@ -55,12 +55,12 @@ impl ScalarF32 {
 
     #[inline(always)]
     pub(crate) fn floor(self) -> Self {
-        Self(magetypes::nostd_math::floorf(self.0), PhantomData)
+        Self(magetypes::scalar::floor_f32(self.0), PhantomData)
     }
 
     #[inline(always)]
     pub(crate) fn round(self) -> Self {
-        Self(magetypes::nostd_math::roundevenf(self.0), PhantomData)
+        Self(magetypes::scalar::round_f32(self.0), PhantomData)
     }
 
     #[inline(always)]

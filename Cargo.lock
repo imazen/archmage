@@ -1016,6 +1016,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "indoc",
+ "proc-macro2",
  "quote",
  "regex",
  "serde",

@@ -2508,12 +2508,12 @@ fn generate_scalar_float_impl(ty: &FloatVecType) -> String {
 
         #[inline(always)]
         fn minimum(self, a: {array}, b: {array}) -> {array} {{
-            core::array::from_fn(|i| crate::nostd_math::{min_ieee}(a[i], b[i]))
+            core::array::from_fn(|i| crate::scalar_extrema::{min_ieee}(a[i], b[i]))
         }}
 
         #[inline(always)]
         fn maximum(self, a: {array}, b: {array}) -> {array} {{
-            core::array::from_fn(|i| crate::nostd_math::{max_ieee}(a[i], b[i]))
+            core::array::from_fn(|i| crate::scalar_extrema::{max_ieee}(a[i], b[i]))
         }}
 
         #[inline(always)]

@@ -74,7 +74,7 @@
 //!
 //! # Known limitations (documented for auditors)
 //!
-//! - Text-based, not AST-based: comments are stripped, but intrinsic names
+//! - The intrinsic scan is text-based: comments are stripped, but intrinsic names
 //!   inside string literals would be (harmlessly) scanned, and pathological
 //!   formatting could confuse the brace matcher. Generated code is
 //!   formatting-stable, making this reliable in practice; the floors ensure
@@ -339,7 +339,7 @@ impl<'r> Scanner<'r> {
             }
         }
 
-        structural_rules(rel, &text, &mut out.errors);
+        structural_rules(self.reg, rel, &text, &mut out.errors);
         raw_context::verify(self.reg, rel, &text, &mut out.errors);
         safety_comment_rules(rel, raw, &mut out.errors);
         out
@@ -502,10 +502,104 @@ fn safety_comment_rules(rel: &str, raw: &str, errors: &mut Vec<String>) {
     }
 }
 
+/// Audit the specific summon call in each scalar selector against its module's cfg.
+fn scalar_selector_summons(reg: &Registry, rel: &str, text: &str) -> HashSet<usize> {
+    use syn::{Expr, Item, Meta, Stmt};
+
+    let Ok(file) = syn::parse_file(text) else {
+        return HashSet::new();
+    };
+    let mut permitted = HashSet::new();
+    for item in file.items {
+        let Item::Mod(module) = item else { continue };
+        if module.ident != "selected" {
+            continue;
+        }
+        let Some((_, items)) = module.content else {
+            continue;
+        };
+        for item in items {
+            let Item::Fn(function) = item else { continue };
+            if function.sig.ident != "token" {
+                continue;
+            }
+            let [Stmt::Expr(Expr::Call(call), None)] = function.block.stmts.as_slice() else {
+                continue;
+            };
+            let Expr::Path(callee) = call.func.as_ref() else {
+                continue;
+            };
+            let segments: Vec<_> = callee.path.segments.iter().collect();
+            let [krate, token, summon] = segments.as_slice() else {
+                continue;
+            };
+            if callee.qself.is_some()
+                || callee.path.leading_colon.is_none()
+                || krate.ident != "archmage"
+                || summon.ident != "summon"
+                || !call.args.is_empty()
+                || segments.iter().any(|s| !s.arguments.is_empty())
+            {
+                continue;
+            }
+            let token_name = token.ident.to_string();
+            let arch = match token_name.as_str() {
+                "NeonToken" => "aarch64",
+                "Wasm128Token" => "wasm32",
+                "X64V2Token" if rel == "magetypes/src/scalar_round.rs" => "x86_64",
+                _ => continue,
+            };
+            let Some(def) = reg.find_token(&token_name) else {
+                continue;
+            };
+            // Only positive conjuncts provide proof. In particular, features
+            // mentioned in any(...) or not(...) cannot authorize a summon.
+            let cfg = module
+                .attrs
+                .iter()
+                .filter(|attr| attr.path().is_ident("cfg"))
+                .filter_map(|attr| match attr.parse_args::<Meta>().ok()? {
+                    Meta::List(list) if list.path.is_ident("all") => Some(list),
+                    _ => None,
+                })
+                .filter_map(|list| {
+                    list.parse_args_with(
+                        syn::punctuated::Punctuated::<Meta, syn::Token![,]>::parse_terminated,
+                    )
+                    .ok()
+                })
+                .flatten()
+                .filter_map(|meta| {
+                    let Meta::NameValue(pair) = meta else {
+                        return None;
+                    };
+                    let Expr::Lit(value) = pair.value else {
+                        return None;
+                    };
+                    let syn::Lit::Str(value) = value.lit else {
+                        return None;
+                    };
+                    Some((pair.path.get_ident()?.to_string(), value.value()))
+                })
+                .collect::<Vec<_>>();
+            let has_cfg = |key, value| cfg.iter().any(|(k, v)| k == key && v == value);
+            if has_cfg("target_arch", arch)
+                && def.features.iter().all(|feature| {
+                    (arch == "x86_64" && X86_64_BASELINE.contains(&feature.as_str()))
+                        || has_cfg("target_feature", feature.as_str())
+                })
+            {
+                permitted.insert(summon.ident.span().byte_range().start);
+            }
+        }
+    }
+    permitted
+}
+
 /// Structural soundness rules for magetypes sources, beyond intrinsic
 /// gating. Each rule fences off a way the token-as-proof model could be
 /// bypassed without any intrinsic-vs-feature mismatch being visible.
-fn structural_rules(rel: &str, text: &str, errors: &mut Vec<String>) {
+fn structural_rules(reg: &Registry, rel: &str, text: &str, errors: &mut Vec<String>) {
     let in_magetypes = rel.starts_with("magetypes/src");
     if !in_magetypes {
         return;
@@ -570,7 +664,16 @@ fn structural_rules(rel: &str, text: &str, errors: &mut Vec<String>) {
         "magetypes/src/wasm_fma.rs" => &["relaxed_token"],
         _ => &[],
     };
-    for m in detection.find_iter(text) {
+    let mut detections = detection.find_iter(text).peekable();
+    let scalar_selectors = match rel {
+        "magetypes/src/scalar_round.rs" | "magetypes/src/scalar_extrema.rs"
+            if detections.peek().is_some() =>
+        {
+            scalar_selector_summons(reg, rel, text)
+        }
+        _ => HashSet::new(),
+    };
+    for m in detections {
         let in_slice_selector = audited.iter().any(|name| {
             let signature = format!("fn {name}(");
             text.match_indices(&signature).any(|(start, _)| {
@@ -581,7 +684,7 @@ fn structural_rules(rel: &str, text: &str, errors: &mut Vec<String>) {
                     .is_some_and(|close| open < m.start() && m.start() < close)
             })
         });
-        if !in_slice_selector {
+        if !in_slice_selector && !scalar_selectors.contains(&m.start()) {
             errors.push(format!(
                 "{}:{}: STRUCTURAL RULE: `{}` — hidden CPU detection in magetypes; \
                  accept a caller-supplied proof or use an audited whole-slice selector.",
@@ -1216,6 +1319,7 @@ mod tests {
 
     #[test]
     fn hidden_cpu_detection_is_rejected_in_magetypes() {
+        let reg = test_registry();
         for call in [
             "X64V3Token::summon()",
             "<X64V3Token as SimdToken>::summon()",
@@ -1225,6 +1329,7 @@ mod tests {
         ] {
             let mut errors = Vec::new();
             structural_rules(
+                &reg,
                 "magetypes/src/nostd_math.rs",
                 &format!("fn arithmetic() {{ let _ = {call}; }}"),
                 &mut errors,
@@ -1236,12 +1341,14 @@ mod tests {
         }
         let mut errors = Vec::new();
         structural_rules(
+            &reg,
             "magetypes/src/nostd_math.rs",
             "fn arithmetic(t: Arm64V2Token) { let _ = t.neon(); }",
             &mut errors,
         );
         assert!(errors.is_empty(), "{errors:?}");
         structural_rules(
+            &reg,
             "src/tokens/generated/x86.rs",
             "fn detect() { X64V3Token::summon(); }",
             &mut errors,
@@ -1254,14 +1361,17 @@ mod tests {
 
     #[test]
     fn slice_detection_exception_does_not_cover_vector_methods() {
+        let reg = test_registry();
         let mut errors = Vec::new();
         structural_rules(
+            &reg,
             "magetypes/src/simd/generic/convert_f16.rs",
             "fn neon_f16_decode_select() { if true { Arm64V2Token::summon(); } }",
             &mut errors,
         );
         assert!(errors.is_empty(), "{errors:?}");
         structural_rules(
+            &reg,
             "magetypes/src/simd/generic/convert_f16.rs",
             "fn neon_f16_decode_select() {} fn register_convert() { Arm64V2Token::summon(); }",
             &mut errors,
@@ -1272,14 +1382,17 @@ mod tests {
 
     #[test]
     fn soft_fma_detection_exception_is_one_function() {
+        let reg = test_registry();
         let mut errors = Vec::new();
         structural_rules(
+            &reg,
             "magetypes/src/soft_fma.rs",
             "mod hw { pub(super) fn token() -> Option<Token> { Token::summon() } }",
             &mut errors,
         );
         assert!(errors.is_empty(), "{errors:?}");
         structural_rules(
+            &reg,
             "magetypes/src/soft_fma.rs",
             "fn token() {} fn fmaf_lanes() { X64V3Token::summon(); }",
             &mut errors,
@@ -1288,11 +1401,73 @@ mod tests {
         assert!(errors[0].contains("hidden CPU detection"));
         let mut errors = Vec::new();
         structural_rules(
+            &reg,
             "magetypes/src/nostd_math.rs",
             "fn token() { X64V3Token::summon(); }",
             &mut errors,
         );
         assert_eq!(errors.len(), 1, "the exception is per file: {errors:?}");
+    }
+
+    #[test]
+    fn scalar_selectors_require_the_matching_compile_time_gate() {
+        let reg = test_registry();
+        const ROUND: &str = "magetypes/src/scalar_round.rs";
+        const EXTREMA: &str = "magetypes/src/scalar_extrema.rs";
+        const V2: &str = r#"target_arch = "x86_64", target_feature = "sse3",
+            target_feature = "ssse3", target_feature = "sse4.1", target_feature = "sse4.2",
+            target_feature = "popcnt", target_feature = "cmpxchg16b""#;
+        let checked = |file, gate: &str, token, extra| {
+            let src = format!(
+                "{gate}\nmod selected {{ fn token() -> Option<{token}> {{
+                    ::archmage::{token}::summon()
+                }} }}\n{extra}"
+            );
+            let mut errors = Vec::new();
+            structural_rules(&reg, file, &src, &mut errors);
+            errors
+        };
+
+        let v2_gate = format!("#[cfg(all({V2}))]");
+        for (file, gate, token, extra) in [
+            (ROUND, "", "X64V2Token", ""),
+            (
+                ROUND,
+                r#"#[cfg(all(target_arch = "x86_64", target_feature = "sse4.1"))]"#,
+                "X64V2Token",
+                "",
+            ),
+            (ROUND, &format!("#[cfg(any({V2}))]"), "X64V2Token", ""),
+            (ROUND, &v2_gate, "X64V3Token", ""),
+            (EXTREMA, &v2_gate, "X64V2Token", ""),
+            (
+                ROUND,
+                &v2_gate,
+                "X64V2Token",
+                "mod other { fn token() { ::archmage::X64V2Token::summon(); } }",
+            ),
+        ] {
+            let errors = checked(file, gate, token, extra);
+            assert_eq!(errors.len(), 1, "{file} {gate} {token} {extra}: {errors:?}");
+            assert!(errors[0].contains("hidden CPU detection"), "{errors:?}");
+        }
+
+        for (file, gate, token) in [
+            (ROUND, v2_gate.as_str(), "X64V2Token"),
+            (
+                EXTREMA,
+                r#"#[cfg(all(target_arch = "aarch64", target_feature = "neon"))]"#,
+                "NeonToken",
+            ),
+            (
+                EXTREMA,
+                r#"#[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]"#,
+                "Wasm128Token",
+            ),
+        ] {
+            let errors = checked(file, gate, token, "");
+            assert!(errors.is_empty(), "{file} {gate} {token}: {errors:?}");
+        }
     }
 
     #[test]

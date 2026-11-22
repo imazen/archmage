@@ -195,26 +195,14 @@ pub fn to_bf16_with<const CFG: u32>(x: f32) -> u16 {
 }
 
 macro_rules! scalar_float {
-    ($f:ty, $bits:ty, $mask:literal, $min:ident, $max:ident, $clamp:ident,
+    ($f:ty, $min:ident, $max:ident, $clamp:ident,
      $min_ieee:ident, $max_ieee:ident, $recip:ident, $rsqrt:ident, $try_recip:ident, $try_rsqrt:ident, $sqrt:ident,
-     $trunc:ident, $bias:literal, $mantissa:literal,
+     $trunc:ident, $trunc_impl:ident,
      $nmadd_fused:ident, $madd_fused:ident, $nmadd_relaxed:ident, $madd_relaxed:ident, $backend:ident) => {
         /// Bit-preserving truncation toward zero, including the sign of zero.
         #[inline(always)]
         pub fn $trunc(x: $f) -> $f {
-            round_scalar!(x, trunc, {
-                let bits = x.to_bits();
-                let exponent = ((bits >> $mantissa) as i32 & $mask) - $bias;
-                if exponent < 0 {
-                    <$f>::from_bits(0).copysign(x)
-                } else if exponent >= $mantissa {
-                    x
-                } else {
-                    let one: $bits = 1;
-                    let fraction = (one << ($mantissa - exponent)) - 1;
-                    <$f>::from_bits(bits & !fraction)
-                }
-            })
+            crate::scalar_round::$trunc_impl(x)
         }
 
         /// Compute `c - a * b` with one rounding.
@@ -291,7 +279,7 @@ macro_rules! scalar_float {
         #[inline(always)]
         pub fn $min<const CFG: u32>(a: $f, b: $f) -> $f {
             match const { ExtremaOptions::decode(CFG) } {
-                ExtremaDomain::PropagateNan => super::$min_ieee(a, b),
+                ExtremaDomain::PropagateNan => crate::scalar_extrema::$min_ieee(a, b),
                 ExtremaDomain::DropNan => a.min(b),
                 _ => {
                     if a < b {
@@ -309,7 +297,7 @@ macro_rules! scalar_float {
         #[inline(always)]
         pub fn $max<const CFG: u32>(a: $f, b: $f) -> $f {
             match const { ExtremaOptions::decode(CFG) } {
-                ExtremaDomain::PropagateNan => super::$max_ieee(a, b),
+                ExtremaDomain::PropagateNan => crate::scalar_extrema::$max_ieee(a, b),
                 ExtremaDomain::DropNan => a.max(b),
                 _ => {
                     if a > b {
@@ -333,21 +321,18 @@ macro_rules! scalar_float {
 
 scalar_float!(
     f32,
-    u32,
-    0xff,
     min_f32_with,
     max_f32_with,
     clamp_f32_with,
-    minimum_f32,
-    maximum_f32,
+    minimumf,
+    maximumf,
     recip_f32_with,
     rsqrt_f32_with,
     try_recip_f32_with,
     try_rsqrt_f32_with,
     sqrt_f32,
     trunc_f32,
-    127,
-    23,
+    truncf,
     mul_neg_add_fused_f32,
     mul_add_fused_f32,
     mul_neg_add_relaxed_f32,
@@ -356,21 +341,18 @@ scalar_float!(
 );
 scalar_float!(
     f64,
-    u64,
-    0x7ff,
     min_f64_with,
     max_f64_with,
     clamp_f64_with,
-    minimum_f64,
-    maximum_f64,
+    minimum,
+    maximum,
     recip_f64_with,
     rsqrt_f64_with,
     try_recip_f64_with,
     try_rsqrt_f64_with,
     sqrt_f64,
     trunc_f64,
-    1023,
-    52,
+    trunc,
     mul_neg_add_fused_f64,
     mul_add_fused_f64,
     mul_neg_add_relaxed_f64,
