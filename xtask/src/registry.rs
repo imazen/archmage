@@ -396,21 +396,48 @@ impl Registry {
         let token_names: HashSet<&str> = self.token.iter().map(|t| t.name.as_str()).collect();
 
         for token in &self.token {
+            let child_features: HashSet<&str> = token.features.iter().map(|f| f.as_str()).collect();
+
             for parent in &token.parents {
                 if !token_names.contains(parent.as_str()) {
                     bail!("Token {} references unknown parent: {}", token.name, parent);
                 }
-                // Parent must be same arch
-                if let Some(parent_def) = self.token.iter().find(|t| t.name == *parent)
-                    && parent_def.arch != token.arch
-                {
-                    bail!(
-                        "Token {} (arch={}) has parent {} (arch={}) — must be same arch",
-                        token.name,
-                        token.arch,
-                        parent,
-                        parent_def.arch
-                    );
+                if let Some(parent_def) = self.token.iter().find(|t| t.name == *parent) {
+                    // Parent must be same arch
+                    if parent_def.arch != token.arch {
+                        bail!(
+                            "Token {} (arch={}) has parent {} (arch={}) — must be same arch",
+                            token.name,
+                            token.arch,
+                            parent,
+                            parent_def.arch
+                        );
+                    }
+                    // Parent's features must be a strict subset of the child's features:
+                    // soundness requires every parent feature to be present on the child,
+                    // and token_gen::gen_extraction_methods only emits inherent downgrade
+                    // methods (called by IntoConcreteToken::try_*) for strict subsets.
+                    let parent_features: HashSet<&str> =
+                        parent_def.features.iter().map(|f| f.as_str()).collect();
+                    let missing: Vec<&str> = parent_features
+                        .difference(&child_features)
+                        .copied()
+                        .collect();
+                    if !missing.is_empty() {
+                        bail!(
+                            "Token {} declares parent {}, but is missing parent feature(s): {:?}",
+                            token.name,
+                            parent,
+                            missing
+                        );
+                    }
+                    if parent_features == child_features {
+                        bail!(
+                            "Token {} declares parent {} with an identical feature set — parent features must be a strict subset",
+                            token.name,
+                            parent
+                        );
+                    }
                 }
             }
 
@@ -661,22 +688,67 @@ mod tests {
             }
         }
 
-        // Every child's features must be a superset of parent's features
+        // Every child's features must be a strict superset of parent's features
         for token in &registry.token {
+            let child_features: HashSet<&str> = token.features.iter().map(|f| f.as_str()).collect();
             for parent_name in &token.parents {
                 if let Some(parent) = registry.find_token(parent_name) {
+                    let parent_features: HashSet<&str> =
+                        parent.features.iter().map(|f| f.as_str()).collect();
                     for parent_feature in &parent.features {
                         assert!(
-                            token.features.contains(parent_feature),
+                            child_features.contains(parent_feature.as_str()),
                             "Token {} missing parent feature {} from {}",
                             token.name,
                             parent_feature,
                             parent_name
                         );
                     }
+                    assert_ne!(
+                        child_features, parent_features,
+                        "Token {} has identical feature set to parent {}",
+                        token.name, parent_name
+                    );
                 }
             }
         }
+    }
+
+    #[test]
+    fn validate_rejects_parent_with_extra_feature() {
+        let mut registry = load_test_registry();
+        let v3 = registry
+            .token
+            .iter_mut()
+            .find(|t| t.name == "X64V3Token")
+            .unwrap();
+        v3.traits.clear();
+        v3.features.retain(|f| f != "sse4.2");
+        let err = registry.validate().unwrap_err();
+        let msg = format!("{err:#}");
+        assert!(
+            msg.contains("missing parent feature"),
+            "unexpected error: {msg}"
+        );
+    }
+
+    #[test]
+    fn validate_rejects_equal_feature_parent() {
+        let mut registry = load_test_registry();
+        let v2_features = registry.find_token("X64V2Token").unwrap().features.clone();
+        let v3 = registry
+            .token
+            .iter_mut()
+            .find(|t| t.name == "X64V3Token")
+            .unwrap();
+        v3.traits.clear();
+        v3.features = v2_features;
+        let err = registry.validate().unwrap_err();
+        let msg = format!("{err:#}");
+        assert!(
+            msg.contains("identical feature set"),
+            "unexpected error: {msg}"
+        );
     }
 
     #[test]
