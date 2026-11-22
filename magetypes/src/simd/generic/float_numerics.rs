@@ -113,7 +113,7 @@ macro_rules! float_numerics {
 
                 let exact_seed = self.1.as_scalar().is_some();
                 #[cfg(target_arch = "wasm32")]
-                let exact_seed = exact_seed || self.1.as_wasm128().is_some();
+                let exact_seed = exact_seed || self.1.try_wasm128().is_some();
                 if exact_seed {
                     let exact = one / self;
                     return if matches!(precision, RecipPrecision::Nr1Ceil) {

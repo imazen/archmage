@@ -47,33 +47,14 @@ pub(crate) fn select<T: IntoConcreteToken>(token: T, execution: Execution, widen
     {
         #[cfg(feature = "avx512")]
         {
-            if let Some(t) = token.as_x64v4x() {
+            if let Some(t) = token.try_v4x() {
                 return Plan::V4x(t);
             }
-            if let Some(t) = token.as_x64v4() {
+            if let Some(t) = token.try_v4() {
                 return Plan::V4(t);
             }
-            if let Some(t) = token.as_avx512_fp16() {
-                return Plan::V4(t.v4());
-            }
         }
-        #[cfg(not(feature = "avx512"))]
-        {
-            if let Some(t) = token.as_x64v4x() {
-                return Plan::V3(t.v3());
-            }
-            if let Some(t) = token.as_x64v4() {
-                return Plan::V3(t.v3());
-            }
-            if let Some(t) = token.as_avx512_fp16() {
-                return Plan::V3(t.v3());
-            }
-        }
-        if let Some(v3) = token
-            .as_x64v3()
-            .or_else(|| token.as_x64v3_crypto().map(|t| t.v3()))
-            .or_else(|| token.as_x64v3_gfni_crypto().map(|t| t.v3()))
-        {
+        if let Some(v3) = token.try_v3() {
             #[cfg(feature = "avx512")]
             if widen_v3 && execution == Execution::Upgrade {
                 let upgraded = reattune_plan();
@@ -85,34 +66,12 @@ pub(crate) fn select<T: IntoConcreteToken>(token: T, execution: Execution, widen
         }
     }
     #[cfg(target_arch = "aarch64")]
-    {
-        if let Some(t) = token.as_neon() {
-            return Plan::Neon(t);
-        }
-        if let Some(t) = token.as_neon_aes() {
-            return Plan::Neon(t.neon());
-        }
-        if let Some(t) = token.as_neon_sha3() {
-            return Plan::Neon(t.neon());
-        }
-        if let Some(t) = token.as_neon_crc() {
-            return Plan::Neon(t.neon());
-        }
-        if let Some(t) = token.as_arm_v2() {
-            return Plan::Neon(t.neon());
-        }
-        if let Some(t) = token.as_arm_v3() {
-            return Plan::Neon(t.neon());
-        }
+    if let Some(t) = token.try_neon() {
+        return Plan::Neon(t);
     }
     #[cfg(target_arch = "wasm32")]
-    {
-        if let Some(t) = token
-            .as_wasm128()
-            .or_else(|| token.as_wasm128_relaxed().map(|r| r.wasm128()))
-        {
-            return Plan::Wasm(t);
-        }
+    if let Some(t) = token.try_wasm128() {
+        return Plan::Wasm(t);
     }
     if execution == Execution::Caller {
         return Plan::Software;

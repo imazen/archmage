@@ -83,7 +83,11 @@ AArch64:
   NeonCrcToken → NeonToken
 ```
 
-Extraction methods are `.v1()`, `.v2()`, `.x64_crypto()`, `.v3()`, `.v3_crypto()`, `.v3_gfni_crypto()`, `.v4()` (alias `.avx512()`), `.neon()`, `.neon_aes()`, `.neon_sha3()`, `.neon_crc()`, `.arm_v2()` and `.wasm128()`, each on the tokens that cover it. Extraction is free. `IntoConcreteToken` recovers the concrete type of a generic token: `as_x64v3()` returns `Some` only for exactly `X64V3Token`, so it neither upgrades nor downcasts.
+Extraction methods such as `.v3()`, `.neon()`, and `.wasm128()` reuse a
+concrete token's proof. On a generic `IntoConcreteToken`, `as_x64v3()` checks
+for exactly `X64V3Token`, while `try_v3()` also accepts descendants of V3
+in the registry's parent hierarchy. Both forms use the held proof without CPU
+detection.
 
 ### 1.4 Trait Hierarchy
 
@@ -334,7 +338,7 @@ See `just test-cross` and `just test-parity` for full cross-platform suites.
 
 The registry uses TOML with these table types:
 
-- `[[token]]` — token definitions with name, arch, aliases, deprecated_aliases, features, traits, parents, display_name, short_name, magetypes_namespace, extraction_aliases, doc
+- `[[token]]` — token definitions with name, arch, aliases, deprecated_aliases, features, traits, parents, display_name, short_name, try_suffix, magetypes_namespace, extraction_aliases, doc
 - `[[trait]]` — trait definitions with name, features, parents
 - `[[width_namespace]]` — width namespace config for simd type re-exports
 - `[[polyfill_w256]]` / `[[polyfill_w512]]` — polyfill platform configs

@@ -11,6 +11,11 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 
 #### Added
 
+- Generate `IntoConcreteToken` from the token registry and add `try_*` methods
+  for recovering parent-tier proofs. The `as_*` methods retain exact identity
+  checks. Magemath uses these proofs to select SIMD kernels, including V3
+  kernels for `X64V3VnniToken`.
+
 - Add `X64V3VnniToken` (`v3_vnni`, `dispatch_priority = 38`, parent `X64V3GfniCryptoToken`) proving pure-VEX `avxvnni`, `adx`, and `sha` on top of `X64V3GfniCryptoToken` without requiring AVX-512, along with `IntoConcreteToken::as_x64v3_vnni`, `is_x86_feature_available!` support for `"avxvnni"` and `"adx"`, and `for_each_token_permutation` coverage (#161, #199, 0b933aee).
 
 - Support disabling WASM SIMD128 and relaxed-SIMD selection with `testable_dispatch`. Existing proofs remain valid after a disable.

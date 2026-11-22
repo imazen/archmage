@@ -50,6 +50,9 @@ pub struct TokenDef {
     /// Extraction method name (e.g., "v2", "v3", "neon").
     #[serde(default)]
     pub short_name: Option<String>,
+    /// Hierarchical extraction suffix when it differs from the short name.
+    #[serde(default)]
+    pub try_suffix: Option<String>,
     /// Explicit dispatch ordering and exact-token extraction for this tier.
     #[serde(default)]
     pub dispatch_priority: Option<u32>,
@@ -71,6 +74,17 @@ pub struct TokenDef {
     /// Used by `import_magetypes` parameter in `#[arcane]`/`#[rite]`.
     #[serde(default)]
     pub magetypes_namespace: Option<String>,
+}
+
+impl TokenDef {
+    pub fn try_method_name(&self) -> String {
+        let suffix = self
+            .try_suffix
+            .as_deref()
+            .or(self.short_name.as_deref())
+            .expect("validated short_name");
+        format!("try_{suffix}")
+    }
 }
 
 /// A trait definition.
@@ -208,15 +222,45 @@ impl Registry {
 impl Registry {
     fn validate(&self) -> Result<()> {
         self.validate_no_duplicate_names()?;
+        let mut dispatch_methods = HashSet::from(["as_scalar"]);
+        let mut unavailable_try_methods = HashSet::from(["try_new".to_owned()]);
         for token in &self.token {
-            if token.dispatch_priority.is_some() != token.dispatch_as.is_some() {
+            unavailable_try_methods.extend(token.short_name.iter().cloned());
+            unavailable_try_methods.extend(token.extraction_aliases.iter().cloned());
+        }
+        for token in &self.token {
+            let Some(method) = token.dispatch_as.as_deref() else {
+                bail!("{} needs dispatch_as for IntoConcreteToken", token.name);
+            };
+            if token.dispatch_priority.is_none() || token.short_name.is_none() {
                 bail!(
-                    "{} needs both dispatch_priority and dispatch_as",
+                    "{} needs dispatch_priority and short_name for dispatch",
                     token.name
                 );
             }
-            if token.dispatch_priority.is_some() && token.short_name.is_none() {
-                bail!("{} needs a short_name for dispatch", token.name);
+            if !method.starts_with("as_")
+                || method.len() == 3
+                || !method
+                    .bytes()
+                    .all(|ch| ch.is_ascii_alphanumeric() || ch == b'_')
+                || !dispatch_methods.insert(method)
+            {
+                bail!(
+                    "{} has invalid or duplicate dispatch_as: {method}",
+                    token.name
+                );
+            }
+            let try_method = token.try_method_name();
+            if try_method.len() == 4
+                || !try_method
+                    .bytes()
+                    .all(|ch| ch.is_ascii_alphanumeric() || ch == b'_')
+                || !unavailable_try_methods.insert(try_method.clone())
+            {
+                bail!(
+                    "{} has an invalid or conflicting method: {try_method}",
+                    token.name
+                );
             }
         }
         self.validate_trait_references()?;
@@ -533,6 +577,34 @@ mod tests {
             .unwrap()
             .join("token-registry.toml");
         Registry::load(&path).expect("Failed to load token-registry.toml")
+    }
+
+    #[test]
+    fn try_methods_cannot_collide_with_other_extractions() {
+        let mut registry = load_test_registry();
+        let v1 = registry
+            .token
+            .iter()
+            .position(|token| token.name == "X64V1Token")
+            .unwrap();
+        registry.token[v1].try_suffix = Some("v2".into());
+        assert!(
+            registry
+                .validate()
+                .unwrap_err()
+                .to_string()
+                .contains("try_v2")
+        );
+
+        registry.token[v1].try_suffix = None;
+        registry.token[v1].extraction_aliases.push("try_v3".into());
+        assert!(
+            registry
+                .validate()
+                .unwrap_err()
+                .to_string()
+                .contains("try_v3")
+        );
     }
 
     #[test]

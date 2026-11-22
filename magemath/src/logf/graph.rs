@@ -97,7 +97,7 @@ macro_rules! make_madd {
                 if $arithmetic == WASM_SOFTWARE {
                     let (a, b, c) = (a.to_array(), b.to_array(), c.to_array());
                     let proof = $token
-                        .as_wasm128()
+                        .try_wasm128()
                         .expect("private WASM mode requires its matching proof");
                     return $V::from_array_t(
                         $token,
