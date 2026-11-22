@@ -14,9 +14,8 @@
 //!   NEON's `i32x16::all_true` disagreed with its own `i32x4::all_true` on
 //!   the same logical data.
 //!
-//! Every assertion below uses inputs that are *not* comparison masks, because
-//! that is the only place the rules differ — an all-ones or all-zeros vector
-//! cannot tell them apart, and every pre-existing test used exactly those.
+//! The tests include noncanonical masks to distinguish sign-bit semantics
+//! from testing whether lanes are nonzero or all ones.
 #[cfg(any(
     target_arch = "x86_64",
     target_arch = "aarch64",
@@ -24,13 +23,15 @@
 ))]
 use archmage::SimdToken;
 use magetypes::simd::backends::{
-    I8x16Backend, I16x8Backend, I16x16Backend, I32x4Backend, I32x8Backend, I64x2Backend,
-    U8x16Backend, U16x8Backend, U16x16Backend, U32x4Backend,
+    I8x16Backend, I8x32Backend, I16x8Backend, I16x16Backend, I32x4Backend, I32x8Backend,
+    I64x2Backend, I64x4Backend, U8x16Backend, U8x32Backend, U16x8Backend, U16x16Backend,
+    U32x4Backend, U32x8Backend, U64x4Backend,
 };
 #[cfg(feature = "w512")]
 use magetypes::simd::backends::{I16x32Backend, I32x16Backend, U16x32Backend};
 use magetypes::simd::generic::{
-    i8x16, i16x8, i16x16, i32x4, i32x8, i64x2, u8x16, u16x8, u16x16, u32x4,
+    i8x16, i8x32, i16x8, i16x16, i32x4, i32x8, i64x2, i64x4, u8x16, u8x32, u16x8, u16x16, u32x4,
+    u32x8, u64x4,
 };
 #[cfg(feature = "w512")]
 use magetypes::simd::generic::{i16x32, i32x16, u16x32};
@@ -156,6 +157,59 @@ where
     assert!(b8.any_true() && !b8.all_true());
 }
 
+// Exercise both halves with comparison masks and with MSB-only true lanes.
+// With every lower bit set in the latter false lanes, a nonzero test fails.
+macro_rules! assert_w256_reductions {
+    ($ty:ident, $token:expr, $elem:ty, $count:literal) => {{
+        let check = |lanes: [$elem; $count], all, any| {
+            let vector = $ty::from_array_t($token, lanes);
+            assert_eq!(
+                (vector.all_true(), vector.any_true()),
+                (all, any),
+                "{} input {lanes:?}",
+                stringify!($ty),
+            );
+        };
+        let one: $elem = 1;
+        let msb = one << (<$elem>::BITS - 1);
+        for (false_lane, true_lane) in [(0, !0), (!msb, msb)] {
+            check([false_lane; $count], false, false);
+            check([true_lane; $count], true, true);
+            for lane in 0..$count {
+                let mut one_false = [true_lane; $count];
+                one_false[lane] = false_lane;
+                check(one_false, false, true);
+
+                let mut one_true = [false_lane; $count];
+                one_true[lane] = true_lane;
+                check(one_true, false, true);
+            }
+        }
+    }};
+}
+
+fn check_w256<T>(token: T)
+where
+    T: Copy
+        + I8x32Backend
+        + U8x32Backend
+        + I16x16Backend
+        + U16x16Backend
+        + I32x8Backend
+        + U32x8Backend
+        + I64x4Backend
+        + U64x4Backend,
+{
+    assert_w256_reductions!(i8x32, token, i8, 32);
+    assert_w256_reductions!(u8x32, token, u8, 32);
+    assert_w256_reductions!(i16x16, token, i16, 16);
+    assert_w256_reductions!(u16x16, token, u16, 16);
+    assert_w256_reductions!(i32x8, token, i32, 8);
+    assert_w256_reductions!(u32x8, token, u32, 8);
+    assert_w256_reductions!(i64x4, token, i64, 4);
+    assert_w256_reductions!(u64x4, token, u64, 4);
+}
+
 /// The 512-bit types are `w512`-gated, and they matter most here: fold-first
 /// landed at 512-bit first, which is what made a backend disagree with itself.
 #[cfg(feature = "w512")]
@@ -213,6 +267,7 @@ macro_rules! check_all {
         let token = $token;
         check(token);
         check_cross_width(token);
+        check_w256(token);
         #[cfg(feature = "w512")]
         check_w512(token);
     }};
