@@ -10,7 +10,7 @@ weight = 4
 calls a family using the enclosing feature context or proof; `reattune!` permits
 runtime reselection. Earlier `#[arcane]`, `#[rite]`, `#[autoversion]`,
 `#[magetypes]`, and `incant!` spellings are superseded and queued for
-deprecation in the next release (they remain warning-free in 0.9.32).
+deprecation in the next release (they remain warning-free in 0.9.33).
 
 Use matching versions of archmage and magetypes. The archmage dependency
 pins archmage-macros exactly because generated code refers to archmage APIs.

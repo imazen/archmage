@@ -1,6 +1,6 @@
 [package]
 name = "magemath"
-version = "0.1.0"
+version = "0.1.1"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -19,8 +19,8 @@ avx512 = ["w512", "archmage/avx512", "magetypes/avx512"]
 _exhaustive-tests = []
 
 [dependencies]
-archmage = { version = "0.9.32", path = "..", default-features = false }
-magetypes = { version = "0.9.32", path = "../magetypes", default-features = false }
+archmage = { version = "0.9.33", path = "..", default-features = false }
+magetypes = { version = "0.9.33", path = "../magetypes", default-features = false }
 
 [[test]]
 name = "wasm_cbrtf_dispatch"

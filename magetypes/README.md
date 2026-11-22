@@ -14,8 +14,8 @@ token proving its CPU features, so using it takes no `unsafe` in your code.
 
 ```toml
 [dependencies]
-magetypes = "=0.9.32"
-archmage  = "=0.9.32"   # the macros and tokens
+magetypes = "=0.9.33"
+archmage  = "=0.9.33"   # the macros and tokens
 ```
 
 Multiply a buffer by a factor, using AVX2, NEON or WASM SIMD where available:
@@ -52,12 +52,14 @@ assert_eq!(plane, [1.0; 11]);
   here, not inside it.
 - Constructors ending in `_t` take the token as their first argument.
 
-`0.9.32` is the matching release for `archmage = "=0.9.32"`:
-existing vector and constructor signatures are preserved, `_t(token, ...)`
-remains token-first, and the flat transcendental methods remain supported
-(fixing `NaN` propagation in `log2_midp`/`ln_midp`/`log10_midp` and `-0.0` at
-`silu_midp(-inf)`). Configurable domain-checked `powf`/`expf`/`logf`/`cbrtf`
-with matching scalar tail helpers live in
+`0.9.33` is the matching release for `archmage = "=0.9.33"`:
+it adds `f32x16` block/transpose/packed-RGB ops, `X64V3VnniToken` V3
+delegation, checked integer/half/recip/rsqrt numerics (`magetypes::numerics`),
+unified hardware `no_std` scalar sqrt/rounding/extrema, `ScalarToken` codegen
+and panic-path reductions, and NEON 128-bit `ldp`/`stp` wide I/O while
+preserving existing vector and `_t(token, ...)` constructor signatures.
+Configurable domain-checked `powf`/`expf`/`logf`/`cbrtf` with matching scalar
+tail helpers live in
 [Magemath](https://github.com/imazen/archmage/tree/main/magemath). Unified
 macros (`#[attune]`, `attuned!`, `reattune!`) are documented in the
 [unified macro guide](https://github.com/imazen/archmage/blob/main/docs/ATTUNE.md).

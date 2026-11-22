@@ -24,7 +24,7 @@ different obligations. See the [testing guide](https://imazen.github.io/archmage
 
 Earlier attributes (`#[arcane]`, `#[rite]`, `#[magetypes]`, `#[autoversion]`,
 `incant!`) are superseded by `#[attune]`, `attuned!`, and `reattune!` and
-queued for deprecation in the next release (they remain warning-free in 0.9.32).
+queued for deprecation in the next release (they remain warning-free in 0.9.33).
 Use matching `archmage` and `archmage-macros` versions; the exact dependency
 pin keeps generated code and runtime APIs paired.
 

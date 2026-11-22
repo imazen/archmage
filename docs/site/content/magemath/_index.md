@@ -80,8 +80,8 @@ Pin matching `archmage` and `magetypes` versions alongside `magemath`:
 
 ```toml
 [dependencies]
-archmage = "=0.9.32"
-magetypes = "=0.9.32"
+archmage = "=0.9.33"
+magetypes = "=0.9.33"
 magemath = { version = "0.1", features = ["std"] }
 ```
 

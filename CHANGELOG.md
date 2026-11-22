@@ -9,16 +9,10 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 
 ### [Unreleased]
 
-#### Added
-
-- Generate `IntoConcreteToken` and all 19 concrete token impls from `token-registry.toml` and add 18 hierarchical `try_<short_name>()` methods (`try_v3`, `try_v4`, `try_v4x`, `try_neon`, `try_wasm128`, etc.) for recovering parent-tier proofs via safe downgrades while preserving all 19 exact-identity `as_*` methods verbatim (#205, 9f954003).
-- Add `X64V3VnniToken` (`v3_vnni`, `dispatch_priority = 38`, parent `X64V3GfniCryptoToken`) proving pure-VEX `avxvnni`, `adx`, and `sha` on top of `X64V3GfniCryptoToken` without requiring AVX-512, along with `IntoConcreteToken::as_x64v3_vnni`, `is_x86_feature_available!` support for `"avxvnni"` and `"adx"`, and `for_each_token_permutation` coverage (#161, #199, 0b933aee).
-- Support disabling WASM SIMD128 and relaxed-SIMD selection with `testable_dispatch`; existing proofs remain valid after a disable (#200, 39520f74).
-
 #### QUEUED DEPRECATIONS (next 0.9.x)
 
 - Use `SimdToken::summon()` instead of `SimdToken::attempt()` and `SimdToken::try_new()`.
-- Use `#[attune]`, `attuned!`, and `reattune!` instead of re-exported legacy macros `#[arcane]`, `#[rite]`, `#[magetypes]`, `#[autoversion]`, `incant!`, `dispatch_variant!`, `#[simd_fn]`, `simd_route!`, `#[token_target_features]`, and `#[token_target_features_boundary]` (`0.9.32` keeps all legacy spellings warning-free).
+- Use `#[attune]`, `attuned!`, and `reattune!` instead of re-exported legacy macros `#[arcane]`, `#[rite]`, `#[magetypes]`, `#[autoversion]`, `incant!`, `dispatch_variant!`, `#[simd_fn]`, `simd_route!`, `#[token_target_features]`, and `#[token_target_features_boundary]` (`0.9.33` keeps all legacy spellings warning-free).
 
 #### QUEUED BREAKING CHANGES
 
@@ -27,6 +21,18 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 - Use `X64V1Token` instead of `Sse2Token` and `X64V3Token` (or `Desktop64`) instead of `Avx2FmaToken` — remove deprecated token type aliases (deprecated since 0.9.9).
 - Use `Token::from_context()` (or `SimdToken::summon()` for runtime detection) instead of `forge_token_dangerously()` — remove `forge_token_dangerously()` across all concrete, stub, and scalar tokens (deprecated since 0.9.29).
 - Planned 0.10: add "adx" and "sha" target features to `X64V3GfniCryptoToken`, `X64V4xToken`, and `Avx512Fp16Token` to match real shipping CPUs at those tiers (Alder Lake+, Ice Lake+, Sapphire Rapids+, Zen 4+); deferred from 0.9.x because adding required `#[target_feature]` gates breaks semver on existing `from_context` and `magetypes` `from_raw` signatures (#174).
+
+### [0.9.33] - 2026-11-22
+
+#### Added
+
+- Generate `IntoConcreteToken` and all 19 concrete token impls from `token-registry.toml` and add 18 hierarchical `try_<short_name>()` methods (`try_v3`, `try_v4`, `try_v4x`, `try_neon`, `try_wasm128`, etc.) for recovering parent-tier proofs via safe downgrades while preserving all 19 exact-identity `as_*` methods verbatim (#205, 9f954003).
+- Add `X64V3VnniToken` (`v3_vnni`, `dispatch_priority = 38`, parent `X64V3GfniCryptoToken`) proving pure-VEX `avxvnni`, `adx`, and `sha` on top of `X64V3GfniCryptoToken` without requiring AVX-512, along with `IntoConcreteToken::as_x64v3_vnni`, `is_x86_feature_available!` support for `"avxvnni"` and `"adx"`, and `for_each_token_permutation` coverage (#161, #199, 0b933aee).
+- Support disabling WASM SIMD128 and relaxed-SIMD selection with `testable_dispatch`; existing proofs remain valid after a disable (#200, 39520f74).
+
+#### Changed
+
+- Pin matching `archmage-macros = "=0.9.33"`.
 
 ### [0.9.32] - 2026-11-20
 
@@ -81,10 +87,6 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 
 ### [Unreleased]
 
-#### Added
-
-- Support the `v3_vnni` tier (`X64V3VnniToken`, dispatch priority `38`) across `#[attune]`, `attuned!`, `reattune!`, `#[autoversion]`, `#[magetypes]`, and `incant!` (#161, #199, 0b933aee).
-
 #### QUEUED DEPRECATIONS (next 0.9.x)
 
 - Use `#[attune]`, `attuned!`, and `reattune!` instead of legacy `#[arcane]`, `#[rite]`, `#[magetypes]`, `#[autoversion]`, `incant!`, `dispatch_variant!`, `#[simd_fn]`, `simd_route!`, `#[token_target_features]`, and `#[token_target_features_boundary]`:
@@ -101,6 +103,12 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 - Use `attuned!(..., using(token))`, `#[attune(_*)]` context forwarding, or direct `IntoConcreteToken` dispatch — deprecate and remove `incant!` passthrough mode (`with token`).
 - Require explicit `scalar` or `default` in `incant!` tier lists (currently auto-appended with a deprecation warning).
 - Require explicit `tier(cfg(feature))` syntax — remove implicit `cfg_feature` auto-gating on `v4`/`v4x` in legacy macros.
+
+### [0.9.33] - 2026-11-22
+
+#### Added
+
+- Support the `v3_vnni` tier (`X64V3VnniToken`, dispatch priority `38`) across `#[attune]`, `attuned!`, `reattune!`, `#[autoversion]`, `#[magetypes]`, and `incant!` (#161, #199, 0b933aee).
 
 ### [0.9.32] - 2026-11-20
 
@@ -187,50 +195,36 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 
 ### [Unreleased]
 
-#### Changed
-
-- Replace `cbrtf` rational/division approximations with division-free minimax polynomials across `Lowp`, `Midp`, and `Highp`, and use hardware FMA on the final `BackendDependent` `cbrtf` step (#201, 21823c2f; #202, 443fa386).
-- Unify `log1pf` polynomial evaluation with zero monotonicity decreases across the domain (#202, 443fa386).
-- Simplify internal token dispatchers across `cbrtf`, `expf`, `logf`, and `powf` to use `IntoConcreteToken::try_*` hierarchical extraction, routing `X64V3VnniToken` cleanly to V3 kernels (#205, 9f954003).
-- Specialize single-lane scalar and `opt-z` codegen across `cbrtf`, `expf`, `logf`, `log1pf`, and `powf`, demorphize `Highp` `powf` slice kernels on structural flags (`ELIDE_RANGE_CHECK`, `ZERO_BEHAVIOR`, `VALIDATE`), and replay only rejected SIMD slice chunks using the executed plan and exact lane width (`powf_slice_scalar` `37.3 KB → 625 B` WASM `opt-z`, 4-config `Highp` gamma slice `-69.5%` WASM / `-71.4%` x64 `opt-z`, `2.0×–10.8×` `Highp` speedup and `5×–105×` `opt-z` scalar throughput speedup) (#203).
-
 #### QUEUED BREAKING CHANGES
 
 - None currently queued.
+
+### [0.1.1] - 2026-11-22
+
+#### Changed
+
+- Require matching `archmage = "0.9.33"` and `magetypes = "0.9.33"`.
+- Replace `cbrtf` rational/division approximations with division-free minimax polynomials across `Lowp`, `Midp`, and `Highp`, and use hardware FMA on the final `BackendDependent` `cbrtf` step (#201, 21823c2f; #202, 443fa386).
+- Unify `log1pf` polynomial evaluation with zero monotonicity decreases across the domain (#202, 443fa386).
+- Simplify internal token dispatchers across `cbrtf`, `expf`, `logf`, and `powf` to use `IntoConcreteToken::try_*` hierarchical extraction, routing `X64V3VnniToken` cleanly to V3 kernels (#205, 9f954003).
+- Specialize single-lane scalar and `opt-z` codegen across `cbrtf`, `expf`, `logf`, `log1pf`, and `powf`, demorphize `Highp` `powf` slice kernels on structural flags (`ELIDE_RANGE_CHECK`, `ZERO_BEHAVIOR`, `VALIDATE`), and replay only rejected SIMD slice chunks using the executed plan and exact lane width (`powf_slice_scalar` `37.3 KB → 625 B` WASM `opt-z`, 4-config `Highp` gamma slice `-69.5%` WASM / `-71.4%` x64 `opt-z`, `2.0×–10.8×` `Highp` speedup and `5×–105×` `opt-z` scalar throughput speedup) (#203, 190af9b0).
+- Route WASM slice kernels to native 4-lane W128 `slice4` loops (`-51.6%` strict / `-52.7%` relaxed `opt-3` WASM bytes, `2.8–5.6×` faster `N=4`), route unfused WASM `BitExact` slices directly to `Scalar 1` (`1.4–2.7×` faster), and fix `BitExact` `cbrtf` admission-to-kernel fusion parity under `testable_dispatch` (#208, ddd51d78).
+- Deduplicate `Highp` `powf` error-closure lowering under `opt-z`, cutting `Highp` slice code size by `3.8×–5.2×` across x64, AArch64, and WASM (#207, 8b38a1eb).
+- Document caller-side loop widths (`f32x4` on WASM, `f32x8` on V3/NEON, `f32x16` on AVX-512), `SimdMath` vs slice entry-point choice, and WASM `BitExact` vs `BackendDependent` tradeoffs in `magemath/README.md`, `docs/PERFORMANCE.md`, and the site guide (#209, cb55badf).
 
 ### [0.1.0] - 2026-11-20
 
 #### Added
 
-- Initial `#![no_std]`, `#![forbid(unsafe_code)]` release of configurable `f32` transcendental approximations paired with `archmage = "0.9.32"` and `magetypes = "0.9.32"` (f665a8aa):
-  - Function families: `powf::Powf`, `expf::Expf` (`exp2`, `exp`), `logf::Logf` (`log2`, `ln`, `log10`), `log1pf::Log1pf`, and `cbrtf::Cbrtf`, plus inline `SimdMath` extension methods on `magetypes::simd::generic::f32x{4,8,16}<T>`.
-  - Fluent `const` option builders (`PowfOptions`, `ExpfOptions`, `LogfOptions`, `Log1pfOptions`, `CbrtfOptions`) compiling to `const u128` specialization keys (`.bits()`) or dynamic `.runtime()` policies.
-  - Explicit orthogonal contracts for domain presets, precision (`Lowp`, `Midp`, `Highp`), `Validation` (`Checked`, `ClampOutOfBounds`, `AssumeValid`, `ClampFinite`), `Subnormals` (`Reject`, `FlushOrClamp`, `Normalize` via `.admit_subnormals()`), `Portability` (`BitExact`, `BackendDependent`), and `Execution` (`Upgrade`, `Caller`).
-  - Slice entry points returning `SliceError` indices, token-matched `*_with_token` scalar helpers for SIMD remainder loops, and `bf16` table helpers.
+- Add the `magemath` (`0.1.0`) `#![no_std]`, `#![forbid(unsafe_code)]` crate (optional `std`, `w512`, `avx512`) paired with `archmage = "0.9.32"` and `magetypes = "0.9.32"` providing configurable `f32` `powf`, `expf` (`exp2`, `exp`), `logf` (`log2`, `ln`, `log10`), `log1pf` (`log1p`), and `cbrtf` approximations with explicit domain, subnormal, precision, portability, and execution options plus matching scalar and `*_with_token` entry points for SIMD tails (f665a8aa, `docs/MAGEMATH-MIGRATION.md`, `magemath/VALIDATION.md`).
+- Configure each family through one fluent `const` options builder (`PowfOptions`, `ExpfOptions`, `LogfOptions`, `Log1pfOptions`, `CbrtfOptions`) with discrete `#[non_exhaustive]` per-family `*Domain` enums (`PowfDomain`, `ExpfDomain`, `LogfDomain`, `Log1pfDomain`, `CbrtfDomain`), outward-rounded `bf16` custom range/clamp bounds (`bf16::{MAX_BF16, MAX_CBRT_BF16, expand_bf16, floor_bf16, ceil_bf16}`), and compile-time `PowfOptions::const_exponent(n: f32)` specialization (`Powf::<CFG>::{scalar_const, scalar_const_infallible, scalar_const_with_token, array_const, slice_const, slice_const_with_token, simd_const}`, `PowfRuntime::*_const`, and `SimdMath::{try_powf_const, powf_const}`, with IEEE hardware algebraic fast-paths for `0, 0.25, ±0.5, ±1, 1.5, ±2, 3, 4`). Encode options into `const CFG: u128` via `.bits()` (with distinct per-family tags, 38–76 reserved expansion bits, and `from_bits` round-trip) for compile-time specialization on `Powf<CFG>`, `Expf<CFG>`, `Logf<CFG>`, `Log1pf<CFG>`, `Cbrtf<CFG>`, and inline vector chaining via `SimdMath` (reusing `v.token()`), plus `.runtime()` dynamic evaluators and shared root enums (`Execution::{Upgrade, Caller}`, `Portability`, `Validation::{Checked, ClampOutOfBounds, AssumeValid, ClampFinite}`, `Subnormals::{Reject, FlushOrClamp, Normalize}`). Bounded domains use `Subnormals::FlushOrClamp` by default, with explicit `.reject_subnormals()` and `.admit_subnormals()` opt-ins. `.clamp_finite()` skips NaN save and restore in clamped evaluation.
+- Mark policy-axis enums, `*Domain` enums, and `*ErrorKind` enums `#[non_exhaustive]` so future approximation families, domains, and option axes remain minor-compatible.
+- Add single-dispatch slice entry points (`Powf::<CFG>::{slice, slice_const}`, `Expf::<CFG>::{exp2_slice, exp_slice}`, `Logf::<CFG>::{log2_slice, ln_slice, log10_slice}`, `Log1pf::<CFG>::slice`, `Cbrtf::<CFG>::slice`, `*_slice_with_token`, and default `try_*_slice` helpers), including native 16-lane AVX-512 `zmm` slice loops and `Execution::Upgrade` `X64V3Token -> X64V4xToken/X64V4Token` widening on slices, 16-lane vectors, and 8-lane `Highp` `powf`, single-pass SIMD range checks with `tail[0]` padding, hoisted WASM `relaxed-simd` fusion probing with probe-free `WASM_SOFTWARE` fallback across `powf`, `expf`, and `logf`/`log1pf`, and `magemath::SliceError { kind, index }` naming the exact first rejected element. At the 8-lane baseline (`1cb042ba3741`, Zen 4) per-chunk 8-element array calls took 4.6x to 12x as long as slice entries; on Zen 5 with 16-lane AVX-512 `Execution::Upgrade` they take 2.68x to 19.2x as long (1.48x to 2.35x as long as an 8-lane `#[attune]` loop; `benchmarks/magemath_slices_2026-11-17/RESULTS.md`).
+- Replace `core::any::Any` / `TypeId` downcasts inside `magemath` with static `archmage::IntoConcreteToken` selection, enforce compile-time memory/symbol budgets via `xtask/check_compile_budget.py`, and pin bit-exact hashes across 11 configurations in `magemath/tests/portable_hashes.rs`.
 
 ## magetypes
 
 ### [Unreleased]
-
-#### Added
-
-- `f32x16<T>` supports lane interleave, dual 8×8 and 16×16 matrix transposes, zero-copy signed bitcast references, and packed RGB loads and stores for sixteen pixels (#197, 4be34f89).
-- Add concrete W128/W256 V3 delegation for `X64V3VnniToken` across all 34 backend, conversion, and bitcast traits plus `F32ScalarBackend`/`F64ScalarBackend`, `F32x8FromHalves`, and `SimdTypes`, available outside `feature = "avx512"` (#161, #199, 0b933aee).
-
-- Add checked scalar and SIMD integer, half-precision, reciprocal, and reciprocal-square-root operations that report the violated input contract and every rejected lane (#200, 39520f74).
-
-#### Changed
-
-- Replace verbatim AVX-512 narrow forwarding with crate-private concrete-impl delegation macros (`x86_v4_f32_delegated.rs`, `x86_v3_delegated.rs`), reducing complete `x86_64` generated backend source from `43,767` to `37,827` lines while preserving all concrete impls, AVX-512VL overrides, and assembly (#198, 55f48029, 0b933aee).
-- Use hardware square root for scalar vectors where std or compile-time target features provide it (#152, #200, 39520f74).
-- Compute the generic f32 cube-root seed in registers with exact integer division by three (#162, #200, 39520f74).
-- Optimize wide NEON W256/W512 load/store paths to emit 128-bit chunked `ldp`/`stp` pairs, add WASM/Scalar `recip_with` short-circuit with integer masking, and tighten anchored `exp2_lowp`/`pow_lowp` cubic error by `55.4×` (#202, 443fa386).
-- Eliminate `ScalarToken` codegen bloat and spurious panic paths across `magetypes` (`f32x16` transpose `41.4×` smaller, RGB deinterleave `29.7×`, `f32x8` RGB load/store `20.4×`, `scalar_sqrt` `50–78.7×`, `rsqrt_with` up to `22.4×`, `round` `11×`, `u8x32::bitmask` `16.3×`, plus `exp2`/`pow` scalar shrinks) with zero public API changes and zero AVX2/AVX-512 regressions (#204, 02d136b0).
-
-#### Fixed
-
-- Preserve the upper bound for finite nonzero division results in SIMD `Nr1Ceil + AllFloats`. Normal estimate lanes bypass division when the whole vector is in range (#195, #200, 39520f74).
-- Make `f32x1::clamp` follow the scalar SIMD comparison order for reversed or NaN bounds (#200, 39520f74).
 
 #### QUEUED DEPRECATIONS (next 0.9.x)
 
@@ -248,6 +242,29 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 - Remove deprecated one-lane wrappers (`f32x1`..`u64x1`), unimplemented comparison traits (`SimdEq`..`SimdGe`), and `SimdTypes` / `WidthDispatch` in a breaking release after deprecation (use `*<ScalarToken>` + `magetypes::scalar` / `magemath`, inherent `v.simd_*(..)`, and `#[attune(_*_t, define(...))]` + `*Backend` generics).
 - Planned magetypes 0.10: reserve short constructor names for matching feature contexts; `_t(token, ...)` provides the explicit-token spelling in 0.9 and remains supported in 0.10 (772ef504).
 - Remove the six no-op `*_midp_precise` aliases (`exp2`/`exp`/`ln`/`log2`/`log10`/`pow` — use `*_midp`, or `magemath` `.admit_subnormals()`); `cbrt_midp_precise` stays because it performs real denormal and range rescaling.
+
+### [0.9.33] - 2026-11-22
+
+#### Added
+
+- `f32x16<T>` supports lane interleave, dual 8×8 and 16×16 matrix transposes, zero-copy signed bitcast references, and packed RGB loads and stores for sixteen pixels (#197, 4be34f89).
+- Add concrete W128/W256 V3 delegation for `X64V3VnniToken` across all 34 backend, conversion, and bitcast traits plus `F32ScalarBackend`/`F64ScalarBackend`, `F32x8FromHalves`, and `SimdTypes`, available outside `feature = "avx512"` (#161, #199, 0b933aee).
+- Add checked scalar and SIMD integer, half-precision, reciprocal, and reciprocal-square-root operations that report the violated input contract and every rejected lane (#200, 39520f74).
+
+#### Changed
+
+- Require matching `archmage = "0.9.33"`.
+- Replace verbatim AVX-512 narrow forwarding with crate-private concrete-impl delegation macros (`x86_v4_f32_delegated.rs`, `x86_v3_delegated.rs`), reducing complete `x86_64` generated backend source from `43,767` to `37,827` lines while preserving all concrete impls, AVX-512VL overrides, and assembly (#198, 55f48029, 0b933aee).
+- Use hardware square root for scalar vectors where std or compile-time target features provide it (#152, #200, 39520f74).
+- Use single-instruction hardware rounding (`floor`, `ceil`, `trunc`, `round_ties_even` via `roundss`/`roundsd`, `frint*`, `f32.floor`/etc.) and IEEE `minimum`/`maximum` in `magetypes::scalar` and `ScalarToken` across both `no_std` and `std` whenever compile-time target features provide them (#206, 22e6b307).
+- Compute the generic f32 cube-root seed in registers with exact integer division by three (#162, #200, 39520f74).
+- Optimize wide NEON W256/W512 load/store paths to emit 128-bit chunked `ldp`/`stp` pairs, add WASM/Scalar `recip_with` short-circuit with integer masking, and tighten anchored `exp2_lowp`/`pow_lowp` cubic error by `55.4×` (#202, 443fa386).
+- Eliminate `ScalarToken` codegen bloat and spurious panic paths across `magetypes` (`f32x16` transpose `41.4×` smaller, RGB deinterleave `29.7×`, `f32x8` RGB load/store `20.4×`, `scalar_sqrt` `50–78.7×`, `rsqrt_with` up to `22.4×`, `round` `11×`, `u8x32::bitmask` `16.3×`, plus `exp2`/`pow` scalar shrinks) with zero public API changes and zero AVX2/AVX-512 regressions (#204, 02d136b0).
+
+#### Fixed
+
+- Preserve the upper bound for finite nonzero division results in SIMD `Nr1Ceil + AllFloats`. Normal estimate lanes bypass division when the whole vector is in range (#195, #200, 39520f74).
+- Make `f32x1::clamp` follow the scalar SIMD comparison order for reversed or NaN bounds (#200, 39520f74).
 - Planned: make `w512` non-default in magetypes; users who need 512-bit types add `features = ["w512"]`.
 - Rebuild vectors under the target token (`from_array_t` or `from_raw_t`) instead of `cast::Upcast` and `cast::Downcast` — remove both traits and the `cast` module in 0.10 (deprecated since 0.9.30, never implemented; b1b2ff67).
 
@@ -367,33 +384,29 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 - The package includes the MIT and Apache-2.0 license texts (683bef73).
 - The docs of `log2_midp_precise`, `ln_midp_precise`, `log10_midp_precise` and `pow_midp_precise` promised subnormal handling that they do not have: each is its plain `_midp` form, so `log2_midp_precise(1e-42)` returns about -127 (true -139.5). The docs now say so; only `cbrt_midp_precise` handles subnormal inputs. Behavior is unchanged (780e205c).
 
-## magemath
-
-### [0.1.0] - 2026-11-19
-
-#### Added
-
-- Add the `magemath` (`0.1.0`) crate (`no_std` by default, optional `std`, `w512`, `avx512`) providing configurable `f32` `powf`, `expf` (`exp2`, `exp`), `logf` (`log2`, `ln`, `log10`), `log1pf` (`log1p`), and `cbrtf` approximations with explicit domain, subnormal, precision, portability, and execution options plus matching scalar and `*_with_token` entry points for SIMD tails (`docs/MAGEMATH-MIGRATION.md`, `magemath/VALIDATION.md`).
-- Configure each family through one fluent `const` options builder (`PowfOptions`, `ExpfOptions`, `LogfOptions`, `Log1pfOptions`, `CbrtfOptions`) with discrete `#[non_exhaustive]` per-family `*Domain` enums (`PowfDomain`, `ExpfDomain`, `LogfDomain`, `Log1pfDomain`, `CbrtfDomain`), outward-rounded `bf16` custom range/clamp bounds (`bf16::{MAX_BF16, MAX_CBRT_BF16, expand_bf16, floor_bf16, ceil_bf16}`), and compile-time `PowfOptions::const_exponent(n: f32)` specialization (`Powf::<CFG>::{scalar_const, scalar_const_infallible, scalar_const_with_token, array_const, slice_const, slice_const_with_token, simd_const}`, `PowfRuntime::*_const`, and `SimdMath::{try_powf_const, powf_const}`, with IEEE hardware algebraic fast-paths for `0, 0.25, ±0.5, ±1, 1.5, ±2, 3, 4`). Encode options into `const CFG: u128` via `.bits()` (with distinct per-family tags, 38–76 reserved expansion bits, and `from_bits` round-trip) for compile-time specialization on `Powf<CFG>`, `Expf<CFG>`, `Logf<CFG>`, `Log1pf<CFG>`, `Cbrtf<CFG>`, and inline vector chaining via `SimdMath` (reusing `v.token()`), plus `.runtime()` dynamic evaluators and shared root enums (`Execution::{Upgrade, Caller}`, `Portability`, `Validation::{Checked, ClampOutOfBounds, AssumeValid, ClampFinite}`, `Subnormals::{Reject, FlushOrClamp, Normalize}`). Bounded domains use `Subnormals::FlushOrClamp` by default, with explicit `.reject_subnormals()` and `.admit_subnormals()` opt-ins. `.clamp_finite()` skips NaN save and restore in clamped evaluation.
-- Mark policy-axis enums, `*Domain` enums, and `*ErrorKind` enums `#[non_exhaustive]` so future approximation families, domains, and option axes remain minor-compatible.
-- Add single-dispatch slice entry points (`Powf::<CFG>::{slice, slice_const}`, `Expf::<CFG>::{exp2_slice, exp_slice}`, `Logf::<CFG>::{log2_slice, ln_slice, log10_slice}`, `Log1pf::<CFG>::slice`, `Cbrtf::<CFG>::slice`, `*_slice_with_token`, and default `try_*_slice` helpers), including native 16-lane AVX-512 `zmm` slice loops and `Execution::Upgrade` `X64V3Token -> X64V4xToken/X64V4Token` widening on slices, 16-lane vectors, and 8-lane `Highp` `powf`, single-pass SIMD range checks with `tail[0]` padding, hoisted WASM `relaxed-simd` fusion probing with probe-free `WASM_SOFTWARE` fallback across `powf`, `expf`, and `logf`/`log1pf`, and `magemath::SliceError { kind, index }` naming the exact first rejected element. At the 8-lane baseline (`1cb042ba3741`, Zen 4) per-chunk 8-element array calls took 4.6x to 12x as long as slice entries; on Zen 5 with 16-lane AVX-512 `Execution::Upgrade` they take 2.68x to 19.2x as long (1.48x to 2.35x as long as an 8-lane `#[attune]` loop; `benchmarks/magemath_slices_2026-11-17/RESULTS.md`).
-- Replace `core::any::Any` / `TypeId` downcasts inside `magemath` with static `archmage::IntoConcreteToken` selection, enforce compile-time memory/symbol budgets via `xtask/check_compile_budget.py`, and pin bit-exact hashes across 11 configurations in `magemath/tests/portable_hashes.rs`.
-
 ## Workspace
 
 ### [Unreleased]
+
+#### QUEUED BREAKING CHANGES
+
+(none)
+
+### [0.9.33] - 2026-11-22
 
 #### Added
 
 - Add 512-pattern regression coverage for 256-bit integer `all_true`/`any_true` reductions across NEON, WASM128, x86, and scalar (#196, 7894b86c).
 - Add generation-time audit and completeness checks for concrete delegation macros and include narrow delegation in `xtask` `COMPILE_BUDGETS` (#198, 55f48029).
 - Add unfused relaxed-SIMD WASM (`-W relaxed-simd-deterministic=n -C cranelift-has-fma=false`) contract coverage in CI (#202, 443fa386).
-- Generate `src/tokens/generated/into_concrete.rs` from `token-registry.toml` via `xtask` and simplify `xtask`/workspace token dispatchers (#205, 9f954003).
+- Generate `src/tokens/generated/into_concrete.rs` from `token-registry.toml` via `xtask`, enforce strict feature-subset validation on registry parent edges, and simplify `xtask`/workspace token dispatchers (#205, 9f954003, 4bd1b8dd).
 - Allow strict instruction-count reductions (`len(new) < len(old)`) in `xtask/codegen.py` for reviewed scalar `f32` FMA shrinks (#204, 02d136b0).
+- Add versioned, cost-table-scored, LLVM-resilient `xtask/magemath_codegen.py` guardrails (`234` probes across `x86_64`, `aarch64`, `wasm32`, `wasm32_relaxed`, and `i686` in `xtask/codegen_baselines/magemath_v1.json`) and `magemath/benches/transcendentals.rs` (#207, 8b38a1eb).
+- Add caller-width, `SimdMath` vs slice, and WASM `BitExact` guidance across `docs/PERFORMANCE.md`, `magemath/README.md`, and the site docs (#209, cb55badf).
 
-#### QUEUED BREAKING CHANGES
+#### Changed
 
-(none)
+- Update package and documentation install examples to `0.9.33` / `magemath 0.1.1`.
 
 ### [0.9.32] - 2026-11-19
 
