@@ -205,6 +205,40 @@ run_const!(
     16
 );
 
+#[inline(always)]
+pub(super) fn run1_cfg(
+    plan: Plan,
+    input: f32,
+    backend: bool,
+    cfg: graph::KernelCfg,
+) -> Result<f32, CbrtfError> {
+    if matches!(plan, Plan::Software) {
+        return graph::kernel1_cfg(input, backend, cfg);
+    }
+    run4_cfg(plan, [input; 4], backend, cfg)
+        .map(|result| result[0])
+        .map_err(|error| CbrtfError {
+            lane_mask: 1,
+            ..error
+        })
+}
+
+#[inline(always)]
+pub(super) fn run1_const<K: graph::Kernel, const BACKEND: bool>(
+    plan: Plan,
+    input: f32,
+) -> Result<f32, CbrtfError> {
+    if matches!(plan, Plan::Software) {
+        return graph::kernel1_with::<K, BACKEND>(input);
+    }
+    run4_const::<K, BACKEND>(plan, [input; 4])
+        .map(|result| result[0])
+        .map_err(|error| CbrtfError {
+            lane_mask: 1,
+            ..error
+        })
+}
+
 #[cfg_attr(debug_assertions, inline(never))]
 #[cfg_attr(not(debug_assertions), inline(always))]
 pub(super) fn run_slice_cfg(
@@ -216,16 +250,16 @@ pub(super) fn run_slice_cfg(
 ) -> Result<(), (usize, CbrtfError)> {
     match plan {
         #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
-        Plan::V3(t) => graph::slice8_cfg_v3(t, src, dst, backend, cfg),
+        Plan::V3(t) => graph::slice8_cfg_v3_t(t, src, dst, backend, cfg),
         #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
         Plan::V4(t) => graph::slice16_cfg_v4(t, src, dst, backend, cfg),
         #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
         Plan::V4x(t) => graph::slice16_cfg_v4x(t, src, dst, backend, cfg),
         #[cfg(target_arch = "aarch64")]
-        Plan::Neon(t) => graph::slice8_cfg_neon(t, src, dst, backend, cfg),
+        Plan::Neon(t) => graph::slice8_cfg_neon_t(t, src, dst, backend, cfg),
         #[cfg(target_arch = "wasm32")]
-        Plan::Wasm(t) => graph::slice8_cfg_wasm128(t, src, dst, backend, cfg),
-        Plan::Software => graph::slice8_cfg_scalar(ScalarToken, src, dst, backend, cfg),
+        Plan::Wasm(t) => graph::slice8_cfg_wasm128_t(t, src, dst, backend, cfg),
+        Plan::Software => graph::slice1_cfg_scalar(src, dst, backend, cfg),
     }
 }
 
@@ -242,15 +276,15 @@ pub(super) fn run_slice_const<K: graph::Kernel, const BACKEND: bool>(
     #[cfg(not(debug_assertions))]
     match plan {
         #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
-        Plan::V3(t) => graph::slice8_with_v3::<K, BACKEND>(t, src, dst),
+        Plan::V3(t) => graph::slice8_with_v3_t::<K, BACKEND>(t, src, dst),
         #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
         Plan::V4(t) => graph::slice16_with_v4::<K, BACKEND>(t, src, dst),
         #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
         Plan::V4x(t) => graph::slice16_with_v4x::<K, BACKEND>(t, src, dst),
         #[cfg(target_arch = "aarch64")]
-        Plan::Neon(t) => graph::slice8_with_neon::<K, BACKEND>(t, src, dst),
+        Plan::Neon(t) => graph::slice8_with_neon_t::<K, BACKEND>(t, src, dst),
         #[cfg(target_arch = "wasm32")]
-        Plan::Wasm(t) => graph::slice8_with_wasm128::<K, BACKEND>(t, src, dst),
-        Plan::Software => graph::slice8_with_scalar::<K, BACKEND>(ScalarToken, src, dst),
+        Plan::Wasm(t) => graph::slice8_with_wasm128_t::<K, BACKEND>(t, src, dst),
+        Plan::Software => graph::slice1_with_scalar::<K, BACKEND>(src, dst),
     }
 }

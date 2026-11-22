@@ -641,6 +641,7 @@ pub mod expf;
 pub mod log1pf;
 pub mod logf;
 pub mod powf;
+mod scalar1;
 mod soft_fma;
 #[cfg(target_arch = "wasm32")]
 #[allow(dead_code)] // The copy also contains vector-primitive helpers not used here.

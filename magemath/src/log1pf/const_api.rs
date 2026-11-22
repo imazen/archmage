@@ -117,14 +117,7 @@ pub(crate) fn runtime_token<T: archmage::IntoConcreteToken, const N: usize>(
     let cfg = options.to_kernel_cfg();
     let mut output = [0.0; N];
     if N == 1 {
-        let value = dispatch::run4_cfg(plan, [inputs[0]; 4], 3, backend, cfg).map_err(|error| {
-            Log1pfError {
-                kind: Log1pfErrorKind::InvalidInput,
-                lane_mask: 1,
-            }
-            .with_mask_1(error)
-        })?;
-        output[0] = value[0];
+        output[0] = dispatch::run1_cfg(plan, inputs[0], 3, backend, cfg).map_err(map_err)?;
     } else if N == 4 {
         let mut input = [0.0; 4];
         input.copy_from_slice(&inputs);
@@ -144,13 +137,6 @@ pub(crate) fn runtime_token<T: archmage::IntoConcreteToken, const N: usize>(
         }
     }
     Ok(output)
-}
-
-impl Log1pfError {
-    #[inline(always)]
-    const fn with_mask_1(self, _orig: LogfError) -> Self {
-        self
-    }
 }
 
 #[cfg_attr(debug_assertions, inline(never))]
@@ -226,6 +212,24 @@ impl<const CFG: u128> Log1pf<CFG> {
         token: T,
         x: f32,
     ) -> Result<f32, Log1pfError> {
+        let opts = const {
+            let opts = Log1pfOptions::decode_const(CFG);
+            opts.validate();
+            opts
+        };
+        let backend = opts.is_backend();
+        if token.as_scalar().is_some() {
+            let plan = if opts.is_caller() {
+                dispatch::Plan::Software
+            } else {
+                dispatch::select(token, Execution::Upgrade, backend, false)
+            };
+            return if backend {
+                dispatch::run1_const::<Cfg<CFG>, 3, true>(plan, x).map_err(map_err)
+            } else {
+                dispatch::run1_const::<Cfg<CFG>, 3, false>(plan, x).map_err(map_err)
+            };
+        }
         run4::<CFG, T>(token, magetypes::simd::generic::f32x4::splat_t(token, x))
             .map(|v| v.to_array()[0])
             .map_err(|error| Log1pfError {
@@ -250,12 +254,7 @@ impl<const CFG: u128> Log1pf<CFG> {
         }
         let mut output = [0.0; N];
         if N == 1 {
-            let value = run4::<CFG, _>(ScalarToken, f32x4::splat_t(ScalarToken, inputs[0]))
-                .map_err(|error| Log1pfError {
-                    lane_mask: 1,
-                    ..error
-                })?;
-            output[0] = value.to_array()[0];
+            output[0] = Self::scalar_with_token(ScalarToken, inputs[0])?;
         } else if N == 4 {
             let mut input = [0.0; 4];
             input.copy_from_slice(&inputs);
@@ -294,7 +293,7 @@ impl<const CFG: u128> Log1pf<CFG> {
     /// # Panics
     ///
     /// Panics if `src.len() != dst.len()`.
-    #[inline]
+    #[inline(always)]
     pub fn slice(src: &[f32], dst: &mut [f32]) -> Result<(), SliceError<Log1pfErrorKind>> {
         Self::slice_with_token(archmage::ScalarToken, src, dst)
     }

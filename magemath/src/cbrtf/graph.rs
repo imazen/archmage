@@ -299,17 +299,18 @@ macro_rules! eval_cbrtf {
     }};
 }
 
-macro_rules! graph {
-    ($vector_dbg:ident, $vector_rel:ident, $profile:ident, $cfg_entry:ident, $const_entry:ident, $float:ident, $int:ident, $bound:ident, $lanes:literal) => {
+macro_rules! graph_eval {
+    ($vector_dbg:ident, $vector_rel:ident, $profile:ident,
+     [$($generic:tt)*], [$($type_arg:tt)*], $token:ty, $vector:ty, [$($imports:tt)*]) => {
         #[cfg_attr(debug_assertions, inline(never))]
         #[cfg_attr(not(debug_assertions), inline)]
-        fn $vector_dbg<T: magetypes::simd::backends::$bound>(
-            token: T,
-            input: magetypes::simd::generic::$float<T>,
+        fn $vector_dbg<$($generic)*>(
+            token: $token,
+            input: $vector,
             backend: bool,
             cfg: KernelCfg,
-        ) -> Result<magetypes::simd::generic::$float<T>, CbrtfError> {
-            use magetypes::simd::generic::{$float as V, $int as I};
+        ) -> Result<$vector, CbrtfError> {
+            $($imports)*
             eval_cbrtf!(
                 V,
                 I,
@@ -332,11 +333,11 @@ macro_rules! graph {
 
         #[cfg(not(debug_assertions))]
         #[inline(always)]
-        fn $vector_rel<T: magetypes::simd::backends::$bound, K: Kernel, const BACKEND: bool>(
-            token: T,
-            input: magetypes::simd::generic::$float<T>,
-        ) -> Result<magetypes::simd::generic::$float<T>, CbrtfError> {
-            use magetypes::simd::generic::{$float as V, $int as I};
+        fn $vector_rel<$($generic)* K: Kernel, const BACKEND: bool>(
+            token: $token,
+            input: $vector,
+        ) -> Result<$vector, CbrtfError> {
+            $($imports)*
             eval_cbrtf!(
                 V,
                 I,
@@ -359,18 +360,29 @@ macro_rules! graph {
 
         #[inline(always)]
         pub(super) fn $profile<
-            T: magetypes::simd::backends::$bound,
+            $($generic)*
             K: Kernel,
             const BACKEND: bool,
         >(
-            token: T,
-            input: magetypes::simd::generic::$float<T>,
-        ) -> Result<magetypes::simd::generic::$float<T>, CbrtfError> {
+            token: $token,
+            input: $vector,
+        ) -> Result<$vector, CbrtfError> {
             #[cfg(debug_assertions)]
-            return $vector_dbg::<T>(token, input, BACKEND, cfg_of::<K>());
+            return $vector_dbg::<$($type_arg)*>(token, input, BACKEND, cfg_of::<K>());
             #[cfg(not(debug_assertions))]
-            $vector_rel::<T, K, BACKEND>(token, input)
+            $vector_rel::<$($type_arg)* K, BACKEND>(token, input)
         }
+    };
+}
+
+macro_rules! graph {
+    ($vector_dbg:ident, $vector_rel:ident, $profile:ident, $cfg_entry:ident, $const_entry:ident, $float:ident, $int:ident, $bound:ident, $lanes:literal) => {
+        graph_eval!(
+            $vector_dbg, $vector_rel, $profile,
+            [T: magetypes::simd::backends::$bound,], [T,], T,
+            magetypes::simd::generic::$float<T>,
+            [use magetypes::simd::generic::{$float as V, $int as I};]
+        );
 
         #[archmage::magetypes(v4x(cfg(avx512)), v4(cfg(avx512)), v3, neon, wasm128, scalar)]
         pub(super) fn $cfg_entry(
@@ -402,6 +414,15 @@ macro_rules! graph {
         }
     };
 }
+
+graph_eval!(
+    vector1_dbg, vector1_rel, profile1,
+    [], [], archmage::ScalarToken, crate::scalar1::ScalarF32,
+    [
+        use crate::scalar1::{ScalarF32 as V, ScalarI32 as I};
+        type T = archmage::ScalarToken;
+    ]
+);
 
 graph!(
     vector4_dbg,
@@ -438,8 +459,54 @@ graph!(
     16
 );
 
+#[inline(always)]
+pub(super) fn kernel1_cfg(input: f32, backend: bool, cfg: KernelCfg) -> Result<f32, CbrtfError> {
+    use crate::scalar1::ScalarF32;
+    use archmage::ScalarToken;
+    vector1_dbg(
+        ScalarToken,
+        ScalarF32::splat_t(ScalarToken, input),
+        backend,
+        cfg,
+    )
+    .map(|value| value.0)
+}
+
+#[inline(always)]
+pub(super) fn kernel1_with<K: Kernel, const BACKEND: bool>(input: f32) -> Result<f32, CbrtfError> {
+    use crate::scalar1::ScalarF32;
+    use archmage::ScalarToken;
+    profile1::<K, BACKEND>(ScalarToken, ScalarF32::splat_t(ScalarToken, input)).map(|value| value.0)
+}
+
+#[cfg_attr(debug_assertions, inline(never))]
+#[cfg_attr(not(debug_assertions), inline)]
+pub(super) fn slice1_cfg_scalar(
+    src: &[f32],
+    dst: &mut [f32],
+    backend: bool,
+    cfg: KernelCfg,
+) -> Result<(), (usize, CbrtfError)> {
+    for (i, (&x, d)) in src.iter().zip(dst.iter_mut()).enumerate() {
+        *d = kernel1_cfg(x, backend, cfg).map_err(|e| (i, e))?;
+    }
+    Ok(())
+}
+
+#[cfg(not(debug_assertions))]
+#[inline]
+pub(super) fn slice1_with_scalar<K: Kernel, const BACKEND: bool>(
+    src: &[f32],
+    dst: &mut [f32],
+) -> Result<(), (usize, CbrtfError)> {
+    for (i, (&x, d)) in src.iter().zip(dst.iter_mut()).enumerate() {
+        *d = kernel1_with::<K, BACKEND>(x).map_err(|e| (i, e))?;
+    }
+    Ok(())
+}
+
 /// Whole-slice kernel parameterized on `KernelCfg`.
-#[archmage::magetypes(v3, neon, wasm128, scalar)]
+#[archmage::attune(_v3_t, _neon_t, _wasm128_t)]
 pub(super) fn slice8_cfg(
     token: Token,
     src: &[f32],
@@ -517,7 +584,7 @@ pub(super) fn slice16_cfg_v4x(
 /// Whole-slice kernel: one feature region around the loop, the 8-lane graph
 /// per chunk, and `tail[0]` padding.
 #[cfg(not(debug_assertions))]
-#[archmage::magetypes(v3, neon, wasm128, scalar)]
+#[archmage::attune(_v3_t, _neon_t, _wasm128_t)]
 pub(super) fn slice8_with<K: Kernel, const BACKEND: bool>(
     token: Token,
     src: &[f32],

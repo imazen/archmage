@@ -86,6 +86,24 @@ fn scalar_with_token<const CFG: u128, const OP: u8, T: magetypes::simd::backends
     token: T,
     x: f32,
 ) -> Result<f32, ExpfError> {
+    let opts = const {
+        let opts = ExpfOptions::decode_const(CFG);
+        opts.validate();
+        opts
+    };
+    let backend = opts.is_backend();
+    if token.as_scalar().is_some() {
+        let plan = if opts.is_caller() {
+            dispatch::Plan::Software
+        } else {
+            dispatch::select(token, Execution::Upgrade, backend, false)
+        };
+        return if backend {
+            dispatch::run1_const::<Cfg<CFG>, OP, true>(plan, x)
+        } else {
+            dispatch::run1_const::<Cfg<CFG>, OP, false>(plan, x)
+        };
+    }
     run4::<CFG, OP, T>(token, magetypes::simd::generic::f32x4::splat_t(token, x))
         .map(|v| v.to_array()[0])
         .map_err(|error| ExpfError {
@@ -111,12 +129,7 @@ fn array_const<const CFG: u128, const OP: u8, const N: usize>(
     }
     let mut output = [0.0; N];
     if N == 1 {
-        let value = run4::<CFG, OP, _>(ScalarToken, f32x4::splat_t(ScalarToken, inputs[0]))
-            .map_err(|error| ExpfError {
-                lane_mask: 1,
-                ..error
-            })?;
-        output[0] = value.to_array()[0];
+        output[0] = scalar_with_token::<CFG, OP, _>(ScalarToken, inputs[0])?;
     } else if N == 4 {
         let mut input = [0.0; 4];
         input.copy_from_slice(&inputs);
@@ -179,14 +192,7 @@ pub(crate) fn runtime_token<T: archmage::IntoConcreteToken, const OP: u8, const 
     let cfg = graph::KernelCfg::from_options(options);
     let mut output = [0.0; N];
     if N == 1 {
-        let value =
-            dispatch::run4_cfg(plan, [inputs[0]; 4], OP, backend, cfg).map_err(|error| {
-                ExpfError {
-                    lane_mask: 1,
-                    ..error
-                }
-            })?;
-        output[0] = value[0];
+        output[0] = dispatch::run1_cfg(plan, inputs[0], OP, backend, cfg)?;
     } else if N == 4 {
         let mut input = [0.0; 4];
         input.copy_from_slice(&inputs);
@@ -326,7 +332,7 @@ impl<const CFG: u128> Expf<CFG> {
     /// # Panics
     ///
     /// Panics if `src.len() != dst.len()`.
-    #[inline]
+    #[inline(always)]
     pub fn exp2_slice(src: &[f32], dst: &mut [f32]) -> Result<(), SliceError<ExpfErrorKind>> {
         slice_const::<CFG, 0, _>(archmage::ScalarToken, src, dst)
     }
@@ -395,7 +401,7 @@ impl<const CFG: u128> Expf<CFG> {
     /// # Panics
     ///
     /// Panics if `src.len() != dst.len()`.
-    #[inline]
+    #[inline(always)]
     pub fn exp_slice(src: &[f32], dst: &mut [f32]) -> Result<(), SliceError<ExpfErrorKind>> {
         slice_const::<CFG, 1, _>(archmage::ScalarToken, src, dst)
     }
