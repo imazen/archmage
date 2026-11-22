@@ -1218,10 +1218,14 @@ const COMPILE_BUDGETS: &[(&str, &[&str], usize)] = &[
             "magetypes/src/simd/impls/x86_v4.rs",
             "magetypes/src/simd/impls/x86_v4_f32_delegated.rs",
             "magetypes/src/simd/impls/x86_v4_f32_overrides.rs",
+            "magetypes/src/simd/impls/x86_v4_narrow_delegated.rs",
             "magetypes/src/simd/impls/scalar.rs",
             "magetypes/src/simd/backends/",
         ],
-        34_708, // measured 34 456
+        // Includes `x86_v4_narrow_delegated.rs` (previously omitted; complete
+        // pre-macro count was 43 767 lines, reduced to 37 002 via concrete
+        // delegation macros).
+        37_300,
     ),
     (
         "aarch64",

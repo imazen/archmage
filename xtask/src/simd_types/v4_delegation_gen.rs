@@ -1,24 +1,92 @@
-//! `impls/x86_v4_f32_delegated.rs`: the AVX-512 tokens' `F32x4Backend` /
-//! `F32x8Backend` impls, forwarded to `X64V3Token`'s.
+//! Concrete-impl delegation macros for `impls/x86_v4_f32_delegated.rs` and
+//! `impls/x86_v4_narrow_delegated.rs`.
 //!
-//! Derived from the generated trait definitions, so every method the trait
-//! declares is forwarded and a new trait method cannot silently fall back to
-//! its scalar default body for the AVX-512 tokens (issue #60). Methods with a cheaper AVX-512VL form call the hand-written helpers in
-//! `impls/x86_v4_f32_overrides.rs` instead.
+//! Each generated file defines a crate-private `macro_rules!` whose arms are
+//! derived directly from the generated backend trait ASTs (so a new trait
+//! method can never silently fall back to its scalar default body, issue #60),
+//! followed by one explicit macro invocation per `(Trait, Token)` pair.
+//!
+//! ## Intentional default-method exceptions
+//!
+//! Only `F32x4Backend::store_rgba_bytes` and `F32x8Backend::store_rgba_bytes`
+//! are intentionally omitted from forwarding so they inherit their trait
+//! default bodies, which dispatch through `Self::store_rgba_u8_into` (preserving
+//! the selected AVX-512VL pixel-packing override on `F32x4Internal`). The
+//! generator requires every listed exception to carry a default body on the
+//! parsed trait and panics if an exception disappears or is unmatched.
+//!
+//! ## Auditability invariants
+//!
+//! - Every invocation expands to an ordinary concrete `impl Trait for
+//!   archmage::<Token>` (no blanket impls, no coherence/method-lookup changes,
+//!   concrete rustdoc rosters preserved).
+//! - The macro accepts only an `archmage::$child:ident` token identifier and
+//!   (for f32 overrides) a two-arm `v4_parent!` proof extractor (`identity` or
+//!   `v4`).
+//! - The generator validates at generation time that there are no duplicate
+//!   tokens, duplicate trait specs, duplicate overrides, or unmatched overrides
+//!   (catching renamed/removed trait methods immediately).
+//! - The generator lexically scans the full emitted file (including helper
+//!   macros and invocations, ignoring comments) and asserts zero forbidden
+//!   identifiers (`unsafe`, `target_feature`, `arcane`, `attune`, `rite`,
+//!   `from_context`, `summon`, `macro_export`) and zero raw pointer types
+//!   (`*const` / `*mut`, regardless of whitespace).
+
+use std::collections::BTreeSet;
+use std::io::Write;
+use std::process::{Command, Stdio};
 
 use indoc::formatdoc;
 use quote::{ToTokens, format_ident, quote};
 use syn::{FnArg, Item, Pat, TraitItem};
 
-/// The tokens that delegate, with the expression that yields the
-/// `X64V4Token` the override helpers take as proof.
-const TOKENS: &[(&str, &str)] = &[
-    ("archmage::X64V4Token", "self"),
-    ("archmage::X64V4xToken", "self.v4()"),
-    ("archmage::Avx512Fp16Token", "self.v4()"),
+/// How an AVX-512 child token obtains the `X64V4Token` proof expected by
+/// `impls/x86_v4_f32_overrides.rs`.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum V4ProofMode {
+    /// The token *is* `X64V4Token` (`self`).
+    Identity,
+    /// The token is a strict superset of `X64V4Token` (`self.v4()`).
+    ViaV4,
+}
+
+impl V4ProofMode {
+    const fn as_macro_tag(self) -> &'static str {
+        match self {
+            Self::Identity => "identity",
+            Self::ViaV4 => "v4",
+        }
+    }
+}
+
+/// A concrete `archmage::*` token that delegates narrow W128/W256 traits to
+/// `archmage::X64V3Token`.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) struct DelegatedToken {
+    /// Unqualified identifier under `archmage::` (e.g. `"X64V4Token"`).
+    pub(crate) ident: &'static str,
+    /// How this token supplies an `X64V4Token` proof to AVX-512VL overrides.
+    pub(crate) v4_mode: V4ProofMode,
+}
+
+/// The AVX-512 tokens that delegate narrow W128/W256 backends to V3.
+const TOKENS: &[DelegatedToken] = &[
+    DelegatedToken {
+        ident: "X64V4Token",
+        v4_mode: V4ProofMode::Identity,
+    },
+    DelegatedToken {
+        ident: "X64V4xToken",
+        v4_mode: V4ProofMode::ViaV4,
+    },
+    DelegatedToken {
+        ident: "Avx512Fp16Token",
+        v4_mode: V4ProofMode::ViaV4,
+    },
 ];
 
-/// Methods that take the AVX-512VL path: (trait, method, helper).
+/// Methods that take the AVX-512VL path in `impls/x86_v4_f32_overrides.rs`:
+/// `(trait_name, method_name, helper_fn)`.
 const OVERRIDES: &[(&str, &str, &str)] = &[
     ("F32x4Backend", "to_u8_bytes", "to_u8_bytes_x4_v4"),
     (
@@ -46,25 +114,57 @@ const OVERRIDES: &[(&str, &str, &str)] = &[
     ("F32x8Internal", "from_u32_lanes", "from_u32_lanes_x8_v4"),
 ];
 
-/// Generate the delegation file from the two trait sources.
+/// Trait methods intentionally left to their trait default body rather than
+/// forwarded to `X64V3Token`. Each calls `Self::store_rgba_u8_into`, which
+/// routes through `F32x4Internal` / `F32x8Internal` and preserves overrides.
+const DEFAULT_BODY_EXCEPTIONS: &[(&str, &str)] = &[
+    ("F32x4Backend", "store_rgba_bytes"),
+    ("F32x8Backend", "store_rgba_bytes"),
+];
+
+const CHILD_PLACEHOLDER: &str = "__DELEGATE_CHILD__";
+const V4_PLACEHOLDER: &str = "__DELEGATE_V4__";
+const ARM_SPLIT_MARKER: &str = "// __DELEGATE_ARM_SPLIT__";
+
+/// Generate `impls/x86_v4_f32_delegated.rs` from the two f32 trait sources.
 pub(crate) fn generate(f32x4_trait_src: &str, f32x8_trait_src: &str) -> String {
-    let mut body = String::new();
-    for (trait_name, src) in [
+    let specs = [
         ("F32x4Backend", f32x4_trait_src),
         ("F32x4Internal", f32x4_trait_src),
         ("F32x8Backend", f32x8_trait_src),
         ("F32x8Internal", f32x8_trait_src),
-    ] {
-        let trait_item = find_trait(src, trait_name);
-        for (token, v4_expr) in TOKENS {
-            body.push_str(&delegating_impl(trait_name, &trait_item, token, v4_expr));
-        }
-    }
+    ];
+    let macro_and_invocations = build_delegation_body(
+        "delegate_v3_f32_backend",
+        &specs,
+        TOKENS,
+        OVERRIDES,
+        DEFAULT_BODY_EXCEPTIONS,
+        true,
+    );
+
+    let code_body = formatdoc! {r#"
+        use super::x86_v4_f32_overrides as overrides;
+        use crate::simd::backends::{{F32x4Backend, F32x4Internal, F32x8Backend, F32x8Internal}};
+
+        macro_rules! v4_parent {{
+            ($token:ident, identity) => {{
+                $token
+            }};
+            ($token:ident, v4) => {{
+                $token.v4()
+            }};
+        }}
+
+        {macro_and_invocations}
+    "#};
+    assert_source_audit_invariants(&code_body);
 
     formatdoc! {r#"
         //! W128 / W256 f32 backend delegation for `X64V4Token` / `X64V4xToken` /
-        //! `Avx512Fp16Token`. Generated by xtask from the `F32x4Backend` and
-        //! `F32x8Backend` definitions; do not edit.
+        //! `Avx512Fp16Token`. Generated by xtask from the `F32x4Backend`,
+        //! `F32x4Internal`, `F32x8Backend`, and `F32x8Internal` definitions;
+        //! do not edit.
         //!
         //! ## Why this file exists
         //!
@@ -83,43 +183,73 @@ pub(crate) fn generate(f32x4_trait_src: &str, f32x8_trait_src: &str) -> String {
         //! V4's. [`F32x4Backend`] / [`F32x8Backend`] for `X64V3Token` use only V3
         //! intrinsics, so forwarding V4's methods to them is sound; `Self::Repr`
         //! stays `__m128` / `__m256`, so callers see no representation change.
-        //! Each method forwards with the `.v3()` extractor, so the proof chain is
-        //! explicit at every call. `X64V4xToken` and `Avx512Fp16Token` are V4 plus
-        //! further AVX-512 sub-features, supersets of V3 by the same argument.
+        //! Each inherited method forwards with the `.v3()` extractor, so the proof
+        //! chain is explicit at every call. `X64V4xToken` and `Avx512Fp16Token` are
+        //! V4 plus further AVX-512 sub-features, supersets of V3 by the same argument.
         //!
-        //! ## The exception: pixel packing
+        //! ## AVX-512VL overrides and default-method exceptions
         //!
-        //! `to_u8_bytes` (both widths) and `f32x4::{{store_rgba_u8_into, store_rgb_u8_into}}`
-        //! call the hand-written AVX-512VL helpers in `x86_v4_f32_overrides.rs`, which
-        //! take a concrete `X64V4Token` (`self` for V4, `self.v4()` for V4x and FP16).
+        //! Sixteen narrow methods call the hand-written AVX-512VL helpers in
+        //! `x86_v4_f32_overrides.rs`, which take a concrete `X64V4Token`
+        //! (`v4_parent!(self, identity)` for V4, `v4_parent!(self, v4)` for V4x
+        //! and FP16):
+        //! - `F32x4Backend`: `to_u8_bytes`, `min`, `max`
+        //! - `F32x4Internal`: `store_rgba_u8_into`, `store_rgb_u8_into`,
+        //!   `to_u16_lanes`, `to_u8_lanes`, `to_u32_lanes`, `from_u32_lanes`
+        //! - `F32x8Backend`: `to_u8_bytes`, `min`, `max`
+        //! - `F32x8Internal`: `to_u16_lanes`, `to_u8_lanes`, `to_u32_lanes`,
+        //!   `from_u32_lanes`
+        //!
+        //! `F32x4Backend::store_rgba_bytes` and `F32x8Backend::store_rgba_bytes`
+        //! are intentionally left to their trait default bodies, which dispatch to
+        //! `Self::store_rgba_u8_into` so the selected packing backend is preserved.
+        //!
+        //! ## Concrete-impl macro auditability
+        //!
+        //! `delegate_v3_f32_backend!` is crate-private and expands only to plain
+        //! concrete `impl Trait for archmage::$child` blocks — zero `unsafe`,
+        //! zero raw pointers, zero target-feature boundaries, and no blanket impls.
 
         #![cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
 
-        use crate::simd::backends::{{F32x4Backend, F32x4Internal, F32x8Backend, F32x8Internal}};
-        use super::x86_v4_f32_overrides as overrides;
-
-        {body}
+        {code_body}
     "#}
 }
 
-/// `impls/x86_v4_narrow_delegated.rs`: every other W128/W256 backend the
-/// AVX-512 tokens lack — f64x2/f64x4, the i8/i16/i32/i64 and
+/// Generate `impls/x86_v4_narrow_delegated.rs`: every other W128/W256 backend
+/// the AVX-512 tokens lack — f64x2/f64x4, the i8/i16/i32/i64 and
 /// u8/u16/u32/u64 families — plus the float↔int `*Convert` and `*Bitcast`
-/// traits (needed for `F32x8Convert`-bounded kernels like iwssim's
-/// infow map). Same delegation proof as the f32 file; no overrides —
-/// every method forwards to `X64V3Token`.
+/// traits. Same delegation proof as the f32 file; no overrides — every method
+/// forwards to `X64V3Token`.
 ///
 /// `specs` is `(trait_name, trait_source)` pairs read from the generated
-/// `backends/*.rs` sources, so a new method cannot fall back to its
-/// scalar default body (issue #60).
+/// `backends/*.rs` sources, so a new method cannot fall back to its scalar
+/// default body (issue #60).
 pub(crate) fn generate_narrow(specs: &[(String, String)]) -> String {
-    let mut body = String::new();
-    for (trait_name, src) in specs {
-        let trait_item = find_trait(src, trait_name);
-        for (token, v4_expr) in TOKENS {
-            body.push_str(&delegating_impl(trait_name, &trait_item, token, v4_expr));
-        }
-    }
+    let borrowed: Vec<(&str, &str)> = specs
+        .iter()
+        .map(|(name, src)| (name.as_str(), src.as_str()))
+        .collect();
+    let macro_and_invocations = build_delegation_body(
+        "delegate_v3_narrow_backend",
+        &borrowed,
+        TOKENS,
+        &[],
+        &[],
+        false,
+    );
+
+    let code_body = formatdoc! {r#"
+        // Wildcard: the impls' signatures name supertraits of the
+        // implemented traits (`<Self as F32x8Backend>::Repr` inside a
+        // `F32x8Convert` impl, `<Self as U8x16Backend>::Repr` inside an
+        // `I8x16Bitcast` impl, …) — every sibling backend trait must be
+        // in scope, not just the implemented set.
+        use crate::simd::backends::*;
+
+        {macro_and_invocations}
+    "#};
+    assert_source_audit_invariants(&code_body);
 
     formatdoc! {r#"
         //! W128 / W256 f64 and integer backends plus the float↔int
@@ -148,18 +278,306 @@ pub(crate) fn generate_narrow(specs: &[(String, String)]) -> String {
         //! Popcnt extension backends are NOT delegated: they exist only
         //! for `X64V4xToken` (native AVX-512 VPOPCNTDQ) and have no V3
         //! impls to forward to.
+        //!
+        //! ## Concrete-impl macro auditability
+        //!
+        //! `delegate_v3_narrow_backend!` is crate-private and expands only to
+        //! plain concrete `impl Trait for archmage::$child` blocks — zero
+        //! `unsafe`, zero raw pointers, zero target-feature boundaries, and no
+        //! blanket impls.
 
         #![cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
 
-        // Wildcard: the impls' signatures name supertraits of the
-        // implemented traits (`<Self as F32x8Backend>::Repr` inside a
-        // `F32x8Convert` impl, `<Self as U8x16Backend>::Repr` inside an
-        // `I8x16Bitcast` impl, …) — every sibling backend trait must be
-        // in scope, not just the implemented set.
-        use crate::simd::backends::*;
-
-        {body}
+        {code_body}
     "#}
+}
+
+fn build_delegation_body(
+    macro_name: &str,
+    specs: &[(&str, &str)],
+    tokens: &[DelegatedToken],
+    overrides: &[(&str, &str, &str)],
+    default_exceptions: &[(&str, &str)],
+    with_v4_overrides: bool,
+) -> String {
+    validate_inputs(
+        specs,
+        tokens,
+        overrides,
+        default_exceptions,
+        with_v4_overrides,
+    );
+
+    let mut used_overrides: BTreeSet<(&str, &str)> = BTreeSet::new();
+    let mut used_exceptions: BTreeSet<(&str, &str)> = BTreeSet::new();
+    let mut raw_impls: Vec<(&str, String)> = Vec::with_capacity(specs.len());
+
+    for (trait_name, src) in specs {
+        let trait_item = find_trait(src, trait_name);
+        let raw_impl = delegating_impl_template(
+            trait_name,
+            &trait_item,
+            overrides,
+            default_exceptions,
+            &mut used_overrides,
+            &mut used_exceptions,
+        );
+        raw_impls.push((trait_name, raw_impl));
+    }
+
+    // Completeness check: every configured override and default-body exception
+    // must match an actual trait method.
+    for &(ov_trait, ov_method, ov_helper) in overrides {
+        assert!(
+            used_overrides.contains(&(ov_trait, ov_method)),
+            "unmatched override ({ov_trait}::{ov_method} -> {ov_helper}): trait or method not found"
+        );
+    }
+    for &(ex_trait, ex_method) in default_exceptions {
+        assert!(
+            used_exceptions.contains(&(ex_trait, ex_method)),
+            "unmatched default-body exception ({ex_trait}::{ex_method}): trait or method not found"
+        );
+    }
+
+    let formatted_impls = format_impl_templates(&raw_impls);
+
+    let mut out = String::new();
+    out.push_str(&format!("macro_rules! {macro_name} {{\n"));
+    for ((trait_name, _), formatted) in raw_impls.iter().zip(formatted_impls.iter()) {
+        let arm_body = formatted
+            .replace(CHILD_PLACEHOLDER, "$child")
+            .replace(V4_PLACEHOLDER, "$v4");
+        if with_v4_overrides {
+            out.push_str(&format!(
+                "    ({trait_name} => $child:ident, v4 = $v4:ident) => {{\n"
+            ));
+        } else {
+            out.push_str(&format!("    ({trait_name} => $child:ident) => {{\n"));
+        }
+        for line in arm_body.lines() {
+            if line.is_empty() {
+                out.push('\n');
+            } else {
+                out.push_str("        ");
+                out.push_str(line);
+                out.push('\n');
+            }
+        }
+        out.push_str("    };\n");
+    }
+    out.push_str("}\n\n");
+
+    let total_impls = tokens.len() * specs.len();
+    out.push_str(&format!(
+        "// Concrete trait implementations ({} tokens × {} traits = {total_impls} impls).\n",
+        tokens.len(),
+        specs.len(),
+    ));
+    for token in tokens {
+        let ident = token.ident;
+        if with_v4_overrides {
+            let tag = token.v4_mode.as_macro_tag();
+            out.push_str(&format!("\n// archmage::{ident} (v4 = {tag})\n"));
+            for (trait_name, _) in specs {
+                out.push_str(&format!(
+                    "{macro_name}!({trait_name} => {ident}, v4 = {tag});\n"
+                ));
+            }
+        } else {
+            out.push_str(&format!("\n// archmage::{ident}\n"));
+            for (trait_name, _) in specs {
+                out.push_str(&format!("{macro_name}!({trait_name} => {ident});\n"));
+            }
+        }
+    }
+
+    assert_source_audit_invariants(&out);
+    out
+}
+
+fn validate_inputs(
+    specs: &[(&str, &str)],
+    tokens: &[DelegatedToken],
+    overrides: &[(&str, &str, &str)],
+    default_exceptions: &[(&str, &str)],
+    with_v4_overrides: bool,
+) {
+    assert!(
+        !specs.is_empty(),
+        "delegation trait spec list must not be empty"
+    );
+    assert!(
+        !tokens.is_empty(),
+        "delegation token list must not be empty"
+    );
+    if !with_v4_overrides {
+        assert!(
+            overrides.is_empty(),
+            "overrides supplied for non-override delegation macro"
+        );
+    }
+
+    let mut seen_traits = BTreeSet::new();
+    for &(trait_name, _) in specs {
+        assert!(
+            !trait_name.is_empty(),
+            "delegation trait name must not be empty"
+        );
+        assert!(
+            seen_traits.insert(trait_name),
+            "duplicate trait `{trait_name}` in delegation spec list"
+        );
+    }
+
+    let mut seen_tokens = BTreeSet::new();
+    for token in tokens {
+        assert!(
+            !token.ident.is_empty()
+                && token
+                    .ident
+                    .chars()
+                    .all(|c| c.is_ascii_alphanumeric() || c == '_'),
+            "invalid token identifier `{}` in delegation list",
+            token.ident
+        );
+        assert!(
+            seen_tokens.insert(token.ident),
+            "duplicate token `{}` in delegation token list",
+            token.ident
+        );
+    }
+
+    let mut seen_overrides = BTreeSet::new();
+    for &(ov_trait, ov_method, ov_helper) in overrides {
+        assert!(
+            !ov_helper.is_empty(),
+            "empty override helper for {ov_trait}::{ov_method}"
+        );
+        assert!(
+            seen_overrides.insert((ov_trait, ov_method)),
+            "duplicate override for {ov_trait}::{ov_method}"
+        );
+    }
+
+    let mut seen_exceptions = BTreeSet::new();
+    for &(ex_trait, ex_method) in default_exceptions {
+        assert!(
+            seen_exceptions.insert((ex_trait, ex_method)),
+            "duplicate default-body exception for {ex_trait}::{ex_method}"
+        );
+        assert!(
+            !seen_overrides.contains(&(ex_trait, ex_method)),
+            "{ex_trait}::{ex_method} cannot be both an override and a default-body exception"
+        );
+    }
+}
+
+/// Mechanical safety/auditability guard: lexically scan emitted code (skipping
+/// comments and string literals) so checks are independent of whitespace or
+/// formatting. Rejects forbidden identifiers (`unsafe`, `target_feature`,
+/// `arcane`, `attune`, `rite`, `from_context`, `summon`, `macro_export`) and
+/// raw pointer syntax (`*const` / `*mut` with any intervening whitespace).
+fn assert_source_audit_invariants(source: &str) {
+    const FORBIDDEN_IDENTS: &[&str] = &[
+        "unsafe",
+        "target_feature",
+        "arcane",
+        "attune",
+        "rite",
+        "from_context",
+        "summon",
+        "macro_export",
+    ];
+
+    let bytes = source.as_bytes();
+    let len = bytes.len();
+    let mut i = 0;
+    let mut prev_star = false;
+
+    while i < len {
+        let b = bytes[i];
+
+        // Skip whitespace without resetting `prev_star`, so `* const` / `* mut`
+        // are caught identically to `*const` / `*mut`.
+        if b.is_ascii_whitespace() {
+            i += 1;
+            continue;
+        }
+
+        // Skip `//` line comments.
+        if b == b'/' && i + 1 < len && bytes[i + 1] == b'/' {
+            i += 2;
+            while i < len && bytes[i] != b'\n' {
+                i += 1;
+            }
+            continue;
+        }
+
+        // Skip `/* ... */` block comments (supporting nesting).
+        if b == b'/' && i + 1 < len && bytes[i + 1] == b'*' {
+            i += 2;
+            let mut depth = 1usize;
+            while i + 1 < len && depth > 0 {
+                if bytes[i] == b'/' && bytes[i + 1] == b'*' {
+                    depth += 1;
+                    i += 2;
+                } else if bytes[i] == b'*' && bytes[i + 1] == b'/' {
+                    depth -= 1;
+                    i += 2;
+                } else {
+                    i += 1;
+                }
+            }
+            continue;
+        }
+
+        // Skip double-quoted string literals (used in `#![cfg(...)]`).
+        if b == b'"' {
+            prev_star = false;
+            i += 1;
+            while i < len {
+                if bytes[i] == b'\\' {
+                    i += 2;
+                    continue;
+                }
+                if bytes[i] == b'"' {
+                    i += 1;
+                    break;
+                }
+                i += 1;
+            }
+            continue;
+        }
+
+        // Track `*` for raw-pointer detection (`*const` / `*mut`).
+        if b == b'*' {
+            prev_star = true;
+            i += 1;
+            continue;
+        }
+
+        // Scan whole Rust identifiers (including raw `r#ident`).
+        if b.is_ascii_alphabetic() || b == b'_' {
+            let start = i;
+            i += 1;
+            while i < len && (bytes[i].is_ascii_alphanumeric() || bytes[i] == b'_') {
+                i += 1;
+            }
+            let ident = &source[start..i];
+            if prev_star && matches!(ident, "const" | "mut") {
+                panic!("delegation source contains forbidden raw pointer `*{ident}`");
+            }
+            prev_star = false;
+            if FORBIDDEN_IDENTS.contains(&ident) {
+                panic!("delegation source contains forbidden identifier `{ident}`");
+            }
+            continue;
+        }
+
+        prev_star = false;
+        i += 1;
+    }
 }
 
 fn find_trait(src: &str, name: &str) -> syn::ItemTrait {
@@ -173,16 +591,20 @@ fn find_trait(src: &str, name: &str) -> syn::ItemTrait {
         .unwrap_or_else(|| panic!("trait {name} not found in generated source"))
 }
 
-fn delegating_impl(
-    trait_name: &str,
+fn delegating_impl_template<'a>(
+    trait_name: &'a str,
     trait_item: &syn::ItemTrait,
-    token: &str,
-    v4_expr: &str,
+    overrides: &[(&'a str, &'a str, &'a str)],
+    default_exceptions: &[(&'a str, &'a str)],
+    used_overrides: &mut BTreeSet<(&'a str, &'a str)>,
+    used_exceptions: &mut BTreeSet<(&'a str, &'a str)>,
 ) -> String {
     let trait_ident = format_ident!("{trait_name}");
-    let token_path: syn::Path = syn::parse_str(token).expect("token path");
-    let v4: syn::Expr = syn::parse_str(v4_expr).expect("v4 expression");
+    let child_placeholder = format_ident!("{CHILD_PLACEHOLDER}");
+    let v4_placeholder = format_ident!("{V4_PLACEHOLDER}");
     let mut methods = Vec::new();
+    let mut seen_methods = BTreeSet::new();
+
     for item in &trait_item.items {
         let TraitItem::Fn(method) = item else {
             continue;
@@ -200,7 +622,19 @@ fn delegating_impl(
         .expect("method signature re-parse");
         let sig = &sig;
         let name = &sig.ident;
-        if name == "store_rgba_bytes" {
+        assert!(
+            seen_methods.insert(name.to_string()),
+            "duplicate method `{name}` in trait {trait_name}"
+        );
+        if let Some(&(ex_trait, ex_method)) = default_exceptions
+            .iter()
+            .find(|&&(t, m)| t == trait_name && name == m)
+        {
+            assert!(
+                method.default.is_some(),
+                "default-body exception {ex_trait}::{ex_method} has no default body on the trait"
+            );
+            used_exceptions.insert((ex_trait, ex_method));
             continue;
         }
         assert!(
@@ -239,12 +673,15 @@ fn delegating_impl(
                 quote! { ::<#(#params),*> }
             }
         };
-        let override_helper = OVERRIDES
+        let override_match = overrides
             .iter()
-            .find(|(t, m, _)| *t == trait_name && name == m)
-            .map(|(_, _, helper)| format_ident!("{helper}"));
-        let body = match override_helper {
-            Some(helper) => quote! { overrides::#helper #turbofish(#v4, #(#args),*) },
+            .find(|&&(t, m, _)| t == trait_name && name == m);
+        let body = match override_match {
+            Some(&(ov_trait, ov_method, helper)) => {
+                used_overrides.insert((ov_trait, ov_method));
+                let helper_ident = format_ident!("{helper}");
+                quote! { overrides::#helper_ident #turbofish(v4_parent!(self, #v4_placeholder), #(#args),*) }
+            }
             None => {
                 quote! { <archmage::X64V3Token as #trait_ident>::#name #turbofish(self.v3(), #(#args),*) }
             }
@@ -254,6 +691,7 @@ fn delegating_impl(
             #sig { #body }
         });
     }
+
     // `type Repr` exists on the backend traits but not on the
     // float↔int conversion traits (whose methods name supertrait Reprs
     // in signature position) — emit it only when the trait declares it.
@@ -265,10 +703,253 @@ fn delegating_impl(
         quote! { type #assoc = <archmage::X64V3Token as #trait_ident>::#assoc; }
     });
     let tokens = quote! {
-        impl #trait_ident for #token_path {
+        impl #trait_ident for archmage::#child_placeholder {
             #repr_impl
             #(#methods)*
         }
     };
-    format!("{tokens}\n\n")
+    tokens.to_string()
+}
+
+/// Format all generated `impl` templates in a single `rustfmt` invocation so
+/// macro arm bodies are canonically indented and easy to audit. Fails loudly
+/// with `rustfmt` stderr rather than silently falling back to unformatted
+/// single-line token strings.
+fn format_impl_templates(raw_impls: &[(&str, String)]) -> Vec<String> {
+    let mut joined = String::new();
+    for (idx, (_, src)) in raw_impls.iter().enumerate() {
+        if idx > 0 {
+            joined.push('\n');
+            joined.push_str(ARM_SPLIT_MARKER);
+            joined.push('\n');
+        }
+        joined.push_str(src);
+        joined.push('\n');
+    }
+
+    let formatted = run_rustfmt(&joined);
+    let parts: Vec<String> = formatted
+        .split(ARM_SPLIT_MARKER)
+        .map(|part| part.trim().to_string())
+        .collect();
+    assert_eq!(
+        parts.len(),
+        raw_impls.len(),
+        "rustfmt split marker count mismatch (expected {}, got {})",
+        raw_impls.len(),
+        parts.len()
+    );
+    parts
+}
+
+fn run_rustfmt(input: &str) -> String {
+    let mut child = Command::new("rustfmt")
+        .arg("--edition")
+        .arg("2024")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("failed to spawn `rustfmt --edition 2024` for delegation templates");
+    if let Some(mut stdin) = child.stdin.take() {
+        stdin
+            .write_all(input.as_bytes())
+            .expect("failed to write delegation templates to rustfmt stdin");
+    }
+    let output = child
+        .wait_with_output()
+        .expect("failed to wait on rustfmt for delegation templates");
+    assert!(
+        output.status.success(),
+        "rustfmt failed on delegation templates (status {}):\n{}",
+        output.status,
+        String::from_utf8_lossy(&output.stderr)
+    );
+    String::from_utf8(output.stdout).expect("rustfmt stdout must be valid UTF-8")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const SAMPLE_TRAIT: &str = r#"
+        pub trait DemoBackend {
+            type Repr;
+            fn splat(self, v: f32) -> Self::Repr;
+            fn min(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
+            fn write(self, a: Self::Repr, out: &mut [f32; 4]);
+            fn default_helper(self, a: Self::Repr) -> Self::Repr {
+                a
+            }
+        }
+    "#;
+
+    const SAMPLE_TOKENS: &[DelegatedToken] = &[
+        DelegatedToken {
+            ident: "X64V4Token",
+            v4_mode: V4ProofMode::Identity,
+        },
+        DelegatedToken {
+            ident: "X64V4xToken",
+            v4_mode: V4ProofMode::ViaV4,
+        },
+    ];
+
+    #[test]
+    fn generated_macros_emit_exact_concrete_invocations_and_pass_audit() {
+        let with_ov = build_delegation_body(
+            "delegate_demo_f32",
+            &[("DemoBackend", SAMPLE_TRAIT)],
+            SAMPLE_TOKENS,
+            &[("DemoBackend", "min", "min_demo_v4")],
+            &[("DemoBackend", "default_helper")],
+            true,
+        );
+        assert!(with_ov.contains("macro_rules! delegate_demo_f32 {"));
+        assert!(with_ov.contains("impl DemoBackend for archmage::$child {"));
+        assert!(with_ov.contains("fn write("));
+        assert!(!with_ov.contains("fn default_helper("));
+        assert!(with_ov.contains("overrides::min_demo_v4(v4_parent!(self, $v4), a, b)"));
+        assert!(with_ov.contains("delegate_demo_f32!(DemoBackend => X64V4Token, v4 = identity);"));
+        assert!(with_ov.contains("delegate_demo_f32!(DemoBackend => X64V4xToken, v4 = v4);"));
+
+        let without_ov = build_delegation_body(
+            "delegate_demo_narrow",
+            &[("DemoBackend", SAMPLE_TRAIT)],
+            SAMPLE_TOKENS,
+            &[],
+            &[],
+            false,
+        );
+        assert!(without_ov.contains("macro_rules! delegate_demo_narrow {"));
+        assert!(without_ov.contains("(DemoBackend => $child:ident) => {"));
+        assert!(without_ov.contains("fn default_helper("));
+        assert!(without_ov.contains("delegate_demo_narrow!(DemoBackend => X64V4Token);"));
+        assert!(without_ov.contains("delegate_demo_narrow!(DemoBackend => X64V4xToken);"));
+    }
+
+    #[test]
+    #[should_panic(expected = "duplicate override")]
+    fn duplicate_override_panics() {
+        let _ = build_delegation_body(
+            "delegate_demo",
+            &[("DemoBackend", SAMPLE_TRAIT)],
+            SAMPLE_TOKENS,
+            &[
+                ("DemoBackend", "min", "min_a"),
+                ("DemoBackend", "min", "min_b"),
+            ],
+            &[],
+            true,
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "unmatched override")]
+    fn unknown_override_panics() {
+        let _ = build_delegation_body(
+            "delegate_demo",
+            &[("DemoBackend", SAMPLE_TRAIT)],
+            SAMPLE_TOKENS,
+            &[("DemoBackend", "nonexistent_method", "helper_v4")],
+            &[],
+            true,
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "has no default body")]
+    fn default_exception_without_default_body_panics() {
+        let _ = build_delegation_body(
+            "delegate_demo",
+            &[("DemoBackend", SAMPLE_TRAIT)],
+            SAMPLE_TOKENS,
+            &[],
+            &[("DemoBackend", "splat")],
+            false,
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "unmatched default-body exception")]
+    fn unknown_default_exception_panics() {
+        let _ = build_delegation_body(
+            "delegate_demo",
+            &[("DemoBackend", SAMPLE_TRAIT)],
+            SAMPLE_TOKENS,
+            &[],
+            &[("DemoBackend", "no_such_default")],
+            false,
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "duplicate trait")]
+    fn duplicate_trait_spec_panics() {
+        let _ = build_delegation_body(
+            "delegate_demo",
+            &[("DemoBackend", SAMPLE_TRAIT), ("DemoBackend", SAMPLE_TRAIT)],
+            SAMPLE_TOKENS,
+            &[],
+            &[],
+            false,
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "duplicate token")]
+    fn duplicate_token_panics() {
+        let dup = &[
+            DelegatedToken {
+                ident: "X64V4Token",
+                v4_mode: V4ProofMode::Identity,
+            },
+            DelegatedToken {
+                ident: "X64V4Token",
+                v4_mode: V4ProofMode::ViaV4,
+            },
+        ];
+        let _ = build_delegation_body(
+            "delegate_demo",
+            &[("DemoBackend", SAMPLE_TRAIT)],
+            dup,
+            &[],
+            &[],
+            false,
+        );
+    }
+
+    #[test]
+    fn audit_invariants_allow_write_and_comments() {
+        assert_source_audit_invariants(
+            "// zero `unsafe`, zero *const, zero target_feature\n\
+             fn write(x: f32) -> f32 { x * x }\n",
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "forbidden identifier `unsafe`")]
+    fn audit_invariants_reject_unsafe() {
+        assert_source_audit_invariants("macro_rules! bad { () => { unsafe { } }; }");
+    }
+
+    #[test]
+    #[should_panic(expected = "forbidden identifier `target_feature`")]
+    fn audit_invariants_reject_target_feature() {
+        assert_source_audit_invariants(
+            "macro_rules! bad { () => { #[target_feature(enable = \"avx2\")] fn f() {} }; }",
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "forbidden raw pointer `*const`")]
+    fn audit_invariants_reject_spaced_raw_const_ptr() {
+        assert_source_audit_invariants("fn bad(p: * const u8) {}");
+    }
+
+    #[test]
+    #[should_panic(expected = "forbidden raw pointer `*mut`")]
+    fn audit_invariants_reject_spaced_raw_mut_ptr() {
+        assert_source_audit_invariants("fn bad(p: *   mut u8) {}");
+    }
 }
