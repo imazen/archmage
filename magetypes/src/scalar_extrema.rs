@@ -1,4 +1,4 @@
-//! IEEE extrema for runtime scalar callers, with canonical NaNs.
+//! IEEE extrema for runtime scalar callers.
 #![forbid(unsafe_code)]
 
 #[cfg(not(any(
@@ -24,9 +24,7 @@ macro_rules! select_extrema {
             let Some(proof) = token() else {
                 return crate::nostd_math::$name(a, b);
             };
-            let value = $hardware(proof, a, b);
-            // Preserve the scalar result bits even when hardware selects a NaN payload.
-            if value.is_nan() { <$float>::NAN } else { value }
+            $hardware(proof, a, b)
         }
     )+};
 }

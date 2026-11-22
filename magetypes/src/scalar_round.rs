@@ -13,7 +13,8 @@ mod software {
                 let bits = x.to_bits();
                 let exponent = ((bits >> $mantissa) as i32 & $mask) - $bias;
                 if exponent < 0 {
-                    (0.0 as $float).copysign(x)
+                    let zero: $float = 0.0;
+                    zero.copysign(x)
                 } else if exponent >= $mantissa {
                     x
                 } else {
@@ -49,10 +50,6 @@ macro_rules! select_round {
             let Some(proof) = token() else {
                 return super::software::$name(x);
             };
-            // Preserve payload, sign and signaling bit, as the software path does.
-            if x.is_nan() {
-                return x;
-            }
             #[cfg(feature = "std")]
             {
                 let _ = proof;

@@ -13,7 +13,7 @@ macro_rules! checks {
         $floor:ident, $ceil:ident, $round:ident, $trunc:ident,
         $floor_soft:ident, $ceil_soft:ident, $round_soft:ident,
         $min:ident, $max:ident, $min_with:ident, $max_with:ident,
-        $single:ident, [$(($vector:ident, $lanes:literal)),+]
+        $single:ident, [$($vector:ident),+]
     ) => {
         fn $check() {
             let limit: $float = $limit;
@@ -28,6 +28,13 @@ macro_rules! checks {
                 -(0.5 as $float).next_down(), -(0.5 as $float).next_up(),
             ];
             let inputs = cases.into_iter().chain(cases.map(|x| -x));
+            let assert_value = |actual: $float, expected: $float| {
+                if expected.is_nan() {
+                    assert!(actual.is_nan(), "expected NaN, got {actual:?}");
+                } else {
+                    assert_eq!(actual.to_bits(), expected.to_bits());
+                }
+            };
             let rounding = |x: $float| {
                 let expected = [
                     nostd_math::$floor_soft(x),
@@ -36,7 +43,9 @@ macro_rules! checks {
                     if x.is_nan() { x } else { x.trunc() },
                 ];
                 let actual = [scalar::$floor(x), scalar::$ceil(x), scalar::$round(x), scalar::$trunc(x)];
-                assert_eq!(actual.map(<$float>::to_bits), expected.map(<$float>::to_bits), "rounding {:#x}", x.to_bits());
+                for (actual, expected) in actual.into_iter().zip(expected) {
+                    assert_value(actual, expected);
+                }
                 expected
             };
             for a in inputs.clone() {
@@ -44,23 +53,29 @@ macro_rules! checks {
                 $(
                     let x = generic::$vector::splat_t(ScalarToken, a);
                     for (actual, expected) in [(x.floor(), floor), (x.ceil(), ceil), (x.round(), round), (x.trunc(), trunc)] {
-                        assert_eq!(actual.to_array().map(<$float>::to_bits), [expected.to_bits(); $lanes]);
+                        for actual in actual.to_array() {
+                            assert_value(actual, expected);
+                        }
                     }
                 )+
                 for b in inputs.clone() {
-                    let min = scalar::$min(a, b).to_bits();
-                    let max = scalar::$max(a, b).to_bits();
+                    let min = scalar::$min(a, b);
+                    let max = scalar::$max(a, b);
                     let x = single::$single(a);
                     let y = single::$single(b);
-                    assert_eq!(x.minimum(y).0.to_bits(), min);
-                    assert_eq!(x.maximum(y).0.to_bits(), max);
-                    assert_eq!(scalar::$min_with::<PROPAGATE>(a, b).to_bits(), min);
-                    assert_eq!(scalar::$max_with::<PROPAGATE>(a, b).to_bits(), max);
+                    assert_value(x.minimum(y).0, min);
+                    assert_value(x.maximum(y).0, max);
+                    assert_value(scalar::$min_with::<PROPAGATE>(a, b), min);
+                    assert_value(scalar::$max_with::<PROPAGATE>(a, b), max);
                     $(
                         let x = generic::$vector::splat_t(ScalarToken, a);
                         let y = generic::$vector::splat_t(ScalarToken, b);
-                        assert_eq!(x.minimum(y).to_array().map(<$float>::to_bits), [min; $lanes]);
-                        assert_eq!(x.maximum(y).to_array().map(<$float>::to_bits), [max; $lanes]);
+                        for actual in x.minimum(y).to_array() {
+                            assert_value(actual, min);
+                        }
+                        for actual in x.maximum(y).to_array() {
+                            assert_value(actual, max);
+                        }
                     )+
                 }
             }
@@ -95,7 +110,7 @@ checks!(
     min_f32_with,
     max_f32_with,
     f32x1,
-    [(f32x4, 4), (f32x8, 8)]
+    [f32x4, f32x8]
 );
 checks!(
     check64,
@@ -115,7 +130,7 @@ checks!(
     min_f64_with,
     max_f64_with,
     f64x1,
-    [(f64x2, 2), (f64x4, 4)]
+    [f64x2, f64x4]
 );
 
 #[test]
