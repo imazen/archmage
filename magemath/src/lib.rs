@@ -638,6 +638,7 @@ impl_simd_vector!(
 
 pub mod cbrtf;
 pub mod expf;
+mod lanes;
 pub mod log1pf;
 pub mod logf;
 mod plan;
