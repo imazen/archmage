@@ -640,6 +640,7 @@ pub mod cbrtf;
 pub mod expf;
 pub mod log1pf;
 pub mod logf;
+mod plan;
 pub mod powf;
 mod scalar1;
 mod soft_fma;
