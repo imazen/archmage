@@ -146,6 +146,28 @@ impl F32x8FromHalves for archmage::X64V3Token {
     }
 }
 
+// X64V3VnniToken — same Repr as V3 (delegation installed in
+// impls/x86_v3_delegated.rs), available without `feature = "avx512"`.
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
+impl F32x8FromHalves for archmage::X64V3VnniToken {
+    #[inline(always)]
+    fn from_halves(
+        self,
+        lo: core::arch::x86_64::__m128,
+        hi: core::arch::x86_64::__m128,
+    ) -> core::arch::x86_64::__m256 {
+        <archmage::X64V3Token as F32x8FromHalves>::from_halves(self.v3(), lo, hi)
+    }
+    #[inline(always)]
+    fn low(self, wide: core::arch::x86_64::__m256) -> core::arch::x86_64::__m128 {
+        <archmage::X64V3Token as F32x8FromHalves>::low(self.v3(), wide)
+    }
+    #[inline(always)]
+    fn high(self, wide: core::arch::x86_64::__m256) -> core::arch::x86_64::__m128 {
+        <archmage::X64V3Token as F32x8FromHalves>::high(self.v3(), wide)
+    }
+}
+
 // X64V4Token / X64V4xToken / Avx512Fp16Token — same Repr as V3 (delegation
 // installed in impls/x86_v4_f32_delegated.rs). Soundness inherited from V3
 // by the V3 ⊊ V4 subset relation (proved in that file's module doc).

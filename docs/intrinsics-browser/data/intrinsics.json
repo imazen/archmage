@@ -30,6 +30,7 @@
       "n": "_addcarryx_u32",
       "s": true,
       "sig": "fn _addcarryx_u32(c_in: u8, a: u32, b: u32, out: &mut u32) -> u8",
+      "t": "X64V3VnniToken",
       "u": false
     },
     {
@@ -62943,6 +62944,7 @@
       "n": "_mm256_dpwssd_avx_epi32",
       "s": true,
       "sig": "fn _mm256_dpwssd_avx_epi32(src: __m256i, a: __m256i, b: __m256i) -> __m256i",
+      "t": "X64V3VnniToken",
       "u": false
     },
     {
@@ -62986,6 +62988,7 @@
       "n": "_mm_dpwssd_avx_epi32",
       "s": true,
       "sig": "fn _mm_dpwssd_avx_epi32(src: __m128i, a: __m128i, b: __m128i) -> __m128i",
+      "t": "X64V3VnniToken",
       "u": false
     },
     {
@@ -63062,6 +63065,7 @@
       "n": "_mm256_dpwssds_avx_epi32",
       "s": true,
       "sig": "fn _mm256_dpwssds_avx_epi32(src: __m256i, a: __m256i, b: __m256i) -> __m256i",
+      "t": "X64V3VnniToken",
       "u": false
     },
     {
@@ -63105,6 +63109,7 @@
       "n": "_mm_dpwssds_avx_epi32",
       "s": true,
       "sig": "fn _mm_dpwssds_avx_epi32(src: __m128i, a: __m128i, b: __m128i) -> __m128i",
+      "t": "X64V3VnniToken",
       "u": false
     },
     {
@@ -63181,6 +63186,7 @@
       "n": "_mm256_dpbusd_avx_epi32",
       "s": true,
       "sig": "fn _mm256_dpbusd_avx_epi32(src: __m256i, a: __m256i, b: __m256i) -> __m256i",
+      "t": "X64V3VnniToken",
       "u": false
     },
     {
@@ -63224,6 +63230,7 @@
       "n": "_mm_dpbusd_avx_epi32",
       "s": true,
       "sig": "fn _mm_dpbusd_avx_epi32(src: __m128i, a: __m128i, b: __m128i) -> __m128i",
+      "t": "X64V3VnniToken",
       "u": false
     },
     {
@@ -63300,6 +63307,7 @@
       "n": "_mm256_dpbusds_avx_epi32",
       "s": true,
       "sig": "fn _mm256_dpbusds_avx_epi32(src: __m256i, a: __m256i, b: __m256i) -> __m256i",
+      "t": "X64V3VnniToken",
       "u": false
     },
     {
@@ -63343,6 +63351,7 @@
       "n": "_mm_dpbusds_avx_epi32",
       "s": true,
       "sig": "fn _mm_dpbusds_avx_epi32(src: __m128i, a: __m128i, b: __m128i) -> __m128i",
+      "t": "X64V3VnniToken",
       "u": false
     },
     {
@@ -65174,6 +65183,7 @@
       "n": "_mm_sha1msg1_epu32",
       "s": true,
       "sig": "fn _mm_sha1msg1_epu32(a: __m128i, b: __m128i) -> __m128i",
+      "t": "X64V3VnniToken",
       "u": false
     },
     {
@@ -65184,6 +65194,7 @@
       "n": "_mm_sha1msg2_epu32",
       "s": true,
       "sig": "fn _mm_sha1msg2_epu32(a: __m128i, b: __m128i) -> __m128i",
+      "t": "X64V3VnniToken",
       "u": false
     },
     {
@@ -65194,6 +65205,7 @@
       "n": "_mm_sha1nexte_epu32",
       "s": true,
       "sig": "fn _mm_sha1nexte_epu32(a: __m128i, b: __m128i) -> __m128i",
+      "t": "X64V3VnniToken",
       "u": false
     },
     {
@@ -65204,6 +65216,7 @@
       "n": "_mm_sha1rnds4_epu32",
       "s": true,
       "sig": "fn _mm_sha1rnds4_epu32<FUNC: i32>(a: __m128i, b: __m128i) -> __m128i",
+      "t": "X64V3VnniToken",
       "u": false
     },
     {
@@ -65214,6 +65227,7 @@
       "n": "_mm_sha256msg1_epu32",
       "s": true,
       "sig": "fn _mm_sha256msg1_epu32(a: __m128i, b: __m128i) -> __m128i",
+      "t": "X64V3VnniToken",
       "u": false
     },
     {
@@ -65224,6 +65238,7 @@
       "n": "_mm_sha256msg2_epu32",
       "s": true,
       "sig": "fn _mm_sha256msg2_epu32(a: __m128i, b: __m128i) -> __m128i",
+      "t": "X64V3VnniToken",
       "u": false
     },
     {
@@ -65234,6 +65249,7 @@
       "n": "_mm_sha256rnds2_epu32",
       "s": true,
       "sig": "fn _mm_sha256rnds2_epu32(a: __m128i, b: __m128i, k: __m128i) -> __m128i",
+      "t": "X64V3VnniToken",
       "u": false
     },
     {
@@ -70616,6 +70632,7 @@
       "n": "_addcarryx_u64",
       "s": true,
       "sig": "fn _addcarryx_u64(c_in: u8, a: u64, b: u64, out: &mut u64) -> u8",
+      "t": "X64V3VnniToken",
       "u": false
     },
     {
@@ -179339,6 +179356,43 @@
         "X64V3CryptoToken"
       ],
       "tier": "v3_gfni_crypto"
+    },
+    {
+      "aliases": [],
+      "arch": "x86_64",
+      "display": "x86-64-v3 VNNI",
+      "doc": "Proof that VEX-encoded AVX-VNNI (`avxvnni`), `adx`, and `sha` are available on top of `X64V3GfniCryptoToken`.",
+      "features": [
+        "sse",
+        "sse2",
+        "sse3",
+        "ssse3",
+        "sse4.1",
+        "sse4.2",
+        "popcnt",
+        "cmpxchg16b",
+        "avx",
+        "avx2",
+        "fma",
+        "bmi1",
+        "bmi2",
+        "f16c",
+        "lzcnt",
+        "movbe",
+        "pclmulqdq",
+        "aes",
+        "vpclmulqdq",
+        "vaes",
+        "gfni",
+        "avxvnni",
+        "adx",
+        "sha"
+      ],
+      "name": "X64V3VnniToken",
+      "parents": [
+        "X64V3GfniCryptoToken"
+      ],
+      "tier": "v3_vnni"
     },
     {
       "aliases": [

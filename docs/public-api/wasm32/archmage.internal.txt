@@ -10,20 +10,20 @@
 ## summary
 #
 #   pub modules                                 1
-#   pub consts/statics                         35
+#   pub consts/statics                         37
 #   free functions                              1
-#   inherent methods                           23
+#   inherent methods                           24
 #   re-exports                                  2
-#   trait roster entries (type × trait)        19
+#   trait roster entries (type × trait)        20
 #
 # per-module pub lines:
 #   (root)                            3
 #   __private                         1
 #   prelude                           2
 #   testing                           1
-#   tokens                           55
+#   tokens                           58
 
-## items (62 lines)
+## items (65 lines)
 
 pub const tokens::Arm64V2Token::__ARCHMAGE_ASSERT_TIER_B0231590: ()
 pub const tokens::Arm64V2Token::__ARCHMAGE_TIER_TAG: u32
@@ -56,6 +56,8 @@ pub const tokens::X64V3GfniCryptoToken::__ARCHMAGE_ASSERT_TIER_49A7BE90: ()
 pub const tokens::X64V3GfniCryptoToken::__ARCHMAGE_TIER_TAG: u32
 pub const tokens::X64V3Token::__ARCHMAGE_ASSERT_TIER_F38B284B: ()
 pub const tokens::X64V3Token::__ARCHMAGE_TIER_TAG: u32
+pub const tokens::X64V3VnniToken::__ARCHMAGE_ASSERT_TIER_256B958C: ()
+pub const tokens::X64V3VnniToken::__ARCHMAGE_TIER_TAG: u32
 pub const tokens::X64V4Token::__ARCHMAGE_ASSERT_TIER_FE1B900C: ()
 pub const tokens::X64V4Token::__ARCHMAGE_TIER_TAG: u32
 pub const tokens::X64V4xToken::__ARCHMAGE_ASSERT_TIER_8F63232A: ()
@@ -82,13 +84,14 @@ pub fn tokens::X64V2Token::try_new() -> core::option::Option<Self>
 pub fn tokens::X64V3CryptoToken::try_new() -> core::option::Option<Self>
 pub fn tokens::X64V3GfniCryptoToken::try_new() -> core::option::Option<Self>
 pub fn tokens::X64V3Token::try_new() -> core::option::Option<Self>
+pub fn tokens::X64V3VnniToken::try_new() -> core::option::Option<Self>
 pub fn tokens::X64V4Token::try_new() -> core::option::Option<Self>
 pub fn tokens::X64V4xToken::try_new() -> core::option::Option<Self>
 pub mod __private
 pub use prelude::simd_fn
 pub use simd_fn
 
-## trait impls (19 types)
+## trait impls (20 types)
 
 testing::CompileTimePolicy: TrivialClone
 tokens::Arm64V2Token: TrivialClone
@@ -107,5 +110,6 @@ tokens::X64V2Token: TrivialClone
 tokens::X64V3CryptoToken: TrivialClone
 tokens::X64V3GfniCryptoToken: TrivialClone
 tokens::X64V3Token: TrivialClone
+tokens::X64V3VnniToken: TrivialClone
 tokens::X64V4Token: TrivialClone
 tokens::X64V4xToken: TrivialClone

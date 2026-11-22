@@ -78,6 +78,24 @@ impl SimdTypes for archmage::X64V3Token {
 }
 
 #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
+impl SimdTypes for archmage::X64V3VnniToken {
+    type F32 = crate::simd::generic::f32x8<archmage::X64V3VnniToken>;
+    type F64 = crate::simd::generic::f64x4<archmage::X64V3VnniToken>;
+    type I8 = crate::simd::generic::i8x32<archmage::X64V3VnniToken>;
+    type I16 = crate::simd::generic::i16x16<archmage::X64V3VnniToken>;
+    type I32 = crate::simd::generic::i32x8<archmage::X64V3VnniToken>;
+    type I64 = crate::simd::generic::i64x4<archmage::X64V3VnniToken>;
+    type U8 = crate::simd::generic::u8x32<archmage::X64V3VnniToken>;
+    type U16 = crate::simd::generic::u16x16<archmage::X64V3VnniToken>;
+    type U32 = crate::simd::generic::u32x8<archmage::X64V3VnniToken>;
+    type U64 = crate::simd::generic::u64x4<archmage::X64V3VnniToken>;
+
+    const F32_LANES: usize = 8;
+    const F64_LANES: usize = 4;
+    const I32_LANES: usize = 8;
+}
+
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl SimdTypes for archmage::X64V2Token {
     type F32 = crate::simd::generic::f32x4<archmage::X64V3Token>;
     type F64 = crate::simd::generic::f64x2<archmage::X64V3Token>;

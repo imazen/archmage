@@ -6,7 +6,7 @@
 # impls omitted; re-export duplicates annotated `[also: path]`.
 # DO NOT EDIT BY HAND — commit regenerated changes with the code.
 #
-# files: magetypes.txt 2985 lines (supported surface) | magetypes.features.txt 96 added (features: avx512,std,w512) | magetypes.internal.txt 60 lines (72 hidden + 0 excluded-feature)
+# files: magetypes.txt 2986 lines (supported surface) | magetypes.features.txt 96 added (features: avx512,std,w512) | magetypes.internal.txt 60 lines (72 hidden + 0 excluded-feature)
 
 ## summary
 #
@@ -17,7 +17,7 @@
 #   inherent methods                         1296
 #   enum variants                              23
 #   re-exports                                  2
-#   trait roster entries (type × trait)       818
+#   trait roster entries (type × trait)       854
 #   conditional trait impls (verbatim)        120
 #   auto-trait-complete types                  22
 #   auto-trait exceptions                      30
@@ -2782,7 +2782,7 @@ pub fn WidthDispatch::u8x64_load(self, &[u8; 64]) -> Self::U8x64
 pub fn WidthDispatch::u8x64_splat(self, u8) -> Self::U8x64
 pub fn WidthDispatch::u8x64_zero(self) -> Self::U8x64
 
-## trait impls (85 types)
+## trait impls (86 types)
 
 [f32; 16]: From<prelude::f32x16<T>>
 [f32; 4]: From<prelude::f32x4<T>>
@@ -2817,6 +2817,7 @@ pub fn WidthDispatch::u8x64_zero(self) -> Self::U8x64
 archmage::tokens::ScalarToken: SimdTypes, prelude::F16Convert, prelude::F32x16FromHalves, prelude::F32x8FromHalves, scalar::F32ScalarBackend, scalar::F64ScalarBackend, simd::backends::F32x16Backend, simd::backends::F32x16Convert, simd::backends::F32x4Backend, simd::backends::F32x4Convert, simd::backends::F32x8Backend, simd::backends::F32x8Convert, simd::backends::F64x2Backend, simd::backends::F64x4Backend, simd::backends::F64x8Backend, simd::backends::I16x16Backend, simd::backends::I16x16Bitcast, simd::backends::I16x32Backend, simd::backends::I16x8Backend, simd::backends::I16x8Bitcast, simd::backends::I32x16Backend, simd::backends::I32x4Backend, simd::backends::I32x8Backend, simd::backends::I64x2Backend, simd::backends::I64x2Bitcast, simd::backends::I64x4Backend, simd::backends::I64x4Bitcast, simd::backends::I64x8Backend, simd::backends::I8x16Backend, simd::backends::I8x16Bitcast, simd::backends::I8x32Backend, simd::backends::I8x32Bitcast, simd::backends::I8x64Backend, simd::backends::U16x16Backend, simd::backends::U16x32Backend, simd::backends::U16x8Backend, simd::backends::U32x16Backend, simd::backends::U32x4Backend, simd::backends::U32x4Bitcast, simd::backends::U32x8Backend, simd::backends::U32x8Bitcast, simd::backends::U64x2Backend, simd::backends::U64x2Bitcast, simd::backends::U64x4Backend, simd::backends::U64x4Bitcast, simd::backends::U64x8Backend, simd::backends::U8x16Backend, simd::backends::U8x32Backend, simd::backends::U8x64Backend
 archmage::tokens::generated::x86::X64V2Token: SimdTypes
 archmage::tokens::generated::x86::X64V3Token: SimdTypes, WidthDispatch, prelude::F16Convert, prelude::F32x16FromHalves, prelude::F32x8FromHalves, scalar::F32ScalarBackend, scalar::F64ScalarBackend, simd::backends::F32x16Backend, simd::backends::F32x16Convert, simd::backends::F32x4Backend, simd::backends::F32x4Convert, simd::backends::F32x8Backend, simd::backends::F32x8Convert, simd::backends::F64x2Backend, simd::backends::F64x4Backend, simd::backends::F64x8Backend, simd::backends::I16x16Backend, simd::backends::I16x16Bitcast, simd::backends::I16x32Backend, simd::backends::I16x8Backend, simd::backends::I16x8Bitcast, simd::backends::I32x16Backend, simd::backends::I32x4Backend, simd::backends::I32x8Backend, simd::backends::I64x2Backend, simd::backends::I64x2Bitcast, simd::backends::I64x4Backend, simd::backends::I64x4Bitcast, simd::backends::I64x8Backend, simd::backends::I8x16Backend, simd::backends::I8x16Bitcast, simd::backends::I8x32Backend, simd::backends::I8x32Bitcast, simd::backends::I8x64Backend, simd::backends::U16x16Backend, simd::backends::U16x32Backend, simd::backends::U16x8Backend, simd::backends::U32x16Backend, simd::backends::U32x4Backend, simd::backends::U32x4Bitcast, simd::backends::U32x8Backend, simd::backends::U32x8Bitcast, simd::backends::U64x2Backend, simd::backends::U64x2Bitcast, simd::backends::U64x4Backend, simd::backends::U64x4Bitcast, simd::backends::U64x8Backend, simd::backends::U8x16Backend, simd::backends::U8x32Backend, simd::backends::U8x64Backend
+archmage::tokens::generated::x86::X64V3VnniToken: SimdTypes, prelude::F32x8FromHalves, scalar::F32ScalarBackend, scalar::F64ScalarBackend, simd::backends::F32x4Backend, simd::backends::F32x4Convert, simd::backends::F32x8Backend, simd::backends::F32x8Convert, simd::backends::F64x2Backend, simd::backends::F64x4Backend, simd::backends::I16x16Backend, simd::backends::I16x16Bitcast, simd::backends::I16x8Backend, simd::backends::I16x8Bitcast, simd::backends::I32x4Backend, simd::backends::I32x8Backend, simd::backends::I64x2Backend, simd::backends::I64x2Bitcast, simd::backends::I64x4Backend, simd::backends::I64x4Bitcast, simd::backends::I8x16Backend, simd::backends::I8x16Bitcast, simd::backends::I8x32Backend, simd::backends::I8x32Bitcast, simd::backends::U16x16Backend, simd::backends::U16x8Backend, simd::backends::U32x4Backend, simd::backends::U32x4Bitcast, simd::backends::U32x8Backend, simd::backends::U32x8Bitcast, simd::backends::U64x2Backend, simd::backends::U64x2Bitcast, simd::backends::U64x4Backend, simd::backends::U64x4Bitcast, simd::backends::U8x16Backend, simd::backends::U8x32Backend
 numerics::ExtremaDomain: Clone, Copy, Debug, Default, Eq, PartialEq
 numerics::ExtremaOptions: Clone, Copy, Debug, Default, Eq, PartialEq
 numerics::HalfConvert: Clone, Copy, Debug, Default, Eq, PartialEq

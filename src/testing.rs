@@ -215,15 +215,16 @@ fn build_token_slots() -> Vec<TokenSlot> {
     //           Crypto(2)          → V4(6)
     #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
     {
-        slots.push(token_slot!(crate::X64V1Token, &[1, 2, 3, 4, 5, 6, 7, 8]));
-        slots.push(token_slot!(crate::X64V2Token, &[2, 3, 4, 5, 6, 7, 8]));
-        slots.push(token_slot!(crate::X64CryptoToken, &[4, 5, 6, 7, 8]));
-        slots.push(token_slot!(crate::X64V3Token, &[4, 5, 6, 7, 8]));
-        slots.push(token_slot!(crate::X64V3CryptoToken, &[5, 7]));
-        slots.push(token_slot!(crate::X64V3GfniCryptoToken, &[7]));
+        slots.push(token_slot!(crate::X64V1Token, &[1, 2, 3, 4, 5, 6, 7, 8, 9]));
+        slots.push(token_slot!(crate::X64V2Token, &[2, 3, 4, 5, 6, 7, 8, 9]));
+        slots.push(token_slot!(crate::X64CryptoToken, &[4, 5, 6, 7, 8, 9]));
+        slots.push(token_slot!(crate::X64V3Token, &[4, 5, 6, 7, 8, 9]));
+        slots.push(token_slot!(crate::X64V3CryptoToken, &[5, 7, 9]));
+        slots.push(token_slot!(crate::X64V3GfniCryptoToken, &[7, 9]));
         slots.push(token_slot!(crate::X64V4Token, &[7, 8]));
         slots.push(token_slot!(crate::X64V4xToken, &[]));
         slots.push(token_slot!(crate::Avx512Fp16Token, &[]));
+        slots.push(token_slot!(crate::X64V3VnniToken, &[]));
     }
 
     // AArch64 hierarchy:

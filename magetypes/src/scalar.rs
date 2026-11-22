@@ -409,7 +409,7 @@ impl F64ScalarInternal for archmage::X64V3Token {
     }
 }
 
-#[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 macro_rules! impl_x86_v3_scalar_delegate {
     ($($token:ty),+ $(,)?) => {
         $(
@@ -471,6 +471,9 @@ macro_rules! impl_x86_v3_scalar_delegate {
         )+
     };
 }
+
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
+impl_x86_v3_scalar_delegate!(archmage::X64V3VnniToken);
 
 #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
 impl_x86_v3_scalar_delegate!(
