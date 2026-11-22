@@ -44,21 +44,13 @@ mod software {
     )
 ))]
 macro_rules! select_round {
-    ($($name:ident, $hardware:ident, $method:ident, $float:ty);+ $(;)?) => {$(
+    ($($name:ident, $hardware:ident, $float:ty);+ $(;)?) => {$(
         #[inline(always)]
         pub(crate) fn $name(x: $float) -> $float {
             let Some(proof) = token() else {
                 return super::software::$name(x);
             };
-            #[cfg(feature = "std")]
-            {
-                let _ = proof;
-                x.$method()
-            }
-            #[cfg(not(feature = "std"))]
-            {
-                $hardware(proof, x)
-            }
+            $hardware(proof, x)
         }
     )+};
 }
@@ -66,7 +58,6 @@ macro_rules! select_round {
 #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
 mod selected {
     use archmage::{NeonToken, SimdToken};
-    #[cfg(not(feature = "std"))]
     use core::arch::aarch64::*;
 
     // The enclosing cfg proves every feature of the token. Test builds may
@@ -77,59 +68,51 @@ mod selected {
     }
 
     select_round! {
-        floorf, floorf_hw, floor, f32;
-        floor, floor_hw, floor, f64;
-        ceilf, ceilf_hw, ceil, f32;
-        ceil, ceil_hw, ceil, f64;
-        roundevenf, roundevenf_hw, round_ties_even, f32;
-        roundeven, roundeven_hw, round_ties_even, f64;
-        truncf, truncf_hw, trunc, f32;
-        trunc, trunc_hw, trunc, f64;
+        floorf, floorf_hw, f32;
+        floor, floor_hw, f64;
+        ceilf, ceilf_hw, f32;
+        ceil, ceil_hw, f64;
+        roundevenf, roundevenf_hw, f32;
+        roundeven, roundeven_hw, f64;
+        truncf, truncf_hw, f32;
+        trunc, trunc_hw, f64;
     }
 
-    #[cfg(not(feature = "std"))]
     #[archmage::attune(wrap)]
     fn floorf_hw(_token: NeonToken, x: f32) -> f32 {
         vget_lane_f32::<0>(vrndm_f32(vdup_n_f32(x)))
     }
 
-    #[cfg(not(feature = "std"))]
     #[archmage::attune(wrap)]
     fn floor_hw(_token: NeonToken, x: f64) -> f64 {
         vget_lane_f64::<0>(vrndm_f64(vdup_n_f64(x)))
     }
 
-    #[cfg(not(feature = "std"))]
     #[archmage::attune(wrap)]
     fn ceilf_hw(_token: NeonToken, x: f32) -> f32 {
         vget_lane_f32::<0>(vrndp_f32(vdup_n_f32(x)))
     }
 
-    #[cfg(not(feature = "std"))]
     #[archmage::attune(wrap)]
     fn ceil_hw(_token: NeonToken, x: f64) -> f64 {
         vget_lane_f64::<0>(vrndp_f64(vdup_n_f64(x)))
     }
 
-    #[cfg(not(feature = "std"))]
     #[archmage::attune(wrap)]
     fn roundevenf_hw(_token: NeonToken, x: f32) -> f32 {
         vget_lane_f32::<0>(vrndn_f32(vdup_n_f32(x)))
     }
 
-    #[cfg(not(feature = "std"))]
     #[archmage::attune(wrap)]
     fn roundeven_hw(_token: NeonToken, x: f64) -> f64 {
         vget_lane_f64::<0>(vrndn_f64(vdup_n_f64(x)))
     }
 
-    #[cfg(not(feature = "std"))]
     #[archmage::attune(wrap)]
     fn truncf_hw(_token: NeonToken, x: f32) -> f32 {
         vget_lane_f32::<0>(vrnd_f32(vdup_n_f32(x)))
     }
 
-    #[cfg(not(feature = "std"))]
     #[archmage::attune(wrap)]
     fn trunc_hw(_token: NeonToken, x: f64) -> f64 {
         vget_lane_f64::<0>(vrnd_f64(vdup_n_f64(x)))
@@ -139,7 +122,6 @@ mod selected {
 #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
 mod selected {
     use archmage::{SimdToken, Wasm128Token};
-    #[cfg(not(feature = "std"))]
     use core::arch::wasm32::*;
 
     // The enclosing cfg proves every feature of the token. Test builds may
@@ -150,59 +132,51 @@ mod selected {
     }
 
     select_round! {
-        floorf, floorf_hw, floor, f32;
-        floor, floor_hw, floor, f64;
-        ceilf, ceilf_hw, ceil, f32;
-        ceil, ceil_hw, ceil, f64;
-        roundevenf, roundevenf_hw, round_ties_even, f32;
-        roundeven, roundeven_hw, round_ties_even, f64;
-        truncf, truncf_hw, trunc, f32;
-        trunc, trunc_hw, trunc, f64;
+        floorf, floorf_hw, f32;
+        floor, floor_hw, f64;
+        ceilf, ceilf_hw, f32;
+        ceil, ceil_hw, f64;
+        roundevenf, roundevenf_hw, f32;
+        roundeven, roundeven_hw, f64;
+        truncf, truncf_hw, f32;
+        trunc, trunc_hw, f64;
     }
 
-    #[cfg(not(feature = "std"))]
     #[archmage::attune(wrap)]
     fn floorf_hw(_token: Wasm128Token, x: f32) -> f32 {
         f32x4_extract_lane::<0>(f32x4_floor(f32x4_splat(x)))
     }
 
-    #[cfg(not(feature = "std"))]
     #[archmage::attune(wrap)]
     fn floor_hw(_token: Wasm128Token, x: f64) -> f64 {
         f64x2_extract_lane::<0>(f64x2_floor(f64x2_splat(x)))
     }
 
-    #[cfg(not(feature = "std"))]
     #[archmage::attune(wrap)]
     fn ceilf_hw(_token: Wasm128Token, x: f32) -> f32 {
         f32x4_extract_lane::<0>(f32x4_ceil(f32x4_splat(x)))
     }
 
-    #[cfg(not(feature = "std"))]
     #[archmage::attune(wrap)]
     fn ceil_hw(_token: Wasm128Token, x: f64) -> f64 {
         f64x2_extract_lane::<0>(f64x2_ceil(f64x2_splat(x)))
     }
 
-    #[cfg(not(feature = "std"))]
     #[archmage::attune(wrap)]
     fn roundevenf_hw(_token: Wasm128Token, x: f32) -> f32 {
         f32x4_extract_lane::<0>(f32x4_nearest(f32x4_splat(x)))
     }
 
-    #[cfg(not(feature = "std"))]
     #[archmage::attune(wrap)]
     fn roundeven_hw(_token: Wasm128Token, x: f64) -> f64 {
         f64x2_extract_lane::<0>(f64x2_nearest(f64x2_splat(x)))
     }
 
-    #[cfg(not(feature = "std"))]
     #[archmage::attune(wrap)]
     fn truncf_hw(_token: Wasm128Token, x: f32) -> f32 {
         f32x4_extract_lane::<0>(f32x4_trunc(f32x4_splat(x)))
     }
 
-    #[cfg(not(feature = "std"))]
     #[archmage::attune(wrap)]
     fn trunc_hw(_token: Wasm128Token, x: f64) -> f64 {
         f64x2_extract_lane::<0>(f64x2_trunc(f64x2_splat(x)))
@@ -220,7 +194,6 @@ mod selected {
 ))]
 mod selected {
     use archmage::{SimdToken, X64V2Token};
-    #[cfg(not(feature = "std"))]
     use core::arch::x86_64::*;
 
     // The enclosing cfg proves every feature of the token. Test builds may
@@ -231,45 +204,40 @@ mod selected {
     }
 
     select_round! {
-        floorf, floorf_hw, floor, f32;
-        floor, floor_hw, floor, f64;
-        ceilf, ceilf_hw, ceil, f32;
-        ceil, ceil_hw, ceil, f64;
-        roundevenf, roundevenf_hw, round_ties_even, f32;
-        roundeven, roundeven_hw, round_ties_even, f64;
-        truncf, truncf_hw, trunc, f32;
-        trunc, trunc_hw, trunc, f64;
+        floorf, floorf_hw, f32;
+        floor, floor_hw, f64;
+        ceilf, ceilf_hw, f32;
+        ceil, ceil_hw, f64;
+        roundevenf, roundevenf_hw, f32;
+        roundeven, roundeven_hw, f64;
+        truncf, truncf_hw, f32;
+        trunc, trunc_hw, f64;
     }
 
-    #[cfg(not(feature = "std"))]
     #[archmage::attune(wrap)]
     fn floorf_hw(_token: X64V2Token, x: f32) -> f32 {
         let v = _mm_set_ss(x);
         _mm_cvtss_f32(_mm_round_ss::<{ _MM_FROUND_TO_NEG_INF | _MM_FROUND_NO_EXC }>(v, v))
     }
 
-    #[cfg(not(feature = "std"))]
     #[archmage::attune(wrap)]
     fn floor_hw(_token: X64V2Token, x: f64) -> f64 {
         let v = _mm_set_sd(x);
         _mm_cvtsd_f64(_mm_round_sd::<{ _MM_FROUND_TO_NEG_INF | _MM_FROUND_NO_EXC }>(v, v))
     }
 
-    #[cfg(not(feature = "std"))]
     #[archmage::attune(wrap)]
     fn ceilf_hw(_token: X64V2Token, x: f32) -> f32 {
         let v = _mm_set_ss(x);
         _mm_cvtss_f32(_mm_round_ss::<{ _MM_FROUND_TO_POS_INF | _MM_FROUND_NO_EXC }>(v, v))
     }
 
-    #[cfg(not(feature = "std"))]
     #[archmage::attune(wrap)]
     fn ceil_hw(_token: X64V2Token, x: f64) -> f64 {
         let v = _mm_set_sd(x);
         _mm_cvtsd_f64(_mm_round_sd::<{ _MM_FROUND_TO_POS_INF | _MM_FROUND_NO_EXC }>(v, v))
     }
 
-    #[cfg(not(feature = "std"))]
     #[archmage::attune(wrap)]
     fn roundevenf_hw(_token: X64V2Token, x: f32) -> f32 {
         let v = _mm_set_ss(x);
@@ -278,7 +246,6 @@ mod selected {
         >(v, v))
     }
 
-    #[cfg(not(feature = "std"))]
     #[archmage::attune(wrap)]
     fn roundeven_hw(_token: X64V2Token, x: f64) -> f64 {
         let v = _mm_set_sd(x);
@@ -287,7 +254,6 @@ mod selected {
         >(v, v))
     }
 
-    #[cfg(not(feature = "std"))]
     #[archmage::attune(wrap)]
     fn truncf_hw(_token: X64V2Token, x: f32) -> f32 {
         let v = _mm_set_ss(x);
@@ -296,7 +262,6 @@ mod selected {
         ))
     }
 
-    #[cfg(not(feature = "std"))]
     #[archmage::attune(wrap)]
     fn trunc_hw(_token: X64V2Token, x: f64) -> f64 {
         let v = _mm_set_sd(x);
