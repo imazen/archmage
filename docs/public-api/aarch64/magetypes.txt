@@ -6,14 +6,14 @@
 # impls omitted; re-export duplicates annotated `[also: path]`.
 # DO NOT EDIT BY HAND — commit regenerated changes with the code.
 #
-# files: magetypes.txt 2966 lines (supported surface) | magetypes.features.txt 12 added (features: avx512,std,w512) | magetypes.internal.txt 60 lines (72 hidden + 0 excluded-feature)
+# files: magetypes.txt 2980 lines (supported surface) | magetypes.features.txt 12 added (features: avx512,std,w512) | magetypes.internal.txt 60 lines (72 hidden + 0 excluded-feature)
 
 ## summary
 #
 #   pub modules                                14
 #   pub types (struct/enum/trait/alias)       301
 #   pub consts/statics                        270
-#   free functions                           4381
+#   free functions                           4419
 #   inherent methods                         1296
 #   enum variants                              23
 #   re-exports                                  2
@@ -26,11 +26,11 @@
 #   (root)                          365
 #   cast                              3
 #   numerics                         34
-#   prelude                        4128
+#   prelude                        4166
 #   scalar                           51
 #   simd                           1706
 
-## items (2731 lines)
+## items (2745 lines)
 
 pub mod magetypes
 pub use archmage
@@ -146,6 +146,10 @@ pub fn prelude::f32x16<T>::to_f16_bits_with<const CFG: u32>(self) -> [u16; 16] [
 pub fn prelude::f32x16<T>::to_u16(self) -> [u16; 16] [also: prelude::f32x16<T>]
 pub fn prelude::f32x16<T>::to_u16_with<const CFG: u32>(self) -> [u16; 16] [also: prelude::f32x16<T>]
 pub fn prelude::f32x16<T>::to_u8_with<const CFG: u32>(self) -> [u8; 16] [also: prelude::f32x16<T>]
+pub fn prelude::f32x16<T>::load_rgb_u16_t(T, &[u16; 48]) -> (Self, Self, Self) [also: prelude::f32x16<T>]
+pub fn prelude::f32x16<T>::load_rgb_u8_t(T, &[u8; 48]) -> (Self, Self, Self) [also: prelude::f32x16<T>]
+pub fn prelude::f32x16<T>::store_rgb_u8(Self, Self, Self, &mut [u8; 48]) [also: prelude::f32x16<T>]
+pub fn prelude::f32x16<T>::store_rgb_u8_with<const CFG: u32>(Self, Self, Self, &mut [u8; 48]) [also: prelude::f32x16<T>]
 pub fn prelude::f32x16<T>::from_u8_t(T, &[u8; 16]) -> Self [also: prelude::f32x16<T>]
 pub fn prelude::f32x16<T>::load_rgba_u8_t(T, &[u8; 64]) -> (Self, Self, Self, Self) [also: prelude::f32x16<T>]
 pub fn prelude::f32x16<T>::store_rgba_u8(Self, Self, Self, Self, &mut [u8; 64]) [also: prelude::f32x16<T>]
@@ -156,6 +160,14 @@ pub fn prelude::f32x16<T>::from_repr(T, <T as simd::backends::F32x16Backend>::Re
 pub fn prelude::f32x16<T>::load(T, &[f32; 16]) -> Self [also: prelude::f32x16<T>]
 pub fn prelude::f32x16<T>::partition_slice(T, &[f32]) -> (&[[f32; 16]], &[f32]) [also: prelude::f32x16<T>]
 pub fn prelude::f32x16<T>::partition_slice_mut(T, &mut [f32]) -> (&mut [[f32; 16]], &mut [f32]) [also: prelude::f32x16<T>]
+pub fn prelude::f32x16<T>::load_16x16_t(T, &[f32; 256]) -> [Self; 16] [also: prelude::f32x16<T>]
+pub fn prelude::f32x16<T>::load_dual_8x8_t(T, &[f32; 128]) -> [Self; 8] [also: prelude::f32x16<T>]
+pub fn prelude::f32x16<T>::store_16x16(&[Self; 16], &mut [f32; 256]) [also: prelude::f32x16<T>]
+pub fn prelude::f32x16<T>::store_dual_8x8(&[Self; 8], &mut [f32; 128]) [also: prelude::f32x16<T>]
+pub fn prelude::f32x16<T>::transpose_16x16(&mut [Self; 16]) [also: prelude::f32x16<T>]
+pub fn prelude::f32x16<T>::transpose_16x16_copy([Self; 16]) -> [Self; 16] [also: prelude::f32x16<T>]
+pub fn prelude::f32x16<T>::transpose_dual_8x8(&mut [Self; 8]) [also: prelude::f32x16<T>]
+pub fn prelude::f32x16<T>::transpose_dual_8x8_copy([Self; 8]) -> [Self; 8] [also: prelude::f32x16<T>]
 pub fn prelude::f32x16<T>::bitcast_i32x16(self) -> prelude::i32x16<T> [also: prelude::f32x16<T>]
 pub fn prelude::f32x16<T>::bitcast_to_i32(self) -> prelude::i32x16<T> [also: prelude::f32x16<T>]
 pub fn prelude::f32x16<T>::from_i32_bitcast_t(T, prelude::i32x16<T>) -> Self [also: prelude::f32x16<T>]
@@ -166,6 +178,8 @@ pub fn prelude::f32x16<T>::to_i32_round(self) -> prelude::i32x16<T> [also: prelu
 pub fn prelude::f32x16<T>::to_i32_saturating(self) -> prelude::i32x16<T> [also: prelude::f32x16<T>]
 pub fn prelude::f32x16<T>::to_i32x16(self) -> prelude::i32x16<T> [also: prelude::f32x16<T>]
 pub fn prelude::f32x16<T>::to_i32x16_round(self) -> prelude::i32x16<T> [also: prelude::f32x16<T>]
+pub fn prelude::f32x16<T>::bitcast_mut_i32(&mut self) -> &mut prelude::i32x16<T> [also: prelude::f32x16<T>]
+pub fn prelude::f32x16<T>::bitcast_ref_i32(&self) -> &prelude::i32x16<T> [also: prelude::f32x16<T>]
 pub fn prelude::f32x16<T>::from_i32(T, prelude::i32x16<T>) -> Self [also: prelude::f32x16<T>]
 pub fn prelude::f32x16<T>::from_i32_bitcast(T, prelude::i32x16<T>) -> Self [also: prelude::f32x16<T>]
 pub fn prelude::f32x16<T>::from_i32x16(T, prelude::i32x16<T>) -> Self [also: prelude::f32x16<T>]
@@ -223,10 +237,10 @@ pub fn prelude::f32x4<T>::deinterleave_4ch([Self; 4]) -> [Self; 4] [also: prelud
 pub fn prelude::f32x4<T>::from_bytes_owned_t(T, [u8; 16]) -> Self [also: prelude::f32x4<T>, prelude::f64x2<T>, prelude::i32x4<T>, prelude::i8x16<T>, prelude::u32x4<T>]
 pub fn prelude::f32x4<T>::from_bytes_t(T, &[u8; 16]) -> Self [also: prelude::f32x4<T>, prelude::f64x2<T>, prelude::i32x4<T>, prelude::i8x16<T>, prelude::u32x4<T>]
 pub fn prelude::f32x4<T>::from_u8_t(T, &[u8; 4]) -> Self [also: prelude::f32x4<T>]
-pub fn prelude::f32x4<T>::interleave(self, Self) -> (Self, Self) [also: prelude::f32x4<T>, prelude::f32x8<T>]
+pub fn prelude::f32x4<T>::interleave(self, Self) -> (Self, Self) [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
 pub fn prelude::f32x4<T>::interleave_4ch([Self; 4]) -> [Self; 4] [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
-pub fn prelude::f32x4<T>::interleave_hi(self, Self) -> Self [also: prelude::f32x4<T>, prelude::f32x8<T>]
-pub fn prelude::f32x4<T>::interleave_lo(self, Self) -> Self [also: prelude::f32x4<T>, prelude::f32x8<T>]
+pub fn prelude::f32x4<T>::interleave_hi(self, Self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
+pub fn prelude::f32x4<T>::interleave_lo(self, Self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
 pub fn prelude::f32x4<T>::load_4_rgba_u8_t(T, &[u8; 16]) -> (Self, Self, Self, Self) [also: prelude::f32x4<T>]
 pub fn prelude::f32x4<T>::load_rgba_u8_t(T, &[u8; 16]) -> (Self, Self, Self, Self) [also: prelude::f32x4<T>]
 pub fn prelude::f32x4<T>::store_4_rgba_u8(Self, Self, Self, Self) -> [u8; 16] [also: prelude::f32x4<T>]
@@ -260,8 +274,8 @@ pub fn prelude::f32x4<T>::recip_with<const CFG: u32>(self) -> Self [also: prelud
 pub fn prelude::f32x4<T>::reduce_max_with<const CFG: u32>(self) -> f32 [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
 pub fn prelude::f32x4<T>::reduce_min_with<const CFG: u32>(self) -> f32 [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
 pub fn prelude::f32x4<T>::rsqrt_with<const CFG: u32>(self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>, prelude::f64x2<T>, prelude::f64x4<T>, prelude::f64x8<T>]
-pub fn prelude::f32x4<T>::deinterleave_3ch([Self; 3]) -> [Self; 3] [also: prelude::f32x4<T>, prelude::f32x8<T>]
-pub fn prelude::f32x4<T>::interleave_3ch([Self; 3]) -> [Self; 3] [also: prelude::f32x4<T>, prelude::f32x8<T>]
+pub fn prelude::f32x4<T>::deinterleave_3ch([Self; 3]) -> [Self; 3] [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
+pub fn prelude::f32x4<T>::interleave_3ch([Self; 3]) -> [Self; 3] [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
 pub fn prelude::f32x4<T>::load_rgb_u16_t(T, &[u16; 12]) -> (Self, Self, Self) [also: prelude::f32x4<T>]
 pub fn prelude::f32x4<T>::load_rgb_u8_t(T, &[u8; 12]) -> (Self, Self, Self) [also: prelude::f32x4<T>]
 pub fn prelude::f32x4<T>::store_rgb_u8(Self, Self, Self, &mut [u8; 12]) [also: prelude::f32x4<T>]

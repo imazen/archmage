@@ -62,6 +62,8 @@ mod u8x32_impl;
 mod u8x64_impl;
 
 // Block layout operations
+#[cfg(feature = "w512")]
+mod block_ops_f32x16;
 mod block_ops_f32x4;
 mod block_ops_f32x8;
 mod block_ops_f64x2;

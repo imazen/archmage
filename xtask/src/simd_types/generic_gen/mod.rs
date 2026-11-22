@@ -1,6 +1,6 @@
 //! Generator for `magetypes/src/simd/generic/generated/` — the strategy-pattern wrapper types.
 //!
-//! Generates all 42 files: 30 `*_impl.rs`, 8 `block_ops_*.rs`,
+//! Generates 30 `*_impl.rs` files, 9 `block_ops_*.rs` files,
 //! 3 `transcendentals_*.rs`, and 1 `mod.rs`.
 
 mod block_ops;
@@ -379,7 +379,7 @@ pub fn generate_generic_files(registry: &crate::registry::Registry) -> BTreeMap<
         files.insert(path, content);
     }
 
-    // Generate 8 block_ops files
+    // Generate block_ops files
     for (type_name, elem, width) in block_ops_types() {
         let ty = SimdType::new(elem, width);
         let path = format!("generic/generated/block_ops_{type_name}.rs");
@@ -454,6 +454,7 @@ fn block_ops_types() -> Vec<(&'static str, ElementType, SimdWidth)> {
     vec![
         ("f32x4", ElementType::F32, SimdWidth::W128),
         ("f32x8", ElementType::F32, SimdWidth::W256),
+        ("f32x16", ElementType::F32, SimdWidth::W512),
         ("f64x2", ElementType::F64, SimdWidth::W128),
         ("f64x4", ElementType::F64, SimdWidth::W256),
         ("i32x4", ElementType::I32, SimdWidth::W128),

@@ -195,6 +195,10 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 
 ### [Unreleased]
 
+#### Added
+
+- `f32x16<T>` supports lane interleave, dual 8×8 and 16×16 matrix transposes, zero-copy signed bitcast references, and packed RGB loads and stores for sixteen pixels.
+
 #### QUEUED DEPRECATIONS (next 0.9.x)
 
 - Use `f32x8<ScalarToken>` (and sibling `*<ScalarToken>` vector types) for the scalar tier and plain Rust arithmetic, `magetypes::scalar`, or `magemath` `*_with_token` for scalar tails instead of single-lane `*x1` wrappers (`f32x1`, `f64x1`, `i8x1`, `u8x1`, `i16x1`, `u16x1`, `i32x1`, `u32x1`, `i64x1`, `u64x1`).

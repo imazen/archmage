@@ -1,7 +1,7 @@
 //! Integration tests for 3-tier float `min` / `minimum` / `min_fast` (and
 //! `max` / `maximum` / `max_fast`), matching scalar equivalents, `to_i32_fast`,
 //! and 3-channel RGB block helpers (`deinterleave_3ch`, `interleave_3ch`,
-//! `load_{4,8}_rgb_u8_t`, `store_{4,8}_rgb_u8`).
+//! `load_rgb_u8_t`, `load_rgb_u16_t`, `store_rgb_u8`).
 
 #![forbid(unsafe_code)]
 
@@ -18,6 +18,97 @@ use magetypes::simd::generic::{f32x4, f32x8, f64x2, f64x4};
 #[cfg(feature = "w512")]
 use magetypes::simd::generic::{f32x16, f64x8};
 use magetypes::simd::scalar::{f32x1, f64x1};
+
+#[cfg(all(
+    feature = "w512",
+    any(
+        target_arch = "aarch64",
+        all(target_arch = "wasm32", target_feature = "simd128")
+    )
+))]
+#[path = "support/f32x16_block.rs"]
+mod f32x16_block;
+
+#[cfg(feature = "w512")]
+fn check_w512_rgb<T: F32x16Backend>(token: T, tier: &str) {
+    use magetypes::numerics::IntConvert;
+
+    let packed_bits: [u32; 48] = core::array::from_fn(|i| {
+        (if i % 2 == 0 { 0x7f80_0000 } else { 0xffc0_0000 }) | (i + 1) as u32
+    });
+    let packed = packed_bits.map(f32::from_bits);
+    let bits = |v: f32x16<T>| v.to_array().map(f32::to_bits);
+    let aos = core::array::from_fn(|i| f32x16::load_t(token, &packed.as_chunks::<16>().0[i]));
+    let planar_bits = |channel| core::array::from_fn(|lane| packed_bits[lane * 3 + channel]);
+    let soa =
+        core::array::from_fn(|c| f32x16::from_array_t(token, planar_bits(c).map(f32::from_bits)));
+    assert_eq!(
+        f32x16::deinterleave_3ch(aos).map(bits),
+        core::array::from_fn(planar_bits),
+        "{tier} deinterleave RGB bits",
+    );
+    assert_eq!(
+        f32x16::interleave_3ch(soa).map(bits).as_flattened(),
+        &packed_bits,
+        "{tier} interleave RGB bits",
+    );
+
+    let bytes = core::array::from_fn(|i| (i * 37 + 255) as u8);
+    let [r, g, b] = {
+        let (r, g, b) = f32x16::load_rgb_u8_t(token, &bytes);
+        [r, g, b]
+    };
+    for (channel, v) in [r, g, b].into_iter().enumerate() {
+        let expected = core::array::from_fn(|i| f32::from(bytes[i * 3 + channel]));
+        assert_eq!(v.to_array(), expected, "{tier} RGB u8 channel {channel}");
+    }
+    let mut out = [0; 48];
+    f32x16::store_rgb_u8(r, g, b, &mut out);
+    assert_eq!(out, bytes, "{tier} RGB u8 round trip");
+
+    let words = core::array::from_fn(|i| (i * 2377 + 65535) as u16);
+    let (r, g, b) = f32x16::load_rgb_u16_t(token, &words);
+    for (channel, v) in [r, g, b].into_iter().enumerate() {
+        let expected = core::array::from_fn(|i| f32::from(words[i * 3 + channel]));
+        assert_eq!(v.to_array(), expected, "{tier} RGB u16 channel {channel}");
+    }
+
+    let rails = [
+        f32::NAN,
+        f32::from_bits(0x7f80_0001),
+        f32::NEG_INFINITY,
+        f32::INFINITY,
+        -f32::MAX,
+        f32::MAX,
+        -1.5,
+        -0.0,
+        0.5,
+        1.5,
+        2.5,
+        17.75,
+        126.5,
+        253.5,
+        254.75,
+        255.5,
+    ];
+    let plane = |channel: usize, lane: usize| rails[(lane + channel * 5) % 16];
+    let [r, g, b] = core::array::from_fn(|c| {
+        f32x16::from_array_t(token, core::array::from_fn(|i| plane(c, i)))
+    });
+    let packed = |i: usize| plane(i % 3, i / 3);
+    let nearest = core::array::from_fn(|i| packed(i).round_ties_even() as u8);
+    let trunc = core::array::from_fn(|i| packed(i) as u8);
+    f32x16::store_rgb_u8(r, g, b, &mut out);
+    assert_eq!(out, nearest, "{tier} RGB default saturation");
+    f32x16::store_rgb_u8_with::<{ IntConvert::new().nearest_even().saturate_all().bits() }>(
+        r, g, b, &mut out,
+    );
+    assert_eq!(out, nearest, "{tier} RGB nearest-even saturation");
+    f32x16::store_rgb_u8_with::<{ IntConvert::new().trunc().saturate_all().bits() }>(
+        r, g, b, &mut out,
+    );
+    assert_eq!(out, trunc, "{tier} RGB truncating saturation");
+}
 
 fn assert_f32_bits_or_nan(got: f32, exp: f32, ctx: &str) {
     if got.is_nan() && exp.is_nan() {
@@ -706,6 +797,13 @@ fn check_w512_backend<T>(token: T, tier: &str)
 where
     T: SimdToken + F32x16Backend + F32x16Convert + F64x8Backend,
 {
+    check_w512_rgb(token, tier);
+    #[cfg(any(
+        target_arch = "aarch64",
+        all(target_arch = "wasm32", target_feature = "simd128")
+    ))]
+    f32x16_block::check(token, tier);
+
     let pairs32 = f32_edge_pairs();
     let a16: [f32; 16] = core::array::from_fn(|i| pairs32[i].0);
     let b16: [f32; 16] = core::array::from_fn(|i| pairs32[i].1);
