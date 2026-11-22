@@ -5,16 +5,9 @@ use archmage::{ScalarToken, SimdToken};
 use magetypes::simd::generic::{f32x4, f32x8};
 
 fn ulp_distance(got: f32, want: f64) -> f64 {
-    let want_f32 = want as f32;
-    if got.to_bits() == want_f32.to_bits() {
-        return 0.0;
-    }
-    let next = f32::from_bits(want_f32.to_bits().saturating_add(1)) as f64;
-    let prev = f32::from_bits(want_f32.to_bits().saturating_sub(1)) as f64;
-    let step = (next - want_f32 as f64)
-        .abs()
-        .max((want_f32 as f64 - prev).abs());
-    ((got as f64) - want).abs() / step
+    let exp = (want.to_bits() >> 52) & 0x7ff;
+    let ulp = f64::from_bits((exp - 23) << 52);
+    (f64::from(got) - want).abs() / ulp
 }
 
 #[test]
@@ -22,6 +15,7 @@ fn cbrt_midp_and_lowp_accuracy_and_signs() {
     const MIDP: u128 = CbrtfOptions::new().bits();
     const LOWP: u128 = CbrtfOptions::new().lowp().bits();
     const FULL_MIDP: u128 = CbrtfOptions::new().full_domain().bits();
+    const FULL_LOWP: u128 = CbrtfOptions::new().full_domain().lowp().bits();
 
     // Exact signed zeros
     assert_eq!(
@@ -64,12 +58,12 @@ fn cbrt_midp_and_lowp_accuracy_and_signs() {
         }
     }
     assert!(
-        max_midp_ulp <= 3.2,
-        "cbrtf MIDP exceeded 3.2 ULP: {max_midp_ulp}"
+        max_midp_ulp <= 1.5,
+        "cbrtf MIDP exceeded 1.5 ULP: {max_midp_ulp}"
     );
     assert!(
-        max_lowp_ulp <= 259.0,
-        "cbrtf LOWP exceeded 259 ULP: {max_lowp_ulp}"
+        max_lowp_ulp <= 181.0,
+        "cbrtf LOWP exceeded 181 ULP: {max_lowp_ulp}"
     );
 
     // Full domain: subnormals, > f32::MAX / 3 up to f32::MAX, ±inf, NaN
@@ -87,9 +81,28 @@ fn cbrt_midp_and_lowp_accuracy_and_signs() {
         let want = (sub as f64).cbrt();
         let u = ulp_distance(got, want);
         assert!(
-            u <= 3.2,
+            u <= 1.5,
             "cbrtf FULL MIDP({sub:e}) got {got:e} want {want:e} ({u} ULP)"
         );
+    }
+    // The lowest representable power of eight is subnormal.
+    for exp in -49..=42 {
+        let root = f32::from_bits(((127 + exp) as u32) << 23);
+        let input = if exp < -42 {
+            f32::from_bits(1 << (149 + 3 * exp))
+        } else {
+            f32::from_bits(((127 + 3 * exp) as u32) << 23)
+        };
+        for (x, y) in [(input, root), (-input, -root)] {
+            assert_eq!(
+                Cbrtf::<FULL_MIDP>::scalar_infallible(x).to_bits(),
+                y.to_bits()
+            );
+            assert_eq!(
+                Cbrtf::<FULL_LOWP>::scalar_infallible(x).to_bits(),
+                y.to_bits()
+            );
+        }
     }
     assert_eq!(
         Cbrtf::<FULL_MIDP>::scalar_infallible(f32::INFINITY),

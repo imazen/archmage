@@ -17,12 +17,12 @@ An IEEE-754 `f32` packs a 1-bit sign, an 8-bit biased exponent (`(bits >> 23) & 
 
 ### Why fast SIMD transcendentals break on subnormals without extra work
 
-Vector `log2`, `ln`, `log10`, `powf`, and `cbrt` do not loop per lane calling `frexpf`; they extract the binary exponent directly from the raw `u32` bit pattern (`(bits >> 23) - 127`, or Kahan's `bits / 3 + 0x2a50_8c2d` seed for `cbrt`):
+Vector `log2`, `ln`, `log10`, `powf`, and `cbrt` extract the binary exponent directly from the float's magnitude bits.
 
-- On a normal float, `bits >> 23` gives the true binary exponent in one vector shift.
+- On a normal float, `abs_bits >> 23` gives the biased exponent in one vector shift.
 - On **any** nonzero subnormal from `1.17e-38` down to `1.40e-45`, the 8-bit exponent field is `0`. `bits >> 23` reads `0` regardless of how many leading zeros sit in the 23-bit fraction, so an unrescaled `log2` polynomial treats `1e-42` (`≈ 2^-139.5`) as if it were near `2^-127` and returns `~ -127` instead of `-139.5`. (`exp2(x)` and `exp(x)` do not extract the input's exponent — for any subnormal `x`, `2^x ≈ 1 + x ln 2` rounds directly to `1.0` on `Midp`, so `ExpfOptions` needs no subnormal pre-pass.)
 
-Supporting subnormals accurately in SIMD requires detecting `0 < |x| < f32::MIN_POSITIVE`, multiplying subnormal lanes by `2^23` (`8_388_608.0` on `logf`/`powf`) or `2^24` (`16_777_216.0` on `cbrtf`) to push their leading `1` into the normal exponent field, subtracting `23` from the extracted exponent (or multiplying `cbrt` by `2^-8 = 1.0 / 256.0` afterward), and blending. Because SIMD executes both arms of a blend on every vector, that pre-scaling sits directly on the critical latency chain **even when your buffer contains zero subnormals**. On AMD Ryzen 9 9950X3D (Zen 5, 16-lane AVX-512 slices on normal-only inputs, [`RESULTS.md`](https://github.com/imazen/archmage/blob/main/benchmarks/magemath_slices_2026-11-17/RESULTS.md)), `.admit_subnormals()` adds **`+31.5%` to `+41.5%`** per slice (`429.2 ns -> 575.2 ns` on `log2`, `710.4 ns -> 1.01 µs` on `cbrt`, `1.33 µs -> 1.52 µs` on `powf`). Older x86 microarchitectures can also suffer hardware microcode assists on subnormal intermediates when CPU flush-to-zero (`FTZ`/`DAZ`) is off.
+`logf` and `powf` multiply subnormal lanes by `2^23` before extracting the exponent and compensate for that shift afterward. `cbrtf` places the subnormal fraction bits at the exponent of `1.0`, then subtracts `1.0`. This gives the magnitude scaled by `2^126` exactly. The cube-root graph compensates by subtracting 42 from its output exponent. Vectors without zeros or subnormals skip this normalization.
 
 ### When you cannot have subnormals vs when you can
 
@@ -30,7 +30,7 @@ In most media, imaging, and ML pipelines, nonzero subnormals are impossible by r
 
 - **`u8` pixels divided by `255.0`:** smallest nonzero value is `1.0 / 255.0 = 3.9216e-3` (`~2^-8`).
 - **`u16` pixels divided by `65535.0`:** smallest nonzero value is `1.0 / 65535.0 = 1.5259e-5` (`~2^-16`, matching the `1.0 / 65_536.0` lower bound of `PowfDomain::SdrGamma`, `HdrGamma`, and `LogfDomain::Hdr`).
-- **24-bit PCM audio (`2^-23 ≈ 1.192e-7`) or clamped linear light (`>= 1e-6`):** still **more than 30 orders of magnitude above `f32::MIN_POSITIVE` (`1.175e-38`)**. Paying `+34%`–`+41%` on every lane to rescale values below `1.175e-38` buys nothing on these inputs.
+- **24-bit PCM audio (`2^-23 ≈ 1.192e-7`) or clamped linear light (`>= 1e-6`):** the smallest nonzero magnitude is more than 30 orders of magnitude above `f32::MIN_POSITIVE` (`1.175e-38`).
 
 Subnormals **do** appear and are worth handling in:
 
@@ -42,14 +42,13 @@ Subnormals **do** appear and are worth handling in:
 
 `PowfOptions::new()`, `LogfOptions::new()`, `Log1pfOptions::new()`, and `CbrtfOptions::new()` all default to [`Subnormals::FlushOrClamp`](https://docs.rs/magemath/latest/magemath/enum.Subnormals.html) so checked evaluation does not fail if floating-point noise near zero produces a stray subnormal:
 
-| Policy | Builder method | Behavior under `Validation::Checked` | Behavior under `AssumeValid` | `CbrtfDomain::SignedUnit` (`4,096` `f32`, Zen 5) |
-|---|---|---|---|---:|
-| `Subnormals::FlushOrClamp` *(default)* | `.flush_or_clamp_subnormals()` | Flushes `0 < \|x\| < MIN_POSITIVE` to `±0.0` (when `0` is admitted) or `lo_bound` (when `0` is excluded) before checking domain bounds | Omitted (`0` extra ops; caller promises post-flush domain) | `969.9 ns ± 2 ns` |
-| `Subnormals::Reject` | `.reject_subnormals()` | Rejects nonzero subnormals as out-of-bounds (`Err` with exact lane mask / index); skips pre-validation flush blend | Omitted (`0` extra ops) | `796.8 ns ± 2 ns` (`1.22x` faster) |
-| `Subnormals::Normalize` | `.admit_subnormals()` | Rescales subnormals (`* 2^23` on `powf`/`logf`, `* 2^24` / `* 2^-8` on `cbrtf`, identity `x` on `log1pf`) for full accuracy down to `2^-149` | Keeps exact subnormal rescaling; omits bounds rejection | `1.01 µs ± 2 ns` (checked) |
-| *(Any of `FlushOrClamp` / `Reject`)* | `.assume_in_bounds()` | — | Omits bounds check, flush, and rescaling | **`640.3 ns ± 5 ns`** (`1.57x` faster than `Normalize`) |
+| Policy | Builder method | Behavior under `Validation::Checked` | Behavior under `AssumeValid` |
+|---|---|---|---|
+| `Subnormals::FlushOrClamp` *(default)* | `.flush_or_clamp_subnormals()` | Flushes to signed zero when the domain admits it, or clamps to the applicable normal bound | Caller supplies values within the post-flush domain |
+| `Subnormals::Reject` | `.reject_subnormals()` | Rejects nonzero subnormals with an exact lane mask or slice index | Caller supplies normal values or admitted zeros |
+| `Subnormals::Normalize` | `.admit_subnormals()` | Normalizes subnormals for accuracy down to `2^-149`. `log1pf` uses the identity at subnormal inputs | Keeps subnormal support |
 
-Notice the practical consequence on `Validation::Checked`: if your checked domain admits `0.0` (like `CbrtfDomain::SignedUnit` or `PowfDomain::HdrGamma`) and your inputs are normal or exact `0.0`, adding **`.reject_subnormals()`** removes the pre-validation subnormal-flush blend while keeping full `< lo`, `> hi`, `±inf`, and `NaN` checking (`969.9 ns -> 796.8 ns` on `cbrt`, `1.00 µs -> 830.4 ns` on `powf` `HdrGamma`). Or choose a domain whose lower bound already excludes zero and subnormals (such as `.input_range(0.01, 4.0)` + `.reject_subnormals()` at `688.6 ns`).
+`CbrtfDomain::Bounded` can flush subnormals during output reconstruction because it admits zero of either sign. For a custom interval such as `.input_range(0.01, 4.0)`, the bounds already rule out subnormals.
 
 ```rust
 use magemath::cbrtf::{Cbrtf, CbrtfDomain, CbrtfErrorKind, CbrtfOptions};
@@ -75,10 +74,10 @@ assert_eq!(Cbrtf::<FLUSH>::scalar(-sub).unwrap().to_bits(), (-0.0_f32).to_bits()
 // 2. Reject: flags nonzero subnormals as InvalidInput
 assert_eq!(Cbrtf::<REJECT>::scalar(sub).unwrap_err().kind, CbrtfErrorKind::InvalidInput);
 
-// 3. Normalize: rescales by 2^24 before the Kahan seed and 2^-8 after (cbrt(2^-147) = 2^-49)
+// 3. Normalize preserves the exact root of 2^-147.
 let exact = Cbrtf::<NORMALIZE>::scalar(sub).unwrap();
 let expected = f32::from_bits((127 - 49) << 23);
-assert!((exact - expected).abs() < 1e-20);
+assert_eq!(exact.to_bits(), expected.to_bits());
 ```
 
 ---
@@ -178,8 +177,8 @@ assert_eq!(Expf::<CLAMP_FINITE>::exp2_infallible(10.0), 2.0);
 ### Step 4: Choose `Precision` and `Execution`
 
 - **Precision (`Lowp`, `Midp`, `Highp`):**
-  - `Midp` *(default, `.midp()`)*: refitted degree-6 `exp2` (`<= 1.9 ULP` below `127.5`, `<= 0.78 ULP` on `SingleOctave`), degree-6 odd-rational `log2`/`ln`/`log10` (`<= 4.5 ULP` over positive normals, `<= 2.9 ULP` on `SingleOctave`), Kahan-compensated `log1p` (`<= 2.9 ULP` around zero), 2-step Halley `cbrt` (`<= 3.2 ULP`), and 100% exact 8/10/12-bit sRGB round-trips on `powf`.
-  - `Lowp` *( `.lowp()` )*: refitted degree-3 `exp2` (`<= 0.030%` relative error on `[-126, 127.99]`), rational `P2/Q2` `log2` (`~6e-6` absolute error), and 1-step Halley `cbrt` (`<= 259 ULP`, `~3e-5` relative error). Note that `Lowp` `log1p` has a `~1.3e-6` polynomial intercept on tiny positive normals near zero (while preserving `0.0` and admitted subnormals), so keep `Midp` when tiny normal signs near zero matter.
+  - `Midp` *(default, `.midp()`)*: refitted degree-6 `exp2` (`<= 1.9 ULP` below `127.5`, `<= 0.78 ULP` on `SingleOctave`), degree-6 odd-rational `log2`/`ln`/`log10` (`<= 4.5 ULP` over positive normals, `<= 2.9 ULP` on `SingleOctave`), Kahan-compensated `log1p` (`<= 2.9 ULP` around zero), division-free Estrin `cbrt` (1.47 ULP maximum measured in `BitExact`), and 100% exact 8/10/12-bit sRGB round-trips on `powf`.
+  - `Lowp` *( `.lowp()` )*: refitted degree-3 `exp2` (`<= 0.030%` relative error on `[-126, 127.99]`), rational `P2/Q2` `log2` (`~6e-6` absolute error), and division-free Horner `cbrt` (180.67 ULP maximum measured in `BitExact`). Note that `Lowp` `log1p` has a `~1.3e-6` polynomial intercept on tiny positive normals near zero (while preserving `0.0` and admitted subnormals), so keep `Midp` when tiny normal signs near zero matter.
   - `Highp` *( `.highp()`, `powf` only )*: table-based binary64 polynomial under `BitExact`, or `std` `f32::powf` under `BackendDependent` (requires `std`). Required for `PowfDomain::AllFloats`.
 - **Execution (`Upgrade` vs `Caller`):**
   - `Execution::Upgrade` *(default, `.upgrade()`)*: upgrades once per operation when runtime CPU detection (`std`) exposes a wider or faster tier — notably widening `ScalarToken` and `X64V3Token` slice calls to 16-lane AVX-512 `zmm` loops when `avx512` is enabled, while keeping isolated 4/8-lane `Midp`/`Lowp` `V3` vector calls inline.

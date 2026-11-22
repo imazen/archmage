@@ -148,6 +148,7 @@ fn portable_result_hashes() {
     }
     // Pinned 2026-11-17: identical on x86-64 (AVX-512 automatic and ScalarToken)
     // and AArch64 Neoverse-N1 (NEON automatic and ScalarToken).
+    // The final two entries pin the division-free cube-root graph.
     const EXPECTED: [u64; 11] = [
         0xce6e05b0a6121aea,
         0xa218fefe2cd0d6c4,
@@ -158,8 +159,8 @@ fn portable_result_hashes() {
         0x4fe057004d949a1b,
         0x9b8c1c453d4dc044,
         0xde622032bc96abbb,
-        0xce2026face080231,
-        0xca724aa35fb557d5,
+        0x76ff602673eecedd,
+        0xb3b701b0234d1bc1,
     ];
     assert_eq!(
         NONE.load(std::sync::atomic::Ordering::Relaxed),

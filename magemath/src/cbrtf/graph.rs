@@ -1,12 +1,13 @@
-//! Configured cube-root (`cbrtf`) graphs with in-register SIMD Kahan seed.
+//! Configured cube-root (`cbrtf`) graphs with division-free exponent reduction.
 use super::{CbrtfError, CbrtfErrorKind};
 
-const MAGIC: i32 = 0x2a50_8c2d;
 const MIN_NORMAL_BITS: i32 = 0x0080_0000;
 const INF_BITS: i32 = 0x7f80_0000;
 const MAX_BOUNDED_BITS: i32 = (f32::MAX / 3.0).to_bits() as i32;
 const MAX_BOUNDED_INCLUSIVE: f32 = f32::from_bits((f32::MAX / 3.0).to_bits() - 1);
-const BIG_SCALE_THRESHOLD_BITS: i32 = 1.0e36_f32.to_bits() as i32;
+const MANTISSA_MASK: i32 = MIN_NORMAL_BITS - 1;
+const CBRT_2_MANTISSA: i32 = 0x0021_4518;
+const CBRT_4_MANTISSA: i32 = 0x004b_2ff5;
 
 pub(super) trait Kernel: 'static {
     const RANGED: bool;
@@ -112,7 +113,10 @@ macro_rules! eval_cbrtf {
         } else {
             (-MAX_BOUNDED_INCLUSIVE, MAX_BOUNDED_INCLUSIVE)
         };
-        let pre_in = if !$assume && !$clamp_oob && !$full && $flush_sub {
+        // Bounded admits zero of either sign. Its subnormals can be flushed
+        // when restoring zero, after validation and polynomial evaluation.
+        let flush_bounded = !$ranged && !$assume && !$clamp_oob && !$full && $flush_sub;
+        let pre_in = if $ranged && !$assume && !$clamp_oob && !$full && $flush_sub {
             let in_bits = $input.bitcast_to_i32();
             let in_abs = in_bits & ip(0x7fff_ffff_u32 as i32);
             let is_denorm = in_abs.simd_gt(ip(0)) & in_abs.simd_lt(ip(MIN_NORMAL_BITS));
@@ -160,7 +164,7 @@ macro_rules! eval_cbrtf {
                 }
             } else if !$full {
                 let is_too_large_or_nonfinite = abs_bits.simd_ge(ip(MAX_BOUNDED_BITS));
-                let invalid = if $denorm_possible {
+                let invalid = if $denorm_possible && !flush_bounded {
                     let is_denorm = abs_bits.simd_gt(ip(0)) & abs_bits.simd_lt(ip(MIN_NORMAL_BITS));
                     is_denorm | is_too_large_or_nonfinite
                 } else {
@@ -217,72 +221,73 @@ macro_rules! eval_cbrtf {
         };
 
         let bits = base_in.bitcast_to_i32();
-        let abs_bits = bits & ip(0x7fff_ffff_u32 as i32);
-
-        let (work_input, post_scale) = if $full {
-            let one = sp(1.0);
-            let is_denorm =
-                (abs_bits.simd_gt(ip(0)) & abs_bits.simd_lt(ip(MIN_NORMAL_BITS))).bitcast_to_f32();
-            let is_big = abs_bits
-                .simd_ge(ip(BIG_SCALE_THRESHOLD_BITS))
-                .bitcast_to_f32();
-            let pre = $V::blend(
-                is_denorm,
-                sp(16_777_216.0),
-                $V::blend(is_big, sp(0.125), one),
-            );
-            let post = $V::blend(is_denorm, sp(1.0 / 256.0), $V::blend(is_big, sp(2.0), one));
-            (base_in * pre, Some(post))
-        } else if $scale_subnorm {
-            let one = sp(1.0);
-            let is_denorm =
-                (abs_bits.simd_gt(ip(0)) & abs_bits.simd_lt(ip(MIN_NORMAL_BITS))).bitcast_to_f32();
-            let pre = $V::blend(is_denorm, sp(16_777_216.0), one);
-            let post = $V::blend(is_denorm, sp(1.0 / 256.0), one);
-            (base_in * pre, Some(post))
+        let abs_bits = bits & ip(i32::MAX);
+        let tiny = abs_bits.simd_lt(ip(MIN_NORMAL_BITS));
+        let (work_bits, scale_adjust) = if ($full || $scale_subnorm) && tiny.any_true() {
+            // Putting the fraction bits at 1.0 and subtracting 1.0 gives
+            // |x| * 2^126 exactly. Subtract 42 from the output exponent.
+            let fraction = ((abs_bits & ip(MANTISSA_MASK)) | ip(1.0f32.to_bits() as i32))
+                .bitcast_to_f32()
+                - sp(1.0);
+            (
+                $I::blend(tiny, fraction.bitcast_to_i32(), abs_bits),
+                tiny & ip(42),
+            )
         } else {
-            (base_in, None)
+            (abs_bits, ip(0))
         };
 
-        let sign = work_input & sp(-0.0);
-        let abs_x = work_input.abs();
+        // For n = biased exponent + 2, write n = 3q + r. Then 1366*n
+        // equals 4096*q + (2*q + 1366*r). For n <= 257, the low 12
+        // bits encode r = 0, 1, or 2 in bits 10 and 11. The upper bits
+        // encode q, biased by 127 - 43 for the output scale.
+        let biased_exponent = work_bits.shr_logical_const::<23>();
+        let product = biased_exponent * ip(1366) + ip(((127 - 43) << 12) + 2 * 1366);
+        let mantissa = ((product & ip(0x0400)).simd_ne(ip(0)) & ip(CBRT_2_MANTISSA))
+            | ((product & ip(0x0800)).simd_ne(ip(0)) & ip(CBRT_4_MANTISSA));
+        let exponent = (product.shl_const::<11>() & ip(INF_BITS)) - scale_adjust.shl_const::<23>();
+        let scale = (exponent | mantissa | (bits & ip(i32::MIN))).bitcast_to_f32();
 
-        // In-register vectorized Kahan bit-hack seed:
-        // Approximate `u / 3` for non-negative 31-bit IEEE-754 bit pattern `u`.
-        // The 0.1.0 BitExact hashes include this seed's rounding. Exact division
-        // would change the result, even after both Midp Halley steps.
-        let u = abs_x.bitcast_to_i32();
-        let mut d = u.shr_arithmetic_const::<2>() + u.shr_arithmetic_const::<4>();
-        d = d + d.shr_arithmetic_const::<4>();
-        d = d + d.shr_arithmetic_const::<8>();
-        d = d + d.shr_arithmetic_const::<16>();
-        let mut y = (d + ip(MAGIC)).bitcast_to_f32();
-
-        let two = sp(2.0);
-        let steps = if $lowp { 1 } else { 2 };
-        for _ in 0..steps {
-            let y3 = y * y * y;
+        let madd = |a: $V<T>, b: $V<T>, c: $V<T>| {
             if $backend {
-                y *= two.mul_add_relaxed(abs_x, y3) / two.mul_add_relaxed(y3, abs_x);
+                a.mul_add_relaxed(b, c)
             } else {
-                y *= (y3 + two * abs_x) / (two * y3 + abs_x);
+                a.mul_add_fused(b, c)
             }
-        }
+        };
+        let m = ((work_bits & ip(MANTISSA_MASK)) | ip(1.0f32.to_bits() as i32)).bitcast_to_f32();
+        let delta = m - sp(1.0);
+        // Weighted minimax fits for (cbrt(m) - 1) / (m - 1). The factor
+        // m - 1 anchors both graphs at exact cube roots of powers of eight.
+        let mut result = if $lowp {
+            // Horner in delta keeps the polynomial independent of the scale.
+            let p23 = madd(sp(-0.010_966_721), delta, sp(0.044_462_245));
+            let p123 = madd(p23, delta, sp(-0.106_520_32));
+            let p = madd(p123, delta, sp(0.332_932_38));
+            delta.mul_add_fused(p, sp(1.0)) * scale
+        } else {
+            // Estrin in the centered mantissa. The final FMA scales the
+            // correction before rounding, without rounding cbrt(m) first.
+            let t = m - sp(1.5);
+            let t2 = t * t;
+            let p01 = madd(sp(-0.070_095_22), t, sp(0.289_428_47));
+            let p23 = madd(sp(-0.012_384_874), t, sp(0.027_132_858));
+            let p45 = madd(sp(-0.003_293_586_4), t, sp(0.006_144_125));
+            let p67 = madd(sp(-0.000_931_472_75), t, sp(0.002_000_763_8));
+            let p03 = madd(p23, t2, p01);
+            let p47 = madd(p67, t2, p45);
+            let p = madd(p47, t2 * t2, p03);
+            (delta * scale).mul_add_fused(p, scale)
+        };
 
-        let mut result = y | sign;
-        if let Some(post) = post_scale {
-            result *= post;
-            if $full {
-                let keep =
-                    (abs_bits.simd_eq(ip(0)) | abs_bits.simd_eq(ip(INF_BITS))).bitcast_to_f32();
-                let nan = abs_bits.simd_gt(ip(INF_BITS)).bitcast_to_f32();
-                result = $V::blend(keep, base_in, result);
-                result = $V::blend(nan, sp(f32::NAN), result);
-            } else {
-                let is_zero = abs_bits.simd_eq(ip(0)).bitcast_to_f32();
-                result = $V::blend(is_zero, base_in, result);
-            }
-        } else if !$ranged || ($in_lo <= 0.0 && $in_hi >= 0.0) {
+        if $full {
+            let keep = (abs_bits.simd_eq(ip(0)) | abs_bits.simd_eq(ip(INF_BITS))).bitcast_to_f32();
+            let nan = abs_bits.simd_gt(ip(INF_BITS)).bitcast_to_f32();
+            result = $V::blend(keep, base_in, result);
+            result = $V::blend(nan, sp(f32::NAN), result);
+        } else if flush_bounded {
+            result = $V::blend(tiny.bitcast_to_f32(), base_in & sp(-0.0), result);
+        } else if $scale_subnorm || !$ranged || ($in_lo <= 0.0 && $in_hi >= 0.0) {
             let is_zero = abs_bits.simd_eq(ip(0)).bitcast_to_f32();
             result = $V::blend(is_zero, base_in, result);
         }

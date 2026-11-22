@@ -1,11 +1,11 @@
-//! Configurable `f32` cube-root (`cbrtf`) approximations with in-register SIMD
-//! Kahan initial seeds, explicit portability, precision, and domain validation.
+//! Configurable `f32` cube-root (`cbrtf`) approximations with explicit
+//! portability, precision, and domain validation.
 //!
-//! Replaces the scalar `to_array()` + integer `/ 3` + `from_array()` Kahan seed
-//! in Magetypes' flat `cbrt_lowp` / `cbrt_midp` / `cbrt_midp_precise` methods
-//! with a pure SIMD 4-step shift-add approximation to `u / 3` across all vector
-//! lanes, followed by `1` (`Lowp`, `<= 259 ULP`) or `2` (`Midp`, `<= 3.2 ULP`)
-//! Halley iterations.
+//! The division-free SIMD graph splits the exponent by three and evaluates a
+//! mantissa polynomial using Estrin for [`CbrtfPrecision::Midp`] and Horner for
+//! [`CbrtfPrecision::Lowp`]. Both precisions give exact roots for powers of eight.
+//! An exhaustive `BitExact` sweep of finite inputs measured at most 1.47 ULP
+//! for [`CbrtfPrecision::Midp`] and 180.67 ULP for [`CbrtfPrecision::Lowp`].
 //!
 //! ```
 //! use magemath::cbrtf::{Cbrtf, CbrtfOptions, try_cbrt};
