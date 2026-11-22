@@ -2,6 +2,9 @@
 //!
 //! cfg-gated module imports and re-exports for all token types.
 
+mod into_concrete;
+pub use into_concrete::IntoConcreteToken;
+
 mod traits;
 pub use traits::*;
 

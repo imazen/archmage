@@ -36,10 +36,9 @@ if let Some(v4) = X64V4Token::summon() {
 }
 ```
 
-Rust does not implicitly coerce V4 to V3 in an ordinary function call. Use
-`.v3()`. `IntoConcreteToken::as_x64v3()` instead tests exact identity, so it
-returns `None` for a V4 token. Hardware implication also does not automatically
-supply every magetypes backend implementation for that token type.
+Use `.v3()` on a concrete V4 token, or `IntoConcreteToken::try_v3()` when
+the input token is generic. `IntoConcreteToken::as_x64v3()` tests exact
+identity and returns `None` for a V4 token.
 
 ## Construct from an existing feature context
 

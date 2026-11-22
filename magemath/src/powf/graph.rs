@@ -324,7 +324,7 @@ macro_rules! eval_powf {
                     #[cfg(target_arch = "wasm32")]
                     if $arithmetic == WASM_SOFTWARE {
                         let proof = $token
-                            .as_wasm128()
+                            .try_wasm128()
                             .expect("private WASM mode requires its matching proof");
                         return $V::from_array_t(
                             $token,

@@ -1144,8 +1144,8 @@ pub fn prelude::F32x8FromHalves::from_halves(self, <Self as simd::backends::F32x
 pub fn prelude::F32x8FromHalves::high(self, <Self as simd::backends::F32x8Backend>::Repr) -> <Self as simd::backends::F32x4Backend>::Repr
 pub fn prelude::F32x8FromHalves::low(self, <Self as simd::backends::F32x8Backend>::Repr) -> <Self as simd::backends::F32x4Backend>::Repr
 pub mod scalar
-pub trait scalar::F32ScalarBackend: archmage::tokens::IntoConcreteToken + archmage::tokens::SimdToken + simd::backends::sealed::Sealed + F32ScalarInternal + core::marker::Copy + 'static
-pub trait scalar::F64ScalarBackend: archmage::tokens::IntoConcreteToken + archmage::tokens::SimdToken + simd::backends::sealed::Sealed + F64ScalarInternal + core::marker::Copy + 'static
+pub trait scalar::F32ScalarBackend: archmage::tokens::generated::into_concrete::IntoConcreteToken + archmage::tokens::SimdToken + simd::backends::sealed::Sealed + F32ScalarInternal + core::marker::Copy + 'static
+pub trait scalar::F64ScalarBackend: archmage::tokens::generated::into_concrete::IntoConcreteToken + archmage::tokens::SimdToken + simd::backends::sealed::Sealed + F64ScalarInternal + core::marker::Copy + 'static
 pub fn scalar::ceil_f32(f32) -> f32
 pub fn scalar::ceil_f64(f64) -> f64
 pub fn scalar::clamp_f32<T: scalar::F32ScalarBackend>(T, f32, f32, f32) -> f32

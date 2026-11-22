@@ -6,7 +6,7 @@
 # impls omitted; re-export duplicates annotated `[also: path]`.
 # DO NOT EDIT BY HAND — commit regenerated changes with the code.
 #
-# files: archmage.txt 418 lines (supported surface) | archmage.features.txt 0 added (features: avx512,forge-token-api,macros,safe_unaligned_simd,std,testable_dispatch) | archmage.internal.txt 85 lines (85 hidden + 0 excluded-feature)
+# files: archmage.txt 472 lines (supported surface) | archmage.features.txt 0 added (features: avx512,forge-token-api,macros,safe_unaligned_simd,std,testable_dispatch) | archmage.internal.txt 85 lines (85 hidden + 0 excluded-feature)
 
 ## summary
 #
@@ -14,7 +14,7 @@
 #   pub types (struct/enum/trait/alias)       117
 #   pub consts/statics                         18
 #   free functions                              4
-#   inherent methods                          201
+#   inherent methods                          255
 #   struct fields                              12
 #   enum variants                              51
 #   re-exports                                 60
@@ -23,13 +23,13 @@
 #   auto-trait exceptions                       1
 #
 # per-module pub lines:
-#   (root)                          143
+#   (root)                          161
 #   intrinsics                       19
-#   prelude                          92
+#   prelude                         110
 #   testing                          13
-#   tokens                          202
+#   tokens                          220
 
-## items (391 lines)
+## items (445 lines)
 
 pub mod archmage
 pub use arcane
@@ -175,6 +175,24 @@ pub fn prelude::IntoConcreteToken::as_x64v3_gfni_crypto(self) -> core::option::O
 pub fn prelude::IntoConcreteToken::as_x64v3_vnni(self) -> core::option::Option<tokens::X64V3VnniToken>
 pub fn prelude::IntoConcreteToken::as_x64v4(self) -> core::option::Option<tokens::X64V4Token>
 pub fn prelude::IntoConcreteToken::as_x64v4x(self) -> core::option::Option<tokens::X64V4xToken>
+pub fn prelude::IntoConcreteToken::try_arm_v2(self) -> core::option::Option<tokens::Arm64V2Token>
+pub fn prelude::IntoConcreteToken::try_arm_v3(self) -> core::option::Option<tokens::Arm64V3Token>
+pub fn prelude::IntoConcreteToken::try_avx512_fp16(self) -> core::option::Option<tokens::Avx512Fp16Token>
+pub fn prelude::IntoConcreteToken::try_neon(self) -> core::option::Option<tokens::NeonToken>
+pub fn prelude::IntoConcreteToken::try_neon_aes(self) -> core::option::Option<tokens::NeonAesToken>
+pub fn prelude::IntoConcreteToken::try_neon_crc(self) -> core::option::Option<tokens::NeonCrcToken>
+pub fn prelude::IntoConcreteToken::try_neon_sha3(self) -> core::option::Option<tokens::NeonSha3Token>
+pub fn prelude::IntoConcreteToken::try_v1(self) -> core::option::Option<tokens::X64V1Token>
+pub fn prelude::IntoConcreteToken::try_v2(self) -> core::option::Option<tokens::X64V2Token>
+pub fn prelude::IntoConcreteToken::try_v3(self) -> core::option::Option<tokens::X64V3Token>
+pub fn prelude::IntoConcreteToken::try_v3_crypto(self) -> core::option::Option<tokens::X64V3CryptoToken>
+pub fn prelude::IntoConcreteToken::try_v3_gfni_crypto(self) -> core::option::Option<tokens::X64V3GfniCryptoToken>
+pub fn prelude::IntoConcreteToken::try_v3_vnni(self) -> core::option::Option<tokens::X64V3VnniToken>
+pub fn prelude::IntoConcreteToken::try_v4(self) -> core::option::Option<tokens::X64V4Token>
+pub fn prelude::IntoConcreteToken::try_v4x(self) -> core::option::Option<tokens::X64V4xToken>
+pub fn prelude::IntoConcreteToken::try_wasm128(self) -> core::option::Option<tokens::Wasm128Token>
+pub fn prelude::IntoConcreteToken::try_wasm128_relaxed(self) -> core::option::Option<tokens::Wasm128RelaxedToken>
+pub fn prelude::IntoConcreteToken::try_x64_crypto(self) -> core::option::Option<tokens::X64CryptoToken>
 pub const prelude::SimdToken::DISABLE_TARGET_FEATURES: &'static str
 pub const prelude::SimdToken::ENABLE_TARGET_FEATURES: &'static str
 pub const prelude::SimdToken::NAME: &'static str
@@ -281,6 +299,24 @@ pub fn tokens::IntoConcreteToken::as_x64v3_gfni_crypto(self) -> core::option::Op
 pub fn tokens::IntoConcreteToken::as_x64v3_vnni(self) -> core::option::Option<tokens::X64V3VnniToken>
 pub fn tokens::IntoConcreteToken::as_x64v4(self) -> core::option::Option<tokens::X64V4Token>
 pub fn tokens::IntoConcreteToken::as_x64v4x(self) -> core::option::Option<tokens::X64V4xToken>
+pub fn tokens::IntoConcreteToken::try_arm_v2(self) -> core::option::Option<tokens::Arm64V2Token>
+pub fn tokens::IntoConcreteToken::try_arm_v3(self) -> core::option::Option<tokens::Arm64V3Token>
+pub fn tokens::IntoConcreteToken::try_avx512_fp16(self) -> core::option::Option<tokens::Avx512Fp16Token>
+pub fn tokens::IntoConcreteToken::try_neon(self) -> core::option::Option<tokens::NeonToken>
+pub fn tokens::IntoConcreteToken::try_neon_aes(self) -> core::option::Option<tokens::NeonAesToken>
+pub fn tokens::IntoConcreteToken::try_neon_crc(self) -> core::option::Option<tokens::NeonCrcToken>
+pub fn tokens::IntoConcreteToken::try_neon_sha3(self) -> core::option::Option<tokens::NeonSha3Token>
+pub fn tokens::IntoConcreteToken::try_v1(self) -> core::option::Option<tokens::X64V1Token>
+pub fn tokens::IntoConcreteToken::try_v2(self) -> core::option::Option<tokens::X64V2Token>
+pub fn tokens::IntoConcreteToken::try_v3(self) -> core::option::Option<tokens::X64V3Token>
+pub fn tokens::IntoConcreteToken::try_v3_crypto(self) -> core::option::Option<tokens::X64V3CryptoToken>
+pub fn tokens::IntoConcreteToken::try_v3_gfni_crypto(self) -> core::option::Option<tokens::X64V3GfniCryptoToken>
+pub fn tokens::IntoConcreteToken::try_v3_vnni(self) -> core::option::Option<tokens::X64V3VnniToken>
+pub fn tokens::IntoConcreteToken::try_v4(self) -> core::option::Option<tokens::X64V4Token>
+pub fn tokens::IntoConcreteToken::try_v4x(self) -> core::option::Option<tokens::X64V4xToken>
+pub fn tokens::IntoConcreteToken::try_wasm128(self) -> core::option::Option<tokens::Wasm128Token>
+pub fn tokens::IntoConcreteToken::try_wasm128_relaxed(self) -> core::option::Option<tokens::Wasm128RelaxedToken>
+pub fn tokens::IntoConcreteToken::try_x64_crypto(self) -> core::option::Option<tokens::X64CryptoToken>
 pub const tokens::SimdToken::DISABLE_TARGET_FEATURES: &'static str
 pub const tokens::SimdToken::ENABLE_TARGET_FEATURES: &'static str
 pub const tokens::SimdToken::NAME: &'static str
@@ -405,6 +441,24 @@ pub fn IntoConcreteToken::as_x64v3_gfni_crypto(self) -> core::option::Option<tok
 pub fn IntoConcreteToken::as_x64v3_vnni(self) -> core::option::Option<tokens::X64V3VnniToken>
 pub fn IntoConcreteToken::as_x64v4(self) -> core::option::Option<tokens::X64V4Token>
 pub fn IntoConcreteToken::as_x64v4x(self) -> core::option::Option<tokens::X64V4xToken>
+pub fn IntoConcreteToken::try_arm_v2(self) -> core::option::Option<tokens::Arm64V2Token>
+pub fn IntoConcreteToken::try_arm_v3(self) -> core::option::Option<tokens::Arm64V3Token>
+pub fn IntoConcreteToken::try_avx512_fp16(self) -> core::option::Option<tokens::Avx512Fp16Token>
+pub fn IntoConcreteToken::try_neon(self) -> core::option::Option<tokens::NeonToken>
+pub fn IntoConcreteToken::try_neon_aes(self) -> core::option::Option<tokens::NeonAesToken>
+pub fn IntoConcreteToken::try_neon_crc(self) -> core::option::Option<tokens::NeonCrcToken>
+pub fn IntoConcreteToken::try_neon_sha3(self) -> core::option::Option<tokens::NeonSha3Token>
+pub fn IntoConcreteToken::try_v1(self) -> core::option::Option<tokens::X64V1Token>
+pub fn IntoConcreteToken::try_v2(self) -> core::option::Option<tokens::X64V2Token>
+pub fn IntoConcreteToken::try_v3(self) -> core::option::Option<tokens::X64V3Token>
+pub fn IntoConcreteToken::try_v3_crypto(self) -> core::option::Option<tokens::X64V3CryptoToken>
+pub fn IntoConcreteToken::try_v3_gfni_crypto(self) -> core::option::Option<tokens::X64V3GfniCryptoToken>
+pub fn IntoConcreteToken::try_v3_vnni(self) -> core::option::Option<tokens::X64V3VnniToken>
+pub fn IntoConcreteToken::try_v4(self) -> core::option::Option<tokens::X64V4Token>
+pub fn IntoConcreteToken::try_v4x(self) -> core::option::Option<tokens::X64V4xToken>
+pub fn IntoConcreteToken::try_wasm128(self) -> core::option::Option<tokens::Wasm128Token>
+pub fn IntoConcreteToken::try_wasm128_relaxed(self) -> core::option::Option<tokens::Wasm128RelaxedToken>
+pub fn IntoConcreteToken::try_x64_crypto(self) -> core::option::Option<tokens::X64CryptoToken>
 pub trait SimdToken: tokens::sealed::Sealed + core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync + 'static [also: prelude, tokens]
 pub const SimdToken::DISABLE_TARGET_FEATURES: &'static str
 pub const SimdToken::ENABLE_TARGET_FEATURES: &'static str
@@ -429,27 +483,27 @@ testing::CompileTimePolicy: Clone, Copy, Debug, Eq, PartialEq
 testing::PermutationReport: Clone, Debug, Display
 testing::TokenPermutation: Clone, Debug, Display
 testing::TokenTestGuard: Debug, Drop
-tokens::Arm64V2Token: Clone, Copy, Debug, tokens::Has128BitSimd, tokens::HasArm64V2, tokens::HasNeon, tokens::HasNeonAes, tokens::IntoConcreteToken, tokens::SimdToken
-tokens::Arm64V3Token: Clone, Copy, Debug, tokens::Has128BitSimd, tokens::HasArm64V2, tokens::HasArm64V3, tokens::HasNeon, tokens::HasNeonAes, tokens::HasNeonSha3, tokens::IntoConcreteToken, tokens::SimdToken
-tokens::Avx512Fp16Token: Clone, Copy, Debug, tokens::Has128BitSimd, tokens::Has256BitSimd, tokens::Has512BitSimd, tokens::HasX64V2, tokens::HasX64V4, tokens::IntoConcreteToken, tokens::SimdToken
+tokens::Arm64V2Token: Clone, Copy, Debug, IntoConcreteToken, tokens::Has128BitSimd, tokens::HasArm64V2, tokens::HasNeon, tokens::HasNeonAes, tokens::SimdToken
+tokens::Arm64V3Token: Clone, Copy, Debug, IntoConcreteToken, tokens::Has128BitSimd, tokens::HasArm64V2, tokens::HasArm64V3, tokens::HasNeon, tokens::HasNeonAes, tokens::HasNeonSha3, tokens::SimdToken
+tokens::Avx512Fp16Token: Clone, Copy, Debug, IntoConcreteToken, tokens::Has128BitSimd, tokens::Has256BitSimd, tokens::Has512BitSimd, tokens::HasX64V2, tokens::HasX64V4, tokens::SimdToken
 tokens::CompileTimeGuaranteedError: Clone, Debug, Display, Error
 tokens::DisableAllSimdError: Clone, Debug, Display, Error
-tokens::NeonAesToken: Clone, Copy, Debug, tokens::Has128BitSimd, tokens::HasNeon, tokens::HasNeonAes, tokens::IntoConcreteToken, tokens::SimdToken
-tokens::NeonCrcToken: Clone, Copy, Debug, tokens::Has128BitSimd, tokens::HasNeon, tokens::IntoConcreteToken, tokens::SimdToken
-tokens::NeonSha3Token: Clone, Copy, Debug, tokens::Has128BitSimd, tokens::HasNeon, tokens::HasNeonSha3, tokens::IntoConcreteToken, tokens::SimdToken
-tokens::NeonToken: Clone, Copy, Debug, tokens::Has128BitSimd, tokens::HasNeon, tokens::IntoConcreteToken, tokens::SimdToken
-tokens::ScalarToken: Clone, Copy, Debug, Eq, Hash, PartialEq, tokens::IntoConcreteToken, tokens::SimdToken
-tokens::Wasm128RelaxedToken: Clone, Copy, Debug, tokens::Has128BitSimd, tokens::IntoConcreteToken, tokens::SimdToken
-tokens::Wasm128Token: Clone, Copy, Debug, tokens::Has128BitSimd, tokens::IntoConcreteToken, tokens::SimdToken
-tokens::X64CryptoToken: Clone, Copy, Debug, tokens::Has128BitSimd, tokens::HasX64V2, tokens::IntoConcreteToken, tokens::SimdToken
-tokens::X64V1Token: Clone, Copy, Debug, tokens::Has128BitSimd, tokens::IntoConcreteToken, tokens::SimdToken
-tokens::X64V2Token: Clone, Copy, Debug, tokens::Has128BitSimd, tokens::HasX64V2, tokens::IntoConcreteToken, tokens::SimdToken
-tokens::X64V3CryptoToken: Clone, Copy, Debug, tokens::Has128BitSimd, tokens::Has256BitSimd, tokens::HasX64V2, tokens::IntoConcreteToken, tokens::SimdToken
-tokens::X64V3GfniCryptoToken: Clone, Copy, Debug, tokens::Has128BitSimd, tokens::Has256BitSimd, tokens::HasX64V2, tokens::IntoConcreteToken, tokens::SimdToken
-tokens::X64V3Token: Clone, Copy, Debug, tokens::Has128BitSimd, tokens::Has256BitSimd, tokens::HasX64V2, tokens::IntoConcreteToken, tokens::SimdToken
-tokens::X64V3VnniToken: Clone, Copy, Debug, tokens::Has128BitSimd, tokens::Has256BitSimd, tokens::HasX64V2, tokens::IntoConcreteToken, tokens::SimdToken
-tokens::X64V4Token: Clone, Copy, Debug, tokens::Has128BitSimd, tokens::Has256BitSimd, tokens::Has512BitSimd, tokens::HasX64V2, tokens::HasX64V4, tokens::IntoConcreteToken, tokens::SimdToken
-tokens::X64V4xToken: Clone, Copy, Debug, tokens::Has128BitSimd, tokens::Has256BitSimd, tokens::Has512BitSimd, tokens::HasX64V2, tokens::HasX64V4, tokens::IntoConcreteToken, tokens::SimdToken
+tokens::NeonAesToken: Clone, Copy, Debug, IntoConcreteToken, tokens::Has128BitSimd, tokens::HasNeon, tokens::HasNeonAes, tokens::SimdToken
+tokens::NeonCrcToken: Clone, Copy, Debug, IntoConcreteToken, tokens::Has128BitSimd, tokens::HasNeon, tokens::SimdToken
+tokens::NeonSha3Token: Clone, Copy, Debug, IntoConcreteToken, tokens::Has128BitSimd, tokens::HasNeon, tokens::HasNeonSha3, tokens::SimdToken
+tokens::NeonToken: Clone, Copy, Debug, IntoConcreteToken, tokens::Has128BitSimd, tokens::HasNeon, tokens::SimdToken
+tokens::ScalarToken: Clone, Copy, Debug, Eq, Hash, IntoConcreteToken, PartialEq, tokens::SimdToken
+tokens::Wasm128RelaxedToken: Clone, Copy, Debug, IntoConcreteToken, tokens::Has128BitSimd, tokens::SimdToken
+tokens::Wasm128Token: Clone, Copy, Debug, IntoConcreteToken, tokens::Has128BitSimd, tokens::SimdToken
+tokens::X64CryptoToken: Clone, Copy, Debug, IntoConcreteToken, tokens::Has128BitSimd, tokens::HasX64V2, tokens::SimdToken
+tokens::X64V1Token: Clone, Copy, Debug, IntoConcreteToken, tokens::Has128BitSimd, tokens::SimdToken
+tokens::X64V2Token: Clone, Copy, Debug, IntoConcreteToken, tokens::Has128BitSimd, tokens::HasX64V2, tokens::SimdToken
+tokens::X64V3CryptoToken: Clone, Copy, Debug, IntoConcreteToken, tokens::Has128BitSimd, tokens::Has256BitSimd, tokens::HasX64V2, tokens::SimdToken
+tokens::X64V3GfniCryptoToken: Clone, Copy, Debug, IntoConcreteToken, tokens::Has128BitSimd, tokens::Has256BitSimd, tokens::HasX64V2, tokens::SimdToken
+tokens::X64V3Token: Clone, Copy, Debug, IntoConcreteToken, tokens::Has128BitSimd, tokens::Has256BitSimd, tokens::HasX64V2, tokens::SimdToken
+tokens::X64V3VnniToken: Clone, Copy, Debug, IntoConcreteToken, tokens::Has128BitSimd, tokens::Has256BitSimd, tokens::HasX64V2, tokens::SimdToken
+tokens::X64V4Token: Clone, Copy, Debug, IntoConcreteToken, tokens::Has128BitSimd, tokens::Has256BitSimd, tokens::Has512BitSimd, tokens::HasX64V2, tokens::HasX64V4, tokens::SimdToken
+tokens::X64V4xToken: Clone, Copy, Debug, IntoConcreteToken, tokens::Has128BitSimd, tokens::Has256BitSimd, tokens::Has512BitSimd, tokens::HasX64V2, tokens::HasX64V4, tokens::SimdToken
 
 ## auto traits
 

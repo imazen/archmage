@@ -119,6 +119,7 @@ pub fn generate_token_files(reg: &Registry, major_version: u32) -> Vec<(String, 
 
     // Traits
     files.push(("traits.rs".into(), gen_traits(reg)));
+    files.push(("into_concrete.rs".into(), gen_into_concrete(reg)));
 
     // Module file
     files.push(("mod.rs".into(), gen_mod_rs()));
@@ -761,10 +762,7 @@ fn gen_extraction_methods(out: &mut String, reg: &Registry, token: &TokenDef) {
     let wasm = token.arch == "wasm";
     for ancestor in &targets {
         let anc_name = &ancestor.name;
-        let short = ancestor
-            .short_name
-            .as_deref()
-            .unwrap_or("MISSING_SHORT_NAME");
+        let short = extraction_name(ancestor);
         let anc_display = ancestor.display_name.as_deref().unwrap_or(anc_name);
 
         let doc = formatdoc! {"
@@ -817,6 +815,10 @@ fn gen_extraction_methods(out: &mut String, reg: &Registry, token: &TokenDef) {
     }
 
     out.push_str("}\n");
+}
+
+fn extraction_name(token: &TokenDef) -> &str {
+    token.short_name.as_deref().unwrap_or("MISSING_SHORT_NAME")
 }
 
 /// Generate disable/getter methods for a real token.
@@ -1192,6 +1194,159 @@ fn gen_tier_tags(out: &mut String, tokens: &[&TokenDef], major_version: u32) {
 // Trait definitions
 // ============================================================================
 
+fn gen_into_concrete(reg: &Registry) -> String {
+    let token_imports = reg
+        .token
+        .iter()
+        .map(|token| token.name.as_str())
+        .collect::<Vec<_>>()
+        .join(", ");
+    let mut out = formatdoc! {r#"
+        //! Generated from token-registry.toml — DO NOT EDIT.
+        //!
+        //! Regenerate with: cargo xtask generate
+
+        use super::{{{token_imports}}};
+        use crate::tokens::{{ScalarToken, SimdToken}};
+
+        /// Recover concrete proofs from a generic SIMD token.
+        ///
+        /// The `as_*` methods check the token's exact type. The `try_*` methods also
+        /// accept descendants of the requested token in the registry's parent
+        /// hierarchy. For example, an [`X64V4Token`] can supply a proof through
+        /// [`Self::try_v3`], while [`Self::as_x64v3`] returns `None` for it.
+        ///
+        /// Both forms use the proof already held by the caller. They perform no
+        /// CPU detection, and monomorphization lets the compiler fold the checks.
+        /// For a known concrete type, its inherent extraction method (such as
+        /// `X64V4Token::v3`) gives the parent proof directly on the native target.
+        ///
+        /// # Example
+        ///
+        /// Check stronger proofs first when multiple tiers can run the operation.
+        ///
+        /// ```rust
+        /// use archmage::{{IntoConcreteToken, ScalarToken, SimdToken, X64V4Token}};
+        ///
+        /// fn selected_tier(token: impl IntoConcreteToken) -> &'static str {{
+        ///     if let Some(proof) = token.try_v4x() {{
+        ///         proof.name()
+        ///     }} else if let Some(proof) = token.try_v4() {{
+        ///         proof.name()
+        ///     }} else if let Some(proof) = token.try_v3() {{
+        ///         proof.name()
+        ///     }} else if let Some(proof) = token.try_neon() {{
+        ///         proof.name()
+        ///     }} else if let Some(proof) = token.try_wasm128() {{
+        ///         proof.name()
+        ///     }} else {{
+        ///         "Scalar"
+        ///     }}
+        /// }}
+        ///
+        /// assert_eq!(selected_tier(ScalarToken), "Scalar");
+        /// if let Some(v4) = X64V4Token::summon() {{
+        ///     assert_eq!(selected_tier(v4), X64V4Token::NAME);
+        ///     assert!(v4.as_x64v3().is_none());
+        ///     assert!(v4.try_v3().is_some());
+        /// }}
+        /// ```
+        pub trait IntoConcreteToken: SimdToken + Sized {{
+    "#};
+
+    for token in &reg.token {
+        let name = &token.name;
+        let exact = dispatch_identity(token);
+        out.push_str(&formatdoc! {"
+            {INDENT}/// Returns the proof if this token is exactly [`{name}`].
+            {INDENT}#[inline(always)]
+            {INDENT}fn {exact}(self) -> Option<{name}> {{
+            {INDENT}    None
+            {INDENT}}}
+
+        "});
+    }
+    out.push_str(&formatdoc! {"
+        {INDENT}/// Returns the proof if this token is exactly [`ScalarToken`].
+        {INDENT}#[inline(always)]
+        {INDENT}fn as_scalar(self) -> Option<ScalarToken> {{
+        {INDENT}    None
+        {INDENT}}}
+    "});
+
+    for token in &reg.token {
+        let name = &token.name;
+        let exact = dispatch_identity(token);
+        let tier = token.try_method_name();
+        out.push_str(&formatdoc! {"
+
+            {INDENT}/// Returns a [`{name}`] proof from that token or a descendant in the
+            {INDENT}/// registry's parent hierarchy. Returns `None` for other tokens.
+            {INDENT}/// Use [`Self::{exact}`] to check for the exact type.
+            {INDENT}#[inline(always)]
+            {INDENT}fn {tier}(self) -> Option<{name}> {{
+            {INDENT}    None
+            {INDENT}}}
+        "});
+    }
+    out.push_str("}\n");
+    out.push_str(&formatdoc! {"
+
+        impl IntoConcreteToken for ScalarToken {{
+            #[inline(always)]
+            fn as_scalar(self) -> Option<ScalarToken> {{
+                Some(self)
+            }}
+        }}
+    "});
+
+    for token in &reg.token {
+        let name = &token.name;
+        let exact = dispatch_identity(token);
+        let tier = token.try_method_name();
+        out.push_str(&formatdoc! {"
+
+            impl IntoConcreteToken for {name} {{
+                #[inline(always)]
+                fn {exact}(self) -> Option<{name}> {{
+                    Some(self)
+                }}
+
+                #[inline(always)]
+                fn {tier}(self) -> Option<{name}> {{
+                    Some(self)
+                }}
+        "});
+
+        // Only native tokens can be summoned or have inherent extraction methods.
+        let native = match token.arch.as_str() {
+            "x86" => r#"all(target_arch = "x86_64", target_feature = "sse2")"#,
+            "aarch64" => r#"target_arch = "aarch64""#,
+            "wasm" => r#"target_arch = "wasm32""#,
+            arch => unreachable!("unknown token architecture: {arch}"),
+        };
+        for ancestor in collect_ancestors(reg, token) {
+            let name = &ancestor.name;
+            let tier = ancestor.try_method_name();
+            let extract = extraction_name(ancestor);
+            out.push_str(&formatdoc! {"
+
+                {INDENT}#[cfg({native})]
+                {INDENT}#[inline(always)]
+                {INDENT}fn {tier}(self) -> Option<{name}> {{
+                {INDENT}    Some(self.{extract}())
+                {INDENT}}}
+            "});
+        }
+        out.push_str("}\n");
+    }
+    out
+}
+
+fn dispatch_identity(token: &TokenDef) -> &str {
+    token.dispatch_as.as_deref().expect("validated dispatch_as")
+}
+
 fn gen_traits(reg: &Registry) -> String {
     let mut out = String::with_capacity(2048);
 
@@ -1264,6 +1419,9 @@ fn gen_mod_rs() -> String {
         //! Generated from token-registry.toml — DO NOT EDIT.
         //!
         //! cfg-gated module imports and re-exports for all token types.
+
+        mod into_concrete;
+        pub use into_concrete::IntoConcreteToken;
 
         mod traits;
         pub use traits::*;
@@ -1451,6 +1609,7 @@ mod tests {
             "arm_stubs.rs",
             "wasm_stubs.rs",
             "traits.rs",
+            "into_concrete.rs",
             "mod.rs",
         ];
         for exp in &expected {

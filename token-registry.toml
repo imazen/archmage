@@ -18,6 +18,7 @@
 # Token codegen fields:
 #   display_name  — SimdToken::NAME const (human-readable)
 #   short_name    — extraction method name (.v2(), .v3(), .neon(), etc.)
+#   try_suffix    — optional suffix for IntoConcreteToken::try_* (defaults to short_name)
 #   parents       — parent tokens in hierarchy (for extraction method chain, DAG)
 #   extraction_aliases — extra extraction method names for this token
 #   doc           — doc comment for the struct
@@ -214,6 +215,7 @@ features = [
 traits = ["HasX64V2", "HasX64V4", "Has128BitSimd", "Has256BitSimd", "Has512BitSimd"]
 display_name = "AVX-512FP16"
 short_name = "fp16"
+try_suffix = "avx512_fp16"
 magetypes_namespace = "v4"
 parents = ["X64V4Token"]
 doc = "Proof that AVX-512 FP16 (half-precision) is available.\n\nAVX-512 FP16 provides native 16-bit floating-point arithmetic in 512-bit\nvectors, enabling efficient ML inference and scientific computing.\n\nAvailable on Intel Sapphire Rapids (2023+), Emerald Rapids.\nNOT available on Skylake-X, Ice Lake, AMD Zen 4."

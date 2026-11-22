@@ -13,7 +13,7 @@ Rust mechanism and is not the normal magetypes kernel pattern.
 | `HasX64V2`, `HasX64V4`, `HasNeon`, `HasNeonAes`, `HasNeonSha3`, `HasArm64V2`, `HasArm64V3` | Proof of a tier's CPU capabilities; understood by `#[attune(wrap)]` |
 | `F32x8Backend`, `I32x4Backend`, etc. | Operations and storage for a particular logical vector shape |
 | Published conversion traits such as `F32x8Convert` | Additional cross-type conversions required by a generic body |
-| `IntoConcreteToken` | Exact token-type identity checks, not feature upgrades |
+| `IntoConcreteToken` | Exact identity checks and parent-tier proof extraction |
 
 Add bounds for the operations your helper actually calls. Source-backend traits
 now carry widening, narrowing, pairwise, and terminal byte operations; some

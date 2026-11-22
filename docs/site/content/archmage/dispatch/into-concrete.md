@@ -3,17 +3,22 @@ title = "IntoConcreteToken Trait"
 weight = 4
 +++
 
-`IntoConcreteToken` checks the **identity of a token's type**. It does not detect
-new CPU features or convert a higher token into a lower token.
+`IntoConcreteToken` lets generic code recover a concrete CPU proof. The `as_*`
+methods check the token's exact type. The `try_*` methods also accept descendants
+in the registry's parent hierarchy. Both use the caller's existing proof.
 
 ```rust
-use archmage::{IntoConcreteToken, SimdToken, X64V4Token};
-#[cfg(target_arch = "x86_64")]
+use archmage::{IntoConcreteToken, ScalarToken, SimdToken, X64V4Token};
+
+fn has_v3(token: impl IntoConcreteToken) -> bool {
+    token.try_v3().is_some()
+}
+
+assert!(!has_v3(ScalarToken));
 if let Some(v4) = X64V4Token::summon() {
     assert!(v4.as_x64v4().is_some());
     assert!(v4.as_x64v3().is_none());
-    let v3 = v4.v3();
-    assert!(v3.as_x64v3().is_some());
+    assert!(has_v3(v4));
 }
 ```
 
@@ -23,12 +28,8 @@ Use `summon()` when you need evidence for additional features.
 
 For ordinary portable kernels, use a generated entry and a backend-generic
 helper. For a family of concrete variants, use [attuned!](@/archmage/dispatch/incant.md).
-Manual branching on exact token types must handle unrecognized token types and cfg-gate
-architecture-specific calls. Falling through without doing the work is not a
-valid scalar fallback.
-
-This is a low-level reference facility. The reviewed zen kernel patterns do not
-justify introducing exact-token-type dispatch into the beginner call chain.
+When branching on `try_*`, check stronger tiers first, cfg-gate
+architecture-specific calls, and provide a scalar fallback.
 
 With `attuned!(work(data), [_v3, _scalar], using(token))`, non-scalar tiers
 check `IntoConcreteToken` without probing the CPU, and any unrecognized token

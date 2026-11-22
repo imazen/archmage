@@ -60,7 +60,7 @@ pub fn cbrtf::Cbrtf<CFG>::scalar_infallible(f32) -> f32
 pub fn cbrtf::Cbrtf<CFG>::scalar_with_token<T: magetypes::simd::backends::convert::F32x4Convert>(T, f32) -> core::result::Result<f32, cbrtf::CbrtfError>
 pub fn cbrtf::Cbrtf<CFG>::simd<V: SimdVector>(V) -> core::result::Result<V, cbrtf::CbrtfError>
 pub fn cbrtf::Cbrtf<CFG>::slice(&[f32], &mut [f32]) -> core::result::Result<(), SliceError<cbrtf::CbrtfErrorKind>>
-pub fn cbrtf::Cbrtf<CFG>::slice_with_token(impl archmage::tokens::IntoConcreteToken, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<cbrtf::CbrtfErrorKind>>
+pub fn cbrtf::Cbrtf<CFG>::slice_with_token(impl archmage::tokens::generated::into_concrete::IntoConcreteToken, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<cbrtf::CbrtfErrorKind>>
 pub struct cbrtf::CbrtfError
 pub cbrtf::CbrtfError::kind: cbrtf::CbrtfErrorKind
 pub cbrtf::CbrtfError::lane_mask: u16
@@ -105,7 +105,7 @@ pub fn cbrtf::CbrtfRuntime::scalar(self, f32) -> core::result::Result<f32, cbrtf
 pub fn cbrtf::CbrtfRuntime::scalar_with_token<T: magetypes::simd::backends::convert::F32x4Convert>(self, T, f32) -> core::result::Result<f32, cbrtf::CbrtfError>
 pub fn cbrtf::CbrtfRuntime::simd<V: SimdVector>(self, V) -> core::result::Result<V, cbrtf::CbrtfError>
 pub fn cbrtf::CbrtfRuntime::slice(self, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<cbrtf::CbrtfErrorKind>>
-pub fn cbrtf::CbrtfRuntime::slice_with_token(self, impl archmage::tokens::IntoConcreteToken, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<cbrtf::CbrtfErrorKind>>
+pub fn cbrtf::CbrtfRuntime::slice_with_token(self, impl archmage::tokens::generated::into_concrete::IntoConcreteToken, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<cbrtf::CbrtfErrorKind>>
 pub fn cbrtf::try_cbrt(f32) -> core::result::Result<f32, cbrtf::CbrtfError>
 pub fn cbrtf::try_cbrt_slice(&[f32], &mut [f32]) -> core::result::Result<(), SliceError<cbrtf::CbrtfErrorKind>>
 pub mod expf
@@ -131,13 +131,13 @@ pub fn expf::Expf<CFG>::exp2_array<const N: usize>([f32; N]) -> core::result::Re
 pub fn expf::Expf<CFG>::exp2_infallible(f32) -> f32
 pub fn expf::Expf<CFG>::exp2_simd<V: SimdVector>(V) -> core::result::Result<V, expf::ExpfError>
 pub fn expf::Expf<CFG>::exp2_slice(&[f32], &mut [f32]) -> core::result::Result<(), SliceError<expf::ExpfErrorKind>>
-pub fn expf::Expf<CFG>::exp2_slice_with_token(impl archmage::tokens::IntoConcreteToken, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<expf::ExpfErrorKind>>
+pub fn expf::Expf<CFG>::exp2_slice_with_token(impl archmage::tokens::generated::into_concrete::IntoConcreteToken, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<expf::ExpfErrorKind>>
 pub fn expf::Expf<CFG>::exp2_with_token<T: magetypes::simd::backends::convert::F32x4Convert>(T, f32) -> core::result::Result<f32, expf::ExpfError>
 pub fn expf::Expf<CFG>::exp_array<const N: usize>([f32; N]) -> core::result::Result<[f32; N], expf::ExpfError>
 pub fn expf::Expf<CFG>::exp_infallible(f32) -> f32
 pub fn expf::Expf<CFG>::exp_simd<V: SimdVector>(V) -> core::result::Result<V, expf::ExpfError>
 pub fn expf::Expf<CFG>::exp_slice(&[f32], &mut [f32]) -> core::result::Result<(), SliceError<expf::ExpfErrorKind>>
-pub fn expf::Expf<CFG>::exp_slice_with_token(impl archmage::tokens::IntoConcreteToken, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<expf::ExpfErrorKind>>
+pub fn expf::Expf<CFG>::exp_slice_with_token(impl archmage::tokens::generated::into_concrete::IntoConcreteToken, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<expf::ExpfErrorKind>>
 pub fn expf::Expf<CFG>::exp_with_token<T: magetypes::simd::backends::convert::F32x4Convert>(T, f32) -> core::result::Result<f32, expf::ExpfError>
 pub struct expf::ExpfError
 pub expf::ExpfError::kind: expf::ExpfErrorKind
@@ -180,12 +180,12 @@ pub fn expf::ExpfRuntime::exp2(self, f32) -> core::result::Result<f32, expf::Exp
 pub fn expf::ExpfRuntime::exp2_array<const N: usize>(self, [f32; N]) -> core::result::Result<[f32; N], expf::ExpfError>
 pub fn expf::ExpfRuntime::exp2_simd<V: SimdVector>(self, V) -> core::result::Result<V, expf::ExpfError>
 pub fn expf::ExpfRuntime::exp2_slice(self, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<expf::ExpfErrorKind>>
-pub fn expf::ExpfRuntime::exp2_slice_with_token(self, impl archmage::tokens::IntoConcreteToken, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<expf::ExpfErrorKind>>
+pub fn expf::ExpfRuntime::exp2_slice_with_token(self, impl archmage::tokens::generated::into_concrete::IntoConcreteToken, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<expf::ExpfErrorKind>>
 pub fn expf::ExpfRuntime::exp2_with_token<T: magetypes::simd::backends::convert::F32x4Convert>(self, T, f32) -> core::result::Result<f32, expf::ExpfError>
 pub fn expf::ExpfRuntime::exp_array<const N: usize>(self, [f32; N]) -> core::result::Result<[f32; N], expf::ExpfError>
 pub fn expf::ExpfRuntime::exp_simd<V: SimdVector>(self, V) -> core::result::Result<V, expf::ExpfError>
 pub fn expf::ExpfRuntime::exp_slice(self, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<expf::ExpfErrorKind>>
-pub fn expf::ExpfRuntime::exp_slice_with_token(self, impl archmage::tokens::IntoConcreteToken, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<expf::ExpfErrorKind>>
+pub fn expf::ExpfRuntime::exp_slice_with_token(self, impl archmage::tokens::generated::into_concrete::IntoConcreteToken, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<expf::ExpfErrorKind>>
 pub fn expf::ExpfRuntime::exp_with_token<T: magetypes::simd::backends::convert::F32x4Convert>(self, T, f32) -> core::result::Result<f32, expf::ExpfError>
 pub const fn expf::ExpfRuntime::options(self) -> expf::ExpfOptions
 pub fn expf::try_exp(f32) -> core::result::Result<f32, expf::ExpfError>
@@ -217,7 +217,7 @@ pub fn log1pf::Log1pf<CFG>::scalar_infallible(f32) -> f32
 pub fn log1pf::Log1pf<CFG>::scalar_with_token<T: magetypes::simd::backends::convert::F32x4Convert>(T, f32) -> core::result::Result<f32, log1pf::Log1pfError>
 pub fn log1pf::Log1pf<CFG>::simd<V: SimdVector>(V) -> core::result::Result<V, log1pf::Log1pfError>
 pub fn log1pf::Log1pf<CFG>::slice(&[f32], &mut [f32]) -> core::result::Result<(), SliceError<log1pf::Log1pfErrorKind>>
-pub fn log1pf::Log1pf<CFG>::slice_with_token(impl archmage::tokens::IntoConcreteToken, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<log1pf::Log1pfErrorKind>>
+pub fn log1pf::Log1pf<CFG>::slice_with_token(impl archmage::tokens::generated::into_concrete::IntoConcreteToken, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<log1pf::Log1pfErrorKind>>
 pub struct log1pf::Log1pfError
 pub log1pf::Log1pfError::kind: log1pf::Log1pfErrorKind
 pub log1pf::Log1pfError::lane_mask: u16
@@ -265,7 +265,7 @@ pub fn log1pf::Log1pfRuntime::scalar(self, f32) -> core::result::Result<f32, log
 pub fn log1pf::Log1pfRuntime::scalar_with_token<T: magetypes::simd::backends::convert::F32x4Convert>(self, T, f32) -> core::result::Result<f32, log1pf::Log1pfError>
 pub fn log1pf::Log1pfRuntime::simd<V: SimdVector>(self, V) -> core::result::Result<V, log1pf::Log1pfError>
 pub fn log1pf::Log1pfRuntime::slice(self, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<log1pf::Log1pfErrorKind>>
-pub fn log1pf::Log1pfRuntime::slice_with_token(self, impl archmage::tokens::IntoConcreteToken, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<log1pf::Log1pfErrorKind>>
+pub fn log1pf::Log1pfRuntime::slice_with_token(self, impl archmage::tokens::generated::into_concrete::IntoConcreteToken, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<log1pf::Log1pfErrorKind>>
 pub fn log1pf::try_log1p(f32) -> core::result::Result<f32, log1pf::Log1pfError>
 pub fn log1pf::try_log1p_slice(&[f32], &mut [f32]) -> core::result::Result<(), SliceError<log1pf::Log1pfErrorKind>>
 pub mod logf
@@ -291,21 +291,21 @@ pub fn logf::Logf<CFG>::ln_array<const N: usize>([f32; N]) -> core::result::Resu
 pub fn logf::Logf<CFG>::ln_infallible(f32) -> f32
 pub fn logf::Logf<CFG>::ln_simd<V: SimdVector>(V) -> core::result::Result<V, logf::LogfError>
 pub fn logf::Logf<CFG>::ln_slice(&[f32], &mut [f32]) -> core::result::Result<(), SliceError<logf::LogfErrorKind>>
-pub fn logf::Logf<CFG>::ln_slice_with_token(impl archmage::tokens::IntoConcreteToken, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<logf::LogfErrorKind>>
+pub fn logf::Logf<CFG>::ln_slice_with_token(impl archmage::tokens::generated::into_concrete::IntoConcreteToken, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<logf::LogfErrorKind>>
 pub fn logf::Logf<CFG>::ln_with_token<T: magetypes::simd::backends::convert::F32x4Convert>(T, f32) -> core::result::Result<f32, logf::LogfError>
 pub fn logf::Logf<CFG>::log10(f32) -> core::result::Result<f32, logf::LogfError>
 pub fn logf::Logf<CFG>::log10_array<const N: usize>([f32; N]) -> core::result::Result<[f32; N], logf::LogfError>
 pub fn logf::Logf<CFG>::log10_infallible(f32) -> f32
 pub fn logf::Logf<CFG>::log10_simd<V: SimdVector>(V) -> core::result::Result<V, logf::LogfError>
 pub fn logf::Logf<CFG>::log10_slice(&[f32], &mut [f32]) -> core::result::Result<(), SliceError<logf::LogfErrorKind>>
-pub fn logf::Logf<CFG>::log10_slice_with_token(impl archmage::tokens::IntoConcreteToken, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<logf::LogfErrorKind>>
+pub fn logf::Logf<CFG>::log10_slice_with_token(impl archmage::tokens::generated::into_concrete::IntoConcreteToken, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<logf::LogfErrorKind>>
 pub fn logf::Logf<CFG>::log10_with_token<T: magetypes::simd::backends::convert::F32x4Convert>(T, f32) -> core::result::Result<f32, logf::LogfError>
 pub fn logf::Logf<CFG>::log2(f32) -> core::result::Result<f32, logf::LogfError>
 pub fn logf::Logf<CFG>::log2_array<const N: usize>([f32; N]) -> core::result::Result<[f32; N], logf::LogfError>
 pub fn logf::Logf<CFG>::log2_infallible(f32) -> f32
 pub fn logf::Logf<CFG>::log2_simd<V: SimdVector>(V) -> core::result::Result<V, logf::LogfError>
 pub fn logf::Logf<CFG>::log2_slice(&[f32], &mut [f32]) -> core::result::Result<(), SliceError<logf::LogfErrorKind>>
-pub fn logf::Logf<CFG>::log2_slice_with_token(impl archmage::tokens::IntoConcreteToken, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<logf::LogfErrorKind>>
+pub fn logf::Logf<CFG>::log2_slice_with_token(impl archmage::tokens::generated::into_concrete::IntoConcreteToken, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<logf::LogfErrorKind>>
 pub fn logf::Logf<CFG>::log2_with_token<T: magetypes::simd::backends::convert::F32x4Convert>(T, f32) -> core::result::Result<f32, logf::LogfError>
 pub struct logf::LogfError
 pub logf::LogfError::kind: logf::LogfErrorKind
@@ -350,19 +350,19 @@ pub fn logf::LogfRuntime::ln(self, f32) -> core::result::Result<f32, logf::LogfE
 pub fn logf::LogfRuntime::ln_array<const N: usize>(self, [f32; N]) -> core::result::Result<[f32; N], logf::LogfError>
 pub fn logf::LogfRuntime::ln_simd<V: SimdVector>(self, V) -> core::result::Result<V, logf::LogfError>
 pub fn logf::LogfRuntime::ln_slice(self, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<logf::LogfErrorKind>>
-pub fn logf::LogfRuntime::ln_slice_with_token(self, impl archmage::tokens::IntoConcreteToken, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<logf::LogfErrorKind>>
+pub fn logf::LogfRuntime::ln_slice_with_token(self, impl archmage::tokens::generated::into_concrete::IntoConcreteToken, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<logf::LogfErrorKind>>
 pub fn logf::LogfRuntime::ln_with_token<T: magetypes::simd::backends::convert::F32x4Convert>(self, T, f32) -> core::result::Result<f32, logf::LogfError>
 pub fn logf::LogfRuntime::log10(self, f32) -> core::result::Result<f32, logf::LogfError>
 pub fn logf::LogfRuntime::log10_array<const N: usize>(self, [f32; N]) -> core::result::Result<[f32; N], logf::LogfError>
 pub fn logf::LogfRuntime::log10_simd<V: SimdVector>(self, V) -> core::result::Result<V, logf::LogfError>
 pub fn logf::LogfRuntime::log10_slice(self, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<logf::LogfErrorKind>>
-pub fn logf::LogfRuntime::log10_slice_with_token(self, impl archmage::tokens::IntoConcreteToken, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<logf::LogfErrorKind>>
+pub fn logf::LogfRuntime::log10_slice_with_token(self, impl archmage::tokens::generated::into_concrete::IntoConcreteToken, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<logf::LogfErrorKind>>
 pub fn logf::LogfRuntime::log10_with_token<T: magetypes::simd::backends::convert::F32x4Convert>(self, T, f32) -> core::result::Result<f32, logf::LogfError>
 pub fn logf::LogfRuntime::log2(self, f32) -> core::result::Result<f32, logf::LogfError>
 pub fn logf::LogfRuntime::log2_array<const N: usize>(self, [f32; N]) -> core::result::Result<[f32; N], logf::LogfError>
 pub fn logf::LogfRuntime::log2_simd<V: SimdVector>(self, V) -> core::result::Result<V, logf::LogfError>
 pub fn logf::LogfRuntime::log2_slice(self, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<logf::LogfErrorKind>>
-pub fn logf::LogfRuntime::log2_slice_with_token(self, impl archmage::tokens::IntoConcreteToken, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<logf::LogfErrorKind>>
+pub fn logf::LogfRuntime::log2_slice_with_token(self, impl archmage::tokens::generated::into_concrete::IntoConcreteToken, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<logf::LogfErrorKind>>
 pub fn logf::LogfRuntime::log2_with_token<T: magetypes::simd::backends::convert::F32x4Convert>(self, T, f32) -> core::result::Result<f32, logf::LogfError>
 pub const fn logf::LogfRuntime::options(self) -> logf::LogfOptions
 pub fn logf::try_ln(f32) -> core::result::Result<f32, logf::LogfError>
@@ -406,8 +406,8 @@ pub fn powf::Powf<CFG>::simd<V: SimdVector>(V, f32) -> core::result::Result<V, p
 pub fn powf::Powf<CFG>::simd_const<V: SimdVector>(V) -> core::result::Result<V, powf::PowfError>
 pub fn powf::Powf<CFG>::slice(&[f32], &mut [f32], f32) -> core::result::Result<(), SliceError<powf::PowfErrorKind>>
 pub fn powf::Powf<CFG>::slice_const(&[f32], &mut [f32]) -> core::result::Result<(), SliceError<powf::PowfErrorKind>>
-pub fn powf::Powf<CFG>::slice_const_with_token(impl archmage::tokens::IntoConcreteToken, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<powf::PowfErrorKind>>
-pub fn powf::Powf<CFG>::slice_with_token(impl archmage::tokens::IntoConcreteToken, &[f32], &mut [f32], f32) -> core::result::Result<(), SliceError<powf::PowfErrorKind>>
+pub fn powf::Powf<CFG>::slice_const_with_token(impl archmage::tokens::generated::into_concrete::IntoConcreteToken, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<powf::PowfErrorKind>>
+pub fn powf::Powf<CFG>::slice_with_token(impl archmage::tokens::generated::into_concrete::IntoConcreteToken, &[f32], &mut [f32], f32) -> core::result::Result<(), SliceError<powf::PowfErrorKind>>
 pub struct powf::PowfError
 pub powf::PowfError::kind: powf::PowfErrorKind
 pub powf::PowfError::lane_mask: u16
@@ -471,8 +471,8 @@ pub fn powf::PowfRuntime::simd<V: SimdVector>(self, V, f32) -> core::result::Res
 pub fn powf::PowfRuntime::simd_const<V: SimdVector>(self, V) -> core::result::Result<V, powf::PowfError>
 pub fn powf::PowfRuntime::slice(self, &[f32], &mut [f32], f32) -> core::result::Result<(), SliceError<powf::PowfErrorKind>>
 pub fn powf::PowfRuntime::slice_const(self, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<powf::PowfErrorKind>>
-pub fn powf::PowfRuntime::slice_const_with_token(self, impl archmage::tokens::IntoConcreteToken, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<powf::PowfErrorKind>>
-pub fn powf::PowfRuntime::slice_with_token(self, impl archmage::tokens::IntoConcreteToken, &[f32], &mut [f32], f32) -> core::result::Result<(), SliceError<powf::PowfErrorKind>>
+pub fn powf::PowfRuntime::slice_const_with_token(self, impl archmage::tokens::generated::into_concrete::IntoConcreteToken, &[f32], &mut [f32]) -> core::result::Result<(), SliceError<powf::PowfErrorKind>>
+pub fn powf::PowfRuntime::slice_with_token(self, impl archmage::tokens::generated::into_concrete::IntoConcreteToken, &[f32], &mut [f32], f32) -> core::result::Result<(), SliceError<powf::PowfErrorKind>>
 pub const powf::MAX_EXP_BOUND: f32
 pub fn powf::try_powf(f32, f32) -> core::result::Result<f32, powf::PowfError>
 pub fn powf::try_powf_slice(&[f32], &mut [f32], f32) -> core::result::Result<(), SliceError<powf::PowfErrorKind>>

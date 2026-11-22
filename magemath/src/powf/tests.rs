@@ -1133,3 +1133,87 @@ fn prepare_exponent_clamps_one_sided_subnormal_bounds_inward() {
         assert_eq!(prepared.to_bits(), (-f32::MIN_POSITIVE).to_bits());
     }
 }
+
+#[cfg(all(test, target_arch = "x86_64", target_feature = "sse2", not(miri)))]
+mod registry_token_dispatch {
+    use super::super::dispatch::{select, select_highp, select_relaxed};
+    use crate::Execution;
+    use crate::{
+        cbrtf::dispatch as cbrtf, expf::dispatch as expf, log1pf::Log1pf, log1pf::Log1pfOptions,
+        logf::dispatch as logf,
+    };
+    use archmage::{
+        Avx512Fp16Token, IntoConcreteToken, SimdToken, X64V3CryptoToken, X64V3GfniCryptoToken,
+        X64V3VnniToken,
+    };
+
+    fn check_dispatch(token: impl IntoConcreteToken, expected: impl IntoConcreteToken) {
+        let caller = Execution::Caller;
+        let upgrade = Execution::Upgrade;
+        let token_name = token.name();
+        macro_rules! same_tier {
+            ($select:path, $execution:expr, $($options:expr),+) => {
+                assert_eq!(
+                    core::mem::discriminant(&$select(token, $execution, $($options),+)),
+                    core::mem::discriminant(&$select(expected, $execution, $($options),+)),
+                    "{token_name} in {} with {:?}", stringify!($select), $execution,
+                )
+            };
+        }
+        for (execution, widen) in [
+            (caller, false),
+            (caller, true),
+            (upgrade, false),
+            (upgrade, true),
+        ] {
+            same_tier!(cbrtf::select, execution, widen);
+            same_tier!(expf::select, execution, false, widen);
+            same_tier!(expf::select, execution, true, widen);
+            same_tier!(logf::select, execution, false, widen);
+            same_tier!(logf::select, execution, true, widen);
+            same_tier!(select, execution, widen);
+            same_tier!(select_relaxed, execution, widen);
+            same_tier!(select_highp, execution, widen);
+        }
+
+        // Log1pf shares Logf's selector and calls its OP=3 slice kernels.
+        type CallerLog1p = Log1pf<{ Log1pfOptions::new().caller().bits() }>;
+        let input = core::array::from_fn::<_, 19, _>(|lane| lane as f32 * 0.125 - 0.75);
+        let (mut actual, mut reference) = ([0.0; 19], [0.0; 19]);
+        CallerLog1p::slice_with_token(token, &input, &mut actual).unwrap();
+        CallerLog1p::slice_with_token(expected, &input, &mut reference).unwrap();
+        assert_eq!(
+            actual.map(f32::to_bits),
+            reference.map(f32::to_bits),
+            "{token_name}"
+        );
+        std::eprintln!("Checked {token_name} against {}", expected.name());
+    }
+
+    #[test]
+    fn v3_extensions_dispatch_like_v3() {
+        #[cfg(all(feature = "avx512", feature = "std"))]
+        let _lock = archmage::testing::lock_token_testing();
+        if let Some(token) = X64V3CryptoToken::summon() {
+            check_dispatch(token, token.v3());
+        }
+        if let Some(token) = X64V3GfniCryptoToken::summon() {
+            check_dispatch(token, token.v3());
+        }
+        if let Some(token) = X64V3VnniToken::summon() {
+            check_dispatch(token, token.v3());
+        }
+    }
+
+    #[test]
+    fn fp16_dispatches_like_the_available_base_tier() {
+        #[cfg(all(feature = "avx512", feature = "std"))]
+        let _lock = archmage::testing::lock_token_testing();
+        if let Some(token) = Avx512Fp16Token::summon() {
+            #[cfg(feature = "avx512")]
+            check_dispatch(token, token.v4());
+            #[cfg(not(feature = "avx512"))]
+            check_dispatch(token, token.v3());
+        }
+    }
+}
