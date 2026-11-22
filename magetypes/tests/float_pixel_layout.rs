@@ -534,6 +534,8 @@ macro_rules! check_ceil_near_max {
             0.0,
             <$float>::INFINITY,
             <$float>::from_bits(1),
+            1.0 / <$float>::MIN_POSITIVE,
+            <$float>::NAN,
         ];
         for (i, _) in cases.iter().enumerate() {
             let input = core::array::from_fn::<_, $lanes, _>(|j| {
@@ -547,11 +549,12 @@ macro_rules! check_ceil_near_max {
                 if x.is_finite() && x.abs() >= cases[4] {
                     $bound(x, y);
                 }
-                assert_eq!(
-                    y.to_bits(),
-                    scalar::$scalar::<CEIL_ALL>(x).to_bits(),
-                    "x={x:e}"
-                );
+                let expected = scalar::$scalar::<CEIL_ALL>(x);
+                if expected.is_nan() {
+                    assert!(y.is_nan());
+                } else {
+                    assert_eq!(y.to_bits(), expected.to_bits(), "x={x:e}");
+                }
             }
         }
     }};

@@ -1,6 +1,6 @@
 use crate::numerics::{
     ExtremaDomain, ExtremaOptions, HalfConvert, I32_MAX, I32_MIN, IntConvert, NumericsError,
-    RecipOptions, RecipPrecision, U32_MAX,
+    NumericsErrorKind, RecipOptions, RecipPrecision, U32_MAX,
 };
 
 macro_rules! to_int {
@@ -192,7 +192,7 @@ pub fn to_bf16_with<const CFG: u32>(x: f32) -> u16 {
 
 macro_rules! scalar_float {
     ($f:ty, $bits:ty, $mask:literal, $min:ident, $max:ident, $clamp:ident,
-     $min_ieee:ident, $max_ieee:ident, $recip:ident, $rsqrt:ident, $sqrt:ident,
+     $min_ieee:ident, $max_ieee:ident, $recip:ident, $rsqrt:ident, $try_recip:ident, $try_rsqrt:ident, $sqrt:ident,
      $trunc:ident, $bias:literal, $mantissa:literal,
      $nmadd_fused:ident, $madd_fused:ident, $nmadd_relaxed:ident, $madd_relaxed:ident, $backend:ident) => {
         /// Bit-preserving truncation toward zero, including the sign of zero.
@@ -249,6 +249,34 @@ macro_rules! scalar_float {
                 let _ = RecipOptions::decode(CFG);
             }
             1.0 / super::$sqrt(x)
+        }
+
+        /// Evaluate a scalar reciprocal with the same domain check as the vector operation.
+        #[inline(always)]
+        pub fn $try_recip<const CFG: u32>(x: $f) -> Result<$f, NumericsError> {
+            if const { RecipOptions::decode(CFG).checks_normal_domain() }
+                && !(<$f>::MIN_POSITIVE..1.0 / <$f>::MIN_POSITIVE).contains(&x.abs())
+            {
+                return Err(NumericsError {
+                    kind: NumericsErrorKind::RecipDomain,
+                    lane_mask: 1,
+                });
+            }
+            Ok($recip::<CFG>(x))
+        }
+
+        /// Evaluate a scalar reciprocal square root with the same domain check as the vector operation.
+        #[inline(always)]
+        pub fn $try_rsqrt<const CFG: u32>(x: $f) -> Result<$f, NumericsError> {
+            if const { RecipOptions::decode(CFG).checks_normal_domain() }
+                && !(<$f>::MIN_POSITIVE..=<$f>::MAX).contains(&x)
+            {
+                return Err(NumericsError {
+                    kind: NumericsErrorKind::RecipDomain,
+                    lane_mask: 1,
+                });
+            }
+            Ok($rsqrt::<CFG>(x))
         }
 
         /// Scalar minimum with the selected NaN policy.
@@ -308,6 +336,8 @@ scalar_float!(
     maximum_f32,
     recip_f32_with,
     rsqrt_f32_with,
+    try_recip_f32_with,
+    try_rsqrt_f32_with,
     sqrt_f32,
     trunc_f32,
     127,
@@ -329,6 +359,8 @@ scalar_float!(
     maximum_f64,
     recip_f64_with,
     rsqrt_f64_with,
+    try_recip_f64_with,
+    try_rsqrt_f64_with,
     sqrt_f64,
     trunc_f64,
     1023,

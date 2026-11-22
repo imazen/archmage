@@ -6,17 +6,17 @@
 # impls omitted; re-export duplicates annotated `[also: path]`.
 # DO NOT EDIT BY HAND — commit regenerated changes with the code.
 #
-# files: magetypes.txt 2990 lines (supported surface) | magetypes.features.txt 12 added (features: avx512,std,w512) | magetypes.internal.txt 64 lines (76 hidden + 0 excluded-feature)
+# files: magetypes.txt 2997 lines (supported surface) | magetypes.features.txt 12 added (features: avx512,std,w512) | magetypes.internal.txt 64 lines (76 hidden + 0 excluded-feature)
 
 ## summary
 #
 #   pub modules                                14
 #   pub types (struct/enum/trait/alias)       303
 #   pub consts/statics                        270
-#   free functions                           4468
+#   free functions                           4496
 #   inherent methods                         1296
 #   struct fields                               2
-#   enum variants                              25
+#   enum variants                              26
 #   re-exports                                  2
 #   trait roster entries (type × trait)       828
 #   conditional trait impls (verbatim)        120
@@ -26,12 +26,12 @@
 # per-module pub lines:
 #   (root)                          365
 #   cast                              3
-#   numerics                         40
-#   prelude                        4208
-#   scalar                           58
+#   numerics                         41
+#   prelude                        4232
+#   scalar                           62
 #   simd                           1706
 
-## items (2752 lines)
+## items (2759 lines)
 
 pub mod magetypes
 pub use archmage
@@ -66,6 +66,7 @@ pub numerics::IntRounding::Trunc
 #[non_exhaustive] pub enum numerics::NumericsErrorKind
 pub numerics::NumericsErrorKind::IntegerBounds
 pub numerics::NumericsErrorKind::NonFinite
+pub numerics::NumericsErrorKind::RecipDomain
 #[non_exhaustive] pub enum numerics::RecipDomain
 pub numerics::RecipDomain::AllFloats
 pub numerics::RecipDomain::FiniteNormal
@@ -294,6 +295,8 @@ pub fn prelude::f32x4<T>::recip_with<const CFG: u32>(self) -> Self [also: prelud
 pub fn prelude::f32x4<T>::reduce_max_with<const CFG: u32>(self) -> f32 [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
 pub fn prelude::f32x4<T>::reduce_min_with<const CFG: u32>(self) -> f32 [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
 pub fn prelude::f32x4<T>::rsqrt_with<const CFG: u32>(self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>, prelude::f64x2<T>, prelude::f64x4<T>, prelude::f64x8<T>]
+pub fn prelude::f32x4<T>::try_recip_with<const CFG: u32>(self) -> core::result::Result<Self, numerics::NumericsError> [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>, prelude::f64x2<T>, prelude::f64x4<T>, prelude::f64x8<T>]
+pub fn prelude::f32x4<T>::try_rsqrt_with<const CFG: u32>(self) -> core::result::Result<Self, numerics::NumericsError> [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>, prelude::f64x2<T>, prelude::f64x4<T>, prelude::f64x8<T>]
 pub fn prelude::f32x4<T>::deinterleave_3ch([Self; 3]) -> [Self; 3] [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
 pub fn prelude::f32x4<T>::interleave_3ch([Self; 3]) -> [Self; 3] [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
 pub fn prelude::f32x4<T>::load_rgb_u16_t(T, &[u16; 12]) -> (Self, Self, Self) [also: prelude::f32x4<T>]
@@ -1197,6 +1200,10 @@ pub fn scalar::to_u8_with<const CFG: u32>(f32) -> u8
 pub fn scalar::trunc_f32(f32) -> f32
 pub fn scalar::trunc_f64(f64) -> f64
 pub fn scalar::try_from_f16_with<const CFG: u32>(u16) -> core::result::Result<f32, numerics::NumericsError>
+pub fn scalar::try_recip_f32_with<const CFG: u32>(f32) -> core::result::Result<f32, numerics::NumericsError>
+pub fn scalar::try_recip_f64_with<const CFG: u32>(f64) -> core::result::Result<f64, numerics::NumericsError>
+pub fn scalar::try_rsqrt_f32_with<const CFG: u32>(f32) -> core::result::Result<f32, numerics::NumericsError>
+pub fn scalar::try_rsqrt_f64_with<const CFG: u32>(f64) -> core::result::Result<f64, numerics::NumericsError>
 pub fn scalar::try_to_bf16_with<const CFG: u32>(f32) -> core::result::Result<u16, numerics::NumericsError>
 pub fn scalar::try_to_f16_bits_with<const CFG: u32>(f32) -> core::result::Result<u16, numerics::NumericsError>
 pub fn scalar::try_to_i32_with<const CFG: u32>(f32) -> core::result::Result<i32, numerics::NumericsError>

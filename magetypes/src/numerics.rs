@@ -42,6 +42,32 @@
 //! let input = f32x4::splat_t(ScalarToken, 1.0);
 //! let _ = input.try_to_f16_bits_with::<{IntConvert::new().bits()}>();
 //! ```
+//!
+//! Checked reciprocal and reciprocal square root validate the normal input
+//! domain for approximate policies. Exact and all-floats policies admit
+//! every input, including IEEE special values.
+//!
+//! ```
+//! use magetypes::{numerics::{NumericsErrorKind, RecipOptions}, scalar};
+//! const NORMAL: u32 = RecipOptions::new().bits();
+//! let invalid = scalar::try_rsqrt_f32_with::<NORMAL>(-4.0).unwrap_err();
+//! assert_eq!(invalid.kind, NumericsErrorKind::RecipDomain);
+//! assert_eq!(invalid.lane_mask, 1);
+//! assert_eq!(scalar::try_recip_f32_with::<NORMAL>(4.0).unwrap(), 0.25);
+//! ```
+//!
+//! ```compile_fail
+//! use magetypes::{numerics::RecipOptions, scalar};
+//! const RESERVED: u32 = RecipOptions::new().bits() | 0x80;
+//! let _ = scalar::try_recip_f64_with::<RESERVED>(1.0);
+//! ```
+//!
+//! ```compile_fail
+//! use archmage::ScalarToken;
+//! use magetypes::{numerics::HalfConvert, simd::generic::f32x4};
+//! let input = f32x4::splat_t(ScalarToken, 1.0);
+//! let _ = input.try_rsqrt_with::<{ HalfConvert::new().bits() }>();
+//! ```
 
 const FAMILY_MASK: u32 = 0xff00_0000;
 const INT_FAMILY: u32 = 0x0100_0000;
@@ -49,7 +75,7 @@ const HALF_FAMILY: u32 = 0x0200_0000;
 const RECIP_FAMILY: u32 = 0x0300_0000;
 const EXTREMA_FAMILY: u32 = 0x0400_0000;
 
-/// Input contract violated by a checked conversion.
+/// Input contract violated by a checked numerical operation.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[non_exhaustive]
 pub enum NumericsErrorKind {
@@ -57,9 +83,11 @@ pub enum NumericsErrorKind {
     IntegerBounds,
     /// A half-precision conversion requires finite input.
     NonFinite,
+    /// A reciprocal input is outside the selected normal or positive-normal domain.
+    RecipDomain,
 }
 
-/// Rejection of a checked scalar or SIMD conversion.
+/// Rejection of a checked scalar or SIMD numerical operation.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct NumericsError {
     /// Which input contract failed.
@@ -527,6 +555,10 @@ impl RecipOptions {
     }
     pub(crate) const fn admits_all(self) -> bool {
         matches!(self.domain, RecipDomain::AllFloats)
+    }
+
+    pub(crate) const fn checks_normal_domain(self) -> bool {
+        !self.admits_all() && !matches!(self.precision, RecipPrecision::Exact)
     }
 }
 

@@ -13,6 +13,8 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 
 - Add `X64V3VnniToken` (`v3_vnni`, `dispatch_priority = 38`, parent `X64V3GfniCryptoToken`) proving pure-VEX `avxvnni`, `adx`, and `sha` on top of `X64V3GfniCryptoToken` without requiring AVX-512, along with `IntoConcreteToken::as_x64v3_vnni`, `is_x86_feature_available!` support for `"avxvnni"` and `"adx"`, and `for_each_token_permutation` coverage (#161, #199, 0b933aee).
 
+- Support disabling WASM SIMD128 and relaxed-SIMD selection with `testable_dispatch`. Existing proofs remain valid after a disable.
+
 #### QUEUED DEPRECATIONS (next 0.9.x)
 
 - Use `SimdToken::summon()` instead of `SimdToken::attempt()` and `SimdToken::try_new()`.
@@ -208,9 +210,19 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 - `f32x16<T>` supports lane interleave, dual 8×8 and 16×16 matrix transposes, zero-copy signed bitcast references, and packed RGB loads and stores for sixteen pixels (#197, 4be34f89).
 - Add concrete W128/W256 V3 delegation for `X64V3VnniToken` across all 34 backend, conversion, and bitcast traits plus `F32ScalarBackend`/`F64ScalarBackend`, `F32x8FromHalves`, and `SimdTypes`, available outside `feature = "avx512"` (#161, #199, 0b933aee).
 
+- Add checked scalar and SIMD integer, half-precision, reciprocal, and reciprocal-square-root operations that report the violated input contract and every rejected lane.
+
 #### Changed
 
 - Replace verbatim AVX-512 narrow forwarding with crate-private concrete-impl delegation macros (`x86_v4_f32_delegated.rs`, `x86_v3_delegated.rs`), reducing complete `x86_64` generated backend source from `43,767` to `37,827` lines while preserving all concrete impls, AVX-512VL overrides, and assembly (#198, 55f48029, 0b933aee).
+
+- Use hardware square root for scalar vectors where std or compile-time target features provide it (#152).
+- Compute the generic f32 cube-root seed in registers with exact integer division by three (#162).
+
+#### Fixed
+
+- Preserve the upper bound for finite nonzero division results in SIMD `Nr1Ceil + AllFloats`. Normal estimate lanes bypass division when the whole vector is in range (#195).
+- Make `f32x1::clamp` follow the scalar SIMD comparison order for reversed or NaN bounds.
 
 #### QUEUED DEPRECATIONS (next 0.9.x)
 
