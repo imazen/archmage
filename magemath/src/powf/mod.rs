@@ -45,8 +45,6 @@ mod options;
 mod std_probe;
 #[cfg(test)]
 mod tests;
-#[cfg(target_arch = "wasm32")]
-mod wasm;
 
 pub use const_api::{Powf, PowfRuntime};
 pub use options::{MAX_EXP_BOUND, PowfDomain, PowfOptions, PowfPrecision};

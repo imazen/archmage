@@ -328,7 +328,7 @@ macro_rules! eval_powf {
                             .expect("private WASM mode requires its matching proof");
                         return $V::from_array_t(
                             $token,
-                            super::wasm::software_lanes(proof, a, b, c),
+                            crate::wasm_fma::software_lanes(proof, a, b, c),
                         );
                     }
                     #[cfg(all(feature = "std", not(miri)))]
@@ -573,7 +573,7 @@ macro_rules! graph {
             [use magetypes::simd::generic::{$float as V, $int as I};]
         );
 
-        #[archmage::magetypes(v4x(cfg(avx512)), v4(cfg(avx512)), v3, neon, wasm128, scalar)]
+        #[archmage::attune(_*_t, +v4(cfg(avx512)), +v4x(cfg(avx512)))]
         pub(super) fn $cfg_entry<const ARITHMETIC: usize>(
             token: Token,
             bases: [f32; $lanes],
@@ -590,7 +590,7 @@ macro_rules! graph {
         }
 
         #[cfg(not(debug_assertions))]
-        #[archmage::magetypes(v4x(cfg(avx512)), v4(cfg(avx512)), v3, neon, wasm128, scalar)]
+        #[archmage::attune(_*_t, +v4(cfg(avx512)), +v4x(cfg(avx512)))]
         pub(super) fn $const_entry<K: Kernel, const ARITHMETIC: usize>(
             token: Token,
             bases: [f32; $lanes],
@@ -770,10 +770,10 @@ pub(super) fn slice4_cfg<const ARITHMETIC: usize>(
     Ok(())
 }
 
-#[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
-#[inline(always)]
-fn slice16_cfg_impl<T: magetypes::simd::backends::F32x16Convert, const ARITHMETIC: usize>(
-    token: T,
+/// 16-lane AVX-512 (`V4`/`V4x`) whole-slice kernel parameterized on `KernelCfg`.
+#[archmage::attune(_v4_t(cfg(avx512)), _v4x_t(cfg(avx512)))]
+pub(super) fn slice16_cfg<const ARITHMETIC: usize>(
+    token: Token,
     src: &[f32],
     dst: &mut [f32],
     exponent: f32,
@@ -783,42 +783,21 @@ fn slice16_cfg_impl<T: magetypes::simd::backends::F32x16Convert, const ARITHMETI
     let (chunks, tail) = V::partition_slice_t(token, src);
     let (out_chunks, out_tail) = V::partition_slice_mut_t(token, dst);
     for (i, (s, d)) in chunks.iter().zip(out_chunks.iter_mut()).enumerate() {
-        vector16_dbg::<T, ARITHMETIC>(token, V::load_t(token, s), exponent, cfg)
+        vector16_dbg::<Token, ARITHMETIC>(token, V::load_t(token, s), exponent, cfg)
             .map_err(|e| (i * 16, e))?
             .store(d);
     }
     if !tail.is_empty() {
-        vector16_dbg::<T, ARITHMETIC>(token, V::load_padded_t(token, tail, tail[0]), exponent, cfg)
-            .map_err(|e| (chunks.len() * 16, e))?
-            .store_prefix(out_tail);
+        vector16_dbg::<Token, ARITHMETIC>(
+            token,
+            V::load_padded_t(token, tail, tail[0]),
+            exponent,
+            cfg,
+        )
+        .map_err(|e| (chunks.len() * 16, e))?
+        .store_prefix(out_tail);
     }
     Ok(())
-}
-
-/// 16-lane AVX-512 (`V4`) whole-slice kernel parameterized on `KernelCfg`.
-#[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
-#[archmage::arcane]
-pub(super) fn slice16_cfg_v4<const ARITHMETIC: usize>(
-    token: archmage::X64V4Token,
-    src: &[f32],
-    dst: &mut [f32],
-    exponent: f32,
-    cfg: KernelCfg,
-) -> Result<(), (usize, PowfError)> {
-    slice16_cfg_impl::<_, ARITHMETIC>(token, src, dst, exponent, cfg)
-}
-
-/// 16-lane AVX-512 (`V4x`) whole-slice kernel parameterized on `KernelCfg`.
-#[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
-#[archmage::arcane]
-pub(super) fn slice16_cfg_v4x<const ARITHMETIC: usize>(
-    token: archmage::X64V4xToken,
-    src: &[f32],
-    dst: &mut [f32],
-    exponent: f32,
-    cfg: KernelCfg,
-) -> Result<(), (usize, PowfError)> {
-    slice16_cfg_impl::<_, ARITHMETIC>(token, src, dst, exponent, cfg)
 }
 
 /// Whole-slice kernel: one feature region around the loop, the 8-lane graph
@@ -872,18 +851,11 @@ pub(super) fn slice4_with<K: Kernel, const ARITHMETIC: usize>(
     Ok(())
 }
 
-#[cfg(all(
-    not(debug_assertions),
-    all(target_arch = "x86_64", target_feature = "sse2"),
-    feature = "avx512"
-))]
-#[inline(always)]
-fn slice16_with_impl<
-    T: magetypes::simd::backends::F32x16Convert,
-    K: Kernel,
-    const ARITHMETIC: usize,
->(
-    token: T,
+/// 16-lane AVX-512 (`V4`/`V4x`) whole-slice kernel (`zmm` native registers).
+#[cfg(not(debug_assertions))]
+#[archmage::attune(_v4_t(cfg(avx512)), _v4x_t(cfg(avx512)))]
+pub(super) fn slice16_with<K: Kernel, const ARITHMETIC: usize>(
+    token: Token,
     src: &[f32],
     dst: &mut [f32],
     exponent: f32,
@@ -892,46 +864,14 @@ fn slice16_with_impl<
     let (chunks, tail) = V::partition_slice_t(token, src);
     let (out_chunks, out_tail) = V::partition_slice_mut_t(token, dst);
     for (i, (s, d)) in chunks.iter().zip(out_chunks.iter_mut()).enumerate() {
-        profile16::<T, K, ARITHMETIC>(token, V::load_t(token, s), exponent)
+        profile16::<Token, K, ARITHMETIC>(token, V::load_t(token, s), exponent)
             .map_err(|e| (i * 16, e))?
             .store(d);
     }
     if !tail.is_empty() {
-        profile16::<T, K, ARITHMETIC>(token, V::load_padded_t(token, tail, tail[0]), exponent)
+        profile16::<Token, K, ARITHMETIC>(token, V::load_padded_t(token, tail, tail[0]), exponent)
             .map_err(|e| (chunks.len() * 16, e))?
             .store_prefix(out_tail);
     }
     Ok(())
-}
-
-/// 16-lane AVX-512 (`V4`) whole-slice kernel (`zmm` native registers).
-#[cfg(all(
-    not(debug_assertions),
-    all(target_arch = "x86_64", target_feature = "sse2"),
-    feature = "avx512"
-))]
-#[archmage::arcane]
-pub(super) fn slice16_with_v4<K: Kernel, const ARITHMETIC: usize>(
-    token: archmage::X64V4Token,
-    src: &[f32],
-    dst: &mut [f32],
-    exponent: f32,
-) -> Result<(), (usize, PowfError)> {
-    slice16_with_impl::<_, K, ARITHMETIC>(token, src, dst, exponent)
-}
-
-/// 16-lane AVX-512 (`V4x`) whole-slice kernel (`zmm` native registers).
-#[cfg(all(
-    not(debug_assertions),
-    all(target_arch = "x86_64", target_feature = "sse2"),
-    feature = "avx512"
-))]
-#[archmage::arcane]
-pub(super) fn slice16_with_v4x<K: Kernel, const ARITHMETIC: usize>(
-    token: archmage::X64V4xToken,
-    src: &[f32],
-    dst: &mut [f32],
-    exponent: f32,
-) -> Result<(), (usize, PowfError)> {
-    slice16_with_impl::<_, K, ARITHMETIC>(token, src, dst, exponent)
 }
