@@ -4,10 +4,13 @@
 use archmage::ScalarToken;
 use magemath::{
     cbrtf::{Cbrtf, CbrtfDomain, CbrtfOptions},
-    expf::{Expf, ExpfDomain, ExpfOptions},
     log1pf::{Log1pf, Log1pfDomain, Log1pfOptions},
-    logf::{Logf, LogfDomain, LogfOptions},
     powf::{Powf, PowfDomain, PowfOptions},
+};
+#[cfg(not(target_arch = "x86"))]
+use magemath::{
+    expf::{Expf, ExpfDomain, ExpfOptions},
+    logf::{Logf, LogfDomain, LogfOptions},
 };
 use magetypes::{
     numerics::RecipOptions,
@@ -46,6 +49,7 @@ fn panic(_: &core::panic::PanicInfo) -> ! {
 // consumer's contract. Keep both lengths opaque to model the public slice API.
 macro_rules! slice_probe {
     (native $name:ident, |$token:ident, $src:ident, $dst:ident| $body:expr) => {
+        #[cfg(not(target_arch = "x86"))]
         #[cfg_attr(target_arch = "aarch64", archmage::attune(neon))]
         #[cfg_attr(target_arch = "wasm32", archmage::attune(wasm128))]
         #[cfg_attr(target_arch = "x86_64", archmage::attune(v3))]
@@ -66,11 +70,13 @@ macro_rules! slice_probe {
     };
 }
 
+#[cfg(not(target_arch = "x86"))]
 const UNIT: PowfOptions = PowfOptions::new()
     .domain(PowfDomain::Unit)
     .midp()
     .caller()
     .const_exponent(1.0 / 2.4);
+#[cfg(not(target_arch = "x86"))]
 const HDR: PowfOptions = PowfOptions::new()
     .gamma()
     .midp()
@@ -166,6 +172,7 @@ macro_rules! unary_probe {
     };
 }
 
+#[cfg(not(target_arch = "x86"))]
 const EXP: ExpfOptions = ExpfOptions::new()
     .domain(ExpfDomain::Finite)
     .caller()
@@ -175,6 +182,7 @@ unary_probe!(native exp2_midp_backend, Expf, EXP.midp().backend_dependent(), exp
 unary_probe!(native exp2_lowp_bit_exact, Expf, EXP.lowp().bit_exact(), exp2_slice_with_token);
 unary_probe!(native exp2_lowp_backend, Expf, EXP.lowp().backend_dependent(), exp2_slice_with_token);
 
+#[cfg(not(target_arch = "x86"))]
 const LOG: LogfOptions = LogfOptions::new()
     .domain(LogfDomain::PositiveNormals)
     .midp()
@@ -188,6 +196,10 @@ const LOG1P_AROUND: Log1pfOptions = LOG1P.domain(Log1pfDomain::AroundZero);
 const LOG1P_GREATER: Log1pfOptions = LOG1P.domain(Log1pfDomain::GreaterThanNegOne);
 unary_probe!(native log1p_around, Log1pf, LOG1P_AROUND, slice_with_token);
 unary_probe!(native log1p_greater, Log1pf, LOG1P_GREATER, slice_with_token);
+#[cfg(all(target_arch = "wasm32", target_feature = "relaxed-simd"))]
+unary_probe!(native log1p_around_backend, Log1pf, LOG1P_AROUND.backend_dependent(), slice_with_token);
+#[cfg(all(target_arch = "wasm32", target_feature = "relaxed-simd"))]
+unary_probe!(native log1p_greater_backend, Log1pf, LOG1P_GREATER.backend_dependent(), slice_with_token);
 unary_probe!(scalar log1p_around_scalar, Log1pf, LOG1P_AROUND, slice_with_token);
 unary_probe!(scalar log1p_greater_scalar, Log1pf, LOG1P_GREATER, slice_with_token);
 

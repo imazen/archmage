@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Score optimized no_std Magemath and ScalarToken consumer code.
 
-Needs Python 3.12+, rustup with the three TARGETS, and Linux binutils (readelf).
+Needs Python 3.12+, rustup with the TARGETS, and Linux binutils (readelf).
 Native sizes are ELF STT_FUNC sizes. WASM sizes are linked code-section function
 bodies, with names and exports used only to identify them. Scores count static
 instructions in the union of reachable local functions, once per function.
@@ -33,9 +33,13 @@ TARGETS = {
     "x86_64": "x86_64-unknown-linux-gnu",
     "aarch64": "aarch64-unknown-linux-gnu",
     "wasm32": "wasm32-unknown-unknown",
+    "wasm32_relaxed": "wasm32-unknown-unknown",
+    "i686": "i686-unknown-linux-gnu",
 }
-SCHEMA_VERSION = 1
-COST_TABLE_VERSION = 2
+WASM_ISAS = {"wasm32", "wasm32_relaxed"}
+X86_ISAS = {"x86_64", "i686"}
+SCHEMA_VERSION = 2
+COST_TABLE_VERSION = 3
 WEIGHTS = {
     "alu": 1.0,
     "fma": 1.5,
@@ -58,7 +62,7 @@ COST_TABLES = {
         ("fma", r"^v?f[nm]*m(?:add|sub)"),
         ("scalarized_lane_move", r"^v?(?:pinsr|pextr|insertps|extractps)"),
         ("shuffle", r"^v?(?:(?:p)?shuf|perm|(?:p)?unpck|(?:p)?blend|pack|broadcast)"),
-        ("stack_spill", r"^(?:push|pop)\w*\b|^(?!lea).*\([^)]*%(?:rsp|rbp)\b"),
+        ("stack_spill", r"^(?:push|pop)\w*\b|^(?!lea).*\([^)]*%[er](?:sp|bp)\b"),
         ("mem", r"^(?!lea)\S+\s+.*(?:\(|@GOT|\.(?:L)?CPI)"),
     ),
     "aarch64": (
@@ -78,6 +82,11 @@ COST_TABLES = {
         ("mem", r"\.(?:load|store|copy|fill)"),
     ),
 }
+COST_TABLES["wasm32_relaxed"] = COST_TABLES["wasm32"]
+COST_TABLES["i686"] = (
+    ("hw_div_sqrt", r"^(?:fi?div(?:r)?[slp]?|fsqrt)\b"),
+    *COST_TABLES["x86_64"],
+)
 COST_RULES = {
     isa: [(bucket, re.compile(pattern)) for bucket, pattern in rules]
     for isa, rules in COST_TABLES.items()
@@ -88,24 +97,32 @@ CALL_MUT = re.compile(r"call_mut")
 GOLDSCHMIDT = re.compile(r"goldschmidt|nostd_math.*sqrt", re.I)
 HELPER = re.compile(r"nostd_math|compiler_builtins|\b(?:memcpy|memmove|memset|memcmp)\b")
 FLOAT_DIV = re.compile(r"^(?:v?div(?:ps|pd|ss|sd)|fdiv|f(?:32(?:x4)?|64(?:x2)?)\.div)\b")
+X87_DIV = re.compile(r"^fi?divr?[slp]?\b")
+WASM_RELAXED_MADD = re.compile(r"^f(?:32x4|64x2)\.relaxed_(?:madd|nmadd)\b")
 # Moving a byte *into* a vector lane can turn packed I/O into a sequence of
 # inserts. A scalar extraction (mov b0, v1.b[15]) in a short tail is different.
 BYTE_LANE_MOVE = re.compile(r"^mov\.b\b|^(?:mov|ins)\s+v\d+\.b\[")
 QUAD_PAIR = re.compile(r"^(?:ldp|stp)\s+q\d+,\s*q\d+,\s*\[(?!sp\b|x29\b)")
-DIRECT_CALLS = {"call", "callq", "return_call", "bl"}
+DIRECT_CALLS = {"call", "callq", "calll", "return_call", "bl"}
 INDIRECT_CALLS = {"call_indirect", "call_ref", "return_call_indirect",
                   "return_call_ref", "blr", "blraa", "blrab"}
 CALLS = DIRECT_CALLS | INDIRECT_CALLS
-TAILS = {"b", "jmp", "jmpq"}
-BRANCH = re.compile(r"^(?:j\w+|b(?:\.\w+)?|br(?:_\w+)?|cbn?z|tbn?z|retq?|return|"
+TAILS = {"b", "jmp", "jmpq", "jmpl"}
+BRANCH = re.compile(r"^(?:j\w+|b(?:\.\w+)?|br(?:_\w+)?|cbn?z|tbn?z|ret[ql]?|return|"
                     r"if|else|block|loop|end_(?:block|loop|if))$")
 TRAPS = {"ud2", "ud1", "brk", "unreachable"}
 SYMBOL = r"[-\w.$]+"
 FUNCTION = re.compile(rf"^\s*\.type\s+({SYMBOL}),\s*[@%]function\b", re.M)
 ALIAS = re.compile(rf"^\s*(?:\.set\s+({SYMBOL}),\s*|({SYMBOL})\s*=\s*)({SYMBOL})\s*$")
 DIRECT_SYMBOL = re.compile(rf"({SYMBOL})(?:@PLT)?")
-X86_GOT = re.compile(rf"({SYMBOL})@GOTPCREL(?:X)?\(%rip\)")
-X86_ADDRESS = re.compile(rf"({SYMBOL})\(%rip\)")
+X86_GOT = {
+    "x86_64": re.compile(rf"({SYMBOL})@GOTPCREL(?:X)?\(%rip\)"),
+    "i686": re.compile(rf"({SYMBOL})@GOT\(%e(?:ax|bx|cx|dx|si|di|bp)\)"),
+}
+X86_ADDRESS = {
+    "x86_64": re.compile(rf"({SYMBOL})\(%rip\)"),
+    "i686": re.compile(rf"({SYMBOL})@GOTOFF\(%e(?:ax|bx|cx|dx|si|di|bp)\)"),
+}
 X86_REGISTERS = {
     "%" + name: "%" + family[0]
     for family in (
@@ -118,6 +135,8 @@ X86_REGISTERS = {
     for name in family
 }
 X86_CALLEE_SAVED = {"%rbx", "%rbp", "%r12", "%r13", "%r14", "%r15"}
+I686_CALLEE_SAVED = {"%rbx", "%rbp", "%rsi", "%rdi"}
+I686_PC_THUNK = re.compile(r"__x86\.get_pc_thunk\.(ax|bx|cx|dx|si|di|bp)")
 X86_IMPLICIT_WRITE = re.compile(
     r"^(?:cpuid|rdtsc[p]?|rdpmc|syscall|sysenter|xgetbv|xlat[b]?|lahf|"
     r"(?:i?mul|i?div|cqo|cdq|cwd|cmpxchg|loop|movs|stos|lods|scas|cmps|leave)\w*)$"
@@ -138,6 +157,9 @@ MATH = (
 )
 HIGHP = ("powf_highp_gamma_one", "powf_highp_gamma_four")
 COMMON = ("powf_slice_scalar", *HIGHP, *SCALAR)
+RELAXED_LOG1P = ("log1p_around_backend", "log1p_greater_backend")
+I686_PROBES = ("powf_slice_scalar", *HIGHP, *SCALAR[:6],
+               *(name for name in MATH if name.endswith("_scalar")))
 
 
 def opcode(line):
@@ -158,30 +180,36 @@ def alias_chain(name, aliases):
     return names
 
 
-def x86_register_update(line, op, operands, registers):
+def x86_register_update(isa, line, op, operands, target, registers):
     """Track proven symbol addresses within a basic block of AT&T assembly."""
     if op in CALLS:
-        for reg in registers.keys() - X86_CALLEE_SAVED:
+        callee_saved = I686_CALLEE_SAVED if isa == "i686" else X86_CALLEE_SAVED
+        for reg in registers.keys() - callee_saved:
             del registers[reg]
+        # The PIC thunk writes the PC into the named register, even if that
+        # register is normally callee-saved.
+        if isa == "i686" and target and (thunk := I686_PC_THUNK.fullmatch(target)):
+            registers.pop(X86_REGISTERS[f"%e{thunk[1]}"], None)
         return
-    if op in TAILS or op in {"ret", "retq"} or X86_IMPLICIT_WRITE.fullmatch(op):
+    if op in TAILS or op in {"ret", "retq", "retl"} or X86_IMPLICIT_WRITE.fullmatch(op):
         registers.clear()
         return
     source, _, dest = operands.rpartition(", ")
     symbol = None
-    if op == "movq":
-        got = X86_GOT.fullmatch(source)
-        symbol = got[1] if got else registers.get(source)
-    if op == "leaq":
-        address = X86_ADDRESS.fullmatch(source)
+    if op == ("movl" if isa == "i686" else "movq"):
+        got = X86_GOT[isa].fullmatch(source)
+        symbol = got[1] if got else registers.get(X86_REGISTERS.get(source))
+    if op == ("leal" if isa == "i686" else "leaq"):
+        address = X86_ADDRESS[isa].fullmatch(source)
         symbol = address[1] if address else None
     # Forget any explicitly used register unless a recognized full-width
     # assignment recovers its value. This also catches writes to subregisters
     # and instructions with more than one output.
     for operand in re.findall(r"%[a-z][a-z0-9]*", line):
         registers.pop(X86_REGISTERS.get(operand), None)
-    if symbol and dest in X86_REGISTERS and X86_REGISTERS[dest] == dest:
-        registers[dest] = symbol
+    full_width = dest.startswith("%e") if isa == "i686" else X86_REGISTERS.get(dest) == dest
+    if symbol and full_width and dest in X86_REGISTERS:
+        registers[X86_REGISTERS[dest]] = symbol
 
 
 def instructions(isa, body, aliases):
@@ -195,18 +223,19 @@ def instructions(isa, body, aliases):
         target = None
         indirect = op in INDIRECT_CALLS or (isa == "aarch64" and op in {"br", "braa", "brab"})
         if op in DIRECT_CALLS | TAILS:
-            if isa == "x86_64" and operands.startswith("*"):
+            if isa in X86_ISAS and operands.startswith("*"):
                 indirect = True
-                got = X86_GOT.fullmatch(operands[1:])
-                target = got[1] if got else registers.get(operands[1:])
+                got = X86_GOT[isa].fullmatch(operands[1:])
+                target = got[1] if got else registers.get(X86_REGISTERS.get(operands[1:]))
             elif match := DIRECT_SYMBOL.fullmatch(operands):
                 symbol = match[1]
                 if symbol in aliases or (not symbol.startswith((".L", "$")) and not symbol.isdigit()):
                     target = symbol
         names = alias_chain(target, aliases) if target else ()
-        if isa == "x86_64" and (registers or op in {"movq", "leaq"}):
+        if isa in X86_ISAS and (registers or op in {"movq", "leaq", "movl", "leal"}):
             # Transfer consumes the pre-call value before applying clobbers.
-            x86_register_update(line, opcode(line), operands, registers)
+            x86_register_update(isa, line, opcode(line), operands,
+                                names[-1] if names else None, registers)
         yield line, names, indirect and target is None
 
 
@@ -215,6 +244,8 @@ def bucket_for(isa, line, target, local):
     if op in TRAPS or (target and PANIC.search(target)):
         return "panic_or_trap"
     if op in CALLS or (op in TAILS and target):
+        if isa == "i686" and target and I686_PC_THUNK.fullmatch(target):
+            return "call_internal"
         if target and (SOFT_FMA.search(target) or HELPER.search(target) or target not in local):
             return "call_helper"
         return "call_internal"
@@ -226,7 +257,7 @@ def bucket_for(isa, line, target, local):
 def parse_assembly(isa, text):
     names = set(FUNCTION.findall(text))
     bodies, aliases = {}, {}
-    comment = "//" if isa in {"aarch64", "wasm32"} else "#"
+    comment = "//" if isa == "aarch64" or isa in WASM_ISAS else "#"
     current = None
     for raw in text.splitlines():
         line = raw.split(comment, 1)[0].strip()
@@ -354,14 +385,18 @@ def invariant_results(isa, name, decoded):
     lines = [line for line, _, _ in decoded]
     results = []
     if name.startswith(("log1p_", "cbrtf_")):
-        results.append(["float_div", sum(bool(FLOAT_DIV.match(line)) for line in lines)])
+        results.append(["float_div", sum(bool(FLOAT_DIV.match(line) or
+                                               (isa == "i686" and X87_DIV.match(line)))
+                                         for line in lines)])
     if isa == "aarch64" and name == "powf_unit_unchecked":
         results.extend([
             ["byte_lane_move", sum(bool(BYTE_LANE_MOVE.match(line)) for line in lines)],
             ["quad_pair", sum(bool(QUAD_PAIR.match(line)) for line in lines)],
         ])
-    if isa == "wasm32" and "backend" in name:
+    if isa in WASM_ISAS and "backend" in name:
         results.append(["soft_fma", matching_calls(SOFT_FMA)])
+        if isa == "wasm32_relaxed" and not name.endswith("_scalar"):
+            results.append(["relaxed_madd", sum(bool(WASM_RELAXED_MADD.match(line)) for line in lines)])
     if name in SCALAR[:6]:
         results.append(["bounds_panic", sum(any(PANIC.search(symbol) for symbol in names or (line,))
                                            for line, names, _ in decoded)])
@@ -375,7 +410,7 @@ def invariant_results(isa, name, decoded):
             # LLVM can fold a splat, SIMD sqrt, and lane-zero extract into
             # the equally native scalar WASM sqrt opcode.
             "wasm32": {"f32.sqrt", "f32x4.sqrt"} if f32 else {"f64.sqrt", "f64x2.sqrt"},
-        }[isa]
+        }["wasm32" if isa in WASM_ISAS else isa]
         results.extend([
             ["hardware_sqrt", sum(opcode(line) in native for line in lines)],
             ["goldschmidt", matching_calls(GOLDSCHMIDT)],
@@ -415,7 +450,7 @@ def require_invariants(probes):
         for edge in metrics.get("unresolved_indirect_edges", ()):
             errors.append(f"{key}: unresolved indirect edge in {edge}")
         for invariant, actual in metrics["invariants"]:
-            if invariant in {"quad_pair", "hardware_sqrt"}:
+            if invariant in {"quad_pair", "hardware_sqrt", "relaxed_madd"}:
                 passes, expected = actual >= 1, ">= 1"
             elif invariant == "gamma_ratio":
                 passes, expected = actual <= 1.6, "<= 1.6"
@@ -501,17 +536,23 @@ lto = "fat"
         CARGO_BUILD_BUILD_DIR=str(directory / "target"),
         CARGO_INCREMENTAL="0",
     )
-    if isa == "wasm32":
-        env["RUSTFLAGS"] = "-Ctarget-feature=+simd128,-relaxed-simd"
+    if isa in WASM_ISAS:
+        relaxed = "+" if isa == "wasm32_relaxed" else "-"
+        env["RUSTFLAGS"] = f"-Ctarget-feature=+simd128,{relaxed}relaxed-simd"
     shared = {}
-    names = [*COMMON] if opt == "z" else [*COMMON, *MATH]
+    if isa == "wasm32_relaxed":
+        names = (*COMMON, *MATH, *RELAXED_LOG1P)
+    elif isa == "i686":
+        names = I686_PROBES
+    else:
+        names = COMMON if opt == "z" else (*COMMON, *MATH)
     if opt == "3" and isa == "x86_64":
-        names += ["powf_highp_v3", "powf_highp_v4x"]
+        names += ("powf_highp_v3", "powf_highp_v4x")
     for four in (False, True):
         variant = "four" if four else "one"
         asm = directory / f"{variant}.s"
         obj = directory / f"{variant}.o"
-        flags = [f"--emit=asm={asm},link"] if isa == "wasm32" else [
+        flags = [f"--emit=asm={asm},link"] if isa in WASM_ISAS else [
             "-Clinker=rust-lld", "-Clinker-flavor=ld.lld", f"--emit=asm={asm},obj={obj}",
         ]
         features = ["avx512"] if isa == "x86_64" else []
@@ -524,9 +565,9 @@ lto = "fat"
         assembly = asm.read_text()
         bodies, aliases = parse_assembly(isa, assembly)
         sizes = (wasm_sizes(directory / f"target/{target}/release/math_guard_probe.wasm")
-                 if isa == "wasm32" else elf_sizes(obj))
+                 if isa in WASM_ISAS else elf_sizes(obj))
         if dump:
-            out = dump / side / target / f"opt-{opt}"
+            out = dump / side / (isa if isa == "wasm32_relaxed" else target) / f"opt-{opt}"
             out.mkdir(parents=True, exist_ok=True)
             # Canonical whitespace, omit comments and non-code directives, retain
             # operands and function attribution for human review.
@@ -569,13 +610,31 @@ def metadata(toolchain):
 
 
 def baseline_text(data):
-    header = {key: value for key, value in data.items() if key != "probes"}
+    # Share the field names across probes. A dense bucket vector is shorter
+    # than repeating dictionary keys, even when some counts are zero.
+    columns = ("code_bytes", "insn_count", "cost_score", "buckets", "invariants")
+    header = {
+        **{key: value for key, value in data.items() if key != "probes"},
+        "probe_columns": columns,
+        "bucket_columns": tuple(WEIGHTS),
+    }
     summary = json.dumps(header, indent=2).removesuffix("\n}")
-    rows = ",\n".join(
-        "    " + json.dumps(key) + ":" + json.dumps(row, separators=(",", ":"))
-        for key, row in data["probes"].items()
-    )
-    return summary + ',\n  "probes": {\n' + rows + "\n  }\n}\n"
+    rows = []
+    for key, row in data["probes"].items():
+        counts = [row["buckets"].get(bucket, 0) for bucket in WEIGHTS]
+        cells = [row["code_bytes"], row["insn_count"], row["cost_score"], counts, row["invariants"]]
+        rows.append("    " + json.dumps(key) + ":" + json.dumps(cells, separators=(",", ":")))
+    return summary + ',\n  "probes": {\n' + ",\n".join(rows) + "\n  }\n}\n"
+
+
+def baseline_probes(data):
+    probes = {}
+    for key, cells in data["probes"].items():
+        row = dict(zip(data["probe_columns"], cells, strict=True))
+        counts = zip(data["bucket_columns"], row["buckets"], strict=True)
+        row["buckets"] = {bucket: count for bucket, count in counts if count}
+        probes[key] = row
+    return probes
 
 
 def check_versions(before, after):
@@ -715,6 +774,46 @@ class GuardTests(unittest.TestCase):
                 self.assertEqual(row["buckets"], {"call_helper": 1})
                 self.assertEqual(require_invariants({name: row}), [f"{name}: soft_fma 1 (expected = 0)"])
 
+    def test_relaxed_wasm_requires_madd_without_software_fma(self):
+        name = "log1p_greater_backend"
+        for op in ("f32x4.relaxed_madd", "f32x4.relaxed_nmadd"):
+            row = self.score("wasm32_relaxed", name, f"\t{op}")
+            self.assertEqual(row["buckets"], {"fma": 1})
+            self.assertEqual(require_invariants({name: row}), [])
+        unfused = self.score("wasm32_relaxed", name, "\tf32x4.mul\n\tf32x4.add")
+        self.assertEqual(require_invariants({name: unfused}), [f"{name}: relaxed_madd 0 (expected >= 1)"])
+        software = self.score("wasm32_relaxed", name, "\tf32x4.relaxed_madd\n\tcall powf_soft_f32x4")
+        self.assertEqual(require_invariants({name: software}), [f"{name}: soft_fma 1 (expected = 0)"])
+
+    def test_i686_pic_thunk_and_got_targets(self):
+        name = "log1p_around_scalar"
+        bodies = {
+            name: [
+                "calll __x86.get_pc_thunk.bx",
+                "addl $_GLOBAL_OFFSET_TABLE_, %ebx",
+                "calll *divide@GOT(%ebx)",
+                "movl divide@GOT(%ebx), %esi",
+                "calll *%esi",
+                "retl",
+            ],
+            "divide": ["fdivrp %st, %st(1)", "retl"],
+        }
+        row = measure("i686", name, (name,), bodies, {}, {name: 23, "divide": 3})
+        self.assertEqual(row["code_bytes"], 26)
+        self.assertEqual(row["buckets"], {"alu": 1, "branch": 2, "call_internal": 3,
+                                          "hw_div_sqrt": 1, "mem": 1})
+        self.assertEqual(require_invariants({name: row}), [f"{name}: float_div 1 (expected = 0)"])
+        name = "scalar_transpose"
+        panic = self.score("i686", name, "\tcalll *_RNv4core9panicking9panic_fmt@GOT(%ebx)")
+        self.assertEqual(require_invariants({name: panic}), [f"{name}: bounds_panic 1 (expected = 0)"])
+
+    def test_compact_baseline_round_trips_measurement_rows(self):
+        name = "log1p_greater_backend"
+        row = self.score("wasm32_relaxed", name, "\tf32x4.relaxed_madd\n\tret")
+        probes = {f"wasm32_relaxed/opt-z/{name}": row}
+        compact = json.loads(baseline_text({"schema_version": SCHEMA_VERSION, "probes": probes}))
+        self.assertEqual(baseline_probes(compact), probes)
+
     def test_got_calls_reach_divide_helper(self):
         name = "log1p_around"
         helpers = {"divide": ["divss %xmm1, %xmm0", "retq"]}
@@ -845,7 +944,7 @@ def main():
                 old = json.loads(args.check_baseline.read_text())
                 check_versions(old, current)
                 drift_pct = drift_tolerance(old, current, args.llvm_drift_pct)
-                issues = comparison(old["probes"], probes, drift_pct=drift_pct)
+                issues = comparison(baseline_probes(old), probes, drift_pct=drift_pct)
             else:
                 issues = require_invariants(probes)
                 path = args.update_baseline
