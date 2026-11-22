@@ -21,6 +21,23 @@ pub(super) enum Plan {
 
 impl Plan {
     #[inline(always)]
+    pub(super) fn midp_slice_width(self) -> usize {
+        match self {
+            Self::Software => 1,
+            #[cfg(all(feature = "std", not(miri)))]
+            Self::Std => 1,
+            #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
+            Self::V4(_) | Self::V4x(_) => 16,
+            #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
+            Self::V3(_) => 8,
+            #[cfg(target_arch = "aarch64")]
+            Self::Neon(_) => 8,
+            #[cfg(target_arch = "wasm32")]
+            Self::Wasm(..) => 8,
+        }
+    }
+
+    #[inline(always)]
     pub(super) fn same_tier(self, other: Self) -> bool {
         core::mem::discriminant(&self) == core::mem::discriminant(&other)
     }

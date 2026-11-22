@@ -5,68 +5,186 @@
     target_arch = "wasm32"
 ))]
 use super::highp_simd;
-use super::{PowfError, PowfOptions, dispatch::Plan, graph, highp, highp_scalar};
-use crate::Execution;
+use super::{
+    PowfError, PowfErrorKind, PowfOptions, const_api::refine_slice_error, dispatch::Plan, graph,
+    highp, highp_scalar,
+};
+use crate::{Execution, SliceError};
 use archmage::ScalarToken;
-use highp::{HighpCfg, RUNTIME};
+use highp::HighpCfg;
+
+type SliceResult = Result<(), (usize, PowfError)>;
 
 #[cfg_attr(debug_assertions, inline(never))]
 #[cfg_attr(not(debug_assertions), inline(always))]
-fn run<
-    const CFG: u128,
-    const IN_CONTEXT: bool,
-    const ELIDE: bool,
-    const ZERO: bool,
-    const N: usize,
->(
+pub(super) fn for_token_const<const CFG: u128, T: archmage::IntoConcreteToken, const N: usize>(
+    t: T,
+    bases: [f32; N],
+    n: f32,
+) -> Result<[f32; N], PowfError> {
+    let (opts, cfg) = const {
+        let opts = PowfOptions::decode_const(CFG);
+        (opts, HighpCfg::from_options(opts))
+    };
+    #[cfg(feature = "std")]
+    if opts.is_backend() {
+        return highp::run_cfg(cfg, bases, n);
+    }
+    let (plan, in_context) = select(t, opts.is_caller(), N >= 8);
+    eval_array(plan, in_context, cfg, bases, n)
+}
+
+#[cfg_attr(debug_assertions, inline(never))]
+#[cfg_attr(not(debug_assertions), inline(always))]
+pub(super) fn for_token_slice_const<const CFG: u128, T: archmage::IntoConcreteToken>(
+    t: T,
+    src: &[f32],
+    dst: &mut [f32],
+    n: f32,
+) -> Result<(), SliceError<PowfErrorKind>> {
+    let (opts, cfg) = const {
+        let opts = PowfOptions::decode_const(CFG);
+        (opts, HighpCfg::from_options(opts))
+    };
+    slice_with_options(t, opts, cfg, src, dst, n)
+}
+
+#[cfg_attr(debug_assertions, inline(never))]
+#[cfg_attr(not(debug_assertions), inline)]
+pub(super) fn for_token_cfg<T: archmage::IntoConcreteToken, const N: usize>(
+    t: T,
+    opts: PowfOptions,
+    bases: [f32; N],
+    n: f32,
+) -> Result<[f32; N], PowfError> {
+    let cfg = HighpCfg::from_options(opts);
+    #[cfg(feature = "std")]
+    if opts.is_backend() {
+        return highp::run_cfg(cfg, bases, n);
+    }
+    let (plan, in_context) = select(t, opts.is_caller(), N >= 8);
+    eval_array(plan, in_context, cfg, bases, n)
+}
+
+#[cfg_attr(debug_assertions, inline(never))]
+#[cfg_attr(not(debug_assertions), inline)]
+pub(super) fn for_token_slice_cfg<T: archmage::IntoConcreteToken>(
+    t: T,
+    opts: PowfOptions,
+    src: &[f32],
+    dst: &mut [f32],
+    n: f32,
+) -> Result<(), SliceError<PowfErrorKind>> {
+    let cfg = HighpCfg::from_options(opts);
+    slice_with_options(t, opts, cfg, src, dst, n)
+}
+
+#[inline(always)]
+fn slice_with_options(
+    t: impl archmage::IntoConcreteToken,
+    opts: PowfOptions,
+    cfg: HighpCfg,
+    src: &[f32],
+    dst: &mut [f32],
+    n: f32,
+) -> Result<(), SliceError<PowfErrorKind>> {
+    #[cfg(feature = "std")]
+    if opts.is_backend() {
+        return std_slice(cfg, src, dst, n);
+    }
+    let (plan, in_context) = select(t, opts.is_caller(), true);
+    eval_slice(plan, in_context, cfg, src, dst, n).map_err(|(base, error)| {
+        if opts.is_infallible() || uses_single_lane_slice(plan) || src.len() - base < 8 {
+            SliceError {
+                kind: error.kind,
+                index: base,
+            }
+        } else {
+            refine_highp_chunk(plan, in_context, cfg, src, base, error, n)
+        }
+    })
+}
+
+#[inline(always)]
+fn prepare<const VALIDATE: bool, const N: usize>(
+    cfg: HighpCfg,
+    bases: [f32; N],
+    n: f32,
+) -> Result<([f32; N], u16), PowfError> {
+    if !VALIDATE {
+        return Ok((bases, 0));
+    }
+    let (bases, nan_mask) = highp::sanitize_bases_cfg(cfg, bases, n);
+    highp::check_bases_cfg(cfg, &bases, n)?;
+    Ok((bases, nan_mask))
+}
+
+#[inline(always)]
+fn finish<const VALIDATE: bool, const N: usize>(
+    cfg: HighpCfg,
+    bases: &[f32; N],
+    mut out: [f32; N],
+    n: f32,
+    nan_mask: u16,
+) -> Result<[f32; N], PowfError> {
+    if VALIDATE {
+        highp::check_results_cfg(cfg, bases, &out, n)?;
+        highp::restore_nans(&mut out, nan_mask);
+    }
+    Ok(out)
+}
+
+#[cfg_attr(debug_assertions, inline(never))]
+#[cfg_attr(not(debug_assertions), inline(always))]
+fn run<const ELIDE: bool, const ZERO: bool, const N: usize>(
     plan: Plan,
+    in_context: bool,
     cfg: HighpCfg,
     bases: [f32; N],
     n: f32,
 ) -> Result<[f32; N], PowfError> {
-    let cfg = cfg.resolve::<CFG>();
-    let (bases, nan_mask) = highp::sanitize_bases_cfg::<N>(cfg, bases, n);
-    highp::check_bases_cfg(cfg, &bases, n)?;
-    let mut out = if cfg.alg_kind != 0 {
+    let _ = in_context;
+    let (bases, nan_mask) = prepare::<true, N>(cfg, bases, n)?;
+    let out = if cfg.alg_kind != 0 {
         match plan {
             #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
             Plan::V3(t) => {
-                if IN_CONTEXT {
+                if in_context {
                     highp::eval_alg_token::<_, N>(t, cfg.alg_kind, bases)
                 } else {
-                    v3_alg::<CFG, N>(t, cfg, bases)
+                    v3_alg::<N>(t, cfg.alg_kind, bases)
                 }
             }
             #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
             Plan::V4(t) => {
-                if IN_CONTEXT {
+                if in_context {
                     highp::eval_alg_token::<_, N>(t, cfg.alg_kind, bases)
                 } else {
-                    v4_alg::<CFG, N>(t, cfg, bases)
+                    v4_alg::<N>(t, cfg.alg_kind, bases)
                 }
             }
             #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
             Plan::V4x(t) => {
-                if IN_CONTEXT {
+                if in_context {
                     highp::eval_alg_token::<_, N>(t, cfg.alg_kind, bases)
                 } else {
-                    v4x_alg::<CFG, N>(t, cfg, bases)
+                    v4x_alg::<N>(t, cfg.alg_kind, bases)
                 }
             }
             #[cfg(target_arch = "aarch64")]
             Plan::Neon(t) => {
-                if IN_CONTEXT {
+                if in_context {
                     highp::eval_alg_token::<_, N>(t, cfg.alg_kind, bases)
                 } else {
-                    neon_alg::<CFG, N>(t, cfg, bases)
+                    neon_alg::<N>(t, cfg.alg_kind, bases)
                 }
             }
             #[cfg(target_arch = "wasm32")]
             Plan::Wasm(t, _) => {
-                if IN_CONTEXT {
+                if in_context {
                     highp::eval_alg_token::<_, N>(t, cfg.alg_kind, bases)
                 } else {
-                    wasm_alg::<CFG, N>(t, cfg, bases)
+                    wasm_alg::<N>(t, cfg.alg_kind, bases)
                 }
             }
             _ => highp::eval_alg_token::<_, N>(ScalarToken, cfg.alg_kind, bases),
@@ -75,7 +193,7 @@ fn run<
         match plan {
             #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
             Plan::V3(t) => {
-                if IN_CONTEXT {
+                if in_context {
                     highp_simd::packed4::<archmage::X64V3Token, ELIDE, ZERO, N>(t, bases, n)
                 } else {
                     v3::<ELIDE, ZERO, N>(t, bases, n)
@@ -83,7 +201,7 @@ fn run<
             }
             #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
             Plan::V4(t) => {
-                if IN_CONTEXT {
+                if in_context {
                     highp_simd::wide::<archmage::X64V4Token, ELIDE, ZERO, N>(t, bases, n)
                 } else {
                     v4::<ELIDE, ZERO, N>(t, bases, n)
@@ -91,7 +209,7 @@ fn run<
             }
             #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
             Plan::V4x(t) => {
-                if IN_CONTEXT {
+                if in_context {
                     highp_simd::wide::<archmage::X64V4xToken, ELIDE, ZERO, N>(t, bases, n)
                 } else {
                     v4x::<ELIDE, ZERO, N>(t, bases, n)
@@ -99,7 +217,7 @@ fn run<
             }
             #[cfg(target_arch = "aarch64")]
             Plan::Neon(t) => {
-                if IN_CONTEXT {
+                if in_context {
                     highp_simd::packed2::<archmage::NeonToken, ELIDE, ZERO, N>(t, bases, n)
                 } else {
                     neon::<ELIDE, ZERO, N>(t, bases, n)
@@ -107,7 +225,7 @@ fn run<
             }
             #[cfg(target_arch = "wasm32")]
             Plan::Wasm(t, true) => {
-                if IN_CONTEXT {
+                if in_context {
                     highp_simd::packed2::<archmage::Wasm128Token, ELIDE, ZERO, N>(t, bases, n)
                 } else {
                     wasm::<ELIDE, ZERO, N>(t, bases, n)
@@ -116,9 +234,7 @@ fn run<
             _ => scalar::<ScalarToken, { graph::SOFTWARE }, ELIDE, N>(ScalarToken, bases, n),
         }
     };
-    highp::check_results_cfg(cfg, &bases, &out, n)?;
-    highp::restore_nans(&mut out, nan_mask);
-    Ok(out)
+    finish::<true, N>(cfg, &bases, out, n, nan_mask)
 }
 
 #[inline]
@@ -146,10 +262,10 @@ fn scalar<
     target_arch = "aarch64",
     target_arch = "wasm32"
 ))]
-macro_rules! entry {
-    ($name:ident,$alg_name:ident,$token:ident,$packed:ident) => {
-        #[archmage::arcane]
-        fn $name<const ELIDE: bool, const ZERO: bool, const N: usize>(
+macro_rules! packed_backend {
+    ($token:ident, $packed:ident, $array:ident, $alg:ident, $slice:ident, $slice_boundary:ident) => {
+        #[archmage::attune(wrap)]
+        fn $array<const ELIDE: bool, const ZERO: bool, const N: usize>(
             t: archmage::$token,
             x: [f32; N],
             n: f32,
@@ -157,26 +273,81 @@ macro_rules! entry {
             highp_simd::$packed::<_, ELIDE, ZERO, N>(t, x, n)
         }
 
-        #[archmage::arcane]
-        fn $alg_name<const CFG: u128, const N: usize>(
+        #[archmage::attune(wrap)]
+        fn $alg<const N: usize>(t: archmage::$token, kind: u8, x: [f32; N]) -> [f32; N] {
+            highp::eval_alg_token(t, kind, x)
+        }
+
+        #[inline(always)]
+        fn $slice<
+            const ELIDE: bool,
+            const ZERO: bool,
+            const VALIDATE: bool,
+            const ALGEBRAIC: bool,
+        >(
+            t: archmage::$token,
+            in_context: bool,
+            cfg: HighpCfg,
+            src: &[f32],
+            dst: &mut [f32],
+            n: f32,
+        ) -> SliceResult {
+            if in_context {
+                eval_slice_loop::<_, { graph::NATIVE }, ELIDE, VALIDATE, ALGEBRAIC, _>(
+                    t,
+                    cfg,
+                    src,
+                    dst,
+                    n,
+                    highp_simd::$packed::<_, ELIDE, ZERO, 8>,
+                )
+            } else {
+                $slice_boundary::<ELIDE, ZERO, VALIDATE, ALGEBRAIC>(t, cfg, src, dst, n)
+            }
+        }
+
+        #[archmage::attune(wrap)]
+        fn $slice_boundary<
+            const ELIDE: bool,
+            const ZERO: bool,
+            const VALIDATE: bool,
+            const ALGEBRAIC: bool,
+        >(
             t: archmage::$token,
             cfg: HighpCfg,
-            x: [f32; N],
-        ) -> [f32; N] {
-            highp::eval_alg_token::<_, N>(t, cfg.resolve::<CFG>().alg_kind, x)
+            src: &[f32],
+            dst: &mut [f32],
+            n: f32,
+        ) -> SliceResult {
+            eval_slice_loop::<_, { graph::NATIVE }, ELIDE, VALIDATE, ALGEBRAIC, _>(
+                t,
+                cfg,
+                src,
+                dst,
+                n,
+                highp_simd::$packed::<_, ELIDE, ZERO, 8>,
+            )
         }
     };
 }
+
 #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
-entry!(v3, v3_alg, X64V3Token, packed4);
+packed_backend!(X64V3Token, packed4, v3, v3_alg, v3_slice, v3_slice_t);
 #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
-entry!(v4, v4_alg, X64V4Token, wide);
+packed_backend!(X64V4Token, wide, v4, v4_alg, v4_slice, v4_slice_t);
 #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
-entry!(v4x, v4x_alg, X64V4xToken, wide);
+packed_backend!(X64V4xToken, wide, v4x, v4x_alg, v4x_slice, v4x_slice_t);
 #[cfg(target_arch = "aarch64")]
-entry!(neon, neon_alg, NeonToken, packed2);
+packed_backend!(NeonToken, packed2, neon, neon_alg, neon_slice, neon_slice_t);
 #[cfg(target_arch = "wasm32")]
-entry!(wasm, wasm_alg, Wasm128Token, packed2);
+packed_backend!(
+    Wasm128Token,
+    packed2,
+    wasm,
+    wasm_alg,
+    wasm_slice,
+    wasm_slice_t
+);
 
 #[cfg(any(
     all(target_arch = "x86_64", target_feature = "sse2"),
@@ -216,6 +387,8 @@ fn eval_alg_slice_loop<T: magetypes::simd::backends::F64x2Backend>(
     Ok(())
 }
 
+// Keep the packed result assignment in this loop. Factoring each chunk
+// through the scalar validation helpers produced extra stores on x86.
 #[cfg(any(
     all(target_arch = "x86_64", target_feature = "sse2"),
     target_arch = "aarch64",
@@ -224,10 +397,11 @@ fn eval_alg_slice_loop<T: magetypes::simd::backends::F64x2Backend>(
 #[cfg_attr(debug_assertions, inline)]
 #[cfg_attr(not(debug_assertions), inline(always))]
 fn eval_slice_loop<
-    const CFG: u128,
     T: magetypes::simd::backends::F64x2Backend,
     const MODE: usize,
     const ELIDE: bool,
+    const VALIDATE: bool,
+    const ALGEBRAIC: bool,
     F: FnMut(T, [f32; 8], f32) -> [f32; 8],
 >(
     t: T,
@@ -237,10 +411,14 @@ fn eval_slice_loop<
     n: f32,
     mut eval8: F,
 ) -> Result<(), (usize, PowfError)> {
-    let cfg = cfg.resolve::<CFG>();
-    if cfg.alg_kind != 0 {
+    if ALGEBRAIC {
         return eval_alg_slice_loop(t, cfg, src, dst, n);
     }
+    let cfg = if VALIDATE {
+        cfg
+    } else {
+        const { HighpCfg::from_options(PowfOptions::new().full_domain().highp()) }
+    };
     let (chunks, tail) = src.as_chunks::<8>();
     let (out_chunks, out_tail) = dst.as_chunks_mut::<8>();
     for (i, (s, d)) in chunks.iter().zip(out_chunks.iter_mut()).enumerate() {
@@ -265,221 +443,175 @@ fn eval_slice_loop<
     Ok(())
 }
 
+#[inline(always)]
+fn eval_lane<
+    T: magetypes::simd::backends::F64x2Backend,
+    const MODE: usize,
+    const ELIDE: bool,
+    const VALIDATE: bool,
+    const ALGEBRAIC: bool,
+>(
+    t: T,
+    cfg: HighpCfg,
+    x: f32,
+    n: f32,
+) -> Result<f32, PowfError> {
+    let (bases, nan_mask) = prepare::<VALIDATE, 1>(cfg, [x], n)?;
+    let out = if ALGEBRAIC {
+        highp::eval_alg_token(t, cfg.alg_kind, bases)
+    } else {
+        [highp_scalar::pow::<T, MODE, ELIDE>(t, bases[0], n)]
+    };
+    Ok(finish::<VALIDATE, 1>(cfg, &bases, out, n, nan_mask)?[0])
+}
+
 #[inline(never)]
-fn scalar_slice<const CFG: u128, const ELIDE: bool>(
+fn scalar_slice<const ELIDE: bool, const VALIDATE: bool, const ALGEBRAIC: bool>(
     cfg: HighpCfg,
     src: &[f32],
     dst: &mut [f32],
     n: f32,
-) -> Result<(), (usize, PowfError)> {
-    let cfg = cfg.resolve::<CFG>();
+) -> SliceResult {
     for (i, (&x, d)) in src.iter().zip(dst.iter_mut()).enumerate() {
-        let ([base], nan_mask) = highp::sanitize_bases_cfg(cfg, [x], n);
-        highp::check_bases_cfg(cfg, &[base], n).map_err(|e| (i, e))?;
-        let mut out = if cfg.alg_kind == 0 {
-            [highp_scalar::pow::<_, { graph::SOFTWARE }, ELIDE>(
-                ScalarToken,
-                base,
-                n,
-            )]
-        } else {
-            highp::eval_alg_token(ScalarToken, cfg.alg_kind, [base])
-        };
-        highp::check_results_cfg(cfg, &[base], &out, n).map_err(|e| (i, e))?;
-        highp::restore_nans(&mut out, nan_mask);
-        *d = out[0];
+        *d =
+            eval_lane::<_, { graph::SOFTWARE }, ELIDE, VALIDATE, ALGEBRAIC>(ScalarToken, cfg, x, n)
+                .map_err(|e| (i, e))?;
     }
     Ok(())
 }
 
-#[cfg(any(
-    all(target_arch = "x86_64", target_feature = "sse2"),
-    target_arch = "aarch64",
-    target_arch = "wasm32"
-))]
-macro_rules! slice_entry {
-    ($name:ident, $token:ident, $packed:ident) => {
-        #[archmage::arcane]
-        fn $name<const CFG: u128, const ELIDE: bool, const ZERO: bool>(
-            t: archmage::$token,
-            cfg: HighpCfg,
-            src: &[f32],
-            dst: &mut [f32],
-            n: f32,
-        ) -> Result<(), (usize, PowfError)> {
-            eval_slice_loop::<CFG, _, { graph::NATIVE }, ELIDE, _>(
-                t,
-                cfg,
-                src,
-                dst,
-                n,
-                highp_simd::$packed::<_, ELIDE, ZERO, 8>,
-            )
-        }
-    };
-}
-#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
-slice_entry!(v3_slice, X64V3Token, packed4);
-#[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
-slice_entry!(v4_slice, X64V4Token, wide);
-#[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
-slice_entry!(v4x_slice, X64V4xToken, wide);
-#[cfg(target_arch = "aarch64")]
-slice_entry!(neon_slice, NeonToken, packed2);
-#[cfg(target_arch = "wasm32")]
-slice_entry!(wasm_slice, Wasm128Token, packed2);
-
 #[cfg_attr(debug_assertions, inline(never))]
 #[cfg_attr(not(debug_assertions), inline(always))]
-fn run_slice<const CFG: u128, const IN_CONTEXT: bool, const ELIDE: bool, const ZERO: bool>(
+fn run_slice<const ELIDE: bool, const ZERO: bool, const VALIDATE: bool, const ALGEBRAIC: bool>(
     plan: Plan,
+    in_context: bool,
     cfg: HighpCfg,
     src: &[f32],
     dst: &mut [f32],
     n: f32,
-) -> Result<(), (usize, PowfError)> {
+) -> SliceResult {
+    let _ = in_context;
     match plan {
         #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
         Plan::V3(t) => {
-            if IN_CONTEXT {
-                eval_slice_loop::<CFG, _, { graph::NATIVE }, ELIDE, _>(
-                    t,
-                    cfg,
-                    src,
-                    dst,
-                    n,
-                    highp_simd::packed4::<archmage::X64V3Token, ELIDE, ZERO, 8>,
-                )
-            } else {
-                v3_slice::<CFG, ELIDE, ZERO>(t, cfg, src, dst, n)
-            }
+            v3_slice::<ELIDE, ZERO, VALIDATE, ALGEBRAIC>(t, in_context, cfg, src, dst, n)
         }
         #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
         Plan::V4(t) => {
-            if IN_CONTEXT {
-                eval_slice_loop::<CFG, _, { graph::NATIVE }, ELIDE, _>(
-                    t,
-                    cfg,
-                    src,
-                    dst,
-                    n,
-                    highp_simd::wide::<archmage::X64V4Token, ELIDE, ZERO, 8>,
-                )
-            } else {
-                v4_slice::<CFG, ELIDE, ZERO>(t, cfg, src, dst, n)
-            }
+            v4_slice::<ELIDE, ZERO, VALIDATE, ALGEBRAIC>(t, in_context, cfg, src, dst, n)
         }
         #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
         Plan::V4x(t) => {
-            if IN_CONTEXT {
-                eval_slice_loop::<CFG, _, { graph::NATIVE }, ELIDE, _>(
-                    t,
-                    cfg,
-                    src,
-                    dst,
-                    n,
-                    highp_simd::wide::<archmage::X64V4xToken, ELIDE, ZERO, 8>,
-                )
-            } else {
-                v4x_slice::<CFG, ELIDE, ZERO>(t, cfg, src, dst, n)
-            }
+            v4x_slice::<ELIDE, ZERO, VALIDATE, ALGEBRAIC>(t, in_context, cfg, src, dst, n)
         }
         #[cfg(target_arch = "aarch64")]
         Plan::Neon(t) => {
-            if IN_CONTEXT {
-                eval_slice_loop::<CFG, _, { graph::NATIVE }, ELIDE, _>(
-                    t,
-                    cfg,
-                    src,
-                    dst,
-                    n,
-                    highp_simd::packed2::<archmage::NeonToken, ELIDE, ZERO, 8>,
-                )
-            } else {
-                neon_slice::<CFG, ELIDE, ZERO>(t, cfg, src, dst, n)
-            }
+            neon_slice::<ELIDE, ZERO, VALIDATE, ALGEBRAIC>(t, in_context, cfg, src, dst, n)
         }
         #[cfg(target_arch = "wasm32")]
         Plan::Wasm(t, true) => {
-            if IN_CONTEXT {
-                eval_slice_loop::<CFG, _, { graph::NATIVE }, ELIDE, _>(
-                    t,
-                    cfg,
-                    src,
-                    dst,
-                    n,
-                    highp_simd::packed2::<archmage::Wasm128Token, ELIDE, ZERO, 8>,
-                )
-            } else {
-                wasm_slice::<CFG, ELIDE, ZERO>(t, cfg, src, dst, n)
-            }
+            wasm_slice::<ELIDE, ZERO, VALIDATE, ALGEBRAIC>(t, in_context, cfg, src, dst, n)
         }
-        _ => scalar_slice::<CFG, ELIDE>(cfg, src, dst, n),
+        _ => scalar_slice::<ELIDE, VALIDATE, ALGEBRAIC>(cfg, src, dst, n),
     }
 }
 
-// The direct form inlines into an already capable vector caller. Upgrades
-// enter one arcane boundary for the complete graph instead.
+// A caller already inside the selected tier can inline the numerical graph.
+// An upgrade uses one proof boundary around the whole operation.
+#[inline(always)]
+fn select(t: impl archmage::IntoConcreteToken, caller_only: bool, wide: bool) -> (Plan, bool) {
+    let caller = super::dispatch::select_highp(t, Execution::Caller, false);
+    let plan = if caller_only {
+        caller
+    } else {
+        super::dispatch::select_highp(t, Execution::Upgrade, wide)
+    };
+    (
+        plan,
+        !matches!(caller, Plan::Software) && plan.same_tier(caller),
+    )
+}
+
+#[inline(always)]
+fn uses_single_lane_slice(plan: Plan) -> bool {
+    #[cfg(target_arch = "wasm32")]
+    if matches!(plan, Plan::Wasm(_, false)) {
+        return true;
+    }
+    plan.midp_slice_width() == 1
+}
+
+#[cold]
+#[inline(never)]
+fn refine_highp_chunk(
+    plan: Plan,
+    in_context: bool,
+    cfg: HighpCfg,
+    src: &[f32],
+    base: usize,
+    error: PowfError,
+    n: f32,
+) -> SliceError<PowfErrorKind> {
+    refine_slice_error(src, base, 8, error, |x| {
+        eval_array(plan, in_context, cfg, [x], n).map(|value| value[0])
+    })
+}
+
 #[cfg_attr(debug_assertions, inline(never))]
-#[cfg_attr(not(debug_assertions), inline)]
-pub(super) fn for_token_cfg<T: archmage::IntoConcreteToken, const N: usize>(
-    t: T,
-    opts: PowfOptions,
+#[cfg_attr(not(debug_assertions), inline(always))]
+fn eval_array<const N: usize>(
+    plan: Plan,
+    in_context: bool,
+    cfg: HighpCfg,
     bases: [f32; N],
     n: f32,
 ) -> Result<[f32; N], PowfError> {
-    let cfg = HighpCfg::from_options(opts);
-    #[cfg(feature = "std")]
-    if opts.is_backend() {
-        return highp::run_cfg::<N>(cfg, bases, n);
+    if !cfg.elide || cfg.subnormals {
+        return run::<false, false, N>(plan, in_context, cfg, bases, n);
     }
-    let caller = super::dispatch::select_highp(t, Execution::Caller, false);
-    let plan = if opts.is_caller() {
-        caller
+    if cfg.zero {
+        run::<true, true, N>(plan, in_context, cfg, bases, n)
     } else {
-        super::dispatch::select_highp(t, Execution::Upgrade, N >= 8)
-    };
-    let in_context = !matches!(caller, Plan::Software) && plan.same_tier(caller);
-    let elide = opts.elides_range_check() && !opts.admits_subnormals();
-    match (in_context, elide, opts.admits_zero()) {
-        (true, true, true) => run::<RUNTIME, true, true, true, N>(plan, cfg, bases, n),
-        (true, true, false) => run::<RUNTIME, true, true, false, N>(plan, cfg, bases, n),
-        (true, false, _) => run::<RUNTIME, true, false, false, N>(plan, cfg, bases, n),
-        (false, true, true) => run::<RUNTIME, false, true, true, N>(plan, cfg, bases, n),
-        (false, true, false) => run::<RUNTIME, false, true, false, N>(plan, cfg, bases, n),
-        (false, false, _) => run::<RUNTIME, false, false, false, N>(plan, cfg, bases, n),
+        run::<true, false, N>(plan, in_context, cfg, bases, n)
     }
 }
 
 #[cfg_attr(debug_assertions, inline(never))]
-#[cfg_attr(not(debug_assertions), inline)]
-pub(super) fn for_token_slice_cfg<T: archmage::IntoConcreteToken>(
-    t: T,
-    opts: PowfOptions,
+#[cfg_attr(not(debug_assertions), inline(always))]
+fn eval_slice(
+    plan: Plan,
+    in_context: bool,
+    cfg: HighpCfg,
     src: &[f32],
     dst: &mut [f32],
     n: f32,
-) -> Result<(), (usize, PowfError)> {
-    let cfg = HighpCfg::from_options(opts);
-    #[cfg(feature = "std")]
-    if opts.is_backend() {
-        return std_slice(cfg, src, dst, n);
-    }
-    let caller = super::dispatch::select_highp(t, Execution::Caller, false);
-    let plan = if opts.is_caller() {
-        caller
+) -> SliceResult {
+    if cfg.full || cfg.assume {
+        eval_slice_with_validation::<false>(plan, in_context, cfg, src, dst, n)
     } else {
-        super::dispatch::select_highp(t, Execution::Upgrade, true)
-    };
-    let in_context = !matches!(caller, Plan::Software) && plan.same_tier(caller);
-    let elide = opts.elides_range_check() && !opts.admits_subnormals();
-    match (in_context, elide, opts.admits_zero()) {
-        (true, true, true) => run_slice::<RUNTIME, true, true, true>(plan, cfg, src, dst, n),
-        (true, true, false) => run_slice::<RUNTIME, true, true, false>(plan, cfg, src, dst, n),
-        (true, false, _) => run_slice::<RUNTIME, true, false, false>(plan, cfg, src, dst, n),
-        (false, true, true) => run_slice::<RUNTIME, false, true, true>(plan, cfg, src, dst, n),
-        (false, true, false) => run_slice::<RUNTIME, false, true, false>(plan, cfg, src, dst, n),
-        (false, false, _) => run_slice::<RUNTIME, false, false, false>(plan, cfg, src, dst, n),
+        eval_slice_with_validation::<true>(plan, in_context, cfg, src, dst, n)
+    }
+}
+
+#[inline(always)]
+fn eval_slice_with_validation<const VALIDATE: bool>(
+    plan: Plan,
+    in_context: bool,
+    cfg: HighpCfg,
+    src: &[f32],
+    dst: &mut [f32],
+    n: f32,
+) -> SliceResult {
+    if cfg.alg_kind != 0 {
+        return run_slice::<false, false, VALIDATE, true>(plan, in_context, cfg, src, dst, n);
+    }
+    if !cfg.elide || cfg.subnormals {
+        return run_slice::<false, false, VALIDATE, false>(plan, in_context, cfg, src, dst, n);
+    }
+    if cfg.zero {
+        run_slice::<true, true, VALIDATE, false>(plan, in_context, cfg, src, dst, n)
+    } else {
+        run_slice::<true, false, VALIDATE, false>(plan, in_context, cfg, src, dst, n)
     }
 }
 
@@ -490,88 +622,34 @@ fn std_slice(
     src: &[f32],
     dst: &mut [f32],
     n: f32,
-) -> Result<(), (usize, PowfError)> {
+) -> Result<(), SliceError<PowfErrorKind>> {
     let (chunks, tail) = src.as_chunks::<8>();
     let (out_chunks, out_tail) = dst.as_chunks_mut::<8>();
     for (i, (s, d)) in chunks.iter().zip(out_chunks.iter_mut()).enumerate() {
-        *d = highp::run_cfg::<8>(cfg, *s, n).map_err(|e| (i * 8, e))?;
+        *d = highp::run_cfg::<8>(cfg, *s, n)
+            .map_err(|error| refine_std_chunk(cfg, src, i * 8, error, n))?;
     }
     let tail_base = chunks.len() * 8;
     for (i, (&x, d)) in tail.iter().zip(out_tail.iter_mut()).enumerate() {
-        *d = highp::run_cfg::<1>(cfg, [x], n)
-            .map_err(|e| (tail_base + i, PowfError { lane_mask: 1, ..e }))?[0];
+        *d = highp::run_cfg::<1>(cfg, [x], n).map_err(|error| SliceError {
+            kind: error.kind,
+            index: tail_base + i,
+        })?[0];
     }
     Ok(())
 }
 
-macro_rules! run_const {
-    ($run:ident, $cfg_bits:ident, $in_context:expr, [$($width:ident)?], $($args:expr),+ $(,)?) => {{
-        if const {
-            let opts = PowfOptions::decode_const($cfg_bits);
-            opts.elides_range_check() && !opts.admits_subnormals()
-        } {
-            if const { PowfOptions::decode_const($cfg_bits).admits_zero() } {
-                if $in_context {
-                    $run::<$cfg_bits, true, true, true $(, $width)?>($($args),+)
-                } else {
-                    $run::<$cfg_bits, false, true, true $(, $width)?>($($args),+)
-                }
-            } else if $in_context {
-                $run::<$cfg_bits, true, true, false $(, $width)?>($($args),+)
-            } else {
-                $run::<$cfg_bits, false, true, false $(, $width)?>($($args),+)
-            }
-        } else if $in_context {
-            $run::<$cfg_bits, true, false, false $(, $width)?>($($args),+)
-        } else {
-            $run::<$cfg_bits, false, false, false $(, $width)?>($($args),+)
-        }
-    }};
-}
-
-// Resolve the policy at compile time before entering a feature boundary.
-// Caller plans and the numerical policy can then fold even at opt-level=z.
-#[cfg_attr(debug_assertions, inline(never))]
-#[cfg_attr(not(debug_assertions), inline(always))]
-pub(super) fn for_token_const<const CFG: u128, T: archmage::IntoConcreteToken, const N: usize>(
-    t: T,
-    bases: [f32; N],
-    n: f32,
-) -> Result<[f32; N], PowfError> {
-    let cfg = const { HighpCfg::from_options(PowfOptions::decode_const(CFG)) };
-    #[cfg(feature = "std")]
-    if const { PowfOptions::decode_const(CFG).is_backend() } {
-        return highp::run_cfg::<N>(cfg, bases, n);
-    }
-    let caller = super::dispatch::select_highp(t, Execution::Caller, false);
-    let plan = if const { PowfOptions::decode_const(CFG).is_caller() } {
-        caller
-    } else {
-        super::dispatch::select_highp(t, Execution::Upgrade, N >= 8)
-    };
-    let in_context = !matches!(caller, Plan::Software) && plan.same_tier(caller);
-    run_const!(run, CFG, in_context, [N], plan, cfg, bases, n)
-}
-
-#[cfg_attr(debug_assertions, inline(never))]
-#[cfg_attr(not(debug_assertions), inline(always))]
-pub(super) fn for_token_slice_const<const CFG: u128, T: archmage::IntoConcreteToken>(
-    t: T,
+#[cfg(feature = "std")]
+#[cold]
+#[inline(never)]
+fn refine_std_chunk(
+    cfg: HighpCfg,
     src: &[f32],
-    dst: &mut [f32],
+    base: usize,
+    error: PowfError,
     n: f32,
-) -> Result<(), (usize, PowfError)> {
-    let cfg = const { HighpCfg::from_options(PowfOptions::decode_const(CFG)) };
-    #[cfg(feature = "std")]
-    if const { PowfOptions::decode_const(CFG).is_backend() } {
-        return std_slice(cfg, src, dst, n);
-    }
-    let caller = super::dispatch::select_highp(t, Execution::Caller, false);
-    let plan = if const { PowfOptions::decode_const(CFG).is_caller() } {
-        caller
-    } else {
-        super::dispatch::select_highp(t, Execution::Upgrade, true)
-    };
-    let in_context = !matches!(caller, Plan::Software) && plan.same_tier(caller);
-    run_const!(run_slice, CFG, in_context, [], plan, cfg, src, dst, n)
+) -> SliceError<PowfErrorKind> {
+    refine_slice_error(src, base, 8, error, |x| {
+        highp::run_cfg(cfg, [x], n).map(|value| value[0])
+    })
 }

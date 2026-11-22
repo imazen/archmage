@@ -180,6 +180,37 @@ fn first_rejected_index_is_reported() {
 }
 
 #[test]
+fn powf_slice_reports_earlier_result_error_before_later_base_error() {
+    const MIDP: PowfOptions = PowfOptions::new().midp();
+    const HIGHP: PowfOptions = PowfOptions::new().highp();
+    let mut src = [1.0; 25];
+    src[18] = f32::MAX;
+    src[21] = f32::NAN;
+    let mut dst = [0.0; 25];
+    let expected = Err(SliceError {
+        kind: p::PowfErrorKind::OutsideApproximationRange,
+        index: 18,
+    });
+
+    assert_eq!(
+        Powf::<{ MIDP.bits() }>::slice(&src, &mut dst, 2.0),
+        expected
+    );
+    assert_eq!(MIDP.runtime().slice(&src, &mut dst, 2.0), expected);
+    assert_eq!(
+        Powf::<{ HIGHP.bits() }>::slice(&src, &mut dst, 2.0),
+        expected
+    );
+    assert_eq!(HIGHP.runtime().slice(&src, &mut dst, 2.0), expected);
+    #[cfg(feature = "std")]
+    {
+        const STD: PowfOptions = HIGHP.backend_dependent();
+        assert_eq!(Powf::<{ STD.bits() }>::slice(&src, &mut dst, 2.0), expected);
+        assert_eq!(STD.runtime().slice(&src, &mut dst, 2.0), expected);
+    }
+}
+
+#[test]
 #[should_panic(expected = "slice lengths differ")]
 fn length_mismatch_panics() {
     let _ = p::try_powf_slice(&[1.0; 4], &mut [0.0; 3], 2.0);

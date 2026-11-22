@@ -1213,6 +1213,11 @@ Documented accuracy limits, left unfixed because every fix measured slower on ev
 
 ### Resolved (each with its regression coverage)
 
+- **Powf slice first-error replay:** Highp keeps the selected backend across
+  replay, including when SIMD token availability changes after a chunk fails.
+  Midp bounds replay to the selected slice width. The `slices` tests cover an
+  early result overflow followed by a later invalid base in the same chunk.
+
 - **Float negation bits (#135):** x86 uses sign-bit XOR instead of zero minus
   the input. `float_negation` requires exact sign, payload and signalling-bit
   preservation across every generic float width; generated scalar parity no longer

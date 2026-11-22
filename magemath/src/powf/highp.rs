@@ -15,22 +15,7 @@ pub(super) struct HighpCfg {
     pub(super) base: Option<(f32, f32)>,
 }
 
-// Zero cannot encode valid PowfOptions and identifies the runtime entry.
-pub(super) const RUNTIME: u128 = 0;
-
 impl HighpCfg {
-    #[inline(always)]
-    pub(super) fn resolve<const CFG: u128>(self) -> Self {
-        let policy = const {
-            if CFG == RUNTIME {
-                None
-            } else {
-                Some(Self::from_options(PowfOptions::decode_const(CFG)))
-            }
-        };
-        policy.unwrap_or(self)
-    }
-
     pub(super) const fn from_options(opts: PowfOptions) -> Self {
         Self {
             zero: opts.admits_zero(),
