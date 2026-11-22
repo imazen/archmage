@@ -192,6 +192,7 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 - Replace `cbrtf` rational/division approximations with division-free minimax polynomials across `Lowp`, `Midp`, and `Highp`, and use hardware FMA on the final `BackendDependent` `cbrtf` step (#201, 21823c2f; #202, 443fa386).
 - Unify `log1pf` polynomial evaluation with zero monotonicity decreases across the domain (#202, 443fa386).
 - Simplify internal token dispatchers across `cbrtf`, `expf`, `logf`, and `powf` to use `IntoConcreteToken::try_*` hierarchical extraction, routing `X64V3VnniToken` cleanly to V3 kernels (#205, 9f954003).
+- Specialize single-lane scalar and `opt-z` codegen across `cbrtf`, `expf`, `logf`, `log1pf`, and `powf`, demorphize `Highp` `powf` slice kernels on structural flags (`ELIDE_RANGE_CHECK`, `ZERO_BEHAVIOR`, `VALIDATE`), and replay only rejected SIMD slice chunks using the executed plan and exact lane width (`powf_slice_scalar` `37.3 KB → 625 B` WASM `opt-z`, 4-config `Highp` gamma slice `-69.5%` WASM / `-71.4%` x64 `opt-z`, `2.0×–10.8×` `Highp` speedup and `5×–105×` `opt-z` scalar throughput speedup) (#203).
 
 #### QUEUED BREAKING CHANGES
 

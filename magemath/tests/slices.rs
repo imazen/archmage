@@ -180,7 +180,130 @@ fn first_rejected_index_is_reported() {
 }
 
 #[test]
+fn powf_slice_reports_earlier_result_error_before_later_base_error() {
+    const MIDP: PowfOptions = PowfOptions::new().midp();
+    const HIGHP: PowfOptions = PowfOptions::new().highp();
+    let mut src = [1.0; 25];
+    src[18] = f32::MAX;
+    src[21] = f32::NAN;
+    let mut dst = [0.0; 25];
+    let expected = Err(SliceError {
+        kind: p::PowfErrorKind::OutsideApproximationRange,
+        index: 18,
+    });
+
+    assert_eq!(
+        Powf::<{ MIDP.bits() }>::slice(&src, &mut dst, 2.0),
+        expected
+    );
+    assert_eq!(MIDP.runtime().slice(&src, &mut dst, 2.0), expected);
+    assert_eq!(
+        Powf::<{ HIGHP.bits() }>::slice(&src, &mut dst, 2.0),
+        expected
+    );
+    assert_eq!(HIGHP.runtime().slice(&src, &mut dst, 2.0), expected);
+    #[cfg(feature = "std")]
+    {
+        const STD: PowfOptions = HIGHP.backend_dependent();
+        assert_eq!(Powf::<{ STD.bits() }>::slice(&src, &mut dst, 2.0), expected);
+        assert_eq!(STD.runtime().slice(&src, &mut dst, 2.0), expected);
+    }
+}
+
+#[test]
 #[should_panic(expected = "slice lengths differ")]
 fn length_mismatch_panics() {
     let _ = p::try_powf_slice(&[1.0; 4], &mut [0.0; 3], 2.0);
+}
+
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
+#[test]
+fn vnni_caller_scalar_and_slice_match_vector_bits() {
+    use archmage::{SimdToken, X64V3VnniToken};
+
+    #[archmage::attune(wrap)]
+    fn check(token: X64V3VnniToken) {
+        use magemath::SimdMath;
+        use magetypes::simd::generic::f32x4;
+
+        const CBRT: u128 = CbrtfOptions::new().caller().backend_dependent().bits();
+        const EXP: u128 = ExpfOptions::new().caller().backend_dependent().bits();
+        const LOG: u128 = LogfOptions::new().caller().backend_dependent().bits();
+        const LOG1P: u128 = l1p::Log1pfOptions::new()
+            .caller()
+            .backend_dependent()
+            .bits();
+        const POW: u128 = PowfOptions::new().caller().backend_dependent().bits();
+        const N: f32 = 2.4;
+
+        // Put the rounding witness in both the eight-lane block and the tail.
+        let src = [
+            1.039_062_5,
+            0.31,
+            0.68,
+            1.72,
+            7.0,
+            2.61,
+            0.103,
+            2.345,
+            1.039_062_5,
+        ];
+        let mut dst = [0.0; 9];
+        macro_rules! check_family {
+            ($api:ty, $scalar:ident, $slice:ident, $vector:ident, $cfg:ident $(, $arg:expr)?) => {
+                <$api>::$slice(token, &src, &mut dst $(, $arg)?).unwrap();
+                for (&x, &slice) in src.iter().zip(&dst) {
+                    let expected = f32x4::splat_t(token, x)
+                        .$vector::<$cfg>($($arg)?)
+                        .unwrap()
+                        .to_array()[0]
+                        .to_bits();
+                    let scalar = <$api>::$scalar(token, x $(, $arg)?).unwrap().to_bits();
+                    assert_eq!(scalar, expected, "{} scalar at {x}", stringify!($vector));
+                    assert_eq!(slice.to_bits(), expected, "{} slice at {x}", stringify!($vector));
+                }
+            };
+        }
+
+        check_family!(
+            Cbrtf<CBRT>,
+            scalar_with_token,
+            slice_with_token,
+            try_cbrt_with,
+            CBRT
+        );
+        check_family!(
+            Expf<EXP>,
+            exp2_with_token,
+            exp2_slice_with_token,
+            try_exp2_with,
+            EXP
+        );
+        check_family!(
+            Logf<LOG>,
+            log2_with_token,
+            log2_slice_with_token,
+            try_log2_with,
+            LOG
+        );
+        check_family!(
+            l1p::Log1pf<LOG1P>,
+            scalar_with_token,
+            slice_with_token,
+            try_log1p_with,
+            LOG1P
+        );
+        check_family!(
+            Powf<POW>,
+            scalar_with_token,
+            slice_with_token,
+            try_powf_with,
+            POW,
+            N
+        );
+    }
+
+    if let Some(token) = X64V3VnniToken::summon() {
+        check(token);
+    }
 }

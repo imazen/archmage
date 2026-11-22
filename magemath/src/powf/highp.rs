@@ -108,7 +108,8 @@ fn eval_sqrt_pair<T: magetypes::simd::backends::F64x2Backend>(
     }
 }
 
-#[inline]
+#[cfg_attr(debug_assertions, inline)]
+#[cfg_attr(not(debug_assertions), inline(always))]
 pub(super) fn eval_alg_token<T: magetypes::simd::backends::F64x2Backend, const N: usize>(
     t: T,
     alg_kind: u8,

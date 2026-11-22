@@ -76,6 +76,24 @@ fn scalar_with_token<const CFG: u128, T: magetypes::simd::backends::F32x4Convert
     token: T,
     x: f32,
 ) -> Result<f32, CbrtfError> {
+    let opts = const {
+        let opts = CbrtfOptions::decode_const(CFG);
+        opts.validate();
+        opts
+    };
+    let backend = opts.is_backend();
+    if token.as_scalar().is_some() {
+        let plan = if opts.is_caller() {
+            dispatch::Plan::Software
+        } else {
+            dispatch::select(token, Execution::Upgrade, false)
+        };
+        return if backend {
+            dispatch::run1_const::<Cfg<CFG>, true>(plan, x)
+        } else {
+            dispatch::run1_const::<Cfg<CFG>, false>(plan, x)
+        };
+    }
     run4::<CFG, T>(token, magetypes::simd::generic::f32x4::splat_t(token, x))
         .map(|v| v.to_array()[0])
         .map_err(|error| CbrtfError {
@@ -99,13 +117,7 @@ fn array_const<const CFG: u128, const N: usize>(inputs: [f32; N]) -> Result<[f32
     }
     let mut output = [0.0; N];
     if N == 1 {
-        let value = run4::<CFG, _>(ScalarToken, f32x4::splat_t(ScalarToken, inputs[0])).map_err(
-            |error| CbrtfError {
-                lane_mask: 1,
-                ..error
-            },
-        )?;
-        output[0] = value.to_array()[0];
+        output[0] = scalar_with_token::<CFG, _>(ScalarToken, inputs[0])?;
     } else if N == 4 {
         let mut input = [0.0; 4];
         input.copy_from_slice(&inputs);
@@ -167,12 +179,7 @@ pub(crate) fn runtime_token<T: archmage::IntoConcreteToken, const N: usize>(
     let backend = options.is_backend();
     let mut output = [0.0; N];
     if N == 1 {
-        let value =
-            dispatch::run4_cfg(plan, [inputs[0]; 4], backend, cfg).map_err(|error| CbrtfError {
-                lane_mask: 1,
-                ..error
-            })?;
-        output[0] = value[0];
+        output[0] = dispatch::run1_cfg(plan, inputs[0], backend, cfg)?;
     } else if N == 4 {
         let mut input = [0.0; 4];
         input.copy_from_slice(&inputs);
@@ -312,7 +319,7 @@ impl<const CFG: u128> Cbrtf<CFG> {
     /// # Panics
     ///
     /// Panics if `src.len() != dst.len()`.
-    #[inline]
+    #[inline(always)]
     pub fn slice(src: &[f32], dst: &mut [f32]) -> Result<(), SliceError<CbrtfErrorKind>> {
         slice_const::<CFG, _>(archmage::ScalarToken, src, dst)
     }

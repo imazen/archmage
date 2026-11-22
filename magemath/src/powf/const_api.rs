@@ -33,11 +33,33 @@ pub(super) fn prepare_exponent<const N: usize>(
     if opts.assume_valid() || opts.is_full() {
         return Ok(Some(n));
     }
+    prepare_exponent_with_bounds::<N>(opts, opts.exponent_bounds(), n)
+}
+
+#[inline(always)]
+fn prepare_exponent_for_cfg<const CFG: u128, const N: usize>(
+    opts: PowfOptions,
+    n: f32,
+) -> Result<Option<f32>, PowfError> {
+    // Resolve bounds at the entry point so opt-z can discard runtime decoding.
+    let bounds = const { PowfOptions::decode_const(CFG).exponent_bounds() };
+    prepare_exponent_with_bounds::<N>(opts, bounds, n)
+}
+
+#[inline(always)]
+fn prepare_exponent_with_bounds<const N: usize>(
+    opts: PowfOptions,
+    bounds: Option<(f32, f32)>,
+    n: f32,
+) -> Result<Option<f32>, PowfError> {
+    if opts.assume_valid() || opts.is_full() {
+        return Ok(Some(n));
+    }
     if opts.clamp_oob() {
         if opts.preserve_clamped_nan() && n.is_nan() {
             return Ok(None);
         }
-        let (raw_lo, raw_hi) = opts.exponent_bounds().unwrap_or((-f32::MAX, f32::MAX));
+        let (raw_lo, raw_hi) = bounds.unwrap_or((-f32::MAX, f32::MAX));
         let (eff_lo, eff_hi) = if !opts.admits_subnormals() {
             let eff_lo = if raw_lo > 0.0 && raw_lo < f32::MIN_POSITIVE {
                 f32::MIN_POSITIVE
@@ -79,7 +101,7 @@ pub(super) fn prepare_exponent<const N: usize>(
     let is_subnorm = bits != 0 && bits < 0x0080_0000;
     if is_subnorm {
         if opts.flushes_subnormals() {
-            match opts.exponent_bounds() {
+            match bounds {
                 None => eff_n = 0.0,
                 Some((lo, hi)) => {
                     if lo == 0.0 && hi == 0.0 {
@@ -102,7 +124,7 @@ pub(super) fn prepare_exponent<const N: usize>(
             });
         }
     }
-    let in_range = match opts.exponent_bounds() {
+    let in_range = match bounds {
         Some((lo, hi)) => eff_n >= lo && eff_n <= hi,
         None => true,
     };
@@ -135,20 +157,20 @@ fn select_plan<T: archmage::IntoConcreteToken>(
     }
 }
 
-#[cold]
-#[inline(never)]
-fn refine_slice_error(
-    plan: dispatch::Plan,
-    backend: bool,
-    cfg: graph::KernelCfg,
+// Replay only the failed chunk. A base check can reject a later lane before
+// the kernel reaches an earlier lane's result check.
+#[inline(always)]
+pub(super) fn refine_slice_error(
     src: &[f32],
     base: usize,
+    width: usize,
     fallback: PowfError,
-    n: f32,
+    mut eval: impl FnMut(f32) -> Result<f32, PowfError>,
 ) -> SliceError<PowfErrorKind> {
-    let end = (base + 16).min(src.len());
-    for (offset, &x) in src[base..end].iter().enumerate() {
-        if let Err(err) = dispatch::run4_cfg(plan, backend, [x; 4], n, cfg) {
+    let remaining = &src[base..];
+    let chunk = &remaining[..width.min(remaining.len())];
+    for (offset, &x) in chunk.iter().enumerate() {
+        if let Err(err) = eval(x) {
             return SliceError {
                 kind: err.kind,
                 index: base + offset,
@@ -157,33 +179,72 @@ fn refine_slice_error(
     }
     SliceError {
         kind: fallback.kind,
-        index: base + fallback.lane_mask.trailing_zeros().min(15) as usize,
+        index: base
+            + fallback
+                .lane_mask
+                .trailing_zeros()
+                .min((chunk.len() - 1) as u32) as usize,
     }
+}
+
+#[inline(always)]
+fn midp_slice_error(
+    plan: dispatch::Plan,
+    opts: PowfOptions,
+    infallible: bool,
+    src: &[f32],
+    base: usize,
+    e: PowfError,
+    n: f32,
+) -> SliceError<PowfErrorKind> {
+    // Software and std-assisted slice kernels evaluate one lane at a time.
+    if infallible || plan.midp_slice_width() == 1 {
+        return SliceError {
+            kind: e.kind,
+            index: base,
+        };
+    }
+    refine_midp_chunk(
+        plan,
+        graph::KernelCfg::from_options(opts),
+        opts.is_backend(),
+        src,
+        base,
+        e,
+        n,
+    )
 }
 
 #[cold]
 #[inline(never)]
-fn refine_highp_slice_error<T: archmage::IntoConcreteToken>(
-    token: T,
-    opts: PowfOptions,
+fn refine_midp_chunk(
+    plan: dispatch::Plan,
+    cfg: graph::KernelCfg,
+    backend: bool,
     src: &[f32],
     base: usize,
-    fallback: PowfError,
+    error: PowfError,
     n: f32,
 ) -> SliceError<PowfErrorKind> {
-    let end = (base + 8).min(src.len());
-    for (offset, &x) in src[base..end].iter().enumerate() {
-        if let Err(err) = super::highp_dispatch::for_token_cfg::<T, 1>(token, opts, [x], n) {
-            return SliceError {
-                kind: err.kind,
-                index: base + offset,
-            };
-        }
-    }
-    SliceError {
-        kind: fallback.kind,
-        index: base + fallback.lane_mask.trailing_zeros().min(7) as usize,
-    }
+    refine_slice_error(src, base, plan.midp_slice_width(), error, |x| {
+        dispatch::run1_cfg(plan, x, n, backend, cfg)
+    })
+}
+
+// Checked SIMD replay keeps the const graph so the cold path need not
+// compile a second, runtime-configurable graph for every checked slice.
+#[cold]
+#[inline(never)]
+fn refine_const_chunk<K: graph::Kernel, const BACKEND: bool>(
+    plan: dispatch::Plan,
+    src: &[f32],
+    base: usize,
+    error: PowfError,
+    n: f32,
+) -> SliceError<PowfErrorKind> {
+    refine_slice_error(src, base, plan.midp_slice_width(), error, |x| {
+        dispatch::run1_const::<K, BACKEND>(plan, x, n)
+    })
 }
 
 macro_rules! vector {
@@ -196,12 +257,7 @@ macro_rules! vector {
             n: f32,
         ) -> Result<magetypes::simd::generic::$float<T>, PowfError> {
             if opts.is_highp() {
-                let result = super::highp_dispatch::for_token_cfg::<T, $n>(
-                    token,
-                    opts,
-                    input.to_array(),
-                    n,
-                )?;
+                let result = super::highp_dispatch::for_token_const::<CFG, T, $n>(token, input.to_array(), n)?;
                 return Ok(magetypes::simd::generic::$float::from_array_t(
                     token, result,
                 ));
@@ -250,7 +306,7 @@ macro_rules! vector {
                 );
                 o
             };
-            let Some(n) = prepare_exponent::<$n>(opts, n)? else {
+            let Some(n) = prepare_exponent_for_cfg::<CFG, $n>(opts, n)? else {
                 return Ok(magetypes::simd::generic::$float::splat_t(token, f32::NAN));
             };
             $inner::<CFG, T>(opts, token, input, n)
@@ -331,13 +387,7 @@ fn runtime_eval<T: archmage::IntoConcreteToken, const N: usize>(
     let cfg = graph::KernelCfg::from_options(options);
     let mut output = [0.; N];
     if N == 1 {
-        let arr = dispatch::run4_cfg(plan, backend, [bases[0]; 4], n, cfg).map_err(|error| {
-            PowfError {
-                lane_mask: 1,
-                ..error
-            }
-        })?;
-        output[0] = arr[0];
+        output[0] = dispatch::run1_cfg(plan, bases[0], n, backend, cfg)?;
     } else if N == 4 {
         let mut input = [0.; 4];
         input.copy_from_slice(&bases);
@@ -424,8 +474,7 @@ fn slice_runtime_eval<T: archmage::IntoConcreteToken>(
     options: PowfOptions,
 ) -> Result<(), SliceError<PowfErrorKind>> {
     if options.is_highp() {
-        return super::highp_dispatch::for_token_slice_cfg::<T>(token, options, src, dst, n)
-            .map_err(|(base, e)| refine_highp_slice_error(token, options, src, base, e, n));
+        return super::highp_dispatch::for_token_slice_cfg(token, options, src, dst, n);
     }
     let exec = if options.is_caller() {
         Execution::Caller
@@ -435,8 +484,9 @@ fn slice_runtime_eval<T: archmage::IntoConcreteToken>(
     let backend = options.is_backend();
     let plan = select_plan(options, token, exec, true);
     let cfg = graph::KernelCfg::from_options(options);
-    dispatch::run_slice_cfg(plan, backend, src, dst, n, cfg)
-        .map_err(|(base, e)| refine_slice_error(plan, backend, cfg, src, base, e, n))
+    dispatch::run_slice_cfg(plan, backend, src, dst, n, cfg).map_err(|(base, e)| {
+        midp_slice_error(plan, options, options.is_infallible(), src, base, e, n)
+    })
 }
 
 #[cfg_attr(debug_assertions, inline(never))]
@@ -490,33 +540,85 @@ fn slice_runtime_const_exp<T: archmage::IntoConcreteToken>(
     slice_runtime_eval(token, src, dst, n, options)
 }
 
-#[inline]
+#[cfg_attr(debug_assertions, inline(never))]
+#[cfg_attr(not(debug_assertions), inline(always))]
 fn slice_const_eval<const CFG: u128>(
-    opts: PowfOptions,
     token: impl archmage::IntoConcreteToken,
     src: &[f32],
     dst: &mut [f32],
     n: f32,
 ) -> Result<(), SliceError<PowfErrorKind>> {
-    if opts.is_highp() {
-        return super::highp_dispatch::for_token_slice_cfg(token, opts, src, dst, n)
-            .map_err(|(base, e)| refine_highp_slice_error(token, opts, src, base, e, n));
+    let opts = const { PowfOptions::decode_const(CFG) };
+    let infallible = const { PowfOptions::decode_const(CFG).is_infallible() };
+    if const { PowfOptions::decode_const(CFG).is_highp() } {
+        return super::highp_dispatch::for_token_slice_const::<CFG, _>(token, src, dst, n);
     }
     let exec = if opts.is_caller() {
         Execution::Caller
     } else {
         Execution::Upgrade
     };
-    let backend = opts.is_backend();
     let plan = select_plan(opts, token, exec, true);
-    let res = if backend {
-        dispatch::run_slice::<Cfg<CFG>, true>(plan, src, dst, n)
+    if const { PowfOptions::decode_const(CFG).is_backend() } {
+        slice_const_with_plan::<Cfg<CFG>, true>(plan, infallible, src, dst, n)
     } else {
-        dispatch::run_slice::<Cfg<CFG>, false>(plan, src, dst, n)
+        slice_const_with_plan::<Cfg<CFG>, false>(plan, infallible, src, dst, n)
+    }
+}
+
+#[inline(always)]
+fn slice_const_with_plan<K: graph::Kernel, const BACKEND: bool>(
+    plan: dispatch::Plan,
+    infallible: bool,
+    src: &[f32],
+    dst: &mut [f32],
+    n: f32,
+) -> Result<(), SliceError<PowfErrorKind>> {
+    let Err((base, error)) = dispatch::run_slice::<K, BACKEND>(plan, src, dst, n) else {
+        return Ok(());
     };
-    res.map_err(|(base, e)| {
-        let cfg = graph::KernelCfg::from_options(opts);
-        refine_slice_error(plan, backend, cfg, src, base, e, n)
+    if infallible || plan.midp_slice_width() == 1 {
+        return Err(SliceError {
+            kind: error.kind,
+            index: base,
+        });
+    }
+    Err(refine_const_chunk::<K, BACKEND>(plan, src, base, error, n))
+}
+
+#[cfg_attr(debug_assertions, inline(never))]
+#[cfg_attr(not(debug_assertions), inline(always))]
+fn scalar_eval_const<const CFG: u128, T: magetypes::simd::backends::F32x4Convert>(
+    token: T,
+    base: f32,
+    n: f32,
+) -> Result<f32, PowfError> {
+    let opts = const { PowfOptions::decode_const(CFG) };
+    if const { PowfOptions::decode_const(CFG).is_highp() } {
+        return super::highp_dispatch::for_token_const::<CFG, T, 1>(token, [base], n).map(|v| v[0]);
+    }
+    if token.as_scalar().is_some() {
+        let plan = if opts.is_caller() {
+            dispatch::Plan::Software
+        } else {
+            select_plan(opts, token, Execution::Upgrade, false)
+        };
+        return if opts.is_backend() {
+            dispatch::run1_const::<Cfg<CFG>, true>(plan, base, n)
+        } else {
+            dispatch::run1_const::<Cfg<CFG>, false>(plan, base, n)
+        };
+    }
+    run4_inner::<CFG, T>(
+        opts,
+        token,
+        magetypes::simd::generic::f32x4::splat_t(token, base),
+        n,
+    )
+    .map(|v| v.to_array()[0])
+    .map_err(|error| PowfError {
+        lane_mask: 1,
+        ..error
     })
 }
 
@@ -630,23 +732,10 @@ impl<const CFG: u128> Powf<CFG> {
             );
             o
         };
-        if opts.is_highp() {
-            let Some(n) = prepare_exponent::<1>(opts, n)? else {
-                return Ok(f32::NAN);
-            };
-            return super::highp_dispatch::for_token_cfg::<T, 1>(token, opts, [base], n)
-                .map(|v| v[0]);
-        }
-        run4::<CFG, T>(
-            token,
-            magetypes::simd::generic::f32x4::splat_t(token, base),
-            n,
-        )
-        .map(|v| v.to_array()[0])
-        .map_err(|error| PowfError {
-            lane_mask: 1,
-            ..error
-        })
+        let Some(n) = prepare_exponent_for_cfg::<CFG, 1>(opts, n)? else {
+            return Ok(f32::NAN);
+        };
+        scalar_eval_const::<CFG, T>(token, base, n)
     }
 
     /// Scalar `base^N` retaining a vector caller's capability token where `N` is
@@ -656,24 +745,15 @@ impl<const CFG: u128> Powf<CFG> {
         token: T,
         base: f32,
     ) -> Result<f32, PowfError> {
-        let (opts, const_exp) = const {
+        let const_exp = const {
             let o = PowfOptions::decode_const(CFG);
             o.validate();
             let Some(e) = o.const_exponent_value() else {
                 panic!("Powf::<CFG>::scalar_const_with_token requires `.const_exponent(n)`");
             };
-            (o, e)
+            e
         };
-        if opts.is_highp() {
-            return super::highp_dispatch::for_token_cfg::<T, 1>(token, opts, [base], const_exp)
-                .map(|v| v[0]);
-        }
-        run4_const::<CFG, T>(token, magetypes::simd::generic::f32x4::splat_t(token, base))
-            .map(|v| v.to_array()[0])
-            .map_err(|error| PowfError {
-                lane_mask: 1,
-                ..error
-            })
+        scalar_eval_const::<CFG, T>(token, base, const_exp)
     }
 
     /// Version-independent array boundary for widths `1`, `4`, `8` and (with `w512`) `16`.
@@ -697,19 +777,14 @@ impl<const CFG: u128> Powf<CFG> {
             });
         }
         if opts.is_highp() {
-            let Some(n) = prepare_exponent::<N>(opts, n)? else {
+            let Some(n) = prepare_exponent_for_cfg::<CFG, N>(opts, n)? else {
                 return Ok([f32::NAN; N]);
             };
-            return super::highp_dispatch::for_token_cfg::<_, N>(ScalarToken, opts, bases, n);
+            return super::highp_dispatch::for_token_const::<CFG, _, N>(ScalarToken, bases, n);
         }
         let mut output = [0.0; N];
         if N == 1 {
-            let value = run4::<CFG, _>(ScalarToken, f32x4::splat_t(ScalarToken, bases[0]), n)
-                .map_err(|error| PowfError {
-                    lane_mask: 1,
-                    ..error
-                })?;
-            output[0] = value.to_array()[0];
+            output[0] = Self::scalar_with_token(ScalarToken, bases[0], n)?;
         } else if N == 4 {
             let mut input = [0.0; 4];
             input.copy_from_slice(&bases);
@@ -766,21 +841,15 @@ impl<const CFG: u128> Powf<CFG> {
             });
         }
         if opts.is_highp() {
-            return super::highp_dispatch::for_token_cfg::<_, N>(
+            return super::highp_dispatch::for_token_const::<CFG, _, N>(
                 ScalarToken,
-                opts,
                 bases,
                 const_exp,
             );
         }
         let mut output = [0.0; N];
         if N == 1 {
-            let value = run4_const::<CFG, _>(ScalarToken, f32x4::splat_t(ScalarToken, bases[0]))
-                .map_err(|error| PowfError {
-                    lane_mask: 1,
-                    ..error
-                })?;
-            output[0] = value.to_array()[0];
+            output[0] = Self::scalar_const_with_token(ScalarToken, bases[0])?;
         } else if N == 4 {
             let mut input = [0.0; 4];
             input.copy_from_slice(&bases);
@@ -821,7 +890,7 @@ impl<const CFG: u128> Powf<CFG> {
     /// # Panics
     ///
     /// Panics if `src.len() != dst.len()`.
-    #[inline]
+    #[inline(always)]
     pub fn slice(src: &[f32], dst: &mut [f32], n: f32) -> Result<(), SliceError<PowfErrorKind>> {
         Self::slice_with_token(archmage::ScalarToken, src, dst, n)
     }
@@ -831,7 +900,7 @@ impl<const CFG: u128> Powf<CFG> {
     /// # Panics
     ///
     /// Panics if `src.len() != dst.len()`.
-    #[inline]
+    #[inline(always)]
     pub fn slice_const(src: &[f32], dst: &mut [f32]) -> Result<(), SliceError<PowfErrorKind>> {
         Self::slice_const_with_token(archmage::ScalarToken, src, dst)
     }
@@ -860,7 +929,7 @@ impl<const CFG: u128> Powf<CFG> {
             o
         };
         assert_eq!(src.len(), dst.len(), "powf slice lengths differ");
-        let Some(n) = prepare_exponent::<1>(opts, n).map_err(|e| SliceError {
+        let Some(n) = prepare_exponent_for_cfg::<CFG, 1>(opts, n).map_err(|e| SliceError {
             kind: e.kind,
             index: 0,
         })?
@@ -868,7 +937,7 @@ impl<const CFG: u128> Powf<CFG> {
             dst.fill(f32::NAN);
             return Ok(());
         };
-        slice_const_eval::<CFG>(opts, token, src, dst, n)
+        slice_const_eval::<CFG>(token, src, dst, n)
     }
 
     /// Whole-slice `src[i]^N -> dst[i]` starting from `token` where `N` is
@@ -883,16 +952,16 @@ impl<const CFG: u128> Powf<CFG> {
         src: &[f32],
         dst: &mut [f32],
     ) -> Result<(), SliceError<PowfErrorKind>> {
-        let (opts, const_exp) = const {
+        let const_exp = const {
             let o = PowfOptions::decode_const(CFG);
             o.validate();
             let Some(e) = o.const_exponent_value() else {
                 panic!("Powf::<CFG>::slice_const_with_token requires `.const_exponent(n)`");
             };
-            (o, e)
+            e
         };
         assert_eq!(src.len(), dst.len(), "powf slice lengths differ");
-        slice_const_eval::<CFG>(opts, token, src, dst, const_exp)
+        slice_const_eval::<CFG>(token, src, dst, const_exp)
     }
 
     /// Evaluate `input^n` on any Magetypes `f32` vector (`f32x4`, `f32x8`, or

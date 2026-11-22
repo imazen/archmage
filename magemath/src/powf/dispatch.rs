@@ -21,6 +21,23 @@ pub(super) enum Plan {
 
 impl Plan {
     #[inline(always)]
+    pub(super) fn midp_slice_width(self) -> usize {
+        match self {
+            Self::Software => 1,
+            #[cfg(all(feature = "std", not(miri)))]
+            Self::Std => 1,
+            #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
+            Self::V4(_) | Self::V4x(_) => 16,
+            #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
+            Self::V3(_) => 8,
+            #[cfg(target_arch = "aarch64")]
+            Self::Neon(_) => 8,
+            #[cfg(target_arch = "wasm32")]
+            Self::Wasm(..) => 8,
+        }
+    }
+
+    #[inline(always)]
     pub(super) fn same_tier(self, other: Self) -> bool {
         core::mem::discriminant(&self) == core::mem::discriminant(&other)
     }
@@ -313,6 +330,58 @@ pub(super) fn select_highp<T: IntoConcreteToken>(
     select_impl::<T, true, true>(token, execution, widen_v3)
 }
 
+#[inline(always)]
+pub(super) fn run1_cfg(
+    plan: Plan,
+    input: f32,
+    exponent: f32,
+    backend: bool,
+    cfg: graph::KernelCfg,
+) -> Result<f32, PowfError> {
+    if matches!(plan, Plan::Software) {
+        return if backend {
+            graph::kernel1_cfg::<{ graph::RELAXED }>(input, exponent, cfg)
+        } else {
+            graph::kernel1_cfg::<{ graph::SOFTWARE }>(input, exponent, cfg)
+        };
+    }
+    #[cfg(all(feature = "std", not(miri)))]
+    if matches!(plan, Plan::Std) {
+        return graph::kernel1_cfg::<{ graph::STD }>(input, exponent, cfg);
+    }
+    run4_cfg(plan, backend, [input; 4], exponent, cfg)
+        .map(|result| result[0])
+        .map_err(|error| PowfError {
+            lane_mask: 1,
+            ..error
+        })
+}
+
+#[inline(always)]
+pub(super) fn run1_const<K: graph::Kernel, const BACKEND: bool>(
+    plan: Plan,
+    input: f32,
+    exponent: f32,
+) -> Result<f32, PowfError> {
+    if matches!(plan, Plan::Software) {
+        return if BACKEND {
+            graph::kernel1_with::<K, { graph::RELAXED }>(input, exponent)
+        } else {
+            graph::kernel1_with::<K, { graph::SOFTWARE }>(input, exponent)
+        };
+    }
+    #[cfg(all(feature = "std", not(miri)))]
+    if matches!(plan, Plan::Std) {
+        return graph::kernel1_with::<K, { graph::STD }>(input, exponent);
+    }
+    run4_const::<K, BACKEND>(plan, [input; 4], exponent)
+        .map(|result| result[0])
+        .map_err(|error| PowfError {
+            lane_mask: 1,
+            ..error
+        })
+}
+
 #[cfg_attr(debug_assertions, inline(never))]
 #[cfg_attr(not(debug_assertions), inline(always))]
 pub(super) fn run_slice_cfg(
@@ -325,38 +394,30 @@ pub(super) fn run_slice_cfg(
 ) -> Result<(), (usize, PowfError)> {
     match plan {
         #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
-        Plan::V3(t) => graph::slice8_cfg_v3::<{ graph::NATIVE }>(t, src, dst, exponent, cfg),
+        Plan::V3(t) => graph::slice8_cfg_v3_t::<{ graph::NATIVE }>(t, src, dst, exponent, cfg),
         #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
         Plan::V4(t) => graph::slice16_cfg_v4::<{ graph::NATIVE }>(t, src, dst, exponent, cfg),
         #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
         Plan::V4x(t) => graph::slice16_cfg_v4x::<{ graph::NATIVE }>(t, src, dst, exponent, cfg),
         #[cfg(target_arch = "aarch64")]
-        Plan::Neon(t) => graph::slice8_cfg_neon::<{ graph::NATIVE }>(t, src, dst, exponent, cfg),
+        Plan::Neon(t) => graph::slice8_cfg_neon_t::<{ graph::NATIVE }>(t, src, dst, exponent, cfg),
         #[cfg(target_arch = "wasm32")]
         Plan::Wasm(t, true) => {
-            graph::slice8_cfg_wasm128::<{ graph::NATIVE }>(t, src, dst, exponent, cfg)
+            graph::slice8_cfg_wasm128_t::<{ graph::NATIVE }>(t, src, dst, exponent, cfg)
         }
         #[cfg(target_arch = "wasm32")]
         Plan::Wasm(t, false) => {
-            graph::slice8_cfg_wasm128::<{ graph::WASM_SOFTWARE }>(t, src, dst, exponent, cfg)
+            graph::slice8_cfg_wasm128_t::<{ graph::WASM_SOFTWARE }>(t, src, dst, exponent, cfg)
         }
         Plan::Software => {
             if backend {
-                graph::slice8_cfg_scalar::<{ graph::RELAXED }>(ScalarToken, src, dst, exponent, cfg)
+                graph::slice1_cfg_scalar::<{ graph::RELAXED }>(src, dst, exponent, cfg)
             } else {
-                graph::slice8_cfg_scalar::<{ graph::SOFTWARE }>(
-                    ScalarToken,
-                    src,
-                    dst,
-                    exponent,
-                    cfg,
-                )
+                graph::slice1_cfg_scalar::<{ graph::SOFTWARE }>(src, dst, exponent, cfg)
             }
         }
         #[cfg(all(feature = "std", not(miri)))]
-        Plan::Std => {
-            graph::slice8_cfg_scalar::<{ graph::STD }>(ScalarToken, src, dst, exponent, cfg)
-        }
+        Plan::Std => graph::slice1_cfg_scalar::<{ graph::STD }>(src, dst, exponent, cfg),
     }
 }
 
@@ -374,31 +435,29 @@ pub(super) fn run_slice<K: graph::Kernel, const BACKEND: bool>(
     #[cfg(not(debug_assertions))]
     match plan {
         #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
-        Plan::V3(t) => graph::slice8_with_v3::<K, { graph::NATIVE }>(t, src, dst, exponent),
+        Plan::V3(t) => graph::slice8_with_v3_t::<K, { graph::NATIVE }>(t, src, dst, exponent),
         #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
         Plan::V4(t) => graph::slice16_with_v4::<K, { graph::NATIVE }>(t, src, dst, exponent),
         #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
         Plan::V4x(t) => graph::slice16_with_v4x::<K, { graph::NATIVE }>(t, src, dst, exponent),
         #[cfg(target_arch = "aarch64")]
-        Plan::Neon(t) => graph::slice8_with_neon::<K, { graph::NATIVE }>(t, src, dst, exponent),
+        Plan::Neon(t) => graph::slice8_with_neon_t::<K, { graph::NATIVE }>(t, src, dst, exponent),
         #[cfg(target_arch = "wasm32")]
         Plan::Wasm(t, true) => {
-            graph::slice8_with_wasm128::<K, { graph::NATIVE }>(t, src, dst, exponent)
+            graph::slice8_with_wasm128_t::<K, { graph::NATIVE }>(t, src, dst, exponent)
         }
         #[cfg(target_arch = "wasm32")]
         Plan::Wasm(t, false) => {
-            graph::slice8_with_wasm128::<K, { graph::WASM_SOFTWARE }>(t, src, dst, exponent)
+            graph::slice8_with_wasm128_t::<K, { graph::WASM_SOFTWARE }>(t, src, dst, exponent)
         }
         Plan::Software => {
             if BACKEND {
-                graph::slice8_with_scalar::<K, { graph::RELAXED }>(ScalarToken, src, dst, exponent)
+                graph::slice1_with_scalar::<K, { graph::RELAXED }>(src, dst, exponent)
             } else {
-                graph::slice8_with_scalar::<K, { graph::SOFTWARE }>(ScalarToken, src, dst, exponent)
+                graph::slice1_with_scalar::<K, { graph::SOFTWARE }>(src, dst, exponent)
             }
         }
         #[cfg(all(feature = "std", not(miri)))]
-        Plan::Std => {
-            graph::slice8_with_scalar::<K, { graph::STD }>(ScalarToken, src, dst, exponent)
-        }
+        Plan::Std => graph::slice1_with_scalar::<K, { graph::STD }>(src, dst, exponent),
     }
 }
