@@ -3508,7 +3508,7 @@ impl I8x16Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn splat(self, v: i8) -> [i8; 16] {
-        [v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v]
+        [v; 16]
     }
 
     #[inline(always)]
@@ -3538,352 +3538,73 @@ impl I8x16Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn add(self, a: [i8; 16], b: [i8; 16]) -> [i8; 16] {
-        [
-            a[0].wrapping_add(b[0]),
-            a[1].wrapping_add(b[1]),
-            a[2].wrapping_add(b[2]),
-            a[3].wrapping_add(b[3]),
-            a[4].wrapping_add(b[4]),
-            a[5].wrapping_add(b[5]),
-            a[6].wrapping_add(b[6]),
-            a[7].wrapping_add(b[7]),
-            a[8].wrapping_add(b[8]),
-            a[9].wrapping_add(b[9]),
-            a[10].wrapping_add(b[10]),
-            a[11].wrapping_add(b[11]),
-            a[12].wrapping_add(b[12]),
-            a[13].wrapping_add(b[13]),
-            a[14].wrapping_add(b[14]),
-            a[15].wrapping_add(b[15]),
-        ]
+        core::array::from_fn(|i| a[i].wrapping_add(b[i]))
     }
 
     #[inline(always)]
     fn sub(self, a: [i8; 16], b: [i8; 16]) -> [i8; 16] {
-        [
-            a[0].wrapping_sub(b[0]),
-            a[1].wrapping_sub(b[1]),
-            a[2].wrapping_sub(b[2]),
-            a[3].wrapping_sub(b[3]),
-            a[4].wrapping_sub(b[4]),
-            a[5].wrapping_sub(b[5]),
-            a[6].wrapping_sub(b[6]),
-            a[7].wrapping_sub(b[7]),
-            a[8].wrapping_sub(b[8]),
-            a[9].wrapping_sub(b[9]),
-            a[10].wrapping_sub(b[10]),
-            a[11].wrapping_sub(b[11]),
-            a[12].wrapping_sub(b[12]),
-            a[13].wrapping_sub(b[13]),
-            a[14].wrapping_sub(b[14]),
-            a[15].wrapping_sub(b[15]),
-        ]
+        core::array::from_fn(|i| a[i].wrapping_sub(b[i]))
     }
 
     #[inline(always)]
     fn neg(self, a: [i8; 16]) -> [i8; 16] {
-        [
-            a[0].wrapping_neg(),
-            a[1].wrapping_neg(),
-            a[2].wrapping_neg(),
-            a[3].wrapping_neg(),
-            a[4].wrapping_neg(),
-            a[5].wrapping_neg(),
-            a[6].wrapping_neg(),
-            a[7].wrapping_neg(),
-            a[8].wrapping_neg(),
-            a[9].wrapping_neg(),
-            a[10].wrapping_neg(),
-            a[11].wrapping_neg(),
-            a[12].wrapping_neg(),
-            a[13].wrapping_neg(),
-            a[14].wrapping_neg(),
-            a[15].wrapping_neg(),
-        ]
+        core::array::from_fn(|i| a[i].wrapping_neg())
     }
 
     #[inline(always)]
     fn min(self, a: [i8; 16], b: [i8; 16]) -> [i8; 16] {
-        [
-            if a[0] < b[0] { a[0] } else { b[0] },
-            if a[1] < b[1] { a[1] } else { b[1] },
-            if a[2] < b[2] { a[2] } else { b[2] },
-            if a[3] < b[3] { a[3] } else { b[3] },
-            if a[4] < b[4] { a[4] } else { b[4] },
-            if a[5] < b[5] { a[5] } else { b[5] },
-            if a[6] < b[6] { a[6] } else { b[6] },
-            if a[7] < b[7] { a[7] } else { b[7] },
-            if a[8] < b[8] { a[8] } else { b[8] },
-            if a[9] < b[9] { a[9] } else { b[9] },
-            if a[10] < b[10] { a[10] } else { b[10] },
-            if a[11] < b[11] { a[11] } else { b[11] },
-            if a[12] < b[12] { a[12] } else { b[12] },
-            if a[13] < b[13] { a[13] } else { b[13] },
-            if a[14] < b[14] { a[14] } else { b[14] },
-            if a[15] < b[15] { a[15] } else { b[15] },
-        ]
+        core::array::from_fn(|i| if a[i] < b[i] { a[i] } else { b[i] })
     }
 
     #[inline(always)]
     fn max(self, a: [i8; 16], b: [i8; 16]) -> [i8; 16] {
-        [
-            if a[0] > b[0] { a[0] } else { b[0] },
-            if a[1] > b[1] { a[1] } else { b[1] },
-            if a[2] > b[2] { a[2] } else { b[2] },
-            if a[3] > b[3] { a[3] } else { b[3] },
-            if a[4] > b[4] { a[4] } else { b[4] },
-            if a[5] > b[5] { a[5] } else { b[5] },
-            if a[6] > b[6] { a[6] } else { b[6] },
-            if a[7] > b[7] { a[7] } else { b[7] },
-            if a[8] > b[8] { a[8] } else { b[8] },
-            if a[9] > b[9] { a[9] } else { b[9] },
-            if a[10] > b[10] { a[10] } else { b[10] },
-            if a[11] > b[11] { a[11] } else { b[11] },
-            if a[12] > b[12] { a[12] } else { b[12] },
-            if a[13] > b[13] { a[13] } else { b[13] },
-            if a[14] > b[14] { a[14] } else { b[14] },
-            if a[15] > b[15] { a[15] } else { b[15] },
-        ]
+        core::array::from_fn(|i| if a[i] > b[i] { a[i] } else { b[i] })
     }
 
     #[inline(always)]
     fn abs(self, a: [i8; 16]) -> [i8; 16] {
-        [
-            a[0].wrapping_abs(),
-            a[1].wrapping_abs(),
-            a[2].wrapping_abs(),
-            a[3].wrapping_abs(),
-            a[4].wrapping_abs(),
-            a[5].wrapping_abs(),
-            a[6].wrapping_abs(),
-            a[7].wrapping_abs(),
-            a[8].wrapping_abs(),
-            a[9].wrapping_abs(),
-            a[10].wrapping_abs(),
-            a[11].wrapping_abs(),
-            a[12].wrapping_abs(),
-            a[13].wrapping_abs(),
-            a[14].wrapping_abs(),
-            a[15].wrapping_abs(),
-        ]
+        core::array::from_fn(|i| a[i].wrapping_abs())
     }
 
     #[inline(always)]
     fn simd_eq(self, a: [i8; 16], b: [i8; 16]) -> [i8; 16] {
-        [
-            if a[0] == b[0] { -1 } else { 0 },
-            if a[1] == b[1] { -1 } else { 0 },
-            if a[2] == b[2] { -1 } else { 0 },
-            if a[3] == b[3] { -1 } else { 0 },
-            if a[4] == b[4] { -1 } else { 0 },
-            if a[5] == b[5] { -1 } else { 0 },
-            if a[6] == b[6] { -1 } else { 0 },
-            if a[7] == b[7] { -1 } else { 0 },
-            if a[8] == b[8] { -1 } else { 0 },
-            if a[9] == b[9] { -1 } else { 0 },
-            if a[10] == b[10] { -1 } else { 0 },
-            if a[11] == b[11] { -1 } else { 0 },
-            if a[12] == b[12] { -1 } else { 0 },
-            if a[13] == b[13] { -1 } else { 0 },
-            if a[14] == b[14] { -1 } else { 0 },
-            if a[15] == b[15] { -1 } else { 0 },
-        ]
+        core::array::from_fn(|i| if a[i] == b[i] { -1 } else { 0 })
     }
 
     #[inline(always)]
     fn simd_ne(self, a: [i8; 16], b: [i8; 16]) -> [i8; 16] {
-        [
-            if a[0] != b[0] { -1 } else { 0 },
-            if a[1] != b[1] { -1 } else { 0 },
-            if a[2] != b[2] { -1 } else { 0 },
-            if a[3] != b[3] { -1 } else { 0 },
-            if a[4] != b[4] { -1 } else { 0 },
-            if a[5] != b[5] { -1 } else { 0 },
-            if a[6] != b[6] { -1 } else { 0 },
-            if a[7] != b[7] { -1 } else { 0 },
-            if a[8] != b[8] { -1 } else { 0 },
-            if a[9] != b[9] { -1 } else { 0 },
-            if a[10] != b[10] { -1 } else { 0 },
-            if a[11] != b[11] { -1 } else { 0 },
-            if a[12] != b[12] { -1 } else { 0 },
-            if a[13] != b[13] { -1 } else { 0 },
-            if a[14] != b[14] { -1 } else { 0 },
-            if a[15] != b[15] { -1 } else { 0 },
-        ]
+        core::array::from_fn(|i| if a[i] != b[i] { -1 } else { 0 })
     }
 
     #[inline(always)]
     fn simd_lt(self, a: [i8; 16], b: [i8; 16]) -> [i8; 16] {
-        [
-            if a[0] < b[0] { -1 } else { 0 },
-            if a[1] < b[1] { -1 } else { 0 },
-            if a[2] < b[2] { -1 } else { 0 },
-            if a[3] < b[3] { -1 } else { 0 },
-            if a[4] < b[4] { -1 } else { 0 },
-            if a[5] < b[5] { -1 } else { 0 },
-            if a[6] < b[6] { -1 } else { 0 },
-            if a[7] < b[7] { -1 } else { 0 },
-            if a[8] < b[8] { -1 } else { 0 },
-            if a[9] < b[9] { -1 } else { 0 },
-            if a[10] < b[10] { -1 } else { 0 },
-            if a[11] < b[11] { -1 } else { 0 },
-            if a[12] < b[12] { -1 } else { 0 },
-            if a[13] < b[13] { -1 } else { 0 },
-            if a[14] < b[14] { -1 } else { 0 },
-            if a[15] < b[15] { -1 } else { 0 },
-        ]
+        core::array::from_fn(|i| if a[i] < b[i] { -1 } else { 0 })
     }
 
     #[inline(always)]
     fn simd_le(self, a: [i8; 16], b: [i8; 16]) -> [i8; 16] {
-        [
-            if a[0] <= b[0] { -1 } else { 0 },
-            if a[1] <= b[1] { -1 } else { 0 },
-            if a[2] <= b[2] { -1 } else { 0 },
-            if a[3] <= b[3] { -1 } else { 0 },
-            if a[4] <= b[4] { -1 } else { 0 },
-            if a[5] <= b[5] { -1 } else { 0 },
-            if a[6] <= b[6] { -1 } else { 0 },
-            if a[7] <= b[7] { -1 } else { 0 },
-            if a[8] <= b[8] { -1 } else { 0 },
-            if a[9] <= b[9] { -1 } else { 0 },
-            if a[10] <= b[10] { -1 } else { 0 },
-            if a[11] <= b[11] { -1 } else { 0 },
-            if a[12] <= b[12] { -1 } else { 0 },
-            if a[13] <= b[13] { -1 } else { 0 },
-            if a[14] <= b[14] { -1 } else { 0 },
-            if a[15] <= b[15] { -1 } else { 0 },
-        ]
+        core::array::from_fn(|i| if a[i] <= b[i] { -1 } else { 0 })
     }
 
     #[inline(always)]
     fn simd_gt(self, a: [i8; 16], b: [i8; 16]) -> [i8; 16] {
-        [
-            if a[0] > b[0] { -1 } else { 0 },
-            if a[1] > b[1] { -1 } else { 0 },
-            if a[2] > b[2] { -1 } else { 0 },
-            if a[3] > b[3] { -1 } else { 0 },
-            if a[4] > b[4] { -1 } else { 0 },
-            if a[5] > b[5] { -1 } else { 0 },
-            if a[6] > b[6] { -1 } else { 0 },
-            if a[7] > b[7] { -1 } else { 0 },
-            if a[8] > b[8] { -1 } else { 0 },
-            if a[9] > b[9] { -1 } else { 0 },
-            if a[10] > b[10] { -1 } else { 0 },
-            if a[11] > b[11] { -1 } else { 0 },
-            if a[12] > b[12] { -1 } else { 0 },
-            if a[13] > b[13] { -1 } else { 0 },
-            if a[14] > b[14] { -1 } else { 0 },
-            if a[15] > b[15] { -1 } else { 0 },
-        ]
+        core::array::from_fn(|i| if a[i] > b[i] { -1 } else { 0 })
     }
 
     #[inline(always)]
     fn simd_ge(self, a: [i8; 16], b: [i8; 16]) -> [i8; 16] {
-        [
-            if a[0] >= b[0] { -1 } else { 0 },
-            if a[1] >= b[1] { -1 } else { 0 },
-            if a[2] >= b[2] { -1 } else { 0 },
-            if a[3] >= b[3] { -1 } else { 0 },
-            if a[4] >= b[4] { -1 } else { 0 },
-            if a[5] >= b[5] { -1 } else { 0 },
-            if a[6] >= b[6] { -1 } else { 0 },
-            if a[7] >= b[7] { -1 } else { 0 },
-            if a[8] >= b[8] { -1 } else { 0 },
-            if a[9] >= b[9] { -1 } else { 0 },
-            if a[10] >= b[10] { -1 } else { 0 },
-            if a[11] >= b[11] { -1 } else { 0 },
-            if a[12] >= b[12] { -1 } else { 0 },
-            if a[13] >= b[13] { -1 } else { 0 },
-            if a[14] >= b[14] { -1 } else { 0 },
-            if a[15] >= b[15] { -1 } else { 0 },
-        ]
+        core::array::from_fn(|i| if a[i] >= b[i] { -1 } else { 0 })
     }
 
     #[inline(always)]
     fn blend(self, mask: [i8; 16], if_true: [i8; 16], if_false: [i8; 16]) -> [i8; 16] {
-        [
-            if mask[0] != 0 {
-                if_true[0]
+        core::array::from_fn(|i| {
+            if mask[i] != 0 {
+                if_true[i]
             } else {
-                if_false[0]
-            },
-            if mask[1] != 0 {
-                if_true[1]
-            } else {
-                if_false[1]
-            },
-            if mask[2] != 0 {
-                if_true[2]
-            } else {
-                if_false[2]
-            },
-            if mask[3] != 0 {
-                if_true[3]
-            } else {
-                if_false[3]
-            },
-            if mask[4] != 0 {
-                if_true[4]
-            } else {
-                if_false[4]
-            },
-            if mask[5] != 0 {
-                if_true[5]
-            } else {
-                if_false[5]
-            },
-            if mask[6] != 0 {
-                if_true[6]
-            } else {
-                if_false[6]
-            },
-            if mask[7] != 0 {
-                if_true[7]
-            } else {
-                if_false[7]
-            },
-            if mask[8] != 0 {
-                if_true[8]
-            } else {
-                if_false[8]
-            },
-            if mask[9] != 0 {
-                if_true[9]
-            } else {
-                if_false[9]
-            },
-            if mask[10] != 0 {
-                if_true[10]
-            } else {
-                if_false[10]
-            },
-            if mask[11] != 0 {
-                if_true[11]
-            } else {
-                if_false[11]
-            },
-            if mask[12] != 0 {
-                if_true[12]
-            } else {
-                if_false[12]
-            },
-            if mask[13] != 0 {
-                if_true[13]
-            } else {
-                if_false[13]
-            },
-            if mask[14] != 0 {
-                if_true[14]
-            } else {
-                if_false[14]
-            },
-            if mask[15] != 0 {
-                if_true[15]
-            } else {
-                if_false[15]
-            },
-        ]
+                if_false[i]
+            }
+        })
     }
 
     #[inline(always)]
@@ -3893,142 +3614,37 @@ impl I8x16Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn not(self, a: [i8; 16]) -> [i8; 16] {
-        [
-            !a[0], !a[1], !a[2], !a[3], !a[4], !a[5], !a[6], !a[7], !a[8], !a[9], !a[10], !a[11],
-            !a[12], !a[13], !a[14], !a[15],
-        ]
+        core::array::from_fn(|i| !a[i])
     }
 
     #[inline(always)]
     fn bitand(self, a: [i8; 16], b: [i8; 16]) -> [i8; 16] {
-        [
-            a[0] & b[0],
-            a[1] & b[1],
-            a[2] & b[2],
-            a[3] & b[3],
-            a[4] & b[4],
-            a[5] & b[5],
-            a[6] & b[6],
-            a[7] & b[7],
-            a[8] & b[8],
-            a[9] & b[9],
-            a[10] & b[10],
-            a[11] & b[11],
-            a[12] & b[12],
-            a[13] & b[13],
-            a[14] & b[14],
-            a[15] & b[15],
-        ]
+        core::array::from_fn(|i| a[i] & b[i])
     }
 
     #[inline(always)]
     fn bitor(self, a: [i8; 16], b: [i8; 16]) -> [i8; 16] {
-        [
-            a[0] | b[0],
-            a[1] | b[1],
-            a[2] | b[2],
-            a[3] | b[3],
-            a[4] | b[4],
-            a[5] | b[5],
-            a[6] | b[6],
-            a[7] | b[7],
-            a[8] | b[8],
-            a[9] | b[9],
-            a[10] | b[10],
-            a[11] | b[11],
-            a[12] | b[12],
-            a[13] | b[13],
-            a[14] | b[14],
-            a[15] | b[15],
-        ]
+        core::array::from_fn(|i| a[i] | b[i])
     }
 
     #[inline(always)]
     fn bitxor(self, a: [i8; 16], b: [i8; 16]) -> [i8; 16] {
-        [
-            a[0] ^ b[0],
-            a[1] ^ b[1],
-            a[2] ^ b[2],
-            a[3] ^ b[3],
-            a[4] ^ b[4],
-            a[5] ^ b[5],
-            a[6] ^ b[6],
-            a[7] ^ b[7],
-            a[8] ^ b[8],
-            a[9] ^ b[9],
-            a[10] ^ b[10],
-            a[11] ^ b[11],
-            a[12] ^ b[12],
-            a[13] ^ b[13],
-            a[14] ^ b[14],
-            a[15] ^ b[15],
-        ]
+        core::array::from_fn(|i| a[i] ^ b[i])
     }
 
     #[inline(always)]
     fn shl_const<const N: i32>(self, a: [i8; 16]) -> [i8; 16] {
-        [
-            a[0].wrapping_shl(N as u32),
-            a[1].wrapping_shl(N as u32),
-            a[2].wrapping_shl(N as u32),
-            a[3].wrapping_shl(N as u32),
-            a[4].wrapping_shl(N as u32),
-            a[5].wrapping_shl(N as u32),
-            a[6].wrapping_shl(N as u32),
-            a[7].wrapping_shl(N as u32),
-            a[8].wrapping_shl(N as u32),
-            a[9].wrapping_shl(N as u32),
-            a[10].wrapping_shl(N as u32),
-            a[11].wrapping_shl(N as u32),
-            a[12].wrapping_shl(N as u32),
-            a[13].wrapping_shl(N as u32),
-            a[14].wrapping_shl(N as u32),
-            a[15].wrapping_shl(N as u32),
-        ]
+        core::array::from_fn(|i| a[i].wrapping_shl(N as u32))
     }
 
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: [i8; 16]) -> [i8; 16] {
-        [
-            (a[0] as u8).wrapping_shr(N as u32) as i8,
-            (a[1] as u8).wrapping_shr(N as u32) as i8,
-            (a[2] as u8).wrapping_shr(N as u32) as i8,
-            (a[3] as u8).wrapping_shr(N as u32) as i8,
-            (a[4] as u8).wrapping_shr(N as u32) as i8,
-            (a[5] as u8).wrapping_shr(N as u32) as i8,
-            (a[6] as u8).wrapping_shr(N as u32) as i8,
-            (a[7] as u8).wrapping_shr(N as u32) as i8,
-            (a[8] as u8).wrapping_shr(N as u32) as i8,
-            (a[9] as u8).wrapping_shr(N as u32) as i8,
-            (a[10] as u8).wrapping_shr(N as u32) as i8,
-            (a[11] as u8).wrapping_shr(N as u32) as i8,
-            (a[12] as u8).wrapping_shr(N as u32) as i8,
-            (a[13] as u8).wrapping_shr(N as u32) as i8,
-            (a[14] as u8).wrapping_shr(N as u32) as i8,
-            (a[15] as u8).wrapping_shr(N as u32) as i8,
-        ]
+        core::array::from_fn(|i| (a[i] as u8).wrapping_shr(N as u32) as i8)
     }
 
     #[inline(always)]
     fn shr_arithmetic_const<const N: i32>(self, a: [i8; 16]) -> [i8; 16] {
-        [
-            a[0].wrapping_shr(N as u32),
-            a[1].wrapping_shr(N as u32),
-            a[2].wrapping_shr(N as u32),
-            a[3].wrapping_shr(N as u32),
-            a[4].wrapping_shr(N as u32),
-            a[5].wrapping_shr(N as u32),
-            a[6].wrapping_shr(N as u32),
-            a[7].wrapping_shr(N as u32),
-            a[8].wrapping_shr(N as u32),
-            a[9].wrapping_shr(N as u32),
-            a[10].wrapping_shr(N as u32),
-            a[11].wrapping_shr(N as u32),
-            a[12].wrapping_shr(N as u32),
-            a[13].wrapping_shr(N as u32),
-            a[14].wrapping_shr(N as u32),
-            a[15].wrapping_shr(N as u32),
-        ]
+        core::array::from_fn(|i| a[i].wrapping_shr(N as u32))
     }
 
     #[inline(always)]
@@ -4081,10 +3697,7 @@ impl I8x32Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn splat(self, v: i8) -> [i8; 32] {
-        [
-            v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v,
-            v, v, v,
-        ]
+        [v; 32]
     }
 
     #[inline(always)]
@@ -4114,624 +3727,73 @@ impl I8x32Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn add(self, a: [i8; 32], b: [i8; 32]) -> [i8; 32] {
-        [
-            a[0].wrapping_add(b[0]),
-            a[1].wrapping_add(b[1]),
-            a[2].wrapping_add(b[2]),
-            a[3].wrapping_add(b[3]),
-            a[4].wrapping_add(b[4]),
-            a[5].wrapping_add(b[5]),
-            a[6].wrapping_add(b[6]),
-            a[7].wrapping_add(b[7]),
-            a[8].wrapping_add(b[8]),
-            a[9].wrapping_add(b[9]),
-            a[10].wrapping_add(b[10]),
-            a[11].wrapping_add(b[11]),
-            a[12].wrapping_add(b[12]),
-            a[13].wrapping_add(b[13]),
-            a[14].wrapping_add(b[14]),
-            a[15].wrapping_add(b[15]),
-            a[16].wrapping_add(b[16]),
-            a[17].wrapping_add(b[17]),
-            a[18].wrapping_add(b[18]),
-            a[19].wrapping_add(b[19]),
-            a[20].wrapping_add(b[20]),
-            a[21].wrapping_add(b[21]),
-            a[22].wrapping_add(b[22]),
-            a[23].wrapping_add(b[23]),
-            a[24].wrapping_add(b[24]),
-            a[25].wrapping_add(b[25]),
-            a[26].wrapping_add(b[26]),
-            a[27].wrapping_add(b[27]),
-            a[28].wrapping_add(b[28]),
-            a[29].wrapping_add(b[29]),
-            a[30].wrapping_add(b[30]),
-            a[31].wrapping_add(b[31]),
-        ]
+        core::array::from_fn(|i| a[i].wrapping_add(b[i]))
     }
 
     #[inline(always)]
     fn sub(self, a: [i8; 32], b: [i8; 32]) -> [i8; 32] {
-        [
-            a[0].wrapping_sub(b[0]),
-            a[1].wrapping_sub(b[1]),
-            a[2].wrapping_sub(b[2]),
-            a[3].wrapping_sub(b[3]),
-            a[4].wrapping_sub(b[4]),
-            a[5].wrapping_sub(b[5]),
-            a[6].wrapping_sub(b[6]),
-            a[7].wrapping_sub(b[7]),
-            a[8].wrapping_sub(b[8]),
-            a[9].wrapping_sub(b[9]),
-            a[10].wrapping_sub(b[10]),
-            a[11].wrapping_sub(b[11]),
-            a[12].wrapping_sub(b[12]),
-            a[13].wrapping_sub(b[13]),
-            a[14].wrapping_sub(b[14]),
-            a[15].wrapping_sub(b[15]),
-            a[16].wrapping_sub(b[16]),
-            a[17].wrapping_sub(b[17]),
-            a[18].wrapping_sub(b[18]),
-            a[19].wrapping_sub(b[19]),
-            a[20].wrapping_sub(b[20]),
-            a[21].wrapping_sub(b[21]),
-            a[22].wrapping_sub(b[22]),
-            a[23].wrapping_sub(b[23]),
-            a[24].wrapping_sub(b[24]),
-            a[25].wrapping_sub(b[25]),
-            a[26].wrapping_sub(b[26]),
-            a[27].wrapping_sub(b[27]),
-            a[28].wrapping_sub(b[28]),
-            a[29].wrapping_sub(b[29]),
-            a[30].wrapping_sub(b[30]),
-            a[31].wrapping_sub(b[31]),
-        ]
+        core::array::from_fn(|i| a[i].wrapping_sub(b[i]))
     }
 
     #[inline(always)]
     fn neg(self, a: [i8; 32]) -> [i8; 32] {
-        [
-            a[0].wrapping_neg(),
-            a[1].wrapping_neg(),
-            a[2].wrapping_neg(),
-            a[3].wrapping_neg(),
-            a[4].wrapping_neg(),
-            a[5].wrapping_neg(),
-            a[6].wrapping_neg(),
-            a[7].wrapping_neg(),
-            a[8].wrapping_neg(),
-            a[9].wrapping_neg(),
-            a[10].wrapping_neg(),
-            a[11].wrapping_neg(),
-            a[12].wrapping_neg(),
-            a[13].wrapping_neg(),
-            a[14].wrapping_neg(),
-            a[15].wrapping_neg(),
-            a[16].wrapping_neg(),
-            a[17].wrapping_neg(),
-            a[18].wrapping_neg(),
-            a[19].wrapping_neg(),
-            a[20].wrapping_neg(),
-            a[21].wrapping_neg(),
-            a[22].wrapping_neg(),
-            a[23].wrapping_neg(),
-            a[24].wrapping_neg(),
-            a[25].wrapping_neg(),
-            a[26].wrapping_neg(),
-            a[27].wrapping_neg(),
-            a[28].wrapping_neg(),
-            a[29].wrapping_neg(),
-            a[30].wrapping_neg(),
-            a[31].wrapping_neg(),
-        ]
+        core::array::from_fn(|i| a[i].wrapping_neg())
     }
 
     #[inline(always)]
     fn min(self, a: [i8; 32], b: [i8; 32]) -> [i8; 32] {
-        [
-            if a[0] < b[0] { a[0] } else { b[0] },
-            if a[1] < b[1] { a[1] } else { b[1] },
-            if a[2] < b[2] { a[2] } else { b[2] },
-            if a[3] < b[3] { a[3] } else { b[3] },
-            if a[4] < b[4] { a[4] } else { b[4] },
-            if a[5] < b[5] { a[5] } else { b[5] },
-            if a[6] < b[6] { a[6] } else { b[6] },
-            if a[7] < b[7] { a[7] } else { b[7] },
-            if a[8] < b[8] { a[8] } else { b[8] },
-            if a[9] < b[9] { a[9] } else { b[9] },
-            if a[10] < b[10] { a[10] } else { b[10] },
-            if a[11] < b[11] { a[11] } else { b[11] },
-            if a[12] < b[12] { a[12] } else { b[12] },
-            if a[13] < b[13] { a[13] } else { b[13] },
-            if a[14] < b[14] { a[14] } else { b[14] },
-            if a[15] < b[15] { a[15] } else { b[15] },
-            if a[16] < b[16] { a[16] } else { b[16] },
-            if a[17] < b[17] { a[17] } else { b[17] },
-            if a[18] < b[18] { a[18] } else { b[18] },
-            if a[19] < b[19] { a[19] } else { b[19] },
-            if a[20] < b[20] { a[20] } else { b[20] },
-            if a[21] < b[21] { a[21] } else { b[21] },
-            if a[22] < b[22] { a[22] } else { b[22] },
-            if a[23] < b[23] { a[23] } else { b[23] },
-            if a[24] < b[24] { a[24] } else { b[24] },
-            if a[25] < b[25] { a[25] } else { b[25] },
-            if a[26] < b[26] { a[26] } else { b[26] },
-            if a[27] < b[27] { a[27] } else { b[27] },
-            if a[28] < b[28] { a[28] } else { b[28] },
-            if a[29] < b[29] { a[29] } else { b[29] },
-            if a[30] < b[30] { a[30] } else { b[30] },
-            if a[31] < b[31] { a[31] } else { b[31] },
-        ]
+        core::array::from_fn(|i| if a[i] < b[i] { a[i] } else { b[i] })
     }
 
     #[inline(always)]
     fn max(self, a: [i8; 32], b: [i8; 32]) -> [i8; 32] {
-        [
-            if a[0] > b[0] { a[0] } else { b[0] },
-            if a[1] > b[1] { a[1] } else { b[1] },
-            if a[2] > b[2] { a[2] } else { b[2] },
-            if a[3] > b[3] { a[3] } else { b[3] },
-            if a[4] > b[4] { a[4] } else { b[4] },
-            if a[5] > b[5] { a[5] } else { b[5] },
-            if a[6] > b[6] { a[6] } else { b[6] },
-            if a[7] > b[7] { a[7] } else { b[7] },
-            if a[8] > b[8] { a[8] } else { b[8] },
-            if a[9] > b[9] { a[9] } else { b[9] },
-            if a[10] > b[10] { a[10] } else { b[10] },
-            if a[11] > b[11] { a[11] } else { b[11] },
-            if a[12] > b[12] { a[12] } else { b[12] },
-            if a[13] > b[13] { a[13] } else { b[13] },
-            if a[14] > b[14] { a[14] } else { b[14] },
-            if a[15] > b[15] { a[15] } else { b[15] },
-            if a[16] > b[16] { a[16] } else { b[16] },
-            if a[17] > b[17] { a[17] } else { b[17] },
-            if a[18] > b[18] { a[18] } else { b[18] },
-            if a[19] > b[19] { a[19] } else { b[19] },
-            if a[20] > b[20] { a[20] } else { b[20] },
-            if a[21] > b[21] { a[21] } else { b[21] },
-            if a[22] > b[22] { a[22] } else { b[22] },
-            if a[23] > b[23] { a[23] } else { b[23] },
-            if a[24] > b[24] { a[24] } else { b[24] },
-            if a[25] > b[25] { a[25] } else { b[25] },
-            if a[26] > b[26] { a[26] } else { b[26] },
-            if a[27] > b[27] { a[27] } else { b[27] },
-            if a[28] > b[28] { a[28] } else { b[28] },
-            if a[29] > b[29] { a[29] } else { b[29] },
-            if a[30] > b[30] { a[30] } else { b[30] },
-            if a[31] > b[31] { a[31] } else { b[31] },
-        ]
+        core::array::from_fn(|i| if a[i] > b[i] { a[i] } else { b[i] })
     }
 
     #[inline(always)]
     fn abs(self, a: [i8; 32]) -> [i8; 32] {
-        [
-            a[0].wrapping_abs(),
-            a[1].wrapping_abs(),
-            a[2].wrapping_abs(),
-            a[3].wrapping_abs(),
-            a[4].wrapping_abs(),
-            a[5].wrapping_abs(),
-            a[6].wrapping_abs(),
-            a[7].wrapping_abs(),
-            a[8].wrapping_abs(),
-            a[9].wrapping_abs(),
-            a[10].wrapping_abs(),
-            a[11].wrapping_abs(),
-            a[12].wrapping_abs(),
-            a[13].wrapping_abs(),
-            a[14].wrapping_abs(),
-            a[15].wrapping_abs(),
-            a[16].wrapping_abs(),
-            a[17].wrapping_abs(),
-            a[18].wrapping_abs(),
-            a[19].wrapping_abs(),
-            a[20].wrapping_abs(),
-            a[21].wrapping_abs(),
-            a[22].wrapping_abs(),
-            a[23].wrapping_abs(),
-            a[24].wrapping_abs(),
-            a[25].wrapping_abs(),
-            a[26].wrapping_abs(),
-            a[27].wrapping_abs(),
-            a[28].wrapping_abs(),
-            a[29].wrapping_abs(),
-            a[30].wrapping_abs(),
-            a[31].wrapping_abs(),
-        ]
+        core::array::from_fn(|i| a[i].wrapping_abs())
     }
 
     #[inline(always)]
     fn simd_eq(self, a: [i8; 32], b: [i8; 32]) -> [i8; 32] {
-        [
-            if a[0] == b[0] { -1 } else { 0 },
-            if a[1] == b[1] { -1 } else { 0 },
-            if a[2] == b[2] { -1 } else { 0 },
-            if a[3] == b[3] { -1 } else { 0 },
-            if a[4] == b[4] { -1 } else { 0 },
-            if a[5] == b[5] { -1 } else { 0 },
-            if a[6] == b[6] { -1 } else { 0 },
-            if a[7] == b[7] { -1 } else { 0 },
-            if a[8] == b[8] { -1 } else { 0 },
-            if a[9] == b[9] { -1 } else { 0 },
-            if a[10] == b[10] { -1 } else { 0 },
-            if a[11] == b[11] { -1 } else { 0 },
-            if a[12] == b[12] { -1 } else { 0 },
-            if a[13] == b[13] { -1 } else { 0 },
-            if a[14] == b[14] { -1 } else { 0 },
-            if a[15] == b[15] { -1 } else { 0 },
-            if a[16] == b[16] { -1 } else { 0 },
-            if a[17] == b[17] { -1 } else { 0 },
-            if a[18] == b[18] { -1 } else { 0 },
-            if a[19] == b[19] { -1 } else { 0 },
-            if a[20] == b[20] { -1 } else { 0 },
-            if a[21] == b[21] { -1 } else { 0 },
-            if a[22] == b[22] { -1 } else { 0 },
-            if a[23] == b[23] { -1 } else { 0 },
-            if a[24] == b[24] { -1 } else { 0 },
-            if a[25] == b[25] { -1 } else { 0 },
-            if a[26] == b[26] { -1 } else { 0 },
-            if a[27] == b[27] { -1 } else { 0 },
-            if a[28] == b[28] { -1 } else { 0 },
-            if a[29] == b[29] { -1 } else { 0 },
-            if a[30] == b[30] { -1 } else { 0 },
-            if a[31] == b[31] { -1 } else { 0 },
-        ]
+        core::array::from_fn(|i| if a[i] == b[i] { -1 } else { 0 })
     }
 
     #[inline(always)]
     fn simd_ne(self, a: [i8; 32], b: [i8; 32]) -> [i8; 32] {
-        [
-            if a[0] != b[0] { -1 } else { 0 },
-            if a[1] != b[1] { -1 } else { 0 },
-            if a[2] != b[2] { -1 } else { 0 },
-            if a[3] != b[3] { -1 } else { 0 },
-            if a[4] != b[4] { -1 } else { 0 },
-            if a[5] != b[5] { -1 } else { 0 },
-            if a[6] != b[6] { -1 } else { 0 },
-            if a[7] != b[7] { -1 } else { 0 },
-            if a[8] != b[8] { -1 } else { 0 },
-            if a[9] != b[9] { -1 } else { 0 },
-            if a[10] != b[10] { -1 } else { 0 },
-            if a[11] != b[11] { -1 } else { 0 },
-            if a[12] != b[12] { -1 } else { 0 },
-            if a[13] != b[13] { -1 } else { 0 },
-            if a[14] != b[14] { -1 } else { 0 },
-            if a[15] != b[15] { -1 } else { 0 },
-            if a[16] != b[16] { -1 } else { 0 },
-            if a[17] != b[17] { -1 } else { 0 },
-            if a[18] != b[18] { -1 } else { 0 },
-            if a[19] != b[19] { -1 } else { 0 },
-            if a[20] != b[20] { -1 } else { 0 },
-            if a[21] != b[21] { -1 } else { 0 },
-            if a[22] != b[22] { -1 } else { 0 },
-            if a[23] != b[23] { -1 } else { 0 },
-            if a[24] != b[24] { -1 } else { 0 },
-            if a[25] != b[25] { -1 } else { 0 },
-            if a[26] != b[26] { -1 } else { 0 },
-            if a[27] != b[27] { -1 } else { 0 },
-            if a[28] != b[28] { -1 } else { 0 },
-            if a[29] != b[29] { -1 } else { 0 },
-            if a[30] != b[30] { -1 } else { 0 },
-            if a[31] != b[31] { -1 } else { 0 },
-        ]
+        core::array::from_fn(|i| if a[i] != b[i] { -1 } else { 0 })
     }
 
     #[inline(always)]
     fn simd_lt(self, a: [i8; 32], b: [i8; 32]) -> [i8; 32] {
-        [
-            if a[0] < b[0] { -1 } else { 0 },
-            if a[1] < b[1] { -1 } else { 0 },
-            if a[2] < b[2] { -1 } else { 0 },
-            if a[3] < b[3] { -1 } else { 0 },
-            if a[4] < b[4] { -1 } else { 0 },
-            if a[5] < b[5] { -1 } else { 0 },
-            if a[6] < b[6] { -1 } else { 0 },
-            if a[7] < b[7] { -1 } else { 0 },
-            if a[8] < b[8] { -1 } else { 0 },
-            if a[9] < b[9] { -1 } else { 0 },
-            if a[10] < b[10] { -1 } else { 0 },
-            if a[11] < b[11] { -1 } else { 0 },
-            if a[12] < b[12] { -1 } else { 0 },
-            if a[13] < b[13] { -1 } else { 0 },
-            if a[14] < b[14] { -1 } else { 0 },
-            if a[15] < b[15] { -1 } else { 0 },
-            if a[16] < b[16] { -1 } else { 0 },
-            if a[17] < b[17] { -1 } else { 0 },
-            if a[18] < b[18] { -1 } else { 0 },
-            if a[19] < b[19] { -1 } else { 0 },
-            if a[20] < b[20] { -1 } else { 0 },
-            if a[21] < b[21] { -1 } else { 0 },
-            if a[22] < b[22] { -1 } else { 0 },
-            if a[23] < b[23] { -1 } else { 0 },
-            if a[24] < b[24] { -1 } else { 0 },
-            if a[25] < b[25] { -1 } else { 0 },
-            if a[26] < b[26] { -1 } else { 0 },
-            if a[27] < b[27] { -1 } else { 0 },
-            if a[28] < b[28] { -1 } else { 0 },
-            if a[29] < b[29] { -1 } else { 0 },
-            if a[30] < b[30] { -1 } else { 0 },
-            if a[31] < b[31] { -1 } else { 0 },
-        ]
+        core::array::from_fn(|i| if a[i] < b[i] { -1 } else { 0 })
     }
 
     #[inline(always)]
     fn simd_le(self, a: [i8; 32], b: [i8; 32]) -> [i8; 32] {
-        [
-            if a[0] <= b[0] { -1 } else { 0 },
-            if a[1] <= b[1] { -1 } else { 0 },
-            if a[2] <= b[2] { -1 } else { 0 },
-            if a[3] <= b[3] { -1 } else { 0 },
-            if a[4] <= b[4] { -1 } else { 0 },
-            if a[5] <= b[5] { -1 } else { 0 },
-            if a[6] <= b[6] { -1 } else { 0 },
-            if a[7] <= b[7] { -1 } else { 0 },
-            if a[8] <= b[8] { -1 } else { 0 },
-            if a[9] <= b[9] { -1 } else { 0 },
-            if a[10] <= b[10] { -1 } else { 0 },
-            if a[11] <= b[11] { -1 } else { 0 },
-            if a[12] <= b[12] { -1 } else { 0 },
-            if a[13] <= b[13] { -1 } else { 0 },
-            if a[14] <= b[14] { -1 } else { 0 },
-            if a[15] <= b[15] { -1 } else { 0 },
-            if a[16] <= b[16] { -1 } else { 0 },
-            if a[17] <= b[17] { -1 } else { 0 },
-            if a[18] <= b[18] { -1 } else { 0 },
-            if a[19] <= b[19] { -1 } else { 0 },
-            if a[20] <= b[20] { -1 } else { 0 },
-            if a[21] <= b[21] { -1 } else { 0 },
-            if a[22] <= b[22] { -1 } else { 0 },
-            if a[23] <= b[23] { -1 } else { 0 },
-            if a[24] <= b[24] { -1 } else { 0 },
-            if a[25] <= b[25] { -1 } else { 0 },
-            if a[26] <= b[26] { -1 } else { 0 },
-            if a[27] <= b[27] { -1 } else { 0 },
-            if a[28] <= b[28] { -1 } else { 0 },
-            if a[29] <= b[29] { -1 } else { 0 },
-            if a[30] <= b[30] { -1 } else { 0 },
-            if a[31] <= b[31] { -1 } else { 0 },
-        ]
+        core::array::from_fn(|i| if a[i] <= b[i] { -1 } else { 0 })
     }
 
     #[inline(always)]
     fn simd_gt(self, a: [i8; 32], b: [i8; 32]) -> [i8; 32] {
-        [
-            if a[0] > b[0] { -1 } else { 0 },
-            if a[1] > b[1] { -1 } else { 0 },
-            if a[2] > b[2] { -1 } else { 0 },
-            if a[3] > b[3] { -1 } else { 0 },
-            if a[4] > b[4] { -1 } else { 0 },
-            if a[5] > b[5] { -1 } else { 0 },
-            if a[6] > b[6] { -1 } else { 0 },
-            if a[7] > b[7] { -1 } else { 0 },
-            if a[8] > b[8] { -1 } else { 0 },
-            if a[9] > b[9] { -1 } else { 0 },
-            if a[10] > b[10] { -1 } else { 0 },
-            if a[11] > b[11] { -1 } else { 0 },
-            if a[12] > b[12] { -1 } else { 0 },
-            if a[13] > b[13] { -1 } else { 0 },
-            if a[14] > b[14] { -1 } else { 0 },
-            if a[15] > b[15] { -1 } else { 0 },
-            if a[16] > b[16] { -1 } else { 0 },
-            if a[17] > b[17] { -1 } else { 0 },
-            if a[18] > b[18] { -1 } else { 0 },
-            if a[19] > b[19] { -1 } else { 0 },
-            if a[20] > b[20] { -1 } else { 0 },
-            if a[21] > b[21] { -1 } else { 0 },
-            if a[22] > b[22] { -1 } else { 0 },
-            if a[23] > b[23] { -1 } else { 0 },
-            if a[24] > b[24] { -1 } else { 0 },
-            if a[25] > b[25] { -1 } else { 0 },
-            if a[26] > b[26] { -1 } else { 0 },
-            if a[27] > b[27] { -1 } else { 0 },
-            if a[28] > b[28] { -1 } else { 0 },
-            if a[29] > b[29] { -1 } else { 0 },
-            if a[30] > b[30] { -1 } else { 0 },
-            if a[31] > b[31] { -1 } else { 0 },
-        ]
+        core::array::from_fn(|i| if a[i] > b[i] { -1 } else { 0 })
     }
 
     #[inline(always)]
     fn simd_ge(self, a: [i8; 32], b: [i8; 32]) -> [i8; 32] {
-        [
-            if a[0] >= b[0] { -1 } else { 0 },
-            if a[1] >= b[1] { -1 } else { 0 },
-            if a[2] >= b[2] { -1 } else { 0 },
-            if a[3] >= b[3] { -1 } else { 0 },
-            if a[4] >= b[4] { -1 } else { 0 },
-            if a[5] >= b[5] { -1 } else { 0 },
-            if a[6] >= b[6] { -1 } else { 0 },
-            if a[7] >= b[7] { -1 } else { 0 },
-            if a[8] >= b[8] { -1 } else { 0 },
-            if a[9] >= b[9] { -1 } else { 0 },
-            if a[10] >= b[10] { -1 } else { 0 },
-            if a[11] >= b[11] { -1 } else { 0 },
-            if a[12] >= b[12] { -1 } else { 0 },
-            if a[13] >= b[13] { -1 } else { 0 },
-            if a[14] >= b[14] { -1 } else { 0 },
-            if a[15] >= b[15] { -1 } else { 0 },
-            if a[16] >= b[16] { -1 } else { 0 },
-            if a[17] >= b[17] { -1 } else { 0 },
-            if a[18] >= b[18] { -1 } else { 0 },
-            if a[19] >= b[19] { -1 } else { 0 },
-            if a[20] >= b[20] { -1 } else { 0 },
-            if a[21] >= b[21] { -1 } else { 0 },
-            if a[22] >= b[22] { -1 } else { 0 },
-            if a[23] >= b[23] { -1 } else { 0 },
-            if a[24] >= b[24] { -1 } else { 0 },
-            if a[25] >= b[25] { -1 } else { 0 },
-            if a[26] >= b[26] { -1 } else { 0 },
-            if a[27] >= b[27] { -1 } else { 0 },
-            if a[28] >= b[28] { -1 } else { 0 },
-            if a[29] >= b[29] { -1 } else { 0 },
-            if a[30] >= b[30] { -1 } else { 0 },
-            if a[31] >= b[31] { -1 } else { 0 },
-        ]
+        core::array::from_fn(|i| if a[i] >= b[i] { -1 } else { 0 })
     }
 
     #[inline(always)]
     fn blend(self, mask: [i8; 32], if_true: [i8; 32], if_false: [i8; 32]) -> [i8; 32] {
-        [
-            if mask[0] != 0 {
-                if_true[0]
+        core::array::from_fn(|i| {
+            if mask[i] != 0 {
+                if_true[i]
             } else {
-                if_false[0]
-            },
-            if mask[1] != 0 {
-                if_true[1]
-            } else {
-                if_false[1]
-            },
-            if mask[2] != 0 {
-                if_true[2]
-            } else {
-                if_false[2]
-            },
-            if mask[3] != 0 {
-                if_true[3]
-            } else {
-                if_false[3]
-            },
-            if mask[4] != 0 {
-                if_true[4]
-            } else {
-                if_false[4]
-            },
-            if mask[5] != 0 {
-                if_true[5]
-            } else {
-                if_false[5]
-            },
-            if mask[6] != 0 {
-                if_true[6]
-            } else {
-                if_false[6]
-            },
-            if mask[7] != 0 {
-                if_true[7]
-            } else {
-                if_false[7]
-            },
-            if mask[8] != 0 {
-                if_true[8]
-            } else {
-                if_false[8]
-            },
-            if mask[9] != 0 {
-                if_true[9]
-            } else {
-                if_false[9]
-            },
-            if mask[10] != 0 {
-                if_true[10]
-            } else {
-                if_false[10]
-            },
-            if mask[11] != 0 {
-                if_true[11]
-            } else {
-                if_false[11]
-            },
-            if mask[12] != 0 {
-                if_true[12]
-            } else {
-                if_false[12]
-            },
-            if mask[13] != 0 {
-                if_true[13]
-            } else {
-                if_false[13]
-            },
-            if mask[14] != 0 {
-                if_true[14]
-            } else {
-                if_false[14]
-            },
-            if mask[15] != 0 {
-                if_true[15]
-            } else {
-                if_false[15]
-            },
-            if mask[16] != 0 {
-                if_true[16]
-            } else {
-                if_false[16]
-            },
-            if mask[17] != 0 {
-                if_true[17]
-            } else {
-                if_false[17]
-            },
-            if mask[18] != 0 {
-                if_true[18]
-            } else {
-                if_false[18]
-            },
-            if mask[19] != 0 {
-                if_true[19]
-            } else {
-                if_false[19]
-            },
-            if mask[20] != 0 {
-                if_true[20]
-            } else {
-                if_false[20]
-            },
-            if mask[21] != 0 {
-                if_true[21]
-            } else {
-                if_false[21]
-            },
-            if mask[22] != 0 {
-                if_true[22]
-            } else {
-                if_false[22]
-            },
-            if mask[23] != 0 {
-                if_true[23]
-            } else {
-                if_false[23]
-            },
-            if mask[24] != 0 {
-                if_true[24]
-            } else {
-                if_false[24]
-            },
-            if mask[25] != 0 {
-                if_true[25]
-            } else {
-                if_false[25]
-            },
-            if mask[26] != 0 {
-                if_true[26]
-            } else {
-                if_false[26]
-            },
-            if mask[27] != 0 {
-                if_true[27]
-            } else {
-                if_false[27]
-            },
-            if mask[28] != 0 {
-                if_true[28]
-            } else {
-                if_false[28]
-            },
-            if mask[29] != 0 {
-                if_true[29]
-            } else {
-                if_false[29]
-            },
-            if mask[30] != 0 {
-                if_true[30]
-            } else {
-                if_false[30]
-            },
-            if mask[31] != 0 {
-                if_true[31]
-            } else {
-                if_false[31]
-            },
-        ]
+                if_false[i]
+            }
+        })
     }
 
     #[inline(always)]
@@ -4741,239 +3803,37 @@ impl I8x32Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn not(self, a: [i8; 32]) -> [i8; 32] {
-        [
-            !a[0], !a[1], !a[2], !a[3], !a[4], !a[5], !a[6], !a[7], !a[8], !a[9], !a[10], !a[11],
-            !a[12], !a[13], !a[14], !a[15], !a[16], !a[17], !a[18], !a[19], !a[20], !a[21], !a[22],
-            !a[23], !a[24], !a[25], !a[26], !a[27], !a[28], !a[29], !a[30], !a[31],
-        ]
+        core::array::from_fn(|i| !a[i])
     }
 
     #[inline(always)]
     fn bitand(self, a: [i8; 32], b: [i8; 32]) -> [i8; 32] {
-        [
-            a[0] & b[0],
-            a[1] & b[1],
-            a[2] & b[2],
-            a[3] & b[3],
-            a[4] & b[4],
-            a[5] & b[5],
-            a[6] & b[6],
-            a[7] & b[7],
-            a[8] & b[8],
-            a[9] & b[9],
-            a[10] & b[10],
-            a[11] & b[11],
-            a[12] & b[12],
-            a[13] & b[13],
-            a[14] & b[14],
-            a[15] & b[15],
-            a[16] & b[16],
-            a[17] & b[17],
-            a[18] & b[18],
-            a[19] & b[19],
-            a[20] & b[20],
-            a[21] & b[21],
-            a[22] & b[22],
-            a[23] & b[23],
-            a[24] & b[24],
-            a[25] & b[25],
-            a[26] & b[26],
-            a[27] & b[27],
-            a[28] & b[28],
-            a[29] & b[29],
-            a[30] & b[30],
-            a[31] & b[31],
-        ]
+        core::array::from_fn(|i| a[i] & b[i])
     }
 
     #[inline(always)]
     fn bitor(self, a: [i8; 32], b: [i8; 32]) -> [i8; 32] {
-        [
-            a[0] | b[0],
-            a[1] | b[1],
-            a[2] | b[2],
-            a[3] | b[3],
-            a[4] | b[4],
-            a[5] | b[5],
-            a[6] | b[6],
-            a[7] | b[7],
-            a[8] | b[8],
-            a[9] | b[9],
-            a[10] | b[10],
-            a[11] | b[11],
-            a[12] | b[12],
-            a[13] | b[13],
-            a[14] | b[14],
-            a[15] | b[15],
-            a[16] | b[16],
-            a[17] | b[17],
-            a[18] | b[18],
-            a[19] | b[19],
-            a[20] | b[20],
-            a[21] | b[21],
-            a[22] | b[22],
-            a[23] | b[23],
-            a[24] | b[24],
-            a[25] | b[25],
-            a[26] | b[26],
-            a[27] | b[27],
-            a[28] | b[28],
-            a[29] | b[29],
-            a[30] | b[30],
-            a[31] | b[31],
-        ]
+        core::array::from_fn(|i| a[i] | b[i])
     }
 
     #[inline(always)]
     fn bitxor(self, a: [i8; 32], b: [i8; 32]) -> [i8; 32] {
-        [
-            a[0] ^ b[0],
-            a[1] ^ b[1],
-            a[2] ^ b[2],
-            a[3] ^ b[3],
-            a[4] ^ b[4],
-            a[5] ^ b[5],
-            a[6] ^ b[6],
-            a[7] ^ b[7],
-            a[8] ^ b[8],
-            a[9] ^ b[9],
-            a[10] ^ b[10],
-            a[11] ^ b[11],
-            a[12] ^ b[12],
-            a[13] ^ b[13],
-            a[14] ^ b[14],
-            a[15] ^ b[15],
-            a[16] ^ b[16],
-            a[17] ^ b[17],
-            a[18] ^ b[18],
-            a[19] ^ b[19],
-            a[20] ^ b[20],
-            a[21] ^ b[21],
-            a[22] ^ b[22],
-            a[23] ^ b[23],
-            a[24] ^ b[24],
-            a[25] ^ b[25],
-            a[26] ^ b[26],
-            a[27] ^ b[27],
-            a[28] ^ b[28],
-            a[29] ^ b[29],
-            a[30] ^ b[30],
-            a[31] ^ b[31],
-        ]
+        core::array::from_fn(|i| a[i] ^ b[i])
     }
 
     #[inline(always)]
     fn shl_const<const N: i32>(self, a: [i8; 32]) -> [i8; 32] {
-        [
-            a[0].wrapping_shl(N as u32),
-            a[1].wrapping_shl(N as u32),
-            a[2].wrapping_shl(N as u32),
-            a[3].wrapping_shl(N as u32),
-            a[4].wrapping_shl(N as u32),
-            a[5].wrapping_shl(N as u32),
-            a[6].wrapping_shl(N as u32),
-            a[7].wrapping_shl(N as u32),
-            a[8].wrapping_shl(N as u32),
-            a[9].wrapping_shl(N as u32),
-            a[10].wrapping_shl(N as u32),
-            a[11].wrapping_shl(N as u32),
-            a[12].wrapping_shl(N as u32),
-            a[13].wrapping_shl(N as u32),
-            a[14].wrapping_shl(N as u32),
-            a[15].wrapping_shl(N as u32),
-            a[16].wrapping_shl(N as u32),
-            a[17].wrapping_shl(N as u32),
-            a[18].wrapping_shl(N as u32),
-            a[19].wrapping_shl(N as u32),
-            a[20].wrapping_shl(N as u32),
-            a[21].wrapping_shl(N as u32),
-            a[22].wrapping_shl(N as u32),
-            a[23].wrapping_shl(N as u32),
-            a[24].wrapping_shl(N as u32),
-            a[25].wrapping_shl(N as u32),
-            a[26].wrapping_shl(N as u32),
-            a[27].wrapping_shl(N as u32),
-            a[28].wrapping_shl(N as u32),
-            a[29].wrapping_shl(N as u32),
-            a[30].wrapping_shl(N as u32),
-            a[31].wrapping_shl(N as u32),
-        ]
+        core::array::from_fn(|i| a[i].wrapping_shl(N as u32))
     }
 
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: [i8; 32]) -> [i8; 32] {
-        [
-            (a[0] as u8).wrapping_shr(N as u32) as i8,
-            (a[1] as u8).wrapping_shr(N as u32) as i8,
-            (a[2] as u8).wrapping_shr(N as u32) as i8,
-            (a[3] as u8).wrapping_shr(N as u32) as i8,
-            (a[4] as u8).wrapping_shr(N as u32) as i8,
-            (a[5] as u8).wrapping_shr(N as u32) as i8,
-            (a[6] as u8).wrapping_shr(N as u32) as i8,
-            (a[7] as u8).wrapping_shr(N as u32) as i8,
-            (a[8] as u8).wrapping_shr(N as u32) as i8,
-            (a[9] as u8).wrapping_shr(N as u32) as i8,
-            (a[10] as u8).wrapping_shr(N as u32) as i8,
-            (a[11] as u8).wrapping_shr(N as u32) as i8,
-            (a[12] as u8).wrapping_shr(N as u32) as i8,
-            (a[13] as u8).wrapping_shr(N as u32) as i8,
-            (a[14] as u8).wrapping_shr(N as u32) as i8,
-            (a[15] as u8).wrapping_shr(N as u32) as i8,
-            (a[16] as u8).wrapping_shr(N as u32) as i8,
-            (a[17] as u8).wrapping_shr(N as u32) as i8,
-            (a[18] as u8).wrapping_shr(N as u32) as i8,
-            (a[19] as u8).wrapping_shr(N as u32) as i8,
-            (a[20] as u8).wrapping_shr(N as u32) as i8,
-            (a[21] as u8).wrapping_shr(N as u32) as i8,
-            (a[22] as u8).wrapping_shr(N as u32) as i8,
-            (a[23] as u8).wrapping_shr(N as u32) as i8,
-            (a[24] as u8).wrapping_shr(N as u32) as i8,
-            (a[25] as u8).wrapping_shr(N as u32) as i8,
-            (a[26] as u8).wrapping_shr(N as u32) as i8,
-            (a[27] as u8).wrapping_shr(N as u32) as i8,
-            (a[28] as u8).wrapping_shr(N as u32) as i8,
-            (a[29] as u8).wrapping_shr(N as u32) as i8,
-            (a[30] as u8).wrapping_shr(N as u32) as i8,
-            (a[31] as u8).wrapping_shr(N as u32) as i8,
-        ]
+        core::array::from_fn(|i| (a[i] as u8).wrapping_shr(N as u32) as i8)
     }
 
     #[inline(always)]
     fn shr_arithmetic_const<const N: i32>(self, a: [i8; 32]) -> [i8; 32] {
-        [
-            a[0].wrapping_shr(N as u32),
-            a[1].wrapping_shr(N as u32),
-            a[2].wrapping_shr(N as u32),
-            a[3].wrapping_shr(N as u32),
-            a[4].wrapping_shr(N as u32),
-            a[5].wrapping_shr(N as u32),
-            a[6].wrapping_shr(N as u32),
-            a[7].wrapping_shr(N as u32),
-            a[8].wrapping_shr(N as u32),
-            a[9].wrapping_shr(N as u32),
-            a[10].wrapping_shr(N as u32),
-            a[11].wrapping_shr(N as u32),
-            a[12].wrapping_shr(N as u32),
-            a[13].wrapping_shr(N as u32),
-            a[14].wrapping_shr(N as u32),
-            a[15].wrapping_shr(N as u32),
-            a[16].wrapping_shr(N as u32),
-            a[17].wrapping_shr(N as u32),
-            a[18].wrapping_shr(N as u32),
-            a[19].wrapping_shr(N as u32),
-            a[20].wrapping_shr(N as u32),
-            a[21].wrapping_shr(N as u32),
-            a[22].wrapping_shr(N as u32),
-            a[23].wrapping_shr(N as u32),
-            a[24].wrapping_shr(N as u32),
-            a[25].wrapping_shr(N as u32),
-            a[26].wrapping_shr(N as u32),
-            a[27].wrapping_shr(N as u32),
-            a[28].wrapping_shr(N as u32),
-            a[29].wrapping_shr(N as u32),
-            a[30].wrapping_shr(N as u32),
-            a[31].wrapping_shr(N as u32),
-        ]
+        core::array::from_fn(|i| a[i].wrapping_shr(N as u32))
     }
 
     #[inline(always)]
@@ -5026,7 +3886,7 @@ impl U8x16Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn splat(self, v: u8) -> [u8; 16] {
-        [v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v]
+        [v; 16]
     }
 
     #[inline(always)]
@@ -5056,308 +3916,63 @@ impl U8x16Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn add(self, a: [u8; 16], b: [u8; 16]) -> [u8; 16] {
-        [
-            a[0].wrapping_add(b[0]),
-            a[1].wrapping_add(b[1]),
-            a[2].wrapping_add(b[2]),
-            a[3].wrapping_add(b[3]),
-            a[4].wrapping_add(b[4]),
-            a[5].wrapping_add(b[5]),
-            a[6].wrapping_add(b[6]),
-            a[7].wrapping_add(b[7]),
-            a[8].wrapping_add(b[8]),
-            a[9].wrapping_add(b[9]),
-            a[10].wrapping_add(b[10]),
-            a[11].wrapping_add(b[11]),
-            a[12].wrapping_add(b[12]),
-            a[13].wrapping_add(b[13]),
-            a[14].wrapping_add(b[14]),
-            a[15].wrapping_add(b[15]),
-        ]
+        core::array::from_fn(|i| a[i].wrapping_add(b[i]))
     }
 
     #[inline(always)]
     fn sub(self, a: [u8; 16], b: [u8; 16]) -> [u8; 16] {
-        [
-            a[0].wrapping_sub(b[0]),
-            a[1].wrapping_sub(b[1]),
-            a[2].wrapping_sub(b[2]),
-            a[3].wrapping_sub(b[3]),
-            a[4].wrapping_sub(b[4]),
-            a[5].wrapping_sub(b[5]),
-            a[6].wrapping_sub(b[6]),
-            a[7].wrapping_sub(b[7]),
-            a[8].wrapping_sub(b[8]),
-            a[9].wrapping_sub(b[9]),
-            a[10].wrapping_sub(b[10]),
-            a[11].wrapping_sub(b[11]),
-            a[12].wrapping_sub(b[12]),
-            a[13].wrapping_sub(b[13]),
-            a[14].wrapping_sub(b[14]),
-            a[15].wrapping_sub(b[15]),
-        ]
+        core::array::from_fn(|i| a[i].wrapping_sub(b[i]))
     }
 
     #[inline(always)]
     fn min(self, a: [u8; 16], b: [u8; 16]) -> [u8; 16] {
-        [
-            if a[0] < b[0] { a[0] } else { b[0] },
-            if a[1] < b[1] { a[1] } else { b[1] },
-            if a[2] < b[2] { a[2] } else { b[2] },
-            if a[3] < b[3] { a[3] } else { b[3] },
-            if a[4] < b[4] { a[4] } else { b[4] },
-            if a[5] < b[5] { a[5] } else { b[5] },
-            if a[6] < b[6] { a[6] } else { b[6] },
-            if a[7] < b[7] { a[7] } else { b[7] },
-            if a[8] < b[8] { a[8] } else { b[8] },
-            if a[9] < b[9] { a[9] } else { b[9] },
-            if a[10] < b[10] { a[10] } else { b[10] },
-            if a[11] < b[11] { a[11] } else { b[11] },
-            if a[12] < b[12] { a[12] } else { b[12] },
-            if a[13] < b[13] { a[13] } else { b[13] },
-            if a[14] < b[14] { a[14] } else { b[14] },
-            if a[15] < b[15] { a[15] } else { b[15] },
-        ]
+        core::array::from_fn(|i| if a[i] < b[i] { a[i] } else { b[i] })
     }
 
     #[inline(always)]
     fn max(self, a: [u8; 16], b: [u8; 16]) -> [u8; 16] {
-        [
-            if a[0] > b[0] { a[0] } else { b[0] },
-            if a[1] > b[1] { a[1] } else { b[1] },
-            if a[2] > b[2] { a[2] } else { b[2] },
-            if a[3] > b[3] { a[3] } else { b[3] },
-            if a[4] > b[4] { a[4] } else { b[4] },
-            if a[5] > b[5] { a[5] } else { b[5] },
-            if a[6] > b[6] { a[6] } else { b[6] },
-            if a[7] > b[7] { a[7] } else { b[7] },
-            if a[8] > b[8] { a[8] } else { b[8] },
-            if a[9] > b[9] { a[9] } else { b[9] },
-            if a[10] > b[10] { a[10] } else { b[10] },
-            if a[11] > b[11] { a[11] } else { b[11] },
-            if a[12] > b[12] { a[12] } else { b[12] },
-            if a[13] > b[13] { a[13] } else { b[13] },
-            if a[14] > b[14] { a[14] } else { b[14] },
-            if a[15] > b[15] { a[15] } else { b[15] },
-        ]
+        core::array::from_fn(|i| if a[i] > b[i] { a[i] } else { b[i] })
     }
 
     #[inline(always)]
     fn simd_eq(self, a: [u8; 16], b: [u8; 16]) -> [u8; 16] {
-        [
-            if a[0] == b[0] { 0xFF } else { 0 },
-            if a[1] == b[1] { 0xFF } else { 0 },
-            if a[2] == b[2] { 0xFF } else { 0 },
-            if a[3] == b[3] { 0xFF } else { 0 },
-            if a[4] == b[4] { 0xFF } else { 0 },
-            if a[5] == b[5] { 0xFF } else { 0 },
-            if a[6] == b[6] { 0xFF } else { 0 },
-            if a[7] == b[7] { 0xFF } else { 0 },
-            if a[8] == b[8] { 0xFF } else { 0 },
-            if a[9] == b[9] { 0xFF } else { 0 },
-            if a[10] == b[10] { 0xFF } else { 0 },
-            if a[11] == b[11] { 0xFF } else { 0 },
-            if a[12] == b[12] { 0xFF } else { 0 },
-            if a[13] == b[13] { 0xFF } else { 0 },
-            if a[14] == b[14] { 0xFF } else { 0 },
-            if a[15] == b[15] { 0xFF } else { 0 },
-        ]
+        core::array::from_fn(|i| if a[i] == b[i] { 0xFF } else { 0 })
     }
 
     #[inline(always)]
     fn simd_ne(self, a: [u8; 16], b: [u8; 16]) -> [u8; 16] {
-        [
-            if a[0] != b[0] { 0xFF } else { 0 },
-            if a[1] != b[1] { 0xFF } else { 0 },
-            if a[2] != b[2] { 0xFF } else { 0 },
-            if a[3] != b[3] { 0xFF } else { 0 },
-            if a[4] != b[4] { 0xFF } else { 0 },
-            if a[5] != b[5] { 0xFF } else { 0 },
-            if a[6] != b[6] { 0xFF } else { 0 },
-            if a[7] != b[7] { 0xFF } else { 0 },
-            if a[8] != b[8] { 0xFF } else { 0 },
-            if a[9] != b[9] { 0xFF } else { 0 },
-            if a[10] != b[10] { 0xFF } else { 0 },
-            if a[11] != b[11] { 0xFF } else { 0 },
-            if a[12] != b[12] { 0xFF } else { 0 },
-            if a[13] != b[13] { 0xFF } else { 0 },
-            if a[14] != b[14] { 0xFF } else { 0 },
-            if a[15] != b[15] { 0xFF } else { 0 },
-        ]
+        core::array::from_fn(|i| if a[i] != b[i] { 0xFF } else { 0 })
     }
 
     #[inline(always)]
     fn simd_lt(self, a: [u8; 16], b: [u8; 16]) -> [u8; 16] {
-        [
-            if a[0] < b[0] { 0xFF } else { 0 },
-            if a[1] < b[1] { 0xFF } else { 0 },
-            if a[2] < b[2] { 0xFF } else { 0 },
-            if a[3] < b[3] { 0xFF } else { 0 },
-            if a[4] < b[4] { 0xFF } else { 0 },
-            if a[5] < b[5] { 0xFF } else { 0 },
-            if a[6] < b[6] { 0xFF } else { 0 },
-            if a[7] < b[7] { 0xFF } else { 0 },
-            if a[8] < b[8] { 0xFF } else { 0 },
-            if a[9] < b[9] { 0xFF } else { 0 },
-            if a[10] < b[10] { 0xFF } else { 0 },
-            if a[11] < b[11] { 0xFF } else { 0 },
-            if a[12] < b[12] { 0xFF } else { 0 },
-            if a[13] < b[13] { 0xFF } else { 0 },
-            if a[14] < b[14] { 0xFF } else { 0 },
-            if a[15] < b[15] { 0xFF } else { 0 },
-        ]
+        core::array::from_fn(|i| if a[i] < b[i] { 0xFF } else { 0 })
     }
 
     #[inline(always)]
     fn simd_le(self, a: [u8; 16], b: [u8; 16]) -> [u8; 16] {
-        [
-            if a[0] <= b[0] { 0xFF } else { 0 },
-            if a[1] <= b[1] { 0xFF } else { 0 },
-            if a[2] <= b[2] { 0xFF } else { 0 },
-            if a[3] <= b[3] { 0xFF } else { 0 },
-            if a[4] <= b[4] { 0xFF } else { 0 },
-            if a[5] <= b[5] { 0xFF } else { 0 },
-            if a[6] <= b[6] { 0xFF } else { 0 },
-            if a[7] <= b[7] { 0xFF } else { 0 },
-            if a[8] <= b[8] { 0xFF } else { 0 },
-            if a[9] <= b[9] { 0xFF } else { 0 },
-            if a[10] <= b[10] { 0xFF } else { 0 },
-            if a[11] <= b[11] { 0xFF } else { 0 },
-            if a[12] <= b[12] { 0xFF } else { 0 },
-            if a[13] <= b[13] { 0xFF } else { 0 },
-            if a[14] <= b[14] { 0xFF } else { 0 },
-            if a[15] <= b[15] { 0xFF } else { 0 },
-        ]
+        core::array::from_fn(|i| if a[i] <= b[i] { 0xFF } else { 0 })
     }
 
     #[inline(always)]
     fn simd_gt(self, a: [u8; 16], b: [u8; 16]) -> [u8; 16] {
-        [
-            if a[0] > b[0] { 0xFF } else { 0 },
-            if a[1] > b[1] { 0xFF } else { 0 },
-            if a[2] > b[2] { 0xFF } else { 0 },
-            if a[3] > b[3] { 0xFF } else { 0 },
-            if a[4] > b[4] { 0xFF } else { 0 },
-            if a[5] > b[5] { 0xFF } else { 0 },
-            if a[6] > b[6] { 0xFF } else { 0 },
-            if a[7] > b[7] { 0xFF } else { 0 },
-            if a[8] > b[8] { 0xFF } else { 0 },
-            if a[9] > b[9] { 0xFF } else { 0 },
-            if a[10] > b[10] { 0xFF } else { 0 },
-            if a[11] > b[11] { 0xFF } else { 0 },
-            if a[12] > b[12] { 0xFF } else { 0 },
-            if a[13] > b[13] { 0xFF } else { 0 },
-            if a[14] > b[14] { 0xFF } else { 0 },
-            if a[15] > b[15] { 0xFF } else { 0 },
-        ]
+        core::array::from_fn(|i| if a[i] > b[i] { 0xFF } else { 0 })
     }
 
     #[inline(always)]
     fn simd_ge(self, a: [u8; 16], b: [u8; 16]) -> [u8; 16] {
-        [
-            if a[0] >= b[0] { 0xFF } else { 0 },
-            if a[1] >= b[1] { 0xFF } else { 0 },
-            if a[2] >= b[2] { 0xFF } else { 0 },
-            if a[3] >= b[3] { 0xFF } else { 0 },
-            if a[4] >= b[4] { 0xFF } else { 0 },
-            if a[5] >= b[5] { 0xFF } else { 0 },
-            if a[6] >= b[6] { 0xFF } else { 0 },
-            if a[7] >= b[7] { 0xFF } else { 0 },
-            if a[8] >= b[8] { 0xFF } else { 0 },
-            if a[9] >= b[9] { 0xFF } else { 0 },
-            if a[10] >= b[10] { 0xFF } else { 0 },
-            if a[11] >= b[11] { 0xFF } else { 0 },
-            if a[12] >= b[12] { 0xFF } else { 0 },
-            if a[13] >= b[13] { 0xFF } else { 0 },
-            if a[14] >= b[14] { 0xFF } else { 0 },
-            if a[15] >= b[15] { 0xFF } else { 0 },
-        ]
+        core::array::from_fn(|i| if a[i] >= b[i] { 0xFF } else { 0 })
     }
 
     #[inline(always)]
     fn blend(self, mask: [u8; 16], if_true: [u8; 16], if_false: [u8; 16]) -> [u8; 16] {
-        [
-            if mask[0] != 0 {
-                if_true[0]
+        core::array::from_fn(|i| {
+            if mask[i] != 0 {
+                if_true[i]
             } else {
-                if_false[0]
-            },
-            if mask[1] != 0 {
-                if_true[1]
-            } else {
-                if_false[1]
-            },
-            if mask[2] != 0 {
-                if_true[2]
-            } else {
-                if_false[2]
-            },
-            if mask[3] != 0 {
-                if_true[3]
-            } else {
-                if_false[3]
-            },
-            if mask[4] != 0 {
-                if_true[4]
-            } else {
-                if_false[4]
-            },
-            if mask[5] != 0 {
-                if_true[5]
-            } else {
-                if_false[5]
-            },
-            if mask[6] != 0 {
-                if_true[6]
-            } else {
-                if_false[6]
-            },
-            if mask[7] != 0 {
-                if_true[7]
-            } else {
-                if_false[7]
-            },
-            if mask[8] != 0 {
-                if_true[8]
-            } else {
-                if_false[8]
-            },
-            if mask[9] != 0 {
-                if_true[9]
-            } else {
-                if_false[9]
-            },
-            if mask[10] != 0 {
-                if_true[10]
-            } else {
-                if_false[10]
-            },
-            if mask[11] != 0 {
-                if_true[11]
-            } else {
-                if_false[11]
-            },
-            if mask[12] != 0 {
-                if_true[12]
-            } else {
-                if_false[12]
-            },
-            if mask[13] != 0 {
-                if_true[13]
-            } else {
-                if_false[13]
-            },
-            if mask[14] != 0 {
-                if_true[14]
-            } else {
-                if_false[14]
-            },
-            if mask[15] != 0 {
-                if_true[15]
-            } else {
-                if_false[15]
-            },
-        ]
+                if_false[i]
+            }
+        })
     }
 
     #[inline(always)]
@@ -5367,120 +3982,32 @@ impl U8x16Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn not(self, a: [u8; 16]) -> [u8; 16] {
-        [
-            !a[0], !a[1], !a[2], !a[3], !a[4], !a[5], !a[6], !a[7], !a[8], !a[9], !a[10], !a[11],
-            !a[12], !a[13], !a[14], !a[15],
-        ]
+        core::array::from_fn(|i| !a[i])
     }
 
     #[inline(always)]
     fn bitand(self, a: [u8; 16], b: [u8; 16]) -> [u8; 16] {
-        [
-            a[0] & b[0],
-            a[1] & b[1],
-            a[2] & b[2],
-            a[3] & b[3],
-            a[4] & b[4],
-            a[5] & b[5],
-            a[6] & b[6],
-            a[7] & b[7],
-            a[8] & b[8],
-            a[9] & b[9],
-            a[10] & b[10],
-            a[11] & b[11],
-            a[12] & b[12],
-            a[13] & b[13],
-            a[14] & b[14],
-            a[15] & b[15],
-        ]
+        core::array::from_fn(|i| a[i] & b[i])
     }
 
     #[inline(always)]
     fn bitor(self, a: [u8; 16], b: [u8; 16]) -> [u8; 16] {
-        [
-            a[0] | b[0],
-            a[1] | b[1],
-            a[2] | b[2],
-            a[3] | b[3],
-            a[4] | b[4],
-            a[5] | b[5],
-            a[6] | b[6],
-            a[7] | b[7],
-            a[8] | b[8],
-            a[9] | b[9],
-            a[10] | b[10],
-            a[11] | b[11],
-            a[12] | b[12],
-            a[13] | b[13],
-            a[14] | b[14],
-            a[15] | b[15],
-        ]
+        core::array::from_fn(|i| a[i] | b[i])
     }
 
     #[inline(always)]
     fn bitxor(self, a: [u8; 16], b: [u8; 16]) -> [u8; 16] {
-        [
-            a[0] ^ b[0],
-            a[1] ^ b[1],
-            a[2] ^ b[2],
-            a[3] ^ b[3],
-            a[4] ^ b[4],
-            a[5] ^ b[5],
-            a[6] ^ b[6],
-            a[7] ^ b[7],
-            a[8] ^ b[8],
-            a[9] ^ b[9],
-            a[10] ^ b[10],
-            a[11] ^ b[11],
-            a[12] ^ b[12],
-            a[13] ^ b[13],
-            a[14] ^ b[14],
-            a[15] ^ b[15],
-        ]
+        core::array::from_fn(|i| a[i] ^ b[i])
     }
 
     #[inline(always)]
     fn shl_const<const N: i32>(self, a: [u8; 16]) -> [u8; 16] {
-        [
-            a[0].wrapping_shl(N as u32),
-            a[1].wrapping_shl(N as u32),
-            a[2].wrapping_shl(N as u32),
-            a[3].wrapping_shl(N as u32),
-            a[4].wrapping_shl(N as u32),
-            a[5].wrapping_shl(N as u32),
-            a[6].wrapping_shl(N as u32),
-            a[7].wrapping_shl(N as u32),
-            a[8].wrapping_shl(N as u32),
-            a[9].wrapping_shl(N as u32),
-            a[10].wrapping_shl(N as u32),
-            a[11].wrapping_shl(N as u32),
-            a[12].wrapping_shl(N as u32),
-            a[13].wrapping_shl(N as u32),
-            a[14].wrapping_shl(N as u32),
-            a[15].wrapping_shl(N as u32),
-        ]
+        core::array::from_fn(|i| a[i].wrapping_shl(N as u32))
     }
 
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: [u8; 16]) -> [u8; 16] {
-        [
-            a[0].wrapping_shr(N as u32),
-            a[1].wrapping_shr(N as u32),
-            a[2].wrapping_shr(N as u32),
-            a[3].wrapping_shr(N as u32),
-            a[4].wrapping_shr(N as u32),
-            a[5].wrapping_shr(N as u32),
-            a[6].wrapping_shr(N as u32),
-            a[7].wrapping_shr(N as u32),
-            a[8].wrapping_shr(N as u32),
-            a[9].wrapping_shr(N as u32),
-            a[10].wrapping_shr(N as u32),
-            a[11].wrapping_shr(N as u32),
-            a[12].wrapping_shr(N as u32),
-            a[13].wrapping_shr(N as u32),
-            a[14].wrapping_shr(N as u32),
-            a[15].wrapping_shr(N as u32),
-        ]
+        core::array::from_fn(|i| a[i].wrapping_shr(N as u32))
     }
 
     #[inline(always)]
@@ -5555,10 +4082,7 @@ impl U8x32Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn splat(self, v: u8) -> [u8; 32] {
-        [
-            v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v,
-            v, v, v,
-        ]
+        [v; 32]
     }
 
     #[inline(always)]
@@ -5588,548 +4112,63 @@ impl U8x32Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn add(self, a: [u8; 32], b: [u8; 32]) -> [u8; 32] {
-        [
-            a[0].wrapping_add(b[0]),
-            a[1].wrapping_add(b[1]),
-            a[2].wrapping_add(b[2]),
-            a[3].wrapping_add(b[3]),
-            a[4].wrapping_add(b[4]),
-            a[5].wrapping_add(b[5]),
-            a[6].wrapping_add(b[6]),
-            a[7].wrapping_add(b[7]),
-            a[8].wrapping_add(b[8]),
-            a[9].wrapping_add(b[9]),
-            a[10].wrapping_add(b[10]),
-            a[11].wrapping_add(b[11]),
-            a[12].wrapping_add(b[12]),
-            a[13].wrapping_add(b[13]),
-            a[14].wrapping_add(b[14]),
-            a[15].wrapping_add(b[15]),
-            a[16].wrapping_add(b[16]),
-            a[17].wrapping_add(b[17]),
-            a[18].wrapping_add(b[18]),
-            a[19].wrapping_add(b[19]),
-            a[20].wrapping_add(b[20]),
-            a[21].wrapping_add(b[21]),
-            a[22].wrapping_add(b[22]),
-            a[23].wrapping_add(b[23]),
-            a[24].wrapping_add(b[24]),
-            a[25].wrapping_add(b[25]),
-            a[26].wrapping_add(b[26]),
-            a[27].wrapping_add(b[27]),
-            a[28].wrapping_add(b[28]),
-            a[29].wrapping_add(b[29]),
-            a[30].wrapping_add(b[30]),
-            a[31].wrapping_add(b[31]),
-        ]
+        core::array::from_fn(|i| a[i].wrapping_add(b[i]))
     }
 
     #[inline(always)]
     fn sub(self, a: [u8; 32], b: [u8; 32]) -> [u8; 32] {
-        [
-            a[0].wrapping_sub(b[0]),
-            a[1].wrapping_sub(b[1]),
-            a[2].wrapping_sub(b[2]),
-            a[3].wrapping_sub(b[3]),
-            a[4].wrapping_sub(b[4]),
-            a[5].wrapping_sub(b[5]),
-            a[6].wrapping_sub(b[6]),
-            a[7].wrapping_sub(b[7]),
-            a[8].wrapping_sub(b[8]),
-            a[9].wrapping_sub(b[9]),
-            a[10].wrapping_sub(b[10]),
-            a[11].wrapping_sub(b[11]),
-            a[12].wrapping_sub(b[12]),
-            a[13].wrapping_sub(b[13]),
-            a[14].wrapping_sub(b[14]),
-            a[15].wrapping_sub(b[15]),
-            a[16].wrapping_sub(b[16]),
-            a[17].wrapping_sub(b[17]),
-            a[18].wrapping_sub(b[18]),
-            a[19].wrapping_sub(b[19]),
-            a[20].wrapping_sub(b[20]),
-            a[21].wrapping_sub(b[21]),
-            a[22].wrapping_sub(b[22]),
-            a[23].wrapping_sub(b[23]),
-            a[24].wrapping_sub(b[24]),
-            a[25].wrapping_sub(b[25]),
-            a[26].wrapping_sub(b[26]),
-            a[27].wrapping_sub(b[27]),
-            a[28].wrapping_sub(b[28]),
-            a[29].wrapping_sub(b[29]),
-            a[30].wrapping_sub(b[30]),
-            a[31].wrapping_sub(b[31]),
-        ]
+        core::array::from_fn(|i| a[i].wrapping_sub(b[i]))
     }
 
     #[inline(always)]
     fn min(self, a: [u8; 32], b: [u8; 32]) -> [u8; 32] {
-        [
-            if a[0] < b[0] { a[0] } else { b[0] },
-            if a[1] < b[1] { a[1] } else { b[1] },
-            if a[2] < b[2] { a[2] } else { b[2] },
-            if a[3] < b[3] { a[3] } else { b[3] },
-            if a[4] < b[4] { a[4] } else { b[4] },
-            if a[5] < b[5] { a[5] } else { b[5] },
-            if a[6] < b[6] { a[6] } else { b[6] },
-            if a[7] < b[7] { a[7] } else { b[7] },
-            if a[8] < b[8] { a[8] } else { b[8] },
-            if a[9] < b[9] { a[9] } else { b[9] },
-            if a[10] < b[10] { a[10] } else { b[10] },
-            if a[11] < b[11] { a[11] } else { b[11] },
-            if a[12] < b[12] { a[12] } else { b[12] },
-            if a[13] < b[13] { a[13] } else { b[13] },
-            if a[14] < b[14] { a[14] } else { b[14] },
-            if a[15] < b[15] { a[15] } else { b[15] },
-            if a[16] < b[16] { a[16] } else { b[16] },
-            if a[17] < b[17] { a[17] } else { b[17] },
-            if a[18] < b[18] { a[18] } else { b[18] },
-            if a[19] < b[19] { a[19] } else { b[19] },
-            if a[20] < b[20] { a[20] } else { b[20] },
-            if a[21] < b[21] { a[21] } else { b[21] },
-            if a[22] < b[22] { a[22] } else { b[22] },
-            if a[23] < b[23] { a[23] } else { b[23] },
-            if a[24] < b[24] { a[24] } else { b[24] },
-            if a[25] < b[25] { a[25] } else { b[25] },
-            if a[26] < b[26] { a[26] } else { b[26] },
-            if a[27] < b[27] { a[27] } else { b[27] },
-            if a[28] < b[28] { a[28] } else { b[28] },
-            if a[29] < b[29] { a[29] } else { b[29] },
-            if a[30] < b[30] { a[30] } else { b[30] },
-            if a[31] < b[31] { a[31] } else { b[31] },
-        ]
+        core::array::from_fn(|i| if a[i] < b[i] { a[i] } else { b[i] })
     }
 
     #[inline(always)]
     fn max(self, a: [u8; 32], b: [u8; 32]) -> [u8; 32] {
-        [
-            if a[0] > b[0] { a[0] } else { b[0] },
-            if a[1] > b[1] { a[1] } else { b[1] },
-            if a[2] > b[2] { a[2] } else { b[2] },
-            if a[3] > b[3] { a[3] } else { b[3] },
-            if a[4] > b[4] { a[4] } else { b[4] },
-            if a[5] > b[5] { a[5] } else { b[5] },
-            if a[6] > b[6] { a[6] } else { b[6] },
-            if a[7] > b[7] { a[7] } else { b[7] },
-            if a[8] > b[8] { a[8] } else { b[8] },
-            if a[9] > b[9] { a[9] } else { b[9] },
-            if a[10] > b[10] { a[10] } else { b[10] },
-            if a[11] > b[11] { a[11] } else { b[11] },
-            if a[12] > b[12] { a[12] } else { b[12] },
-            if a[13] > b[13] { a[13] } else { b[13] },
-            if a[14] > b[14] { a[14] } else { b[14] },
-            if a[15] > b[15] { a[15] } else { b[15] },
-            if a[16] > b[16] { a[16] } else { b[16] },
-            if a[17] > b[17] { a[17] } else { b[17] },
-            if a[18] > b[18] { a[18] } else { b[18] },
-            if a[19] > b[19] { a[19] } else { b[19] },
-            if a[20] > b[20] { a[20] } else { b[20] },
-            if a[21] > b[21] { a[21] } else { b[21] },
-            if a[22] > b[22] { a[22] } else { b[22] },
-            if a[23] > b[23] { a[23] } else { b[23] },
-            if a[24] > b[24] { a[24] } else { b[24] },
-            if a[25] > b[25] { a[25] } else { b[25] },
-            if a[26] > b[26] { a[26] } else { b[26] },
-            if a[27] > b[27] { a[27] } else { b[27] },
-            if a[28] > b[28] { a[28] } else { b[28] },
-            if a[29] > b[29] { a[29] } else { b[29] },
-            if a[30] > b[30] { a[30] } else { b[30] },
-            if a[31] > b[31] { a[31] } else { b[31] },
-        ]
+        core::array::from_fn(|i| if a[i] > b[i] { a[i] } else { b[i] })
     }
 
     #[inline(always)]
     fn simd_eq(self, a: [u8; 32], b: [u8; 32]) -> [u8; 32] {
-        [
-            if a[0] == b[0] { 0xFF } else { 0 },
-            if a[1] == b[1] { 0xFF } else { 0 },
-            if a[2] == b[2] { 0xFF } else { 0 },
-            if a[3] == b[3] { 0xFF } else { 0 },
-            if a[4] == b[4] { 0xFF } else { 0 },
-            if a[5] == b[5] { 0xFF } else { 0 },
-            if a[6] == b[6] { 0xFF } else { 0 },
-            if a[7] == b[7] { 0xFF } else { 0 },
-            if a[8] == b[8] { 0xFF } else { 0 },
-            if a[9] == b[9] { 0xFF } else { 0 },
-            if a[10] == b[10] { 0xFF } else { 0 },
-            if a[11] == b[11] { 0xFF } else { 0 },
-            if a[12] == b[12] { 0xFF } else { 0 },
-            if a[13] == b[13] { 0xFF } else { 0 },
-            if a[14] == b[14] { 0xFF } else { 0 },
-            if a[15] == b[15] { 0xFF } else { 0 },
-            if a[16] == b[16] { 0xFF } else { 0 },
-            if a[17] == b[17] { 0xFF } else { 0 },
-            if a[18] == b[18] { 0xFF } else { 0 },
-            if a[19] == b[19] { 0xFF } else { 0 },
-            if a[20] == b[20] { 0xFF } else { 0 },
-            if a[21] == b[21] { 0xFF } else { 0 },
-            if a[22] == b[22] { 0xFF } else { 0 },
-            if a[23] == b[23] { 0xFF } else { 0 },
-            if a[24] == b[24] { 0xFF } else { 0 },
-            if a[25] == b[25] { 0xFF } else { 0 },
-            if a[26] == b[26] { 0xFF } else { 0 },
-            if a[27] == b[27] { 0xFF } else { 0 },
-            if a[28] == b[28] { 0xFF } else { 0 },
-            if a[29] == b[29] { 0xFF } else { 0 },
-            if a[30] == b[30] { 0xFF } else { 0 },
-            if a[31] == b[31] { 0xFF } else { 0 },
-        ]
+        core::array::from_fn(|i| if a[i] == b[i] { 0xFF } else { 0 })
     }
 
     #[inline(always)]
     fn simd_ne(self, a: [u8; 32], b: [u8; 32]) -> [u8; 32] {
-        [
-            if a[0] != b[0] { 0xFF } else { 0 },
-            if a[1] != b[1] { 0xFF } else { 0 },
-            if a[2] != b[2] { 0xFF } else { 0 },
-            if a[3] != b[3] { 0xFF } else { 0 },
-            if a[4] != b[4] { 0xFF } else { 0 },
-            if a[5] != b[5] { 0xFF } else { 0 },
-            if a[6] != b[6] { 0xFF } else { 0 },
-            if a[7] != b[7] { 0xFF } else { 0 },
-            if a[8] != b[8] { 0xFF } else { 0 },
-            if a[9] != b[9] { 0xFF } else { 0 },
-            if a[10] != b[10] { 0xFF } else { 0 },
-            if a[11] != b[11] { 0xFF } else { 0 },
-            if a[12] != b[12] { 0xFF } else { 0 },
-            if a[13] != b[13] { 0xFF } else { 0 },
-            if a[14] != b[14] { 0xFF } else { 0 },
-            if a[15] != b[15] { 0xFF } else { 0 },
-            if a[16] != b[16] { 0xFF } else { 0 },
-            if a[17] != b[17] { 0xFF } else { 0 },
-            if a[18] != b[18] { 0xFF } else { 0 },
-            if a[19] != b[19] { 0xFF } else { 0 },
-            if a[20] != b[20] { 0xFF } else { 0 },
-            if a[21] != b[21] { 0xFF } else { 0 },
-            if a[22] != b[22] { 0xFF } else { 0 },
-            if a[23] != b[23] { 0xFF } else { 0 },
-            if a[24] != b[24] { 0xFF } else { 0 },
-            if a[25] != b[25] { 0xFF } else { 0 },
-            if a[26] != b[26] { 0xFF } else { 0 },
-            if a[27] != b[27] { 0xFF } else { 0 },
-            if a[28] != b[28] { 0xFF } else { 0 },
-            if a[29] != b[29] { 0xFF } else { 0 },
-            if a[30] != b[30] { 0xFF } else { 0 },
-            if a[31] != b[31] { 0xFF } else { 0 },
-        ]
+        core::array::from_fn(|i| if a[i] != b[i] { 0xFF } else { 0 })
     }
 
     #[inline(always)]
     fn simd_lt(self, a: [u8; 32], b: [u8; 32]) -> [u8; 32] {
-        [
-            if a[0] < b[0] { 0xFF } else { 0 },
-            if a[1] < b[1] { 0xFF } else { 0 },
-            if a[2] < b[2] { 0xFF } else { 0 },
-            if a[3] < b[3] { 0xFF } else { 0 },
-            if a[4] < b[4] { 0xFF } else { 0 },
-            if a[5] < b[5] { 0xFF } else { 0 },
-            if a[6] < b[6] { 0xFF } else { 0 },
-            if a[7] < b[7] { 0xFF } else { 0 },
-            if a[8] < b[8] { 0xFF } else { 0 },
-            if a[9] < b[9] { 0xFF } else { 0 },
-            if a[10] < b[10] { 0xFF } else { 0 },
-            if a[11] < b[11] { 0xFF } else { 0 },
-            if a[12] < b[12] { 0xFF } else { 0 },
-            if a[13] < b[13] { 0xFF } else { 0 },
-            if a[14] < b[14] { 0xFF } else { 0 },
-            if a[15] < b[15] { 0xFF } else { 0 },
-            if a[16] < b[16] { 0xFF } else { 0 },
-            if a[17] < b[17] { 0xFF } else { 0 },
-            if a[18] < b[18] { 0xFF } else { 0 },
-            if a[19] < b[19] { 0xFF } else { 0 },
-            if a[20] < b[20] { 0xFF } else { 0 },
-            if a[21] < b[21] { 0xFF } else { 0 },
-            if a[22] < b[22] { 0xFF } else { 0 },
-            if a[23] < b[23] { 0xFF } else { 0 },
-            if a[24] < b[24] { 0xFF } else { 0 },
-            if a[25] < b[25] { 0xFF } else { 0 },
-            if a[26] < b[26] { 0xFF } else { 0 },
-            if a[27] < b[27] { 0xFF } else { 0 },
-            if a[28] < b[28] { 0xFF } else { 0 },
-            if a[29] < b[29] { 0xFF } else { 0 },
-            if a[30] < b[30] { 0xFF } else { 0 },
-            if a[31] < b[31] { 0xFF } else { 0 },
-        ]
+        core::array::from_fn(|i| if a[i] < b[i] { 0xFF } else { 0 })
     }
 
     #[inline(always)]
     fn simd_le(self, a: [u8; 32], b: [u8; 32]) -> [u8; 32] {
-        [
-            if a[0] <= b[0] { 0xFF } else { 0 },
-            if a[1] <= b[1] { 0xFF } else { 0 },
-            if a[2] <= b[2] { 0xFF } else { 0 },
-            if a[3] <= b[3] { 0xFF } else { 0 },
-            if a[4] <= b[4] { 0xFF } else { 0 },
-            if a[5] <= b[5] { 0xFF } else { 0 },
-            if a[6] <= b[6] { 0xFF } else { 0 },
-            if a[7] <= b[7] { 0xFF } else { 0 },
-            if a[8] <= b[8] { 0xFF } else { 0 },
-            if a[9] <= b[9] { 0xFF } else { 0 },
-            if a[10] <= b[10] { 0xFF } else { 0 },
-            if a[11] <= b[11] { 0xFF } else { 0 },
-            if a[12] <= b[12] { 0xFF } else { 0 },
-            if a[13] <= b[13] { 0xFF } else { 0 },
-            if a[14] <= b[14] { 0xFF } else { 0 },
-            if a[15] <= b[15] { 0xFF } else { 0 },
-            if a[16] <= b[16] { 0xFF } else { 0 },
-            if a[17] <= b[17] { 0xFF } else { 0 },
-            if a[18] <= b[18] { 0xFF } else { 0 },
-            if a[19] <= b[19] { 0xFF } else { 0 },
-            if a[20] <= b[20] { 0xFF } else { 0 },
-            if a[21] <= b[21] { 0xFF } else { 0 },
-            if a[22] <= b[22] { 0xFF } else { 0 },
-            if a[23] <= b[23] { 0xFF } else { 0 },
-            if a[24] <= b[24] { 0xFF } else { 0 },
-            if a[25] <= b[25] { 0xFF } else { 0 },
-            if a[26] <= b[26] { 0xFF } else { 0 },
-            if a[27] <= b[27] { 0xFF } else { 0 },
-            if a[28] <= b[28] { 0xFF } else { 0 },
-            if a[29] <= b[29] { 0xFF } else { 0 },
-            if a[30] <= b[30] { 0xFF } else { 0 },
-            if a[31] <= b[31] { 0xFF } else { 0 },
-        ]
+        core::array::from_fn(|i| if a[i] <= b[i] { 0xFF } else { 0 })
     }
 
     #[inline(always)]
     fn simd_gt(self, a: [u8; 32], b: [u8; 32]) -> [u8; 32] {
-        [
-            if a[0] > b[0] { 0xFF } else { 0 },
-            if a[1] > b[1] { 0xFF } else { 0 },
-            if a[2] > b[2] { 0xFF } else { 0 },
-            if a[3] > b[3] { 0xFF } else { 0 },
-            if a[4] > b[4] { 0xFF } else { 0 },
-            if a[5] > b[5] { 0xFF } else { 0 },
-            if a[6] > b[6] { 0xFF } else { 0 },
-            if a[7] > b[7] { 0xFF } else { 0 },
-            if a[8] > b[8] { 0xFF } else { 0 },
-            if a[9] > b[9] { 0xFF } else { 0 },
-            if a[10] > b[10] { 0xFF } else { 0 },
-            if a[11] > b[11] { 0xFF } else { 0 },
-            if a[12] > b[12] { 0xFF } else { 0 },
-            if a[13] > b[13] { 0xFF } else { 0 },
-            if a[14] > b[14] { 0xFF } else { 0 },
-            if a[15] > b[15] { 0xFF } else { 0 },
-            if a[16] > b[16] { 0xFF } else { 0 },
-            if a[17] > b[17] { 0xFF } else { 0 },
-            if a[18] > b[18] { 0xFF } else { 0 },
-            if a[19] > b[19] { 0xFF } else { 0 },
-            if a[20] > b[20] { 0xFF } else { 0 },
-            if a[21] > b[21] { 0xFF } else { 0 },
-            if a[22] > b[22] { 0xFF } else { 0 },
-            if a[23] > b[23] { 0xFF } else { 0 },
-            if a[24] > b[24] { 0xFF } else { 0 },
-            if a[25] > b[25] { 0xFF } else { 0 },
-            if a[26] > b[26] { 0xFF } else { 0 },
-            if a[27] > b[27] { 0xFF } else { 0 },
-            if a[28] > b[28] { 0xFF } else { 0 },
-            if a[29] > b[29] { 0xFF } else { 0 },
-            if a[30] > b[30] { 0xFF } else { 0 },
-            if a[31] > b[31] { 0xFF } else { 0 },
-        ]
+        core::array::from_fn(|i| if a[i] > b[i] { 0xFF } else { 0 })
     }
 
     #[inline(always)]
     fn simd_ge(self, a: [u8; 32], b: [u8; 32]) -> [u8; 32] {
-        [
-            if a[0] >= b[0] { 0xFF } else { 0 },
-            if a[1] >= b[1] { 0xFF } else { 0 },
-            if a[2] >= b[2] { 0xFF } else { 0 },
-            if a[3] >= b[3] { 0xFF } else { 0 },
-            if a[4] >= b[4] { 0xFF } else { 0 },
-            if a[5] >= b[5] { 0xFF } else { 0 },
-            if a[6] >= b[6] { 0xFF } else { 0 },
-            if a[7] >= b[7] { 0xFF } else { 0 },
-            if a[8] >= b[8] { 0xFF } else { 0 },
-            if a[9] >= b[9] { 0xFF } else { 0 },
-            if a[10] >= b[10] { 0xFF } else { 0 },
-            if a[11] >= b[11] { 0xFF } else { 0 },
-            if a[12] >= b[12] { 0xFF } else { 0 },
-            if a[13] >= b[13] { 0xFF } else { 0 },
-            if a[14] >= b[14] { 0xFF } else { 0 },
-            if a[15] >= b[15] { 0xFF } else { 0 },
-            if a[16] >= b[16] { 0xFF } else { 0 },
-            if a[17] >= b[17] { 0xFF } else { 0 },
-            if a[18] >= b[18] { 0xFF } else { 0 },
-            if a[19] >= b[19] { 0xFF } else { 0 },
-            if a[20] >= b[20] { 0xFF } else { 0 },
-            if a[21] >= b[21] { 0xFF } else { 0 },
-            if a[22] >= b[22] { 0xFF } else { 0 },
-            if a[23] >= b[23] { 0xFF } else { 0 },
-            if a[24] >= b[24] { 0xFF } else { 0 },
-            if a[25] >= b[25] { 0xFF } else { 0 },
-            if a[26] >= b[26] { 0xFF } else { 0 },
-            if a[27] >= b[27] { 0xFF } else { 0 },
-            if a[28] >= b[28] { 0xFF } else { 0 },
-            if a[29] >= b[29] { 0xFF } else { 0 },
-            if a[30] >= b[30] { 0xFF } else { 0 },
-            if a[31] >= b[31] { 0xFF } else { 0 },
-        ]
+        core::array::from_fn(|i| if a[i] >= b[i] { 0xFF } else { 0 })
     }
 
     #[inline(always)]
     fn blend(self, mask: [u8; 32], if_true: [u8; 32], if_false: [u8; 32]) -> [u8; 32] {
-        [
-            if mask[0] != 0 {
-                if_true[0]
+        core::array::from_fn(|i| {
+            if mask[i] != 0 {
+                if_true[i]
             } else {
-                if_false[0]
-            },
-            if mask[1] != 0 {
-                if_true[1]
-            } else {
-                if_false[1]
-            },
-            if mask[2] != 0 {
-                if_true[2]
-            } else {
-                if_false[2]
-            },
-            if mask[3] != 0 {
-                if_true[3]
-            } else {
-                if_false[3]
-            },
-            if mask[4] != 0 {
-                if_true[4]
-            } else {
-                if_false[4]
-            },
-            if mask[5] != 0 {
-                if_true[5]
-            } else {
-                if_false[5]
-            },
-            if mask[6] != 0 {
-                if_true[6]
-            } else {
-                if_false[6]
-            },
-            if mask[7] != 0 {
-                if_true[7]
-            } else {
-                if_false[7]
-            },
-            if mask[8] != 0 {
-                if_true[8]
-            } else {
-                if_false[8]
-            },
-            if mask[9] != 0 {
-                if_true[9]
-            } else {
-                if_false[9]
-            },
-            if mask[10] != 0 {
-                if_true[10]
-            } else {
-                if_false[10]
-            },
-            if mask[11] != 0 {
-                if_true[11]
-            } else {
-                if_false[11]
-            },
-            if mask[12] != 0 {
-                if_true[12]
-            } else {
-                if_false[12]
-            },
-            if mask[13] != 0 {
-                if_true[13]
-            } else {
-                if_false[13]
-            },
-            if mask[14] != 0 {
-                if_true[14]
-            } else {
-                if_false[14]
-            },
-            if mask[15] != 0 {
-                if_true[15]
-            } else {
-                if_false[15]
-            },
-            if mask[16] != 0 {
-                if_true[16]
-            } else {
-                if_false[16]
-            },
-            if mask[17] != 0 {
-                if_true[17]
-            } else {
-                if_false[17]
-            },
-            if mask[18] != 0 {
-                if_true[18]
-            } else {
-                if_false[18]
-            },
-            if mask[19] != 0 {
-                if_true[19]
-            } else {
-                if_false[19]
-            },
-            if mask[20] != 0 {
-                if_true[20]
-            } else {
-                if_false[20]
-            },
-            if mask[21] != 0 {
-                if_true[21]
-            } else {
-                if_false[21]
-            },
-            if mask[22] != 0 {
-                if_true[22]
-            } else {
-                if_false[22]
-            },
-            if mask[23] != 0 {
-                if_true[23]
-            } else {
-                if_false[23]
-            },
-            if mask[24] != 0 {
-                if_true[24]
-            } else {
-                if_false[24]
-            },
-            if mask[25] != 0 {
-                if_true[25]
-            } else {
-                if_false[25]
-            },
-            if mask[26] != 0 {
-                if_true[26]
-            } else {
-                if_false[26]
-            },
-            if mask[27] != 0 {
-                if_true[27]
-            } else {
-                if_false[27]
-            },
-            if mask[28] != 0 {
-                if_true[28]
-            } else {
-                if_false[28]
-            },
-            if mask[29] != 0 {
-                if_true[29]
-            } else {
-                if_false[29]
-            },
-            if mask[30] != 0 {
-                if_true[30]
-            } else {
-                if_false[30]
-            },
-            if mask[31] != 0 {
-                if_true[31]
-            } else {
-                if_false[31]
-            },
-        ]
+                if_false[i]
+            }
+        })
     }
 
     #[inline(always)]
@@ -6139,201 +4178,32 @@ impl U8x32Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn not(self, a: [u8; 32]) -> [u8; 32] {
-        [
-            !a[0], !a[1], !a[2], !a[3], !a[4], !a[5], !a[6], !a[7], !a[8], !a[9], !a[10], !a[11],
-            !a[12], !a[13], !a[14], !a[15], !a[16], !a[17], !a[18], !a[19], !a[20], !a[21], !a[22],
-            !a[23], !a[24], !a[25], !a[26], !a[27], !a[28], !a[29], !a[30], !a[31],
-        ]
+        core::array::from_fn(|i| !a[i])
     }
 
     #[inline(always)]
     fn bitand(self, a: [u8; 32], b: [u8; 32]) -> [u8; 32] {
-        [
-            a[0] & b[0],
-            a[1] & b[1],
-            a[2] & b[2],
-            a[3] & b[3],
-            a[4] & b[4],
-            a[5] & b[5],
-            a[6] & b[6],
-            a[7] & b[7],
-            a[8] & b[8],
-            a[9] & b[9],
-            a[10] & b[10],
-            a[11] & b[11],
-            a[12] & b[12],
-            a[13] & b[13],
-            a[14] & b[14],
-            a[15] & b[15],
-            a[16] & b[16],
-            a[17] & b[17],
-            a[18] & b[18],
-            a[19] & b[19],
-            a[20] & b[20],
-            a[21] & b[21],
-            a[22] & b[22],
-            a[23] & b[23],
-            a[24] & b[24],
-            a[25] & b[25],
-            a[26] & b[26],
-            a[27] & b[27],
-            a[28] & b[28],
-            a[29] & b[29],
-            a[30] & b[30],
-            a[31] & b[31],
-        ]
+        core::array::from_fn(|i| a[i] & b[i])
     }
 
     #[inline(always)]
     fn bitor(self, a: [u8; 32], b: [u8; 32]) -> [u8; 32] {
-        [
-            a[0] | b[0],
-            a[1] | b[1],
-            a[2] | b[2],
-            a[3] | b[3],
-            a[4] | b[4],
-            a[5] | b[5],
-            a[6] | b[6],
-            a[7] | b[7],
-            a[8] | b[8],
-            a[9] | b[9],
-            a[10] | b[10],
-            a[11] | b[11],
-            a[12] | b[12],
-            a[13] | b[13],
-            a[14] | b[14],
-            a[15] | b[15],
-            a[16] | b[16],
-            a[17] | b[17],
-            a[18] | b[18],
-            a[19] | b[19],
-            a[20] | b[20],
-            a[21] | b[21],
-            a[22] | b[22],
-            a[23] | b[23],
-            a[24] | b[24],
-            a[25] | b[25],
-            a[26] | b[26],
-            a[27] | b[27],
-            a[28] | b[28],
-            a[29] | b[29],
-            a[30] | b[30],
-            a[31] | b[31],
-        ]
+        core::array::from_fn(|i| a[i] | b[i])
     }
 
     #[inline(always)]
     fn bitxor(self, a: [u8; 32], b: [u8; 32]) -> [u8; 32] {
-        [
-            a[0] ^ b[0],
-            a[1] ^ b[1],
-            a[2] ^ b[2],
-            a[3] ^ b[3],
-            a[4] ^ b[4],
-            a[5] ^ b[5],
-            a[6] ^ b[6],
-            a[7] ^ b[7],
-            a[8] ^ b[8],
-            a[9] ^ b[9],
-            a[10] ^ b[10],
-            a[11] ^ b[11],
-            a[12] ^ b[12],
-            a[13] ^ b[13],
-            a[14] ^ b[14],
-            a[15] ^ b[15],
-            a[16] ^ b[16],
-            a[17] ^ b[17],
-            a[18] ^ b[18],
-            a[19] ^ b[19],
-            a[20] ^ b[20],
-            a[21] ^ b[21],
-            a[22] ^ b[22],
-            a[23] ^ b[23],
-            a[24] ^ b[24],
-            a[25] ^ b[25],
-            a[26] ^ b[26],
-            a[27] ^ b[27],
-            a[28] ^ b[28],
-            a[29] ^ b[29],
-            a[30] ^ b[30],
-            a[31] ^ b[31],
-        ]
+        core::array::from_fn(|i| a[i] ^ b[i])
     }
 
     #[inline(always)]
     fn shl_const<const N: i32>(self, a: [u8; 32]) -> [u8; 32] {
-        [
-            a[0].wrapping_shl(N as u32),
-            a[1].wrapping_shl(N as u32),
-            a[2].wrapping_shl(N as u32),
-            a[3].wrapping_shl(N as u32),
-            a[4].wrapping_shl(N as u32),
-            a[5].wrapping_shl(N as u32),
-            a[6].wrapping_shl(N as u32),
-            a[7].wrapping_shl(N as u32),
-            a[8].wrapping_shl(N as u32),
-            a[9].wrapping_shl(N as u32),
-            a[10].wrapping_shl(N as u32),
-            a[11].wrapping_shl(N as u32),
-            a[12].wrapping_shl(N as u32),
-            a[13].wrapping_shl(N as u32),
-            a[14].wrapping_shl(N as u32),
-            a[15].wrapping_shl(N as u32),
-            a[16].wrapping_shl(N as u32),
-            a[17].wrapping_shl(N as u32),
-            a[18].wrapping_shl(N as u32),
-            a[19].wrapping_shl(N as u32),
-            a[20].wrapping_shl(N as u32),
-            a[21].wrapping_shl(N as u32),
-            a[22].wrapping_shl(N as u32),
-            a[23].wrapping_shl(N as u32),
-            a[24].wrapping_shl(N as u32),
-            a[25].wrapping_shl(N as u32),
-            a[26].wrapping_shl(N as u32),
-            a[27].wrapping_shl(N as u32),
-            a[28].wrapping_shl(N as u32),
-            a[29].wrapping_shl(N as u32),
-            a[30].wrapping_shl(N as u32),
-            a[31].wrapping_shl(N as u32),
-        ]
+        core::array::from_fn(|i| a[i].wrapping_shl(N as u32))
     }
 
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: [u8; 32]) -> [u8; 32] {
-        [
-            a[0].wrapping_shr(N as u32),
-            a[1].wrapping_shr(N as u32),
-            a[2].wrapping_shr(N as u32),
-            a[3].wrapping_shr(N as u32),
-            a[4].wrapping_shr(N as u32),
-            a[5].wrapping_shr(N as u32),
-            a[6].wrapping_shr(N as u32),
-            a[7].wrapping_shr(N as u32),
-            a[8].wrapping_shr(N as u32),
-            a[9].wrapping_shr(N as u32),
-            a[10].wrapping_shr(N as u32),
-            a[11].wrapping_shr(N as u32),
-            a[12].wrapping_shr(N as u32),
-            a[13].wrapping_shr(N as u32),
-            a[14].wrapping_shr(N as u32),
-            a[15].wrapping_shr(N as u32),
-            a[16].wrapping_shr(N as u32),
-            a[17].wrapping_shr(N as u32),
-            a[18].wrapping_shr(N as u32),
-            a[19].wrapping_shr(N as u32),
-            a[20].wrapping_shr(N as u32),
-            a[21].wrapping_shr(N as u32),
-            a[22].wrapping_shr(N as u32),
-            a[23].wrapping_shr(N as u32),
-            a[24].wrapping_shr(N as u32),
-            a[25].wrapping_shr(N as u32),
-            a[26].wrapping_shr(N as u32),
-            a[27].wrapping_shr(N as u32),
-            a[28].wrapping_shr(N as u32),
-            a[29].wrapping_shr(N as u32),
-            a[30].wrapping_shr(N as u32),
-            a[31].wrapping_shr(N as u32),
-        ]
+        core::array::from_fn(|i| a[i].wrapping_shr(N as u32))
     }
 
     #[inline(always)]
@@ -6408,7 +4278,7 @@ impl I16x8Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn splat(self, v: i16) -> [i16; 8] {
-        [v, v, v, v, v, v, v, v]
+        [v; 8]
     }
 
     #[inline(always)]
@@ -6438,230 +4308,78 @@ impl I16x8Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn add(self, a: [i16; 8], b: [i16; 8]) -> [i16; 8] {
-        [
-            a[0].wrapping_add(b[0]),
-            a[1].wrapping_add(b[1]),
-            a[2].wrapping_add(b[2]),
-            a[3].wrapping_add(b[3]),
-            a[4].wrapping_add(b[4]),
-            a[5].wrapping_add(b[5]),
-            a[6].wrapping_add(b[6]),
-            a[7].wrapping_add(b[7]),
-        ]
+        core::array::from_fn(|i| a[i].wrapping_add(b[i]))
     }
 
     #[inline(always)]
     fn sub(self, a: [i16; 8], b: [i16; 8]) -> [i16; 8] {
-        [
-            a[0].wrapping_sub(b[0]),
-            a[1].wrapping_sub(b[1]),
-            a[2].wrapping_sub(b[2]),
-            a[3].wrapping_sub(b[3]),
-            a[4].wrapping_sub(b[4]),
-            a[5].wrapping_sub(b[5]),
-            a[6].wrapping_sub(b[6]),
-            a[7].wrapping_sub(b[7]),
-        ]
+        core::array::from_fn(|i| a[i].wrapping_sub(b[i]))
     }
 
     #[inline(always)]
     fn mul(self, a: [i16; 8], b: [i16; 8]) -> [i16; 8] {
-        [
-            a[0].wrapping_mul(b[0]),
-            a[1].wrapping_mul(b[1]),
-            a[2].wrapping_mul(b[2]),
-            a[3].wrapping_mul(b[3]),
-            a[4].wrapping_mul(b[4]),
-            a[5].wrapping_mul(b[5]),
-            a[6].wrapping_mul(b[6]),
-            a[7].wrapping_mul(b[7]),
-        ]
+        core::array::from_fn(|i| a[i].wrapping_mul(b[i]))
     }
 
     #[inline(always)]
     fn neg(self, a: [i16; 8]) -> [i16; 8] {
-        [
-            a[0].wrapping_neg(),
-            a[1].wrapping_neg(),
-            a[2].wrapping_neg(),
-            a[3].wrapping_neg(),
-            a[4].wrapping_neg(),
-            a[5].wrapping_neg(),
-            a[6].wrapping_neg(),
-            a[7].wrapping_neg(),
-        ]
+        core::array::from_fn(|i| a[i].wrapping_neg())
     }
 
     #[inline(always)]
     fn min(self, a: [i16; 8], b: [i16; 8]) -> [i16; 8] {
-        [
-            if a[0] < b[0] { a[0] } else { b[0] },
-            if a[1] < b[1] { a[1] } else { b[1] },
-            if a[2] < b[2] { a[2] } else { b[2] },
-            if a[3] < b[3] { a[3] } else { b[3] },
-            if a[4] < b[4] { a[4] } else { b[4] },
-            if a[5] < b[5] { a[5] } else { b[5] },
-            if a[6] < b[6] { a[6] } else { b[6] },
-            if a[7] < b[7] { a[7] } else { b[7] },
-        ]
+        core::array::from_fn(|i| if a[i] < b[i] { a[i] } else { b[i] })
     }
 
     #[inline(always)]
     fn max(self, a: [i16; 8], b: [i16; 8]) -> [i16; 8] {
-        [
-            if a[0] > b[0] { a[0] } else { b[0] },
-            if a[1] > b[1] { a[1] } else { b[1] },
-            if a[2] > b[2] { a[2] } else { b[2] },
-            if a[3] > b[3] { a[3] } else { b[3] },
-            if a[4] > b[4] { a[4] } else { b[4] },
-            if a[5] > b[5] { a[5] } else { b[5] },
-            if a[6] > b[6] { a[6] } else { b[6] },
-            if a[7] > b[7] { a[7] } else { b[7] },
-        ]
+        core::array::from_fn(|i| if a[i] > b[i] { a[i] } else { b[i] })
     }
 
     #[inline(always)]
     fn abs(self, a: [i16; 8]) -> [i16; 8] {
-        [
-            a[0].wrapping_abs(),
-            a[1].wrapping_abs(),
-            a[2].wrapping_abs(),
-            a[3].wrapping_abs(),
-            a[4].wrapping_abs(),
-            a[5].wrapping_abs(),
-            a[6].wrapping_abs(),
-            a[7].wrapping_abs(),
-        ]
+        core::array::from_fn(|i| a[i].wrapping_abs())
     }
 
     #[inline(always)]
     fn simd_eq(self, a: [i16; 8], b: [i16; 8]) -> [i16; 8] {
-        [
-            if a[0] == b[0] { -1 } else { 0 },
-            if a[1] == b[1] { -1 } else { 0 },
-            if a[2] == b[2] { -1 } else { 0 },
-            if a[3] == b[3] { -1 } else { 0 },
-            if a[4] == b[4] { -1 } else { 0 },
-            if a[5] == b[5] { -1 } else { 0 },
-            if a[6] == b[6] { -1 } else { 0 },
-            if a[7] == b[7] { -1 } else { 0 },
-        ]
+        core::array::from_fn(|i| if a[i] == b[i] { -1 } else { 0 })
     }
 
     #[inline(always)]
     fn simd_ne(self, a: [i16; 8], b: [i16; 8]) -> [i16; 8] {
-        [
-            if a[0] != b[0] { -1 } else { 0 },
-            if a[1] != b[1] { -1 } else { 0 },
-            if a[2] != b[2] { -1 } else { 0 },
-            if a[3] != b[3] { -1 } else { 0 },
-            if a[4] != b[4] { -1 } else { 0 },
-            if a[5] != b[5] { -1 } else { 0 },
-            if a[6] != b[6] { -1 } else { 0 },
-            if a[7] != b[7] { -1 } else { 0 },
-        ]
+        core::array::from_fn(|i| if a[i] != b[i] { -1 } else { 0 })
     }
 
     #[inline(always)]
     fn simd_lt(self, a: [i16; 8], b: [i16; 8]) -> [i16; 8] {
-        [
-            if a[0] < b[0] { -1 } else { 0 },
-            if a[1] < b[1] { -1 } else { 0 },
-            if a[2] < b[2] { -1 } else { 0 },
-            if a[3] < b[3] { -1 } else { 0 },
-            if a[4] < b[4] { -1 } else { 0 },
-            if a[5] < b[5] { -1 } else { 0 },
-            if a[6] < b[6] { -1 } else { 0 },
-            if a[7] < b[7] { -1 } else { 0 },
-        ]
+        core::array::from_fn(|i| if a[i] < b[i] { -1 } else { 0 })
     }
 
     #[inline(always)]
     fn simd_le(self, a: [i16; 8], b: [i16; 8]) -> [i16; 8] {
-        [
-            if a[0] <= b[0] { -1 } else { 0 },
-            if a[1] <= b[1] { -1 } else { 0 },
-            if a[2] <= b[2] { -1 } else { 0 },
-            if a[3] <= b[3] { -1 } else { 0 },
-            if a[4] <= b[4] { -1 } else { 0 },
-            if a[5] <= b[5] { -1 } else { 0 },
-            if a[6] <= b[6] { -1 } else { 0 },
-            if a[7] <= b[7] { -1 } else { 0 },
-        ]
+        core::array::from_fn(|i| if a[i] <= b[i] { -1 } else { 0 })
     }
 
     #[inline(always)]
     fn simd_gt(self, a: [i16; 8], b: [i16; 8]) -> [i16; 8] {
-        [
-            if a[0] > b[0] { -1 } else { 0 },
-            if a[1] > b[1] { -1 } else { 0 },
-            if a[2] > b[2] { -1 } else { 0 },
-            if a[3] > b[3] { -1 } else { 0 },
-            if a[4] > b[4] { -1 } else { 0 },
-            if a[5] > b[5] { -1 } else { 0 },
-            if a[6] > b[6] { -1 } else { 0 },
-            if a[7] > b[7] { -1 } else { 0 },
-        ]
+        core::array::from_fn(|i| if a[i] > b[i] { -1 } else { 0 })
     }
 
     #[inline(always)]
     fn simd_ge(self, a: [i16; 8], b: [i16; 8]) -> [i16; 8] {
-        [
-            if a[0] >= b[0] { -1 } else { 0 },
-            if a[1] >= b[1] { -1 } else { 0 },
-            if a[2] >= b[2] { -1 } else { 0 },
-            if a[3] >= b[3] { -1 } else { 0 },
-            if a[4] >= b[4] { -1 } else { 0 },
-            if a[5] >= b[5] { -1 } else { 0 },
-            if a[6] >= b[6] { -1 } else { 0 },
-            if a[7] >= b[7] { -1 } else { 0 },
-        ]
+        core::array::from_fn(|i| if a[i] >= b[i] { -1 } else { 0 })
     }
 
     #[inline(always)]
     fn blend(self, mask: [i16; 8], if_true: [i16; 8], if_false: [i16; 8]) -> [i16; 8] {
-        [
-            if mask[0] != 0 {
-                if_true[0]
+        core::array::from_fn(|i| {
+            if mask[i] != 0 {
+                if_true[i]
             } else {
-                if_false[0]
-            },
-            if mask[1] != 0 {
-                if_true[1]
-            } else {
-                if_false[1]
-            },
-            if mask[2] != 0 {
-                if_true[2]
-            } else {
-                if_false[2]
-            },
-            if mask[3] != 0 {
-                if_true[3]
-            } else {
-                if_false[3]
-            },
-            if mask[4] != 0 {
-                if_true[4]
-            } else {
-                if_false[4]
-            },
-            if mask[5] != 0 {
-                if_true[5]
-            } else {
-                if_false[5]
-            },
-            if mask[6] != 0 {
-                if_true[6]
-            } else {
-                if_false[6]
-            },
-            if mask[7] != 0 {
-                if_true[7]
-            } else {
-                if_false[7]
-            },
-        ]
+                if_false[i]
+            }
+        })
     }
 
     #[inline(always)]
@@ -6671,91 +4389,37 @@ impl I16x8Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn not(self, a: [i16; 8]) -> [i16; 8] {
-        [!a[0], !a[1], !a[2], !a[3], !a[4], !a[5], !a[6], !a[7]]
+        core::array::from_fn(|i| !a[i])
     }
 
     #[inline(always)]
     fn bitand(self, a: [i16; 8], b: [i16; 8]) -> [i16; 8] {
-        [
-            a[0] & b[0],
-            a[1] & b[1],
-            a[2] & b[2],
-            a[3] & b[3],
-            a[4] & b[4],
-            a[5] & b[5],
-            a[6] & b[6],
-            a[7] & b[7],
-        ]
+        core::array::from_fn(|i| a[i] & b[i])
     }
 
     #[inline(always)]
     fn bitor(self, a: [i16; 8], b: [i16; 8]) -> [i16; 8] {
-        [
-            a[0] | b[0],
-            a[1] | b[1],
-            a[2] | b[2],
-            a[3] | b[3],
-            a[4] | b[4],
-            a[5] | b[5],
-            a[6] | b[6],
-            a[7] | b[7],
-        ]
+        core::array::from_fn(|i| a[i] | b[i])
     }
 
     #[inline(always)]
     fn bitxor(self, a: [i16; 8], b: [i16; 8]) -> [i16; 8] {
-        [
-            a[0] ^ b[0],
-            a[1] ^ b[1],
-            a[2] ^ b[2],
-            a[3] ^ b[3],
-            a[4] ^ b[4],
-            a[5] ^ b[5],
-            a[6] ^ b[6],
-            a[7] ^ b[7],
-        ]
+        core::array::from_fn(|i| a[i] ^ b[i])
     }
 
     #[inline(always)]
     fn shl_const<const N: i32>(self, a: [i16; 8]) -> [i16; 8] {
-        [
-            a[0].wrapping_shl(N as u32),
-            a[1].wrapping_shl(N as u32),
-            a[2].wrapping_shl(N as u32),
-            a[3].wrapping_shl(N as u32),
-            a[4].wrapping_shl(N as u32),
-            a[5].wrapping_shl(N as u32),
-            a[6].wrapping_shl(N as u32),
-            a[7].wrapping_shl(N as u32),
-        ]
+        core::array::from_fn(|i| a[i].wrapping_shl(N as u32))
     }
 
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: [i16; 8]) -> [i16; 8] {
-        [
-            (a[0] as u16).wrapping_shr(N as u32) as i16,
-            (a[1] as u16).wrapping_shr(N as u32) as i16,
-            (a[2] as u16).wrapping_shr(N as u32) as i16,
-            (a[3] as u16).wrapping_shr(N as u32) as i16,
-            (a[4] as u16).wrapping_shr(N as u32) as i16,
-            (a[5] as u16).wrapping_shr(N as u32) as i16,
-            (a[6] as u16).wrapping_shr(N as u32) as i16,
-            (a[7] as u16).wrapping_shr(N as u32) as i16,
-        ]
+        core::array::from_fn(|i| (a[i] as u16).wrapping_shr(N as u32) as i16)
     }
 
     #[inline(always)]
     fn shr_arithmetic_const<const N: i32>(self, a: [i16; 8]) -> [i16; 8] {
-        [
-            a[0].wrapping_shr(N as u32),
-            a[1].wrapping_shr(N as u32),
-            a[2].wrapping_shr(N as u32),
-            a[3].wrapping_shr(N as u32),
-            a[4].wrapping_shr(N as u32),
-            a[5].wrapping_shr(N as u32),
-            a[6].wrapping_shr(N as u32),
-            a[7].wrapping_shr(N as u32),
-        ]
+        core::array::from_fn(|i| a[i].wrapping_shr(N as u32))
     }
 
     #[inline(always)]
@@ -6863,7 +4527,7 @@ impl I16x16Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn splat(self, v: i16) -> [i16; 16] {
-        [v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v]
+        [v; 16]
     }
 
     #[inline(always)]
@@ -6893,374 +4557,78 @@ impl I16x16Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn add(self, a: [i16; 16], b: [i16; 16]) -> [i16; 16] {
-        [
-            a[0].wrapping_add(b[0]),
-            a[1].wrapping_add(b[1]),
-            a[2].wrapping_add(b[2]),
-            a[3].wrapping_add(b[3]),
-            a[4].wrapping_add(b[4]),
-            a[5].wrapping_add(b[5]),
-            a[6].wrapping_add(b[6]),
-            a[7].wrapping_add(b[7]),
-            a[8].wrapping_add(b[8]),
-            a[9].wrapping_add(b[9]),
-            a[10].wrapping_add(b[10]),
-            a[11].wrapping_add(b[11]),
-            a[12].wrapping_add(b[12]),
-            a[13].wrapping_add(b[13]),
-            a[14].wrapping_add(b[14]),
-            a[15].wrapping_add(b[15]),
-        ]
+        core::array::from_fn(|i| a[i].wrapping_add(b[i]))
     }
 
     #[inline(always)]
     fn sub(self, a: [i16; 16], b: [i16; 16]) -> [i16; 16] {
-        [
-            a[0].wrapping_sub(b[0]),
-            a[1].wrapping_sub(b[1]),
-            a[2].wrapping_sub(b[2]),
-            a[3].wrapping_sub(b[3]),
-            a[4].wrapping_sub(b[4]),
-            a[5].wrapping_sub(b[5]),
-            a[6].wrapping_sub(b[6]),
-            a[7].wrapping_sub(b[7]),
-            a[8].wrapping_sub(b[8]),
-            a[9].wrapping_sub(b[9]),
-            a[10].wrapping_sub(b[10]),
-            a[11].wrapping_sub(b[11]),
-            a[12].wrapping_sub(b[12]),
-            a[13].wrapping_sub(b[13]),
-            a[14].wrapping_sub(b[14]),
-            a[15].wrapping_sub(b[15]),
-        ]
+        core::array::from_fn(|i| a[i].wrapping_sub(b[i]))
     }
 
     #[inline(always)]
     fn mul(self, a: [i16; 16], b: [i16; 16]) -> [i16; 16] {
-        [
-            a[0].wrapping_mul(b[0]),
-            a[1].wrapping_mul(b[1]),
-            a[2].wrapping_mul(b[2]),
-            a[3].wrapping_mul(b[3]),
-            a[4].wrapping_mul(b[4]),
-            a[5].wrapping_mul(b[5]),
-            a[6].wrapping_mul(b[6]),
-            a[7].wrapping_mul(b[7]),
-            a[8].wrapping_mul(b[8]),
-            a[9].wrapping_mul(b[9]),
-            a[10].wrapping_mul(b[10]),
-            a[11].wrapping_mul(b[11]),
-            a[12].wrapping_mul(b[12]),
-            a[13].wrapping_mul(b[13]),
-            a[14].wrapping_mul(b[14]),
-            a[15].wrapping_mul(b[15]),
-        ]
+        core::array::from_fn(|i| a[i].wrapping_mul(b[i]))
     }
 
     #[inline(always)]
     fn neg(self, a: [i16; 16]) -> [i16; 16] {
-        [
-            a[0].wrapping_neg(),
-            a[1].wrapping_neg(),
-            a[2].wrapping_neg(),
-            a[3].wrapping_neg(),
-            a[4].wrapping_neg(),
-            a[5].wrapping_neg(),
-            a[6].wrapping_neg(),
-            a[7].wrapping_neg(),
-            a[8].wrapping_neg(),
-            a[9].wrapping_neg(),
-            a[10].wrapping_neg(),
-            a[11].wrapping_neg(),
-            a[12].wrapping_neg(),
-            a[13].wrapping_neg(),
-            a[14].wrapping_neg(),
-            a[15].wrapping_neg(),
-        ]
+        core::array::from_fn(|i| a[i].wrapping_neg())
     }
 
     #[inline(always)]
     fn min(self, a: [i16; 16], b: [i16; 16]) -> [i16; 16] {
-        [
-            if a[0] < b[0] { a[0] } else { b[0] },
-            if a[1] < b[1] { a[1] } else { b[1] },
-            if a[2] < b[2] { a[2] } else { b[2] },
-            if a[3] < b[3] { a[3] } else { b[3] },
-            if a[4] < b[4] { a[4] } else { b[4] },
-            if a[5] < b[5] { a[5] } else { b[5] },
-            if a[6] < b[6] { a[6] } else { b[6] },
-            if a[7] < b[7] { a[7] } else { b[7] },
-            if a[8] < b[8] { a[8] } else { b[8] },
-            if a[9] < b[9] { a[9] } else { b[9] },
-            if a[10] < b[10] { a[10] } else { b[10] },
-            if a[11] < b[11] { a[11] } else { b[11] },
-            if a[12] < b[12] { a[12] } else { b[12] },
-            if a[13] < b[13] { a[13] } else { b[13] },
-            if a[14] < b[14] { a[14] } else { b[14] },
-            if a[15] < b[15] { a[15] } else { b[15] },
-        ]
+        core::array::from_fn(|i| if a[i] < b[i] { a[i] } else { b[i] })
     }
 
     #[inline(always)]
     fn max(self, a: [i16; 16], b: [i16; 16]) -> [i16; 16] {
-        [
-            if a[0] > b[0] { a[0] } else { b[0] },
-            if a[1] > b[1] { a[1] } else { b[1] },
-            if a[2] > b[2] { a[2] } else { b[2] },
-            if a[3] > b[3] { a[3] } else { b[3] },
-            if a[4] > b[4] { a[4] } else { b[4] },
-            if a[5] > b[5] { a[5] } else { b[5] },
-            if a[6] > b[6] { a[6] } else { b[6] },
-            if a[7] > b[7] { a[7] } else { b[7] },
-            if a[8] > b[8] { a[8] } else { b[8] },
-            if a[9] > b[9] { a[9] } else { b[9] },
-            if a[10] > b[10] { a[10] } else { b[10] },
-            if a[11] > b[11] { a[11] } else { b[11] },
-            if a[12] > b[12] { a[12] } else { b[12] },
-            if a[13] > b[13] { a[13] } else { b[13] },
-            if a[14] > b[14] { a[14] } else { b[14] },
-            if a[15] > b[15] { a[15] } else { b[15] },
-        ]
+        core::array::from_fn(|i| if a[i] > b[i] { a[i] } else { b[i] })
     }
 
     #[inline(always)]
     fn abs(self, a: [i16; 16]) -> [i16; 16] {
-        [
-            a[0].wrapping_abs(),
-            a[1].wrapping_abs(),
-            a[2].wrapping_abs(),
-            a[3].wrapping_abs(),
-            a[4].wrapping_abs(),
-            a[5].wrapping_abs(),
-            a[6].wrapping_abs(),
-            a[7].wrapping_abs(),
-            a[8].wrapping_abs(),
-            a[9].wrapping_abs(),
-            a[10].wrapping_abs(),
-            a[11].wrapping_abs(),
-            a[12].wrapping_abs(),
-            a[13].wrapping_abs(),
-            a[14].wrapping_abs(),
-            a[15].wrapping_abs(),
-        ]
+        core::array::from_fn(|i| a[i].wrapping_abs())
     }
 
     #[inline(always)]
     fn simd_eq(self, a: [i16; 16], b: [i16; 16]) -> [i16; 16] {
-        [
-            if a[0] == b[0] { -1 } else { 0 },
-            if a[1] == b[1] { -1 } else { 0 },
-            if a[2] == b[2] { -1 } else { 0 },
-            if a[3] == b[3] { -1 } else { 0 },
-            if a[4] == b[4] { -1 } else { 0 },
-            if a[5] == b[5] { -1 } else { 0 },
-            if a[6] == b[6] { -1 } else { 0 },
-            if a[7] == b[7] { -1 } else { 0 },
-            if a[8] == b[8] { -1 } else { 0 },
-            if a[9] == b[9] { -1 } else { 0 },
-            if a[10] == b[10] { -1 } else { 0 },
-            if a[11] == b[11] { -1 } else { 0 },
-            if a[12] == b[12] { -1 } else { 0 },
-            if a[13] == b[13] { -1 } else { 0 },
-            if a[14] == b[14] { -1 } else { 0 },
-            if a[15] == b[15] { -1 } else { 0 },
-        ]
+        core::array::from_fn(|i| if a[i] == b[i] { -1 } else { 0 })
     }
 
     #[inline(always)]
     fn simd_ne(self, a: [i16; 16], b: [i16; 16]) -> [i16; 16] {
-        [
-            if a[0] != b[0] { -1 } else { 0 },
-            if a[1] != b[1] { -1 } else { 0 },
-            if a[2] != b[2] { -1 } else { 0 },
-            if a[3] != b[3] { -1 } else { 0 },
-            if a[4] != b[4] { -1 } else { 0 },
-            if a[5] != b[5] { -1 } else { 0 },
-            if a[6] != b[6] { -1 } else { 0 },
-            if a[7] != b[7] { -1 } else { 0 },
-            if a[8] != b[8] { -1 } else { 0 },
-            if a[9] != b[9] { -1 } else { 0 },
-            if a[10] != b[10] { -1 } else { 0 },
-            if a[11] != b[11] { -1 } else { 0 },
-            if a[12] != b[12] { -1 } else { 0 },
-            if a[13] != b[13] { -1 } else { 0 },
-            if a[14] != b[14] { -1 } else { 0 },
-            if a[15] != b[15] { -1 } else { 0 },
-        ]
+        core::array::from_fn(|i| if a[i] != b[i] { -1 } else { 0 })
     }
 
     #[inline(always)]
     fn simd_lt(self, a: [i16; 16], b: [i16; 16]) -> [i16; 16] {
-        [
-            if a[0] < b[0] { -1 } else { 0 },
-            if a[1] < b[1] { -1 } else { 0 },
-            if a[2] < b[2] { -1 } else { 0 },
-            if a[3] < b[3] { -1 } else { 0 },
-            if a[4] < b[4] { -1 } else { 0 },
-            if a[5] < b[5] { -1 } else { 0 },
-            if a[6] < b[6] { -1 } else { 0 },
-            if a[7] < b[7] { -1 } else { 0 },
-            if a[8] < b[8] { -1 } else { 0 },
-            if a[9] < b[9] { -1 } else { 0 },
-            if a[10] < b[10] { -1 } else { 0 },
-            if a[11] < b[11] { -1 } else { 0 },
-            if a[12] < b[12] { -1 } else { 0 },
-            if a[13] < b[13] { -1 } else { 0 },
-            if a[14] < b[14] { -1 } else { 0 },
-            if a[15] < b[15] { -1 } else { 0 },
-        ]
+        core::array::from_fn(|i| if a[i] < b[i] { -1 } else { 0 })
     }
 
     #[inline(always)]
     fn simd_le(self, a: [i16; 16], b: [i16; 16]) -> [i16; 16] {
-        [
-            if a[0] <= b[0] { -1 } else { 0 },
-            if a[1] <= b[1] { -1 } else { 0 },
-            if a[2] <= b[2] { -1 } else { 0 },
-            if a[3] <= b[3] { -1 } else { 0 },
-            if a[4] <= b[4] { -1 } else { 0 },
-            if a[5] <= b[5] { -1 } else { 0 },
-            if a[6] <= b[6] { -1 } else { 0 },
-            if a[7] <= b[7] { -1 } else { 0 },
-            if a[8] <= b[8] { -1 } else { 0 },
-            if a[9] <= b[9] { -1 } else { 0 },
-            if a[10] <= b[10] { -1 } else { 0 },
-            if a[11] <= b[11] { -1 } else { 0 },
-            if a[12] <= b[12] { -1 } else { 0 },
-            if a[13] <= b[13] { -1 } else { 0 },
-            if a[14] <= b[14] { -1 } else { 0 },
-            if a[15] <= b[15] { -1 } else { 0 },
-        ]
+        core::array::from_fn(|i| if a[i] <= b[i] { -1 } else { 0 })
     }
 
     #[inline(always)]
     fn simd_gt(self, a: [i16; 16], b: [i16; 16]) -> [i16; 16] {
-        [
-            if a[0] > b[0] { -1 } else { 0 },
-            if a[1] > b[1] { -1 } else { 0 },
-            if a[2] > b[2] { -1 } else { 0 },
-            if a[3] > b[3] { -1 } else { 0 },
-            if a[4] > b[4] { -1 } else { 0 },
-            if a[5] > b[5] { -1 } else { 0 },
-            if a[6] > b[6] { -1 } else { 0 },
-            if a[7] > b[7] { -1 } else { 0 },
-            if a[8] > b[8] { -1 } else { 0 },
-            if a[9] > b[9] { -1 } else { 0 },
-            if a[10] > b[10] { -1 } else { 0 },
-            if a[11] > b[11] { -1 } else { 0 },
-            if a[12] > b[12] { -1 } else { 0 },
-            if a[13] > b[13] { -1 } else { 0 },
-            if a[14] > b[14] { -1 } else { 0 },
-            if a[15] > b[15] { -1 } else { 0 },
-        ]
+        core::array::from_fn(|i| if a[i] > b[i] { -1 } else { 0 })
     }
 
     #[inline(always)]
     fn simd_ge(self, a: [i16; 16], b: [i16; 16]) -> [i16; 16] {
-        [
-            if a[0] >= b[0] { -1 } else { 0 },
-            if a[1] >= b[1] { -1 } else { 0 },
-            if a[2] >= b[2] { -1 } else { 0 },
-            if a[3] >= b[3] { -1 } else { 0 },
-            if a[4] >= b[4] { -1 } else { 0 },
-            if a[5] >= b[5] { -1 } else { 0 },
-            if a[6] >= b[6] { -1 } else { 0 },
-            if a[7] >= b[7] { -1 } else { 0 },
-            if a[8] >= b[8] { -1 } else { 0 },
-            if a[9] >= b[9] { -1 } else { 0 },
-            if a[10] >= b[10] { -1 } else { 0 },
-            if a[11] >= b[11] { -1 } else { 0 },
-            if a[12] >= b[12] { -1 } else { 0 },
-            if a[13] >= b[13] { -1 } else { 0 },
-            if a[14] >= b[14] { -1 } else { 0 },
-            if a[15] >= b[15] { -1 } else { 0 },
-        ]
+        core::array::from_fn(|i| if a[i] >= b[i] { -1 } else { 0 })
     }
 
     #[inline(always)]
     fn blend(self, mask: [i16; 16], if_true: [i16; 16], if_false: [i16; 16]) -> [i16; 16] {
-        [
-            if mask[0] != 0 {
-                if_true[0]
+        core::array::from_fn(|i| {
+            if mask[i] != 0 {
+                if_true[i]
             } else {
-                if_false[0]
-            },
-            if mask[1] != 0 {
-                if_true[1]
-            } else {
-                if_false[1]
-            },
-            if mask[2] != 0 {
-                if_true[2]
-            } else {
-                if_false[2]
-            },
-            if mask[3] != 0 {
-                if_true[3]
-            } else {
-                if_false[3]
-            },
-            if mask[4] != 0 {
-                if_true[4]
-            } else {
-                if_false[4]
-            },
-            if mask[5] != 0 {
-                if_true[5]
-            } else {
-                if_false[5]
-            },
-            if mask[6] != 0 {
-                if_true[6]
-            } else {
-                if_false[6]
-            },
-            if mask[7] != 0 {
-                if_true[7]
-            } else {
-                if_false[7]
-            },
-            if mask[8] != 0 {
-                if_true[8]
-            } else {
-                if_false[8]
-            },
-            if mask[9] != 0 {
-                if_true[9]
-            } else {
-                if_false[9]
-            },
-            if mask[10] != 0 {
-                if_true[10]
-            } else {
-                if_false[10]
-            },
-            if mask[11] != 0 {
-                if_true[11]
-            } else {
-                if_false[11]
-            },
-            if mask[12] != 0 {
-                if_true[12]
-            } else {
-                if_false[12]
-            },
-            if mask[13] != 0 {
-                if_true[13]
-            } else {
-                if_false[13]
-            },
-            if mask[14] != 0 {
-                if_true[14]
-            } else {
-                if_false[14]
-            },
-            if mask[15] != 0 {
-                if_true[15]
-            } else {
-                if_false[15]
-            },
-        ]
+                if_false[i]
+            }
+        })
     }
 
     #[inline(always)]
@@ -7270,142 +4638,37 @@ impl I16x16Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn not(self, a: [i16; 16]) -> [i16; 16] {
-        [
-            !a[0], !a[1], !a[2], !a[3], !a[4], !a[5], !a[6], !a[7], !a[8], !a[9], !a[10], !a[11],
-            !a[12], !a[13], !a[14], !a[15],
-        ]
+        core::array::from_fn(|i| !a[i])
     }
 
     #[inline(always)]
     fn bitand(self, a: [i16; 16], b: [i16; 16]) -> [i16; 16] {
-        [
-            a[0] & b[0],
-            a[1] & b[1],
-            a[2] & b[2],
-            a[3] & b[3],
-            a[4] & b[4],
-            a[5] & b[5],
-            a[6] & b[6],
-            a[7] & b[7],
-            a[8] & b[8],
-            a[9] & b[9],
-            a[10] & b[10],
-            a[11] & b[11],
-            a[12] & b[12],
-            a[13] & b[13],
-            a[14] & b[14],
-            a[15] & b[15],
-        ]
+        core::array::from_fn(|i| a[i] & b[i])
     }
 
     #[inline(always)]
     fn bitor(self, a: [i16; 16], b: [i16; 16]) -> [i16; 16] {
-        [
-            a[0] | b[0],
-            a[1] | b[1],
-            a[2] | b[2],
-            a[3] | b[3],
-            a[4] | b[4],
-            a[5] | b[5],
-            a[6] | b[6],
-            a[7] | b[7],
-            a[8] | b[8],
-            a[9] | b[9],
-            a[10] | b[10],
-            a[11] | b[11],
-            a[12] | b[12],
-            a[13] | b[13],
-            a[14] | b[14],
-            a[15] | b[15],
-        ]
+        core::array::from_fn(|i| a[i] | b[i])
     }
 
     #[inline(always)]
     fn bitxor(self, a: [i16; 16], b: [i16; 16]) -> [i16; 16] {
-        [
-            a[0] ^ b[0],
-            a[1] ^ b[1],
-            a[2] ^ b[2],
-            a[3] ^ b[3],
-            a[4] ^ b[4],
-            a[5] ^ b[5],
-            a[6] ^ b[6],
-            a[7] ^ b[7],
-            a[8] ^ b[8],
-            a[9] ^ b[9],
-            a[10] ^ b[10],
-            a[11] ^ b[11],
-            a[12] ^ b[12],
-            a[13] ^ b[13],
-            a[14] ^ b[14],
-            a[15] ^ b[15],
-        ]
+        core::array::from_fn(|i| a[i] ^ b[i])
     }
 
     #[inline(always)]
     fn shl_const<const N: i32>(self, a: [i16; 16]) -> [i16; 16] {
-        [
-            a[0].wrapping_shl(N as u32),
-            a[1].wrapping_shl(N as u32),
-            a[2].wrapping_shl(N as u32),
-            a[3].wrapping_shl(N as u32),
-            a[4].wrapping_shl(N as u32),
-            a[5].wrapping_shl(N as u32),
-            a[6].wrapping_shl(N as u32),
-            a[7].wrapping_shl(N as u32),
-            a[8].wrapping_shl(N as u32),
-            a[9].wrapping_shl(N as u32),
-            a[10].wrapping_shl(N as u32),
-            a[11].wrapping_shl(N as u32),
-            a[12].wrapping_shl(N as u32),
-            a[13].wrapping_shl(N as u32),
-            a[14].wrapping_shl(N as u32),
-            a[15].wrapping_shl(N as u32),
-        ]
+        core::array::from_fn(|i| a[i].wrapping_shl(N as u32))
     }
 
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: [i16; 16]) -> [i16; 16] {
-        [
-            (a[0] as u16).wrapping_shr(N as u32) as i16,
-            (a[1] as u16).wrapping_shr(N as u32) as i16,
-            (a[2] as u16).wrapping_shr(N as u32) as i16,
-            (a[3] as u16).wrapping_shr(N as u32) as i16,
-            (a[4] as u16).wrapping_shr(N as u32) as i16,
-            (a[5] as u16).wrapping_shr(N as u32) as i16,
-            (a[6] as u16).wrapping_shr(N as u32) as i16,
-            (a[7] as u16).wrapping_shr(N as u32) as i16,
-            (a[8] as u16).wrapping_shr(N as u32) as i16,
-            (a[9] as u16).wrapping_shr(N as u32) as i16,
-            (a[10] as u16).wrapping_shr(N as u32) as i16,
-            (a[11] as u16).wrapping_shr(N as u32) as i16,
-            (a[12] as u16).wrapping_shr(N as u32) as i16,
-            (a[13] as u16).wrapping_shr(N as u32) as i16,
-            (a[14] as u16).wrapping_shr(N as u32) as i16,
-            (a[15] as u16).wrapping_shr(N as u32) as i16,
-        ]
+        core::array::from_fn(|i| (a[i] as u16).wrapping_shr(N as u32) as i16)
     }
 
     #[inline(always)]
     fn shr_arithmetic_const<const N: i32>(self, a: [i16; 16]) -> [i16; 16] {
-        [
-            a[0].wrapping_shr(N as u32),
-            a[1].wrapping_shr(N as u32),
-            a[2].wrapping_shr(N as u32),
-            a[3].wrapping_shr(N as u32),
-            a[4].wrapping_shr(N as u32),
-            a[5].wrapping_shr(N as u32),
-            a[6].wrapping_shr(N as u32),
-            a[7].wrapping_shr(N as u32),
-            a[8].wrapping_shr(N as u32),
-            a[9].wrapping_shr(N as u32),
-            a[10].wrapping_shr(N as u32),
-            a[11].wrapping_shr(N as u32),
-            a[12].wrapping_shr(N as u32),
-            a[13].wrapping_shr(N as u32),
-            a[14].wrapping_shr(N as u32),
-            a[15].wrapping_shr(N as u32),
-        ]
+        core::array::from_fn(|i| a[i].wrapping_shr(N as u32))
     }
 
     #[inline(always)]
@@ -7513,7 +4776,7 @@ impl U16x8Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn splat(self, v: u16) -> [u16; 8] {
-        [v, v, v, v, v, v, v, v]
+        [v; 8]
     }
 
     #[inline(always)]
@@ -7543,202 +4806,68 @@ impl U16x8Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn add(self, a: [u16; 8], b: [u16; 8]) -> [u16; 8] {
-        [
-            a[0].wrapping_add(b[0]),
-            a[1].wrapping_add(b[1]),
-            a[2].wrapping_add(b[2]),
-            a[3].wrapping_add(b[3]),
-            a[4].wrapping_add(b[4]),
-            a[5].wrapping_add(b[5]),
-            a[6].wrapping_add(b[6]),
-            a[7].wrapping_add(b[7]),
-        ]
+        core::array::from_fn(|i| a[i].wrapping_add(b[i]))
     }
 
     #[inline(always)]
     fn sub(self, a: [u16; 8], b: [u16; 8]) -> [u16; 8] {
-        [
-            a[0].wrapping_sub(b[0]),
-            a[1].wrapping_sub(b[1]),
-            a[2].wrapping_sub(b[2]),
-            a[3].wrapping_sub(b[3]),
-            a[4].wrapping_sub(b[4]),
-            a[5].wrapping_sub(b[5]),
-            a[6].wrapping_sub(b[6]),
-            a[7].wrapping_sub(b[7]),
-        ]
+        core::array::from_fn(|i| a[i].wrapping_sub(b[i]))
     }
 
     #[inline(always)]
     fn mul(self, a: [u16; 8], b: [u16; 8]) -> [u16; 8] {
-        [
-            a[0].wrapping_mul(b[0]),
-            a[1].wrapping_mul(b[1]),
-            a[2].wrapping_mul(b[2]),
-            a[3].wrapping_mul(b[3]),
-            a[4].wrapping_mul(b[4]),
-            a[5].wrapping_mul(b[5]),
-            a[6].wrapping_mul(b[6]),
-            a[7].wrapping_mul(b[7]),
-        ]
+        core::array::from_fn(|i| a[i].wrapping_mul(b[i]))
     }
 
     #[inline(always)]
     fn min(self, a: [u16; 8], b: [u16; 8]) -> [u16; 8] {
-        [
-            if a[0] < b[0] { a[0] } else { b[0] },
-            if a[1] < b[1] { a[1] } else { b[1] },
-            if a[2] < b[2] { a[2] } else { b[2] },
-            if a[3] < b[3] { a[3] } else { b[3] },
-            if a[4] < b[4] { a[4] } else { b[4] },
-            if a[5] < b[5] { a[5] } else { b[5] },
-            if a[6] < b[6] { a[6] } else { b[6] },
-            if a[7] < b[7] { a[7] } else { b[7] },
-        ]
+        core::array::from_fn(|i| if a[i] < b[i] { a[i] } else { b[i] })
     }
 
     #[inline(always)]
     fn max(self, a: [u16; 8], b: [u16; 8]) -> [u16; 8] {
-        [
-            if a[0] > b[0] { a[0] } else { b[0] },
-            if a[1] > b[1] { a[1] } else { b[1] },
-            if a[2] > b[2] { a[2] } else { b[2] },
-            if a[3] > b[3] { a[3] } else { b[3] },
-            if a[4] > b[4] { a[4] } else { b[4] },
-            if a[5] > b[5] { a[5] } else { b[5] },
-            if a[6] > b[6] { a[6] } else { b[6] },
-            if a[7] > b[7] { a[7] } else { b[7] },
-        ]
+        core::array::from_fn(|i| if a[i] > b[i] { a[i] } else { b[i] })
     }
 
     #[inline(always)]
     fn simd_eq(self, a: [u16; 8], b: [u16; 8]) -> [u16; 8] {
-        [
-            if a[0] == b[0] { 0xFFFF } else { 0 },
-            if a[1] == b[1] { 0xFFFF } else { 0 },
-            if a[2] == b[2] { 0xFFFF } else { 0 },
-            if a[3] == b[3] { 0xFFFF } else { 0 },
-            if a[4] == b[4] { 0xFFFF } else { 0 },
-            if a[5] == b[5] { 0xFFFF } else { 0 },
-            if a[6] == b[6] { 0xFFFF } else { 0 },
-            if a[7] == b[7] { 0xFFFF } else { 0 },
-        ]
+        core::array::from_fn(|i| if a[i] == b[i] { 0xFFFF } else { 0 })
     }
 
     #[inline(always)]
     fn simd_ne(self, a: [u16; 8], b: [u16; 8]) -> [u16; 8] {
-        [
-            if a[0] != b[0] { 0xFFFF } else { 0 },
-            if a[1] != b[1] { 0xFFFF } else { 0 },
-            if a[2] != b[2] { 0xFFFF } else { 0 },
-            if a[3] != b[3] { 0xFFFF } else { 0 },
-            if a[4] != b[4] { 0xFFFF } else { 0 },
-            if a[5] != b[5] { 0xFFFF } else { 0 },
-            if a[6] != b[6] { 0xFFFF } else { 0 },
-            if a[7] != b[7] { 0xFFFF } else { 0 },
-        ]
+        core::array::from_fn(|i| if a[i] != b[i] { 0xFFFF } else { 0 })
     }
 
     #[inline(always)]
     fn simd_lt(self, a: [u16; 8], b: [u16; 8]) -> [u16; 8] {
-        [
-            if a[0] < b[0] { 0xFFFF } else { 0 },
-            if a[1] < b[1] { 0xFFFF } else { 0 },
-            if a[2] < b[2] { 0xFFFF } else { 0 },
-            if a[3] < b[3] { 0xFFFF } else { 0 },
-            if a[4] < b[4] { 0xFFFF } else { 0 },
-            if a[5] < b[5] { 0xFFFF } else { 0 },
-            if a[6] < b[6] { 0xFFFF } else { 0 },
-            if a[7] < b[7] { 0xFFFF } else { 0 },
-        ]
+        core::array::from_fn(|i| if a[i] < b[i] { 0xFFFF } else { 0 })
     }
 
     #[inline(always)]
     fn simd_le(self, a: [u16; 8], b: [u16; 8]) -> [u16; 8] {
-        [
-            if a[0] <= b[0] { 0xFFFF } else { 0 },
-            if a[1] <= b[1] { 0xFFFF } else { 0 },
-            if a[2] <= b[2] { 0xFFFF } else { 0 },
-            if a[3] <= b[3] { 0xFFFF } else { 0 },
-            if a[4] <= b[4] { 0xFFFF } else { 0 },
-            if a[5] <= b[5] { 0xFFFF } else { 0 },
-            if a[6] <= b[6] { 0xFFFF } else { 0 },
-            if a[7] <= b[7] { 0xFFFF } else { 0 },
-        ]
+        core::array::from_fn(|i| if a[i] <= b[i] { 0xFFFF } else { 0 })
     }
 
     #[inline(always)]
     fn simd_gt(self, a: [u16; 8], b: [u16; 8]) -> [u16; 8] {
-        [
-            if a[0] > b[0] { 0xFFFF } else { 0 },
-            if a[1] > b[1] { 0xFFFF } else { 0 },
-            if a[2] > b[2] { 0xFFFF } else { 0 },
-            if a[3] > b[3] { 0xFFFF } else { 0 },
-            if a[4] > b[4] { 0xFFFF } else { 0 },
-            if a[5] > b[5] { 0xFFFF } else { 0 },
-            if a[6] > b[6] { 0xFFFF } else { 0 },
-            if a[7] > b[7] { 0xFFFF } else { 0 },
-        ]
+        core::array::from_fn(|i| if a[i] > b[i] { 0xFFFF } else { 0 })
     }
 
     #[inline(always)]
     fn simd_ge(self, a: [u16; 8], b: [u16; 8]) -> [u16; 8] {
-        [
-            if a[0] >= b[0] { 0xFFFF } else { 0 },
-            if a[1] >= b[1] { 0xFFFF } else { 0 },
-            if a[2] >= b[2] { 0xFFFF } else { 0 },
-            if a[3] >= b[3] { 0xFFFF } else { 0 },
-            if a[4] >= b[4] { 0xFFFF } else { 0 },
-            if a[5] >= b[5] { 0xFFFF } else { 0 },
-            if a[6] >= b[6] { 0xFFFF } else { 0 },
-            if a[7] >= b[7] { 0xFFFF } else { 0 },
-        ]
+        core::array::from_fn(|i| if a[i] >= b[i] { 0xFFFF } else { 0 })
     }
 
     #[inline(always)]
     fn blend(self, mask: [u16; 8], if_true: [u16; 8], if_false: [u16; 8]) -> [u16; 8] {
-        [
-            if mask[0] != 0 {
-                if_true[0]
+        core::array::from_fn(|i| {
+            if mask[i] != 0 {
+                if_true[i]
             } else {
-                if_false[0]
-            },
-            if mask[1] != 0 {
-                if_true[1]
-            } else {
-                if_false[1]
-            },
-            if mask[2] != 0 {
-                if_true[2]
-            } else {
-                if_false[2]
-            },
-            if mask[3] != 0 {
-                if_true[3]
-            } else {
-                if_false[3]
-            },
-            if mask[4] != 0 {
-                if_true[4]
-            } else {
-                if_false[4]
-            },
-            if mask[5] != 0 {
-                if_true[5]
-            } else {
-                if_false[5]
-            },
-            if mask[6] != 0 {
-                if_true[6]
-            } else {
-                if_false[6]
-            },
-            if mask[7] != 0 {
-                if_true[7]
-            } else {
-                if_false[7]
-            },
-        ]
+                if_false[i]
+            }
+        })
     }
 
     #[inline(always)]
@@ -7748,77 +4877,32 @@ impl U16x8Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn not(self, a: [u16; 8]) -> [u16; 8] {
-        [!a[0], !a[1], !a[2], !a[3], !a[4], !a[5], !a[6], !a[7]]
+        core::array::from_fn(|i| !a[i])
     }
 
     #[inline(always)]
     fn bitand(self, a: [u16; 8], b: [u16; 8]) -> [u16; 8] {
-        [
-            a[0] & b[0],
-            a[1] & b[1],
-            a[2] & b[2],
-            a[3] & b[3],
-            a[4] & b[4],
-            a[5] & b[5],
-            a[6] & b[6],
-            a[7] & b[7],
-        ]
+        core::array::from_fn(|i| a[i] & b[i])
     }
 
     #[inline(always)]
     fn bitor(self, a: [u16; 8], b: [u16; 8]) -> [u16; 8] {
-        [
-            a[0] | b[0],
-            a[1] | b[1],
-            a[2] | b[2],
-            a[3] | b[3],
-            a[4] | b[4],
-            a[5] | b[5],
-            a[6] | b[6],
-            a[7] | b[7],
-        ]
+        core::array::from_fn(|i| a[i] | b[i])
     }
 
     #[inline(always)]
     fn bitxor(self, a: [u16; 8], b: [u16; 8]) -> [u16; 8] {
-        [
-            a[0] ^ b[0],
-            a[1] ^ b[1],
-            a[2] ^ b[2],
-            a[3] ^ b[3],
-            a[4] ^ b[4],
-            a[5] ^ b[5],
-            a[6] ^ b[6],
-            a[7] ^ b[7],
-        ]
+        core::array::from_fn(|i| a[i] ^ b[i])
     }
 
     #[inline(always)]
     fn shl_const<const N: i32>(self, a: [u16; 8]) -> [u16; 8] {
-        [
-            a[0].wrapping_shl(N as u32),
-            a[1].wrapping_shl(N as u32),
-            a[2].wrapping_shl(N as u32),
-            a[3].wrapping_shl(N as u32),
-            a[4].wrapping_shl(N as u32),
-            a[5].wrapping_shl(N as u32),
-            a[6].wrapping_shl(N as u32),
-            a[7].wrapping_shl(N as u32),
-        ]
+        core::array::from_fn(|i| a[i].wrapping_shl(N as u32))
     }
 
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: [u16; 8]) -> [u16; 8] {
-        [
-            a[0].wrapping_shr(N as u32),
-            a[1].wrapping_shr(N as u32),
-            a[2].wrapping_shr(N as u32),
-            a[3].wrapping_shr(N as u32),
-            a[4].wrapping_shr(N as u32),
-            a[5].wrapping_shr(N as u32),
-            a[6].wrapping_shr(N as u32),
-            a[7].wrapping_shr(N as u32),
-        ]
+        core::array::from_fn(|i| a[i].wrapping_shr(N as u32))
     }
 
     #[inline(always)]
@@ -7897,7 +4981,7 @@ impl U16x16Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn splat(self, v: u16) -> [u16; 16] {
-        [v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v]
+        [v; 16]
     }
 
     #[inline(always)]
@@ -7927,330 +5011,68 @@ impl U16x16Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn add(self, a: [u16; 16], b: [u16; 16]) -> [u16; 16] {
-        [
-            a[0].wrapping_add(b[0]),
-            a[1].wrapping_add(b[1]),
-            a[2].wrapping_add(b[2]),
-            a[3].wrapping_add(b[3]),
-            a[4].wrapping_add(b[4]),
-            a[5].wrapping_add(b[5]),
-            a[6].wrapping_add(b[6]),
-            a[7].wrapping_add(b[7]),
-            a[8].wrapping_add(b[8]),
-            a[9].wrapping_add(b[9]),
-            a[10].wrapping_add(b[10]),
-            a[11].wrapping_add(b[11]),
-            a[12].wrapping_add(b[12]),
-            a[13].wrapping_add(b[13]),
-            a[14].wrapping_add(b[14]),
-            a[15].wrapping_add(b[15]),
-        ]
+        core::array::from_fn(|i| a[i].wrapping_add(b[i]))
     }
 
     #[inline(always)]
     fn sub(self, a: [u16; 16], b: [u16; 16]) -> [u16; 16] {
-        [
-            a[0].wrapping_sub(b[0]),
-            a[1].wrapping_sub(b[1]),
-            a[2].wrapping_sub(b[2]),
-            a[3].wrapping_sub(b[3]),
-            a[4].wrapping_sub(b[4]),
-            a[5].wrapping_sub(b[5]),
-            a[6].wrapping_sub(b[6]),
-            a[7].wrapping_sub(b[7]),
-            a[8].wrapping_sub(b[8]),
-            a[9].wrapping_sub(b[9]),
-            a[10].wrapping_sub(b[10]),
-            a[11].wrapping_sub(b[11]),
-            a[12].wrapping_sub(b[12]),
-            a[13].wrapping_sub(b[13]),
-            a[14].wrapping_sub(b[14]),
-            a[15].wrapping_sub(b[15]),
-        ]
+        core::array::from_fn(|i| a[i].wrapping_sub(b[i]))
     }
 
     #[inline(always)]
     fn mul(self, a: [u16; 16], b: [u16; 16]) -> [u16; 16] {
-        [
-            a[0].wrapping_mul(b[0]),
-            a[1].wrapping_mul(b[1]),
-            a[2].wrapping_mul(b[2]),
-            a[3].wrapping_mul(b[3]),
-            a[4].wrapping_mul(b[4]),
-            a[5].wrapping_mul(b[5]),
-            a[6].wrapping_mul(b[6]),
-            a[7].wrapping_mul(b[7]),
-            a[8].wrapping_mul(b[8]),
-            a[9].wrapping_mul(b[9]),
-            a[10].wrapping_mul(b[10]),
-            a[11].wrapping_mul(b[11]),
-            a[12].wrapping_mul(b[12]),
-            a[13].wrapping_mul(b[13]),
-            a[14].wrapping_mul(b[14]),
-            a[15].wrapping_mul(b[15]),
-        ]
+        core::array::from_fn(|i| a[i].wrapping_mul(b[i]))
     }
 
     #[inline(always)]
     fn min(self, a: [u16; 16], b: [u16; 16]) -> [u16; 16] {
-        [
-            if a[0] < b[0] { a[0] } else { b[0] },
-            if a[1] < b[1] { a[1] } else { b[1] },
-            if a[2] < b[2] { a[2] } else { b[2] },
-            if a[3] < b[3] { a[3] } else { b[3] },
-            if a[4] < b[4] { a[4] } else { b[4] },
-            if a[5] < b[5] { a[5] } else { b[5] },
-            if a[6] < b[6] { a[6] } else { b[6] },
-            if a[7] < b[7] { a[7] } else { b[7] },
-            if a[8] < b[8] { a[8] } else { b[8] },
-            if a[9] < b[9] { a[9] } else { b[9] },
-            if a[10] < b[10] { a[10] } else { b[10] },
-            if a[11] < b[11] { a[11] } else { b[11] },
-            if a[12] < b[12] { a[12] } else { b[12] },
-            if a[13] < b[13] { a[13] } else { b[13] },
-            if a[14] < b[14] { a[14] } else { b[14] },
-            if a[15] < b[15] { a[15] } else { b[15] },
-        ]
+        core::array::from_fn(|i| if a[i] < b[i] { a[i] } else { b[i] })
     }
 
     #[inline(always)]
     fn max(self, a: [u16; 16], b: [u16; 16]) -> [u16; 16] {
-        [
-            if a[0] > b[0] { a[0] } else { b[0] },
-            if a[1] > b[1] { a[1] } else { b[1] },
-            if a[2] > b[2] { a[2] } else { b[2] },
-            if a[3] > b[3] { a[3] } else { b[3] },
-            if a[4] > b[4] { a[4] } else { b[4] },
-            if a[5] > b[5] { a[5] } else { b[5] },
-            if a[6] > b[6] { a[6] } else { b[6] },
-            if a[7] > b[7] { a[7] } else { b[7] },
-            if a[8] > b[8] { a[8] } else { b[8] },
-            if a[9] > b[9] { a[9] } else { b[9] },
-            if a[10] > b[10] { a[10] } else { b[10] },
-            if a[11] > b[11] { a[11] } else { b[11] },
-            if a[12] > b[12] { a[12] } else { b[12] },
-            if a[13] > b[13] { a[13] } else { b[13] },
-            if a[14] > b[14] { a[14] } else { b[14] },
-            if a[15] > b[15] { a[15] } else { b[15] },
-        ]
+        core::array::from_fn(|i| if a[i] > b[i] { a[i] } else { b[i] })
     }
 
     #[inline(always)]
     fn simd_eq(self, a: [u16; 16], b: [u16; 16]) -> [u16; 16] {
-        [
-            if a[0] == b[0] { 0xFFFF } else { 0 },
-            if a[1] == b[1] { 0xFFFF } else { 0 },
-            if a[2] == b[2] { 0xFFFF } else { 0 },
-            if a[3] == b[3] { 0xFFFF } else { 0 },
-            if a[4] == b[4] { 0xFFFF } else { 0 },
-            if a[5] == b[5] { 0xFFFF } else { 0 },
-            if a[6] == b[6] { 0xFFFF } else { 0 },
-            if a[7] == b[7] { 0xFFFF } else { 0 },
-            if a[8] == b[8] { 0xFFFF } else { 0 },
-            if a[9] == b[9] { 0xFFFF } else { 0 },
-            if a[10] == b[10] { 0xFFFF } else { 0 },
-            if a[11] == b[11] { 0xFFFF } else { 0 },
-            if a[12] == b[12] { 0xFFFF } else { 0 },
-            if a[13] == b[13] { 0xFFFF } else { 0 },
-            if a[14] == b[14] { 0xFFFF } else { 0 },
-            if a[15] == b[15] { 0xFFFF } else { 0 },
-        ]
+        core::array::from_fn(|i| if a[i] == b[i] { 0xFFFF } else { 0 })
     }
 
     #[inline(always)]
     fn simd_ne(self, a: [u16; 16], b: [u16; 16]) -> [u16; 16] {
-        [
-            if a[0] != b[0] { 0xFFFF } else { 0 },
-            if a[1] != b[1] { 0xFFFF } else { 0 },
-            if a[2] != b[2] { 0xFFFF } else { 0 },
-            if a[3] != b[3] { 0xFFFF } else { 0 },
-            if a[4] != b[4] { 0xFFFF } else { 0 },
-            if a[5] != b[5] { 0xFFFF } else { 0 },
-            if a[6] != b[6] { 0xFFFF } else { 0 },
-            if a[7] != b[7] { 0xFFFF } else { 0 },
-            if a[8] != b[8] { 0xFFFF } else { 0 },
-            if a[9] != b[9] { 0xFFFF } else { 0 },
-            if a[10] != b[10] { 0xFFFF } else { 0 },
-            if a[11] != b[11] { 0xFFFF } else { 0 },
-            if a[12] != b[12] { 0xFFFF } else { 0 },
-            if a[13] != b[13] { 0xFFFF } else { 0 },
-            if a[14] != b[14] { 0xFFFF } else { 0 },
-            if a[15] != b[15] { 0xFFFF } else { 0 },
-        ]
+        core::array::from_fn(|i| if a[i] != b[i] { 0xFFFF } else { 0 })
     }
 
     #[inline(always)]
     fn simd_lt(self, a: [u16; 16], b: [u16; 16]) -> [u16; 16] {
-        [
-            if a[0] < b[0] { 0xFFFF } else { 0 },
-            if a[1] < b[1] { 0xFFFF } else { 0 },
-            if a[2] < b[2] { 0xFFFF } else { 0 },
-            if a[3] < b[3] { 0xFFFF } else { 0 },
-            if a[4] < b[4] { 0xFFFF } else { 0 },
-            if a[5] < b[5] { 0xFFFF } else { 0 },
-            if a[6] < b[6] { 0xFFFF } else { 0 },
-            if a[7] < b[7] { 0xFFFF } else { 0 },
-            if a[8] < b[8] { 0xFFFF } else { 0 },
-            if a[9] < b[9] { 0xFFFF } else { 0 },
-            if a[10] < b[10] { 0xFFFF } else { 0 },
-            if a[11] < b[11] { 0xFFFF } else { 0 },
-            if a[12] < b[12] { 0xFFFF } else { 0 },
-            if a[13] < b[13] { 0xFFFF } else { 0 },
-            if a[14] < b[14] { 0xFFFF } else { 0 },
-            if a[15] < b[15] { 0xFFFF } else { 0 },
-        ]
+        core::array::from_fn(|i| if a[i] < b[i] { 0xFFFF } else { 0 })
     }
 
     #[inline(always)]
     fn simd_le(self, a: [u16; 16], b: [u16; 16]) -> [u16; 16] {
-        [
-            if a[0] <= b[0] { 0xFFFF } else { 0 },
-            if a[1] <= b[1] { 0xFFFF } else { 0 },
-            if a[2] <= b[2] { 0xFFFF } else { 0 },
-            if a[3] <= b[3] { 0xFFFF } else { 0 },
-            if a[4] <= b[4] { 0xFFFF } else { 0 },
-            if a[5] <= b[5] { 0xFFFF } else { 0 },
-            if a[6] <= b[6] { 0xFFFF } else { 0 },
-            if a[7] <= b[7] { 0xFFFF } else { 0 },
-            if a[8] <= b[8] { 0xFFFF } else { 0 },
-            if a[9] <= b[9] { 0xFFFF } else { 0 },
-            if a[10] <= b[10] { 0xFFFF } else { 0 },
-            if a[11] <= b[11] { 0xFFFF } else { 0 },
-            if a[12] <= b[12] { 0xFFFF } else { 0 },
-            if a[13] <= b[13] { 0xFFFF } else { 0 },
-            if a[14] <= b[14] { 0xFFFF } else { 0 },
-            if a[15] <= b[15] { 0xFFFF } else { 0 },
-        ]
+        core::array::from_fn(|i| if a[i] <= b[i] { 0xFFFF } else { 0 })
     }
 
     #[inline(always)]
     fn simd_gt(self, a: [u16; 16], b: [u16; 16]) -> [u16; 16] {
-        [
-            if a[0] > b[0] { 0xFFFF } else { 0 },
-            if a[1] > b[1] { 0xFFFF } else { 0 },
-            if a[2] > b[2] { 0xFFFF } else { 0 },
-            if a[3] > b[3] { 0xFFFF } else { 0 },
-            if a[4] > b[4] { 0xFFFF } else { 0 },
-            if a[5] > b[5] { 0xFFFF } else { 0 },
-            if a[6] > b[6] { 0xFFFF } else { 0 },
-            if a[7] > b[7] { 0xFFFF } else { 0 },
-            if a[8] > b[8] { 0xFFFF } else { 0 },
-            if a[9] > b[9] { 0xFFFF } else { 0 },
-            if a[10] > b[10] { 0xFFFF } else { 0 },
-            if a[11] > b[11] { 0xFFFF } else { 0 },
-            if a[12] > b[12] { 0xFFFF } else { 0 },
-            if a[13] > b[13] { 0xFFFF } else { 0 },
-            if a[14] > b[14] { 0xFFFF } else { 0 },
-            if a[15] > b[15] { 0xFFFF } else { 0 },
-        ]
+        core::array::from_fn(|i| if a[i] > b[i] { 0xFFFF } else { 0 })
     }
 
     #[inline(always)]
     fn simd_ge(self, a: [u16; 16], b: [u16; 16]) -> [u16; 16] {
-        [
-            if a[0] >= b[0] { 0xFFFF } else { 0 },
-            if a[1] >= b[1] { 0xFFFF } else { 0 },
-            if a[2] >= b[2] { 0xFFFF } else { 0 },
-            if a[3] >= b[3] { 0xFFFF } else { 0 },
-            if a[4] >= b[4] { 0xFFFF } else { 0 },
-            if a[5] >= b[5] { 0xFFFF } else { 0 },
-            if a[6] >= b[6] { 0xFFFF } else { 0 },
-            if a[7] >= b[7] { 0xFFFF } else { 0 },
-            if a[8] >= b[8] { 0xFFFF } else { 0 },
-            if a[9] >= b[9] { 0xFFFF } else { 0 },
-            if a[10] >= b[10] { 0xFFFF } else { 0 },
-            if a[11] >= b[11] { 0xFFFF } else { 0 },
-            if a[12] >= b[12] { 0xFFFF } else { 0 },
-            if a[13] >= b[13] { 0xFFFF } else { 0 },
-            if a[14] >= b[14] { 0xFFFF } else { 0 },
-            if a[15] >= b[15] { 0xFFFF } else { 0 },
-        ]
+        core::array::from_fn(|i| if a[i] >= b[i] { 0xFFFF } else { 0 })
     }
 
     #[inline(always)]
     fn blend(self, mask: [u16; 16], if_true: [u16; 16], if_false: [u16; 16]) -> [u16; 16] {
-        [
-            if mask[0] != 0 {
-                if_true[0]
+        core::array::from_fn(|i| {
+            if mask[i] != 0 {
+                if_true[i]
             } else {
-                if_false[0]
-            },
-            if mask[1] != 0 {
-                if_true[1]
-            } else {
-                if_false[1]
-            },
-            if mask[2] != 0 {
-                if_true[2]
-            } else {
-                if_false[2]
-            },
-            if mask[3] != 0 {
-                if_true[3]
-            } else {
-                if_false[3]
-            },
-            if mask[4] != 0 {
-                if_true[4]
-            } else {
-                if_false[4]
-            },
-            if mask[5] != 0 {
-                if_true[5]
-            } else {
-                if_false[5]
-            },
-            if mask[6] != 0 {
-                if_true[6]
-            } else {
-                if_false[6]
-            },
-            if mask[7] != 0 {
-                if_true[7]
-            } else {
-                if_false[7]
-            },
-            if mask[8] != 0 {
-                if_true[8]
-            } else {
-                if_false[8]
-            },
-            if mask[9] != 0 {
-                if_true[9]
-            } else {
-                if_false[9]
-            },
-            if mask[10] != 0 {
-                if_true[10]
-            } else {
-                if_false[10]
-            },
-            if mask[11] != 0 {
-                if_true[11]
-            } else {
-                if_false[11]
-            },
-            if mask[12] != 0 {
-                if_true[12]
-            } else {
-                if_false[12]
-            },
-            if mask[13] != 0 {
-                if_true[13]
-            } else {
-                if_false[13]
-            },
-            if mask[14] != 0 {
-                if_true[14]
-            } else {
-                if_false[14]
-            },
-            if mask[15] != 0 {
-                if_true[15]
-            } else {
-                if_false[15]
-            },
-        ]
+                if_false[i]
+            }
+        })
     }
 
     #[inline(always)]
@@ -8260,120 +5082,32 @@ impl U16x16Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn not(self, a: [u16; 16]) -> [u16; 16] {
-        [
-            !a[0], !a[1], !a[2], !a[3], !a[4], !a[5], !a[6], !a[7], !a[8], !a[9], !a[10], !a[11],
-            !a[12], !a[13], !a[14], !a[15],
-        ]
+        core::array::from_fn(|i| !a[i])
     }
 
     #[inline(always)]
     fn bitand(self, a: [u16; 16], b: [u16; 16]) -> [u16; 16] {
-        [
-            a[0] & b[0],
-            a[1] & b[1],
-            a[2] & b[2],
-            a[3] & b[3],
-            a[4] & b[4],
-            a[5] & b[5],
-            a[6] & b[6],
-            a[7] & b[7],
-            a[8] & b[8],
-            a[9] & b[9],
-            a[10] & b[10],
-            a[11] & b[11],
-            a[12] & b[12],
-            a[13] & b[13],
-            a[14] & b[14],
-            a[15] & b[15],
-        ]
+        core::array::from_fn(|i| a[i] & b[i])
     }
 
     #[inline(always)]
     fn bitor(self, a: [u16; 16], b: [u16; 16]) -> [u16; 16] {
-        [
-            a[0] | b[0],
-            a[1] | b[1],
-            a[2] | b[2],
-            a[3] | b[3],
-            a[4] | b[4],
-            a[5] | b[5],
-            a[6] | b[6],
-            a[7] | b[7],
-            a[8] | b[8],
-            a[9] | b[9],
-            a[10] | b[10],
-            a[11] | b[11],
-            a[12] | b[12],
-            a[13] | b[13],
-            a[14] | b[14],
-            a[15] | b[15],
-        ]
+        core::array::from_fn(|i| a[i] | b[i])
     }
 
     #[inline(always)]
     fn bitxor(self, a: [u16; 16], b: [u16; 16]) -> [u16; 16] {
-        [
-            a[0] ^ b[0],
-            a[1] ^ b[1],
-            a[2] ^ b[2],
-            a[3] ^ b[3],
-            a[4] ^ b[4],
-            a[5] ^ b[5],
-            a[6] ^ b[6],
-            a[7] ^ b[7],
-            a[8] ^ b[8],
-            a[9] ^ b[9],
-            a[10] ^ b[10],
-            a[11] ^ b[11],
-            a[12] ^ b[12],
-            a[13] ^ b[13],
-            a[14] ^ b[14],
-            a[15] ^ b[15],
-        ]
+        core::array::from_fn(|i| a[i] ^ b[i])
     }
 
     #[inline(always)]
     fn shl_const<const N: i32>(self, a: [u16; 16]) -> [u16; 16] {
-        [
-            a[0].wrapping_shl(N as u32),
-            a[1].wrapping_shl(N as u32),
-            a[2].wrapping_shl(N as u32),
-            a[3].wrapping_shl(N as u32),
-            a[4].wrapping_shl(N as u32),
-            a[5].wrapping_shl(N as u32),
-            a[6].wrapping_shl(N as u32),
-            a[7].wrapping_shl(N as u32),
-            a[8].wrapping_shl(N as u32),
-            a[9].wrapping_shl(N as u32),
-            a[10].wrapping_shl(N as u32),
-            a[11].wrapping_shl(N as u32),
-            a[12].wrapping_shl(N as u32),
-            a[13].wrapping_shl(N as u32),
-            a[14].wrapping_shl(N as u32),
-            a[15].wrapping_shl(N as u32),
-        ]
+        core::array::from_fn(|i| a[i].wrapping_shl(N as u32))
     }
 
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: [u16; 16]) -> [u16; 16] {
-        [
-            a[0].wrapping_shr(N as u32),
-            a[1].wrapping_shr(N as u32),
-            a[2].wrapping_shr(N as u32),
-            a[3].wrapping_shr(N as u32),
-            a[4].wrapping_shr(N as u32),
-            a[5].wrapping_shr(N as u32),
-            a[6].wrapping_shr(N as u32),
-            a[7].wrapping_shr(N as u32),
-            a[8].wrapping_shr(N as u32),
-            a[9].wrapping_shr(N as u32),
-            a[10].wrapping_shr(N as u32),
-            a[11].wrapping_shr(N as u32),
-            a[12].wrapping_shr(N as u32),
-            a[13].wrapping_shr(N as u32),
-            a[14].wrapping_shr(N as u32),
-            a[15].wrapping_shr(N as u32),
-        ]
+        core::array::from_fn(|i| a[i].wrapping_shr(N as u32))
     }
 
     #[inline(always)]
@@ -8452,7 +5186,7 @@ impl U64x2Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn splat(self, v: u64) -> [u64; 2] {
-        [v, v]
+        [v; 2]
     }
 
     #[inline(always)]
@@ -8482,92 +5216,63 @@ impl U64x2Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn add(self, a: [u64; 2], b: [u64; 2]) -> [u64; 2] {
-        [a[0].wrapping_add(b[0]), a[1].wrapping_add(b[1])]
+        core::array::from_fn(|i| a[i].wrapping_add(b[i]))
     }
 
     #[inline(always)]
     fn sub(self, a: [u64; 2], b: [u64; 2]) -> [u64; 2] {
-        [a[0].wrapping_sub(b[0]), a[1].wrapping_sub(b[1])]
+        core::array::from_fn(|i| a[i].wrapping_sub(b[i]))
     }
 
     #[inline(always)]
     fn min(self, a: [u64; 2], b: [u64; 2]) -> [u64; 2] {
-        [
-            if a[0] < b[0] { a[0] } else { b[0] },
-            if a[1] < b[1] { a[1] } else { b[1] },
-        ]
+        core::array::from_fn(|i| if a[i] < b[i] { a[i] } else { b[i] })
     }
 
     #[inline(always)]
     fn max(self, a: [u64; 2], b: [u64; 2]) -> [u64; 2] {
-        [
-            if a[0] > b[0] { a[0] } else { b[0] },
-            if a[1] > b[1] { a[1] } else { b[1] },
-        ]
+        core::array::from_fn(|i| if a[i] > b[i] { a[i] } else { b[i] })
     }
 
     #[inline(always)]
     fn simd_eq(self, a: [u64; 2], b: [u64; 2]) -> [u64; 2] {
-        [
-            if a[0] == b[0] { u64::MAX } else { 0 },
-            if a[1] == b[1] { u64::MAX } else { 0 },
-        ]
+        core::array::from_fn(|i| if a[i] == b[i] { u64::MAX } else { 0 })
     }
 
     #[inline(always)]
     fn simd_ne(self, a: [u64; 2], b: [u64; 2]) -> [u64; 2] {
-        [
-            if a[0] != b[0] { u64::MAX } else { 0 },
-            if a[1] != b[1] { u64::MAX } else { 0 },
-        ]
+        core::array::from_fn(|i| if a[i] != b[i] { u64::MAX } else { 0 })
     }
 
     #[inline(always)]
     fn simd_lt(self, a: [u64; 2], b: [u64; 2]) -> [u64; 2] {
-        [
-            if a[0] < b[0] { u64::MAX } else { 0 },
-            if a[1] < b[1] { u64::MAX } else { 0 },
-        ]
+        core::array::from_fn(|i| if a[i] < b[i] { u64::MAX } else { 0 })
     }
 
     #[inline(always)]
     fn simd_le(self, a: [u64; 2], b: [u64; 2]) -> [u64; 2] {
-        [
-            if a[0] <= b[0] { u64::MAX } else { 0 },
-            if a[1] <= b[1] { u64::MAX } else { 0 },
-        ]
+        core::array::from_fn(|i| if a[i] <= b[i] { u64::MAX } else { 0 })
     }
 
     #[inline(always)]
     fn simd_gt(self, a: [u64; 2], b: [u64; 2]) -> [u64; 2] {
-        [
-            if a[0] > b[0] { u64::MAX } else { 0 },
-            if a[1] > b[1] { u64::MAX } else { 0 },
-        ]
+        core::array::from_fn(|i| if a[i] > b[i] { u64::MAX } else { 0 })
     }
 
     #[inline(always)]
     fn simd_ge(self, a: [u64; 2], b: [u64; 2]) -> [u64; 2] {
-        [
-            if a[0] >= b[0] { u64::MAX } else { 0 },
-            if a[1] >= b[1] { u64::MAX } else { 0 },
-        ]
+        core::array::from_fn(|i| if a[i] >= b[i] { u64::MAX } else { 0 })
     }
 
     #[inline(always)]
     fn blend(self, mask: [u64; 2], if_true: [u64; 2], if_false: [u64; 2]) -> [u64; 2] {
-        [
-            if mask[0] != 0 {
-                if_true[0]
+        core::array::from_fn(|i| {
+            if mask[i] != 0 {
+                if_true[i]
             } else {
-                if_false[0]
-            },
-            if mask[1] != 0 {
-                if_true[1]
-            } else {
-                if_false[1]
-            },
-        ]
+                if_false[i]
+            }
+        })
     }
 
     #[inline(always)]
@@ -8577,32 +5282,32 @@ impl U64x2Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn not(self, a: [u64; 2]) -> [u64; 2] {
-        [!a[0], !a[1]]
+        core::array::from_fn(|i| !a[i])
     }
 
     #[inline(always)]
     fn bitand(self, a: [u64; 2], b: [u64; 2]) -> [u64; 2] {
-        [a[0] & b[0], a[1] & b[1]]
+        core::array::from_fn(|i| a[i] & b[i])
     }
 
     #[inline(always)]
     fn bitor(self, a: [u64; 2], b: [u64; 2]) -> [u64; 2] {
-        [a[0] | b[0], a[1] | b[1]]
+        core::array::from_fn(|i| a[i] | b[i])
     }
 
     #[inline(always)]
     fn bitxor(self, a: [u64; 2], b: [u64; 2]) -> [u64; 2] {
-        [a[0] ^ b[0], a[1] ^ b[1]]
+        core::array::from_fn(|i| a[i] ^ b[i])
     }
 
     #[inline(always)]
     fn shl_const<const N: i32>(self, a: [u64; 2]) -> [u64; 2] {
-        [a[0].wrapping_shl(N as u32), a[1].wrapping_shl(N as u32)]
+        core::array::from_fn(|i| a[i].wrapping_shl(N as u32))
     }
 
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: [u64; 2]) -> [u64; 2] {
-        [a[0].wrapping_shr(N as u32), a[1].wrapping_shr(N as u32)]
+        core::array::from_fn(|i| a[i].wrapping_shr(N as u32))
     }
 
     #[inline(always)]
@@ -8630,7 +5335,7 @@ impl U64x4Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn splat(self, v: u64) -> [u64; 4] {
-        [v, v, v, v]
+        [v; 4]
     }
 
     #[inline(always)]
@@ -8660,128 +5365,63 @@ impl U64x4Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn add(self, a: [u64; 4], b: [u64; 4]) -> [u64; 4] {
-        [
-            a[0].wrapping_add(b[0]),
-            a[1].wrapping_add(b[1]),
-            a[2].wrapping_add(b[2]),
-            a[3].wrapping_add(b[3]),
-        ]
+        core::array::from_fn(|i| a[i].wrapping_add(b[i]))
     }
 
     #[inline(always)]
     fn sub(self, a: [u64; 4], b: [u64; 4]) -> [u64; 4] {
-        [
-            a[0].wrapping_sub(b[0]),
-            a[1].wrapping_sub(b[1]),
-            a[2].wrapping_sub(b[2]),
-            a[3].wrapping_sub(b[3]),
-        ]
+        core::array::from_fn(|i| a[i].wrapping_sub(b[i]))
     }
 
     #[inline(always)]
     fn min(self, a: [u64; 4], b: [u64; 4]) -> [u64; 4] {
-        [
-            if a[0] < b[0] { a[0] } else { b[0] },
-            if a[1] < b[1] { a[1] } else { b[1] },
-            if a[2] < b[2] { a[2] } else { b[2] },
-            if a[3] < b[3] { a[3] } else { b[3] },
-        ]
+        core::array::from_fn(|i| if a[i] < b[i] { a[i] } else { b[i] })
     }
 
     #[inline(always)]
     fn max(self, a: [u64; 4], b: [u64; 4]) -> [u64; 4] {
-        [
-            if a[0] > b[0] { a[0] } else { b[0] },
-            if a[1] > b[1] { a[1] } else { b[1] },
-            if a[2] > b[2] { a[2] } else { b[2] },
-            if a[3] > b[3] { a[3] } else { b[3] },
-        ]
+        core::array::from_fn(|i| if a[i] > b[i] { a[i] } else { b[i] })
     }
 
     #[inline(always)]
     fn simd_eq(self, a: [u64; 4], b: [u64; 4]) -> [u64; 4] {
-        [
-            if a[0] == b[0] { u64::MAX } else { 0 },
-            if a[1] == b[1] { u64::MAX } else { 0 },
-            if a[2] == b[2] { u64::MAX } else { 0 },
-            if a[3] == b[3] { u64::MAX } else { 0 },
-        ]
+        core::array::from_fn(|i| if a[i] == b[i] { u64::MAX } else { 0 })
     }
 
     #[inline(always)]
     fn simd_ne(self, a: [u64; 4], b: [u64; 4]) -> [u64; 4] {
-        [
-            if a[0] != b[0] { u64::MAX } else { 0 },
-            if a[1] != b[1] { u64::MAX } else { 0 },
-            if a[2] != b[2] { u64::MAX } else { 0 },
-            if a[3] != b[3] { u64::MAX } else { 0 },
-        ]
+        core::array::from_fn(|i| if a[i] != b[i] { u64::MAX } else { 0 })
     }
 
     #[inline(always)]
     fn simd_lt(self, a: [u64; 4], b: [u64; 4]) -> [u64; 4] {
-        [
-            if a[0] < b[0] { u64::MAX } else { 0 },
-            if a[1] < b[1] { u64::MAX } else { 0 },
-            if a[2] < b[2] { u64::MAX } else { 0 },
-            if a[3] < b[3] { u64::MAX } else { 0 },
-        ]
+        core::array::from_fn(|i| if a[i] < b[i] { u64::MAX } else { 0 })
     }
 
     #[inline(always)]
     fn simd_le(self, a: [u64; 4], b: [u64; 4]) -> [u64; 4] {
-        [
-            if a[0] <= b[0] { u64::MAX } else { 0 },
-            if a[1] <= b[1] { u64::MAX } else { 0 },
-            if a[2] <= b[2] { u64::MAX } else { 0 },
-            if a[3] <= b[3] { u64::MAX } else { 0 },
-        ]
+        core::array::from_fn(|i| if a[i] <= b[i] { u64::MAX } else { 0 })
     }
 
     #[inline(always)]
     fn simd_gt(self, a: [u64; 4], b: [u64; 4]) -> [u64; 4] {
-        [
-            if a[0] > b[0] { u64::MAX } else { 0 },
-            if a[1] > b[1] { u64::MAX } else { 0 },
-            if a[2] > b[2] { u64::MAX } else { 0 },
-            if a[3] > b[3] { u64::MAX } else { 0 },
-        ]
+        core::array::from_fn(|i| if a[i] > b[i] { u64::MAX } else { 0 })
     }
 
     #[inline(always)]
     fn simd_ge(self, a: [u64; 4], b: [u64; 4]) -> [u64; 4] {
-        [
-            if a[0] >= b[0] { u64::MAX } else { 0 },
-            if a[1] >= b[1] { u64::MAX } else { 0 },
-            if a[2] >= b[2] { u64::MAX } else { 0 },
-            if a[3] >= b[3] { u64::MAX } else { 0 },
-        ]
+        core::array::from_fn(|i| if a[i] >= b[i] { u64::MAX } else { 0 })
     }
 
     #[inline(always)]
     fn blend(self, mask: [u64; 4], if_true: [u64; 4], if_false: [u64; 4]) -> [u64; 4] {
-        [
-            if mask[0] != 0 {
-                if_true[0]
+        core::array::from_fn(|i| {
+            if mask[i] != 0 {
+                if_true[i]
             } else {
-                if_false[0]
-            },
-            if mask[1] != 0 {
-                if_true[1]
-            } else {
-                if_false[1]
-            },
-            if mask[2] != 0 {
-                if_true[2]
-            } else {
-                if_false[2]
-            },
-            if mask[3] != 0 {
-                if_true[3]
-            } else {
-                if_false[3]
-            },
-        ]
+                if_false[i]
+            }
+        })
     }
 
     #[inline(always)]
@@ -8791,42 +5431,32 @@ impl U64x4Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn not(self, a: [u64; 4]) -> [u64; 4] {
-        [!a[0], !a[1], !a[2], !a[3]]
+        core::array::from_fn(|i| !a[i])
     }
 
     #[inline(always)]
     fn bitand(self, a: [u64; 4], b: [u64; 4]) -> [u64; 4] {
-        [a[0] & b[0], a[1] & b[1], a[2] & b[2], a[3] & b[3]]
+        core::array::from_fn(|i| a[i] & b[i])
     }
 
     #[inline(always)]
     fn bitor(self, a: [u64; 4], b: [u64; 4]) -> [u64; 4] {
-        [a[0] | b[0], a[1] | b[1], a[2] | b[2], a[3] | b[3]]
+        core::array::from_fn(|i| a[i] | b[i])
     }
 
     #[inline(always)]
     fn bitxor(self, a: [u64; 4], b: [u64; 4]) -> [u64; 4] {
-        [a[0] ^ b[0], a[1] ^ b[1], a[2] ^ b[2], a[3] ^ b[3]]
+        core::array::from_fn(|i| a[i] ^ b[i])
     }
 
     #[inline(always)]
     fn shl_const<const N: i32>(self, a: [u64; 4]) -> [u64; 4] {
-        [
-            a[0].wrapping_shl(N as u32),
-            a[1].wrapping_shl(N as u32),
-            a[2].wrapping_shl(N as u32),
-            a[3].wrapping_shl(N as u32),
-        ]
+        core::array::from_fn(|i| a[i].wrapping_shl(N as u32))
     }
 
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: [u64; 4]) -> [u64; 4] {
-        [
-            a[0].wrapping_shr(N as u32),
-            a[1].wrapping_shr(N as u32),
-            a[2].wrapping_shr(N as u32),
-            a[3].wrapping_shr(N as u32),
-        ]
+        core::array::from_fn(|i| a[i].wrapping_shr(N as u32))
     }
 
     #[inline(always)]

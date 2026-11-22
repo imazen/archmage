@@ -116,12 +116,14 @@ const MIN_VERIFIED_CALLS: usize = 4000;
 /// churn doesn't trip them.
 const REQUIRED_FILE_FLOORS: &[(&str, usize)] = &[
     ("magetypes/src/simd/impls/x86_v3.rs", 750), // measured 993
-    ("magetypes/src/simd/impls/x86_v4.rs", 790), // measured 1056
+    // Measured 768 after delegating X64V4xToken's 12 base W512 backends to
+    // X64V4Token in `x86_v4_w512_delegated.rs` (previously 1528 with duplicates).
+    ("magetypes/src/simd/impls/x86_v4.rs", 580),
     ("magetypes/src/simd/impls/arm_neon.rs", 1080), // measured 1445
-    ("magetypes/src/simd/impls/wasm128.rs", 700), // measured 942
+    ("magetypes/src/simd/impls/wasm128.rs", 700),   // measured 942
     ("magetypes/src/simd/generic/cross_width.rs", 6), // measured 8
     ("magetypes/src/simd/generic/convert_f16.rs", 18), // measured 26
-    ("magetypes/src/simd_storage.rs", 13),       // measured 18 (gather/scatter)
+    ("magetypes/src/simd_storage.rs", 13),          // measured 18 (gather/scatter)
 ];
 
 /// The one magetypes file allowed `unsafe` of any kind, `unsafe impl Pod`, and
