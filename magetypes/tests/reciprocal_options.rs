@@ -1,4 +1,4 @@
-use archmage::{ScalarToken, SimdToken, attune};
+use archmage::{ScalarToken, attune};
 use magetypes::numerics::{NumericsError, NumericsErrorKind, RecipOptions};
 use magetypes::scalar;
 use magetypes::simd::generic::{f32x4, f32x8, f64x2, f64x4};
@@ -268,10 +268,16 @@ fn scalar_domains() {
     reciprocal_domains_scalar_t(ScalarToken);
 }
 
+#[cfg(any(
+    all(target_arch = "x86_64", target_feature = "sse2"),
+    target_arch = "aarch64",
+    target_arch = "wasm32"
+))]
 macro_rules! test_tier {
     ($name:ident, $token:ident, $check:ident) => {
         #[test]
         fn $name() {
+            use archmage::SimdToken;
             if let Some(token) = archmage::$token::summon() {
                 $check(token);
             }
