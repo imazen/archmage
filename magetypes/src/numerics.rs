@@ -20,12 +20,86 @@
 //! assert_eq!(vector.to_u16_with::<CFG>(), input.map(scalar::to_u16_with::<CFG>));
 //! assert_eq!(scalar::to_u16_with::<CFG>(1.9), 1);
 //! ```
+//!
+//! Checked conversion methods use `try_*_with` and report every rejected lane
+//! in a [`NumericsError`]. Integer ranges apply to the original input before
+//! rounding. Half policies check input finiteness, leaving finite overflow
+//! and subnormal handling to the selected conversion policy.
+//!
+//! Reserved bits are rejected at compile time.
+//!
+//! ```compile_fail
+//! use magetypes::{numerics::IntConvert, scalar};
+//! const RESERVED: u32 = IntConvert::new().bits() | 0x80;
+//! let _ = scalar::try_to_i32_with::<RESERVED>(1.0);
+//! ```
+//!
+//! A policy from another family is also rejected at compile time.
+//!
+//! ```compile_fail
+//! use archmage::ScalarToken;
+//! use magetypes::{numerics::IntConvert, simd::generic::f32x4};
+//! let input = f32x4::splat_t(ScalarToken, 1.0);
+//! let _ = input.try_to_f16_bits_with::<{IntConvert::new().bits()}>();
+//! ```
 
 const FAMILY_MASK: u32 = 0xff00_0000;
 const INT_FAMILY: u32 = 0x0100_0000;
 const HALF_FAMILY: u32 = 0x0200_0000;
 const RECIP_FAMILY: u32 = 0x0300_0000;
 const EXTREMA_FAMILY: u32 = 0x0400_0000;
+
+/// Input contract violated by a checked conversion.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[non_exhaustive]
+pub enum NumericsErrorKind {
+    /// A lane is outside the selected integer input bounds, including nonfinite lanes.
+    IntegerBounds,
+    /// A half-precision conversion requires finite input.
+    NonFinite,
+}
+
+/// Rejection of a checked scalar or SIMD conversion.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct NumericsError {
+    /// Which input contract failed.
+    pub kind: NumericsErrorKind,
+    /// Bit `i` identifies rejected lane `i`. Scalar calls use bit zero.
+    pub lane_mask: u16,
+}
+
+impl core::fmt::Display for NumericsError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "{:?} (lane mask {:#06x})", self.kind, self.lane_mask)
+    }
+}
+
+#[cfg(feature = "std")]
+impl std::error::Error for NumericsError {}
+
+#[inline(always)]
+fn check_lanes<T, const N: usize>(
+    lanes: [T; N],
+    valid: impl Fn(T) -> bool,
+    kind: NumericsErrorKind,
+) -> Result<(), NumericsError> {
+    let lane_mask = lanes
+        .into_iter()
+        .enumerate()
+        .fold(0, |mask, (i, lane)| mask | (u16::from(!valid(lane)) << i));
+    if lane_mask == 0 {
+        Ok(())
+    } else {
+        Err(NumericsError { kind, lane_mask })
+    }
+}
+
+// Compare the original f32 to the destination domain before rounding. The
+// inclusive upper constants for the 32-bit types are their largest in-range
+// f32 values, since i32::MAX and u32::MAX round up when represented as f32.
+pub(crate) const I32_MIN: f32 = -2_147_483_648.0;
+pub(crate) const I32_MAX: f32 = 2_147_483_520.0;
+pub(crate) const U32_MAX: f32 = 4_294_967_040.0;
 
 /// Rounding before conversion to an integer.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -137,6 +211,26 @@ impl IntConvert {
             None => panic!("invalid IntConvert bits"),
         }
     }
+    #[inline(always)]
+    pub(crate) fn check<const N: usize>(
+        self,
+        lanes: impl FnOnce() -> [f32; N],
+        min: f32,
+        max: f32,
+    ) -> Result<(), NumericsError> {
+        let (min, max) = match self.bounds {
+            IntBounds::Finite => (I32_MIN, I32_MAX),
+            IntBounds::InRange => (min, max),
+            IntBounds::NonNegativeFinite => (0.0, I32_MAX),
+            IntBounds::SaturateAll => return Ok(()),
+        };
+        check_lanes(
+            lanes(),
+            |x| x >= min && x <= max,
+            NumericsErrorKind::IntegerBounds,
+        )
+    }
+
     pub(crate) const fn rounds(self) -> bool {
         matches!(self.rounding, IntRounding::NearestEven)
     }
@@ -284,6 +378,29 @@ impl HalfConvert {
             None => panic!("invalid HalfConvert bits"),
         }
     }
+    #[inline(always)]
+    pub(crate) fn check_float<const N: usize>(
+        self,
+        lanes: impl FnOnce() -> [f32; N],
+    ) -> Result<(), NumericsError> {
+        if self.is_finite() {
+            check_lanes(lanes(), f32::is_finite, NumericsErrorKind::NonFinite)?;
+        }
+        Ok(())
+    }
+
+    #[inline(always)]
+    pub(crate) fn check_f16<const N: usize>(self, bits: &[u16; N]) -> Result<(), NumericsError> {
+        if self.is_finite() {
+            check_lanes(
+                *bits,
+                |lane| lane & 0x7c00 != 0x7c00,
+                NumericsErrorKind::NonFinite,
+            )?;
+        }
+        Ok(())
+    }
+
     pub(crate) const fn is_finite(self) -> bool {
         matches!(self.domain, HalfDomain::Finite)
     }
@@ -307,8 +424,9 @@ pub enum RecipPrecision {
     #[default]
     Nr1 = 0,
     /// Refined reciprocal biased toward positive infinity so finite non-zero
-    /// results satisfy `result >= 1 / x` (`1` ULP on exact scalar division,
-    /// `|r| * (2 * EPSILON)` on SIMD). Reciprocal square root uses the `Nr1` path.
+    /// results satisfy `result >= 1 / x`. Exact division advances one
+    /// representable step. SIMD estimates use a bias of `|r| * (2 * EPSILON)`.
+    /// Reciprocal square root uses the `Nr1` path.
     Nr1Ceil = 2,
     /// Division, or division following square root.
     Exact = 3,

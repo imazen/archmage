@@ -117,10 +117,11 @@ impl f32x1 {
         i32x1(self.0 as i32)
     }
 
-    /// Element-wise clamp (matches [`f32::clamp`]).
+    /// Element-wise clamp using `max_fast(lo).min_fast(hi)`, matching the
+    /// scalar SIMD backend. Reversed or NaN bounds do not panic.
     #[inline(always)]
     pub fn clamp(self, lo: Self, hi: Self) -> Self {
-        Self(self.0.clamp(lo.0, hi.0))
+        self.max_fast(lo).min_fast(hi)
     }
 
     /// Element-wise square root.

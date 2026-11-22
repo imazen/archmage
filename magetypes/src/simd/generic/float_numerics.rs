@@ -41,7 +41,7 @@ macro_rules! float_numerics {
                 }
 
                 let seed = self.rcp_approx();
-                let mut result = if matches!(precision, RecipPrecision::Approx) {
+                let result = if matches!(precision, RecipPrecision::Approx) {
                     seed
                 } else {
                     let residual = self.mul_neg_add_relaxed(seed, one);
@@ -53,32 +53,44 @@ macro_rules! float_numerics {
                         refined
                     }
                 };
+                let bias = |r: Self| {
+                    r.abs()
+                        .mul_add_relaxed(Self::splat_t(self.1, 2.0 * <$elem>::EPSILON), r)
+                };
                 if opts.admits_all() {
                     // Estimates accept normal inputs below 1 / MIN_POSITIVE.
                     // Use division on IEEE rails, subnormals, and ±(1 / MIN_POSITIVE).
-                    let valid = self
-                        .abs()
-                        .simd_ge(Self::splat_t(self.1, <$elem>::MIN_POSITIVE))
-                        & self
-                            .abs()
-                            .simd_lt(Self::splat_t(self.1, 1.0 / <$elem>::MIN_POSITIVE));
-                    result = Self::blend(valid, result, one / self);
-                }
-                if matches!(precision, RecipPrecision::Nr1Ceil) {
-                    let biased = result
-                        .abs()
-                        .mul_add_relaxed(Self::splat_t(self.1, 2.0 * <$elem>::EPSILON), result);
-                    result = if opts.admits_all() {
+                    let magnitude = self.abs();
+                    let valid = magnitude.simd_ge(Self::splat_t(self.1, <$elem>::MIN_POSITIVE))
+                        & magnitude.simd_lt(Self::splat_t(self.1, 1.0 / <$elem>::MIN_POSITIVE));
+                    let exact = one / self;
+                    if matches!(precision, RecipPrecision::Nr1Ceil) {
+                        // Relative bias can round to zero for a subnormal reciprocal.
+                        // Once division has rounded, one representable step suffices.
+                        let exact = Self::from_array_t(
+                            self.1,
+                            exact.to_array().map(|lane| {
+                                if lane.is_finite() && lane != 0.0 {
+                                    lane.next_up()
+                                } else {
+                                    lane
+                                }
+                            }),
+                        );
                         let finite_nz = result.abs().simd_gt(Self::splat_t(self.1, 0.0))
                             & result
                                 .abs()
                                 .simd_lt(Self::splat_t(self.1, <$elem>::INFINITY));
-                        Self::blend(finite_nz, biased, result)
-                    } else {
-                        biased
-                    };
+                        let estimate = Self::blend(finite_nz, bias(result), result);
+                        return Self::blend(valid, estimate, exact);
+                    }
+                    return Self::blend(valid, result, exact);
                 }
-                result
+                if matches!(precision, RecipPrecision::Nr1Ceil) {
+                    bias(result)
+                } else {
+                    result
+                }
             }
 
             /// Lane-wise reciprocal square root with a compile-time policy.

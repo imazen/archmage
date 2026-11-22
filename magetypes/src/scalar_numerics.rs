@@ -1,9 +1,10 @@
 use crate::numerics::{
-    ExtremaDomain, ExtremaOptions, HalfConvert, IntConvert, RecipOptions, RecipPrecision,
+    ExtremaDomain, ExtremaOptions, HalfConvert, I32_MAX, I32_MIN, IntConvert, NumericsError,
+    RecipOptions, RecipPrecision, U32_MAX,
 };
 
 macro_rules! to_int {
-    ($name:ident, $output:ty, $doc:literal) => {
+    ($name:ident, $checked:ident, $output:ty, $lo:expr, $hi:expr, $doc:literal) => {
         #[doc = $doc]
         ///
         /// Configure with [`IntConvert`](crate::numerics::IntConvert).
@@ -17,27 +18,47 @@ macro_rules! to_int {
             };
             rounded as $output
         }
+
+        /// Check the input bounds and convert one lane using the encoded integer policy.
+        #[inline(always)]
+        pub fn $checked<const CFG: u32>(x: f32) -> Result<$output, NumericsError> {
+            let opts = const { IntConvert::decode(CFG) };
+            opts.check(|| [x], $lo, $hi)?;
+            Ok($name::<CFG>(x))
+        }
     };
 }
 
 to_int!(
     to_u8_with,
+    try_to_u8_with,
     u8,
+    0.0,
+    u8::MAX as f32,
     "Convert one lane to u8 with the vector conversion policy."
 );
 to_int!(
     to_u16_with,
+    try_to_u16_with,
     u16,
+    0.0,
+    u16::MAX as f32,
     "Convert one lane to u16 with the vector conversion policy."
 );
 to_int!(
     to_i32_with,
+    try_to_i32_with,
     i32,
+    I32_MIN,
+    I32_MAX,
     "Convert one lane to i32 with the vector conversion policy."
 );
 to_int!(
     to_u32_with,
+    try_to_u32_with,
     u32,
+    0.0,
+    U32_MAX,
     "Convert one lane to u32 with the vector conversion policy."
 );
 
@@ -109,6 +130,37 @@ pub fn to_f16_bits_with<const CFG: u32>(x: f32) -> u16 {
     };
     sign | half as u16
 }
+
+/// Check the input domain and decode one binary16 value.
+#[inline(always)]
+pub fn try_from_f16_with<const CFG: u32>(bits: u16) -> Result<f32, NumericsError> {
+    let opts = const { HalfConvert::decode(CFG) };
+    opts.check_f16(&[bits])?;
+    Ok(from_f16_with::<CFG>(bits))
+}
+
+macro_rules! checked_half {
+    ($name:ident, $encode:ident, $doc:literal) => {
+        #[doc = $doc]
+        #[inline(always)]
+        pub fn $name<const CFG: u32>(x: f32) -> Result<u16, NumericsError> {
+            let opts = const { HalfConvert::decode(CFG) };
+            opts.check_float(|| [x])?;
+            Ok($encode::<CFG>(x))
+        }
+    };
+}
+
+checked_half!(
+    try_to_f16_bits_with,
+    to_f16_bits_with,
+    "Check the input domain and encode one binary16 value."
+);
+checked_half!(
+    try_to_bf16_with,
+    to_bf16_with,
+    "Check the input domain and encode one bfloat16 value."
+);
 
 /// Decode bfloat16 by widening the bits in place.
 #[inline(always)]

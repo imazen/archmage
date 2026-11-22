@@ -45,6 +45,26 @@ macro_rules! float_layout {
                 T::to_u8_lanes::<CFG>(self.1, self.0)
             }
 
+            /// Check every lane against the encoded integer bounds before converting to u16.
+            #[inline(always)]
+            pub fn try_to_u16_with<const CFG: u32>(
+                self,
+            ) -> Result<[u16; $lanes], crate::numerics::NumericsError> {
+                let opts = const { IntConvert::decode(CFG) };
+                opts.check(|| self.to_array(), 0.0, u16::MAX as f32)?;
+                Ok(self.to_u16_with::<CFG>())
+            }
+
+            /// Check every lane against the encoded integer bounds before converting to u8.
+            #[inline(always)]
+            pub fn try_to_u8_with<const CFG: u32>(
+                self,
+            ) -> Result<[u8; $lanes], crate::numerics::NumericsError> {
+                let opts = const { IntConvert::decode(CFG) };
+                opts.check(|| self.to_array(), 0.0, u8::MAX as f32)?;
+                Ok(self.to_u8_with::<CFG>())
+            }
+
             /// Decode binary16 lanes, flushing half subnormals to signed zero.
             #[inline(always)]
             pub fn from_f16_t(token: T, bits: &[u16; $lanes]) -> Self {
@@ -62,6 +82,17 @@ macro_rules! float_layout {
                 Self(T::from_f16_lanes::<CFG>(token, bits), token)
             }
 
+            /// Check the half-precision input domain before decoding binary16 lanes.
+            #[inline(always)]
+            pub fn try_from_f16_with_t<const CFG: u32>(
+                token: T,
+                bits: &[u16; $lanes],
+            ) -> Result<Self, crate::numerics::NumericsError> {
+                let opts = const { HalfConvert::decode(CFG) };
+                opts.check_f16(bits)?;
+                Ok(Self::from_f16_with_t::<CFG>(token, bits))
+            }
+
             /// Encode to binary16, rounding ties to even and flushing half subnormals.
             #[inline(always)]
             pub fn to_f16_bits(self) -> [u16; $lanes] {
@@ -77,6 +108,16 @@ macro_rules! float_layout {
                     let _ = HalfConvert::decode(CFG);
                 }
                 T::to_f16_lanes::<CFG>(self.1, self.0)
+            }
+
+            /// Check the half-precision input domain before encoding binary16 lanes.
+            #[inline(always)]
+            pub fn try_to_f16_bits_with<const CFG: u32>(
+                self,
+            ) -> Result<[u16; $lanes], crate::numerics::NumericsError> {
+                let opts = const { HalfConvert::decode(CFG) };
+                opts.check_float(|| self.to_array())?;
+                Ok(self.to_f16_bits_with::<CFG>())
             }
 
             /// Widen bfloat16 bit patterns, retaining every input bit.
@@ -102,6 +143,16 @@ macro_rules! float_layout {
                     let _ = HalfConvert::decode(CFG);
                 }
                 T::to_bf16_lanes::<CFG>(self.1, self.0)
+            }
+
+            /// Check the half-precision input domain before encoding bfloat16 lanes.
+            #[inline(always)]
+            pub fn try_to_bf16_with<const CFG: u32>(
+                self,
+            ) -> Result<[u16; $lanes], crate::numerics::NumericsError> {
+                let opts = const { HalfConvert::decode(CFG) };
+                opts.check_float(|| self.to_array())?;
+                Ok(self.to_bf16_with::<CFG>())
             }
 
             /// Copy the alpha of each packed RGBA pixel into all four of its lanes.
