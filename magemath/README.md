@@ -86,7 +86,13 @@ Each family has one fluent `const` options builder ([`PowfOptions`](https://docs
 
 ## Inline SIMD kernels and matching scalar tails
 
-Inside an `#[attune(_*_t, define(f32x8))]` kernel, import [`SimdMath`](https://docs.rs/magemath/latest/magemath/trait.SimdMath.html) to call configured operations inline on any Magetypes `f32` vector (`self.token()` is reused automatically), and pair `.caller()` with `*_with_token` so scalar tails produce identical bits:
+**Choosing width and entry points.** Use [`SimdMath`](https://docs.rs/magemath/latest/magemath/trait.SimdMath.html) inside fused loops.
+Start with `f32x4` on WASM, `f32x8` on V3 and NEON, or `f32x16` on AVX-512.
+Use `*_slice` for a standalone buffer pass.
+On WASM, choose `BackendDependent` when cross-ISA bit identity is optional.
+See the [entry-point guide](https://imazen.github.io/archmage/magemath/#which-entry-point-should-you-call).
+
+This eight-lane example uses `.caller()` with `*_with_token` so the vector loop and scalar tail reuse the same proof and rounding policy.
 
 ```rust
 use archmage::prelude::*;

@@ -174,7 +174,52 @@ assert_eq!(Expf::<CLAMP_FINITE>::exp2_infallible(10.0), 2.0);
 - **`Portability::BitExact` *(default, `.bit_exact()`)*:** evaluates one fused polynomial graph across every target so x86 AVX2, x86 AVX-512, AArch64 NEON, WASM SIMD128, and `ScalarToken` produce bit-for-bit identical accepted outputs. On x86 V3/V4 and AArch64 NEON, hardware FMA already rounds once in a single instruction, so **`BitExact` costs nothing extra on native desktop, server, and mobile SIMD tiers**. On `ScalarToken` (without compile-time FMA) and strict `Wasm128Token` (or `relaxed-simd` engines whose cached startup probe rounds twice), `BitExact` runs vectorized branchless software single-rounding FMA (`f64` product with round-to-odd adjustment on rare halfway/subnormal lanes).
 - **`Portability::BackendDependent` *( `.backend_dependent()` )*:** evaluates polynomials with `mul_add_relaxed` (1-instruction FMA on x86 V3/V4 and NEON, plain `a * b + c` on `ScalarToken` and strict WASM, and platform `std` `f32::powf` on `Highp` `powf`). Switch to `.backend_dependent()` when 1–3 ULP cross-ISA drift on scalar/WASM fallbacks is acceptable and WASM or scalar fallback speed matters.
 
-### Step 4: Choose `Precision` and `Execution`
+## WASM portability (`BackendDependent` vs `BitExact`)
+
+For WASM throughput, choose `.backend_dependent()` when your pipeline permits
+cross-ISA rounding differences. The options builders default to `BitExact`
+for reproducible output. On strict SIMD128, or when the relaxed-SIMD
+engine rounds `relaxed_madd` twice, `BitExact` needs software single-rounding
+FMA. Packed `BitExact` took roughly **10–60×** as long as `BackendDependent`
+in sampled strict WASM profiles. For example, strict `Midp` `exp2` on a
+single octave took **17.336 vs 0.281 ns/lane** on Wasmtime 40.0.1 with a
+Ryzen 9 9950X3D and 4,096 inputs.
+
+If you need `BitExact` on strict or unfused WASM, start with a scalar slice
+using `.caller()` and `slice_with_token(ScalarToken, ...)`. The single-lane
+`f32` software FMA promotes to `f64` and handles rounding at the midpoint.
+In the 4,096-element `Midp` slice probes, it ran **1.4–2.7×** as fast as the
+packed `WASM_SOFTWARE` TwoSum path across the five families. Strict
+`powf` took **13.243 vs 31.849 ns/lane** in the follow-up benchmark,
+and the standalone probe's `opt-level = 3` code section went from **57,182
+to 43,335 bytes**. With fusing relaxed SIMD, the four-lane `Midp` `BitExact`
+slices in the follow-up used a single-rounding `relaxed_madd` and took
+**0.234–1.001 ns/lane**. The `Highp` `powf` software path instead uses
+binary64 FMA and has a separate cost profile.
+
+At commit `4bd1b8ddbe4e`, SIMD-enabled builds use eight-lane `Midp` slices
+and select packed software arithmetic for unfused `BitExact`. The measured
+four-lane slice change selects W128 for `BackendDependent` and fusing
+`BitExact`, and selects a one-lane scalar slice for strict or unfused
+`BitExact`. Explicit `SimdMath` calls use the vector width chosen by the
+caller. [WASM slice implementation](https://github.com/imazen/archmage/commit/bf15756e1ad0e698fd1f7664c3d6bac57ab8dc46)
+
+## Which entry point should you call?
+
+| Work | Entry point |
+| --- | --- |
+| Fused row loop | Use `SimdMath` with `.caller()`, starting with four lanes on WASM, eight on V3 or NEON, and sixteen on V4/V4x. Use matching `*_with_token` scalar calls for the tail, or `load_padded_t` and `store_prefix` with valid padding on a lane-wise kernel. |
+| Standalone buffer, plane, or LUT pass | Call `Powf::<CFG>::slice` or `slice_const` once per buffer. Use the matching `*_slice` for other functions. `Execution::Upgrade` can select 16-lane AVX-512. In builds with the WASM slice change, the slice call selects four lanes or the scalar fallback described above. |
+| Single element or cold path | Call `*_with_token` with `.caller()`. In the eight-element scalar `powf` control, the entire stripped WASM module was **625 bytes** at `opt-level = "z"`. |
+| Several `Highp` exponents | Share the slice entry's structural options. In the no-std scalar probe for `2.4`, `1 / 2.4`, `2.2` and `1 / 2.2`, four configurations used **1.03–1.07×** the bytes of one across x86-64 and WASM at `opt-level = 3` and `"z"`. |
+
+`Midp` can specialize `.const_exponent(n)` in the inline graph. The
+shared-exponent probe added about **1–2 cycles per lane** to some inlined
+Zen 5 vector callers. Its bulk slice timings were close. Use
+`.slice(src, dst, exp)` with one configuration when keeping code size down
+across many `Midp` exponents. [Scalar and Highp codegen change](https://github.com/imazen/archmage/commit/190af9b0901df6880c36e31e3b099f6299a6f467)
+
+## Step 4: Choose `Precision` and `Execution`
 
 - **Precision (`Lowp`, `Midp`, `Highp`):**
   - `Midp` *(default, `.midp()`)*: refitted degree-6 `exp2` (`<= 1.9 ULP` below `127.5`, `<= 0.78 ULP` on `SingleOctave`), degree-6 odd-rational `log2`/`ln`/`log10` (`<= 4.5 ULP` over positive normals, `<= 2.9 ULP` on `SingleOctave`), Kahan-compensated `log1p` (`<= 2.9 ULP` around zero), division-free Estrin `cbrt` (1.47 ULP maximum measured in `BitExact`), and 100% exact 8/10/12-bit sRGB round-trips on `powf`.
