@@ -928,11 +928,14 @@ fn registered_features_are_unique_and_have_precomputed_csv() {
 #[test]
 fn combined_trait_features_preserve_first_seen_order() {
     use crate::token_discovery::traits_to_features;
+    use proc_macro2::Span;
     use std::borrow::Cow;
 
-    let single = traits_to_features(&["HasX64V2".into()]).unwrap();
+    let id = |name: &str| syn::Ident::new(name, Span::call_site());
+    let v2 = id("HasX64V2");
+    let single = traits_to_features(&[&v2]).unwrap();
     assert!(matches!(single, Cow::Borrowed(_)));
-    let redundant = traits_to_features(&["HasX64V2".into(), "HasX64V2".into()]).unwrap();
+    let redundant = traits_to_features(&[&v2, &v2]).unwrap();
     assert!(matches!(redundant, Cow::Borrowed(_)));
     assert_eq!(single, redundant);
 
@@ -950,14 +953,17 @@ fn combined_trait_features_preserve_first_seen_order() {
                 }
             }
         }
-        let actual = traits_to_features(&names.map(str::to_owned)).unwrap();
+        let idents = names.map(id);
+        let ident_refs: Vec<&syn::Ident> = idents.iter().collect();
+        let actual = traits_to_features(&ident_refs).unwrap();
         assert_eq!(actual.as_ref(), expected);
         assert_eq!(
             crate::token_discovery::features_csv(None, &actual),
             expected.join(",")
         );
     }
-    assert!(traits_to_features(&["UnknownTrait".into()]).is_none());
+    let unknown = id("UnknownTrait");
+    assert!(traits_to_features(&[&unknown]).is_none());
     let unusual = ["future_feature", "avx2", "future_feature"];
     let csv = crate::token_discovery::features_csv(None, &unusual);
     assert!(matches!(csv, Cow::Owned(_)));

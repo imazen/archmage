@@ -89,6 +89,10 @@ impl Registry {
         out.push('\n');
         self.gen_expected_tier_tag(&mut out, major_version);
         out.push('\n');
+        self.gen_known_token_str(&mut out);
+        out.push('\n');
+        self.gen_known_trait_str(&mut out);
+        out.push('\n');
         self.gen_all_concrete_tokens(&mut out);
         out.push('\n');
         self.gen_all_trait_names(&mut out);
@@ -468,6 +472,53 @@ impl Registry {
         }
 
         out.push_str("        _ => None,\n");
+        out.push_str("    }\n}\n");
+    }
+
+    fn gen_known_token_str(&self, out: &mut String) {
+        use indoc::formatdoc;
+        out.push_str(&formatdoc! {"
+            /// Maps any recognized concrete token spelling (including aliases and `ScalarToken`)
+            /// to a `'static` string slice with zero heap allocation.
+            ///
+            /// Generated from token-registry.toml.
+            pub(crate) fn known_token_str(name: &str) -> Option<&'static str> {{
+                match name {{
+                    \"ScalarToken\" => Some(\"ScalarToken\"),
+        "});
+
+        for token in &self.token {
+            out.push_str(&format!("        \"{0}\" => Some(\"{0}\"),\n", token.name));
+            for alias in &token.aliases {
+                out.push_str(&format!("        \"{alias}\" => Some(\"{alias}\"),\n"));
+            }
+        }
+
+        out.push_str("        _ => None,\n");
+        out.push_str("    }\n}\n");
+    }
+
+    fn gen_known_trait_str(&self, out: &mut String) {
+        use indoc::formatdoc;
+        out.push_str(&formatdoc! {"
+            /// Maps any recognized feature-bearing trait or token bound spelling to a `'static`
+            /// string slice with zero heap allocation.
+            ///
+            /// Generated from token-registry.toml.
+            pub(crate) fn known_trait_str(name: &str) -> Option<&'static str> {{
+                match name {{
+        "});
+
+        for trait_def in &self.traits {
+            out.push_str(&format!(
+                "        \"{0}\" => Some(\"{0}\"),\n",
+                trait_def.name
+            ));
+        }
+
+        out.push_str(
+            "        other => known_token_str(other).filter(|t| trait_to_features(t).is_some()),\n",
+        );
         out.push_str("    }\n}\n");
     }
 

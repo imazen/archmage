@@ -1,5 +1,7 @@
 //! Explicit inline policy, resolved before lowering operations to private helpers.
-use syn::{Attribute, Visibility, parse_quote};
+use proc_macro2::TokenStream;
+use quote::quote;
+use syn::Visibility;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum InlinePolicy {
@@ -20,13 +22,14 @@ impl InlinePolicy {
         }
     }
 
-    pub(crate) fn attribute(self, visibility: &Visibility) -> Option<Attribute> {
+    /// Direct token emission on hot paths (zero `parse_quote!` / `syn::Attribute` parsing).
+    pub(crate) fn tokens(self, visibility: &Visibility) -> TokenStream {
         match self.resolve(visibility) {
             Self::Default => unreachable!("default policy was resolved"),
-            Self::None => None,
-            Self::Hint => Some(parse_quote!(#[inline])),
-            Self::Always => Some(parse_quote!(#[inline(always)])),
-            Self::Never => Some(parse_quote!(#[inline(never)])),
+            Self::None => TokenStream::new(),
+            Self::Hint => quote!(#[inline]),
+            Self::Always => quote!(#[inline(always)]),
+            Self::Never => quote!(#[inline(never)]),
         }
     }
 }

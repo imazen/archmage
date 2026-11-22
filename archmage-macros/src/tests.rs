@@ -214,22 +214,27 @@ fn featureless_traits_are_not_in_registries() {
 
 #[test]
 fn find_featureless_trait_detects_simdtoken() {
-    let names = vec!["SimdToken".to_string()];
-    assert_eq!(find_featureless_trait(&names), Some("SimdToken"));
+    use proc_macro2::{Ident, Span};
+    let simd_token = Ident::new("SimdToken", Span::call_site());
+    let into_concrete = Ident::new("IntoConcreteToken", Span::call_site());
+    let has_v2 = Ident::new("HasX64V2", Span::call_site());
+    let has_neon = Ident::new("HasNeon", Span::call_site());
 
-    let names = vec!["IntoConcreteToken".to_string()];
-    assert_eq!(find_featureless_trait(&names), Some("IntoConcreteToken"));
+    assert_eq!(find_featureless_trait(&[&simd_token]), Some("SimdToken"));
+    assert_eq!(
+        find_featureless_trait(&[&into_concrete]),
+        Some("IntoConcreteToken")
+    );
 
     // Feature-bearing traits should NOT be detected
-    let names = vec!["HasX64V2".to_string()];
-    assert_eq!(find_featureless_trait(&names), None);
-
-    let names = vec!["HasNeon".to_string()];
-    assert_eq!(find_featureless_trait(&names), None);
+    assert_eq!(find_featureless_trait(&[&has_v2]), None);
+    assert_eq!(find_featureless_trait(&[&has_neon]), None);
 
     // Mixed: if SimdToken is among real traits, still detected
-    let names = vec!["SimdToken".to_string(), "HasX64V2".to_string()];
-    assert_eq!(find_featureless_trait(&names), Some("SimdToken"));
+    assert_eq!(
+        find_featureless_trait(&[&simd_token, &has_v2]),
+        Some("SimdToken")
+    );
 }
 
 #[test]
@@ -828,5 +833,144 @@ fn suffix_path_qualified() {
         s.contains("process_neon"),
         "Expected process_neon, got: {}",
         s
+    );
+}
+
+#[test]
+fn known_token_and_trait_str_match_registry() {
+    use crate::generated::{
+        ALL_CONCRETE_TOKENS, ALL_TRAIT_NAMES, known_token_str, known_trait_str, token_to_features,
+        trait_to_features,
+    };
+
+    assert_eq!(known_token_str("ScalarToken"), Some("ScalarToken"));
+    assert_eq!(known_trait_str("ScalarToken"), None);
+    assert_eq!(known_token_str("UnknownToken"), None);
+    assert_eq!(known_trait_str("UnknownTrait"), None);
+
+    for &token in ALL_CONCRETE_TOKENS {
+        assert_eq!(
+            known_token_str(token),
+            Some(token),
+            "known_token_str missing {token}"
+        );
+        assert!(
+            token_to_features(token).is_some(),
+            "token_to_features missing {token}"
+        );
+        let expected_trait = trait_to_features(token).map(|_| token);
+        assert_eq!(
+            known_trait_str(token),
+            expected_trait,
+            "known_trait_str mismatch for concrete token {token}"
+        );
+    }
+
+    for &trait_name in ALL_TRAIT_NAMES {
+        assert_eq!(
+            known_trait_str(trait_name),
+            Some(trait_name),
+            "known_trait_str missing {trait_name}"
+        );
+        assert!(
+            trait_to_features(trait_name).is_some(),
+            "trait_to_features missing {trait_name}"
+        );
+    }
+}
+
+#[test]
+fn with_ident_str_inline_boundary_overflow_and_raw() {
+    use crate::common::with_ident_str;
+    use proc_macro2::{Ident, Span};
+    let short = Ident::new("X64V3Token", Span::call_site());
+    assert_eq!(with_ident_str(&short, str::to_owned), "X64V3Token");
+
+    let exact_64 = "a".repeat(64);
+    let exact_ident = Ident::new(&exact_64, Span::call_site());
+    assert_eq!(with_ident_str(&exact_ident, str::to_owned), exact_64);
+
+    let long_70 = "b".repeat(70);
+    let long_ident = Ident::new(&long_70, Span::call_site());
+    assert_eq!(with_ident_str(&long_ident, str::to_owned), long_70);
+
+    let raw = Ident::new_raw("type", Span::call_site());
+    assert_eq!(with_ident_str(&raw, str::to_owned), "r#type");
+}
+
+#[test]
+fn colon_path_tokens_matches_syn_path() {
+    use crate::common::colon_path_tokens;
+    assert_eq!(
+        colon_path_tokens("archmage::X64V3Token", true).to_string(),
+        quote::quote!(::archmage::X64V3Token).to_string()
+    );
+    assert_eq!(
+        colon_path_tokens("archmage::X64V3Token", false).to_string(),
+        quote::quote!(archmage::X64V3Token).to_string()
+    );
+    assert_eq!(
+        colon_path_tokens("ScalarToken", true).to_string(),
+        quote::quote!(::ScalarToken).to_string()
+    );
+}
+
+#[test]
+#[should_panic(expected = "colon_path_tokens requires a non-empty registry path")]
+fn colon_path_tokens_rejects_empty_path() {
+    let _ = crate::common::colon_path_tokens("", true);
+}
+
+#[test]
+fn boundary_rejects_explicit_receiver_without_token_param() {
+    let input: crate::common::LightFn =
+        syn::parse_str("fn boom(self: &Fake) { let _ = _self; }").unwrap();
+    let opts = crate::engine::boundary::BoundaryOptions {
+        nested: true,
+        self_type: Some(syn::parse_str("X64V4Token").unwrap()),
+        ..Default::default()
+    };
+    let expanded = crate::engine::boundary::expand(input, "arcane", opts).to_string();
+    assert!(
+        expanded.contains("requires a token parameter"),
+        "explicitly typed receiver must not satisfy receiver-only proof discovery: {expanded}"
+    );
+}
+
+#[test]
+fn boundary_rejects_raw_ident_fn_shadowing() {
+    let input: crate::common::LightFn = syn::parse_str(
+        "fn r#move(_token: X64V3Token, __arcane_move: u32) -> u32 { __arcane_move }",
+    )
+    .unwrap();
+    let expanded = crate::engine::boundary::expand(
+        input,
+        "arcane",
+        crate::engine::boundary::BoundaryOptions::default(),
+    )
+    .to_string();
+    assert!(
+        expanded.contains("compile_error") && expanded.contains("__arcane_move"),
+        "raw-ident fn shadowing must be rejected against stripped callee name: {expanded}"
+    );
+}
+
+#[test]
+fn boundary_subpattern_token_uses_wrapper_param_name_in_tier_assertion() {
+    let input: crate::common::LightFn =
+        syn::parse_str("fn work(t @ _: impl HasX64V2, x: f32) -> f32 { let _ = t; x }").unwrap();
+    let expanded = crate::engine::boundary::expand(
+        input,
+        "arcane",
+        crate::engine::boundary::BoundaryOptions::default(),
+    )
+    .to_string();
+    assert!(
+        expanded.contains("__archmage_arg_0"),
+        "expected normalized wrapper parameter in expansion: {expanded}"
+    );
+    assert!(
+        expanded.contains("__archmage_assert_tier_trait (& __archmage_arg_0)"),
+        "tier assertion must reference wrapper param `__archmage_arg_0`, not shadowed `t`: {expanded}"
     );
 }

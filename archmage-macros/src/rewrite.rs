@@ -246,15 +246,15 @@ fn rewrite_single_incant(input: &IncantInput, ctx: &CallerContext) -> Option<Tok
     // Filtering preserves resolve_tiers' descending priority order.
 
     let token_ident = &ctx.token_ident;
+    let caller_ident = token_ident.to_string();
 
     // Build the upgrade attempt arms (need labeled block + break)
     let mut upgrade_arms = Vec::new();
     for rt in &upgrade_tiers {
         let fn_suffixed = suffix_path(func_path, rt.suffix);
-        let token_path: syn::Path = syn::parse_str(rt.token_path).unwrap();
+        let token_path = crate::common::colon_path_tokens(rt.token_path, false);
 
         let token_expr = quote! { __t };
-        let caller_ident = token_ident.to_string();
         let call_args =
             crate::common::build_call_args_with_ident(args, &token_expr, Some(&caller_ident));
         let check = quote! {
@@ -285,7 +285,6 @@ fn rewrite_single_incant(input: &IncantInput, ctx: &CallerContext) -> Option<Tok
     // exactly one guaranteed arm survives cfg evaluation and it is the
     // block's value: no unconditional `break` leaves the fallback unreachable
     // (unreachable_code in the caller's crate when the gate is on).
-    let caller_ident = token_ident.to_string();
     let mut direct_arms = Vec::new();
     let mut direct_gates: Vec<&str> = Vec::new();
     let mut gates_allow_unexpected = false;
@@ -423,7 +422,7 @@ fn rewrite_tokenless_incant(input: &IncantInput, ctx: &CallerContext) -> Option<
             let token = if tier.name == "scalar" {
                 quote! { archmage::ScalarToken }
             } else {
-                let token_path: syn::Path = syn::parse_str(tier.token_path).ok()?;
+                let token_path = crate::common::colon_path_tokens(tier.token_path, false);
                 quote! { #token_path::from_context() }
             };
             let args = crate::common::build_call_args(&input.args, &token);
