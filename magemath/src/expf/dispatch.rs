@@ -324,12 +324,10 @@ pub(super) fn run_slice_cfg(
         Plan::Neon(t) => graph::slice8_cfg_neon_t::<{ graph::NATIVE }>(t, src, dst, op, cfg),
         #[cfg(target_arch = "wasm32")]
         Plan::Wasm(t, true) => {
-            graph::slice8_cfg_wasm128_t::<{ graph::NATIVE }>(t, src, dst, op, cfg)
+            graph::slice4_cfg_wasm128_t::<{ graph::NATIVE }>(t, src, dst, op, cfg)
         }
         #[cfg(target_arch = "wasm32")]
-        Plan::Wasm(t, false) => {
-            graph::slice8_cfg_wasm128_t::<{ graph::WASM_SOFTWARE }>(t, src, dst, op, cfg)
-        }
+        Plan::Wasm(_, false) => graph::slice1_cfg_scalar::<{ graph::SOFTWARE }>(src, dst, op, cfg),
         Plan::Software => {
             if backend {
                 graph::slice1_cfg_scalar::<{ graph::NATIVE }>(src, dst, op, cfg)
@@ -362,12 +360,10 @@ pub(super) fn run_slice_const<K: graph::Kernel, const OP: u8, const BACKEND: boo
         Plan::Neon(t) => graph::slice8_with_neon_t::<K, OP, { graph::NATIVE }>(t, src, dst),
         #[cfg(target_arch = "wasm32")]
         Plan::Wasm(t, true) => {
-            graph::slice8_with_wasm128_t::<K, OP, { graph::NATIVE }>(t, src, dst)
+            graph::slice4_with_wasm128_t::<K, OP, { graph::NATIVE }>(t, src, dst)
         }
         #[cfg(target_arch = "wasm32")]
-        Plan::Wasm(t, false) => {
-            graph::slice8_with_wasm128_t::<K, OP, { graph::WASM_SOFTWARE }>(t, src, dst)
-        }
+        Plan::Wasm(_, false) => graph::slice1_with_scalar::<K, OP, { graph::SOFTWARE }>(src, dst),
         Plan::Software => {
             if BACKEND {
                 graph::slice1_with_scalar::<K, OP, { graph::NATIVE }>(src, dst)

@@ -712,7 +712,7 @@ pub(super) fn slice1_with_scalar<K: Kernel, const ARITHMETIC: usize>(
 
 /// Whole-slice kernel parameterized on `KernelCfg` (used by `.runtime()` and
 /// debug builds): one feature region around the loop.
-#[archmage::attune(_v3_t, _neon_t, _wasm128_t)]
+#[archmage::attune(_v3_t, _neon_t)]
 pub(super) fn slice8_cfg<const ARITHMETIC: usize>(
     token: Token,
     src: &[f32],
@@ -736,6 +736,35 @@ pub(super) fn slice8_cfg<const ARITHMETIC: usize>(
             cfg,
         )
         .map_err(|e| (chunks.len() * 8, e))?
+        .store_prefix(out_tail);
+    }
+    Ok(())
+}
+
+#[archmage::attune(_wasm128_t)]
+pub(super) fn slice4_cfg<const ARITHMETIC: usize>(
+    token: Token,
+    src: &[f32],
+    dst: &mut [f32],
+    exponent: f32,
+    cfg: KernelCfg,
+) -> Result<(), (usize, PowfError)> {
+    use magetypes::simd::generic::f32x4 as V;
+    let (chunks, tail) = V::partition_slice_t(token, src);
+    let (out_chunks, out_tail) = V::partition_slice_mut_t(token, dst);
+    for (i, (s, d)) in chunks.iter().zip(out_chunks.iter_mut()).enumerate() {
+        vector4_dbg::<Token, ARITHMETIC>(token, V::load_t(token, s), exponent, cfg)
+            .map_err(|e| (i * 4, e))?
+            .store(d);
+    }
+    if !tail.is_empty() {
+        vector4_dbg::<Token, ARITHMETIC>(
+            token,
+            V::load_padded_t(token, tail, tail[0]),
+            exponent,
+            cfg,
+        )
+        .map_err(|e| (chunks.len() * 4, e))?
         .store_prefix(out_tail);
     }
     Ok(())
@@ -796,7 +825,7 @@ pub(super) fn slice16_cfg_v4x<const ARITHMETIC: usize>(
 /// per chunk, and one tail vector padded with `tail[0]` so any range that
 /// excludes `1.0` validates accurately and still reports exact first failure.
 #[cfg(not(debug_assertions))]
-#[archmage::attune(_v3_t, _neon_t, _wasm128_t)]
+#[archmage::attune(_v3_t, _neon_t)]
 pub(super) fn slice8_with<K: Kernel, const ARITHMETIC: usize>(
     token: Token,
     src: &[f32],
@@ -814,6 +843,30 @@ pub(super) fn slice8_with<K: Kernel, const ARITHMETIC: usize>(
     if !tail.is_empty() {
         profile8::<Token, K, ARITHMETIC>(token, V::load_padded_t(token, tail, tail[0]), exponent)
             .map_err(|e| (chunks.len() * 8, e))?
+            .store_prefix(out_tail);
+    }
+    Ok(())
+}
+
+#[cfg(not(debug_assertions))]
+#[archmage::attune(_wasm128_t)]
+pub(super) fn slice4_with<K: Kernel, const ARITHMETIC: usize>(
+    token: Token,
+    src: &[f32],
+    dst: &mut [f32],
+    exponent: f32,
+) -> Result<(), (usize, PowfError)> {
+    use magetypes::simd::generic::f32x4 as V;
+    let (chunks, tail) = V::partition_slice_t(token, src);
+    let (out_chunks, out_tail) = V::partition_slice_mut_t(token, dst);
+    for (i, (s, d)) in chunks.iter().zip(out_chunks.iter_mut()).enumerate() {
+        profile4::<Token, K, ARITHMETIC>(token, V::load_t(token, s), exponent)
+            .map_err(|e| (i * 4, e))?
+            .store(d);
+    }
+    if !tail.is_empty() {
+        profile4::<Token, K, ARITHMETIC>(token, V::load_padded_t(token, tail, tail[0]), exponent)
+            .map_err(|e| (chunks.len() * 4, e))?
             .store_prefix(out_tail);
     }
     Ok(())

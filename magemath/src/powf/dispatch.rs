@@ -33,7 +33,13 @@ impl Plan {
             #[cfg(target_arch = "aarch64")]
             Self::Neon(_) => 8,
             #[cfg(target_arch = "wasm32")]
-            Self::Wasm(..) => 8,
+            Self::Wasm(_, native) => {
+                if native {
+                    4
+                } else {
+                    1
+                }
+            }
         }
     }
 
@@ -403,11 +409,11 @@ pub(super) fn run_slice_cfg(
         Plan::Neon(t) => graph::slice8_cfg_neon_t::<{ graph::NATIVE }>(t, src, dst, exponent, cfg),
         #[cfg(target_arch = "wasm32")]
         Plan::Wasm(t, true) => {
-            graph::slice8_cfg_wasm128_t::<{ graph::NATIVE }>(t, src, dst, exponent, cfg)
+            graph::slice4_cfg_wasm128_t::<{ graph::NATIVE }>(t, src, dst, exponent, cfg)
         }
         #[cfg(target_arch = "wasm32")]
-        Plan::Wasm(t, false) => {
-            graph::slice8_cfg_wasm128_t::<{ graph::WASM_SOFTWARE }>(t, src, dst, exponent, cfg)
+        Plan::Wasm(_, false) => {
+            graph::slice1_cfg_scalar::<{ graph::SOFTWARE }>(src, dst, exponent, cfg)
         }
         Plan::Software => {
             if backend {
@@ -444,11 +450,11 @@ pub(super) fn run_slice<K: graph::Kernel, const BACKEND: bool>(
         Plan::Neon(t) => graph::slice8_with_neon_t::<K, { graph::NATIVE }>(t, src, dst, exponent),
         #[cfg(target_arch = "wasm32")]
         Plan::Wasm(t, true) => {
-            graph::slice8_with_wasm128_t::<K, { graph::NATIVE }>(t, src, dst, exponent)
+            graph::slice4_with_wasm128_t::<K, { graph::NATIVE }>(t, src, dst, exponent)
         }
         #[cfg(target_arch = "wasm32")]
-        Plan::Wasm(t, false) => {
-            graph::slice8_with_wasm128_t::<K, { graph::WASM_SOFTWARE }>(t, src, dst, exponent)
+        Plan::Wasm(_, false) => {
+            graph::slice1_with_scalar::<K, { graph::SOFTWARE }>(src, dst, exponent)
         }
         Plan::Software => {
             if BACKEND {

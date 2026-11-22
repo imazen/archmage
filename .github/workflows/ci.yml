@@ -482,6 +482,8 @@ jobs:
         run: |
           cargo test -p magetypes --features "${{ env.FEATURES }}" --target wasm32-wasip1 --lib --test fma_contract --test fused_arithmetic --test doc_examples --test scalar_parity
           cargo test -p magemath --features "${{ env.FEATURES }}" --target wasm32-wasip1 --lib --test portable_hashes --test profiles --test slices --test option_permutations
+          cargo test -p magemath --release --features "${{ env.FEATURES }} archmage/testable_dispatch" --target wasm32-wasip1 --test wasm_cbrtf_dispatch
+          cargo test -p magemath --release --features "${{ env.FEATURES }} archmage/testable_dispatch" --target wasm32-wasip1 --lib -- bit_exact_slice_stays_fused_after_admission --ignored --nocapture
 
       - name: Test no_std WASM arithmetic
         env:
