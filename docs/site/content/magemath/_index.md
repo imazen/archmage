@@ -124,9 +124,18 @@ rt.exp2_slice(&[-0.5, 0.0, 0.25, 0.5], &mut dst).unwrap();
 assert_eq!(dst[1], 1.0);
 ```
 
-## Entry points: prefer whole-slice calls over per-chunk arrays
+## Which entry point should you call?
 
 Every operator struct (`Powf<CFG>`, `Expf<CFG>`, `Logf<CFG>`, `Log1pf<CFG>`, `Cbrtf<CFG>`) provides scalar (`scalar` / `exp2` / `ln`), infallible scalar (`*_infallible`), token-preserving scalar (`*_with_token`), fixed-array (`array::<N>` for `N` in `1, 4, 8, 16`), whole-slice (`slice` / `exp2_slice` / `ln_slice` and `*_slice_with_token`), and vector (`simd`) entry points.
+
+| Work | Entry point |
+| --- | --- |
+| Fused pixel or row loop | Import `SimdMath` and select `.caller()`. Use `try_powf_with`, `try_powf_const`, `try_exp2_with`, `try_log2_with`, `try_log1p_with`, or `try_cbrt_with` for checked options. Start with four lanes on WASM, eight on V3 or NEON, and sixteen on V4/V4x. Match scalar tails with `*_with_token`, or load a padded tail and store its live prefix. |
+| Standalone buffer, LUT, or plane pass | Use `Powf::<CFG>::slice` for a runtime exponent, `slice_const` for a configured exponent, and the sibling `*_slice` methods. Each call selects a kernel once. `Execution::Upgrade` can widen to 16 lanes with `avx512`. |
+| One value or a cold scalar path | Use `*_with_token` with `.caller()`. Pass the held proof for a matching tail or `ScalarToken` for a scalar-only entry. |
+| Several gamma powers | `Highp` scalar slices share a kernel across exponents with the same structural options. For `Midp`, use a runtime exponent with `slice` if you want to keep a shared entry. Use `slice_const` when a fixed exponent pays for its specialization. |
+
+For exact arithmetic on strict or unfused WASM, see the [WASM portability choices](@/magemath/tuning-and-subnormals.md#wasm-portability-backenddependent-vs-bitexact).
 
 When transforming a buffer, call the **slice entry point** rather than looping over `array::<8>` chunks. Under the default `Execution::Upgrade`, a slice call probes CPU features once at the entry boundary and runs a 16-lane AVX-512 `zmm` loop (when `avx512` is enabled) plus a padded remainder pass. Calling `array::<8>` inside a caller loop re-runs dispatch selection and array marshaling every 8 floats.
 
@@ -134,7 +143,7 @@ On Ryzen 9 9950X3D (`len = 4096`, inputs in `[0.01, 3.91)`, [`RESULTS.md`](https
 
 ## Inline vector kernels and matching scalar tails
 
-When a transcendental sits inside a fused multi-step SIMD loop (for example color conversion + tone mapping + packing in one pass without intermediate buffers), import [`magemath::SimdMath`](https://docs.rs/magemath/latest/magemath/trait.SimdMath.html) inside an `#[attune(_*_t, define(f32x8))]` kernel. Every `SimdMath` method reuses the capability proof carried inside the vector (`v.token()`), and pairing `.caller()` (`Execution::Caller`) with `*_with_token(token, ...)` guarantees the scalar remainder executes the exact same rounding and contract as the vector body:
+In a fused SIMD loop, import [`magemath::SimdMath`](https://docs.rs/magemath/latest/magemath/trait.SimdMath.html). Each method reuses the proof carried inside the vector. Use `.caller()` and the same token and options for the scalar tail. This example shows the eight-lane loop.
 
 ```rust
 use archmage::prelude::*;

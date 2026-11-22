@@ -172,6 +172,126 @@ call <X64V3Token as F32x8Backend>::reduce_add::__simd_inner_reduce_add
 
 **The rule:** generic magetypes code is zero-cost when it inlines into an `#[attune]` feature region (for example `#[attune(_*_t, define(f32x8))]`, `#[attune(wrap)]`, or `#[attune(v3)]`). Mark generic SIMD helpers `#[inline(always)]` to guarantee this.
 
+## Choosing vector width per ISA (especially `f32x4` on WASM)
+
+Choose a width for each proof-taking row kernel. Dispatch once before the loop.
+
+| Tier | Starting width | Register use |
+| --- | --- | --- |
+| x86-64 V3 (AVX2 + FMA) | [`f32x8`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.f32x8.html) | One native 256-bit `ymm` per vector, with 16 architectural vector registers. |
+| x86-64 V4/V4x (opt-in `avx512`) | [`f32x16`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.f32x16.html) | One native 512-bit `zmm` per vector, with 32 architectural vector registers. |
+| AArch64 NEON | `f32x8` for bulk, [`f32x4`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.f32x4.html) for short rows or fixed blocks | Two independent 128-bit vectors can overlap FMA latency. The cross-built eight-lane `powf` loop named 28 of 32 vector registers and had zero stack-vector references. |
+| WASM SIMD128 | `f32x4` | One native 128-bit `v128`. An eight-lane vector uses two `v128` values and needs more live temporaries. |
+
+On Wasmtime 40.0.1 (Ryzen 9 9950X3D, Rust 1.100.0, ThinLTO, one codegen unit),
+a width-only probe linking five `Midp` operations with both portability policies
+saved **29,814 strict and 36,309 relaxed WASM code bytes** at `opt-level = 3`.
+In the strict AOT disassembly, the exact `powf` loop went from **72 to 34
+static stack-vector references**. At 12 samples per slice, the median
+`BackendDependent` time across the five operations fell by **2.3–2.9×**
+across strict, fused-relaxed, and forced-unfused Wasmtime. At 4,096 samples
+the median was within **3%**, with `log1p` taking about **12% more time**
+at four lanes. The follow-up combining four-lane slices and scalar exact
+fallback measured **2.8–5.6×** speedups at four samples per slice. These
+measurements include slice setup, stores, and tails. A fused caller's gains
+depend on its own live vectors and row lengths. [WASM slice implementation](https://github.com/imazen/archmage/commit/bf15756e1ad0e698fd1f7664c3d6bac57ab8dc46)
+
+This row loop fuses a gamma power with gain. Separate `#[attune]` tier lists
+choose the vector width and `.caller()` reuses the proof for each scalar tail.
+For a lane-wise operation you can also use `load_padded_t` and `store_prefix`
+on a nonempty tail. Supply padding accepted by every operation in the loop.
+
+```rust
+use archmage::prelude::*;
+use magemath::{SimdMath, powf::{Powf, PowfError, PowfOptions}};
+
+const GAMMA: u128 = PowfOptions::new().gamma().caller().backend_dependent().bits();
+
+macro_rules! gamma_kernel {
+    ($vector:ident, $($tier:ident),+) => {
+        #[attune($($tier),+, define($vector))]
+        fn gamma_row(token: Token, row: &mut [f32]) -> Result<(), PowfError> {
+            let (chunks, tail) = $vector::partition_slice_mut_t(token, row);
+            let gain = $vector::splat_t(token, 0.5);
+            for chunk in chunks {
+                let input = $vector::load_t(token, chunk);
+                (input.try_powf_with::<GAMMA>(2.2)? * gain).store(chunk);
+            }
+            for x in tail {
+                *x = 0.5 * Powf::<GAMMA>::scalar_with_token(token, *x, 2.2)?;
+            }
+            Ok(())
+        }
+    };
+}
+
+gamma_kernel!(f32x8, _v3_t, _neon_t);
+gamma_kernel!(f32x4, _wasm128_t, _scalar_t);
+
+let mut row = [1.0; 11];
+attuned!(gamma_row(&mut row)).unwrap();
+assert_eq!(row, [0.5; 11]);
+```
+
+For an AVX-512 build, add an `f32x16` family with
+`#[attune(_v4x_t(cfg(avx512)), _v4_t(cfg(avx512)), define(f32x16))]`
+and list those gated tiers first in `attuned!`.
+
+## Writing generic dispatchers with `IntoConcreteToken::try_*`
+
+When a generic caller already holds a proof, use `try_*` at the boundary to
+select from the concrete kernels you maintain. A VNNI or crypto extension can
+supply V3, V4x can supply V4 or V3, and Arm64V2 can supply NEON. Check stronger
+tiers first and provide a scalar fallback. Each check uses the held proof and
+can fold away when monomorphized. The exact-type `as_*` methods are useful
+when an operation depends on a particular token identity.
+
+```rust
+use archmage::prelude::*;
+
+#[attune(_*_t, +v4(cfg(avx512)), +v4x(cfg(avx512)))]
+fn gain_impl(_token: Token, row: &mut [f32]) {
+    for x in row {
+        *x *= 0.5;
+    }
+}
+
+fn gain(token: impl IntoConcreteToken, row: &mut [f32]) {
+    #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
+    {
+        if let Some(proof) = token.try_v4x() {
+            return gain_impl_v4x_t(proof, row);
+        }
+        if let Some(proof) = token.try_v4() {
+            return gain_impl_v4_t(proof, row);
+        }
+    }
+    #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
+    if let Some(proof) = token.try_v3() {
+        return gain_impl_v3_t(proof, row);
+    }
+    #[cfg(target_arch = "aarch64")]
+    if let Some(proof) = token.try_neon() {
+        return gain_impl_neon_t(proof, row);
+    }
+    #[cfg(target_arch = "wasm32")]
+    if let Some(proof) = token.try_wasm128() {
+        return gain_impl_wasm128_t(proof, row);
+    }
+    gain_impl_scalar_t(ScalarToken, row);
+}
+
+let mut row = [1.0, 2.0, 3.0];
+gain(ScalarToken, &mut row);
+assert_eq!(row, [0.5, 1.0, 1.5]);
+
+if let Some(vnni) = archmage::X64V3VnniToken::summon() {
+    assert!(vnni.try_v3().is_some());
+    gain(vnni, &mut row);
+    assert_eq!(row, [0.25, 0.5, 0.75]);
+}
+```
+
 ## Rules
 
 These are distilled from the benchmark data above.
