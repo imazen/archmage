@@ -11,14 +11,9 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 
 #### Added
 
-- Generate `IntoConcreteToken` from the token registry and add `try_*` methods
-  for recovering parent-tier proofs. The `as_*` methods retain exact identity
-  checks. Magemath uses these proofs to select SIMD kernels, including V3
-  kernels for `X64V3VnniToken`.
-
+- Generate `IntoConcreteToken` and all 19 concrete token impls from `token-registry.toml` and add 18 hierarchical `try_<short_name>()` methods (`try_v3`, `try_v4`, `try_v4x`, `try_neon`, `try_wasm128`, etc.) for recovering parent-tier proofs via safe downgrades while preserving all 19 exact-identity `as_*` methods verbatim (#205, 9f954003).
 - Add `X64V3VnniToken` (`v3_vnni`, `dispatch_priority = 38`, parent `X64V3GfniCryptoToken`) proving pure-VEX `avxvnni`, `adx`, and `sha` on top of `X64V3GfniCryptoToken` without requiring AVX-512, along with `IntoConcreteToken::as_x64v3_vnni`, `is_x86_feature_available!` support for `"avxvnni"` and `"adx"`, and `for_each_token_permutation` coverage (#161, #199, 0b933aee).
-
-- Support disabling WASM SIMD128 and relaxed-SIMD selection with `testable_dispatch`. Existing proofs remain valid after a disable.
+- Support disabling WASM SIMD128 and relaxed-SIMD selection with `testable_dispatch`; existing proofs remain valid after a disable (#200, 39520f74).
 
 #### QUEUED DEPRECATIONS (next 0.9.x)
 
@@ -192,6 +187,12 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 
 ### [Unreleased]
 
+#### Changed
+
+- Replace `cbrtf` rational/division approximations with division-free minimax polynomials across `Lowp`, `Midp`, and `Highp`, and use hardware FMA on the final `BackendDependent` `cbrtf` step (#201, 21823c2f; #202, 443fa386).
+- Unify `log1pf` polynomial evaluation with zero monotonicity decreases across the domain (#202, 443fa386).
+- Simplify internal token dispatchers across `cbrtf`, `expf`, `logf`, and `powf` to use `IntoConcreteToken::try_*` hierarchical extraction, routing `X64V3VnniToken` cleanly to V3 kernels (#205, 9f954003).
+
 #### QUEUED BREAKING CHANGES
 
 - None currently queued.
@@ -215,19 +216,20 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 - `f32x16<T>` supports lane interleave, dual 8×8 and 16×16 matrix transposes, zero-copy signed bitcast references, and packed RGB loads and stores for sixteen pixels (#197, 4be34f89).
 - Add concrete W128/W256 V3 delegation for `X64V3VnniToken` across all 34 backend, conversion, and bitcast traits plus `F32ScalarBackend`/`F64ScalarBackend`, `F32x8FromHalves`, and `SimdTypes`, available outside `feature = "avx512"` (#161, #199, 0b933aee).
 
-- Add checked scalar and SIMD integer, half-precision, reciprocal, and reciprocal-square-root operations that report the violated input contract and every rejected lane.
+- Add checked scalar and SIMD integer, half-precision, reciprocal, and reciprocal-square-root operations that report the violated input contract and every rejected lane (#200, 39520f74).
 
 #### Changed
 
 - Replace verbatim AVX-512 narrow forwarding with crate-private concrete-impl delegation macros (`x86_v4_f32_delegated.rs`, `x86_v3_delegated.rs`), reducing complete `x86_64` generated backend source from `43,767` to `37,827` lines while preserving all concrete impls, AVX-512VL overrides, and assembly (#198, 55f48029, 0b933aee).
-
-- Use hardware square root for scalar vectors where std or compile-time target features provide it (#152).
-- Compute the generic f32 cube-root seed in registers with exact integer division by three (#162).
+- Use hardware square root for scalar vectors where std or compile-time target features provide it (#152, #200, 39520f74).
+- Compute the generic f32 cube-root seed in registers with exact integer division by three (#162, #200, 39520f74).
+- Optimize wide NEON W256/W512 load/store paths to emit 128-bit chunked `ldp`/`stp` pairs, add WASM/Scalar `recip_with` short-circuit with integer masking, and tighten anchored `exp2_lowp`/`pow_lowp` cubic error by `55.4×` (#202, 443fa386).
+- Eliminate `ScalarToken` codegen bloat and spurious panic paths across `magetypes` (`f32x16` transpose `41.4×` smaller, RGB deinterleave `29.7×`, `f32x8` RGB load/store `20.4×`, `scalar_sqrt` `50–78.7×`, `rsqrt_with` up to `22.4×`, `round` `11×`, `u8x32::bitmask` `16.3×`, plus `exp2`/`pow` scalar shrinks) with zero public API changes and zero AVX2/AVX-512 regressions (#204, 02d136b0).
 
 #### Fixed
 
-- Preserve the upper bound for finite nonzero division results in SIMD `Nr1Ceil + AllFloats`. Normal estimate lanes bypass division when the whole vector is in range (#195).
-- Make `f32x1::clamp` follow the scalar SIMD comparison order for reversed or NaN bounds.
+- Preserve the upper bound for finite nonzero division results in SIMD `Nr1Ceil + AllFloats`. Normal estimate lanes bypass division when the whole vector is in range (#195, #200, 39520f74).
+- Make `f32x1::clamp` follow the scalar SIMD comparison order for reversed or NaN bounds (#200, 39520f74).
 
 #### QUEUED DEPRECATIONS (next 0.9.x)
 
@@ -384,6 +386,9 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 
 - Add 512-pattern regression coverage for 256-bit integer `all_true`/`any_true` reductions across NEON, WASM128, x86, and scalar (#196, 7894b86c).
 - Add generation-time audit and completeness checks for concrete delegation macros and include narrow delegation in `xtask` `COMPILE_BUDGETS` (#198, 55f48029).
+- Add unfused relaxed-SIMD WASM (`-W relaxed-simd-deterministic=n -C cranelift-has-fma=false`) contract coverage in CI (#202, 443fa386).
+- Generate `src/tokens/generated/into_concrete.rs` from `token-registry.toml` via `xtask` and simplify `xtask`/workspace token dispatchers (#205, 9f954003).
+- Allow strict instruction-count reductions (`len(new) < len(old)`) in `xtask/codegen.py` for reviewed scalar `f32` FMA shrinks (#204, 02d136b0).
 
 #### QUEUED BREAKING CHANGES
 
