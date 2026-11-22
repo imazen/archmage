@@ -1,11 +1,11 @@
 //! Configured exp2/exp graphs, instantiated per width, kernel config, and arithmetic mode.
 #![allow(clippy::excessive_precision)] // Preserve the fitted f32 coefficient spellings.
 use super::{ExpfError, ExpfErrorKind};
-
-pub(super) const NATIVE: usize = 0;
-pub(super) const SOFTWARE: usize = 1;
 #[cfg(target_arch = "wasm32")]
-pub(super) const WASM_SOFTWARE: usize = 2;
+pub(super) use crate::lanes::arith::WASM_SOFTWARE;
+pub(super) use crate::lanes::arith::{NATIVE, SOFTWARE};
+use crate::lanes::{F32Lanes, I32Lanes, madd};
+use archmage::IntoConcreteToken as _;
 
 pub(super) trait Kernel: 'static {
     const RANGED: bool;
@@ -100,337 +100,426 @@ pub(super) const fn cfg_of<K: Kernel>() -> KernelCfg {
     }
 }
 
+trait CfgSource: Copy {
+    fn op(self) -> u8;
+    fn ranged(self) -> bool;
+    fn in_lo_exp2(self) -> f32;
+    fn in_hi_exp2(self) -> f32;
+    fn in_lo_exp(self) -> f32;
+    fn in_hi_exp(self) -> f32;
+    fn full(self) -> bool;
+    fn clamp_oob(self) -> bool;
+    fn preserve_clamped_nan(self) -> bool;
+    fn lowp(self) -> bool;
+    fn assume(self) -> bool;
+    fn elide_exp2(self) -> bool;
+    fn elide_exp(self) -> bool;
+    fn elide_overflow_exp2(self) -> bool;
+    fn elide_overflow_exp(self) -> bool;
+    fn elide_red_exp2(self) -> bool;
+    fn elide_red_exp(self) -> bool;
+}
+
+#[derive(Clone, Copy)]
+struct RuntimeCfg {
+    op: u8,
+    cfg: KernelCfg,
+}
+
+impl CfgSource for RuntimeCfg {
+    #[inline(always)]
+    fn op(self) -> u8 {
+        self.op
+    }
+    #[inline(always)]
+    fn ranged(self) -> bool {
+        self.cfg.ranged
+    }
+    #[inline(always)]
+    fn in_lo_exp2(self) -> f32 {
+        self.cfg.in_lo_exp2
+    }
+    #[inline(always)]
+    fn in_hi_exp2(self) -> f32 {
+        self.cfg.in_hi_exp2
+    }
+    #[inline(always)]
+    fn in_lo_exp(self) -> f32 {
+        self.cfg.in_lo_exp
+    }
+    #[inline(always)]
+    fn in_hi_exp(self) -> f32 {
+        self.cfg.in_hi_exp
+    }
+    #[inline(always)]
+    fn full(self) -> bool {
+        self.cfg.full
+    }
+    #[inline(always)]
+    fn clamp_oob(self) -> bool {
+        self.cfg.clamp_oob
+    }
+    #[inline(always)]
+    fn preserve_clamped_nan(self) -> bool {
+        self.cfg.preserve_clamped_nan
+    }
+    #[inline(always)]
+    fn lowp(self) -> bool {
+        self.cfg.lowp
+    }
+    #[inline(always)]
+    fn assume(self) -> bool {
+        self.cfg.assume
+    }
+    #[inline(always)]
+    fn elide_exp2(self) -> bool {
+        self.cfg.elide_exp2
+    }
+    #[inline(always)]
+    fn elide_exp(self) -> bool {
+        self.cfg.elide_exp
+    }
+    #[inline(always)]
+    fn elide_overflow_exp2(self) -> bool {
+        self.cfg.elide_overflow_exp2
+    }
+    #[inline(always)]
+    fn elide_overflow_exp(self) -> bool {
+        self.cfg.elide_overflow_exp
+    }
+    #[inline(always)]
+    fn elide_red_exp2(self) -> bool {
+        self.cfg.elide_red_exp2
+    }
+    #[inline(always)]
+    fn elide_red_exp(self) -> bool {
+        self.cfg.elide_red_exp
+    }
+}
+
+#[cfg(not(debug_assertions))]
+struct ConstCfg<K: Kernel, const OP: u8>(core::marker::PhantomData<K>);
+
+#[cfg(not(debug_assertions))]
+impl<K: Kernel, const OP: u8> Clone for ConstCfg<K, OP> {
+    #[inline(always)]
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[cfg(not(debug_assertions))]
+impl<K: Kernel, const OP: u8> Copy for ConstCfg<K, OP> {}
+
+#[cfg(not(debug_assertions))]
+impl<K: Kernel, const OP: u8> CfgSource for ConstCfg<K, OP> {
+    #[inline(always)]
+    fn op(self) -> u8 {
+        OP
+    }
+    #[inline(always)]
+    fn ranged(self) -> bool {
+        K::RANGED
+    }
+    #[inline(always)]
+    fn in_lo_exp2(self) -> f32 {
+        K::IN_LO_EXP2
+    }
+    #[inline(always)]
+    fn in_hi_exp2(self) -> f32 {
+        K::IN_HI_EXP2
+    }
+    #[inline(always)]
+    fn in_lo_exp(self) -> f32 {
+        K::IN_LO_EXP
+    }
+    #[inline(always)]
+    fn in_hi_exp(self) -> f32 {
+        K::IN_HI_EXP
+    }
+    #[inline(always)]
+    fn full(self) -> bool {
+        K::FULL
+    }
+    #[inline(always)]
+    fn clamp_oob(self) -> bool {
+        K::CLAMP_OOB
+    }
+    #[inline(always)]
+    fn preserve_clamped_nan(self) -> bool {
+        K::PRESERVE_CLAMPED_NAN
+    }
+    #[inline(always)]
+    fn lowp(self) -> bool {
+        K::LOWP
+    }
+    #[inline(always)]
+    fn assume(self) -> bool {
+        K::ASSUME
+    }
+    #[inline(always)]
+    fn elide_exp2(self) -> bool {
+        K::ELIDE_EXP2
+    }
+    #[inline(always)]
+    fn elide_exp(self) -> bool {
+        K::ELIDE_EXP
+    }
+    #[inline(always)]
+    fn elide_overflow_exp2(self) -> bool {
+        K::ELIDE_OVERFLOW_EXP2
+    }
+    #[inline(always)]
+    fn elide_overflow_exp(self) -> bool {
+        K::ELIDE_OVERFLOW_EXP
+    }
+    #[inline(always)]
+    fn elide_red_exp2(self) -> bool {
+        K::ELIDE_RED_EXP2
+    }
+    #[inline(always)]
+    fn elide_red_exp(self) -> bool {
+        K::ELIDE_RED_EXP
+    }
+}
+
 // Relative minimax cubic, constrained to 1 and 2 at the octave endpoints.
 pub(crate) const LOWP_COEFFICIENTS: [f32; 3] = [0.6954243475, 0.2263076823, 0.07826797018];
 
-macro_rules! exp2_lowp {
-    ($x:ident, $sp:ident, $madd:ident) => {{
-        let [c1, c2, c3] = $crate::expf::graph::LOWP_COEFFICIENTS;
-        let p = $madd($sp(c3), $x, $sp(c2));
-        let p = $madd(p, $x, $sp(c1));
-        $madd(p, $x, $sp(1.0))
-    }};
+/// Evaluate the low-precision `2^x` octave polynomial on `x in [0, 1]`.
+#[inline(always)]
+pub(crate) fn exp2_lowp<V: F32Lanes, const ARITHMETIC: usize>(token: V::Token, x: V) -> V {
+    let sp = |v| V::splat(token, v);
+    let [c1, c2, c3] = LOWP_COEFFICIENTS;
+    let p = madd::<V, ARITHMETIC>(token, sp(c3), x, sp(c2));
+    let p = madd::<V, ARITHMETIC>(token, p, x, sp(c1));
+    madd::<V, ARITHMETIC>(token, p, x, sp(1.0))
 }
-pub(crate) use exp2_lowp;
 
-macro_rules! eval_expf {
-    (
-        $V:ident,
-        $I:ident,
-        $token:ident,
-        $input:ident,
-        $op:expr,
-        $arithmetic:expr,
-        $ranged:expr,
-        $in_lo_exp2:expr,
-        $in_hi_exp2:expr,
-        $in_lo_exp:expr,
-        $in_hi_exp:expr,
-        $full:expr,
-        $clamp_oob:expr,
-        $preserve_clamped_nan:expr,
-        $lowp:expr,
-        $assume:expr,
-        $elide_exp2:expr,
-        $elide_exp:expr,
-        $elide_overflow_exp2:expr,
-        $elide_overflow_exp:expr,
-        $elide_red_exp2:expr,
-        $elide_red_exp:expr
-    ) => {{
-        let sp = |x| $V::splat_t($token, x);
-        let ip = |x| $I::splat_t($token, x);
-        let in_lo = if $op == 1 { $in_lo_exp } else { $in_lo_exp2 };
-        let in_hi = if $op == 1 { $in_hi_exp } else { $in_hi_exp2 };
-        let reject = |mask: $I<T>, kind| {
-            let lane_mask = mask
-                .to_array()
-                .iter()
-                .enumerate()
-                .fold(0_u16, |m, (i, &v)| m | (u16::from(v != 0) << i));
-            ExpfError { kind, lane_mask }
-        };
-        if !$assume && !$clamp_oob {
-            if $ranged {
-                let invalid = ($input.simd_ge(sp(in_lo)) & $input.simd_le(sp(in_hi)))
-                    .bitcast_to_i32()
-                    ^ ip(-1);
-                if invalid.any_true() {
-                    return Err(reject(invalid, ExpfErrorKind::InvalidInput));
-                }
-            } else if !$full {
-                let bits = $input.bitcast_to_i32();
-                let abs = bits & ip(0x7fff_ffff_u32 as i32);
-                let invalid = abs.simd_ge(ip(0x7f80_0000));
-                if invalid.any_true() {
-                    return Err(reject(invalid, ExpfErrorKind::InvalidInput));
-                }
+#[inline(always)]
+fn eval_expf<V: F32Lanes, C: CfgSource, const ARITHMETIC: usize>(
+    token: V::Token,
+    input: V,
+    cfg: C,
+) -> Result<V, ExpfError> {
+    let sp = |x| V::splat(token, x);
+    let ip = |x| V::I32::splat(token, x);
+    let op = cfg.op();
+    let in_lo = if op == 1 {
+        cfg.in_lo_exp()
+    } else {
+        cfg.in_lo_exp2()
+    };
+    let in_hi = if op == 1 {
+        cfg.in_hi_exp()
+    } else {
+        cfg.in_hi_exp2()
+    };
+    let reject = |mask: V::I32, kind| ExpfError {
+        kind,
+        lane_mask: mask.lane_mask(),
+    };
+    if !cfg.assume() && !cfg.clamp_oob() {
+        if cfg.ranged() {
+            let invalid =
+                (input.simd_ge(sp(in_lo)) & input.simd_le(sp(in_hi))).bitcast_to_i32() ^ ip(-1);
+            if invalid.any_true() {
+                return Err(reject(invalid, ExpfErrorKind::InvalidInput));
+            }
+        } else if !cfg.full() {
+            let bits = input.bitcast_to_i32();
+            let abs = bits & ip(0x7fff_ffff_u32 as i32);
+            let invalid = abs.simd_ge(ip(0x7f80_0000));
+            if invalid.any_true() {
+                return Err(reject(invalid, ExpfErrorKind::InvalidInput));
             }
         }
-        let is_nan = if $preserve_clamped_nan && !$full {
-            $input.simd_ne($input)
+    }
+    let is_nan = if cfg.preserve_clamped_nan() && !cfg.full() {
+        input.simd_ne(input)
+    } else {
+        ip(0).bitcast_to_f32()
+    };
+    let work_in = if cfg.clamp_oob() && !cfg.full() {
+        let (lo_b, hi_b, safe) = if cfg.ranged() {
+            (in_lo, in_hi, in_lo)
         } else {
-            ip(0).bitcast_to_f32()
+            (-f32::MAX, f32::MAX, 0.0)
         };
-        let work_in = if $clamp_oob && !$full {
-            let (lo_b, hi_b, safe) = if $ranged {
-                (in_lo, in_hi, in_lo)
-            } else {
-                (-f32::MAX, f32::MAX, 0.0)
-            };
-            let c = $V::blend(
-                $input.simd_lt(sp(lo_b)),
-                sp(lo_b),
-                $V::blend($input.simd_gt(sp(hi_b)), sp(hi_b), $input),
-            );
-            if $preserve_clamped_nan {
-                $V::blend(is_nan, sp(safe), c)
-            } else {
-                c
-            }
+        let c = V::blend(
+            input.simd_lt(sp(lo_b)),
+            sp(lo_b),
+            V::blend(input.simd_gt(sp(hi_b)), sp(hi_b), input),
+        );
+        if cfg.preserve_clamped_nan() {
+            V::blend(is_nan, sp(safe), c)
         } else {
-            $input
-        };
-        let arg = if $op == 1 {
-            work_in * sp(core::f32::consts::LOG2_E)
+            c
+        }
+    } else {
+        input
+    };
+    let arg = if op == 1 {
+        work_in * sp(core::f32::consts::LOG2_E)
+    } else {
+        work_in
+    };
+    let elide_clamp = if op == 1 {
+        cfg.elide_exp()
+    } else {
+        cfg.elide_exp2()
+    };
+    let elide_overflow = if op == 1 {
+        cfg.elide_overflow_exp()
+    } else {
+        cfg.elide_overflow_exp2()
+    };
+    let elide_red = if op == 1 {
+        cfg.elide_red_exp()
+    } else {
+        cfg.elide_red_exp2()
+    };
+    let max_lower = |x: V, lo| {
+        if cfg.clamp_oob() && !cfg.full() && !cfg.preserve_clamped_nan() {
+            x.max(lo)
         } else {
-            work_in
-        };
-        let elide_clamp = if $op == 1 { $elide_exp } else { $elide_exp2 };
-        let elide_overflow = if $op == 1 {
-            $elide_overflow_exp
+            x.max_fast(lo)
+        }
+    };
+    let result = if cfg.lowp() {
+        if elide_red {
+            exp2_lowp::<V, ARITHMETIC>(token, arg)
         } else {
-            $elide_overflow_exp2
-        };
-        let elide_red = if $op == 1 {
-            $elide_red_exp
-        } else {
-            $elide_red_exp2
-        };
-        let madd = |a: $V<T>, b: $V<T>, c: $V<T>| -> $V<T> {
-            if $arithmetic == NATIVE {
-                a.mul_add_relaxed(b, c)
-            } else if $arithmetic == SOFTWARE {
-                a.mul_add_fused(b, c)
-            } else {
-                #[cfg(target_arch = "wasm32")]
-                if $arithmetic == WASM_SOFTWARE {
-                    let (a, b, c) = (a.to_array(), b.to_array(), c.to_array());
-                    let proof = $token
-                        .try_wasm128()
-                        .expect("private WASM mode requires its matching proof");
-                    return $V::from_array_t(
-                        $token,
-                        crate::wasm_fma::software_lanes(proof, a, b, c),
-                    );
-                }
-                let (a, b, c) = (a.to_array(), b.to_array(), c.to_array());
-                $V::from_array_t($token, crate::soft_fma::fmaf_soft_lanes(a, b, c))
-            }
-        };
-        let max_lower = |x: $V<T>, lo| {
-            if $clamp_oob && !$full && !$preserve_clamped_nan {
-                x.max(lo)
-            } else {
-                x.max_fast(lo)
-            }
-        };
-        let result = if $lowp {
-            if elide_red {
-                exp2_lowp!(arg, sp, madd)
-            } else {
-                let x = if elide_clamp {
-                    arg
-                } else if elide_overflow {
-                    max_lower(arg, sp(-126.0))
-                } else {
-                    max_lower(arg, sp(-126.0)).min_fast(sp(127.99))
-                };
-                let xi = x.floor();
-                let xf = x - xi;
-                let p = exp2_lowp!(xf, sp, madd);
-                let integer = if $token.as_scalar().is_some() {
-                    xi.to_i32()
-                } else {
-                    xi.to_i32_round()
-                };
-                p * (integer + ip(127)).shl_const::<23>().bitcast_to_f32()
-            }
-        } else if elide_red {
-            let xf = arg;
-            let p = madd(
-                sp(0.000_152_527_896_498_79),
-                xf,
-                sp(0.001_338_604_727_826_21),
-            );
-            let p = madd(p, xf, sp(0.009_618_715_779_149_75));
-            let p = madd(p, xf, sp(0.055_503_695_542_993_11));
-            let p = madd(p, xf, sp(0.240_226_463_934_714_0));
-            let p = madd(p, xf, sp(core::f32::consts::LN_2));
-            madd(p, xf, sp(1.0))
-        } else {
-            let underflow_limit = sp(-126.0);
-            let overflow_limit = sp(128.0);
-            let reduced = if elide_clamp {
+            let x = if elide_clamp {
                 arg
             } else if elide_overflow {
-                max_lower(arg, underflow_limit)
+                max_lower(arg, sp(-126.0))
             } else {
-                max_lower(arg, underflow_limit).min_fast(overflow_limit)
+                max_lower(arg, sp(-126.0)).min_fast(sp(127.99))
             };
-            let xi = if elide_clamp || elide_overflow {
-                reduced.round()
-            } else {
-                reduced.round().min_fast(sp(127.0))
-            };
-            let xf = reduced - xi;
-            let p = madd(
-                sp(0.000_152_527_896_498_79),
-                xf,
-                sp(0.001_338_604_727_826_21),
-            );
-            let p = madd(p, xf, sp(0.009_618_715_779_149_75));
-            let p = madd(p, xf, sp(0.055_503_695_542_993_11));
-            let p = madd(p, xf, sp(0.240_226_463_934_714_0));
-            let p = madd(p, xf, sp(core::f32::consts::LN_2));
-            let p = madd(p, xf, sp(1.0));
-            let integer = if $token.as_scalar().is_some() {
+            let xi = x.floor();
+            let xf = x - xi;
+            let p = exp2_lowp::<V, ARITHMETIC>(token, xf);
+            let integer = if token.as_scalar().is_some() {
                 xi.to_i32()
             } else {
                 xi.to_i32_round()
             };
-            let scale = (integer + ip(127)).shl_const::<23>().bitcast_to_f32();
-            let result = p * scale;
-            if elide_clamp {
-                result
-            } else if elide_overflow {
-                let is_underflow = arg.simd_lt(underflow_limit);
-                $V::blend(is_underflow, sp(0.0), result)
-            } else {
-                let is_underflow = arg.simd_lt(underflow_limit);
-                let is_overflow = arg.simd_ge(overflow_limit);
-                let result = $V::blend(is_underflow, sp(0.0), result);
-                $V::blend(is_overflow, sp(f32::INFINITY), result)
-            }
-        };
-        let result = if $full {
-            let nan = $input.simd_ne($input);
-            let pos_inf = $input.simd_eq(sp(f32::INFINITY));
-            let neg_inf = $input.simd_eq(sp(f32::NEG_INFINITY));
-            let result = $V::blend(nan, sp(f32::NAN), result);
-            let result = $V::blend(pos_inf, sp(f32::INFINITY), result);
-            $V::blend(neg_inf, sp(0.0), result)
-        } else if $preserve_clamped_nan {
-            $V::blend(is_nan, sp(f32::NAN), result)
+            p * (integer + ip(127)).shl_const::<23>().bitcast_to_f32()
+        }
+    } else if elide_red {
+        let xf = arg;
+        let p = madd::<V, ARITHMETIC>(
+            token,
+            sp(0.000_152_527_896_498_79),
+            xf,
+            sp(0.001_338_604_727_826_21),
+        );
+        let p = madd::<V, ARITHMETIC>(token, p, xf, sp(0.009_618_715_779_149_75));
+        let p = madd::<V, ARITHMETIC>(token, p, xf, sp(0.055_503_695_542_993_11));
+        let p = madd::<V, ARITHMETIC>(token, p, xf, sp(0.240_226_463_934_714_0));
+        let p = madd::<V, ARITHMETIC>(token, p, xf, sp(core::f32::consts::LN_2));
+        madd::<V, ARITHMETIC>(token, p, xf, sp(1.0))
+    } else {
+        let underflow_limit = sp(-126.0);
+        let overflow_limit = sp(128.0);
+        let reduced = if elide_clamp {
+            arg
+        } else if elide_overflow {
+            max_lower(arg, underflow_limit)
         } else {
-            result
+            max_lower(arg, underflow_limit).min_fast(overflow_limit)
         };
-        Ok(result)
-    }};
-}
-
-macro_rules! graph_eval {
-    ($vector_dbg:ident, $vector_rel:ident, $profile:ident,
-     [$($generic:tt)*], [$($type_arg:tt)*], $token:ty, $vector:ty, [$($imports:tt)*]) => {
-        #[cfg_attr(debug_assertions, inline(never))]
-        #[cfg_attr(not(debug_assertions), inline)]
-        fn $vector_dbg<$($generic)* const ARITHMETIC: usize>(
-            token: $token,
-            input: $vector,
-            op: u8,
-            cfg: KernelCfg,
-        ) -> Result<$vector, ExpfError> {
-            $($imports)*
-            eval_expf!(
-                V,
-                I,
-                token,
-                input,
-                op,
-                ARITHMETIC,
-                cfg.ranged,
-                cfg.in_lo_exp2,
-                cfg.in_hi_exp2,
-                cfg.in_lo_exp,
-                cfg.in_hi_exp,
-                cfg.full,
-                cfg.clamp_oob,
-                cfg.preserve_clamped_nan,
-                cfg.lowp,
-                cfg.assume,
-                cfg.elide_exp2,
-                cfg.elide_exp,
-                cfg.elide_overflow_exp2,
-                cfg.elide_overflow_exp,
-                cfg.elide_red_exp2,
-                cfg.elide_red_exp
-            )
-        }
-
-        #[cfg(not(debug_assertions))]
-        #[inline(always)]
-        fn $vector_rel<
-            $($generic)*
-            K: Kernel,
-            const OP: u8,
-            const ARITHMETIC: usize,
-        >(
-            token: $token,
-            input: $vector,
-        ) -> Result<$vector, ExpfError> {
-            $($imports)*
-            eval_expf!(
-                V,
-                I,
-                token,
-                input,
-                OP,
-                ARITHMETIC,
-                K::RANGED,
-                K::IN_LO_EXP2,
-                K::IN_HI_EXP2,
-                K::IN_LO_EXP,
-                K::IN_HI_EXP,
-                K::FULL,
-                K::CLAMP_OOB,
-                K::PRESERVE_CLAMPED_NAN,
-                K::LOWP,
-                K::ASSUME,
-                K::ELIDE_EXP2,
-                K::ELIDE_EXP,
-                K::ELIDE_OVERFLOW_EXP2,
-                K::ELIDE_OVERFLOW_EXP,
-                K::ELIDE_RED_EXP2,
-                K::ELIDE_RED_EXP
-            )
-        }
-
-        #[inline(always)]
-        pub(super) fn $profile<
-            $($generic)*
-            K: Kernel,
-            const OP: u8,
-            const ARITHMETIC: usize,
-        >(
-            token: $token,
-            input: $vector,
-        ) -> Result<$vector, ExpfError> {
-            #[cfg(debug_assertions)]
-            return $vector_dbg::<$($type_arg)* ARITHMETIC>(token, input, OP, cfg_of::<K>());
-            #[cfg(not(debug_assertions))]
-            $vector_rel::<$($type_arg)* K, OP, ARITHMETIC>(token, input)
+        let xi = if elide_clamp || elide_overflow {
+            reduced.round()
+        } else {
+            reduced.round().min_fast(sp(127.0))
+        };
+        let xf = reduced - xi;
+        let p = madd::<V, ARITHMETIC>(
+            token,
+            sp(0.000_152_527_896_498_79),
+            xf,
+            sp(0.001_338_604_727_826_21),
+        );
+        let p = madd::<V, ARITHMETIC>(token, p, xf, sp(0.009_618_715_779_149_75));
+        let p = madd::<V, ARITHMETIC>(token, p, xf, sp(0.055_503_695_542_993_11));
+        let p = madd::<V, ARITHMETIC>(token, p, xf, sp(0.240_226_463_934_714_0));
+        let p = madd::<V, ARITHMETIC>(token, p, xf, sp(core::f32::consts::LN_2));
+        let p = madd::<V, ARITHMETIC>(token, p, xf, sp(1.0));
+        let integer = if token.as_scalar().is_some() {
+            xi.to_i32()
+        } else {
+            xi.to_i32_round()
+        };
+        let scale = (integer + ip(127)).shl_const::<23>().bitcast_to_f32();
+        let result = p * scale;
+        if elide_clamp {
+            result
+        } else if elide_overflow {
+            let is_underflow = arg.simd_lt(underflow_limit);
+            V::blend(is_underflow, sp(0.0), result)
+        } else {
+            let is_underflow = arg.simd_lt(underflow_limit);
+            let is_overflow = arg.simd_ge(overflow_limit);
+            let result = V::blend(is_underflow, sp(0.0), result);
+            V::blend(is_overflow, sp(f32::INFINITY), result)
         }
     };
+    let result = if cfg.full() {
+        let nan = input.simd_ne(input);
+        let pos_inf = input.simd_eq(sp(f32::INFINITY));
+        let neg_inf = input.simd_eq(sp(f32::NEG_INFINITY));
+        let result = V::blend(nan, sp(f32::NAN), result);
+        let result = V::blend(pos_inf, sp(f32::INFINITY), result);
+        V::blend(neg_inf, sp(0.0), result)
+    } else if cfg.preserve_clamped_nan() {
+        V::blend(is_nan, sp(f32::NAN), result)
+    } else {
+        result
+    };
+    Ok(result)
 }
 
-macro_rules! graph {
-    ($vector_dbg:ident, $vector_rel:ident, $profile:ident, $cfg_entry:ident, $const_entry:ident, $float:ident, $int:ident, $bound:ident, $lanes:literal) => {
-        graph_eval!(
-            $vector_dbg, $vector_rel, $profile,
-            [T: magetypes::simd::backends::$bound,], [T,], T,
-            magetypes::simd::generic::$float<T>,
-            [use magetypes::simd::generic::{$float as V, $int as I};]
-        );
+#[cfg_attr(debug_assertions, inline(never))]
+#[cfg_attr(not(debug_assertions), inline)]
+fn eval_dbg<V: F32Lanes, const ARITHMETIC: usize>(
+    token: V::Token,
+    input: V,
+    op: u8,
+    cfg: KernelCfg,
+) -> Result<V, ExpfError> {
+    eval_expf::<V, RuntimeCfg, ARITHMETIC>(token, input, RuntimeCfg { op, cfg })
+}
+
+#[inline(always)]
+fn eval_profile<V: F32Lanes, K: Kernel, const OP: u8, const ARITHMETIC: usize>(
+    token: V::Token,
+    input: V,
+) -> Result<V, ExpfError> {
+    #[cfg(debug_assertions)]
+    return eval_dbg::<V, ARITHMETIC>(token, input, OP, cfg_of::<K>());
+    #[cfg(not(debug_assertions))]
+    eval_expf::<V, ConstCfg<K, OP>, ARITHMETIC>(
+        token,
+        input,
+        ConstCfg::<K, OP>(core::marker::PhantomData),
+    )
+}
+
+macro_rules! kernel_entries {
+    ($profile:ident, $cfg_entry:ident, $const_entry:ident, $float:ident, $bound:ident, $lanes:literal) => {
+        #[inline(always)]
+        pub(super) fn $profile<
+            T: magetypes::simd::backends::$bound,
+            K: Kernel,
+            const OP: u8,
+            const ARITHMETIC: usize,
+        >(
+            token: T,
+            input: magetypes::simd::generic::$float<T>,
+        ) -> Result<magetypes::simd::generic::$float<T>, ExpfError> {
+            eval_profile::<_, K, OP, ARITHMETIC>(token, input)
+        }
 
         #[archmage::attune(_*_t, +v4(cfg(avx512)), +v4x(cfg(avx512)))]
         pub(super) fn $cfg_entry<const ARITHMETIC: usize>(
@@ -439,7 +528,7 @@ macro_rules! graph {
             op: u8,
             cfg: KernelCfg,
         ) -> Result<[f32; $lanes], ExpfError> {
-            $vector_dbg::<Token, ARITHMETIC>(
+            eval_dbg::<_, ARITHMETIC>(
                 token,
                 magetypes::simd::generic::$float::from_array_t(token, input),
                 op,
@@ -454,7 +543,7 @@ macro_rules! graph {
             token: Token,
             input: [f32; $lanes],
         ) -> Result<[f32; $lanes], ExpfError> {
-            $profile::<Token, K, OP, ARITHMETIC>(
+            eval_profile::<_, K, OP, ARITHMETIC>(
                 token,
                 magetypes::simd::generic::$float::from_array_t(token, input),
             )
@@ -463,47 +552,14 @@ macro_rules! graph {
     };
 }
 
-graph_eval!(
-    vector1_dbg, vector1_rel, profile1,
-    [], [], archmage::ScalarToken, crate::scalar1::ScalarF32,
-    [
-        use archmage::IntoConcreteToken as _;
-        use crate::scalar1::{ScalarF32 as V, ScalarI32 as I};
-        type T = archmage::ScalarToken;
-    ]
-);
-
-graph!(
-    vector4_dbg,
-    vector4_rel,
-    profile4,
-    kernel4_cfg,
-    kernel4_with,
-    f32x4,
-    i32x4,
-    F32x4Convert,
-    4
-);
-graph!(
-    vector8_dbg,
-    vector8_rel,
-    profile8,
-    kernel8_cfg,
-    kernel8_with,
-    f32x8,
-    i32x8,
-    F32x8Convert,
-    8
-);
+kernel_entries!(profile4, kernel4_cfg, kernel4_with, f32x4, F32x4Convert, 4);
+kernel_entries!(profile8, kernel8_cfg, kernel8_with, f32x8, F32x8Convert, 8);
 #[cfg(feature = "w512")]
-graph!(
-    vector16_dbg,
-    vector16_rel,
+kernel_entries!(
     profile16,
     kernel16_cfg,
     kernel16_with,
     f32x16,
-    i32x16,
     F32x16Convert,
     16
 );
@@ -516,7 +572,7 @@ pub(super) fn kernel1_cfg<const ARITHMETIC: usize>(
 ) -> Result<f32, ExpfError> {
     use crate::scalar1::ScalarF32;
     use archmage::ScalarToken;
-    vector1_dbg::<ARITHMETIC>(ScalarToken, ScalarF32::splat_t(ScalarToken, input), op, cfg)
+    eval_dbg::<_, ARITHMETIC>(ScalarToken, ScalarF32::splat_t(ScalarToken, input), op, cfg)
         .map(|value| value.0)
 }
 
@@ -526,7 +582,7 @@ pub(super) fn kernel1_with<K: Kernel, const OP: u8, const ARITHMETIC: usize>(
 ) -> Result<f32, ExpfError> {
     use crate::scalar1::ScalarF32;
     use archmage::ScalarToken;
-    profile1::<K, OP, ARITHMETIC>(ScalarToken, ScalarF32::splat_t(ScalarToken, input))
+    eval_profile::<_, K, OP, ARITHMETIC>(ScalarToken, ScalarF32::splat_t(ScalarToken, input))
         .map(|value| value.0)
 }
 
@@ -569,12 +625,12 @@ pub(super) fn slice8_cfg<const ARITHMETIC: usize>(
     let (chunks, tail) = V::partition_slice_t(token, src);
     let (out_chunks, out_tail) = V::partition_slice_mut_t(token, dst);
     for (i, (s, d)) in chunks.iter().zip(out_chunks.iter_mut()).enumerate() {
-        vector8_dbg::<Token, ARITHMETIC>(token, V::load_t(token, s), op, cfg)
+        eval_dbg::<_, ARITHMETIC>(token, V::load_t(token, s), op, cfg)
             .map_err(|e| (i * 8, e))?
             .store(d);
     }
     if !tail.is_empty() {
-        vector8_dbg::<Token, ARITHMETIC>(token, V::load_padded_t(token, tail, tail[0]), op, cfg)
+        eval_dbg::<_, ARITHMETIC>(token, V::load_padded_t(token, tail, tail[0]), op, cfg)
             .map_err(|e| (chunks.len() * 8, e))?
             .store_prefix(out_tail);
     }
@@ -593,12 +649,12 @@ pub(super) fn slice4_cfg<const ARITHMETIC: usize>(
     let (chunks, tail) = V::partition_slice_t(token, src);
     let (out_chunks, out_tail) = V::partition_slice_mut_t(token, dst);
     for (i, (s, d)) in chunks.iter().zip(out_chunks.iter_mut()).enumerate() {
-        vector4_dbg::<Token, ARITHMETIC>(token, V::load_t(token, s), op, cfg)
+        eval_dbg::<_, ARITHMETIC>(token, V::load_t(token, s), op, cfg)
             .map_err(|e| (i * 4, e))?
             .store(d);
     }
     if !tail.is_empty() {
-        vector4_dbg::<Token, ARITHMETIC>(token, V::load_padded_t(token, tail, tail[0]), op, cfg)
+        eval_dbg::<_, ARITHMETIC>(token, V::load_padded_t(token, tail, tail[0]), op, cfg)
             .map_err(|e| (chunks.len() * 4, e))?
             .store_prefix(out_tail);
     }
@@ -618,12 +674,12 @@ pub(super) fn slice16_cfg<const ARITHMETIC: usize>(
     let (chunks, tail) = V::partition_slice_t(token, src);
     let (out_chunks, out_tail) = V::partition_slice_mut_t(token, dst);
     for (i, (s, d)) in chunks.iter().zip(out_chunks.iter_mut()).enumerate() {
-        vector16_dbg::<Token, ARITHMETIC>(token, V::load_t(token, s), op, cfg)
+        eval_dbg::<_, ARITHMETIC>(token, V::load_t(token, s), op, cfg)
             .map_err(|e| (i * 16, e))?
             .store(d);
     }
     if !tail.is_empty() {
-        vector16_dbg::<Token, ARITHMETIC>(token, V::load_padded_t(token, tail, tail[0]), op, cfg)
+        eval_dbg::<_, ARITHMETIC>(token, V::load_padded_t(token, tail, tail[0]), op, cfg)
             .map_err(|e| (chunks.len() * 16, e))?
             .store_prefix(out_tail);
     }
@@ -643,12 +699,12 @@ pub(super) fn slice8_with<K: Kernel, const OP: u8, const ARITHMETIC: usize>(
     let (chunks, tail) = V::partition_slice_t(token, src);
     let (out_chunks, out_tail) = V::partition_slice_mut_t(token, dst);
     for (i, (s, d)) in chunks.iter().zip(out_chunks.iter_mut()).enumerate() {
-        profile8::<Token, K, OP, ARITHMETIC>(token, V::load_t(token, s))
+        eval_profile::<_, K, OP, ARITHMETIC>(token, V::load_t(token, s))
             .map_err(|e| (i * 8, e))?
             .store(d);
     }
     if !tail.is_empty() {
-        profile8::<Token, K, OP, ARITHMETIC>(token, V::load_padded_t(token, tail, tail[0]))
+        eval_profile::<_, K, OP, ARITHMETIC>(token, V::load_padded_t(token, tail, tail[0]))
             .map_err(|e| (chunks.len() * 8, e))?
             .store_prefix(out_tail);
     }
@@ -666,12 +722,12 @@ pub(super) fn slice4_with<K: Kernel, const OP: u8, const ARITHMETIC: usize>(
     let (chunks, tail) = V::partition_slice_t(token, src);
     let (out_chunks, out_tail) = V::partition_slice_mut_t(token, dst);
     for (i, (s, d)) in chunks.iter().zip(out_chunks.iter_mut()).enumerate() {
-        profile4::<Token, K, OP, ARITHMETIC>(token, V::load_t(token, s))
+        eval_profile::<_, K, OP, ARITHMETIC>(token, V::load_t(token, s))
             .map_err(|e| (i * 4, e))?
             .store(d);
     }
     if !tail.is_empty() {
-        profile4::<Token, K, OP, ARITHMETIC>(token, V::load_padded_t(token, tail, tail[0]))
+        eval_profile::<_, K, OP, ARITHMETIC>(token, V::load_padded_t(token, tail, tail[0]))
             .map_err(|e| (chunks.len() * 4, e))?
             .store_prefix(out_tail);
     }
@@ -690,12 +746,12 @@ pub(super) fn slice16_with<K: Kernel, const OP: u8, const ARITHMETIC: usize>(
     let (chunks, tail) = V::partition_slice_t(token, src);
     let (out_chunks, out_tail) = V::partition_slice_mut_t(token, dst);
     for (i, (s, d)) in chunks.iter().zip(out_chunks.iter_mut()).enumerate() {
-        profile16::<Token, K, OP, ARITHMETIC>(token, V::load_t(token, s))
+        eval_profile::<_, K, OP, ARITHMETIC>(token, V::load_t(token, s))
             .map_err(|e| (i * 16, e))?
             .store(d);
     }
     if !tail.is_empty() {
-        profile16::<Token, K, OP, ARITHMETIC>(token, V::load_padded_t(token, tail, tail[0]))
+        eval_profile::<_, K, OP, ARITHMETIC>(token, V::load_padded_t(token, tail, tail[0]))
             .map_err(|e| (chunks.len() * 16, e))?
             .store_prefix(out_tail);
     }
