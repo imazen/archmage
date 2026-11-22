@@ -249,6 +249,8 @@ macro_rules! eval_cbrtf {
 
         // In-register vectorized Kahan bit-hack seed:
         // Approximate `u / 3` for non-negative 31-bit IEEE-754 bit pattern `u`.
+        // The 0.1.0 BitExact hashes include this seed's rounding. Exact division
+        // would change the result, even after both Midp Halley steps.
         let u = abs_x.bitcast_to_i32();
         let mut d = u.shr_arithmetic_const::<2>() + u.shr_arithmetic_const::<4>();
         d = d + d.shr_arithmetic_const::<4>();

@@ -393,7 +393,6 @@ pub fn generate_generic_files(registry: &crate::registry::Registry) -> BTreeMap<
         transcendentals::gen_transcendentals(
             "f32x4",
             "i32x4",
-            4,
             "F32x4Backend",
             "F32x4Convert",
             "I32x4Backend",
@@ -404,7 +403,6 @@ pub fn generate_generic_files(registry: &crate::registry::Registry) -> BTreeMap<
         transcendentals::gen_transcendentals(
             "f32x8",
             "i32x8",
-            8,
             "F32x8Backend",
             "F32x8Convert",
             "I32x8Backend",
@@ -415,7 +413,6 @@ pub fn generate_generic_files(registry: &crate::registry::Registry) -> BTreeMap<
         transcendentals::gen_transcendentals(
             "f32x16",
             "i32x16",
-            16,
             "F32x16Backend",
             "F32x16Convert",
             "I32x16Backend",

@@ -1275,3 +1275,50 @@ mod tests {
         assert_eq!(back.to_array(), F16_VALS, "scalar bitcast roundtrip");
     }
 }
+
+#[archmage::attune(_*_t, +v4(cfg(avx512)), +v4x(cfg(avx512)), define(f32x8))]
+fn cbrt_seed_parity(token: Token) {
+    // Reproduce the previous array seed, then use the same backend operations.
+    // Inputs are nonzero and bounded to avoid the documented overflow range.
+    let mut bits = 1;
+    let end = (f32::MAX / 3.0).to_bits();
+    for _ in 0..512 {
+        let input = core::array::from_fn(|_| {
+            bits = (bits + 1_308_769) % end;
+            f32::from_bits(bits.max(1))
+        });
+        let x = f32x8::from_array_t(token, input);
+        let seed = input.map(|v| f32::from_bits(v.to_bits() / 3 + 0x2a50_8c2d));
+        let two = f32x8::splat_t(token, 2.0);
+        let halley = |y| {
+            let y3 = y * y * y;
+            y * ((y3 + two * x) / (two * y3 + x))
+        };
+        let low = halley(f32x8::from_array_t(token, seed));
+        let mid = halley(low);
+        assert_eq!(
+            x.cbrt_lowp().to_array().map(f32::to_bits),
+            low.to_array().map(f32::to_bits)
+        );
+        assert_eq!(
+            x.cbrt_midp().to_array().map(f32::to_bits),
+            mid.to_array().map(f32::to_bits)
+        );
+    }
+}
+
+#[test]
+fn register_cube_root_seed_matches_integer_division() {
+    cbrt_seed_parity_scalar_t(archmage::ScalarToken);
+    archmage::attuned!(
+        cbrt_seed_parity(),
+        [
+            _v4x_t(cfg(avx512)),
+            _v4_t(cfg(avx512)),
+            _v3_t,
+            _neon_t,
+            _wasm128_t,
+            _scalar_t
+        ]
+    );
+}
