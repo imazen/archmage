@@ -397,7 +397,7 @@ software_fma_or_test! {
         /// overflow or underflow risk). A zero factor gives the ordinary `a * b + c`,
         /// which is exact. The error terms feed only the checks, off the critical
         /// path.
-        #[inline]
+        #[inline(always)]
         pub(crate) fn fma_soft_lanes<const N: usize>(a: [f64; N], b: [f64; N], c: [f64; N]) -> [f64; N] {
             let mut out = [0.0; N];
             let mut slow = [false; N];
@@ -410,10 +410,10 @@ software_fma_or_test! {
                 any_slow |= u8::from(!exact);
             }
             if any_slow != 0 {
-                if N == 1 {
-                    out[0] = fma_exact(a[0], b[0], c[0]);
-                } else {
-                    super::correct_slow_lanes(&mut out, &slow, &a, &b, &c, fma_exact);
+                for i in 0..N {
+                    if slow[i] {
+                        out[i] = fma_exact(a[i], b[i], c[i]);
+                    }
                 }
             }
             out
