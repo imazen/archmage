@@ -52,9 +52,9 @@ icon = "fa-solid fa-magnifying-glass"
 title = "Quick Start"
 description = "Add archmage to your project and start writing safe SIMD."
 tabs = [
-    { name = "Cargo.toml", command = "[dependencies]\narchmage = \"=0.9.32\"" },
-    { name = "With Magetypes", command = "[dependencies]\narchmage = \"=0.9.32\"\nmagetypes = \"=0.9.32\"" },
-    { name = "With Magemath", command = "[dependencies]\narchmage = \"=0.9.32\"\nmagetypes = \"=0.9.32\"\nmagemath = \"0.1\"" },
+    { name = "Cargo.toml", command = "[dependencies]\narchmage = \"=0.9.33\"" },
+    { name = "With Magetypes", command = "[dependencies]\narchmage = \"=0.9.33\"\nmagetypes = \"=0.9.33\"" },
+    { name = "With Magemath", command = "[dependencies]\narchmage = \"=0.9.33\"\nmagetypes = \"=0.9.33\"\nmagemath = \"0.1\"" },
     { name = "docs.rs", link = "https://docs.rs/archmage" },
 ]
 

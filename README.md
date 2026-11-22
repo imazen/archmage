@@ -8,17 +8,20 @@ You pick a CPU tier, prove it's present once with `summon()`, and the type syste
 
 It runs on x86-64, AArch64 and WASM, is `no_std + alloc`, and needs Rust 1.89 or later.
 
-## 0.9.32: Cargo 1.100, attune proof opt-out, #154/#193 macro fixes, and magemath
+## 0.9.33: `X64V3VnniToken`, hierarchical `try_*` dispatch, checked numerics, and scalar/WASM/`no_std` perf
 
-This release follows `0.9.31` with Cargo 1.100 build-dir compatibility,
-`#[attune(..., suppress_const_test)]`, safe-Rust callee shadowing and manual
-`#[target_feature]` soundness hardening (#193), preserved author body brace
-spans for line coverage (#154), and the new [Magemath crate](https://github.com/imazen/archmage/tree/main/magemath)
-alongside bug fixes in `magetypes` midp logs and `silu_midp(-inf)`. Earlier
-macro names (`#[arcane]`, `#[rite]`, `#[magetypes]`, `#[autoversion]`,
-`incant!`) remain warning-free in `0.9.32` and are queued for deprecation in
-the next release; use matching versions of archmage and magetypes so their
-tokens come from the same archmage package.
+This release follows `0.9.32` with `X64V3VnniToken` (`v3_vnni`: VEX `avxvnni` +
+`adx` + `sha` without AVX-512), registry-generated `IntoConcreteToken` with 18
+hierarchical `try_<short_name>()` safe-downgrade extractors, WASM
+`testable_dispatch`, `magetypes` checked numerics (`magetypes::numerics`),
+`f32x16` block/transpose/RGB ops, unified hardware `no_std` scalar
+sqrt/rounding/extrema, `ScalarToken` codegen and panic-path elimination, and
+`magemath 0.1.1` (division-free `cbrtf`, scalar/`opt-z`/`Highp` codegen
+specialization, WASM W128 `slice4`, and caller-width guidance). Earlier macro
+names (`#[arcane]`, `#[rite]`, `#[magetypes]`, `#[autoversion]`, `incant!`)
+remain warning-free in `0.9.33` and are queued for deprecation in the next
+release; use matching versions of archmage and magetypes so their tokens come
+from the same archmage package.
 
 ```rust
 use archmage::prelude::*;
@@ -54,8 +57,8 @@ says when to switch.
 
 ```toml
 [dependencies]
-archmage = "=0.9.32"
-magetypes = "=0.9.32"   # vector types such as f32x8
+archmage = "=0.9.33"
+magetypes = "=0.9.33"   # vector types such as f32x8
 ```
 
 Multiply a buffer by a gain, using AVX2, NEON or WASM SIMD where available:

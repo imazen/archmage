@@ -59,8 +59,8 @@ Measured whole-slice throughput (`4,096` `f32` values, AMD Ryzen 9 9950X3D Zen 5
 
 ```toml
 [dependencies]
-archmage = "=0.9.32"
-magetypes = "=0.9.32"
+archmage = "=0.9.33"
+magetypes = "=0.9.33"
 magemath = { version = "0.1", features = ["std"] }
 ```
 

@@ -12,11 +12,11 @@ same dispatcher role; generated variant names and visibility differ.
 
 ## Install
 
-This guide uses the stable 0.9.32 API:
+This guide uses the stable 0.9.33 API:
 
 ```toml
 [dependencies]
-archmage = "=0.9.32"
+archmage = "=0.9.33"
 ```
 
 ## Write and call a kernel

@@ -16,7 +16,7 @@
 //!
 //! Earlier macro spellings (`#[arcane]`, `#[rite]`, `#[magetypes]`,
 //! `#[autoversion]`, `incant!`, and their descriptive aliases) remain
-//! warning-free in 0.9.32 and are queued for deprecation in the next release.
+//! warning-free in 0.9.33 and are queued for deprecation in the next release.
 
 #[cfg(test)]
 mod expansion_tests;
