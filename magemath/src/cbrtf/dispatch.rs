@@ -239,6 +239,72 @@ pub(super) fn run1_const<K: graph::Kernel, const BACKEND: bool>(
         })
 }
 
+#[cfg(target_arch = "wasm32")]
+#[derive(Clone, Copy)]
+enum WasmSlice {
+    Vector {
+        token: archmage::Wasm128Token,
+        relaxed: bool,
+    },
+    Scalar,
+}
+
+#[cfg(target_arch = "wasm32")]
+impl WasmSlice {
+    #[inline(always)]
+    fn select(token: archmage::Wasm128Token, backend: bool) -> Self {
+        use archmage::{SimdToken, Wasm128RelaxedToken};
+
+        if backend || (Wasm128RelaxedToken::summon().is_some() && crate::wasm_fma::powf_f32_fuses())
+        {
+            Self::Vector {
+                token,
+                // In testable builds the relaxed operation rechecks the token
+                // at every multiply-add. Use fused arithmetic for BitExact
+                // so a later toggle can only change its implementation.
+                relaxed: backend || Wasm128RelaxedToken::compiled_with() == Some(true),
+            }
+        } else {
+            Self::Scalar
+        }
+    }
+
+    #[inline(always)]
+    fn run_cfg(
+        self,
+        src: &[f32],
+        dst: &mut [f32],
+        cfg: graph::KernelCfg,
+    ) -> Result<(), (usize, CbrtfError)> {
+        match self {
+            Self::Vector { token, relaxed } => {
+                graph::slice4_cfg_wasm128_t(token, src, dst, relaxed, cfg)
+            }
+            Self::Scalar => graph::slice1_cfg_scalar(src, dst, false, cfg),
+        }
+    }
+
+    #[cfg(not(debug_assertions))]
+    #[inline(always)]
+    fn run_const<K: graph::Kernel>(
+        self,
+        src: &[f32],
+        dst: &mut [f32],
+    ) -> Result<(), (usize, CbrtfError)> {
+        match self {
+            Self::Vector {
+                token,
+                relaxed: true,
+            } => graph::slice4_with_wasm128_t::<K, true>(token, src, dst),
+            Self::Vector {
+                token,
+                relaxed: false,
+            } => graph::slice4_with_wasm128_t::<K, false>(token, src, dst),
+            Self::Scalar => graph::slice1_with_scalar::<K, false>(src, dst),
+        }
+    }
+}
+
 #[cfg_attr(debug_assertions, inline(never))]
 #[cfg_attr(not(debug_assertions), inline(always))]
 pub(super) fn run_slice_cfg(
@@ -258,7 +324,7 @@ pub(super) fn run_slice_cfg(
         #[cfg(target_arch = "aarch64")]
         Plan::Neon(t) => graph::slice8_cfg_neon_t(t, src, dst, backend, cfg),
         #[cfg(target_arch = "wasm32")]
-        Plan::Wasm(t) => graph::slice8_cfg_wasm128_t(t, src, dst, backend, cfg),
+        Plan::Wasm(t) => WasmSlice::select(t, backend).run_cfg(src, dst, cfg),
         Plan::Software => graph::slice1_cfg_scalar(src, dst, backend, cfg),
     }
 }
@@ -284,7 +350,55 @@ pub(super) fn run_slice_const<K: graph::Kernel, const BACKEND: bool>(
         #[cfg(target_arch = "aarch64")]
         Plan::Neon(t) => graph::slice8_with_neon_t::<K, BACKEND>(t, src, dst),
         #[cfg(target_arch = "wasm32")]
-        Plan::Wasm(t) => graph::slice8_with_wasm128_t::<K, BACKEND>(t, src, dst),
+        Plan::Wasm(t) => WasmSlice::select(t, BACKEND).run_const::<K>(src, dst),
         Plan::Software => graph::slice1_with_scalar::<K, BACKEND>(src, dst),
+    }
+}
+
+#[cfg(all(test, target_arch = "wasm32", target_feature = "relaxed-simd"))]
+mod tests {
+    use super::{WasmSlice, graph};
+    use crate::cbrtf::CbrtfOptions;
+    use archmage::{SimdToken, Wasm128RelaxedToken, Wasm128Token};
+
+    #[test]
+    #[ignore = "requires archmage/testable_dispatch and a fusing relaxed SIMD engine"]
+    fn bit_exact_slice_stays_fused_after_admission() {
+        const OPTS: CbrtfOptions = CbrtfOptions::new().caller();
+        let token = Wasm128Token::summon().expect("SIMD128 is enabled");
+        let src = [f32::from_bits(0x3fa0_0497); 17];
+        let mut runtime = [0.0f32; 17];
+        #[cfg(not(debug_assertions))]
+        let mut const_out = [0.0f32; 17];
+
+        for len in [2, 4, 17] {
+            let admission = WasmSlice::select(token, false);
+            assert!(matches!(admission, WasmSlice::Vector { .. }));
+            Wasm128RelaxedToken::dangerously_disable_token_process_wide(true).unwrap();
+            assert!(Wasm128RelaxedToken::summon().is_none());
+            assert!(Wasm128Token::summon().is_some());
+            assert!(matches!(WasmSlice::select(token, false), WasmSlice::Scalar));
+
+            let cfg = graph::KernelCfg::from_options(OPTS);
+            admission
+                .run_cfg(&src[..len], &mut runtime[..len], cfg)
+                .unwrap();
+            #[cfg(not(debug_assertions))]
+            admission
+                .run_const::<crate::cbrtf::const_api::Cfg<{ OPTS.bits() }>>(
+                    &src[..len],
+                    &mut const_out[..len],
+                )
+                .unwrap();
+            Wasm128RelaxedToken::dangerously_disable_token_process_wide(false).unwrap();
+
+            for &value in &runtime[..len] {
+                assert_eq!(value.to_bits(), 0x3f89_e393, "runtime len={len}");
+            }
+            #[cfg(not(debug_assertions))]
+            for &value in &const_out[..len] {
+                assert_eq!(value.to_bits(), 0x3f89_e393, "const len={len}");
+            }
+        }
     }
 }

@@ -1,5 +1,5 @@
 //! Slice entries return the same bits as the scalar entries, element by
-//! element, for every length around the 8-lane and 16-lane chunking, and
+//! element, for lengths around the 4-, 8- and 16-lane chunk sizes, and
 //! report the exact first rejected index.
 use magemath::{
     SliceError,
@@ -25,6 +25,8 @@ fn inputs(len: usize, lo: f32, hi: f32, seed: u32) -> Vec<f32> {
 fn bits(v: &[f32]) -> Vec<u32> {
     v.iter().map(|x| x.to_bits()).collect()
 }
+
+const BOUNDARY_LENGTHS: [usize; 10] = [0, 1, 3, 4, 5, 7, 8, 12, 16, 17];
 
 #[test]
 fn unary_slices_match_scalar_entries() {
@@ -139,7 +141,7 @@ fn caller_execution_with_a_token_matches_upgrade_for_bit_exact_options() {
 fn first_rejected_index_is_reported() {
     const GM: u128 = PowfOptions::new().gamma().midp().bits();
     const GH: u128 = PowfOptions::new().gamma().highp().bits();
-    for len in [1, 7, 8, 9, 15, 16, 17, 20, 23, 33] {
+    for len in BOUNDARY_LENGTHS.into_iter().chain([9, 15, 20, 23, 33]) {
         for bad in 0..len {
             let mut src = vec![0.5f32; len];
             src[bad] = -1.0;
@@ -160,6 +162,14 @@ fn first_rejected_index_is_reported() {
                 bad,
                 "log len {len} bad {bad}"
             );
+            assert_eq!(
+                Powf::<GH>::slice(&src, &mut dst, 2.0).unwrap_err().index,
+                bad
+            );
+            src[bad] = f32::NAN;
+            assert_eq!(e::try_exp2_slice(&src, &mut dst).unwrap_err().index, bad);
+            assert_eq!(l1p::try_log1p_slice(&src, &mut dst).unwrap_err().index, bad);
+            assert_eq!(c::try_cbrt_slice(&src, &mut dst).unwrap_err().index, bad);
         }
     }
     let mut dst = [0.0; 3];
@@ -208,6 +218,123 @@ fn powf_slice_reports_earlier_result_error_before_later_base_error() {
         assert_eq!(Powf::<{ STD.bits() }>::slice(&src, &mut dst, 2.0), expected);
         assert_eq!(STD.runtime().slice(&src, &mut dst, 2.0), expected);
     }
+}
+
+#[test]
+fn powf_checked_chunks_preserve_mixed_error_order() {
+    const MIDP: PowfOptions = PowfOptions::new();
+    const DEP: PowfOptions = MIDP.backend_dependent();
+    const HIGHP: PowfOptions = MIDP.highp();
+
+    for len in BOUNDARY_LENGTHS {
+        for first in 0..len.saturating_sub(1) {
+            for (early, late, kind) in [
+                (
+                    f32::MAX,
+                    f32::NAN,
+                    p::PowfErrorKind::OutsideApproximationRange,
+                ),
+                (f32::NAN, f32::MAX, p::PowfErrorKind::InvalidBase),
+            ] {
+                let mut src = vec![1.0; len];
+                src[first] = early;
+                src[first + 1] = late;
+                let mut dst = vec![0.0; len];
+                let expected = Err(SliceError { kind, index: first });
+                assert_eq!(
+                    Powf::<{ MIDP.bits() }>::slice(&src, &mut dst, 2.0),
+                    expected
+                );
+                assert_eq!(Powf::<{ DEP.bits() }>::slice(&src, &mut dst, 2.0), expected);
+                assert_eq!(
+                    Powf::<{ HIGHP.bits() }>::slice(&src, &mut dst, 2.0),
+                    expected
+                );
+                for opts in [MIDP, DEP, HIGHP] {
+                    assert_eq!(opts.runtime().slice(&src, &mut dst, 2.0), expected);
+                }
+            }
+        }
+    }
+}
+
+#[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
+#[test]
+fn wasm_slices_match_vector_bits_for_both_portability_modes() {
+    use archmage::{SimdToken, Wasm128Token};
+    use l1p::{Log1pf, Log1pfOptions};
+    use magemath::SimdMath;
+    use magetypes::simd::generic::{f32x4, f32x8};
+
+    let token = Wasm128Token::summon().expect("SIMD128 is enabled");
+    let input = inputs(17, 0.001, 3.75, 0xb27c);
+
+    macro_rules! check {
+        ($op:ident, $opts:expr, $slice:ident, $vector:ident $(, $arg:expr)?) => {{
+            const EXACT: u128 = ($opts).caller().bits();
+            const DEP: u128 = ($opts).caller().backend_dependent().bits();
+            for len in BOUNDARY_LENGTHS {
+                let src = &input[..len];
+                let mut dst = vec![f32::NAN; len];
+                let mut other = vec![f32::NAN; len];
+                $op::<EXACT>::$slice(token, src, &mut dst $(, $arg)?).unwrap();
+                $op::<EXACT>::$slice(archmage::ScalarToken, src, &mut other $(, $arg)?).unwrap();
+                assert_eq!(bits(&dst), bits(&other));
+                ($opts).caller().runtime().$slice(token, src, &mut other $(, $arg)?).unwrap();
+                assert_eq!(bits(&dst), bits(&other));
+                for (&x, &actual) in src.iter().zip(&dst) {
+                    let x4 = f32x4::splat_t(token, x).$vector::<EXACT>($($arg)?).unwrap();
+                    let x8 = f32x8::splat_t(token, x).$vector::<EXACT>($($arg)?).unwrap();
+                    assert_eq!(actual.to_bits(), x4.to_array()[0].to_bits());
+                    assert_eq!(actual.to_bits(), x8.to_array()[0].to_bits());
+                }
+
+                $op::<DEP>::$slice(token, src, &mut dst $(, $arg)?).unwrap();
+                ($opts).caller().backend_dependent().runtime().$slice(token, src, &mut other $(, $arg)?).unwrap();
+                assert_eq!(bits(&dst), bits(&other));
+                for (&x, &actual) in src.iter().zip(&dst) {
+                    let x4 = f32x4::splat_t(token, x).$vector::<DEP>($($arg)?).unwrap();
+                    assert_eq!(actual.to_bits(), x4.to_array()[0].to_bits());
+                }
+                for bad in 0..len {
+                    let mut invalid = src.to_vec();
+                    invalid[bad] = f32::NAN;
+                    let error = $op::<DEP>::$slice(token, &invalid, &mut dst $(, $arg)?).unwrap_err();
+                    assert_eq!(error.index, bad);
+                    let error = ($opts).caller().backend_dependent().runtime()
+                        .$slice(token, &invalid, &mut other $(, $arg)?).unwrap_err();
+                    assert_eq!(error.index, bad);
+                }
+            }
+        }};
+    }
+
+    check!(
+        Powf,
+        PowfOptions::new(),
+        slice_with_token,
+        try_powf_with,
+        2.4
+    );
+    check!(
+        Expf,
+        ExpfOptions::new(),
+        exp2_slice_with_token,
+        try_exp2_with
+    );
+    check!(
+        Logf,
+        LogfOptions::new(),
+        log2_slice_with_token,
+        try_log2_with
+    );
+    check!(
+        Log1pf,
+        Log1pfOptions::new(),
+        slice_with_token,
+        try_log1p_with
+    );
+    check!(Cbrtf, CbrtfOptions::new(), slice_with_token, try_cbrt_with);
 }
 
 #[test]

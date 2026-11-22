@@ -22,6 +22,10 @@ _exhaustive-tests = []
 archmage = { version = "0.9.32", path = "..", default-features = false }
 magetypes = { version = "0.9.32", path = "../magetypes", default-features = false }
 
+[[test]]
+name = "wasm_cbrtf_dispatch"
+required-features = ["archmage/testable_dispatch"]
+
 [package.metadata.docs.rs]
 features = ["std", "avx512"]
 rustdoc-args = ["--cfg", "docsrs"]
