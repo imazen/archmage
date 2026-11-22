@@ -118,6 +118,11 @@ use crate::simd::generic::{f32x4, i32x4};
 // arithmetic operation is unchanged — verified exhaustively in
 // `tests/convert_f16_exhaustive.rs`.
 
+const IEEE_HALF: u32 = crate::numerics::HalfConvert::new()
+    .all_floats()
+    .normalize()
+    .bits();
+
 impl<T: F32x4Convert> i32x4<T> {
     /// Decode four IEEE-754 binary16 (`f16`) bit patterns held in the low 16
     /// bits of each lane (`self`) into an [`f32x4`].
@@ -180,6 +185,7 @@ impl<T: F32x4Convert> f32x4<T> {
     #[inline]
     pub fn to_f16(self) -> i32x4<T> {
         let token = self.1;
+
         let f = self;
 
         // Fabian Giesen, `float_to_half_full_rtne`.
@@ -294,10 +300,9 @@ pub trait F16Convert: F32x4Convert {
     /// Decode a slice of IEEE-754 binary16 (`f16`) bit patterns (`&[u16]`)
     /// into `&mut [f32]`.
     ///
-    /// On an x86-64 `X64V3Token` (F16C) this dispatches to the native
-    /// `vcvtph2ps` instruction; on every other target it runs the branchless
-    /// software kernel ([`i32x4::f16_to_f32`], four lanes at a
-    /// time, with a scalar tail).
+    /// Uses native instructions on F16C and NEON-f16, and a lane-by-lane
+    /// decode on `ScalarToken`. Other software paths use
+    /// [`i32x4::f16_to_f32`] for full vectors and scalar code for the tail.
     ///
     /// For every **finite, subnormal, and infinite** input both paths are
     /// **bit-identical** to a scalar IEEE f16→f32 reference, verified
@@ -316,9 +321,8 @@ pub trait F16Convert: F32x4Convert {
     /// Panics if `input.len() != output.len()`.
     #[inline]
     fn f16_to_f32_slice(self, input: &[u16], output: &mut [f32]) {
-        assert_eq!(
-            input.len(),
-            output.len(),
+        assert!(
+            input.len() == output.len(),
             "f16_to_f32_slice: input and output must have equal length"
         );
         self.f16_to_f32_into(input, output);
@@ -327,11 +331,10 @@ pub trait F16Convert: F32x4Convert {
     /// Encode a slice of `f32` into IEEE-754 binary16 (`f16`) bit patterns
     /// (`&mut [u16]`).
     ///
-    /// On an x86-64 `X64V3Token` (F16C) this dispatches to the native
-    /// `vcvtps2ph` instruction (round-to-nearest-even); on every other target
-    /// it runs the branchless software kernel
-    /// ([`f32x4::to_f16`], four lanes at a time, with a
-    /// scalar tail). Both paths are **bit-identical** to a scalar IEEE RTNE
+    /// Uses native round-to-nearest-even instructions on F16C and NEON-f16,
+    /// and a lane-by-lane encode on `ScalarToken`. Other software paths use
+    /// [`f32x4::to_f16`] for full vectors and scalar code for the tail.
+    /// All paths are **bit-identical** to a scalar IEEE RTNE
     /// reference for every finite and infinite input; NaN maps to an f16 NaN
     /// (the F16C `vcvtps2ph` and the software path may emit different NaN
     /// payload bits, but both produce a valid quiet f16 NaN — verified
@@ -345,9 +348,8 @@ pub trait F16Convert: F32x4Convert {
     /// Panics if `input.len() != output.len()`.
     #[inline]
     fn f32_to_f16_slice(self, input: &[f32], output: &mut [u16]) {
-        assert_eq!(
-            input.len(),
-            output.len(),
+        assert!(
+            input.len() == output.len(),
             "f32_to_f16_slice: input and output must have equal length"
         );
         self.f32_to_f16_into(input, output);
@@ -357,24 +359,30 @@ pub trait F16Convert: F32x4Convert {
     /// guaranteed equal by the public entry point
     /// ([`f16_to_f32_slice`](Self::f16_to_f32_slice)).
     ///
-    /// This is the overridable dispatch point: the default runs the branchless
-    /// software kernel; hardware tiers (x86-64 F16C, aarch64 NEON-f16) override
-    /// it with a native conversion.
+    /// The default selects the scalar or vector software kernel. Hardware
+    /// tiers (x86-64 F16C, AArch64 NEON-f16) override this method.
     #[inline]
     fn f16_to_f32_into(self, input: &[u16], output: &mut [f32]) {
-        f16_to_f32_slice_soft(self, input, output);
+        if self.as_scalar().is_some() {
+            decode_half_scalar(input, output);
+        } else {
+            f16_to_f32_slice_soft(self, input, output);
+        }
     }
 
     /// Encode `input.len()` f32 values into f16 bit patterns in `output`.
     /// Lengths are guaranteed equal by the public entry point
     /// ([`f32_to_f16_slice`](Self::f32_to_f16_slice)).
     ///
-    /// This is the overridable dispatch point: the default runs the branchless
-    /// software kernel; hardware tiers (x86-64 F16C, aarch64 NEON-f16) override
-    /// it with a native conversion.
+    /// The default selects the scalar or vector software kernel. Hardware
+    /// tiers (x86-64 F16C, AArch64 NEON-f16) override this method.
     #[inline]
     fn f32_to_f16_into(self, input: &[f32], output: &mut [u16]) {
-        f32_to_f16_slice_soft(self, input, output);
+        if self.as_scalar().is_some() {
+            encode_half_scalar(input, output);
+        } else {
+            f32_to_f16_slice_soft(self, input, output);
+        }
     }
 }
 
@@ -880,12 +888,7 @@ fn f16_to_f32_slice_soft<T: F16Convert>(token: T, input: &[u16], output: &mut [f
         );
         *out = h.f16_to_f32().to_array();
     }
-    for (inp, out) in in_tail.iter().zip(out_tail.iter_mut()) {
-        // Single-lane decode reuses the same vector kernel with a splat,
-        // keeping one branchless code path (no scalar reference fork).
-        let h = i32x4::splat_t(token, *inp as i32);
-        *out = h.f16_to_f32().to_array()[0];
-    }
+    decode_half_scalar(in_tail, out_tail);
 }
 
 /// Software (branchless, portable) f32→f16 slice kernel. Always correct on
@@ -907,8 +910,19 @@ fn f32_to_f16_slice_soft<T: F16Convert>(token: T, input: &[f32], output: &mut [u
         out[2] = bits[2] as u16;
         out[3] = bits[3] as u16;
     }
-    for (inp, out) in in_tail.iter().zip(out_tail.iter_mut()) {
-        let f = f32x4::splat_t(token, *inp);
-        *out = f.to_f16().to_array()[0] as u16;
+    encode_half_scalar(in_tail, out_tail);
+}
+
+#[inline]
+fn decode_half_scalar(input: &[u16], output: &mut [f32]) {
+    for (&value, out) in input.iter().zip(output) {
+        *out = crate::scalar::from_f16_with::<IEEE_HALF>(value);
+    }
+}
+
+#[inline]
+fn encode_half_scalar(input: &[f32], output: &mut [u16]) {
+    for (&value, out) in input.iter().zip(output) {
+        *out = crate::scalar::to_f16_bits_with::<IEEE_HALF>(value);
     }
 }

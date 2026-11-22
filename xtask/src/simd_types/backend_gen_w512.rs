@@ -1179,17 +1179,17 @@ fn generate_scalar_float_impl(ty: &W512Type) -> String {
 
             #[inline(always)]
             fn floor(self, a: {array}) -> {array} {{
-                core::array::from_fn(|i| crate::nostd_math::{floor_fn}(a[i]))
+                a.map(crate::scalar::{floor_fn})
             }}
 
             #[inline(always)]
             fn ceil(self, a: {array}) -> {array} {{
-                core::array::from_fn(|i| crate::nostd_math::{ceil_fn}(a[i]))
+                a.map(crate::scalar::{ceil_fn})
             }}
 
             #[inline(always)]
             fn round(self, a: {array}) -> {array} {{
-                core::array::from_fn(|i| crate::nostd_math::{round_fn}(a[i]))
+                a.map(crate::scalar::{round_fn})
             }}
 
             #[inline(always)]
@@ -1258,9 +1258,9 @@ fn generate_scalar_float_impl(ty: &W512Type) -> String {
         uint = if elem == "f32" { "u32" } else { "u64" },
         min_ieee = if elem == "f32" { "minimumf" } else { "minimum" },
         max_ieee = if elem == "f32" { "maximumf" } else { "maximum" },
-        floor_fn = if elem == "f32" { "floorf" } else { "floor" },
-        ceil_fn = if elem == "f32" { "ceilf" } else { "ceil" },
-        round_fn = if elem == "f32" { "roundevenf" } else { "roundeven" },
+        floor_fn = if elem == "f32" { "floor_f32" } else { "floor_f64" },
+        ceil_fn = if elem == "f32" { "ceil_f32" } else { "ceil_f64" },
+        round_fn = if elem == "f32" { "round_f32" } else { "round_f64" },
         abs_mask = if elem == "f32" { "0x7FFF_FFFF" } else { "0x7FFF_FFFF_FFFF_FFFF" },
     }
 }

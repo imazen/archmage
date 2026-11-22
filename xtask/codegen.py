@@ -2133,6 +2133,13 @@ def compare(root, expected):
                 kind = "exact byte copy; eliminates feature calls without increasing instructions"
             elif target.startswith("x86") and x86_bitand_equivalent(old, new, n):
                 kind = "identical AVX-512 bitwise operands and instruction counts"
+            elif (
+                target.startswith("x86")
+                and n.startswith("scalar_f32x")
+                and "_fma_portable" in n
+                and len(new) < len(old)
+            ):
+                kind = "cold shared slow-lane f32 FMA loop; strictly fewer instructions"
             elif not aligned_store_equivalent(old, new, n):
                 assert target.startswith("x86") and n in [
                     "v3_f32x8_from_halves_plain",

@@ -273,10 +273,7 @@ impl<T: F32x8Backend> f32x8<T> {
     /// Load an 8x8 f32 block from a contiguous array into 8 row vectors.
     #[inline(always)]
     pub fn load_8x8_t(token: T, block: &[f32; 64]) -> [Self; 8] {
-        core::array::from_fn(|i| {
-            let arr: [f32; 8] = block[i * 8..][..8].try_into().unwrap();
-            Self::from_repr_unchecked(token, T::from_array(token, arr))
-        })
+        core::array::from_fn(|i| Self::load_t(token, &block.as_chunks::<8>().0[i]))
     }
 
     /// Store 8 row vectors to a contiguous 8x8 f32 block.

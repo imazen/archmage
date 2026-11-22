@@ -141,8 +141,10 @@ impl<T: U32x16Backend> u32x16<T> {
     /// Create from slice. Panics if `slice.len() < 16`.
     #[inline(always)]
     pub fn from_slice_t(token: T, slice: &[u32]) -> Self {
-        let arr: [u32; 16] = slice[..16].try_into().unwrap();
-        Self(T::from_array(token, arr), token)
+        let Some(lanes) = slice.first_chunk::<16>() else {
+            panic!("u32x16::from_slice_t requires slice.len() >= 16");
+        };
+        Self::load_t(token, lanes)
     }
 
     /// Load up to `16` elements from `slice`, filling remaining high lanes with `pad`.
@@ -155,13 +157,11 @@ impl<T: U32x16Backend> u32x16<T> {
     /// Panics if `slice.len() > 16`.
     #[inline(always)]
     pub fn load_padded_t(token: T, slice: &[u32], pad: u32) -> Self {
-        assert!(
-            slice.len() <= 16,
-            "u32x16::load_padded_t requires slice.len() <= 16, got {}",
-            slice.len(),
-        );
         let mut arr = [pad; 16];
-        arr[..slice.len()].copy_from_slice(slice);
+        let Some(prefix) = arr.get_mut(..slice.len()) else {
+            panic!("u32x16::load_padded_t requires slice.len() <= 16");
+        };
+        prefix.copy_from_slice(slice);
         Self(T::from_array(token, arr), token)
     }
 
@@ -201,13 +201,11 @@ impl<T: U32x16Backend> u32x16<T> {
     /// Panics if `out.len() > 16`.
     #[inline(always)]
     pub fn store_prefix(self, out: &mut [u32]) {
-        assert!(
-            out.len() <= 16,
-            "u32x16::store_prefix requires out.len() <= 16, got {}",
-            out.len(),
-        );
         let arr = T::to_array(self.1, self.0);
-        out.copy_from_slice(&arr[..out.len()]);
+        let Some(prefix) = arr.get(..out.len()) else {
+            panic!("u32x16::store_prefix requires out.len() <= 16");
+        };
+        out.copy_from_slice(prefix);
     }
 
     /// Convert to array.

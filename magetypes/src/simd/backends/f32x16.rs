@@ -58,14 +58,111 @@ pub(crate) trait F32x16Internal: SimdToken + Sealed + Copy + 'static {
     /// Interleave sixteen planar float pixels into RGBA storage.
     fn interleave_rgba_wide(self, channels: [Self::InternalRepr; 4]) -> [Self::InternalRepr; 4];
 
-    /// Select lanes from the concatenated pair using indices in `0..32`.
+    /// Select lanes from the concatenated pair using the low five index bits.
     #[inline(always)]
     fn permute2_wide(self, pair: [Self::InternalRepr; 2], idx: [i32; 16]) -> Self::InternalRepr
     where
         Self: F32x16Backend,
     {
         let lanes = pair.map(|v| self.to_array(v));
-        self.from_array(idx.map(|i| lanes[i as usize / 16][i as usize % 16]))
+        self.from_array(idx.map(|i| {
+            let lane = (i as usize) & 31;
+            lanes[lane / 16][lane % 16]
+        }))
+    }
+
+    /// Transpose sixteen rows while preserving all lane bits.
+    #[inline(always)]
+    fn transpose_16x16_repr(self, rows: [Self::InternalRepr; 16]) -> [Self::InternalRepr; 16]
+    where
+        Self: F32x16Backend,
+    {
+        use crate::simd::generic::f32x16;
+        let (halves, _) = rows.as_chunks::<8>();
+        let top = halves[0].map(|v| f32x16::from_repr_unchecked(self, v));
+        let bottom = halves[1].map(|v| f32x16::from_repr_unchecked(self, v));
+        let top = f32x16::transpose_dual_8x8_copy(top);
+        let bottom = f32x16::transpose_dual_8x8_copy(bottom);
+        const LO: [i32; 16] = [0, 1, 2, 3, 4, 5, 6, 7, 16, 17, 18, 19, 20, 21, 22, 23];
+        const HI: [i32; 16] = [8, 9, 10, 11, 12, 13, 14, 15, 24, 25, 26, 27, 28, 29, 30, 31];
+        [
+            top[0].permute2(bottom[0], LO),
+            top[1].permute2(bottom[1], LO),
+            top[2].permute2(bottom[2], LO),
+            top[3].permute2(bottom[3], LO),
+            top[4].permute2(bottom[4], LO),
+            top[5].permute2(bottom[5], LO),
+            top[6].permute2(bottom[6], LO),
+            top[7].permute2(bottom[7], LO),
+            top[0].permute2(bottom[0], HI),
+            top[1].permute2(bottom[1], HI),
+            top[2].permute2(bottom[2], HI),
+            top[3].permute2(bottom[3], HI),
+            top[4].permute2(bottom[4], HI),
+            top[5].permute2(bottom[5], HI),
+            top[6].permute2(bottom[6], HI),
+            top[7].permute2(bottom[7], HI),
+        ]
+        .map(f32x16::into_repr)
+    }
+
+    /// Deinterleave sixteen packed RGB pixels into three planes.
+    #[inline(always)]
+    fn deinterleave_3ch_repr(self, rgb: [Self::InternalRepr; 3]) -> [Self::InternalRepr; 3]
+    where
+        Self: F32x16Backend,
+    {
+        [
+            self.permute_rgb_wide::<0, true>(rgb),
+            self.permute_rgb_wide::<1, true>(rgb),
+            self.permute_rgb_wide::<2, true>(rgb),
+        ]
+    }
+
+    /// Interleave three planes into sixteen packed RGB pixels.
+    #[inline(always)]
+    fn interleave_3ch_repr(self, channels: [Self::InternalRepr; 3]) -> [Self::InternalRepr; 3]
+    where
+        Self: F32x16Backend,
+    {
+        [
+            self.permute_rgb_wide::<0, false>(channels),
+            self.permute_rgb_wide::<1, false>(channels),
+            self.permute_rgb_wide::<2, false>(channels),
+        ]
+    }
+
+    #[inline(always)]
+    fn permute_rgb_wide<const BLOCK: usize, const DEINTERLEAVE: bool>(
+        self,
+        [a, b, c]: [Self::InternalRepr; 3],
+    ) -> Self::InternalRepr
+    where
+        Self: F32x16Backend,
+    {
+        let (first, second) = const {
+            let mut first = [0; 16];
+            let mut second = [0; 16];
+            let mut lane = 0;
+            while lane < 16 {
+                let packed = BLOCK * 16 + lane;
+                let src = if DEINTERLEAVE {
+                    lane * 3 + BLOCK
+                } else {
+                    (packed % 3) * 16 + packed / 3
+                };
+                // First gather lanes from a and b, then fill the remaining lanes from c.
+                if src < 32 {
+                    first[lane] = src as i32;
+                    second[lane] = lane as i32;
+                } else {
+                    second[lane] = (src - 16) as i32;
+                }
+                lane += 1;
+            }
+            (first, second)
+        };
+        self.permute2_wide([self.permute2_wide([a, b], first), c], second)
     }
 }
 

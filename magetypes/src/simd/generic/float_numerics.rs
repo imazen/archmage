@@ -172,7 +172,7 @@ macro_rules! float_numerics {
             ///
             /// Approximate normal-domain policies require `MIN_POSITIVE <= x <= MAX`.
             /// Exact and all-floats policies accept every input.
-            #[inline(always)]
+            #[inline]
             pub fn try_rsqrt_with<const CFG: u32>(self) -> Result<Self, NumericsError> {
                 if const { RecipOptions::decode(CFG).checks_normal_domain() } {
                     let valid = self.rsqrt_domain_mask();
@@ -192,7 +192,12 @@ macro_rules! float_numerics {
                 let opts = const { RecipOptions::decode(CFG) };
                 let precision = opts.selected_precision();
                 let one = Self::splat_t(self.1, 1.0);
-                if matches!(precision, RecipPrecision::Exact) {
+                // Scalar f64 already seeds with division over sqrt. Use that
+                // path directly, including for f32 when sqrt has a hardware path.
+                if matches!(precision, RecipPrecision::Exact)
+                    || ((core::mem::size_of::<$elem>() == 8 || crate::scalar_sqrt::HAS_NATIVE)
+                        && self.1.as_scalar().is_some())
+                {
                     return one / self.sqrt();
                 }
 

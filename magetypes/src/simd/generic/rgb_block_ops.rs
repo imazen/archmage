@@ -209,11 +209,9 @@ impl<T: F32x16Backend> f32x16<T> {
     /// across pixels `0..16`. All lane bits are preserved.
     #[inline(always)]
     pub fn deinterleave_3ch(rgb: [Self; 3]) -> [Self; 3] {
-        [
-            Self::permute_rgb::<0, true>(rgb),
-            Self::permute_rgb::<1, true>(rgb),
-            Self::permute_rgb::<2, true>(rgb),
-        ]
+        let token = rgb[0].1;
+        T::deinterleave_3ch_repr(token, rgb.map(Self::into_repr))
+            .map(|v| Self::from_repr_unchecked(token, v))
     }
 
     /// Interleave 3 planar [`f32x16`] channels (`[R, G, B]`) from SoA into 3
@@ -222,38 +220,9 @@ impl<T: F32x16Backend> f32x16<T> {
     /// Inverse of [`Self::deinterleave_3ch`]. All lane bits are preserved.
     #[inline(always)]
     pub fn interleave_3ch(channels: [Self; 3]) -> [Self; 3] {
-        [
-            Self::permute_rgb::<0, false>(channels),
-            Self::permute_rgb::<1, false>(channels),
-            Self::permute_rgb::<2, false>(channels),
-        ]
-    }
-
-    #[inline(always)]
-    fn permute_rgb<const BLOCK: usize, const DEINTERLEAVE: bool>([a, b, c]: [Self; 3]) -> Self {
-        let (first, second) = const {
-            let mut first = [0; 16];
-            let mut second = [0; 16];
-            let mut lane = 0;
-            while lane < 16 {
-                let packed = BLOCK * 16 + lane;
-                let src = if DEINTERLEAVE {
-                    lane * 3 + BLOCK
-                } else {
-                    (packed % 3) * 16 + packed / 3
-                };
-                // First gather lanes from a and b, then fill the remaining lanes from c.
-                if src < 32 {
-                    first[lane] = src as i32;
-                    second[lane] = lane as i32;
-                } else {
-                    second[lane] = (src - 16) as i32;
-                }
-                lane += 1;
-            }
-            (first, second)
-        };
-        a.permute2(b, first).permute2(c, second)
+        let token = channels[0].1;
+        T::interleave_3ch_repr(token, channels.map(Self::into_repr))
+            .map(|v| Self::from_repr_unchecked(token, v))
     }
 
     /// Load 16 packed RGB `u8` pixels (`48` bytes) and deinterleave into 3 planar

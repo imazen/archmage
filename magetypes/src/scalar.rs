@@ -117,30 +117,57 @@ pub const fn maximum_f64(a: f64, b: f64) -> f64 {
     crate::nostd_math::maximum(a, b)
 }
 
+// These targets lower std's rounding methods directly to instructions.
+macro_rules! round_scalar {
+    ($x:ident, $method:ident, $software:block) => {{
+        #[cfg(all(
+            feature = "std",
+            any(
+                target_arch = "wasm32",
+                target_arch = "aarch64",
+                target_feature = "sse4.1"
+            )
+        ))]
+        {
+            // Software returns the original NaN bits, including signaling NaNs.
+            if $x.is_nan() { $x } else { $x.$method() }
+        }
+        #[cfg(not(all(
+            feature = "std",
+            any(
+                target_arch = "wasm32",
+                target_arch = "aarch64",
+                target_feature = "sse4.1"
+            )
+        )))]
+        $software
+    }};
+}
+
 /// Round `f32` to the nearest integer with ties to even (`#![no_std]`).
 ///
 /// Matches `f32xN::round()` (unlike `f32::round()`, which breaks ties away from zero).
 #[inline(always)]
 pub fn round_f32(x: f32) -> f32 {
-    crate::nostd_math::roundevenf(x)
+    round_scalar!(x, round_ties_even, { crate::nostd_math::roundevenf(x) })
 }
 
 /// Round `f32` toward `-inf` (`#![no_std]`), matching `f32xN::floor()`.
 #[inline(always)]
 pub fn floor_f32(x: f32) -> f32 {
-    crate::nostd_math::floorf(x)
+    round_scalar!(x, floor, { crate::nostd_math::floorf(x) })
 }
 
 /// Round `f32` toward `+inf` (`#![no_std]`), matching `f32xN::ceil()`.
 #[inline(always)]
 pub fn ceil_f32(x: f32) -> f32 {
-    crate::nostd_math::ceilf(x)
+    round_scalar!(x, ceil, { crate::nostd_math::ceilf(x) })
 }
 
 /// Square root of `f32` (`#![no_std]`), matching `f32xN::sqrt()`.
 #[inline(always)]
 pub fn sqrt_f32(x: f32) -> f32 {
-    crate::nostd_math::sqrtf(x)
+    crate::scalar_sqrt::sqrtf(x)
 }
 
 /// Round `f64` to the nearest integer with ties to even (`#![no_std]`).
@@ -148,25 +175,25 @@ pub fn sqrt_f32(x: f32) -> f32 {
 /// Matches `f64xN::round()` (unlike `f64::round()`, which breaks ties away from zero).
 #[inline(always)]
 pub fn round_f64(x: f64) -> f64 {
-    crate::nostd_math::roundeven(x)
+    round_scalar!(x, round_ties_even, { crate::nostd_math::roundeven(x) })
 }
 
 /// Round `f64` toward `-inf` (`#![no_std]`), matching `f64xN::floor()`.
 #[inline(always)]
 pub fn floor_f64(x: f64) -> f64 {
-    crate::nostd_math::floor(x)
+    round_scalar!(x, floor, { crate::nostd_math::floor(x) })
 }
 
 /// Round `f64` toward `+inf` (`#![no_std]`), matching `f64xN::ceil()`.
 #[inline(always)]
 pub fn ceil_f64(x: f64) -> f64 {
-    crate::nostd_math::ceil(x)
+    round_scalar!(x, ceil, { crate::nostd_math::ceil(x) })
 }
 
 /// Square root of `f64` (`#![no_std]`), matching `f64xN::sqrt()`.
 #[inline(always)]
 pub fn sqrt_f64(x: f64) -> f64 {
-    crate::nostd_math::sqrt(x)
+    crate::scalar_sqrt::sqrt(x)
 }
 
 /// Correctly rounded single-rounding `a * b + c` (`#![no_std]`), matching

@@ -6,6 +6,13 @@
 //! SIMD128; relaxed-SIMD is not required for correctly rounded sqrt.
 #![forbid(unsafe_code)]
 
+pub(crate) const HAS_NATIVE: bool = cfg!(any(
+    feature = "std",
+    all(target_arch = "x86_64", target_feature = "sse2"),
+    all(target_arch = "aarch64", target_feature = "neon"),
+    all(target_arch = "wasm32", target_feature = "simd128")
+));
+
 #[inline(always)]
 pub(crate) fn sqrtf(x: f32) -> f32 {
     #[cfg(feature = "std")]
@@ -134,10 +141,29 @@ mod selected {
 
 #[cfg(all(
     not(feature = "std"),
+    target_arch = "wasm32",
+    not(target_feature = "simd128")
+))]
+mod selected {
+    // Share the software kernel across lanes in scalar WASM. Inlining it
+    // into each lane duplicates Goldschmidt's iterations at opt-level 3.
+    #[inline(never)]
+    pub(super) fn sqrtf(x: f32) -> f32 {
+        crate::nostd_math::sqrtf(x)
+    }
+
+    #[inline(never)]
+    pub(super) fn sqrt(x: f64) -> f64 {
+        crate::nostd_math::sqrt(x)
+    }
+}
+
+#[cfg(all(
+    not(feature = "std"),
     not(any(
         all(target_arch = "x86_64", target_feature = "sse2"),
         all(target_arch = "aarch64", target_feature = "neon"),
-        all(target_arch = "wasm32", target_feature = "simd128")
+        target_arch = "wasm32"
     ))
 ))]
 mod selected {

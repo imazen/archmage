@@ -284,7 +284,7 @@ const F32_MIN_NORMAL_HIGH: u32 = ((1023 - 126) << 20) as u32;
 /// f64. Those lanes, and lanes in f32's subnormal range (where the midpoints
 /// sit higher), take [`fmaf_exact`]. The common path is a multiply, an add and
 /// a narrowing, with the check off the critical path.
-#[inline(always)]
+#[inline]
 pub(crate) fn fmaf_soft_lanes<const N: usize>(a: [f32; N], b: [f32; N], c: [f32; N]) -> [f32; N] {
     let mut out = [0.0; N];
     let mut slow = [false; N];
@@ -303,13 +303,35 @@ pub(crate) fn fmaf_soft_lanes<const N: usize>(a: [f32; N], b: [f32; N], c: [f32;
         any_slow |= u8::from(slow[i]);
     }
     if any_slow != 0 {
-        for i in 0..N {
-            if slow[i] {
-                out[i] = fmaf_exact(a[i], b[i], c[i]);
-            }
+        if N == 1 {
+            out[0] = fmaf_exact(a[0], b[0], c[0]);
+        } else {
+            correct_slow_lanes(&mut out, &slow, &a, &b, &c, fmaf_exact);
         }
     }
     out
+}
+
+// Cold lanes share one loop across vector widths. Keep the fast path
+// available for vectorization and call the exact operation only where needed.
+#[cold]
+#[inline(never)]
+fn correct_slow_lanes<T: Copy>(
+    out: &mut [T],
+    slow: &[bool],
+    a: &[T],
+    b: &[T],
+    c: &[T],
+    exact: impl Fn(T, T, T) -> T,
+) {
+    let mut lanes = out.iter_mut().zip(a).zip(b).zip(c);
+    let mut slow = slow.iter().copied();
+    while let Some(skip) = slow.position(core::convert::identity) {
+        let Some((((out, &a), &b), &c)) = lanes.nth(skip) else {
+            break;
+        };
+        *out = exact(a, b, c);
+    }
 }
 
 /// Exact f32 FMA for every input: TwoSum recovers the f64 sum's error, and

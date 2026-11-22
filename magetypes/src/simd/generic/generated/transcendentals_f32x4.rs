@@ -44,6 +44,34 @@ fn splat_f32<T: F32x4Convert>(token: T, v: f32) -> f32x4<T> {
 }
 
 impl<T: F32x4Convert> f32x4<T> {
+    // Ordered clamps keep the input on unordered comparisons.
+    #[inline(always)]
+    fn exp2_clamp(self, lower: f32, upper: f32) -> Self {
+        let lower = splat_f32::<T>(self.1, lower);
+        let upper = splat_f32::<T>(self.1, upper);
+        #[cfg(any(
+            target_arch = "aarch64",
+            all(target_arch = "wasm32", target_feature = "simd128")
+        ))]
+        {
+            self.maximum(lower).minimum(upper)
+        }
+        #[cfg(not(any(
+            target_arch = "aarch64",
+            all(target_arch = "wasm32", target_feature = "simd128")
+        )))]
+        {
+            let clamped = upper.min_fast(lower.max_fast(self));
+            #[cfg(target_arch = "wasm32")]
+            let clamped = Self::blend(
+                self.simd_eq(self),
+                clamped,
+                splat_f32::<T>(self.1, f32::NAN),
+            );
+            clamped
+        }
+    }
+
     // ====== Low-Precision Transcendentals ======
 
     /// Prefer [`magemath`](https://docs.rs/magemath/latest/magemath/) (`SimdMath` / `Logf`, or `Log1pf` near 1) when configurable domains, bit-exact portability, subnormal rescaling, or scalar tail helpers are needed.
@@ -92,7 +120,11 @@ impl<T: F32x4Convert> f32x4<T> {
     ///
     /// Low-precision base-2 exponential: relative error at most 0.56% for x up
     /// to 127.99 and 1.23% above, where the input is clamped to 127.99.
-    #[inline(always)]
+    #[cfg_attr(all(target_arch = "wasm32", not(target_feature = "simd128")), inline)]
+    #[cfg_attr(
+        not(all(target_arch = "wasm32", not(target_feature = "simd128"))),
+        inline(always)
+    )]
     pub fn exp2_lowp(self) -> Self {
         const C0: f32 = 1.0;
         const C1: f32 = core::f32::consts::LN_2;
@@ -101,14 +133,7 @@ impl<T: F32x4Convert> f32x4<T> {
 
         // floor(x) <= 127 keeps the bit trick (n+127)<<23 in range; at 127.99
         // the result stays below f32::MAX despite the polynomial's error.
-        // Preserve quiet NaNs in one instruction per bound across all backends.
-        #[cfg(any(target_arch = "aarch64", target_arch = "wasm32"))]
-        let x = self
-            .maximum(splat_f32::<T>(self.1, -126.0))
-            .minimum(splat_f32::<T>(self.1, 127.99));
-        #[cfg(not(any(target_arch = "aarch64", target_arch = "wasm32")))]
-        let x =
-            splat_f32::<T>(self.1, 127.99).min_fast(splat_f32::<T>(self.1, -126.0).max_fast(self));
+        let x = self.exp2_clamp(-126.0, 127.99);
         let xi = x.floor();
         let xf = x - xi;
 
@@ -116,7 +141,7 @@ impl<T: F32x4Convert> f32x4<T> {
         let poly = poly.mul_add_relaxed(xf, splat_f32::<T>(self.1, C1));
         let poly = poly.mul_add_relaxed(xf, splat_f32::<T>(self.1, C0));
 
-        let xi_i32 = xi.to_i32_round();
+        let xi_i32 = xi.to_i32();
         let scale_bits = (xi_i32 + splat_i32::<T>(self.1, 127)).shl_const::<23>();
         poly * scale_bits.bitcast_to_f32()
     }
@@ -205,7 +230,11 @@ impl<T: F32x4Convert> f32x4<T> {
     ///
     /// Uses (a-1)/(a+1) transform with odd polynomial evaluation.
     /// Result is undefined for x <= 0.
-    #[inline(always)]
+    #[cfg_attr(all(target_arch = "wasm32", not(target_feature = "simd128")), inline)]
+    #[cfg_attr(
+        not(all(target_arch = "wasm32", not(target_feature = "simd128"))),
+        inline(always)
+    )]
     pub fn log2_midp_unchecked(self) -> Self {
         const SQRT2_OVER_2: u32 = 0x3f35_04f3;
         const ONE_BITS: u32 = 0x3f80_0000;
@@ -243,7 +272,11 @@ impl<T: F32x4Convert> f32x4<T> {
     /// Mid-precision base-2 logarithm with edge case handling.
     ///
     /// Returns -inf for 0, NaN for negative values, +inf for +inf.
-    #[inline(always)]
+    #[cfg_attr(all(target_arch = "wasm32", not(target_feature = "simd128")), inline)]
+    #[cfg_attr(
+        not(all(target_arch = "wasm32", not(target_feature = "simd128"))),
+        inline(always)
+    )]
     pub fn log2_midp(self) -> Self {
         let result = self.log2_midp_unchecked();
         let zero = splat_f32::<T>(self.1, 0.0);
@@ -277,7 +310,11 @@ impl<T: F32x4Convert> f32x4<T> {
     ///
     /// Uses round-to-nearest splitting to keep |frac| <= 0.5, giving
     /// ~1000x less polynomial truncation error than floor-based splitting.
-    #[inline(always)]
+    #[cfg_attr(all(target_arch = "wasm32", not(target_feature = "simd128")), inline)]
+    #[cfg_attr(
+        not(all(target_arch = "wasm32", not(target_feature = "simd128"))),
+        inline(always)
+    )]
     pub fn exp2_midp_unchecked(self) -> Self {
         const C0: f32 = 1.0;
         const C1: f32 = core::f32::consts::LN_2;
@@ -293,11 +330,25 @@ impl<T: F32x4Convert> f32x4<T> {
         // polynomial's range: up to 134.1 ULP there. Folding in the missing
         // factor of two measured 7-12% slower for exp2/exp/pow with AVX2 and
         // 4-8% slower on the scalar backend.
-        let rounded = self.round();
-        #[cfg(any(target_arch = "aarch64", target_arch = "wasm32"))]
-        let xi = rounded.minimum(splat_f32::<T>(self.1, 127.0));
-        #[cfg(not(any(target_arch = "aarch64", target_arch = "wasm32")))]
-        let xi = splat_f32::<T>(self.1, 127.0).min_fast(rounded);
+        let rounded = if self.1.as_scalar().is_some() {
+            // In the documented range, the shifted values have unit
+            // spacing. Restore the input sign on lanes rounding to zero.
+            let offset = splat_f32::<T>(self.1, 12_582_912.0);
+            ((self + offset) - offset) | (self & splat_f32::<T>(self.1, -0.0))
+        } else {
+            self.round()
+        };
+        let upper = splat_f32::<T>(self.1, 127.0);
+        #[cfg(any(
+            target_arch = "aarch64",
+            all(target_arch = "wasm32", target_feature = "simd128")
+        ))]
+        let xi = rounded.minimum(upper);
+        #[cfg(not(any(
+            target_arch = "aarch64",
+            all(target_arch = "wasm32", target_feature = "simd128")
+        )))]
+        let xi = upper.min_fast(rounded);
         let xf = self - xi;
 
         let poly = splat_f32::<T>(self.1, C6).mul_add_relaxed(xf, splat_f32::<T>(self.1, C5));
@@ -307,7 +358,7 @@ impl<T: F32x4Convert> f32x4<T> {
         let poly = poly.mul_add_relaxed(xf, splat_f32::<T>(self.1, C1));
         let poly = poly.mul_add_relaxed(xf, splat_f32::<T>(self.1, C0));
 
-        let xi_i32 = xi.to_i32_round();
+        let xi_i32 = xi.to_i32();
         let scale_bits = (xi_i32 + splat_i32::<T>(self.1, 127)).shl_const::<23>();
         poly * scale_bits.bitcast_to_f32()
     }
@@ -319,17 +370,16 @@ impl<T: F32x4Convert> f32x4<T> {
     /// At most 1.9 ULP for x below 127.5 and up to 134.1 ULP in [127.5, 128).
     /// Returns 0 for x < -126 (denormal results can't be constructed),
     /// inf for x >= 128.
-    #[inline(always)]
+    #[cfg_attr(all(target_arch = "wasm32", not(target_feature = "simd128")), inline)]
+    #[cfg_attr(
+        not(all(target_arch = "wasm32", not(target_feature = "simd128"))),
+        inline(always)
+    )]
     pub fn exp2_midp(self) -> Self {
         let underflow_limit = splat_f32::<T>(self.1, -126.0);
         let overflow_limit = splat_f32::<T>(self.1, 128.0);
 
-        // Clamp to prevent overflow in intermediate calculations while
-        // preserving quiet NaNs in one instruction per bound.
-        #[cfg(any(target_arch = "aarch64", target_arch = "wasm32"))]
-        let clamped = self.maximum(underflow_limit).minimum(overflow_limit);
-        #[cfg(not(any(target_arch = "aarch64", target_arch = "wasm32")))]
-        let clamped = overflow_limit.min_fast(underflow_limit.max_fast(self));
+        let clamped = self.exp2_clamp(-126.0, 128.0);
         let result = clamped.exp2_midp_unchecked();
 
         // Handle edge cases: large negative → 0, large positive → inf
@@ -478,7 +528,11 @@ impl<T: F32x4Convert> f32x4<T> {
     /// Computed as `exp2(n * log2(self))`, so the error grows with
     /// |n * log2(self)|. Measured for n = 2.4: at most 27.8 ULP (mean 3.7) on
     /// [2^-8, 2^8], 64.8 ULP on [2^-20, 2^20] and 144.9 ULP on [2^-50, 2^50].
-    #[inline(always)]
+    #[cfg_attr(all(target_arch = "wasm32", not(target_feature = "simd128")), inline)]
+    #[cfg_attr(
+        not(all(target_arch = "wasm32", not(target_feature = "simd128"))),
+        inline(always)
+    )]
     pub fn pow_midp(self, n: f32) -> Self {
         (self.log2_midp() * splat_f32::<T>(self.1, n)).exp2_midp()
     }
@@ -486,7 +540,11 @@ impl<T: F32x4Convert> f32x4<T> {
     /// Prefer [`magemath`](https://docs.rs/magemath/latest/magemath/) (`SimdMath` / `Powf`) when explicit `.unchecked()` domain contracts, bit-exact portability, or scalar tail helpers are needed.
     ///
     /// Mid-precision power function, no edge case handling.
-    #[inline(always)]
+    #[cfg_attr(all(target_arch = "wasm32", not(target_feature = "simd128")), inline)]
+    #[cfg_attr(
+        not(all(target_arch = "wasm32", not(target_feature = "simd128"))),
+        inline(always)
+    )]
     pub fn pow_midp_unchecked(self, n: f32) -> Self {
         (self.log2_midp_unchecked() * splat_f32::<T>(self.1, n)).exp2_midp_unchecked()
     }
@@ -567,7 +625,11 @@ impl<T: F32x4Convert> f32x4<T> {
     /// overflow an intermediate and return NaN (±inf for a few just above
     /// the limit), and denormals and infinity are not handled: use
     /// `cbrt_midp_precise` for those.
-    #[inline(always)]
+    #[cfg_attr(all(target_arch = "wasm32", not(target_feature = "simd128")), inline)]
+    #[cfg_attr(
+        not(all(target_arch = "wasm32", not(target_feature = "simd128"))),
+        inline(always)
+    )]
     pub fn cbrt_midp(self) -> Self {
         let sign_mask = splat_f32::<T>(self.1, -0.0);
         let sign = self & sign_mask;
@@ -598,7 +660,11 @@ impl<T: F32x4Convert> f32x4<T> {
     /// Wraps `cbrt_midp()`: denormals are scaled up first, magnitudes from
     /// 1e36 up run on x/8 with the result doubled so the Halley step cannot
     /// overflow, and ±0 and ±inf return themselves.
-    #[inline(always)]
+    #[cfg_attr(all(target_arch = "wasm32", not(target_feature = "simd128")), inline)]
+    #[cfg_attr(
+        not(all(target_arch = "wasm32", not(target_feature = "simd128"))),
+        inline(always)
+    )]
     pub fn cbrt_midp_precise(self) -> Self {
         let zero = splat_f32::<T>(self.1, 0.0);
         let one = splat_f32::<T>(self.1, 1.0);
