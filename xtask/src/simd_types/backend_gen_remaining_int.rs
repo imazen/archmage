@@ -2155,7 +2155,8 @@ fn generate_neon_polyfill_int_impl(ty: &IntVecType) -> String {
 
             #[inline(always)]
             fn load(self, data: &{array}) -> {repr} {{
-                crate::simd_storage::copy(data)
+                let halves = data.as_chunks::<{lanes_per_128}>().0;
+                [crate::simd_storage::copy(&halves[0]), crate::simd_storage::copy(&halves[1])]
             }}
 
             #[inline(always)]
@@ -2165,7 +2166,9 @@ fn generate_neon_polyfill_int_impl(ty: &IntVecType) -> String {
 
             #[inline(always)]
             fn store(self, repr: {repr}, out: &mut {array}) {{
-                crate::simd_storage::store(repr, out);
+                let halves = out.as_chunks_mut::<{lanes_per_128}>().0;
+                crate::simd_storage::store(repr[0], &mut halves[0]);
+                crate::simd_storage::store(repr[1], &mut halves[1]);
             }}
 
             #[inline(always)]

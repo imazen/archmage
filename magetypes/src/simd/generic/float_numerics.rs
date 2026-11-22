@@ -3,7 +3,7 @@ use crate::numerics::{
 };
 
 macro_rules! float_numerics {
-    ($vector:ident, $backend:ident, $elem:ty, $min:ident, $max:ident) => {
+    ($vector:ident, $backend:ident, $elem:ty, $bits:ty, $lanes:literal, $min:ident, $max:ident) => {
         /// ### Floating-point numerics
         impl<T: crate::simd::backends::$backend> super::$vector<T> {
             /// Truncate each lane toward zero, retaining the sign of zero.
@@ -44,9 +44,9 @@ macro_rules! float_numerics {
 
             #[inline(always)]
             fn mask_all_true(self) -> bool {
-                // Comparisons produce all-ones or zero lanes. Map those to
-                // 1.0 or 0.0 before the horizontal reduction to avoid NaNs.
-                (self & Self::splat_t(self.1, 1.0)).reduce_min() == 1.0
+                // Comparison masks have all bits set or cleared in each lane.
+                let lanes: [$bits; $lanes] = crate::simd_storage::cast(self.0);
+                lanes.into_iter().fold(<$bits>::MAX, |all, lane| all & lane) == <$bits>::MAX
             }
 
             // Keep the mask in registers until entering the error branch.
@@ -64,6 +64,22 @@ macro_rules! float_numerics {
                     kind: NumericsErrorKind::RecipDomain,
                     lane_mask,
                 }
+            }
+
+            #[inline(always)]
+            fn next_up_finite_nonzero(self) -> Self {
+                let lanes: [$bits; $lanes] = crate::simd_storage::cast(self.0);
+                let advanced = lanes.map(|bits| {
+                    let magnitude = bits & (<$bits>::MAX >> 1);
+                    let finite_nonzero =
+                        <$bits>::from(magnitude.wrapping_sub(1) < <$elem>::INFINITY.to_bits() - 1);
+                    let sign = bits >> (<$bits>::BITS - 1);
+                    // IEEE encodings increase toward +infinity for positive
+                    // values and decrease toward +infinity for negative ones.
+                    let step = finite_nonzero.wrapping_sub((finite_nonzero & sign) << 1);
+                    bits.wrapping_add(step)
+                });
+                Self(crate::simd_storage::cast(advanced), self.1)
             }
 
             /// Evaluate the reciprocal, reporting every lane outside the configured domain.
@@ -93,6 +109,18 @@ macro_rules! float_numerics {
                 let one = Self::splat_t(self.1, 1.0);
                 if matches!(precision, RecipPrecision::Exact) {
                     return one / self;
+                }
+
+                let exact_seed = self.1.as_scalar().is_some();
+                #[cfg(target_arch = "wasm32")]
+                let exact_seed = exact_seed || self.1.as_wasm128().is_some();
+                if exact_seed {
+                    let exact = one / self;
+                    return if matches!(precision, RecipPrecision::Nr1Ceil) {
+                        exact.next_up_finite_nonzero()
+                    } else {
+                        exact
+                    };
                 }
 
                 let seed = self.rcp_approx();
@@ -128,16 +156,7 @@ macro_rules! float_numerics {
 
                         // A relative bias can round to zero for a subnormal
                         // reciprocal. Advance division results by one step.
-                        let exact = Self::from_array_t(
-                            self.1,
-                            (one / self).to_array().map(|lane| {
-                                if lane.is_finite() && lane != 0.0 {
-                                    lane.next_up()
-                                } else {
-                                    lane
-                                }
-                            }),
-                        );
+                        let exact = (one / self).next_up_finite_nonzero();
                         return Self::blend(valid, estimate, exact);
                     }
                     return Self::blend(valid, result, one / self);
@@ -295,11 +314,19 @@ macro_rules! float_numerics {
     };
 }
 
-float_numerics!(f32x4, F32x4Backend, f32, minimum_f32, maximum_f32);
-float_numerics!(f32x8, F32x8Backend, f32, minimum_f32, maximum_f32);
+float_numerics!(f32x4, F32x4Backend, f32, u32, 4, minimum_f32, maximum_f32);
+float_numerics!(f32x8, F32x8Backend, f32, u32, 8, minimum_f32, maximum_f32);
 #[cfg(feature = "w512")]
-float_numerics!(f32x16, F32x16Backend, f32, minimum_f32, maximum_f32);
-float_numerics!(f64x2, F64x2Backend, f64, minimum_f64, maximum_f64);
-float_numerics!(f64x4, F64x4Backend, f64, minimum_f64, maximum_f64);
+float_numerics!(
+    f32x16,
+    F32x16Backend,
+    f32,
+    u32,
+    16,
+    minimum_f32,
+    maximum_f32
+);
+float_numerics!(f64x2, F64x2Backend, f64, u64, 2, minimum_f64, maximum_f64);
+float_numerics!(f64x4, F64x4Backend, f64, u64, 4, minimum_f64, maximum_f64);
 #[cfg(feature = "w512")]
-float_numerics!(f64x8, F64x8Backend, f64, minimum_f64, maximum_f64);
+float_numerics!(f64x8, F64x8Backend, f64, u64, 8, minimum_f64, maximum_f64);

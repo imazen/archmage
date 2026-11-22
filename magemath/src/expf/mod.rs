@@ -22,7 +22,7 @@
 
 pub(crate) mod const_api;
 pub(crate) mod dispatch;
-mod graph;
+pub(crate) mod graph;
 mod options;
 #[cfg(test)]
 mod tests;

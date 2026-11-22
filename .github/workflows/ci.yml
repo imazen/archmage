@@ -503,7 +503,7 @@ jobs:
           CARGO_TARGET_WASM32_WASIP1_RUNNER: "wasmtime -W relaxed-simd-deterministic=n -C cranelift-has-fma=false --env ARCHMAGE_EXPECT_RELAXED_FUSION=no"
         run: |
           cargo test -p magetypes --features "${{ env.FEATURES }}" --target wasm32-wasip1 --lib --test fma_contract --test fused_arithmetic --test doc_examples --test scalar_parity
-          cargo test -p magemath --features "${{ env.FEATURES }}" --target wasm32-wasip1 --lib --test portable_hashes --test profiles --test slices --test option_permutations
+          cargo test -p magemath --features "${{ env.FEATURES }}" --target wasm32-wasip1 --lib --test portable_hashes --test profiles --test slices --test option_permutations --test expf_logf_contracts --test contracts
 
       - name: Run arch exercise (WASM)
         if: always()

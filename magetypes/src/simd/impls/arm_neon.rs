@@ -597,7 +597,11 @@ impl F32x8Backend for NeonToken {
 
     #[inline(always)]
     fn load(self, data: &[f32; 8]) -> [float32x4_t; 2] {
-        crate::simd_storage::copy(data)
+        let halves = data.as_chunks::<4>().0;
+        [
+            crate::simd_storage::copy(&halves[0]),
+            crate::simd_storage::copy(&halves[1]),
+        ]
     }
 
     #[inline(always)]
@@ -607,7 +611,9 @@ impl F32x8Backend for NeonToken {
 
     #[inline(always)]
     fn store(self, repr: [float32x4_t; 2], out: &mut [f32; 8]) {
-        crate::simd_storage::store(repr, out);
+        let halves = out.as_chunks_mut::<4>().0;
+        crate::simd_storage::store(repr[0], &mut halves[0]);
+        crate::simd_storage::store(repr[1], &mut halves[1]);
     }
 
     #[inline(always)]
@@ -1494,7 +1500,11 @@ impl F64x4Backend for NeonToken {
 
     #[inline(always)]
     fn load(self, data: &[f64; 4]) -> [float64x2_t; 2] {
-        crate::simd_storage::copy(data)
+        let halves = data.as_chunks::<2>().0;
+        [
+            crate::simd_storage::copy(&halves[0]),
+            crate::simd_storage::copy(&halves[1]),
+        ]
     }
 
     #[inline(always)]
@@ -1504,7 +1514,9 @@ impl F64x4Backend for NeonToken {
 
     #[inline(always)]
     fn store(self, repr: [float64x2_t; 2], out: &mut [f64; 4]) {
-        crate::simd_storage::store(repr, out);
+        let halves = out.as_chunks_mut::<2>().0;
+        crate::simd_storage::store(repr[0], &mut halves[0]);
+        crate::simd_storage::store(repr[1], &mut halves[1]);
     }
 
     #[inline(always)]
@@ -2059,7 +2071,11 @@ impl I32x8Backend for NeonToken {
 
     #[inline(always)]
     fn load(self, data: &[i32; 8]) -> [int32x4_t; 2] {
-        crate::simd_storage::copy(data)
+        let halves = data.as_chunks::<4>().0;
+        [
+            crate::simd_storage::copy(&halves[0]),
+            crate::simd_storage::copy(&halves[1]),
+        ]
     }
 
     #[inline(always)]
@@ -2069,7 +2085,9 @@ impl I32x8Backend for NeonToken {
 
     #[inline(always)]
     fn store(self, repr: [int32x4_t; 2], out: &mut [i32; 8]) {
-        crate::simd_storage::store(repr, out);
+        let halves = out.as_chunks_mut::<4>().0;
+        crate::simd_storage::store(repr[0], &mut halves[0]);
+        crate::simd_storage::store(repr[1], &mut halves[1]);
     }
 
     #[inline(always)]
@@ -2456,7 +2474,11 @@ impl U32x8Backend for NeonToken {
 
     #[inline(always)]
     fn load(self, data: &[u32; 8]) -> [uint32x4_t; 2] {
-        crate::simd_storage::copy(data)
+        let halves = data.as_chunks::<4>().0;
+        [
+            crate::simd_storage::copy(&halves[0]),
+            crate::simd_storage::copy(&halves[1]),
+        ]
     }
 
     #[inline(always)]
@@ -2466,7 +2488,9 @@ impl U32x8Backend for NeonToken {
 
     #[inline(always)]
     fn store(self, repr: [uint32x4_t; 2], out: &mut [u32; 8]) {
-        crate::simd_storage::store(repr, out);
+        let halves = out.as_chunks_mut::<4>().0;
+        crate::simd_storage::store(repr[0], &mut halves[0]);
+        crate::simd_storage::store(repr[1], &mut halves[1]);
     }
 
     #[inline(always)]
@@ -2803,7 +2827,11 @@ impl I64x4Backend for NeonToken {
 
     #[inline(always)]
     fn load(self, data: &[i64; 4]) -> [int64x2_t; 2] {
-        crate::simd_storage::copy(data)
+        let chunks = data.as_chunks::<2>().0;
+        [
+            <Self as I64x2Backend>::load(self, &chunks[0]),
+            <Self as I64x2Backend>::load(self, &chunks[1]),
+        ]
     }
 
     #[inline(always)]
@@ -2813,7 +2841,9 @@ impl I64x4Backend for NeonToken {
 
     #[inline(always)]
     fn store(self, repr: [int64x2_t; 2], out: &mut [i64; 4]) {
-        crate::simd_storage::store(repr, out);
+        let chunks = out.as_chunks_mut::<2>().0;
+        <Self as I64x2Backend>::store(self, repr[0], &mut chunks[0]);
+        <Self as I64x2Backend>::store(self, repr[1], &mut chunks[1]);
     }
 
     #[inline(always)]
@@ -3184,7 +3214,11 @@ impl I8x32Backend for NeonToken {
 
     #[inline(always)]
     fn load(self, data: &[i8; 32]) -> [int8x16_t; 2] {
-        crate::simd_storage::copy(data)
+        let halves = data.as_chunks::<16>().0;
+        [
+            crate::simd_storage::copy(&halves[0]),
+            crate::simd_storage::copy(&halves[1]),
+        ]
     }
 
     #[inline(always)]
@@ -3194,7 +3228,9 @@ impl I8x32Backend for NeonToken {
 
     #[inline(always)]
     fn store(self, repr: [int8x16_t; 2], out: &mut [i8; 32]) {
-        crate::simd_storage::store(repr, out);
+        let halves = out.as_chunks_mut::<16>().0;
+        crate::simd_storage::store(repr[0], &mut halves[0]);
+        crate::simd_storage::store(repr[1], &mut halves[1]);
     }
 
     #[inline(always)]
@@ -3566,7 +3602,11 @@ impl U8x32Backend for NeonToken {
 
     #[inline(always)]
     fn load(self, data: &[u8; 32]) -> [uint8x16_t; 2] {
-        crate::simd_storage::copy(data)
+        let halves = data.as_chunks::<16>().0;
+        [
+            crate::simd_storage::copy(&halves[0]),
+            crate::simd_storage::copy(&halves[1]),
+        ]
     }
 
     #[inline(always)]
@@ -3576,7 +3616,9 @@ impl U8x32Backend for NeonToken {
 
     #[inline(always)]
     fn store(self, repr: [uint8x16_t; 2], out: &mut [u8; 32]) {
-        crate::simd_storage::store(repr, out);
+        let halves = out.as_chunks_mut::<16>().0;
+        crate::simd_storage::store(repr[0], &mut halves[0]);
+        crate::simd_storage::store(repr[1], &mut halves[1]);
     }
 
     #[inline(always)]
@@ -3973,7 +4015,11 @@ impl I16x16Backend for NeonToken {
 
     #[inline(always)]
     fn load(self, data: &[i16; 16]) -> [int16x8_t; 2] {
-        crate::simd_storage::copy(data)
+        let halves = data.as_chunks::<8>().0;
+        [
+            crate::simd_storage::copy(&halves[0]),
+            crate::simd_storage::copy(&halves[1]),
+        ]
     }
 
     #[inline(always)]
@@ -3983,7 +4029,9 @@ impl I16x16Backend for NeonToken {
 
     #[inline(always)]
     fn store(self, repr: [int16x8_t; 2], out: &mut [i16; 16]) {
-        crate::simd_storage::store(repr, out);
+        let halves = out.as_chunks_mut::<8>().0;
+        crate::simd_storage::store(repr[0], &mut halves[0]);
+        crate::simd_storage::store(repr[1], &mut halves[1]);
     }
 
     #[inline(always)]
@@ -4429,7 +4477,11 @@ impl U16x16Backend for NeonToken {
 
     #[inline(always)]
     fn load(self, data: &[u16; 16]) -> [uint16x8_t; 2] {
-        crate::simd_storage::copy(data)
+        let halves = data.as_chunks::<8>().0;
+        [
+            crate::simd_storage::copy(&halves[0]),
+            crate::simd_storage::copy(&halves[1]),
+        ]
     }
 
     #[inline(always)]
@@ -4439,7 +4491,9 @@ impl U16x16Backend for NeonToken {
 
     #[inline(always)]
     fn store(self, repr: [uint16x8_t; 2], out: &mut [u16; 16]) {
-        crate::simd_storage::store(repr, out);
+        let halves = out.as_chunks_mut::<8>().0;
+        crate::simd_storage::store(repr[0], &mut halves[0]);
+        crate::simd_storage::store(repr[1], &mut halves[1]);
     }
 
     #[inline(always)]
@@ -4763,7 +4817,11 @@ impl U64x4Backend for NeonToken {
 
     #[inline(always)]
     fn load(self, data: &[u64; 4]) -> [uint64x2_t; 2] {
-        crate::simd_storage::copy(data)
+        let halves = data.as_chunks::<2>().0;
+        [
+            crate::simd_storage::copy(&halves[0]),
+            crate::simd_storage::copy(&halves[1]),
+        ]
     }
 
     #[inline(always)]
@@ -4773,7 +4831,9 @@ impl U64x4Backend for NeonToken {
 
     #[inline(always)]
     fn store(self, repr: [uint64x2_t; 2], out: &mut [u64; 4]) {
-        crate::simd_storage::store(repr, out);
+        let halves = out.as_chunks_mut::<2>().0;
+        crate::simd_storage::store(repr[0], &mut halves[0]);
+        crate::simd_storage::store(repr[1], &mut halves[1]);
     }
 
     #[inline(always)]
@@ -5167,11 +5227,12 @@ impl F32x16Backend for NeonToken {
 
     #[inline(always)]
     fn load(self, data: &[f32; 16]) -> [float32x4_t; 4] {
+        let chunks = data.as_chunks::<4>().0;
         [
-            <NeonToken as F32x4Backend>::load(self, data[0..4].try_into().unwrap()),
-            <NeonToken as F32x4Backend>::load(self, data[4..8].try_into().unwrap()),
-            <NeonToken as F32x4Backend>::load(self, data[8..12].try_into().unwrap()),
-            <NeonToken as F32x4Backend>::load(self, data[12..16].try_into().unwrap()),
+            <NeonToken as F32x4Backend>::load(self, &chunks[0]),
+            <NeonToken as F32x4Backend>::load(self, &chunks[1]),
+            <NeonToken as F32x4Backend>::load(self, &chunks[2]),
+            <NeonToken as F32x4Backend>::load(self, &chunks[3]),
         ]
     }
 
@@ -5195,13 +5256,11 @@ impl F32x16Backend for NeonToken {
 
     #[inline(always)]
     fn store(self, repr: [float32x4_t; 4], out: &mut [f32; 16]) {
-        let (o01, o23) = out.split_at_mut(8);
-        let (o0, o1) = o01.split_at_mut(4);
-        let (o2, o3) = o23.split_at_mut(4);
-        <NeonToken as F32x4Backend>::store(self, repr[0], o0.try_into().unwrap());
-        <NeonToken as F32x4Backend>::store(self, repr[1], o1.try_into().unwrap());
-        <NeonToken as F32x4Backend>::store(self, repr[2], o2.try_into().unwrap());
-        <NeonToken as F32x4Backend>::store(self, repr[3], o3.try_into().unwrap());
+        let chunks = out.as_chunks_mut::<4>().0;
+        <NeonToken as F32x4Backend>::store(self, repr[0], &mut chunks[0]);
+        <NeonToken as F32x4Backend>::store(self, repr[1], &mut chunks[1]);
+        <NeonToken as F32x4Backend>::store(self, repr[2], &mut chunks[2]);
+        <NeonToken as F32x4Backend>::store(self, repr[3], &mut chunks[3]);
     }
 
     #[inline(always)]
@@ -5621,11 +5680,12 @@ impl F64x8Backend for NeonToken {
 
     #[inline(always)]
     fn load(self, data: &[f64; 8]) -> [float64x2_t; 4] {
+        let chunks = data.as_chunks::<2>().0;
         [
-            <NeonToken as F64x2Backend>::load(self, data[0..2].try_into().unwrap()),
-            <NeonToken as F64x2Backend>::load(self, data[2..4].try_into().unwrap()),
-            <NeonToken as F64x2Backend>::load(self, data[4..6].try_into().unwrap()),
-            <NeonToken as F64x2Backend>::load(self, data[6..8].try_into().unwrap()),
+            <NeonToken as F64x2Backend>::load(self, &chunks[0]),
+            <NeonToken as F64x2Backend>::load(self, &chunks[1]),
+            <NeonToken as F64x2Backend>::load(self, &chunks[2]),
+            <NeonToken as F64x2Backend>::load(self, &chunks[3]),
         ]
     }
 
@@ -5649,13 +5709,11 @@ impl F64x8Backend for NeonToken {
 
     #[inline(always)]
     fn store(self, repr: [float64x2_t; 4], out: &mut [f64; 8]) {
-        let (o01, o23) = out.split_at_mut(4);
-        let (o0, o1) = o01.split_at_mut(2);
-        let (o2, o3) = o23.split_at_mut(2);
-        <NeonToken as F64x2Backend>::store(self, repr[0], o0.try_into().unwrap());
-        <NeonToken as F64x2Backend>::store(self, repr[1], o1.try_into().unwrap());
-        <NeonToken as F64x2Backend>::store(self, repr[2], o2.try_into().unwrap());
-        <NeonToken as F64x2Backend>::store(self, repr[3], o3.try_into().unwrap());
+        let chunks = out.as_chunks_mut::<2>().0;
+        <NeonToken as F64x2Backend>::store(self, repr[0], &mut chunks[0]);
+        <NeonToken as F64x2Backend>::store(self, repr[1], &mut chunks[1]);
+        <NeonToken as F64x2Backend>::store(self, repr[2], &mut chunks[2]);
+        <NeonToken as F64x2Backend>::store(self, repr[3], &mut chunks[3]);
     }
 
     #[inline(always)]
@@ -5966,11 +6024,12 @@ impl I8x64Backend for NeonToken {
 
     #[inline(always)]
     fn load(self, data: &[i8; 64]) -> [int8x16_t; 4] {
+        let chunks = data.as_chunks::<16>().0;
         [
-            <NeonToken as I8x16Backend>::load(self, data[0..16].try_into().unwrap()),
-            <NeonToken as I8x16Backend>::load(self, data[16..32].try_into().unwrap()),
-            <NeonToken as I8x16Backend>::load(self, data[32..48].try_into().unwrap()),
-            <NeonToken as I8x16Backend>::load(self, data[48..64].try_into().unwrap()),
+            <NeonToken as I8x16Backend>::load(self, &chunks[0]),
+            <NeonToken as I8x16Backend>::load(self, &chunks[1]),
+            <NeonToken as I8x16Backend>::load(self, &chunks[2]),
+            <NeonToken as I8x16Backend>::load(self, &chunks[3]),
         ]
     }
 
@@ -5994,13 +6053,11 @@ impl I8x64Backend for NeonToken {
 
     #[inline(always)]
     fn store(self, repr: [int8x16_t; 4], out: &mut [i8; 64]) {
-        let (o01, o23) = out.split_at_mut(32);
-        let (o0, o1) = o01.split_at_mut(16);
-        let (o2, o3) = o23.split_at_mut(16);
-        <NeonToken as I8x16Backend>::store(self, repr[0], o0.try_into().unwrap());
-        <NeonToken as I8x16Backend>::store(self, repr[1], o1.try_into().unwrap());
-        <NeonToken as I8x16Backend>::store(self, repr[2], o2.try_into().unwrap());
-        <NeonToken as I8x16Backend>::store(self, repr[3], o3.try_into().unwrap());
+        let chunks = out.as_chunks_mut::<16>().0;
+        <NeonToken as I8x16Backend>::store(self, repr[0], &mut chunks[0]);
+        <NeonToken as I8x16Backend>::store(self, repr[1], &mut chunks[1]);
+        <NeonToken as I8x16Backend>::store(self, repr[2], &mut chunks[2]);
+        <NeonToken as I8x16Backend>::store(self, repr[3], &mut chunks[3]);
     }
 
     #[inline(always)]
@@ -6208,11 +6265,12 @@ impl U8x64Backend for NeonToken {
 
     #[inline(always)]
     fn load(self, data: &[u8; 64]) -> [uint8x16_t; 4] {
+        let chunks = data.as_chunks::<16>().0;
         [
-            <NeonToken as U8x16Backend>::load(self, data[0..16].try_into().unwrap()),
-            <NeonToken as U8x16Backend>::load(self, data[16..32].try_into().unwrap()),
-            <NeonToken as U8x16Backend>::load(self, data[32..48].try_into().unwrap()),
-            <NeonToken as U8x16Backend>::load(self, data[48..64].try_into().unwrap()),
+            <NeonToken as U8x16Backend>::load(self, &chunks[0]),
+            <NeonToken as U8x16Backend>::load(self, &chunks[1]),
+            <NeonToken as U8x16Backend>::load(self, &chunks[2]),
+            <NeonToken as U8x16Backend>::load(self, &chunks[3]),
         ]
     }
 
@@ -6236,13 +6294,11 @@ impl U8x64Backend for NeonToken {
 
     #[inline(always)]
     fn store(self, repr: [uint8x16_t; 4], out: &mut [u8; 64]) {
-        let (o01, o23) = out.split_at_mut(32);
-        let (o0, o1) = o01.split_at_mut(16);
-        let (o2, o3) = o23.split_at_mut(16);
-        <NeonToken as U8x16Backend>::store(self, repr[0], o0.try_into().unwrap());
-        <NeonToken as U8x16Backend>::store(self, repr[1], o1.try_into().unwrap());
-        <NeonToken as U8x16Backend>::store(self, repr[2], o2.try_into().unwrap());
-        <NeonToken as U8x16Backend>::store(self, repr[3], o3.try_into().unwrap());
+        let chunks = out.as_chunks_mut::<16>().0;
+        <NeonToken as U8x16Backend>::store(self, repr[0], &mut chunks[0]);
+        <NeonToken as U8x16Backend>::store(self, repr[1], &mut chunks[1]);
+        <NeonToken as U8x16Backend>::store(self, repr[2], &mut chunks[2]);
+        <NeonToken as U8x16Backend>::store(self, repr[3], &mut chunks[3]);
     }
 
     #[inline(always)]
@@ -6482,11 +6538,12 @@ impl I16x32Backend for NeonToken {
 
     #[inline(always)]
     fn load(self, data: &[i16; 32]) -> [int16x8_t; 4] {
+        let chunks = data.as_chunks::<8>().0;
         [
-            <NeonToken as I16x8Backend>::load(self, data[0..8].try_into().unwrap()),
-            <NeonToken as I16x8Backend>::load(self, data[8..16].try_into().unwrap()),
-            <NeonToken as I16x8Backend>::load(self, data[16..24].try_into().unwrap()),
-            <NeonToken as I16x8Backend>::load(self, data[24..32].try_into().unwrap()),
+            <NeonToken as I16x8Backend>::load(self, &chunks[0]),
+            <NeonToken as I16x8Backend>::load(self, &chunks[1]),
+            <NeonToken as I16x8Backend>::load(self, &chunks[2]),
+            <NeonToken as I16x8Backend>::load(self, &chunks[3]),
         ]
     }
 
@@ -6510,13 +6567,11 @@ impl I16x32Backend for NeonToken {
 
     #[inline(always)]
     fn store(self, repr: [int16x8_t; 4], out: &mut [i16; 32]) {
-        let (o01, o23) = out.split_at_mut(16);
-        let (o0, o1) = o01.split_at_mut(8);
-        let (o2, o3) = o23.split_at_mut(8);
-        <NeonToken as I16x8Backend>::store(self, repr[0], o0.try_into().unwrap());
-        <NeonToken as I16x8Backend>::store(self, repr[1], o1.try_into().unwrap());
-        <NeonToken as I16x8Backend>::store(self, repr[2], o2.try_into().unwrap());
-        <NeonToken as I16x8Backend>::store(self, repr[3], o3.try_into().unwrap());
+        let chunks = out.as_chunks_mut::<8>().0;
+        <NeonToken as I16x8Backend>::store(self, repr[0], &mut chunks[0]);
+        <NeonToken as I16x8Backend>::store(self, repr[1], &mut chunks[1]);
+        <NeonToken as I16x8Backend>::store(self, repr[2], &mut chunks[2]);
+        <NeonToken as I16x8Backend>::store(self, repr[3], &mut chunks[3]);
     }
 
     #[inline(always)]
@@ -6800,11 +6855,12 @@ impl U16x32Backend for NeonToken {
 
     #[inline(always)]
     fn load(self, data: &[u16; 32]) -> [uint16x8_t; 4] {
+        let chunks = data.as_chunks::<8>().0;
         [
-            <NeonToken as U16x8Backend>::load(self, data[0..8].try_into().unwrap()),
-            <NeonToken as U16x8Backend>::load(self, data[8..16].try_into().unwrap()),
-            <NeonToken as U16x8Backend>::load(self, data[16..24].try_into().unwrap()),
-            <NeonToken as U16x8Backend>::load(self, data[24..32].try_into().unwrap()),
+            <NeonToken as U16x8Backend>::load(self, &chunks[0]),
+            <NeonToken as U16x8Backend>::load(self, &chunks[1]),
+            <NeonToken as U16x8Backend>::load(self, &chunks[2]),
+            <NeonToken as U16x8Backend>::load(self, &chunks[3]),
         ]
     }
 
@@ -6828,13 +6884,11 @@ impl U16x32Backend for NeonToken {
 
     #[inline(always)]
     fn store(self, repr: [uint16x8_t; 4], out: &mut [u16; 32]) {
-        let (o01, o23) = out.split_at_mut(16);
-        let (o0, o1) = o01.split_at_mut(8);
-        let (o2, o3) = o23.split_at_mut(8);
-        <NeonToken as U16x8Backend>::store(self, repr[0], o0.try_into().unwrap());
-        <NeonToken as U16x8Backend>::store(self, repr[1], o1.try_into().unwrap());
-        <NeonToken as U16x8Backend>::store(self, repr[2], o2.try_into().unwrap());
-        <NeonToken as U16x8Backend>::store(self, repr[3], o3.try_into().unwrap());
+        let chunks = out.as_chunks_mut::<8>().0;
+        <NeonToken as U16x8Backend>::store(self, repr[0], &mut chunks[0]);
+        <NeonToken as U16x8Backend>::store(self, repr[1], &mut chunks[1]);
+        <NeonToken as U16x8Backend>::store(self, repr[2], &mut chunks[2]);
+        <NeonToken as U16x8Backend>::store(self, repr[3], &mut chunks[3]);
     }
 
     #[inline(always)]
@@ -7072,11 +7126,12 @@ impl I32x16Backend for NeonToken {
 
     #[inline(always)]
     fn load(self, data: &[i32; 16]) -> [int32x4_t; 4] {
+        let chunks = data.as_chunks::<4>().0;
         [
-            <NeonToken as I32x4Backend>::load(self, data[0..4].try_into().unwrap()),
-            <NeonToken as I32x4Backend>::load(self, data[4..8].try_into().unwrap()),
-            <NeonToken as I32x4Backend>::load(self, data[8..12].try_into().unwrap()),
-            <NeonToken as I32x4Backend>::load(self, data[12..16].try_into().unwrap()),
+            <NeonToken as I32x4Backend>::load(self, &chunks[0]),
+            <NeonToken as I32x4Backend>::load(self, &chunks[1]),
+            <NeonToken as I32x4Backend>::load(self, &chunks[2]),
+            <NeonToken as I32x4Backend>::load(self, &chunks[3]),
         ]
     }
 
@@ -7100,13 +7155,11 @@ impl I32x16Backend for NeonToken {
 
     #[inline(always)]
     fn store(self, repr: [int32x4_t; 4], out: &mut [i32; 16]) {
-        let (o01, o23) = out.split_at_mut(8);
-        let (o0, o1) = o01.split_at_mut(4);
-        let (o2, o3) = o23.split_at_mut(4);
-        <NeonToken as I32x4Backend>::store(self, repr[0], o0.try_into().unwrap());
-        <NeonToken as I32x4Backend>::store(self, repr[1], o1.try_into().unwrap());
-        <NeonToken as I32x4Backend>::store(self, repr[2], o2.try_into().unwrap());
-        <NeonToken as I32x4Backend>::store(self, repr[3], o3.try_into().unwrap());
+        let chunks = out.as_chunks_mut::<4>().0;
+        <NeonToken as I32x4Backend>::store(self, repr[0], &mut chunks[0]);
+        <NeonToken as I32x4Backend>::store(self, repr[1], &mut chunks[1]);
+        <NeonToken as I32x4Backend>::store(self, repr[2], &mut chunks[2]);
+        <NeonToken as I32x4Backend>::store(self, repr[3], &mut chunks[3]);
     }
 
     #[inline(always)]
@@ -7328,11 +7381,12 @@ impl U32x16Backend for NeonToken {
 
     #[inline(always)]
     fn load(self, data: &[u32; 16]) -> [uint32x4_t; 4] {
+        let chunks = data.as_chunks::<4>().0;
         [
-            <NeonToken as U32x4Backend>::load(self, data[0..4].try_into().unwrap()),
-            <NeonToken as U32x4Backend>::load(self, data[4..8].try_into().unwrap()),
-            <NeonToken as U32x4Backend>::load(self, data[8..12].try_into().unwrap()),
-            <NeonToken as U32x4Backend>::load(self, data[12..16].try_into().unwrap()),
+            <NeonToken as U32x4Backend>::load(self, &chunks[0]),
+            <NeonToken as U32x4Backend>::load(self, &chunks[1]),
+            <NeonToken as U32x4Backend>::load(self, &chunks[2]),
+            <NeonToken as U32x4Backend>::load(self, &chunks[3]),
         ]
     }
 
@@ -7356,13 +7410,11 @@ impl U32x16Backend for NeonToken {
 
     #[inline(always)]
     fn store(self, repr: [uint32x4_t; 4], out: &mut [u32; 16]) {
-        let (o01, o23) = out.split_at_mut(8);
-        let (o0, o1) = o01.split_at_mut(4);
-        let (o2, o3) = o23.split_at_mut(4);
-        <NeonToken as U32x4Backend>::store(self, repr[0], o0.try_into().unwrap());
-        <NeonToken as U32x4Backend>::store(self, repr[1], o1.try_into().unwrap());
-        <NeonToken as U32x4Backend>::store(self, repr[2], o2.try_into().unwrap());
-        <NeonToken as U32x4Backend>::store(self, repr[3], o3.try_into().unwrap());
+        let chunks = out.as_chunks_mut::<4>().0;
+        <NeonToken as U32x4Backend>::store(self, repr[0], &mut chunks[0]);
+        <NeonToken as U32x4Backend>::store(self, repr[1], &mut chunks[1]);
+        <NeonToken as U32x4Backend>::store(self, repr[2], &mut chunks[2]);
+        <NeonToken as U32x4Backend>::store(self, repr[3], &mut chunks[3]);
     }
 
     #[inline(always)]
@@ -7561,11 +7613,12 @@ impl I64x8Backend for NeonToken {
 
     #[inline(always)]
     fn load(self, data: &[i64; 8]) -> [int64x2_t; 4] {
+        let chunks = data.as_chunks::<2>().0;
         [
-            <NeonToken as I64x2Backend>::load(self, data[0..2].try_into().unwrap()),
-            <NeonToken as I64x2Backend>::load(self, data[2..4].try_into().unwrap()),
-            <NeonToken as I64x2Backend>::load(self, data[4..6].try_into().unwrap()),
-            <NeonToken as I64x2Backend>::load(self, data[6..8].try_into().unwrap()),
+            <NeonToken as I64x2Backend>::load(self, &chunks[0]),
+            <NeonToken as I64x2Backend>::load(self, &chunks[1]),
+            <NeonToken as I64x2Backend>::load(self, &chunks[2]),
+            <NeonToken as I64x2Backend>::load(self, &chunks[3]),
         ]
     }
 
@@ -7589,13 +7642,11 @@ impl I64x8Backend for NeonToken {
 
     #[inline(always)]
     fn store(self, repr: [int64x2_t; 4], out: &mut [i64; 8]) {
-        let (o01, o23) = out.split_at_mut(4);
-        let (o0, o1) = o01.split_at_mut(2);
-        let (o2, o3) = o23.split_at_mut(2);
-        <NeonToken as I64x2Backend>::store(self, repr[0], o0.try_into().unwrap());
-        <NeonToken as I64x2Backend>::store(self, repr[1], o1.try_into().unwrap());
-        <NeonToken as I64x2Backend>::store(self, repr[2], o2.try_into().unwrap());
-        <NeonToken as I64x2Backend>::store(self, repr[3], o3.try_into().unwrap());
+        let chunks = out.as_chunks_mut::<2>().0;
+        <NeonToken as I64x2Backend>::store(self, repr[0], &mut chunks[0]);
+        <NeonToken as I64x2Backend>::store(self, repr[1], &mut chunks[1]);
+        <NeonToken as I64x2Backend>::store(self, repr[2], &mut chunks[2]);
+        <NeonToken as I64x2Backend>::store(self, repr[3], &mut chunks[3]);
     }
 
     #[inline(always)]
@@ -7774,11 +7825,12 @@ impl U64x8Backend for NeonToken {
 
     #[inline(always)]
     fn load(self, data: &[u64; 8]) -> [uint64x2_t; 4] {
+        let chunks = data.as_chunks::<2>().0;
         [
-            <NeonToken as U64x2Backend>::load(self, data[0..2].try_into().unwrap()),
-            <NeonToken as U64x2Backend>::load(self, data[2..4].try_into().unwrap()),
-            <NeonToken as U64x2Backend>::load(self, data[4..6].try_into().unwrap()),
-            <NeonToken as U64x2Backend>::load(self, data[6..8].try_into().unwrap()),
+            <NeonToken as U64x2Backend>::load(self, &chunks[0]),
+            <NeonToken as U64x2Backend>::load(self, &chunks[1]),
+            <NeonToken as U64x2Backend>::load(self, &chunks[2]),
+            <NeonToken as U64x2Backend>::load(self, &chunks[3]),
         ]
     }
 
@@ -7802,13 +7854,11 @@ impl U64x8Backend for NeonToken {
 
     #[inline(always)]
     fn store(self, repr: [uint64x2_t; 4], out: &mut [u64; 8]) {
-        let (o01, o23) = out.split_at_mut(4);
-        let (o0, o1) = o01.split_at_mut(2);
-        let (o2, o3) = o23.split_at_mut(2);
-        <NeonToken as U64x2Backend>::store(self, repr[0], o0.try_into().unwrap());
-        <NeonToken as U64x2Backend>::store(self, repr[1], o1.try_into().unwrap());
-        <NeonToken as U64x2Backend>::store(self, repr[2], o2.try_into().unwrap());
-        <NeonToken as U64x2Backend>::store(self, repr[3], o3.try_into().unwrap());
+        let chunks = out.as_chunks_mut::<2>().0;
+        <NeonToken as U64x2Backend>::store(self, repr[0], &mut chunks[0]);
+        <NeonToken as U64x2Backend>::store(self, repr[1], &mut chunks[1]);
+        <NeonToken as U64x2Backend>::store(self, repr[2], &mut chunks[2]);
+        <NeonToken as U64x2Backend>::store(self, repr[3], &mut chunks[3]);
     }
 
     #[inline(always)]

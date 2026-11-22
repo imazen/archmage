@@ -345,6 +345,48 @@ macro_rules! eval_log2 {
     }};
 }
 
+// Fits to (ln(1 + x) - x) / x², with an exact linear term at zero.
+const LOG1P_LOW: [f32; 6] = [
+    -0.5000584211,
+    0.3331853231,
+    -0.2473258626,
+    0.2025821466,
+    -0.2009205163,
+    0.1448155509,
+];
+const LOG1P_MID: [f32; 9] = [
+    -0.4999998684,
+    0.3333332149,
+    -0.2500173438,
+    0.2000235959,
+    -0.1660544601,
+    0.1417161584,
+    -0.1326462578,
+    0.1298266121,
+    -0.07664833665,
+];
+
+macro_rules! log1p_tail {
+    ($x:ident, $lowp:expr, $sp:ident, $madd:ident) => {{
+        let c: &[f32] = if $lowp { &LOG1P_LOW } else { &LOG1P_MID };
+        let x2 = $x * $x;
+        let x4 = x2 * x2;
+        let p01 = $madd($sp(c[1]), $x, $sp(c[0]));
+        let p23 = $madd($sp(c[3]), $x, $sp(c[2]));
+        let p45 = $madd($sp(c[5]), $x, $sp(c[4]));
+        let p48 = if $lowp {
+            p45
+        } else {
+            let p67 = $madd($sp(c[7]), $x, $sp(c[6]));
+            $sp(c[8]) * x4 + (p67 * x2 + p45)
+        };
+        // Keep fusion on the leading terms and round the smaller terms
+        // separately to avoid extra software FMAs on strict WASM.
+        let p = p48 * x4 + $madd(p23, x2, p01);
+        x2 * p
+    }};
+}
+
 macro_rules! eval_log_op {
     (
         $V:ident,
@@ -364,6 +406,7 @@ macro_rules! eval_log_op {
         $preserve_clamped_nan:expr,
         $assume:expr,
         $elide_red_log1p:expr,
+        $lowp:expr,
         $log2_fn:expr
     ) => {{
         let sp = |x| $V::splat_t($token, x);
@@ -501,24 +544,46 @@ macro_rules! eval_log_op {
             } else {
                 pre_x
             };
-            let one = sp(1.0);
-            let u = work_x + one;
-            let c = if $elide_red_log1p {
-                (work_x - (u - one)) / u
-            } else {
-                let two = sp(2.0);
-                let finite_pos = u.simd_gt(sp(0.0)) & u.simd_lt(sp(f32::INFINITY));
-                let c_raw = $V::blend(
-                    u.simd_ge(two),
-                    (one - (u - work_x)) / u,
-                    (work_x - (u - one)) / u,
-                );
-                $V::blend(finite_pos, c_raw, sp(0.0))
-            };
-            let log2_u = $log2_fn(u)?;
-            let ln2 = sp(core::f32::consts::LN_2);
             let madd = make_madd!($V, $token, $arithmetic);
-            let res = madd(log2_u, ln2, c);
+            let magnitude = work_x.bitcast_to_i32() & ip(i32::MAX);
+            let res = if ($elide_red_log1p && $in_lo >= -0.25 && $in_hi <= 0.25)
+                || magnitude.simd_le(ip(0.25_f32.to_bits() as i32)).all_true()
+            {
+                work_x + log1p_tail!(work_x, $lowp, sp, madd)
+            } else {
+                let one = sp(1.0);
+                let u = work_x + one;
+                let adjusted = u.bitcast_to_i32() + ip(0x3f80_0000 - 0x3f35_04f3);
+                let exponent = adjusted.shr_arithmetic_const::<23>() - ip(127);
+                let scale_exp = ip(127) - exponent;
+                let normal_exp = scale_exp.max(ip(1));
+                let scale = normal_exp.shl_const::<23>().bitcast_to_f32();
+                let tail_scale = (scale_exp - normal_exp + ip(127))
+                    .shl_const::<23>()
+                    .bitcast_to_f32();
+                // Reduce 1 + x into [sqrt(0.5), sqrt(2)). Apply the exact
+                // power-of-two scale to x before adding the offset so rounding
+                // 1 + x cannot erase small inputs. Splitting the scale keeps
+                // both factors normal at exponents 127 and 128.
+                let f = (work_x * scale) * tail_scale + (scale - one);
+                let n = exponent.to_f32();
+                let tail = log1p_tail!(f, $lowp, sp, madd);
+                // The high part has enough trailing zeros for n * ln2_hi to be exact.
+                let ln2_hi = sp(f32::from_bits(0x3f31_7200));
+                let ln2_lo = sp(1.428_606_8e-6);
+                let result = n * ln2_hi + (f + (tail + n * ln2_lo));
+                let result = if $zero {
+                    $V::blend(work_x.simd_eq(sp(-1.0)), sp(f32::NEG_INFINITY), result)
+                } else {
+                    result
+                };
+                if $specials {
+                    let result = $V::blend(work_x.simd_ge(sp(-1.0)), result, sp(f32::NAN));
+                    $V::blend(work_x.simd_eq(sp(f32::INFINITY)), sp(f32::INFINITY), result)
+                } else {
+                    result
+                }
+            };
             let preserve_x = if $subnorm || $specials {
                 ((work_x.bitcast_to_i32() & ip(0x7f80_0000)).simd_eq(ip(0))).bitcast_to_f32()
             } else {
@@ -576,12 +641,7 @@ macro_rules! graph {
 
         #[cfg(not(debug_assertions))]
         #[inline(always)]
-        fn $vector_rel<
-            T: magetypes::simd::backends::$bound,
-            K: Kernel,
-            const ARITHMETIC: usize,
-            const FOR_LOG1P: bool,
-        >(
+        fn $vector_rel<T: magetypes::simd::backends::$bound, K: Kernel, const ARITHMETIC: usize>(
             token: T,
             input: magetypes::simd::generic::$float<T>,
         ) -> Result<magetypes::simd::generic::$float<T>, LogfError> {
@@ -592,23 +652,19 @@ macro_rules! graph {
                 token,
                 input,
                 ARITHMETIC,
-                if FOR_LOG1P { false } else { K::RANGED },
+                K::RANGED,
                 K::IN_LO,
                 K::IN_HI,
                 K::ZERO,
-                if FOR_LOG1P { false } else { K::SUBNORM },
-                if FOR_LOG1P { false } else { K::FLUSH_SUB },
+                K::SUBNORM,
+                K::FLUSH_SUB,
                 K::SPECIALS,
-                if FOR_LOG1P { false } else { K::CLAMP_OOB },
-                !FOR_LOG1P && K::PRESERVE_CLAMPED_NAN,
-                FOR_LOG1P,
+                K::CLAMP_OOB,
+                K::PRESERVE_CLAMPED_NAN,
+                false,
                 K::LOWP,
-                if FOR_LOG1P { !K::SPECIALS } else { K::ASSUME },
-                if FOR_LOG1P {
-                    K::ELIDE_RED_LOG1P
-                } else {
-                    K::ELIDE_RED
-                }
+                K::ASSUME,
+                K::ELIDE_RED
             )
         }
 
@@ -621,20 +677,6 @@ macro_rules! graph {
             cfg: KernelCfg,
         ) -> Result<magetypes::simd::generic::$float<T>, LogfError> {
             use magetypes::simd::generic::{$float as V, $int as I};
-            let u_cfg = if op == 3 {
-                KernelCfg {
-                    ranged: false,
-                    subnorm: false,
-                    flush_sub: false,
-                    clamp_oob: false,
-                    preserve_clamped_nan: false,
-                    assume: !cfg.specials,
-                    elide_red: cfg.elide_red_log1p,
-                    ..cfg
-                }
-            } else {
-                cfg
-            };
             eval_log_op!(
                 V,
                 I,
@@ -653,7 +695,8 @@ macro_rules! graph {
                 cfg.preserve_clamped_nan,
                 cfg.assume,
                 cfg.elide_red_log1p,
-                |arg| $vector_dbg::<T, ARITHMETIC>(token, arg, op == 3, u_cfg)
+                cfg.lowp,
+                |arg| $vector_dbg::<T, ARITHMETIC>(token, arg, false, cfg)
             )
         }
 
@@ -687,11 +730,8 @@ macro_rules! graph {
                 K::PRESERVE_CLAMPED_NAN,
                 K::ASSUME,
                 K::ELIDE_RED_LOG1P,
-                |arg| if OP == 3 {
-                    $vector_rel::<T, K, ARITHMETIC, true>(token, arg)
-                } else {
-                    $vector_rel::<T, K, ARITHMETIC, false>(token, arg)
-                }
+                K::LOWP,
+                |arg| $vector_rel::<T, K, ARITHMETIC>(token, arg)
             )
         }
 

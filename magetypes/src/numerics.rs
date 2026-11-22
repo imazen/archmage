@@ -448,7 +448,8 @@ pub enum RecipPrecision {
     /// Native estimate where available, division otherwise.
     Approx = 1,
     /// Newton-refined reciprocal or reciprocal square root (`1` step on `f32`,
-    /// `2` steps on `f64` where hardware estimates exist).
+    /// `2` steps on `f64` where hardware estimates exist). When the
+    /// reciprocal estimate uses division on Scalar or WASM, returns that quotient.
     #[default]
     Nr1 = 0,
     /// Refined reciprocal biased toward positive infinity so finite non-zero
