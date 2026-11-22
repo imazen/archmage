@@ -1,4 +1,4 @@
-use crate::numerics::IntConvert;
+use crate::numerics::{I32_MAX, I32_MIN, IntConvert, NumericsError, U32_MAX};
 
 macro_rules! int_numerics {
     ($float:ident, $int:ident, $unsigned:ident, $convert:ident, $float_backend:ident, $unsigned_backend:ident) => {
@@ -30,6 +30,14 @@ macro_rules! int_numerics {
                     super::$int::from_repr_unchecked(self.1, repr)
                 }
             }
+
+            /// Check every lane against the encoded integer bounds before converting to i32.
+            #[inline(always)]
+            pub fn try_to_i32_with<const CFG: u32>(self) -> Result<super::$int<T>, NumericsError> {
+                let opts = const { IntConvert::decode(CFG) };
+                opts.check(|| self.to_array(), I32_MIN, I32_MAX)?;
+                Ok(self.to_i32_with::<CFG>())
+            }
         }
 
         /// ### Unsigned integer conversion
@@ -53,6 +61,16 @@ macro_rules! int_numerics {
                 }
                 let repr = T::to_u32_lanes::<CFG>(self.1, self.0);
                 super::$unsigned::from_repr_unchecked(self.1, crate::simd_storage::cast(repr))
+            }
+
+            /// Check every lane against the encoded integer bounds before converting to u32.
+            #[inline(always)]
+            pub fn try_to_u32_with<const CFG: u32>(
+                self,
+            ) -> Result<super::$unsigned<T>, NumericsError> {
+                let opts = const { IntConvert::decode(CFG) };
+                opts.check(|| self.to_array(), 0.0, U32_MAX)?;
+                Ok(self.to_u32_with::<CFG>())
             }
 
             /// Widen unsigned integers, rounding ties to even.

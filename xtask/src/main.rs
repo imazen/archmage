@@ -867,6 +867,12 @@ const MIRI_SKIPPED_TESTS: &[(&str, Option<&str>, &str)] = &[
         None,
         "a range sweep over [126, 128) (12 s under Miri): safe code only",
     ),
+    (
+        "sqrt_token_testing",
+        None,
+        "requires archmage/testable_dispatch (run explicitly by just sqrt-token-testing); \
+         safe code only (#![forbid(unsafe_code)])",
+    ),
 ];
 
 /// magetypes integration-test targets, minus the binaries [`MIRI_SKIPPED_TESTS`]

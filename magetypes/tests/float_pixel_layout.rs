@@ -1,5 +1,7 @@
 use archmage::{ScalarToken, SimdToken};
-use magetypes::numerics::{ExtremaOptions, HalfConvert, IntConvert, RecipOptions};
+use magetypes::numerics::{
+    ExtremaOptions, HalfConvert, IntConvert, NumericsError, NumericsErrorKind, RecipOptions,
+};
 use magetypes::scalar;
 use magetypes::simd::backends::{F32x4Convert, F32x8Convert, U32x4Backend, U32x8Backend};
 use magetypes::simd::generic::{f32x4, f32x8};
@@ -169,6 +171,13 @@ macro_rules! check_lanes {
         ];
         let v_ceil = $vec::from_array_t($token, core::array::from_fn(|i| ceil_inputs[i % 4]));
         let got_ceil = v_ceil.recip_with::<NR1_CEIL>().to_array();
+        assert_eq!(
+            v_ceil
+                .recip_with::<NR1_CEIL_ALL>()
+                .to_array()
+                .map(f32::to_bits),
+            got_ceil.map(f32::to_bits)
+        );
         for lane in 0..$n {
             let exact = 1.0_f64 / f64::from(ceil_inputs[lane % 4]);
             assert!(
@@ -303,9 +312,368 @@ macro_rules! check_rgb {
     }};
 }
 
+// Check the expected mask independently, then verify each scalar tail and
+// compare accepted vector results to the pre-existing lane conversions.
+macro_rules! check_checked_conversions {
+    ($token:ident, $vec:ident, $lanes:literal) => {{
+        const FINITE: u32 = IntConvert::new().bits();
+        const RANGE: u32 = IntConvert::new().trunc().in_range().bits();
+        const NONNEG: u32 = IntConvert::new().non_negative_finite().bits();
+        const ALL: u32 = IntConvert::new().saturate_all().bits();
+        const HALF_FINITE: u32 = HalfConvert::new().normalize().bits();
+        const HALF_ALL: u32 = HalfConvert::new().normalize().all_floats().bits();
+        let pattern_mask =
+            |pattern: u16| (0..$lanes).fold(0, |mask, i| mask | (((pattern >> (i % 4)) & 1) << i));
+        let vector = |xs: [f32; 4]| $vec::from_array_t($token, core::array::from_fn(|i| xs[i % 4]));
+
+        macro_rules! check_int {
+            ($name:ident, $values:expr, $cfg:ident, $bad:literal) => {{
+                let lanes: [f32; 4] = $values;
+                let want = NumericsError {
+                    kind: NumericsErrorKind::IntegerBounds,
+                    lane_mask: pattern_mask($bad),
+                };
+                assert_eq!(vector(lanes).$name::<$cfg>().unwrap_err(), want);
+                for (i, x) in lanes.into_iter().enumerate() {
+                    let scalar = scalar::$name::<$cfg>(x);
+                    if $bad & (1 << i) != 0 {
+                        assert_eq!(
+                            scalar.unwrap_err(),
+                            NumericsError {
+                                lane_mask: 1,
+                                ..want
+                            }
+                        );
+                    } else {
+                        let actual = $vec::splat_t($token, x).$name::<$cfg>().unwrap();
+                        assert_eq!(actual[0], scalar.unwrap());
+                    }
+                }
+            }};
+        }
+
+        check_int!(
+            try_to_i32_with,
+            [f32::NAN, -2_147_483_648.0, 2_147_483_648.0, f32::INFINITY],
+            FINITE,
+            0b1101
+        );
+        check_int!(
+            try_to_u32_with,
+            [-0.25, 4_294_967_040.0, 4_294_967_296.0, f32::NEG_INFINITY],
+            RANGE,
+            0b1101
+        );
+        check_int!(
+            try_to_u16_with,
+            [-1.0, 65_535.0, 65_535.5, f32::NAN],
+            RANGE,
+            0b1101
+        );
+        check_int!(try_to_u8_with, [-1.0, -0.0, 256.0, 255.0], RANGE, 0b0101);
+        check_int!(
+            try_to_u8_with,
+            [-1.0, 257.0, 2_147_483_648.0, f32::NEG_INFINITY],
+            NONNEG,
+            0b1101
+        );
+        check_int!(
+            try_to_u16_with,
+            [-1.0, 65_536.0, -2_147_483_904.0, 2_147_483_520.0],
+            FINITE,
+            0b0100
+        );
+        check_int!(
+            try_to_u32_with,
+            [-2_147_483_648.0, 2_147_483_520.0, f32::NAN, 2_147_483_648.0],
+            FINITE,
+            0b1100
+        );
+
+        let accepted = vector([0.5, 1.5, 2.5, 254.5]);
+        assert_eq!(
+            accepted.try_to_i32_with::<FINITE>().unwrap().to_array(),
+            core::array::from_fn(|i| [0, 2, 2, 254][i % 4])
+        );
+        assert_eq!(
+            accepted.try_to_u32_with::<FINITE>().unwrap().to_array(),
+            core::array::from_fn(|i| [0, 2, 2, 254][i % 4])
+        );
+        assert_eq!(
+            accepted.try_to_u16_with::<FINITE>().unwrap(),
+            core::array::from_fn(|i| [0, 2, 2, 254][i % 4])
+        );
+        assert_eq!(
+            accepted.try_to_u8_with::<FINITE>().unwrap(),
+            core::array::from_fn(|i| [0, 2, 2, 254][i % 4])
+        );
+
+        let total = vector([f32::NAN, f32::NEG_INFINITY, f32::INFINITY, -1.0]);
+        let input = total.to_array();
+        assert_eq!(
+            total.try_to_i32_with::<ALL>().unwrap().to_array(),
+            input.map(|x| scalar::try_to_i32_with::<ALL>(x).unwrap())
+        );
+        assert_eq!(
+            total.try_to_u32_with::<ALL>().unwrap().to_array(),
+            input.map(|x| scalar::try_to_u32_with::<ALL>(x).unwrap())
+        );
+        assert_eq!(
+            total.try_to_u16_with::<ALL>().unwrap(),
+            input.map(|x| scalar::try_to_u16_with::<ALL>(x).unwrap())
+        );
+        assert_eq!(
+            total.try_to_u8_with::<ALL>().unwrap(),
+            input.map(|x| scalar::try_to_u8_with::<ALL>(x).unwrap())
+        );
+
+        let nonfinite = NumericsError {
+            kind: NumericsErrorKind::NonFinite,
+            lane_mask: pattern_mask(0b0111),
+        };
+        assert_eq!(
+            total.try_to_f16_bits_with::<HALF_FINITE>().unwrap_err(),
+            nonfinite
+        );
+        assert_eq!(
+            total.try_to_bf16_with::<HALF_FINITE>().unwrap_err(),
+            nonfinite
+        );
+        let bits = core::array::from_fn(|i| [0x7c01, 0xfc00, 0x7c00, 0x8001][i % 4]);
+        assert_eq!(
+            $vec::try_from_f16_with_t::<HALF_FINITE>($token, &bits).unwrap_err(),
+            nonfinite
+        );
+        let scalar_error = NumericsError {
+            lane_mask: 1,
+            ..nonfinite
+        };
+        for (i, (&x, &b)) in input.iter().zip(&bits).enumerate() {
+            if i % 4 != 3 {
+                assert_eq!(
+                    scalar::try_to_f16_bits_with::<HALF_FINITE>(x).unwrap_err(),
+                    scalar_error
+                );
+                assert_eq!(
+                    scalar::try_to_bf16_with::<HALF_FINITE>(x).unwrap_err(),
+                    scalar_error
+                );
+                assert_eq!(
+                    scalar::try_from_f16_with::<HALF_FINITE>(b).unwrap_err(),
+                    scalar_error
+                );
+            }
+        }
+        let binary16 = total.try_to_f16_bits_with::<HALF_ALL>().unwrap();
+        let bf16 = total.try_to_bf16_with::<HALF_ALL>().unwrap();
+        let decoded = $vec::try_from_f16_with_t::<HALF_ALL>($token, &bits)
+            .unwrap()
+            .to_array();
+        for i in 0..$lanes {
+            let x = input[i];
+            if x.is_nan() {
+                assert!(binary16[i] & 0x7fff > 0x7c00);
+                assert!(bf16[i] & 0x7fff > 0x7f80);
+                assert!(decoded[i].is_nan());
+            } else {
+                assert_eq!(
+                    binary16[i],
+                    scalar::try_to_f16_bits_with::<HALF_ALL>(x).unwrap()
+                );
+                assert_eq!(bf16[i], scalar::try_to_bf16_with::<HALF_ALL>(x).unwrap());
+                assert_eq!(
+                    decoded[i].to_bits(),
+                    scalar::try_from_f16_with::<HALF_ALL>(bits[i])
+                        .unwrap()
+                        .to_bits()
+                );
+            }
+        }
+
+        // HalfDomain::Finite validates the source. Finite overflow and
+        // subnormal handling are part of conversion rather than rejection.
+        let finite = vector([f32::MAX, -0.0, f32::from_bits(1), 1.0]);
+        let input = finite.to_array();
+        assert_eq!(
+            finite.try_to_f16_bits_with::<HALF_FINITE>().unwrap(),
+            input.map(|x| scalar::try_to_f16_bits_with::<HALF_FINITE>(x).unwrap())
+        );
+        assert_eq!(
+            finite.try_to_bf16_with::<HALF_FINITE>().unwrap(),
+            input.map(|x| scalar::try_to_bf16_with::<HALF_FINITE>(x).unwrap())
+        );
+        let bytes = core::array::from_fn(|i| [0x0001, 0x8000, 0x8001, 0x3c00][i % 4]);
+        let out = $vec::try_from_f16_with_t::<HALF_FINITE>($token, &bytes)
+            .unwrap()
+            .to_array();
+        assert_eq!(
+            out.map(f32::to_bits),
+            bytes.map(|b| scalar::try_from_f16_with::<HALF_FINITE>(b)
+                .unwrap()
+                .to_bits())
+        );
+    }};
+}
+
+// Near MAX, division returns subnormal reciprocals. Check the signed upper
+// bound independently of the scalar helper, then require exact tail parity.
+const CEIL_ALL: u32 = RecipOptions::new().nr1_ceil().all_floats().bits();
+
+macro_rules! check_ceil_near_max {
+    ($token:ident, $vec:ident, $float:ident, $scalar:ident, $lanes:literal, $bound:ident) => {{
+        let cases = [
+            <$float>::MAX,
+            <$float>::MAX.next_down(),
+            <$float>::MAX.next_down().next_down(),
+            <$float>::MAX.next_down().next_down().next_down(),
+            <$float>::MAX
+                .next_down()
+                .next_down()
+                .next_down()
+                .next_down(),
+            0.0,
+            <$float>::INFINITY,
+            <$float>::from_bits(1),
+            1.0 / <$float>::MIN_POSITIVE,
+            <$float>::NAN,
+        ];
+        for (i, _) in cases.iter().enumerate() {
+            let input = core::array::from_fn::<_, $lanes, _>(|j| {
+                let magnitude = cases[(i + j / 2) % cases.len()];
+                if j % 2 == 0 { magnitude } else { -magnitude }
+            });
+            let actual = $vec::from_array_t($token, input)
+                .recip_with::<CEIL_ALL>()
+                .to_array();
+            for (x, y) in input.into_iter().zip(actual) {
+                if x.is_finite() && x.abs() >= cases[4] {
+                    $bound(x, y);
+                }
+                let expected = scalar::$scalar::<CEIL_ALL>(x);
+                if expected.is_nan() {
+                    assert!(y.is_nan());
+                } else {
+                    assert_eq!(y.to_bits(), expected.to_bits(), "x={x:e}");
+                }
+            }
+        }
+    }};
+}
+
+fn exact_ceil_f32(x: f32, y: f32) {
+    let product = f64::from(x) * f64::from(y);
+    assert!(
+        if x > 0.0 {
+            product >= 1.0
+        } else {
+            product <= 1.0
+        },
+        "f32 x={:#010x} y={:#010x}",
+        x.to_bits(),
+        y.to_bits()
+    );
+    if x == f32::MAX {
+        assert!(y.to_bits() >= 0x0020_0001);
+    }
+}
+
+fn exact_ceil_f64(x: f64, y: f64) {
+    assert_eq!(x.is_sign_negative(), y.is_sign_negative());
+    assert!(y.is_subnormal());
+    // x is normal with unbiased exponent 1023, y is subnormal.
+    // Their unsigned significands give the exact product scaled by 2^103.
+    let significand = (1 << 52) | (x.to_bits() & ((1 << 52) - 1));
+    let product = u128::from(significand) * u128::from(y.abs().to_bits());
+    assert!(
+        if x > 0.0 {
+            product >= 1 << 103
+        } else {
+            product <= 1 << 103
+        },
+        "f64 x={:#018x} y={:#018x}",
+        x.to_bits(),
+        y.to_bits()
+    );
+    if x == f64::MAX {
+        assert!(y.to_bits() >= 0x0004_0000_0000_0001);
+    }
+}
+
+#[archmage::attune(_*_t, +v4(cfg(avx512)), +v4x(cfg(avx512)))]
+fn reciprocal_ceil_rails(token: Token) {
+    use magetypes::simd::generic::{f64x2, f64x4};
+    check_ceil_near_max!(token, f32x4, f32, recip_f32_with, 4, exact_ceil_f32);
+    check_ceil_near_max!(token, f32x8, f32, recip_f32_with, 8, exact_ceil_f32);
+    check_ceil_near_max!(token, f64x2, f64, recip_f64_with, 2, exact_ceil_f64);
+    check_ceil_near_max!(token, f64x4, f64, recip_f64_with, 4, exact_ceil_f64);
+    #[cfg(feature = "w512")]
+    {
+        use magetypes::simd::generic::{f32x16, f64x8};
+        check_ceil_near_max!(token, f32x16, f32, recip_f32_with, 16, exact_ceil_f32);
+        check_ceil_near_max!(token, f64x8, f64, recip_f64_with, 8, exact_ceil_f64);
+    }
+}
+
+#[test]
+fn reciprocal_ceil_division_fallback_matches_scalar_bits() {
+    reciprocal_ceil_rails_scalar_t(ScalarToken);
+    #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
+    {
+        if let Some(t) = archmage::X64V3Token::summon() {
+            reciprocal_ceil_rails_v3_t(t);
+        }
+        #[cfg(feature = "avx512")]
+        {
+            if let Some(t) = archmage::X64V4Token::summon() {
+                reciprocal_ceil_rails_v4_t(t);
+            }
+            if let Some(t) = archmage::X64V4xToken::summon() {
+                reciprocal_ceil_rails_v4x_t(t);
+            }
+        }
+    }
+    #[cfg(target_arch = "aarch64")]
+    if let Some(t) = archmage::NeonToken::summon() {
+        reciprocal_ceil_rails_neon_t(t);
+    }
+    #[cfg(target_arch = "wasm32")]
+    if let Some(t) = archmage::Wasm128Token::summon() {
+        reciprocal_ceil_rails_wasm128_t(t);
+    }
+}
+
+#[test]
+fn single_lane_clamp_matches_scalar_vectors_with_reversed_or_nan_bounds() {
+    use magetypes::simd::scalar::f32x1;
+    for (x, lo, hi) in [
+        (8.0, 1.0, -1.0),
+        (2.0, f32::NAN, 1.0),
+        (2.0, 1.0, f32::NAN),
+        (f32::NAN, 1.0, 3.0),
+        (-0.0, 0.0, 1.0),
+        (-2.0, -1.0, 1.0),
+        (0.5, -1.0, 1.0),
+    ] {
+        let splat = |v| f32x4::splat_t(ScalarToken, v);
+        let expected = splat(x).clamp(splat(lo), splat(hi)).to_array()[0];
+        let actual = f32x1(x).clamp(f32x1(lo), f32x1(hi)).0;
+        if expected.is_nan() {
+            assert!(actual.is_nan());
+        } else {
+            assert_eq!(
+                actual.to_bits(),
+                expected.to_bits(),
+                "x={x} lo={lo} hi={hi}"
+            );
+        }
+    }
+}
+
 fn check_narrow<T: F32x4Convert + F32x8Convert + U32x4Backend + U32x8Backend>(token: T) {
     check_lanes!(token, f32x4, 4);
+    check_checked_conversions!(token, f32x4, 4);
     check_lanes!(token, f32x8, 8);
+    check_checked_conversions!(token, f32x8, 8);
     check_rgb!(token, f32x4, load_rgb_u16_t, 4);
     check_rgb!(token, f32x8, load_rgb_u16_t, 8);
 
@@ -348,6 +716,7 @@ fn check_wide<
 ) {
     use magetypes::simd::generic::f32x16;
     check_lanes!(token, f32x16, 16);
+    check_checked_conversions!(token, f32x16, 16);
 
     let rgba = core::array::from_fn(|i| u8::try_from(i * 4).unwrap());
     let (r, g, b, a) = f32x16::load_rgba_u8_t(token, &rgba);

@@ -6,31 +6,32 @@
 # impls omitted; re-export duplicates annotated `[also: path]`.
 # DO NOT EDIT BY HAND — commit regenerated changes with the code.
 #
-# files: magetypes.txt 2980 lines (supported surface) | magetypes.features.txt 12 added (features: avx512,std,w512) | magetypes.internal.txt 60 lines (72 hidden + 0 excluded-feature)
+# files: magetypes.txt 3023 lines (supported surface) | magetypes.features.txt 12 added (features: avx512,std,w512) | magetypes.internal.txt 64 lines (76 hidden + 0 excluded-feature)
 
 ## summary
 #
 #   pub modules                                14
-#   pub types (struct/enum/trait/alias)       301
+#   pub types (struct/enum/trait/alias)       303
 #   pub consts/statics                        270
-#   free functions                           4419
+#   free functions                           4496
 #   inherent methods                         1296
-#   enum variants                              23
+#   struct fields                               2
+#   enum variants                              26
 #   re-exports                                  2
-#   trait roster entries (type × trait)       817
+#   trait roster entries (type × trait)       829
 #   conditional trait impls (verbatim)        120
-#   auto-trait-complete types                  22
+#   auto-trait-complete types                  24
 #   auto-trait exceptions                      30
 #
 # per-module pub lines:
 #   (root)                          365
 #   cast                              3
-#   numerics                         34
-#   prelude                        4166
-#   scalar                           51
+#   numerics                         41
+#   prelude                        4232
+#   scalar                           62
 #   simd                           1706
 
-## items (2745 lines)
+## items (2786 lines)
 
 pub mod magetypes
 pub use archmage
@@ -62,6 +63,10 @@ pub numerics::IntBounds::SaturateAll
 #[non_exhaustive] #[repr(u32)] pub enum numerics::IntRounding
 pub numerics::IntRounding::NearestEven
 pub numerics::IntRounding::Trunc
+#[non_exhaustive] pub enum numerics::NumericsErrorKind
+pub numerics::NumericsErrorKind::IntegerBounds
+pub numerics::NumericsErrorKind::NonFinite
+pub numerics::NumericsErrorKind::RecipDomain
 #[non_exhaustive] pub enum numerics::RecipDomain
 pub numerics::RecipDomain::AllFloats
 pub numerics::RecipDomain::FiniteNormal
@@ -101,6 +106,9 @@ pub const fn numerics::IntConvert::non_negative_finite(self) -> Self
 pub const fn numerics::IntConvert::rounding(self, numerics::IntRounding) -> Self
 pub const fn numerics::IntConvert::saturate_all(self) -> Self
 pub const fn numerics::IntConvert::trunc(self) -> Self
+pub struct numerics::NumericsError
+pub numerics::NumericsError::kind: numerics::NumericsErrorKind
+pub numerics::NumericsError::lane_mask: u16
 pub struct numerics::RecipOptions
 pub const fn numerics::RecipOptions::all_floats(self) -> Self
 pub const fn numerics::RecipOptions::approx(self) -> Self
@@ -125,6 +133,7 @@ pub fn prelude::f32x16<T>::split(self) -> (prelude::f32x8<T>, prelude::f32x8<T>)
 pub fn prelude::f32x16<T>::from_u32_t(T, prelude::u32x16<T>) -> Self [also: prelude::f32x16<T>]
 pub fn prelude::f32x16<T>::to_u32(self) -> prelude::u32x16<T> [also: prelude::f32x16<T>]
 pub fn prelude::f32x16<T>::to_u32_with<const CFG: u32>(self) -> prelude::u32x16<T> [also: prelude::f32x16<T>]
+pub fn prelude::f32x16<T>::try_to_u32_with<const CFG: u32>(self) -> core::result::Result<prelude::u32x16<T>, numerics::NumericsError> [also: prelude::f32x16<T>]
 pub fn prelude::f32x16<T>::from_array_t(T, [f32; 16]) -> Self [also: prelude::f32x16<T>]
 pub fn prelude::f32x16<T>::from_repr_t(T, <T as simd::backends::F32x16Backend>::Repr) -> Self [also: prelude::f32x16<T>]
 pub fn prelude::f32x16<T>::into_repr(self) -> <T as simd::backends::F32x16Backend>::Repr [also: prelude::f32x16<T>]
@@ -146,6 +155,11 @@ pub fn prelude::f32x16<T>::to_f16_bits_with<const CFG: u32>(self) -> [u16; 16] [
 pub fn prelude::f32x16<T>::to_u16(self) -> [u16; 16] [also: prelude::f32x16<T>]
 pub fn prelude::f32x16<T>::to_u16_with<const CFG: u32>(self) -> [u16; 16] [also: prelude::f32x16<T>]
 pub fn prelude::f32x16<T>::to_u8_with<const CFG: u32>(self) -> [u8; 16] [also: prelude::f32x16<T>]
+pub fn prelude::f32x16<T>::try_from_f16_with_t<const CFG: u32>(T, &[u16; 16]) -> core::result::Result<Self, numerics::NumericsError> [also: prelude::f32x16<T>]
+pub fn prelude::f32x16<T>::try_to_bf16_with<const CFG: u32>(self) -> core::result::Result<[u16; 16], numerics::NumericsError> [also: prelude::f32x16<T>]
+pub fn prelude::f32x16<T>::try_to_f16_bits_with<const CFG: u32>(self) -> core::result::Result<[u16; 16], numerics::NumericsError> [also: prelude::f32x16<T>]
+pub fn prelude::f32x16<T>::try_to_u16_with<const CFG: u32>(self) -> core::result::Result<[u16; 16], numerics::NumericsError> [also: prelude::f32x16<T>]
+pub fn prelude::f32x16<T>::try_to_u8_with<const CFG: u32>(self) -> core::result::Result<[u8; 16], numerics::NumericsError> [also: prelude::f32x16<T>]
 pub fn prelude::f32x16<T>::load_rgb_u16_t(T, &[u16; 48]) -> (Self, Self, Self) [also: prelude::f32x16<T>]
 pub fn prelude::f32x16<T>::load_rgb_u8_t(T, &[u8; 48]) -> (Self, Self, Self) [also: prelude::f32x16<T>]
 pub fn prelude::f32x16<T>::store_rgb_u8(Self, Self, Self, &mut [u8; 48]) [also: prelude::f32x16<T>]
@@ -185,6 +199,7 @@ pub fn prelude::f32x16<T>::from_i32_bitcast(T, prelude::i32x16<T>) -> Self [also
 pub fn prelude::f32x16<T>::from_i32x16(T, prelude::i32x16<T>) -> Self [also: prelude::f32x16<T>]
 pub fn prelude::f32x16<T>::to_i32_fast(self) -> prelude::i32x16<T> [also: prelude::f32x16<T>]
 pub fn prelude::f32x16<T>::to_i32_with<const CFG: u32>(self) -> prelude::i32x16<T> [also: prelude::f32x16<T>]
+pub fn prelude::f32x16<T>::try_to_i32_with<const CFG: u32>(self) -> core::result::Result<prelude::i32x16<T>, numerics::NumericsError> [also: prelude::f32x16<T>]
 pub fn [f32; 16]::from(prelude::f32x16<T>) -> [f32; 16] [also: (root)]
 #[repr(C)] pub struct prelude::f32x4<T: simd::backends::F32x4Backend>(_, _) [also: simd::generic]
 pub const fn prelude::f32x4<archmage::tokens::ScalarToken>::implementation_name() -> &'static str [also: (root)]
@@ -195,6 +210,7 @@ pub const fn prelude::f32x4<archmage::tokens::generated::arm::NeonToken>::implem
 pub fn prelude::f32x4<T>::from_u32_t(T, prelude::u32x4<T>) -> Self [also: prelude::f32x4<T>]
 pub fn prelude::f32x4<T>::to_u32(self) -> prelude::u32x4<T> [also: prelude::f32x4<T>]
 pub fn prelude::f32x4<T>::to_u32_with<const CFG: u32>(self) -> prelude::u32x4<T> [also: prelude::f32x4<T>]
+pub fn prelude::f32x4<T>::try_to_u32_with<const CFG: u32>(self) -> core::result::Result<prelude::u32x4<T>, numerics::NumericsError> [also: prelude::f32x4<T>]
 pub fn prelude::f32x4<T>::blend(Self, Self, Self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>, prelude::f64x2<T>, prelude::f64x4<T>, prelude::f64x8<T>, prelude::i16x16<T>, prelude::i16x32<T>, prelude::i16x8<T>, prelude::i32x16<T>, prelude::i32x4<T>, prelude::i32x8<T>, prelude::i64x2<T>, prelude::i64x4<T>, prelude::i64x8<T>, prelude::i8x16<T>, prelude::i8x32<T>, prelude::i8x64<T>, prelude::u16x16<T>, prelude::u16x32<T>, prelude::u16x8<T>, prelude::u32x16<T>, prelude::u32x4<T>, prelude::u32x8<T>, prelude::u64x2<T>, prelude::u64x4<T>, prelude::u64x8<T>, prelude::u8x16<T>, prelude::u8x32<T>, prelude::u8x64<T>]
 pub fn prelude::f32x4<T>::from_array_t(T, [f32; 4]) -> Self [also: prelude::f32x4<T>]
 pub fn prelude::f32x4<T>::from_repr_t(T, <T as simd::backends::F32x4Backend>::Repr) -> Self [also: prelude::f32x4<T>]
@@ -260,6 +276,11 @@ pub fn prelude::f32x4<T>::to_f16_bits_with<const CFG: u32>(self) -> [u16; 4] [al
 pub fn prelude::f32x4<T>::to_u16(self) -> [u16; 4] [also: prelude::f32x4<T>]
 pub fn prelude::f32x4<T>::to_u16_with<const CFG: u32>(self) -> [u16; 4] [also: prelude::f32x4<T>]
 pub fn prelude::f32x4<T>::to_u8_with<const CFG: u32>(self) -> [u8; 4] [also: prelude::f32x4<T>]
+pub fn prelude::f32x4<T>::try_from_f16_with_t<const CFG: u32>(T, &[u16; 4]) -> core::result::Result<Self, numerics::NumericsError> [also: prelude::f32x4<T>]
+pub fn prelude::f32x4<T>::try_to_bf16_with<const CFG: u32>(self) -> core::result::Result<[u16; 4], numerics::NumericsError> [also: prelude::f32x4<T>]
+pub fn prelude::f32x4<T>::try_to_f16_bits_with<const CFG: u32>(self) -> core::result::Result<[u16; 4], numerics::NumericsError> [also: prelude::f32x4<T>]
+pub fn prelude::f32x4<T>::try_to_u16_with<const CFG: u32>(self) -> core::result::Result<[u16; 4], numerics::NumericsError> [also: prelude::f32x4<T>]
+pub fn prelude::f32x4<T>::try_to_u8_with<const CFG: u32>(self) -> core::result::Result<[u8; 4], numerics::NumericsError> [also: prelude::f32x4<T>]
 pub fn prelude::f32x4<T>::with_rgba_alpha(self, Self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
 pub fn prelude::f32x4<T>::cast_slice(T, &[f32]) -> core::option::Option<&[Self]> [also: prelude::f32x4<T>, prelude::f32x8<T>]
 pub fn prelude::f32x4<T>::cast_slice_mut(T, &mut [f32]) -> core::option::Option<&mut [Self]> [also: prelude::f32x4<T>, prelude::f32x8<T>]
@@ -274,6 +295,8 @@ pub fn prelude::f32x4<T>::recip_with<const CFG: u32>(self) -> Self [also: prelud
 pub fn prelude::f32x4<T>::reduce_max_with<const CFG: u32>(self) -> f32 [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
 pub fn prelude::f32x4<T>::reduce_min_with<const CFG: u32>(self) -> f32 [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
 pub fn prelude::f32x4<T>::rsqrt_with<const CFG: u32>(self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>, prelude::f64x2<T>, prelude::f64x4<T>, prelude::f64x8<T>]
+pub fn prelude::f32x4<T>::try_recip_with<const CFG: u32>(self) -> core::result::Result<Self, numerics::NumericsError> [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>, prelude::f64x2<T>, prelude::f64x4<T>, prelude::f64x8<T>]
+pub fn prelude::f32x4<T>::try_rsqrt_with<const CFG: u32>(self) -> core::result::Result<Self, numerics::NumericsError> [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>, prelude::f64x2<T>, prelude::f64x4<T>, prelude::f64x8<T>]
 pub fn prelude::f32x4<T>::deinterleave_3ch([Self; 3]) -> [Self; 3] [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
 pub fn prelude::f32x4<T>::interleave_3ch([Self; 3]) -> [Self; 3] [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
 pub fn prelude::f32x4<T>::load_rgb_u16_t(T, &[u16; 12]) -> (Self, Self, Self) [also: prelude::f32x4<T>]
@@ -344,6 +367,7 @@ pub fn prelude::f32x4<T>::from_i32x4(T, prelude::i32x4<T>) -> Self [also: prelud
 pub fn prelude::f32x4<T>::to_f16(self) -> prelude::i32x4<T> [also: prelude::f32x4<T>]
 pub fn prelude::f32x4<T>::to_i32_fast(self) -> prelude::i32x4<T> [also: prelude::f32x4<T>]
 pub fn prelude::f32x4<T>::to_i32_with<const CFG: u32>(self) -> prelude::i32x4<T> [also: prelude::f32x4<T>]
+pub fn prelude::f32x4<T>::try_to_i32_with<const CFG: u32>(self) -> core::result::Result<prelude::i32x4<T>, numerics::NumericsError> [also: prelude::f32x4<T>]
 pub fn [f32; 4]::from(prelude::f32x4<T>) -> [f32; 4] [also: (root)]
 #[repr(C)] pub struct prelude::f32x8<T: simd::backends::F32x8Backend>(_, _) [also: simd::generic]
 pub const fn prelude::f32x8<archmage::tokens::ScalarToken>::implementation_name() -> &'static str [also: (root)]
@@ -356,6 +380,7 @@ pub fn prelude::f32x8<T>::split(self) -> (prelude::f32x4<T>, prelude::f32x4<T>) 
 pub fn prelude::f32x8<T>::from_u32_t(T, prelude::u32x8<T>) -> Self [also: prelude::f32x8<T>]
 pub fn prelude::f32x8<T>::to_u32(self) -> prelude::u32x8<T> [also: prelude::f32x8<T>]
 pub fn prelude::f32x8<T>::to_u32_with<const CFG: u32>(self) -> prelude::u32x8<T> [also: prelude::f32x8<T>]
+pub fn prelude::f32x8<T>::try_to_u32_with<const CFG: u32>(self) -> core::result::Result<prelude::u32x8<T>, numerics::NumericsError> [also: prelude::f32x8<T>]
 pub fn prelude::f32x8<T>::from_array_t(T, [f32; 8]) -> Self [also: prelude::f32x8<T>]
 pub fn prelude::f32x8<T>::from_repr_t(T, <T as simd::backends::F32x8Backend>::Repr) -> Self [also: prelude::f32x8<T>]
 pub fn prelude::f32x8<T>::into_repr(self) -> <T as simd::backends::F32x8Backend>::Repr [also: prelude::f32x8<T>]
@@ -393,6 +418,11 @@ pub fn prelude::f32x8<T>::to_f16_bits_with<const CFG: u32>(self) -> [u16; 8] [al
 pub fn prelude::f32x8<T>::to_u16(self) -> [u16; 8] [also: prelude::f32x8<T>]
 pub fn prelude::f32x8<T>::to_u16_with<const CFG: u32>(self) -> [u16; 8] [also: prelude::f32x8<T>]
 pub fn prelude::f32x8<T>::to_u8_with<const CFG: u32>(self) -> [u8; 8] [also: prelude::f32x8<T>]
+pub fn prelude::f32x8<T>::try_from_f16_with_t<const CFG: u32>(T, &[u16; 8]) -> core::result::Result<Self, numerics::NumericsError> [also: prelude::f32x8<T>]
+pub fn prelude::f32x8<T>::try_to_bf16_with<const CFG: u32>(self) -> core::result::Result<[u16; 8], numerics::NumericsError> [also: prelude::f32x8<T>]
+pub fn prelude::f32x8<T>::try_to_f16_bits_with<const CFG: u32>(self) -> core::result::Result<[u16; 8], numerics::NumericsError> [also: prelude::f32x8<T>]
+pub fn prelude::f32x8<T>::try_to_u16_with<const CFG: u32>(self) -> core::result::Result<[u16; 8], numerics::NumericsError> [also: prelude::f32x8<T>]
+pub fn prelude::f32x8<T>::try_to_u8_with<const CFG: u32>(self) -> core::result::Result<[u8; 8], numerics::NumericsError> [also: prelude::f32x8<T>]
 pub fn prelude::f32x8<T>::from_bytes(T, &[u8; 32]) -> Self [also: prelude::f32x8<T>, prelude::f64x4<T>, prelude::i32x8<T>]
 pub fn prelude::f32x8<T>::from_bytes_owned(T, [u8; 32]) -> Self [also: prelude::f32x8<T>, prelude::f64x4<T>, prelude::i32x8<T>]
 pub fn prelude::f32x8<T>::from_u8(T, &[u8; 8]) -> Self [also: prelude::f32x8<T>]
@@ -427,6 +457,7 @@ pub fn prelude::f32x8<T>::from_i32_bitcast(T, prelude::i32x8<T>) -> Self [also: 
 pub fn prelude::f32x8<T>::from_i32x8(T, prelude::i32x8<T>) -> Self [also: prelude::f32x8<T>]
 pub fn prelude::f32x8<T>::to_i32_fast(self) -> prelude::i32x8<T> [also: prelude::f32x8<T>]
 pub fn prelude::f32x8<T>::to_i32_with<const CFG: u32>(self) -> prelude::i32x8<T> [also: prelude::f32x8<T>]
+pub fn prelude::f32x8<T>::try_to_i32_with<const CFG: u32>(self) -> core::result::Result<prelude::i32x8<T>, numerics::NumericsError> [also: prelude::f32x8<T>]
 pub fn [f32; 8]::from(prelude::f32x8<T>) -> [f32; 8] [also: (root)]
 #[repr(C)] pub struct prelude::f64x2<T: simd::backends::F64x2Backend>(_, _) [also: simd::generic]
 pub const fn prelude::f64x2<archmage::tokens::ScalarToken>::implementation_name() -> &'static str [also: (root)]
@@ -1195,6 +1226,17 @@ pub fn scalar::to_u32_with<const CFG: u32>(f32) -> u32
 pub fn scalar::to_u8_with<const CFG: u32>(f32) -> u8
 pub fn scalar::trunc_f32(f32) -> f32
 pub fn scalar::trunc_f64(f64) -> f64
+pub fn scalar::try_from_f16_with<const CFG: u32>(u16) -> core::result::Result<f32, numerics::NumericsError>
+pub fn scalar::try_recip_f32_with<const CFG: u32>(f32) -> core::result::Result<f32, numerics::NumericsError>
+pub fn scalar::try_recip_f64_with<const CFG: u32>(f64) -> core::result::Result<f64, numerics::NumericsError>
+pub fn scalar::try_rsqrt_f32_with<const CFG: u32>(f32) -> core::result::Result<f32, numerics::NumericsError>
+pub fn scalar::try_rsqrt_f64_with<const CFG: u32>(f64) -> core::result::Result<f64, numerics::NumericsError>
+pub fn scalar::try_to_bf16_with<const CFG: u32>(f32) -> core::result::Result<u16, numerics::NumericsError>
+pub fn scalar::try_to_f16_bits_with<const CFG: u32>(f32) -> core::result::Result<u16, numerics::NumericsError>
+pub fn scalar::try_to_i32_with<const CFG: u32>(f32) -> core::result::Result<i32, numerics::NumericsError>
+pub fn scalar::try_to_u16_with<const CFG: u32>(f32) -> core::result::Result<u16, numerics::NumericsError>
+pub fn scalar::try_to_u32_with<const CFG: u32>(f32) -> core::result::Result<u32, numerics::NumericsError>
+pub fn scalar::try_to_u8_with<const CFG: u32>(f32) -> core::result::Result<u8, numerics::NumericsError>
 pub mod simd
 pub mod simd::backends
 pub trait simd::backends::F32x16Backend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + F32x16Internal<InternalRepr = <Self as simd::backends::F32x16Backend>::Repr> + scalar::F32ScalarBackend + core::marker::Copy + 'static
@@ -2778,7 +2820,7 @@ pub fn WidthDispatch::u8x64_load(self, &[u8; 64]) -> Self::U8x64
 pub fn WidthDispatch::u8x64_splat(self, u8) -> Self::U8x64
 pub fn WidthDispatch::u8x64_zero(self) -> Self::U8x64
 
-## trait impls (84 types)
+## trait impls (86 types)
 
 [f32; 16]: From<prelude::f32x16<T>>
 [f32; 4]: From<prelude::f32x4<T>>
@@ -2821,6 +2863,8 @@ numerics::HalfSubnormals: Clone, Copy, Debug, Default, Eq, PartialEq
 numerics::IntBounds: Clone, Copy, Debug, Default, Eq, PartialEq
 numerics::IntConvert: Clone, Copy, Debug, Default, Eq, PartialEq
 numerics::IntRounding: Clone, Copy, Debug, Default, Eq, PartialEq
+numerics::NumericsError: Clone, Copy, Debug, Display, Eq, Error, PartialEq
+numerics::NumericsErrorKind: Clone, Copy, Debug, Eq, PartialEq
 numerics::RecipDomain: Clone, Copy, Debug, Default, Eq, PartialEq
 numerics::RecipOptions: Clone, Copy, Debug, Default, Eq, PartialEq
 numerics::RecipPrecision: Clone, Copy, Debug, Default, Eq, PartialEq
@@ -2987,7 +3031,7 @@ impl<T: core::marker::Copy + simd::backends::U8x64Backend> core::marker::Copy fo
 
 ## auto traits
 
-22 types implement all of: Freeze, RefUnwindSafe, Send, Sync, Unpin, UnwindSafe
+24 types implement all of: Freeze, RefUnwindSafe, Send, Sync, Unpin, UnwindSafe
 prelude::f32x16<T>: !Freeze !RefUnwindSafe !Send !Sync !Unpin !UnwindSafe
 prelude::f32x4<T>: !Freeze !RefUnwindSafe !Send !Sync !Unpin !UnwindSafe
 prelude::f32x8<T>: !Freeze !RefUnwindSafe !Send !Sync !Unpin !UnwindSafe

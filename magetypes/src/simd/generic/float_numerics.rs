@@ -1,4 +1,6 @@
-use crate::numerics::{ExtremaDomain, ExtremaOptions, RecipOptions, RecipPrecision};
+use crate::numerics::{
+    ExtremaDomain, ExtremaOptions, NumericsError, NumericsErrorKind, RecipOptions, RecipPrecision,
+};
 
 macro_rules! float_numerics {
     ($vector:ident, $backend:ident, $elem:ty, $min:ident, $max:ident) => {
@@ -27,6 +29,59 @@ macro_rules! float_numerics {
                 Self(T::mul_neg_add_fused(self.1, self.0, b.0, c.0), self.1)
             }
 
+            #[inline(always)]
+            fn recip_domain_mask(self) -> Self {
+                let magnitude = self.abs();
+                magnitude.simd_ge(Self::splat_t(self.1, <$elem>::MIN_POSITIVE))
+                    & magnitude.simd_lt(Self::splat_t(self.1, 1.0 / <$elem>::MIN_POSITIVE))
+            }
+
+            #[inline(always)]
+            fn rsqrt_domain_mask(self) -> Self {
+                self.simd_ge(Self::splat_t(self.1, <$elem>::MIN_POSITIVE))
+                    & self.simd_le(Self::splat_t(self.1, <$elem>::MAX))
+            }
+
+            #[inline(always)]
+            fn mask_all_true(self) -> bool {
+                // Comparisons produce all-ones or zero lanes. Map those to
+                // 1.0 or 0.0 before the horizontal reduction to avoid NaNs.
+                (self & Self::splat_t(self.1, 1.0)).reduce_min() == 1.0
+            }
+
+            // Keep the mask in registers until entering the error branch.
+            // An out-of-line vector argument forces a stack slot on x86.
+            #[inline(always)]
+            fn recip_domain_error(self) -> NumericsError {
+                let lane_mask = self
+                    .to_array()
+                    .into_iter()
+                    .enumerate()
+                    .fold(0, |mask, (i, lane)| {
+                        mask | (u16::from(lane.to_bits() == 0) << i)
+                    });
+                NumericsError {
+                    kind: NumericsErrorKind::RecipDomain,
+                    lane_mask,
+                }
+            }
+
+            /// Evaluate the reciprocal, reporting every lane outside the configured domain.
+            ///
+            /// Approximate normal-domain policies require
+            /// `MIN_POSITIVE <= abs(x) < 1 / MIN_POSITIVE`.
+            /// Exact and all-floats policies accept every input.
+            #[inline(always)]
+            pub fn try_recip_with<const CFG: u32>(self) -> Result<Self, NumericsError> {
+                if const { RecipOptions::decode(CFG).checks_normal_domain() } {
+                    let valid = self.recip_domain_mask();
+                    if !valid.mask_all_true() {
+                        return Err(valid.recip_domain_error());
+                    }
+                }
+                Ok(self.recip_with::<CFG>())
+            }
+
             /// Lane-wise reciprocal with a compile-time domain and precision.
             ///
             /// Configure with [`RecipOptions`](crate::numerics::RecipOptions).
@@ -41,7 +96,7 @@ macro_rules! float_numerics {
                 }
 
                 let seed = self.rcp_approx();
-                let mut result = if matches!(precision, RecipPrecision::Approx) {
+                let result = if matches!(precision, RecipPrecision::Approx) {
                     seed
                 } else {
                     let residual = self.mul_neg_add_relaxed(seed, one);
@@ -53,32 +108,60 @@ macro_rules! float_numerics {
                         refined
                     }
                 };
+                let bias = |r: Self| {
+                    r.abs()
+                        .mul_add_relaxed(Self::splat_t(self.1, 2.0 * <$elem>::EPSILON), r)
+                };
                 if opts.admits_all() {
                     // Estimates accept normal inputs below 1 / MIN_POSITIVE.
                     // Use division on IEEE rails, subnormals, and ±(1 / MIN_POSITIVE).
-                    let valid = self
-                        .abs()
-                        .simd_ge(Self::splat_t(self.1, <$elem>::MIN_POSITIVE))
-                        & self
-                            .abs()
-                            .simd_lt(Self::splat_t(self.1, 1.0 / <$elem>::MIN_POSITIVE));
-                    result = Self::blend(valid, result, one / self);
-                }
-                if matches!(precision, RecipPrecision::Nr1Ceil) {
-                    let biased = result
-                        .abs()
-                        .mul_add_relaxed(Self::splat_t(self.1, 2.0 * <$elem>::EPSILON), result);
-                    result = if opts.admits_all() {
+                    let valid = self.recip_domain_mask();
+                    if matches!(precision, RecipPrecision::Nr1Ceil) {
                         let finite_nz = result.abs().simd_gt(Self::splat_t(self.1, 0.0))
                             & result
                                 .abs()
                                 .simd_lt(Self::splat_t(self.1, <$elem>::INFINITY));
-                        Self::blend(finite_nz, biased, result)
-                    } else {
-                        biased
-                    };
+                        let estimate = Self::blend(finite_nz, bias(result), result);
+                        if valid.mask_all_true() {
+                            return estimate;
+                        }
+
+                        // A relative bias can round to zero for a subnormal
+                        // reciprocal. Advance division results by one step.
+                        let exact = Self::from_array_t(
+                            self.1,
+                            (one / self).to_array().map(|lane| {
+                                if lane.is_finite() && lane != 0.0 {
+                                    lane.next_up()
+                                } else {
+                                    lane
+                                }
+                            }),
+                        );
+                        return Self::blend(valid, estimate, exact);
+                    }
+                    return Self::blend(valid, result, one / self);
                 }
-                result
+                if matches!(precision, RecipPrecision::Nr1Ceil) {
+                    bias(result)
+                } else {
+                    result
+                }
+            }
+
+            /// Evaluate reciprocal square root, reporting every lane outside the configured domain.
+            ///
+            /// Approximate normal-domain policies require `MIN_POSITIVE <= x <= MAX`.
+            /// Exact and all-floats policies accept every input.
+            #[inline(always)]
+            pub fn try_rsqrt_with<const CFG: u32>(self) -> Result<Self, NumericsError> {
+                if const { RecipOptions::decode(CFG).checks_normal_domain() } {
+                    let valid = self.rsqrt_domain_mask();
+                    if !valid.mask_all_true() {
+                        return Err(valid.recip_domain_error());
+                    }
+                }
+                Ok(self.rsqrt_with::<CFG>())
             }
 
             /// Lane-wise reciprocal square root with a compile-time policy.
@@ -111,8 +194,7 @@ macro_rules! float_numerics {
                     }
                 };
                 if opts.admits_all() {
-                    let valid = self.simd_ge(Self::splat_t(self.1, <$elem>::MIN_POSITIVE))
-                        & self.simd_le(Self::splat_t(self.1, <$elem>::MAX));
+                    let valid = self.rsqrt_domain_mask();
                     Self::blend(valid, result, one / self.sqrt())
                 } else {
                     result

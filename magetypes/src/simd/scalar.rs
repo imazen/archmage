@@ -117,16 +117,17 @@ impl f32x1 {
         i32x1(self.0 as i32)
     }
 
-    /// Element-wise clamp (matches [`f32::clamp`]).
+    /// Element-wise clamp using `max_fast(lo).min_fast(hi)`, matching the
+    /// scalar SIMD backend. Reversed or NaN bounds do not panic.
     #[inline(always)]
     pub fn clamp(self, lo: Self, hi: Self) -> Self {
-        Self(self.0.clamp(lo.0, hi.0))
+        self.max_fast(lo).min_fast(hi)
     }
 
     /// Element-wise square root.
     #[inline(always)]
     pub fn sqrt(self) -> Self {
-        Self(crate::nostd_math::sqrtf(self.0))
+        Self(crate::scalar_sqrt::sqrtf(self.0))
     }
 
     /// Element-wise absolute value.
@@ -373,7 +374,7 @@ impl f64x1 {
     /// Element-wise square root.
     #[inline(always)]
     pub fn sqrt(self) -> Self {
-        Self(crate::nostd_math::sqrt(self.0))
+        Self(crate::scalar_sqrt::sqrt(self.0))
     }
 
     /// Element-wise absolute value.

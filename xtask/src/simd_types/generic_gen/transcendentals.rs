@@ -7,7 +7,6 @@ use crate::simd_types::types::{SimdType, SimdWidth};
 pub(super) fn gen_transcendentals(
     float_type: &str,
     int_type: &str,
-    lanes: usize,
     float_backend: &str,
     convert_trait: &str,
     int_backend: &str,
@@ -510,6 +509,20 @@ pub(super) fn gen_transcendentals(
                 self.pow_midp(n)
             }}
 
+            #[inline(always)]
+            fn cbrt_seed(self) -> Self {{
+                let bits = self.bitcast_to_i32();
+                let hi = bits.shr_logical_const::<16>();
+                let lo = bits & splat_i32::<T>(self.1, 0xffff);
+                // The sign bit is clear, so hi + lo <= 98_302. Since 65536
+                // is 3 * 21845 + 1, divide the residual (hi + lo) by 3.
+                // 43691 = ceil(2^17 / 3). The product fits in u32 and its
+                // scaled error is below 1/3, so flooring is exact.
+                let residual = ((hi + lo) * 43_691).shr_logical_const::<17>();
+                (hi * 21_845 + residual + splat_i32::<T>(self.1, 0x2a50_8c2d))
+                    .bitcast_to_f32()
+            }}
+
             /// Prefer [`magemath`](https://docs.rs/magemath/latest/magemath/) (`SimdMath` / `Cbrtf`) when configurable domains, bit-exact portability, or scalar tail helpers are needed.
             ///
             /// Low-precision cube root (~15 bits, ~4.5 decimal digits).
@@ -528,16 +541,11 @@ pub(super) fn gen_transcendentals(
             /// `cbrt_midp_precise` for those.
             #[inline(always)]
             pub fn cbrt_lowp(self) -> Self {{
-                const MAGIC: u32 = 0x2a50_8c2d;
-
                 let sign_mask = splat_f32::<T>(self.1,-0.0);
                 let sign = self & sign_mask;
                 let abs_x = self.abs();
 
-                let abs_arr = abs_x.to_array();
-                let approx_arr: [f32; {lanes}] =
-                    core::array::from_fn(|i| f32::from_bits((abs_arr[i].to_bits() / 3) + MAGIC));
-                let mut y = {float_type}::from_repr_unchecked(self.1, <T as {float_backend}>::from_array(self.1, approx_arr));
+                let mut y = abs_x.cbrt_seed();
 
                 // Halley iteration: y *= (y³ + 2x) / (2y³ + x)
                 // y³ + 2x reaches 3x, so this overflows above f32::MAX / 3.
@@ -571,16 +579,11 @@ pub(super) fn gen_transcendentals(
             /// `cbrt_midp_precise` for those.
             #[inline(always)]
             pub fn cbrt_midp(self) -> Self {{
-                const MAGIC: u32 = 0x2a50_8c2d;
-
                 let sign_mask = splat_f32::<T>(self.1,-0.0);
                 let sign = self & sign_mask;
                 let abs_x = self.abs();
 
-                let abs_arr = abs_x.to_array();
-                let approx_arr: [f32; {lanes}] =
-                    core::array::from_fn(|i| f32::from_bits((abs_arr[i].to_bits() / 3) + MAGIC));
-                let mut y = {float_type}::from_repr_unchecked(self.1, <T as {float_backend}>::from_array(self.1, approx_arr));
+                let mut y = abs_x.cbrt_seed();
 
                 // 2 Halley iterations: y *= (y³ + 2x) / (2y³ + x)
                 // y³ + 2x reaches 3x, so this overflows above f32::MAX / 3;

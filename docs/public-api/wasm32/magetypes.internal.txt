@@ -12,17 +12,17 @@
 #   pub modules                                 2
 #   pub types (struct/enum/trait/alias)         1
 #   free functions                             29
-#   inherent methods                           12
-#   trait roster entries (type × trait)        26
+#   inherent methods                           14
+#   trait roster entries (type × trait)        28
 #
 # per-module pub lines:
 #   (root)                            2
 #   bypass_adversarial                1
 #   nostd_math                       21
-#   numerics                         12
+#   numerics                         14
 #   simd                              8
 
-## items (37 lines)
+## items (39 lines)
 
 pub fn nostd_math::cbrt_lowp_f32(f32) -> f32
 pub fn nostd_math::cbrt_midp_f32(f32) -> f32
@@ -54,6 +54,8 @@ pub fn numerics::HalfSubnormals::assert_fields_are_eq(&self)
 pub fn numerics::IntBounds::assert_fields_are_eq(&self)
 pub fn numerics::IntConvert::assert_fields_are_eq(&self)
 pub fn numerics::IntRounding::assert_fields_are_eq(&self)
+pub fn numerics::NumericsError::assert_fields_are_eq(&self)
+pub fn numerics::NumericsErrorKind::assert_fields_are_eq(&self)
 pub fn numerics::RecipDomain::assert_fields_are_eq(&self)
 pub fn numerics::RecipOptions::assert_fields_are_eq(&self)
 pub fn numerics::RecipPrecision::assert_fields_are_eq(&self)
@@ -62,7 +64,7 @@ pub mod bypass_adversarial
 pub mod nostd_math
 pub struct bypass_adversarial::BypassAdversarialProofs
 
-## trait impls (23 types)
+## trait impls (25 types)
 
 bypass_adversarial::BypassAdversarialProofs: Clone, Copy, Debug, TrivialClone
 numerics::ExtremaDomain: TrivialClone
@@ -74,6 +76,8 @@ numerics::HalfSubnormals: TrivialClone
 numerics::IntBounds: TrivialClone
 numerics::IntConvert: TrivialClone
 numerics::IntRounding: TrivialClone
+numerics::NumericsError: TrivialClone
+numerics::NumericsErrorKind: TrivialClone
 numerics::RecipDomain: TrivialClone
 numerics::RecipOptions: TrivialClone
 numerics::RecipPrecision: TrivialClone
