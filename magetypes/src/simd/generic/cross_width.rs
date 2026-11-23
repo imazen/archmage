@@ -118,7 +118,7 @@ pub trait F32x8FromHalves:
 // register state with no aliasing concerns.
 #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl F32x8FromHalves for archmage::X64V3Token {
-    #[archmage::arcane(suppress_const_test, _self = archmage::X64V3Token)]
+    #[archmage::attune(wrap, suppress_const_test, _self = archmage::X64V3Token)]
     fn from_halves(
         self,
         lo: core::arch::x86_64::__m128,
@@ -132,13 +132,13 @@ impl F32x8FromHalves for archmage::X64V3Token {
             1,
         )
     }
-    #[archmage::arcane(suppress_const_test, _self = archmage::X64V3Token)]
+    #[archmage::attune(wrap, suppress_const_test, _self = archmage::X64V3Token)]
     fn low(self, wide: core::arch::x86_64::__m256) -> core::arch::x86_64::__m128 {
         // SAFETY: X64V3Token proves AVX. _mm256_castps256_ps128 is a free
         // truncation (no instruction in well-optimized output).
         core::arch::x86_64::_mm256_castps256_ps128(wide)
     }
-    #[archmage::arcane(suppress_const_test, _self = archmage::X64V3Token)]
+    #[archmage::attune(wrap, suppress_const_test, _self = archmage::X64V3Token)]
     fn high(self, wide: core::arch::x86_64::__m256) -> core::arch::x86_64::__m128 {
         // SAFETY: X64V3Token proves AVX. _mm256_extractf128_ps with imm=1
         // returns the high lane; intrinsic is pure.
@@ -400,7 +400,7 @@ impl F32x16FromHalves for archmage::X64V3Token {
 // lane.
 #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
 impl F32x16FromHalves for archmage::X64V4Token {
-    #[archmage::arcane(suppress_const_test, _self = archmage::X64V4Token)]
+    #[archmage::attune(wrap, suppress_const_test, _self = archmage::X64V4Token)]
     fn from_halves(
         self,
         lo: core::arch::x86_64::__m256,
@@ -413,12 +413,12 @@ impl F32x16FromHalves for archmage::X64V4Token {
             1,
         )
     }
-    #[archmage::arcane(suppress_const_test, _self = archmage::X64V4Token)]
+    #[archmage::attune(wrap, suppress_const_test, _self = archmage::X64V4Token)]
     fn low(self, wide: core::arch::x86_64::__m512) -> core::arch::x86_64::__m256 {
         // SAFETY: V4 proves AVX-512. _mm512_castps512_ps256 is a free truncation.
         core::arch::x86_64::_mm512_castps512_ps256(wide)
     }
-    #[archmage::arcane(suppress_const_test, _self = archmage::X64V4Token)]
+    #[archmage::attune(wrap, suppress_const_test, _self = archmage::X64V4Token)]
     fn high(self, wide: core::arch::x86_64::__m512) -> core::arch::x86_64::__m256 {
         // SAFETY: V4 proves AVX-512DQ. _mm512_extractf32x8_ps requires DQ.
         core::arch::x86_64::_mm512_extractf32x8_ps(wide, 1)

@@ -303,47 +303,47 @@ impl F64ScalarInternal for archmage::ScalarToken {
 mod x86_hw {
     use core::arch::x86_64::*;
 
-    #[archmage::arcane]
+    #[archmage::attune(wrap)]
     pub(super) fn min_ss(_token: archmage::X64V3Token, a: f32, b: f32) -> f32 {
         _mm_cvtss_f32(_mm_min_ss(_mm_set_ss(a), _mm_set_ss(b)))
     }
 
-    #[archmage::arcane]
+    #[archmage::attune(wrap)]
     pub(super) fn max_ss(_token: archmage::X64V3Token, a: f32, b: f32) -> f32 {
         _mm_cvtss_f32(_mm_max_ss(_mm_set_ss(a), _mm_set_ss(b)))
     }
 
-    #[archmage::arcane]
+    #[archmage::attune(wrap)]
     pub(super) fn fmadd_ss(_token: archmage::X64V3Token, a: f32, b: f32, c: f32) -> f32 {
         _mm_cvtss_f32(_mm_fmadd_ss(_mm_set_ss(a), _mm_set_ss(b), _mm_set_ss(c)))
     }
 
-    #[archmage::arcane]
+    #[archmage::attune(wrap)]
     pub(super) fn fmsub_ss(_token: archmage::X64V3Token, a: f32, b: f32, c: f32) -> f32 {
         _mm_cvtss_f32(_mm_fmsub_ss(_mm_set_ss(a), _mm_set_ss(b), _mm_set_ss(c)))
     }
 
-    #[archmage::arcane]
+    #[archmage::attune(wrap)]
     pub(super) fn cvttss_si32(_token: archmage::X64V3Token, a: f32) -> i32 {
         _mm_cvttss_si32(_mm_set_ss(a))
     }
 
-    #[archmage::arcane]
+    #[archmage::attune(wrap)]
     pub(super) fn min_sd(_token: archmage::X64V3Token, a: f64, b: f64) -> f64 {
         _mm_cvtsd_f64(_mm_min_sd(_mm_set_sd(a), _mm_set_sd(b)))
     }
 
-    #[archmage::arcane]
+    #[archmage::attune(wrap)]
     pub(super) fn max_sd(_token: archmage::X64V3Token, a: f64, b: f64) -> f64 {
         _mm_cvtsd_f64(_mm_max_sd(_mm_set_sd(a), _mm_set_sd(b)))
     }
 
-    #[archmage::arcane]
+    #[archmage::attune(wrap)]
     pub(super) fn fmadd_sd(_token: archmage::X64V3Token, a: f64, b: f64, c: f64) -> f64 {
         _mm_cvtsd_f64(_mm_fmadd_sd(_mm_set_sd(a), _mm_set_sd(b), _mm_set_sd(c)))
     }
 
-    #[archmage::arcane]
+    #[archmage::attune(wrap)]
     pub(super) fn fmsub_sd(_token: archmage::X64V3Token, a: f64, b: f64, c: f64) -> f64 {
         _mm_cvtsd_f64(_mm_fmsub_sd(_mm_set_sd(a), _mm_set_sd(b), _mm_set_sd(c)))
     }
@@ -486,32 +486,32 @@ impl_x86_v3_scalar_delegate!(
 mod arm_hw {
     use core::arch::aarch64::*;
 
-    #[archmage::arcane]
+    #[archmage::attune(wrap)]
     pub(super) fn minnm_f32(_token: archmage::NeonToken, a: f32, b: f32) -> f32 {
         vget_lane_f32::<0>(vminnm_f32(vdup_n_f32(a), vdup_n_f32(b)))
     }
 
-    #[archmage::arcane]
+    #[archmage::attune(wrap)]
     pub(super) fn maxnm_f32(_token: archmage::NeonToken, a: f32, b: f32) -> f32 {
         vget_lane_f32::<0>(vmaxnm_f32(vdup_n_f32(a), vdup_n_f32(b)))
     }
 
-    #[archmage::arcane]
+    #[archmage::attune(wrap)]
     pub(super) fn fma_f32(_token: archmage::NeonToken, a: f32, b: f32, c: f32) -> f32 {
         vget_lane_f32::<0>(vfma_f32(vdup_n_f32(c), vdup_n_f32(a), vdup_n_f32(b)))
     }
 
-    #[archmage::arcane]
+    #[archmage::attune(wrap)]
     pub(super) fn minnm_f64(_token: archmage::NeonToken, a: f64, b: f64) -> f64 {
         vget_lane_f64::<0>(vminnm_f64(vdup_n_f64(a), vdup_n_f64(b)))
     }
 
-    #[archmage::arcane]
+    #[archmage::attune(wrap)]
     pub(super) fn maxnm_f64(_token: archmage::NeonToken, a: f64, b: f64) -> f64 {
         vget_lane_f64::<0>(vmaxnm_f64(vdup_n_f64(a), vdup_n_f64(b)))
     }
 
-    #[archmage::arcane]
+    #[archmage::attune(wrap)]
     pub(super) fn fma_f64(_token: archmage::NeonToken, a: f64, b: f64, c: f64) -> f64 {
         vget_lane_f64::<0>(vfma_f64(vdup_n_f64(c), vdup_n_f64(a), vdup_n_f64(b)))
     }

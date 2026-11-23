@@ -648,7 +648,7 @@ pub(crate) mod gather {
         len.min(1 << 31) as u32 as i32
     }
 
-    #[archmage::arcane(import_intrinsics)]
+    #[archmage::attune(wrap, import_intrinsics)]
     pub(crate) fn gather_wrapping_epi32<E: Pod, const N: usize>(
         _token: X64V4Token,
         table: &[E; N],
@@ -664,7 +664,7 @@ pub(crate) mod gather {
         unsafe { _mm512_i32gather_epi32::<4>(off, table.as_ptr().cast()) }
     }
 
-    #[archmage::arcane(import_intrinsics)]
+    #[archmage::attune(wrap, import_intrinsics)]
     pub(crate) fn gather_wrapping_ps<const N: usize>(
         _token: X64V4Token,
         table: &[f32; N],
@@ -679,7 +679,7 @@ pub(crate) mod gather {
         unsafe { _mm512_i32gather_ps::<4>(off, table.as_ptr()) }
     }
 
-    #[archmage::arcane(import_intrinsics)]
+    #[archmage::attune(wrap, import_intrinsics)]
     pub(crate) fn gather_or_epi32<E: Pod>(
         _token: X64V4Token,
         table: &[E],
@@ -695,7 +695,7 @@ pub(crate) mod gather {
         unsafe { _mm512_mask_i32gather_epi32::<4>(or, live, idx, table.as_ptr().cast()) }
     }
 
-    #[archmage::arcane(import_intrinsics)]
+    #[archmage::attune(wrap, import_intrinsics)]
     pub(crate) fn gather_or_ps(
         _token: X64V4Token,
         table: &[f32],
@@ -710,7 +710,7 @@ pub(crate) mod gather {
         unsafe { _mm512_mask_i32gather_ps::<4>(or, live, idx, table.as_ptr()) }
     }
 
-    #[archmage::arcane(import_intrinsics)]
+    #[archmage::attune(wrap, import_intrinsics)]
     pub(crate) fn scatter_select_epi32<E: Pod>(
         _token: X64V4Token,
         dst: &mut [E],
@@ -727,7 +727,7 @@ pub(crate) mod gather {
         unsafe { _mm512_mask_i32scatter_epi32::<4>(dst.as_mut_ptr().cast(), live, idx, v) }
     }
 
-    #[archmage::arcane(import_intrinsics)]
+    #[archmage::attune(wrap, import_intrinsics)]
     pub(crate) fn scatter_select_ps(
         _token: X64V4Token,
         dst: &mut [f32],

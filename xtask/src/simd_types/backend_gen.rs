@@ -1229,7 +1229,7 @@ fn impls_safety_contract(token_desc: &str) -> String {
         return indoc! {"
             //! # Safety (audit contract — checked backend boundaries)
             //!
-            //! `#[arcane]` checks value intrinsics against the receiver token's features.
+            //! `#[attune(wrap)]` checks value intrinsics against the receiver token's features.
             //! Whole-array loads/stores and bit casts use `crate::simd_storage` helpers,
             //! which require POD storage and enforce equal sizes at compile time.
             //! Token-bearing wrappers never implement the storage POD trait.
@@ -1239,8 +1239,8 @@ fn impls_safety_contract(token_desc: &str) -> String {
     indoc! {"
         //! # Safety (audit contract — checked backend boundaries)
         //!
-        //! `#[arcane]` checks value intrinsics against the receiver token's features.
-        //! SSE2-only arithmetic runs in `#[arcane]` regions for `X64V1Token`, the
+        //! `#[attune(wrap)]` checks value intrinsics against the receiver token's features.
+        //! SSE2-only arithmetic runs in `#[attune(wrap)]` regions for `X64V1Token`, the
         //! x86-64 baseline, so it inlines into callers without AVX.
         //! Whole-array loads/stores and bit casts use `crate::simd_storage` helpers,
         //! which require POD storage and enforce equal sizes at compile time.
@@ -1274,7 +1274,7 @@ fn generate_x86_v4_impls_file(w512_types: &[super::backend_gen_w512::W512Type]) 
         use core::arch::x86_64::*;
 
         #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
-        use archmage::{{arcane, X64V4Token, X64V4xToken}};
+        use archmage::{{attune, X64V4Token, X64V4xToken}};
 
         use crate::simd::backends::*;
 
@@ -1374,7 +1374,7 @@ fn generate_x86_impls(types: &[FloatVecType], token: &str, max_width: usize) -> 
         use core::arch::x86_64::*;
 
         #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
-        use archmage::{{arcane, {token}}};
+        use archmage::{{attune, {token}}};
 
         use crate::simd::backends::*;
 
@@ -2842,7 +2842,7 @@ fn generate_neon_impls(types: &[FloatVecType]) -> String {
         use core::arch::aarch64::*;
 
         #[cfg(target_arch = "aarch64")]
-        use archmage::{{arcane, NeonToken}};
+        use archmage::{{attune, NeonToken}};
 
         use crate::simd::backends::*;
 

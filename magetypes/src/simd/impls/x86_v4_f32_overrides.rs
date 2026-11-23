@@ -21,14 +21,14 @@ use crate::numerics::IntConvert;
 use core::arch::x86_64::{__m128, __m256};
 
 /// `f32x4::to_u8`: `max(x, 0)`, round-to-nearest-even `cvtps`, `vpmovusdb`.
-#[archmage::arcane(import_intrinsics)]
+#[archmage::attune(wrap, import_intrinsics)]
 pub(super) fn to_u8_bytes_x4_v4(_token: archmage::X64V4Token, a: __m128) -> [u8; 4] {
     let bytes = _mm_cvtusepi32_epi8(_mm_cvtps_epi32(_mm_max_ps(a, _mm_setzero_ps())));
     (_mm_cvtsi128_si32(bytes) as u32).to_ne_bytes()
 }
 
 /// `f32x8::to_u8`: the same sequence at 256 bits, narrowing to 8 bytes.
-#[archmage::arcane(import_intrinsics)]
+#[archmage::attune(wrap, import_intrinsics)]
 pub(super) fn to_u8_bytes_x8_v4(_token: archmage::X64V4Token, a: __m256) -> [u8; 8] {
     let bytes = _mm256_cvtusepi32_epi8(_mm256_cvtps_epi32(_mm256_max_ps(a, _mm256_setzero_ps())));
     (_mm_cvtsi128_si64(bytes) as u64).to_ne_bytes()
@@ -36,7 +36,7 @@ pub(super) fn to_u8_bytes_x8_v4(_token: archmage::X64V4Token, a: __m256) -> [u8;
 
 /// `f32x4::store_rgba_u8`: two planes per 256-bit register, so `max`,
 /// `cvtps` and `vpmovusdb` each cover two planes; one `pshufb` interleaves.
-#[archmage::arcane(import_intrinsics)]
+#[archmage::attune(wrap, import_intrinsics)]
 pub(super) fn store_rgba_u8_into_x4_v4(
     _token: archmage::X64V4Token,
     r: __m128,
@@ -58,7 +58,7 @@ pub(super) fn store_rgba_u8_into_x4_v4(
 
 /// `f32x4::store_rgb_u8`: pack R+G in one 256-bit `vpmovusdb` and B in one
 /// 128-bit `vpmovusdb`, interleave 12 RGB bytes with one `pshufb`, and write 8+4B.
-#[archmage::arcane(import_intrinsics)]
+#[archmage::attune(wrap, import_intrinsics)]
 pub(super) fn store_rgb_u8_into_x4_v4(
     _token: archmage::X64V4Token,
     r: __m128,
@@ -83,17 +83,17 @@ pub(super) fn store_rgb_u8_into_x4_v4(
 }
 
 // 0x04 and 0x05 preserve the sign of the selected operand.
-#[archmage::arcane(import_intrinsics)]
+#[archmage::attune(wrap, import_intrinsics)]
 pub(super) fn min_x4_v4(_token: archmage::X64V4Token, a: __m128, b: __m128) -> __m128 {
     _mm_range_ps::<0x04>(a, b)
 }
 
-#[archmage::arcane(import_intrinsics)]
+#[archmage::attune(wrap, import_intrinsics)]
 pub(super) fn max_x4_v4(_token: archmage::X64V4Token, a: __m128, b: __m128) -> __m128 {
     _mm_range_ps::<0x05>(a, b)
 }
 
-#[archmage::arcane(import_intrinsics)]
+#[archmage::attune(wrap, import_intrinsics)]
 pub(super) fn to_u16_lanes_x4_v4<const CFG: u32>(
     _token: archmage::X64V4Token,
     value: __m128,
@@ -113,7 +113,7 @@ pub(super) fn to_u16_lanes_x4_v4<const CFG: u32>(
     crate::simd_storage::cast(_mm_cvtsi128_si64(packed) as u64)
 }
 
-#[archmage::arcane(import_intrinsics)]
+#[archmage::attune(wrap, import_intrinsics)]
 pub(super) fn to_u8_lanes_x4_v4<const CFG: u32>(
     _token: archmage::X64V4Token,
     value: __m128,
@@ -133,7 +133,7 @@ pub(super) fn to_u8_lanes_x4_v4<const CFG: u32>(
     (_mm_cvtsi128_si32(packed) as u32).to_ne_bytes()
 }
 
-#[archmage::arcane(import_intrinsics)]
+#[archmage::attune(wrap, import_intrinsics)]
 pub(super) fn to_u32_lanes_x4_v4<const CFG: u32>(
     _token: archmage::X64V4Token,
     value: __m128,
@@ -154,7 +154,7 @@ pub(super) fn to_u32_lanes_x4_v4<const CFG: u32>(
 
 // stdarch (MSRV 1.89) exposes only `_mm512_cvtepu32_ps` (`simd_cast`); under
 // AVX-512VL LLVM folds cast+convert+extract to `vcvtudq2ps xmm, xmm` (no ZMM).
-#[archmage::arcane(import_intrinsics)]
+#[archmage::attune(wrap, import_intrinsics)]
 pub(super) fn from_u32_lanes_x4_v4(_token: archmage::X64V4Token, value: __m128) -> __m128 {
     _mm512_castps512_ps128(_mm512_cvtepu32_ps(_mm512_castsi128_si512(
         _mm_castps_si128(value),
@@ -162,17 +162,17 @@ pub(super) fn from_u32_lanes_x4_v4(_token: archmage::X64V4Token, value: __m128) 
 }
 
 // 0x04 and 0x05 preserve the sign of the selected operand.
-#[archmage::arcane(import_intrinsics)]
+#[archmage::attune(wrap, import_intrinsics)]
 pub(super) fn min_x8_v4(_token: archmage::X64V4Token, a: __m256, b: __m256) -> __m256 {
     _mm256_range_ps::<0x04>(a, b)
 }
 
-#[archmage::arcane(import_intrinsics)]
+#[archmage::attune(wrap, import_intrinsics)]
 pub(super) fn max_x8_v4(_token: archmage::X64V4Token, a: __m256, b: __m256) -> __m256 {
     _mm256_range_ps::<0x05>(a, b)
 }
 
-#[archmage::arcane(import_intrinsics)]
+#[archmage::attune(wrap, import_intrinsics)]
 pub(super) fn to_u16_lanes_x8_v4<const CFG: u32>(
     _token: archmage::X64V4Token,
     value: __m256,
@@ -192,7 +192,7 @@ pub(super) fn to_u16_lanes_x8_v4<const CFG: u32>(
     crate::simd_storage::cast(packed)
 }
 
-#[archmage::arcane(import_intrinsics)]
+#[archmage::attune(wrap, import_intrinsics)]
 pub(super) fn to_u8_lanes_x8_v4<const CFG: u32>(
     _token: archmage::X64V4Token,
     value: __m256,
@@ -212,7 +212,7 @@ pub(super) fn to_u8_lanes_x8_v4<const CFG: u32>(
     (_mm_cvtsi128_si64(packed) as u64).to_ne_bytes()
 }
 
-#[archmage::arcane(import_intrinsics)]
+#[archmage::attune(wrap, import_intrinsics)]
 pub(super) fn to_u32_lanes_x8_v4<const CFG: u32>(
     _token: archmage::X64V4Token,
     value: __m256,
@@ -232,7 +232,7 @@ pub(super) fn to_u32_lanes_x8_v4<const CFG: u32>(
 }
 
 // Lowered by LLVM under AVX-512VL to `vcvtudq2ps ymm, ymm` (no ZMM).
-#[archmage::arcane(import_intrinsics)]
+#[archmage::attune(wrap, import_intrinsics)]
 pub(super) fn from_u32_lanes_x8_v4(_token: archmage::X64V4Token, value: __m256) -> __m256 {
     _mm512_castps512_ps256(_mm512_cvtepu32_ps(_mm512_castsi256_si512(
         _mm256_castps_si256(value),
