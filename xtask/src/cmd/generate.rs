@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 
 use crate::cmd::docs::{find_safe_simd_path_simple, generate_reference_docs_new};
 use crate::cmd::validate::validate_summon;
-use crate::{intrinsics_browser, registry, simd_types, soundness, token_gen};
+use crate::{registry, simd_types, soundness, token_gen};
 
 // ============================================================================
 // Intrinsics Re-export Module Generation
@@ -512,10 +512,6 @@ pub(crate) use dispatch::*;
     // Generate reference documentation
     println!("\n=== Generating Reference Documentation ===");
     generate_reference_docs_new()?;
-
-    // Generate intrinsics browser data (JSON + per-token markdown)
-    println!("\n=== Generating Intrinsics Browser ===");
-    intrinsics_browser::generate_intrinsics_browser(&reg)?;
 
     // Run safety validation on generated code (hard failure)
     println!("\n=== Validating Magetypes Safety ===");

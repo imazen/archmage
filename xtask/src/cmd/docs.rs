@@ -48,11 +48,7 @@ fn categorize_intrinsic(name: &str) -> &'static str {
 
 /// Entry from the intrinsics CSV database.
 pub(crate) struct IntrinsicEntry {
-    /// Architecture column from the CSV: `x86`, `x86_64`, `arm_shared`,
-    /// `aarch64`, or `wasm32`.
-    pub(crate) arch: String,
     pub(crate) features: String,
-    #[allow(dead_code)]
     pub(crate) is_unsafe: bool,
 }
 
@@ -76,14 +72,12 @@ pub(crate) fn load_intrinsic_database() -> Result<HashMap<String, IntrinsicEntry
         }
         let fields = parse_csv_line(line);
         if fields.len() >= 4 {
-            let arch = fields[0].clone();
             let name = fields[1].clone();
             let features = fields[2].clone();
             let is_unsafe = fields[3] == "True";
             db.insert(
                 name,
                 IntrinsicEntry {
-                    arch,
                     features,
                     is_unsafe,
                 },

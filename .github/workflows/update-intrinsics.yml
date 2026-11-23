@@ -37,8 +37,10 @@ jobs:
       - name: Populate the cargo cache xtask reads from
         run: cargo fetch
 
-      - name: Regenerate browser data
-        run: cargo run -p xtask -- generate
+      - name: Regenerate docs and browser data
+        run: |
+          cargo run -p xtask -- generate
+          cargo run -p xtask -- intrinsics-browser
 
       - name: Check for changes
         id: diff
