@@ -13,7 +13,6 @@ pub(crate) mod arith {
     pub(crate) const STD: usize = 2;
     #[cfg(target_arch = "wasm32")]
     pub(crate) const WASM_SOFTWARE: usize = 3;
-    pub(crate) const RELAXED: usize = 4;
 }
 
 /// Companion `i32` lane vector for [`F32Lanes`].
@@ -74,7 +73,6 @@ pub(crate) trait F32Lanes:
     fn max(self, rhs: Self) -> Self;
     fn mul_add_relaxed(self, b: Self, c: Self) -> Self;
     fn mul_add_fused(self, b: Self, c: Self) -> Self;
-    fn mul_add_soft(token: Self::Token, a: Self, b: Self, c: Self) -> Self;
     #[cfg(target_arch = "wasm32")]
     fn mul_add_wasm_soft(token: Self::Token, a: Self, b: Self, c: Self) -> Self;
     #[cfg(all(feature = "std", not(miri)))]
@@ -91,7 +89,8 @@ pub(crate) trait F32Lanes:
 /// Evaluate `a * b + c` under the compile-time arithmetic mode `MODE`.
 #[inline(always)]
 pub(crate) fn madd<V: F32Lanes, const MODE: usize>(token: V::Token, a: V, b: V, c: V) -> V {
-    if MODE == arith::NATIVE || MODE == arith::RELAXED {
+    let _ = token;
+    if MODE == arith::NATIVE {
         a.mul_add_relaxed(b, c)
     } else if MODE == arith::SOFTWARE {
         a.mul_add_fused(b, c)
@@ -104,7 +103,7 @@ pub(crate) fn madd<V: F32Lanes, const MODE: usize>(token: V::Token, a: V, b: V, 
         if MODE == arith::STD {
             return V::mul_add_std(token, a, b, c);
         }
-        V::mul_add_soft(token, a, b, c)
+        unreachable!("invalid magemath arithmetic mode")
     }
 }
 
@@ -245,29 +244,15 @@ impl F32Lanes for crate::scalar1::ScalarF32 {
     fn mul_add_fused(self, b: Self, c: Self) -> Self {
         self.mul_add_fused(b, c)
     }
-    #[inline]
-    fn mul_add_soft(token: ScalarToken, a: Self, b: Self, c: Self) -> Self {
-        Self::from_array_t(
-            token,
-            crate::soft_fma::fmaf_soft_lanes(a.to_array(), b.to_array(), c.to_array()),
-        )
-    }
     #[cfg(target_arch = "wasm32")]
     #[inline]
-    fn mul_add_wasm_soft(token: ScalarToken, a: Self, b: Self, c: Self) -> Self {
-        let proof = token
-            .try_wasm128()
-            .expect("private WASM mode requires its matching proof");
-        Self::from_array_t(
-            token,
-            crate::wasm_fma::software_lanes(proof, a.to_array(), b.to_array(), c.to_array()),
-        )
+    fn mul_add_wasm_soft(_token: ScalarToken, _a: Self, _b: Self, _c: Self) -> Self {
+        unreachable!("ScalarF32 never uses WASM_SOFTWARE")
     }
     #[cfg(all(feature = "std", not(miri)))]
     #[inline]
     fn mul_add_std(token: ScalarToken, a: Self, b: Self, c: Self) -> Self {
-        let (a, b, c) = (a.to_array(), b.to_array(), c.to_array());
-        Self::from_array_t(token, [a[0].mul_add(b[0], c[0])])
+        Self::splat_t(token, a.0.mul_add(b.0, c.0))
     }
     #[inline(always)]
     fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
@@ -428,11 +413,6 @@ macro_rules! impl_simd_lanes {
             #[inline(always)]
             fn mul_add_fused(self, b: Self, c: Self) -> Self {
                 self.mul_add_fused(b, c)
-            }
-            #[inline]
-            fn mul_add_soft(token: T, a: Self, b: Self, c: Self) -> Self {
-                let (a, b, c) = (a.to_array(), b.to_array(), c.to_array());
-                Self::from_array_t(token, crate::soft_fma::fmaf_soft_lanes(a, b, c))
             }
             #[cfg(target_arch = "wasm32")]
             #[inline]

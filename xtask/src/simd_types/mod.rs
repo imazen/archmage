@@ -9,12 +9,8 @@
 //! ## Module Structure
 //!
 //! - `types` - Core types (ElementType, SimdWidth, SimdType) and code generation helpers
-//! - `arch` - Architecture-specific helpers (x86, arm)
 //! - `structure` - Type definition and macro generation
-//! - `ops` - Standard SIMD operations (comparison, blend, math, etc.)
-//! - `transcendental` - Transcendental functions (log, exp, pow, cbrt)
 
-pub mod arch;
 pub mod backend_gen;
 pub mod backend_gen_i64;
 pub mod backend_gen_integer_ops;

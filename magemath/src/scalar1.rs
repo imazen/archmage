@@ -1,5 +1,5 @@
 //! Single-lane operands for the transcendental graphs. The token parameter
-//! lets these types use the same graph macros as Magetypes vectors.
+//! lets these types use the same generic graph functions as Magetypes vectors.
 use archmage::ScalarToken;
 use core::{marker::PhantomData, ops};
 
@@ -26,16 +26,6 @@ impl ScalarF32 {
     #[inline(always)]
     pub(crate) fn splat_t(_: ScalarToken, value: f32) -> Self {
         Self(value, PhantomData)
-    }
-
-    #[inline(always)]
-    pub(crate) fn from_array_t(token: ScalarToken, [value]: [f32; 1]) -> Self {
-        Self::splat_t(token, value)
-    }
-
-    #[inline(always)]
-    pub(crate) fn to_array(self) -> [f32; 1] {
-        [self.0]
     }
 
     #[inline(always)]

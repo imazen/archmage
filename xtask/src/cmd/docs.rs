@@ -154,7 +154,7 @@ pub(crate) fn find_safe_simd_path_simple() -> Result<PathBuf> {
     found_other.sort();
     bail!(
         "safe_unaligned_simd is in the cargo cache, but not at the version xtask wants. \
-         Wanted {} (hardcoded as SAFE_SIMD_VERSION in xtask/src/main.rs); cache holds: {}. \
+         Wanted {} (hardcoded as SAFE_SIMD_VERSION in xtask/src/cmd/docs.rs); cache holds: {}. \
          The constant has drifted from Cargo.lock — update it to match the locked version. \
          `cargo fetch` will NOT fix this.",
         SAFE_SIMD_VERSION,

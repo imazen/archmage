@@ -37,7 +37,6 @@ pub(crate) fn validate_summon(reg: &registry::Registry) -> Result<()> {
 
     let token_files = [
         ("src/tokens/generated/x86.rs", "x86"),
-        ("src/tokens/generated/x86_avx512.rs", "x86"),
         ("src/tokens/generated/arm.rs", "aarch64"),
         ("src/tokens/generated/wasm.rs", "wasm"),
     ];
@@ -246,10 +245,8 @@ const COMPILE_BUDGETS: &[(&str, &[&str], usize)] = &[
             "magetypes/src/simd/impls/scalar.rs",
             "magetypes/src/simd/backends/",
         ],
-        // Includes `x86_v3_delegated.rs` (34 plain-V3 arms for `X64V3VnniToken`
-        // + 30 narrow arms for the AVX-512 tokens; complete pre-macro count for
-        // the 3 AVX-512 tokens alone was 43 767 lines).
-        38_000,
+        // Includes `x86_v3_delegated.rs` + `x86_v4_w512_delegated.rs`; measured 33 702.
+        34_500,
     ),
     (
         "aarch64",
@@ -258,7 +255,7 @@ const COMPILE_BUDGETS: &[(&str, &[&str], usize)] = &[
             "magetypes/src/simd/impls/scalar.rs",
             "magetypes/src/simd/backends/",
         ],
-        26_997, // measured 26 700
+        23_800, // measured 23 229
     ),
     (
         "wasm32",
@@ -267,7 +264,7 @@ const COMPILE_BUDGETS: &[(&str, &[&str], usize)] = &[
             "magetypes/src/simd/impls/scalar.rs",
             "magetypes/src/simd/backends/",
         ],
-        26_532, // measured 26 236
+        23_300, // measured 22 708
     ),
 ];
 

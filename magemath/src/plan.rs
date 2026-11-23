@@ -28,6 +28,10 @@ pub(crate) enum Plan {
 impl Plan {
     #[inline(always)]
     pub(crate) fn same_tier(self, other: Self) -> bool {
+        #[cfg(target_arch = "wasm32")]
+        if let (Self::Wasm(_, a), Self::Wasm(_, b)) = (self, other) {
+            return a == b;
+        }
         core::mem::discriminant(&self) == core::mem::discriminant(&other)
     }
 

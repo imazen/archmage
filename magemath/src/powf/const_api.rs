@@ -267,7 +267,7 @@ macro_rules! vector {
             if matches!(caller, dispatch::Plan::Software) || (widen_v3 && !opts.is_caller()) {
                 if opts.is_caller() {
                     if opts.is_backend() {
-                        return graph::$profile::<T, Cfg<CFG>, { graph::RELAXED }>(token, input, n);
+                        return graph::$profile::<T, Cfg<CFG>, { graph::NATIVE }>(token, input, n);
                     }
                     return graph::$profile::<T, Cfg<CFG>, { graph::SOFTWARE }>(token, input, n);
                 }
