@@ -245,8 +245,8 @@ const COMPILE_BUDGETS: &[(&str, &[&str], usize)] = &[
             "magetypes/src/simd/impls/scalar.rs",
             "magetypes/src/simd/backends/",
         ],
-        // Includes `x86_v3_delegated.rs` + `x86_v4_w512_delegated.rs`; measured 33 702.
-        34_500,
+        // Includes `x86_v3_delegated.rs` + `x86_v4_w512_delegated.rs`; measured 32 745.
+        33_500,
     ),
     (
         "aarch64",
@@ -255,7 +255,7 @@ const COMPILE_BUDGETS: &[(&str, &[&str], usize)] = &[
             "magetypes/src/simd/impls/scalar.rs",
             "magetypes/src/simd/backends/",
         ],
-        23_800, // measured 23 229
+        22_800, // measured 22 270
     ),
     (
         "wasm32",
@@ -264,7 +264,7 @@ const COMPILE_BUDGETS: &[(&str, &[&str], usize)] = &[
             "magetypes/src/simd/impls/scalar.rs",
             "magetypes/src/simd/backends/",
         ],
-        23_300, // measured 22 708
+        22_300, // measured 21 751
     ),
 ];
 
