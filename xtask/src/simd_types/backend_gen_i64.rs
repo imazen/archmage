@@ -576,96 +576,35 @@ fn generate_scalar_i64_impl(ty: &I64VecType) -> String {
     let lanes = ty.lanes;
     let array = ty.array_type();
 
-    // For infix operators like &, |, ^
-    let binary_infix = |op: &str| -> String {
-        let items: Vec<String> = (0..lanes).map(|i| format!("a[{i}] {op} b[{i}]")).collect();
-        format!("[{}]", items.join(", "))
-    };
+    let reduce_add = (0..lanes)
+        .map(|i| format!("a[{i}]"))
+        .collect::<Vec<_>>()
+        .join(".wrapping_add(")
+        + &")".repeat(lanes - 1);
 
-    // For method-style ops like .wrapping_add(b)
-    let binary_method = |method: &str| -> String {
-        let items: Vec<String> = (0..lanes)
-            .map(|i| format!("a[{i}].{method}(b[{i}])"))
-            .collect();
-        format!("[{}]", items.join(", "))
-    };
-
-    let min_lanes = || -> String {
-        let items: Vec<String> = (0..lanes)
-            .map(|i| format!("if a[{i}] < b[{i}] {{ a[{i}] }} else {{ b[{i}] }}"))
-            .collect();
-        format!("[{}]", items.join(", "))
-    };
-
-    let max_lanes = || -> String {
-        let items: Vec<String> = (0..lanes)
-            .map(|i| format!("if a[{i}] > b[{i}] {{ a[{i}] }} else {{ b[{i}] }}"))
-            .collect();
-        format!("[{}]", items.join(", "))
-    };
-
-    let neg_lanes = || -> String {
-        let items: Vec<String> = (0..lanes)
-            .map(|i| format!("a[{i}].wrapping_neg()"))
-            .collect();
-        format!("[{}]", items.join(", "))
-    };
-
-    let abs_lanes = || -> String {
-        let items: Vec<String> = (0..lanes)
-            .map(|i| format!("a[{i}].wrapping_abs()"))
-            .collect();
-        format!("[{}]", items.join(", "))
-    };
-
-    let reduce_add = || -> String {
-        let items: Vec<String> = (0..lanes).map(|i| format!("a[{i}]")).collect();
-        items.join(".wrapping_add(") + &")".repeat(lanes - 1)
-    };
-
-    let shl_lanes = || -> String {
-        let items: Vec<String> = (0..lanes).map(|i| format!("a[{i}] << N")).collect();
-        format!("[{}]", items.join(", "))
-    };
-
-    // Rust >> on i64 is arithmetic (sign-extending)
-    let shr_arithmetic_lanes = || -> String {
-        let items: Vec<String> = (0..lanes).map(|i| format!("a[{i}] >> N")).collect();
-        format!("[{}]", items.join(", "))
-    };
-
-    let shr_logical_lanes = || -> String {
-        let items: Vec<String> = (0..lanes)
-            .map(|i| format!("((a[{i}] as u64) >> N) as i64"))
-            .collect();
-        format!("[{}]", items.join(", "))
-    };
-
-    let bitmask_expr = || -> String {
-        let items: Vec<String> = (0..lanes)
-            .map(|i| {
-                if i == 0 {
-                    "((a[0] as u64) >> 63) as u32".to_string()
-                } else {
-                    format!("((((a[{i}] as u64) >> 63) as u32) << {i})")
-                }
-            })
-            .collect();
-        items.join(" | ")
-    };
+    let bitmask = (0..lanes)
+        .map(|i| {
+            if i == 0 {
+                "((a[0] as u64) >> 63) as u32".to_string()
+            } else {
+                format!("((((a[{i}] as u64) >> 63) as u32) << {i})")
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(" | ");
 
     // Sign-bit contract: a lane is "true" when its top bit is set, not
     // merely when it is nonzero. Shifting keeps this correct for both the
     // signed lane types (arithmetic shift -> 0 or -1) and the unsigned ones.
-    let all_true_expr = || -> String {
-        let items: Vec<String> = (0..lanes).map(|i| format!("(a[{i}] >> 63) != 0")).collect();
-        items.join(" && ")
-    };
+    let all_true = (0..lanes)
+        .map(|i| format!("(a[{i}] >> 63) != 0"))
+        .collect::<Vec<_>>()
+        .join(" && ");
 
-    let any_true_expr = || -> String {
-        let items: Vec<String> = (0..lanes).map(|i| format!("(a[{i}] >> 63) != 0")).collect();
-        items.join(" || ")
-    };
+    let any_true = (0..lanes)
+        .map(|i| format!("(a[{i}] >> 63) != 0"))
+        .collect::<Vec<_>>()
+        .join(" || ");
 
     formatdoc! {r#"
         impl {trait_name} for archmage::ScalarToken {{
@@ -707,99 +646,71 @@ fn generate_scalar_i64_impl(ty: &I64VecType) -> String {
 
             #[inline(always)]
             fn add(self, a: {array}, b: {array}) -> {array} {{
-                {add_lanes}
+                core::array::from_fn(|i| a[i].wrapping_add(b[i]))
             }}
 
             #[inline(always)]
             fn sub(self, a: {array}, b: {array}) -> {array} {{
-                {sub_lanes}
+                core::array::from_fn(|i| a[i].wrapping_sub(b[i]))
             }}
 
             #[inline(always)]
             fn neg(self, a: {array}) -> {array} {{
-                {neg}
+                a.map(i64::wrapping_neg)
             }}
 
             // ====== Math ======
 
             #[inline(always)]
             fn min(self, a: {array}, b: {array}) -> {array} {{
-                {min_lanes}
+                core::array::from_fn(|i| if a[i] < b[i] {{ a[i] }} else {{ b[i] }})
             }}
 
             #[inline(always)]
             fn max(self, a: {array}, b: {array}) -> {array} {{
-                {max_lanes}
+                core::array::from_fn(|i| if a[i] > b[i] {{ a[i] }} else {{ b[i] }})
             }}
 
             #[inline(always)]
             fn abs(self, a: {array}) -> {array} {{
-                {abs}
+                a.map(i64::wrapping_abs)
             }}
 
             // ====== Comparisons ======
 
             #[inline(always)]
             fn simd_eq(self, a: {array}, b: {array}) -> {array} {{
-                let mut r = [0i64; {lanes}];
-                for i in 0..{lanes} {{
-                    r[i] = if a[i] == b[i] {{ -1 }} else {{ 0 }};
-                }}
-                r
+                core::array::from_fn(|i| if a[i] == b[i] {{ -1 }} else {{ 0 }})
             }}
 
             #[inline(always)]
             fn simd_ne(self, a: {array}, b: {array}) -> {array} {{
-                let mut r = [0i64; {lanes}];
-                for i in 0..{lanes} {{
-                    r[i] = if a[i] != b[i] {{ -1 }} else {{ 0 }};
-                }}
-                r
+                core::array::from_fn(|i| if a[i] != b[i] {{ -1 }} else {{ 0 }})
             }}
 
             #[inline(always)]
             fn simd_lt(self, a: {array}, b: {array}) -> {array} {{
-                let mut r = [0i64; {lanes}];
-                for i in 0..{lanes} {{
-                    r[i] = if a[i] < b[i] {{ -1 }} else {{ 0 }};
-                }}
-                r
+                core::array::from_fn(|i| if a[i] < b[i] {{ -1 }} else {{ 0 }})
             }}
 
             #[inline(always)]
             fn simd_le(self, a: {array}, b: {array}) -> {array} {{
-                let mut r = [0i64; {lanes}];
-                for i in 0..{lanes} {{
-                    r[i] = if a[i] <= b[i] {{ -1 }} else {{ 0 }};
-                }}
-                r
+                core::array::from_fn(|i| if a[i] <= b[i] {{ -1 }} else {{ 0 }})
             }}
 
             #[inline(always)]
             fn simd_gt(self, a: {array}, b: {array}) -> {array} {{
-                let mut r = [0i64; {lanes}];
-                for i in 0..{lanes} {{
-                    r[i] = if a[i] > b[i] {{ -1 }} else {{ 0 }};
-                }}
-                r
+                core::array::from_fn(|i| if a[i] > b[i] {{ -1 }} else {{ 0 }})
             }}
 
             #[inline(always)]
             fn simd_ge(self, a: {array}, b: {array}) -> {array} {{
-                let mut r = [0i64; {lanes}];
-                for i in 0..{lanes} {{
-                    r[i] = if a[i] >= b[i] {{ -1 }} else {{ 0 }};
-                }}
-                r
+                core::array::from_fn(|i| if a[i] >= b[i] {{ -1 }} else {{ 0 }})
             }}
 
             #[inline(always)]
             fn blend(self, mask: {array}, if_true: {array}, if_false: {array}) -> {array} {{
-                let mut r = [0i64; {lanes}];
-                for i in 0..{lanes} {{
-                    r[i] = if mask[i] != 0 {{ if_true[i] }} else {{ if_false[i] }};
-                }}
-                r
+                core::array::from_fn(|i| if mask[i] != 0 {{ if_true[i] }} else {{ if_false[i] }})
             }}
 
             // ====== Reductions ======
@@ -813,39 +724,39 @@ fn generate_scalar_i64_impl(ty: &I64VecType) -> String {
 
             #[inline(always)]
             fn not(self, a: {array}) -> {array} {{
-                {not_lanes}
+                a.map(|x| !x)
             }}
 
             #[inline(always)]
             fn bitand(self, a: {array}, b: {array}) -> {array} {{
-                {and_lanes}
+                core::array::from_fn(|i| a[i] & b[i])
             }}
 
             #[inline(always)]
             fn bitor(self, a: {array}, b: {array}) -> {array} {{
-                {or_lanes}
+                core::array::from_fn(|i| a[i] | b[i])
             }}
 
             #[inline(always)]
             fn bitxor(self, a: {array}, b: {array}) -> {array} {{
-                {xor_lanes}
+                core::array::from_fn(|i| a[i] ^ b[i])
             }}
 
             // ====== Shifts ======
 
             #[inline(always)]
             fn shl_const<const N: i32>(self, a: {array}) -> {array} {{
-                {shl}
+                a.map(|x| x << N)
             }}
 
             #[inline(always)]
             fn shr_arithmetic_const<const N: i32>(self, a: {array}) -> {array} {{
-                {shr_arithmetic}
+                a.map(|x| x >> N)
             }}
 
             #[inline(always)]
             fn shr_logical_const<const N: i32>(self, a: {array}) -> {array} {{
-                {shr_logical}
+                a.map(|x| ((x as u64) >> N) as i64)
             }}
 
             // ====== Boolean ======
@@ -865,28 +776,7 @@ fn generate_scalar_i64_impl(ty: &I64VecType) -> String {
                 {bitmask}
             }}
         }}
-    "#,
-        add_lanes = binary_method("wrapping_add"),
-        sub_lanes = binary_method("wrapping_sub"),
-        neg = neg_lanes(),
-        min_lanes = min_lanes(),
-        max_lanes = max_lanes(),
-        abs = abs_lanes(),
-        reduce_add = reduce_add(),
-        not_lanes = {
-            let items: Vec<String> = (0..lanes).map(|i| format!("!a[{i}]")).collect();
-            format!("[{}]", items.join(", "))
-        },
-        and_lanes = binary_infix("&"),
-        or_lanes = binary_infix("|"),
-        xor_lanes = binary_infix("^"),
-        shl = shl_lanes(),
-        shr_arithmetic = shr_arithmetic_lanes(),
-        shr_logical = shr_logical_lanes(),
-        all_true = all_true_expr(),
-        any_true = any_true_expr(),
-        bitmask = bitmask_expr(),
-    }
+    "#}
 }
 
 // ============================================================================

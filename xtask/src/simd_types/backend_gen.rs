@@ -2356,101 +2356,29 @@ fn generate_scalar_float_impl(ty: &FloatVecType) -> String {
     let lanes = ty.lanes;
     let array = ty.array_type();
     let zero_lit = if elem == "f32" { "0.0f32" } else { "0.0f64" };
-
-    // Generate lane-by-lane operations
-    let binary_lanes = |op: &str| -> String {
-        let items: Vec<String> = (0..lanes).map(|i| format!("a[{i}] {op} b[{i}]")).collect();
-        format!("[{}]", items.join(", "))
-    };
-
-    let min_lanes_fn = || -> String {
-        let items: Vec<String> = (0..lanes).map(|i| format!("a[{i}].min(b[{i}])")).collect();
-        format!("[{}]", items.join(", "))
-    };
-
-    let max_lanes_fn = || -> String {
-        let items: Vec<String> = (0..lanes).map(|i| format!("a[{i}].max(b[{i}])")).collect();
-        format!("[{}]", items.join(", "))
-    };
-
-    let neg_lanes = || -> String {
-        let items: Vec<String> = (0..lanes).map(|i| format!("-a[{i}]")).collect();
-        format!("[{}]", items.join(", "))
-    };
-
     let abs_mask = if elem == "f32" {
         "0x7FFF_FFFF"
     } else {
         "0x7FFF_FFFF_FFFF_FFFF"
     };
-    let abs_lanes = || -> String {
-        let items: Vec<String> = (0..lanes)
-            .map(|i| format!("{elem}::from_bits(a[{i}].to_bits() & {abs_mask})"))
-            .collect();
-        format!("[{}]", items.join(", "))
-    };
-
-    // mul_add/mul_sub round twice here (multiply, then add); the _portable
-    // forms round once through the correctly rounded software FMA.
-    let mul_add_lanes = || -> String {
-        let items: Vec<String> = (0..lanes)
-            .map(|i| format!("a[{i}] * b[{i}] + c[{i}]"))
-            .collect();
-        format!("[{}]", items.join(", "))
-    };
-
-    let mul_sub_lanes = || -> String {
-        let items: Vec<String> = (0..lanes)
-            .map(|i| format!("a[{i}] * b[{i}] - c[{i}]"))
-            .collect();
-        format!("[{}]", items.join(", "))
-    };
-
-    // Whole-array call: the software form is branch-free per lane, so LLVM
-    // can vectorize it.
-    let fused_lanes = |negate: &str| -> String {
-        let fma_fn = if elem == "f32" {
-            "fmaf_lanes"
-        } else {
-            "fma_lanes"
-        };
-        let addend = if negate.is_empty() {
-            "c".to_string()
-        } else {
-            let items: Vec<String> = (0..lanes).map(|i| format!("-c[{i}]")).collect();
-            format!("[{}]", items.join(", "))
-        };
-        format!("crate::soft_fma::{fma_fn}(a, b, {addend})")
-    };
-
-    let bitwise_unary_lanes = |op: &str| -> String {
-        let items: Vec<String> = (0..lanes)
-            .map(|i| format!("{elem}::from_bits({op}a[{i}].to_bits())"))
-            .collect();
-        format!("[{}]", items.join(", "))
-    };
-
-    let bitwise_binary_lanes = |op: &str| -> String {
-        let items: Vec<String> = (0..lanes)
-            .map(|i| format!("{elem}::from_bits(a[{i}].to_bits() {op} b[{i}].to_bits())"))
-            .collect();
-        format!("[{}]", items.join(", "))
+    let fma_fn = if elem == "f32" {
+        "fmaf_lanes"
+    } else {
+        "fma_lanes"
     };
 
     // Adjacent-pair tree for f32 — matches x86 v3 and NEON reduce_add
     // shape. Better ILP than linear left-fold and stays consistent across
     // backends (#50). f64 with 2 or 4 lanes has no meaningful difference.
-    let reduce_add = || -> String {
-        match (elem, lanes) {
-            ("f32", 4) => "(a[0] + a[1]) + (a[2] + a[3])".to_string(),
-            ("f32", 8) => {
-                "((a[0] + a[4]) + (a[1] + a[5])) + ((a[2] + a[6]) + (a[3] + a[7]))".to_string()
-            }
-            _ => {
-                let items: Vec<String> = (0..lanes).map(|i| format!("a[{i}]")).collect();
-                items.join(" + ")
-            }
+    let reduce_add = match (elem, lanes) {
+        ("f32", 4) => "(a[0] + a[1]) + (a[2] + a[3])".to_string(),
+        ("f32", 8) => {
+            "((a[0] + a[4]) + (a[1] + a[5])) + ((a[2] + a[6]) + (a[3] + a[7]))".to_string()
         }
+        _ => (0..lanes)
+            .map(|i| format!("a[{i}]"))
+            .collect::<Vec<_>>()
+            .join(" + "),
     };
 
     // Helper functions (f32_sqrt etc.) are emitted once per element type
@@ -2583,171 +2511,129 @@ fn generate_scalar_float_impl(ty: &FloatVecType) -> String {
 
             #[inline(always)]
             fn add(self, a: {array}, b: {array}) -> {array} {{
-                {add_lanes}
+                core::array::from_fn(|i| a[i] + b[i])
             }}
 
             #[inline(always)]
             fn sub(self, a: {array}, b: {array}) -> {array} {{
-                {sub_lanes}
+                core::array::from_fn(|i| a[i] - b[i])
             }}
 
             #[inline(always)]
             fn mul(self, a: {array}, b: {array}) -> {array} {{
-                {mul_lanes}
+                core::array::from_fn(|i| a[i] * b[i])
             }}
 
             #[inline(always)]
             fn div(self, a: {array}, b: {array}) -> {array} {{
-                {div_lanes}
+                core::array::from_fn(|i| a[i] / b[i])
             }}
 
             #[inline(always)]
             fn neg(self, a: {array}) -> {array} {{
-                {neg}
+                a.map(|x| -x)
             }}
 
             // ====== Math ======
 
             #[inline(always)]
             fn min(self, a: {array}, b: {array}) -> {array} {{
-                {min_lanes}
+                core::array::from_fn(|i| a[i].min(b[i]))
             }}
 
             #[inline(always)]
             fn max(self, a: {array}, b: {array}) -> {array} {{
-                {max_lanes}
+                core::array::from_fn(|i| a[i].max(b[i]))
             }}
             {min_max_fast_scalar}
 
             #[inline(always)]
             fn sqrt(self, a: {array}) -> {array} {{
-                let mut r = [{zero_lit}; {lanes}];
-                for i in 0..{lanes} {{
-                    r[i] = {elem}_sqrt(a[i]);
-                }}
-                r
+                a.map({elem}_sqrt)
             }}
 
             #[inline(always)]
             fn abs(self, a: {array}) -> {array} {{
-                {abs}
+                a.map(|x| {elem}::from_bits(x.to_bits() & {abs_mask}))
             }}
 
             #[inline(always)]
             fn floor(self, a: {array}) -> {array} {{
-                let mut r = [{zero_lit}; {lanes}];
-                for i in 0..{lanes} {{
-                    r[i] = {elem}_floor(a[i]);
-                }}
-                r
+                a.map({elem}_floor)
             }}
 
             #[inline(always)]
             fn ceil(self, a: {array}) -> {array} {{
-                let mut r = [{zero_lit}; {lanes}];
-                for i in 0..{lanes} {{
-                    r[i] = {elem}_ceil(a[i]);
-                }}
-                r
+                a.map({elem}_ceil)
             }}
 
             #[inline(always)]
             fn round(self, a: {array}) -> {array} {{
-                let mut r = [{zero_lit}; {lanes}];
-                for i in 0..{lanes} {{
-                    r[i] = {elem}_round(a[i]);
-                }}
-                r
+                a.map({elem}_round)
             }}
 
             #[inline(always)]
             fn mul_add(self, a: {array}, b: {array}, c: {array}) -> {array} {{
-                {mul_add}
+                core::array::from_fn(|i| a[i] * b[i] + c[i])
             }}
 
             #[inline(always)]
             fn mul_sub(self, a: {array}, b: {array}, c: {array}) -> {array} {{
-                {mul_sub}
+                core::array::from_fn(|i| a[i] * b[i] - c[i])
             }}
 
             #[inline(always)]
             fn mul_add_portable(self, a: {array}, b: {array}, c: {array}) -> {array} {{
-                {mul_add_portable}
+                crate::soft_fma::{fma_fn}(a, b, c)
             }}
 
             #[inline(always)]
             fn mul_sub_portable(self, a: {array}, b: {array}, c: {array}) -> {array} {{
-                {mul_sub_portable}
+                crate::soft_fma::{fma_fn}(a, b, c.map(|x| -x))
             }}
 
             // ====== Comparisons ======
 
             #[inline(always)]
             fn simd_eq(self, a: {array}, b: {array}) -> {array} {{
-                let mut r = [{zero_lit}; {lanes}];
-                for i in 0..{lanes} {{
-                    r[i] = if a[i] == b[i] {{ {true_mask} }} else {{ 0.0 }};
-                }}
-                r
+                core::array::from_fn(|i| if a[i] == b[i] {{ {true_mask} }} else {{ 0.0 }})
             }}
 
             #[inline(always)]
             fn simd_ne(self, a: {array}, b: {array}) -> {array} {{
-                let mut r = [{zero_lit}; {lanes}];
-                for i in 0..{lanes} {{
-                    r[i] = if a[i] != b[i] {{ {true_mask} }} else {{ 0.0 }};
-                }}
-                r
+                core::array::from_fn(|i| if a[i] != b[i] {{ {true_mask} }} else {{ 0.0 }})
             }}
 
             #[inline(always)]
             fn simd_lt(self, a: {array}, b: {array}) -> {array} {{
-                let mut r = [{zero_lit}; {lanes}];
-                for i in 0..{lanes} {{
-                    r[i] = if a[i] < b[i] {{ {true_mask} }} else {{ 0.0 }};
-                }}
-                r
+                core::array::from_fn(|i| if a[i] < b[i] {{ {true_mask} }} else {{ 0.0 }})
             }}
 
             #[inline(always)]
             fn simd_le(self, a: {array}, b: {array}) -> {array} {{
-                let mut r = [{zero_lit}; {lanes}];
-                for i in 0..{lanes} {{
-                    r[i] = if a[i] <= b[i] {{ {true_mask} }} else {{ 0.0 }};
-                }}
-                r
+                core::array::from_fn(|i| if a[i] <= b[i] {{ {true_mask} }} else {{ 0.0 }})
             }}
 
             #[inline(always)]
             fn simd_gt(self, a: {array}, b: {array}) -> {array} {{
-                let mut r = [{zero_lit}; {lanes}];
-                for i in 0..{lanes} {{
-                    r[i] = if a[i] > b[i] {{ {true_mask} }} else {{ 0.0 }};
-                }}
-                r
+                core::array::from_fn(|i| if a[i] > b[i] {{ {true_mask} }} else {{ 0.0 }})
             }}
 
             #[inline(always)]
             fn simd_ge(self, a: {array}, b: {array}) -> {array} {{
-                let mut r = [{zero_lit}; {lanes}];
-                for i in 0..{lanes} {{
-                    r[i] = if a[i] >= b[i] {{ {true_mask} }} else {{ 0.0 }};
-                }}
-                r
+                core::array::from_fn(|i| if a[i] >= b[i] {{ {true_mask} }} else {{ 0.0 }})
             }}
 
             #[inline(always)]
             fn blend(self, mask: {array}, if_true: {array}, if_false: {array}) -> {array} {{
-                let mut r = [{zero_lit}; {lanes}];
-                for i in 0..{lanes} {{
-                    // Check sign bit of mask (all-1s has sign bit set)
-                    r[i] = if (mask[i].to_bits() >> {sign_shift}) != 0 {{
+                // Check sign bit of mask (all-1s has sign bit set)
+                core::array::from_fn(|i| {{
+                    if (mask[i].to_bits() >> {sign_shift}) != 0 {{
                         if_true[i]
                     }} else {{
                         if_false[i]
-                    }};
-                }}
-                r
+                    }}
+                }})
             }}
 
             // ====== Reductions ======
@@ -2781,22 +2667,22 @@ fn generate_scalar_float_impl(ty: &FloatVecType) -> String {
 
             #[inline(always)]
             fn not(self, a: {array}) -> {array} {{
-                {not_lanes}
+                a.map(|x| {elem}::from_bits(!x.to_bits()))
             }}
 
             #[inline(always)]
             fn bitand(self, a: {array}, b: {array}) -> {array} {{
-                {and_lanes}
+                core::array::from_fn(|i| {elem}::from_bits(a[i].to_bits() & b[i].to_bits()))
             }}
 
             #[inline(always)]
             fn bitor(self, a: {array}, b: {array}) -> {array} {{
-                {or_lanes}
+                core::array::from_fn(|i| {elem}::from_bits(a[i].to_bits() | b[i].to_bits()))
             }}
 
             #[inline(always)]
             fn bitxor(self, a: {array}, b: {array}) -> {array} {{
-                {xor_lanes}
+                core::array::from_fn(|i| {elem}::from_bits(a[i].to_bits() ^ b[i].to_bits()))
             }}
         }}{scalar_internal}
     "#,
@@ -2805,24 +2691,6 @@ fn generate_scalar_float_impl(ty: &FloatVecType) -> String {
         } else {
             String::new()
         },
-        add_lanes = binary_lanes("+"),
-        sub_lanes = binary_lanes("-"),
-        mul_lanes = binary_lanes("*"),
-        div_lanes = binary_lanes("/"),
-        neg = neg_lanes(),
-        min_lanes = min_lanes_fn(),
-        max_lanes = max_lanes_fn(),
-        // Actually, min/max need a different pattern...
-        abs = abs_lanes(),
-        mul_add = mul_add_lanes(),
-        mul_sub = mul_sub_lanes(),
-        mul_add_portable = fused_lanes(""),
-        mul_sub_portable = fused_lanes("-"),
-        reduce_add = reduce_add(),
-        not_lanes = bitwise_unary_lanes("!"),
-        and_lanes = bitwise_binary_lanes("&"),
-        or_lanes = bitwise_binary_lanes("|"),
-        xor_lanes = bitwise_binary_lanes("^"),
     }
 }
 
@@ -5665,95 +5533,35 @@ fn generate_scalar_i32_impl(ty: &I32VecType) -> String {
     let lanes = ty.lanes;
     let array = ty.array_type();
 
-    // For infix operators like &, |, ^
-    let binary_infix = |op: &str| -> String {
-        let items: Vec<String> = (0..lanes).map(|i| format!("a[{i}] {op} b[{i}]")).collect();
-        format!("[{}]", items.join(", "))
-    };
+    let reduce_add = (0..lanes)
+        .map(|i| format!("a[{i}]"))
+        .collect::<Vec<_>>()
+        .join(".wrapping_add(")
+        + &")".repeat(lanes - 1);
 
-    // For method-style ops like .wrapping_add(b)
-    let binary_method = |method: &str| -> String {
-        let items: Vec<String> = (0..lanes)
-            .map(|i| format!("a[{i}].{method}(b[{i}])"))
-            .collect();
-        format!("[{}]", items.join(", "))
-    };
-
-    let min_lanes = || -> String {
-        let items: Vec<String> = (0..lanes)
-            .map(|i| format!("if a[{i}] < b[{i}] {{ a[{i}] }} else {{ b[{i}] }}"))
-            .collect();
-        format!("[{}]", items.join(", "))
-    };
-
-    let max_lanes = || -> String {
-        let items: Vec<String> = (0..lanes)
-            .map(|i| format!("if a[{i}] > b[{i}] {{ a[{i}] }} else {{ b[{i}] }}"))
-            .collect();
-        format!("[{}]", items.join(", "))
-    };
-
-    let neg_lanes = || -> String {
-        let items: Vec<String> = (0..lanes)
-            .map(|i| format!("a[{i}].wrapping_neg()"))
-            .collect();
-        format!("[{}]", items.join(", "))
-    };
-
-    let abs_lanes = || -> String {
-        let items: Vec<String> = (0..lanes)
-            .map(|i| format!("a[{i}].wrapping_abs()"))
-            .collect();
-        format!("[{}]", items.join(", "))
-    };
-
-    let reduce_add = || -> String {
-        let items: Vec<String> = (0..lanes).map(|i| format!("a[{i}]")).collect();
-        items.join(".wrapping_add(") + &")".repeat(lanes - 1)
-    };
-
-    let shl_lanes = || -> String {
-        let items: Vec<String> = (0..lanes).map(|i| format!("a[{i}] << N")).collect();
-        format!("[{}]", items.join(", "))
-    };
-
-    let shr_arithmetic_lanes = || -> String {
-        let items: Vec<String> = (0..lanes).map(|i| format!("a[{i}] >> N")).collect();
-        format!("[{}]", items.join(", "))
-    };
-
-    let shr_logical_lanes = || -> String {
-        let items: Vec<String> = (0..lanes)
-            .map(|i| format!("((a[{i}] as u32) >> N) as i32"))
-            .collect();
-        format!("[{}]", items.join(", "))
-    };
-
-    let bitmask_expr = || -> String {
-        let items: Vec<String> = (0..lanes)
-            .map(|i| {
-                if i == 0 {
-                    "((a[0] as u32) >> 31)".to_string()
-                } else {
-                    format!("(((a[{i}] as u32) >> 31) << {i})")
-                }
-            })
-            .collect();
-        items.join(" | ")
-    };
+    let bitmask = (0..lanes)
+        .map(|i| {
+            if i == 0 {
+                "((a[0] as u32) >> 31)".to_string()
+            } else {
+                format!("(((a[{i}] as u32) >> 31) << {i})")
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(" | ");
 
     // Sign-bit contract: a lane is "true" when its top bit is set, not
     // merely when it is nonzero. Shifting keeps this correct for both the
     // signed lane types (arithmetic shift -> 0 or -1) and the unsigned ones.
-    let all_true_expr = || -> String {
-        let items: Vec<String> = (0..lanes).map(|i| format!("(a[{i}] >> 31) != 0")).collect();
-        items.join(" && ")
-    };
+    let all_true = (0..lanes)
+        .map(|i| format!("(a[{i}] >> 31) != 0"))
+        .collect::<Vec<_>>()
+        .join(" && ");
 
-    let any_true_expr = || -> String {
-        let items: Vec<String> = (0..lanes).map(|i| format!("(a[{i}] >> 31) != 0")).collect();
-        items.join(" || ")
-    };
+    let any_true = (0..lanes)
+        .map(|i| format!("(a[{i}] >> 31) != 0"))
+        .collect::<Vec<_>>()
+        .join(" || ");
 
     formatdoc! {r#"
         impl {trait_name} for archmage::ScalarToken {{
@@ -5795,104 +5603,76 @@ fn generate_scalar_i32_impl(ty: &I32VecType) -> String {
 
             #[inline(always)]
             fn add(self, a: {array}, b: {array}) -> {array} {{
-                {add_lanes}
+                core::array::from_fn(|i| a[i].wrapping_add(b[i]))
             }}
 
             #[inline(always)]
             fn sub(self, a: {array}, b: {array}) -> {array} {{
-                {sub_lanes}
+                core::array::from_fn(|i| a[i].wrapping_sub(b[i]))
             }}
 
             #[inline(always)]
             fn mul(self, a: {array}, b: {array}) -> {array} {{
-                {mul_lanes}
+                core::array::from_fn(|i| a[i].wrapping_mul(b[i]))
             }}
 
             #[inline(always)]
             fn neg(self, a: {array}) -> {array} {{
-                {neg}
+                a.map(i32::wrapping_neg)
             }}
 
             // ====== Math ======
 
             #[inline(always)]
             fn min(self, a: {array}, b: {array}) -> {array} {{
-                {min_lanes}
+                core::array::from_fn(|i| if a[i] < b[i] {{ a[i] }} else {{ b[i] }})
             }}
 
             #[inline(always)]
             fn max(self, a: {array}, b: {array}) -> {array} {{
-                {max_lanes}
+                core::array::from_fn(|i| if a[i] > b[i] {{ a[i] }} else {{ b[i] }})
             }}
 
             #[inline(always)]
             fn abs(self, a: {array}) -> {array} {{
-                {abs}
+                a.map(i32::wrapping_abs)
             }}
 
             // ====== Comparisons ======
 
             #[inline(always)]
             fn simd_eq(self, a: {array}, b: {array}) -> {array} {{
-                let mut r = [0i32; {lanes}];
-                for i in 0..{lanes} {{
-                    r[i] = if a[i] == b[i] {{ -1 }} else {{ 0 }};
-                }}
-                r
+                core::array::from_fn(|i| if a[i] == b[i] {{ -1 }} else {{ 0 }})
             }}
 
             #[inline(always)]
             fn simd_ne(self, a: {array}, b: {array}) -> {array} {{
-                let mut r = [0i32; {lanes}];
-                for i in 0..{lanes} {{
-                    r[i] = if a[i] != b[i] {{ -1 }} else {{ 0 }};
-                }}
-                r
+                core::array::from_fn(|i| if a[i] != b[i] {{ -1 }} else {{ 0 }})
             }}
 
             #[inline(always)]
             fn simd_lt(self, a: {array}, b: {array}) -> {array} {{
-                let mut r = [0i32; {lanes}];
-                for i in 0..{lanes} {{
-                    r[i] = if a[i] < b[i] {{ -1 }} else {{ 0 }};
-                }}
-                r
+                core::array::from_fn(|i| if a[i] < b[i] {{ -1 }} else {{ 0 }})
             }}
 
             #[inline(always)]
             fn simd_le(self, a: {array}, b: {array}) -> {array} {{
-                let mut r = [0i32; {lanes}];
-                for i in 0..{lanes} {{
-                    r[i] = if a[i] <= b[i] {{ -1 }} else {{ 0 }};
-                }}
-                r
+                core::array::from_fn(|i| if a[i] <= b[i] {{ -1 }} else {{ 0 }})
             }}
 
             #[inline(always)]
             fn simd_gt(self, a: {array}, b: {array}) -> {array} {{
-                let mut r = [0i32; {lanes}];
-                for i in 0..{lanes} {{
-                    r[i] = if a[i] > b[i] {{ -1 }} else {{ 0 }};
-                }}
-                r
+                core::array::from_fn(|i| if a[i] > b[i] {{ -1 }} else {{ 0 }})
             }}
 
             #[inline(always)]
             fn simd_ge(self, a: {array}, b: {array}) -> {array} {{
-                let mut r = [0i32; {lanes}];
-                for i in 0..{lanes} {{
-                    r[i] = if a[i] >= b[i] {{ -1 }} else {{ 0 }};
-                }}
-                r
+                core::array::from_fn(|i| if a[i] >= b[i] {{ -1 }} else {{ 0 }})
             }}
 
             #[inline(always)]
             fn blend(self, mask: {array}, if_true: {array}, if_false: {array}) -> {array} {{
-                let mut r = [0i32; {lanes}];
-                for i in 0..{lanes} {{
-                    r[i] = if mask[i] != 0 {{ if_true[i] }} else {{ if_false[i] }};
-                }}
-                r
+                core::array::from_fn(|i| if mask[i] != 0 {{ if_true[i] }} else {{ if_false[i] }})
             }}
 
             // ====== Reductions ======
@@ -5906,39 +5686,39 @@ fn generate_scalar_i32_impl(ty: &I32VecType) -> String {
 
             #[inline(always)]
             fn not(self, a: {array}) -> {array} {{
-                {not_lanes}
+                a.map(|x| !x)
             }}
 
             #[inline(always)]
             fn bitand(self, a: {array}, b: {array}) -> {array} {{
-                {and_lanes}
+                core::array::from_fn(|i| a[i] & b[i])
             }}
 
             #[inline(always)]
             fn bitor(self, a: {array}, b: {array}) -> {array} {{
-                {or_lanes}
+                core::array::from_fn(|i| a[i] | b[i])
             }}
 
             #[inline(always)]
             fn bitxor(self, a: {array}, b: {array}) -> {array} {{
-                {xor_lanes}
+                core::array::from_fn(|i| a[i] ^ b[i])
             }}
 
             // ====== Shifts ======
 
             #[inline(always)]
             fn shl_const<const N: i32>(self, a: {array}) -> {array} {{
-                {shl}
+                a.map(|x| x << N)
             }}
 
             #[inline(always)]
             fn shr_arithmetic_const<const N: i32>(self, a: {array}) -> {array} {{
-                {shr_arithmetic}
+                a.map(|x| x >> N)
             }}
 
             #[inline(always)]
             fn shr_logical_const<const N: i32>(self, a: {array}) -> {array} {{
-                {shr_logical}
+                a.map(|x| ((x as u32) >> N) as i32)
             }}
 
             // ====== Uniform variable shifts ======
@@ -5977,29 +5757,7 @@ fn generate_scalar_i32_impl(ty: &I32VecType) -> String {
             }}
         {integer_methods}
         }}
-    "#,
-        add_lanes = binary_method("wrapping_add"),
-        sub_lanes = binary_method("wrapping_sub"),
-        mul_lanes = binary_method("wrapping_mul"),
-        neg = neg_lanes(),
-        min_lanes = min_lanes(),
-        max_lanes = max_lanes(),
-        abs = abs_lanes(),
-        reduce_add = reduce_add(),
-        not_lanes = {
-            let items: Vec<String> = (0..lanes).map(|i| format!("!a[{i}]")).collect();
-            format!("[{}]", items.join(", "))
-        },
-        and_lanes = binary_infix("&"),
-        or_lanes = binary_infix("|"),
-        xor_lanes = binary_infix("^"),
-        shl = shl_lanes(),
-        shr_arithmetic = shr_arithmetic_lanes(),
-        shr_logical = shr_logical_lanes(),
-        all_true = all_true_expr(),
-        any_true = any_true_expr(),
-        bitmask = bitmask_expr(),
-    }
+    "#}
 }
 
 // ============================================================================
@@ -6014,23 +5772,6 @@ fn generate_scalar_convert_impls() -> String {
         let i_array = format!("[i32; {lanes}]");
         let trait_name = format!("F32x{lanes}Convert");
 
-        let bitcast_f2i = (0..lanes)
-            .map(|i| format!("a[{i}].to_bits() as i32"))
-            .collect::<Vec<_>>()
-            .join(", ");
-        let bitcast_i2f = (0..lanes)
-            .map(|i| format!("f32::from_bits(a[{i}] as u32)"))
-            .collect::<Vec<_>>()
-            .join(", ");
-        let cvt_f2i = (0..lanes)
-            .map(|i| format!("a[{i}] as i32"))
-            .collect::<Vec<_>>()
-            .join(", ");
-        let cvt_i2f = (0..lanes)
-            .map(|i| format!("a[{i}] as f32"))
-            .collect::<Vec<_>>()
-            .join(", ");
-
         // F32x16Convert (lanes=16) is W512 and needs a feature gate.
         let w512_gate = if lanes == 16 {
             "#[cfg(feature = \"w512\")]\n"
@@ -6042,17 +5783,17 @@ fn generate_scalar_convert_impls() -> String {
             {w512_gate}impl {trait_name} for archmage::ScalarToken {{
                 #[inline(always)]
                 fn bitcast_f32_to_i32(self, a: {f_array}) -> {i_array} {{
-                    [{bitcast_f2i}]
+                    a.map(|x| x.to_bits() as i32)
                 }}
 
                 #[inline(always)]
                 fn bitcast_i32_to_f32(self, a: {i_array}) -> {f_array} {{
-                    [{bitcast_i2f}]
+                    a.map(|x| f32::from_bits(x as u32))
                 }}
 
                 #[inline(always)]
                 fn convert_f32_to_i32(self, a: {f_array}) -> {i_array} {{
-                    [{cvt_f2i}]
+                    a.map(|x| x as i32)
                 }}
 
                 #[inline(always)]
@@ -6062,7 +5803,7 @@ fn generate_scalar_convert_impls() -> String {
 
                 #[inline(always)]
                 fn convert_i32_to_f32(self, a: {i_array}) -> {f_array} {{
-                    [{cvt_i2f}]
+                    a.map(|x| x as f32)
                 }}
             }}
 
@@ -6075,25 +5816,16 @@ fn generate_scalar_convert_impls() -> String {
         let i_array = format!("[i32; {lanes}]");
         let trait_name = format!("U32x{lanes}Bitcast");
 
-        let u2i = (0..lanes)
-            .map(|i| format!("a[{i}] as i32"))
-            .collect::<Vec<_>>()
-            .join(", ");
-        let i2u = (0..lanes)
-            .map(|i| format!("a[{i}] as u32"))
-            .collect::<Vec<_>>()
-            .join(", ");
-
         code.push_str(&formatdoc! {r#"
             impl {trait_name} for archmage::ScalarToken {{
                 #[inline(always)]
                 fn bitcast_u32_to_i32(self, a: {u_array}) -> {i_array} {{
-                    [{u2i}]
+                    a.map(|x| x as i32)
                 }}
 
                 #[inline(always)]
                 fn bitcast_i32_to_u32(self, a: {i_array}) -> {u_array} {{
-                    [{i2u}]
+                    a.map(|x| x as u32)
                 }}
             }}
 
@@ -6106,25 +5838,16 @@ fn generate_scalar_convert_impls() -> String {
         let f_array = format!("[f64; {lanes}]");
         let trait_name = format!("I64x{lanes}Bitcast");
 
-        let i2f = (0..lanes)
-            .map(|i| format!("f64::from_bits(a[{i}] as u64)"))
-            .collect::<Vec<_>>()
-            .join(", ");
-        let f2i = (0..lanes)
-            .map(|i| format!("a[{i}].to_bits() as i64"))
-            .collect::<Vec<_>>()
-            .join(", ");
-
         code.push_str(&formatdoc! {r#"
             impl {trait_name} for archmage::ScalarToken {{
                 #[inline(always)]
                 fn bitcast_i64_to_f64(self, a: {i_array}) -> {f_array} {{
-                    [{i2f}]
+                    a.map(|x| f64::from_bits(x as u64))
                 }}
 
                 #[inline(always)]
                 fn bitcast_f64_to_i64(self, a: {f_array}) -> {i_array} {{
-                    [{f2i}]
+                    a.map(|x| x.to_bits() as i64)
                 }}
             }}
 
@@ -7723,74 +7446,35 @@ fn generate_scalar_u32_impl(ty: &U32VecType) -> String {
     let lanes = ty.lanes;
     let array = ty.array_type();
 
-    // For infix operators like &, |, ^
-    let binary_infix = |op: &str| -> String {
-        let items: Vec<String> = (0..lanes).map(|i| format!("a[{i}] {op} b[{i}]")).collect();
-        format!("[{}]", items.join(", "))
-    };
+    let reduce_add = (0..lanes)
+        .map(|i| format!("a[{i}]"))
+        .collect::<Vec<_>>()
+        .join(".wrapping_add(")
+        + &")".repeat(lanes - 1);
 
-    // For method-style ops like .wrapping_add(b)
-    let binary_method = |method: &str| -> String {
-        let items: Vec<String> = (0..lanes)
-            .map(|i| format!("a[{i}].{method}(b[{i}])"))
-            .collect();
-        format!("[{}]", items.join(", "))
-    };
-
-    let min_lanes = || -> String {
-        let items: Vec<String> = (0..lanes)
-            .map(|i| format!("if a[{i}] < b[{i}] {{ a[{i}] }} else {{ b[{i}] }}"))
-            .collect();
-        format!("[{}]", items.join(", "))
-    };
-
-    let max_lanes = || -> String {
-        let items: Vec<String> = (0..lanes)
-            .map(|i| format!("if a[{i}] > b[{i}] {{ a[{i}] }} else {{ b[{i}] }}"))
-            .collect();
-        format!("[{}]", items.join(", "))
-    };
-
-    let reduce_add = || -> String {
-        let items: Vec<String> = (0..lanes).map(|i| format!("a[{i}]")).collect();
-        items.join(".wrapping_add(") + &")".repeat(lanes - 1)
-    };
-
-    let shl_lanes = || -> String {
-        let items: Vec<String> = (0..lanes).map(|i| format!("a[{i}] << N")).collect();
-        format!("[{}]", items.join(", "))
-    };
-
-    let shr_logical_lanes = || -> String {
-        let items: Vec<String> = (0..lanes).map(|i| format!("a[{i}] >> N")).collect();
-        format!("[{}]", items.join(", "))
-    };
-
-    let bitmask_expr = || -> String {
-        let items: Vec<String> = (0..lanes)
-            .map(|i| {
-                if i == 0 {
-                    "(a[0] >> 31)".to_string()
-                } else {
-                    format!("((a[{i}] >> 31) << {i})")
-                }
-            })
-            .collect();
-        items.join(" | ")
-    };
+    let bitmask = (0..lanes)
+        .map(|i| {
+            if i == 0 {
+                "(a[0] >> 31)".to_string()
+            } else {
+                format!("((a[{i}] >> 31) << {i})")
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(" | ");
 
     // Sign-bit contract: a lane is "true" when its top bit is set, not
     // merely when it is nonzero. Shifting keeps this correct for both the
     // signed lane types (arithmetic shift -> 0 or -1) and the unsigned ones.
-    let all_true_expr = || -> String {
-        let items: Vec<String> = (0..lanes).map(|i| format!("(a[{i}] >> 31) != 0")).collect();
-        items.join(" && ")
-    };
+    let all_true = (0..lanes)
+        .map(|i| format!("(a[{i}] >> 31) != 0"))
+        .collect::<Vec<_>>()
+        .join(" && ");
 
-    let any_true_expr = || -> String {
-        let items: Vec<String> = (0..lanes).map(|i| format!("(a[{i}] >> 31) != 0")).collect();
-        items.join(" || ")
-    };
+    let any_true = (0..lanes)
+        .map(|i| format!("(a[{i}] >> 31) != 0"))
+        .collect::<Vec<_>>()
+        .join(" || ");
 
     formatdoc! {r#"
         impl {trait_name} for archmage::ScalarToken {{
@@ -7832,94 +7516,66 @@ fn generate_scalar_u32_impl(ty: &U32VecType) -> String {
 
             #[inline(always)]
             fn add(self, a: {array}, b: {array}) -> {array} {{
-                {add_lanes}
+                core::array::from_fn(|i| a[i].wrapping_add(b[i]))
             }}
 
             #[inline(always)]
             fn sub(self, a: {array}, b: {array}) -> {array} {{
-                {sub_lanes}
+                core::array::from_fn(|i| a[i].wrapping_sub(b[i]))
             }}
 
             #[inline(always)]
             fn mul(self, a: {array}, b: {array}) -> {array} {{
-                {mul_lanes}
+                core::array::from_fn(|i| a[i].wrapping_mul(b[i]))
             }}
 
             // ====== Math ======
 
             #[inline(always)]
             fn min(self, a: {array}, b: {array}) -> {array} {{
-                {min_lanes}
+                core::array::from_fn(|i| if a[i] < b[i] {{ a[i] }} else {{ b[i] }})
             }}
 
             #[inline(always)]
             fn max(self, a: {array}, b: {array}) -> {array} {{
-                {max_lanes}
+                core::array::from_fn(|i| if a[i] > b[i] {{ a[i] }} else {{ b[i] }})
             }}
 
             // ====== Comparisons ======
 
             #[inline(always)]
             fn simd_eq(self, a: {array}, b: {array}) -> {array} {{
-                let mut r = [0u32; {lanes}];
-                for i in 0..{lanes} {{
-                    r[i] = if a[i] == b[i] {{ u32::MAX }} else {{ 0 }};
-                }}
-                r
+                core::array::from_fn(|i| if a[i] == b[i] {{ u32::MAX }} else {{ 0 }})
             }}
 
             #[inline(always)]
             fn simd_ne(self, a: {array}, b: {array}) -> {array} {{
-                let mut r = [0u32; {lanes}];
-                for i in 0..{lanes} {{
-                    r[i] = if a[i] != b[i] {{ u32::MAX }} else {{ 0 }};
-                }}
-                r
+                core::array::from_fn(|i| if a[i] != b[i] {{ u32::MAX }} else {{ 0 }})
             }}
 
             #[inline(always)]
             fn simd_lt(self, a: {array}, b: {array}) -> {array} {{
-                let mut r = [0u32; {lanes}];
-                for i in 0..{lanes} {{
-                    r[i] = if a[i] < b[i] {{ u32::MAX }} else {{ 0 }};
-                }}
-                r
+                core::array::from_fn(|i| if a[i] < b[i] {{ u32::MAX }} else {{ 0 }})
             }}
 
             #[inline(always)]
             fn simd_le(self, a: {array}, b: {array}) -> {array} {{
-                let mut r = [0u32; {lanes}];
-                for i in 0..{lanes} {{
-                    r[i] = if a[i] <= b[i] {{ u32::MAX }} else {{ 0 }};
-                }}
-                r
+                core::array::from_fn(|i| if a[i] <= b[i] {{ u32::MAX }} else {{ 0 }})
             }}
 
             #[inline(always)]
             fn simd_gt(self, a: {array}, b: {array}) -> {array} {{
-                let mut r = [0u32; {lanes}];
-                for i in 0..{lanes} {{
-                    r[i] = if a[i] > b[i] {{ u32::MAX }} else {{ 0 }};
-                }}
-                r
+                core::array::from_fn(|i| if a[i] > b[i] {{ u32::MAX }} else {{ 0 }})
             }}
 
             #[inline(always)]
             fn simd_ge(self, a: {array}, b: {array}) -> {array} {{
-                let mut r = [0u32; {lanes}];
-                for i in 0..{lanes} {{
-                    r[i] = if a[i] >= b[i] {{ u32::MAX }} else {{ 0 }};
-                }}
-                r
+                core::array::from_fn(|i| if a[i] >= b[i] {{ u32::MAX }} else {{ 0 }})
             }}
 
             #[inline(always)]
             fn blend(self, mask: {array}, if_true: {array}, if_false: {array}) -> {array} {{
-                let mut r = [0u32; {lanes}];
-                for i in 0..{lanes} {{
-                    r[i] = if mask[i] != 0 {{ if_true[i] }} else {{ if_false[i] }};
-                }}
-                r
+                core::array::from_fn(|i| if mask[i] != 0 {{ if_true[i] }} else {{ if_false[i] }})
             }}
 
             // ====== Reductions ======
@@ -7933,34 +7589,34 @@ fn generate_scalar_u32_impl(ty: &U32VecType) -> String {
 
             #[inline(always)]
             fn not(self, a: {array}) -> {array} {{
-                {not_lanes}
+                a.map(|x| !x)
             }}
 
             #[inline(always)]
             fn bitand(self, a: {array}, b: {array}) -> {array} {{
-                {and_lanes}
+                core::array::from_fn(|i| a[i] & b[i])
             }}
 
             #[inline(always)]
             fn bitor(self, a: {array}, b: {array}) -> {array} {{
-                {or_lanes}
+                core::array::from_fn(|i| a[i] | b[i])
             }}
 
             #[inline(always)]
             fn bitxor(self, a: {array}, b: {array}) -> {array} {{
-                {xor_lanes}
+                core::array::from_fn(|i| a[i] ^ b[i])
             }}
 
             // ====== Shifts ======
 
             #[inline(always)]
             fn shl_const<const N: i32>(self, a: {array}) -> {array} {{
-                {shl}
+                a.map(|x| x << N)
             }}
 
             #[inline(always)]
             fn shr_logical_const<const N: i32>(self, a: {array}) -> {array} {{
-                {shr_logical}
+                a.map(|x| x >> N)
             }}
 
             // ====== Uniform variable shifts ======
@@ -7992,26 +7648,7 @@ fn generate_scalar_u32_impl(ty: &U32VecType) -> String {
                 {bitmask}
             }}
         }}
-    "#,
-        add_lanes = binary_method("wrapping_add"),
-        sub_lanes = binary_method("wrapping_sub"),
-        mul_lanes = binary_method("wrapping_mul"),
-        min_lanes = min_lanes(),
-        max_lanes = max_lanes(),
-        reduce_add = reduce_add(),
-        not_lanes = {
-            let items: Vec<String> = (0..lanes).map(|i| format!("!a[{i}]")).collect();
-            format!("[{}]", items.join(", "))
-        },
-        and_lanes = binary_infix("&"),
-        or_lanes = binary_infix("|"),
-        xor_lanes = binary_infix("^"),
-        shl = shl_lanes(),
-        shr_logical = shr_logical_lanes(),
-        all_true = all_true_expr(),
-        any_true = any_true_expr(),
-        bitmask = bitmask_expr(),
-    }
+    "#}
 }
 
 // ============================================================================
