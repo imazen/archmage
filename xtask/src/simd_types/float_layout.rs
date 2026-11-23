@@ -888,35 +888,39 @@ pub(super) fn wasm() -> String {
     "#}
 }
 
+/// AVX2 fast path for `F32x16Internal::to_u16_lanes` on `X64V3Token`, called
+/// from the hand-written `impls/polyfill.rs` so both halves pack in one
+/// 256-bit `_mm256_packus_epi32` + `_mm256_permute4x64_epi64`.
+pub(super) fn x86_v3_f32x16_to_u16_helper() -> String {
+    formatdoc! {r#"
+
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "w512"))]
+        #[attune(wrap, suppress_const_test)]
+        pub(super) fn f32x16_to_u16_lanes<const CFG: u32>(
+            _token: X64V3Token,
+            value: [__m256; 2],
+        ) -> [u16; 16] {{
+            let opts = const {{ crate::numerics::IntConvert::decode(CFG) }};
+            let convert = |v| {{
+                let v = if opts.saturates_all() {{
+                    _mm256_min_ps(_mm256_set1_ps(65535.0), v)
+                }} else {{
+                    v
+                }};
+                if opts.rounds() {{
+                    _mm256_cvtps_epi32(v)
+                }} else {{
+                    _mm256_cvttps_epi32(v)
+                }}
+            }};
+            let packed = _mm256_packus_epi32(convert(value[0]), convert(value[1]));
+            crate::simd_storage::cast(_mm256_permute4x64_epi64::<0xd8>(packed))
+        }}
+    "#}
+}
+
 pub(super) fn polyfill(lanes: usize, part: usize, repr: &str) -> String {
     let backend = format!("F32x{part}Internal");
-    let wide = if lanes == 16 {
-        polyfill_rgba_wide(part, repr)
-    } else {
-        String::new()
-    };
-    let pack_words = if part == 8 {
-        let attr = super::backend_syntax::arcane("X64V3Token");
-        formatdoc! {r#"
-            {attr}
-            fn to_u16_lanes<const CFG: u32>(self, value: {repr}) -> [u16; {lanes}] {{
-                let opts = const {{ crate::numerics::IntConvert::decode(CFG) }};
-                let convert = |v| {{
-                    let v = if opts.saturates_all() {{ _mm256_min_ps(_mm256_set1_ps(65535.0), v) }} else {{ v }};
-                    if opts.rounds() {{ _mm256_cvtps_epi32(v) }} else {{ _mm256_cvttps_epi32(v) }}
-                }};
-                let packed = _mm256_packus_epi32(convert(value[0]), convert(value[1]));
-                crate::simd_storage::cast(_mm256_permute4x64_epi64::<0xd8>(packed))
-            }}
-        "#}
-    } else {
-        formatdoc! {r#"
-            #[inline(always)]
-            fn to_u16_lanes<const CFG: u32>(self, value: {repr}) -> [u16; {lanes}] {{
-                crate::simd_storage::cast(value.map(|v| <Self as {backend}>::to_u16_lanes::<CFG>(self, v)))
-            }}
-        "#}
-    };
     formatdoc! {r#"
         #[inline(always)]
         fn from_u16_lanes(self, lanes: &[u16; {lanes}]) -> {repr} {{
@@ -924,7 +928,10 @@ pub(super) fn polyfill(lanes: usize, part: usize, repr: &str) -> String {
             core::array::from_fn(|i| <Self as {backend}>::from_u16_lanes(self, &chunks[i]))
         }}
 
-        {pack_words}
+        #[inline(always)]
+        fn to_u16_lanes<const CFG: u32>(self, value: {repr}) -> [u16; {lanes}] {{
+            crate::simd_storage::cast(value.map(|v| <Self as {backend}>::to_u16_lanes::<CFG>(self, v)))
+        }}
 
         #[inline(always)]
         fn to_u8_lanes<const CFG: u32>(self, value: {repr}) -> [u8; {lanes}] {{
@@ -963,8 +970,6 @@ pub(super) fn polyfill(lanes: usize, part: usize, repr: &str) -> String {
         fn to_bf16_lanes<const CFG: u32>(self, value: {repr}) -> [u16; {lanes}] {{
             crate::simd_storage::cast(value.map(|part| <Self as {backend}>::to_bf16_lanes::<CFG>(self, part)))
         }}
-
-        {wide}
 
         #[inline(always)]
         fn broadcast_rgba_alpha_repr(self, value: {repr}) -> {repr} {{
@@ -1078,42 +1083,6 @@ fn x86_rgba_wide(attr: &str) -> String {
                 _mm512_permutex2var_ps(rg1, first, ba1),
                 _mm512_permutex2var_ps(rg1, second, ba1),
             ]
-        }}
-    "#}
-}
-
-fn polyfill_rgba_wide(part: usize, repr: &str) -> String {
-    let count = 16 / part;
-    formatdoc! {r#"
-        #[inline(always)]
-        fn from_u8_lanes_wide(self, lanes: &[u8; 16]) -> {repr} {{
-            use crate::simd::generic::f32x{part} as V;
-            let (parts, _) = lanes.as_chunks::<{part}>();
-            core::array::from_fn(|i| V::from_u8_t(self, &parts[i]).into_repr())
-        }}
-
-        #[inline(always)]
-        fn deinterleave_rgba_wide(self, rgba: [{repr}; 4]) -> [{repr}; 4] {{
-            use crate::simd::generic::f32x{part} as V;
-            let groups: [[V<Self>; 4]; {count}] = core::array::from_fn(|i| {{
-                V::deinterleave_4ch(core::array::from_fn(|j| {{
-                    let block = 4 * i + j;
-                    V::from_repr_unchecked(self, rgba[block / {count}][block % {count}])
-                }}))
-            }});
-            core::array::from_fn(|c| core::array::from_fn(|i| groups[i][c].into_repr()))
-        }}
-
-        #[inline(always)]
-        fn interleave_rgba_wide(self, channels: [{repr}; 4]) -> [{repr}; 4] {{
-            use crate::simd::generic::f32x{part} as V;
-            let groups: [[V<Self>; 4]; {count}] = core::array::from_fn(|i| {{
-                V::interleave_4ch(channels.map(|c| V::from_repr_unchecked(self, c[i])))
-            }});
-            core::array::from_fn(|i| core::array::from_fn(|j| {{
-                let block = i * {count} + j;
-                groups[block / 4][block % 4].into_repr()
-            }}))
         }}
     "#}
 }

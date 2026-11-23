@@ -425,9 +425,8 @@ pub fn generate_backend_files() -> BTreeMap<String, String> {
         generate_x86_additional_convert_impls, generate_x86_int_impls,
     };
     use super::backend_gen_w512::{
-        all_w512_types, generate_neon_w512_impls, generate_popcnt_backend_traits,
-        generate_scalar_w512_impls, generate_w512_backend_trait, generate_wasm_w512_impls,
-        generate_x86_v3_w512_impls,
+        all_w512_types, generate_popcnt_backend_traits, generate_scalar_w512_impls,
+        generate_w512_backend_trait,
     };
 
     let types = all_float_types();
@@ -517,7 +516,7 @@ pub fn generate_backend_files() -> BTreeMap<String, String> {
         ),
     );
 
-    // 10. Implementation files
+    // 10. Implementation files (W512 polyfills live hand-written in `impls/polyfill.rs`)
     files.insert(
         "impls/x86_v3.rs".to_string(),
         generate_x86_impls(&types, "X64V3Token", 256)
@@ -527,7 +526,7 @@ pub fn generate_backend_files() -> BTreeMap<String, String> {
             + &generate_x86_int_impls(&remaining_int_types, "X64V3Token", 256)
             + &generate_x86_convert_impls("X64V3Token")
             + &generate_x86_additional_convert_impls("X64V3Token")
-            + &gate_w512_impls(generate_x86_v3_w512_impls(&w512_types)),
+            + &super::float_layout::x86_v3_f32x16_to_u16_helper(),
     );
     files.insert(
         "impls/scalar.rs".to_string(),
@@ -548,8 +547,7 @@ pub fn generate_backend_files() -> BTreeMap<String, String> {
             + &generate_neon_i64_impls(&i64_types)
             + &generate_neon_int_impls(&remaining_int_types)
             + &generate_neon_convert_impls()
-            + &generate_neon_additional_convert_impls()
-            + &gate_w512_impls(generate_neon_w512_impls(&w512_types)),
+            + &generate_neon_additional_convert_impls(),
     );
     files.insert(
         "impls/wasm128.rs".to_string(),
@@ -559,8 +557,7 @@ pub fn generate_backend_files() -> BTreeMap<String, String> {
             + &generate_wasm_i64_impls(&i64_types)
             + &generate_wasm_int_impls(&remaining_int_types)
             + &generate_wasm_convert_impls()
-            + &generate_wasm_additional_convert_impls()
-            + &gate_w512_impls(generate_wasm_w512_impls(&w512_types)),
+            + &generate_wasm_additional_convert_impls(),
     );
 
     // 10b. x86 V4 native AVX-512 implementation (W512 types only). Already
@@ -1200,6 +1197,17 @@ fn generate_impls_mod() -> String {
 
         #[cfg(target_arch = "wasm32")]
         mod wasm128;
+
+        // Hand-written width polyfills (W512 for V3 / NEON / WASM128, zero `unsafe`).
+        #[cfg(all(
+            feature = "w512",
+            any(
+                all(target_arch = "x86_64", target_feature = "sse2"),
+                target_arch = "aarch64",
+                target_arch = "wasm32"
+            )
+        ))]
+        mod polyfill;
 
         mod scalar;
     "#}
@@ -5417,47 +5425,6 @@ fn generate_x86_convert_impls(token: &str) -> String {
             }}
         }}
 
-        #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "w512"))]
-        impl F32x16Convert for archmage::{token} {{
-            {arcane}
-            fn bitcast_f32_to_i32(self, a: [__m256; 2]) -> [__m256i; 2] {{
-                [_mm256_castps_si256(a[0]), _mm256_castps_si256(a[1])]
-            }}
-
-            {arcane}
-            fn bitcast_i32_to_f32(self, a: [__m256i; 2]) -> [__m256; 2] {{
-                [_mm256_castsi256_ps(a[0]), _mm256_castsi256_ps(a[1])]
-            }}
-
-            {arcane}
-            fn convert_f32_to_i32(self, a: [__m256; 2]) -> [__m256i; 2] {{
-                [_mm256_cvttps_epi32(a[0]), _mm256_cvttps_epi32(a[1])]
-            }}
-
-            {arcane}
-            fn convert_f32_to_i32_saturating(self, a: [__m256; 2]) -> [__m256i; 2] {{
-                core::array::from_fn(|i| {{
-                    {{
-                        let t = _mm256_cvttps_epi32(a[i]);
-                        let big = _mm256_cmp_ps::<_CMP_GE_OQ>(a[i], _mm256_set1_ps(2_147_483_648.0));
-                        let t = _mm256_blendv_epi8(t, _mm256_set1_epi32(i32::MAX), _mm256_castps_si256(big));
-                        let nan = _mm256_cmp_ps::<_CMP_UNORD_Q>(a[i], a[i]);
-                        _mm256_andnot_si256(_mm256_castps_si256(nan), t)
-                    }}
-                }})
-            }}
-
-            {arcane}
-            fn convert_f32_to_i32_round(self, a: [__m256; 2]) -> [__m256i; 2] {{
-                [_mm256_cvtps_epi32(a[0]), _mm256_cvtps_epi32(a[1])]
-            }}
-
-            {arcane}
-            fn convert_i32_to_f32(self, a: [__m256i; 2]) -> [__m256; 2] {{
-                [_mm256_cvtepi32_ps(a[0]), _mm256_cvtepi32_ps(a[1])]
-            }}
-        }}
-
         #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
         impl U32x4Bitcast for archmage::{token} {{
             {arcane}
@@ -6396,34 +6363,6 @@ fn generate_neon_convert_impls() -> String {
             }}
         }}
 
-        #[cfg(all(target_arch = "aarch64", feature = "w512"))]
-        impl F32x16Convert for archmage::NeonToken {{
-            {arcane}
-            fn bitcast_f32_to_i32(self, a: [float32x4_t; 4]) -> [int32x4_t; 4] {{
-                [vreinterpretq_s32_f32(a[0]), vreinterpretq_s32_f32(a[1]), vreinterpretq_s32_f32(a[2]), vreinterpretq_s32_f32(a[3])]
-            }}
-
-            {arcane}
-            fn bitcast_i32_to_f32(self, a: [int32x4_t; 4]) -> [float32x4_t; 4] {{
-                [vreinterpretq_f32_s32(a[0]), vreinterpretq_f32_s32(a[1]), vreinterpretq_f32_s32(a[2]), vreinterpretq_f32_s32(a[3])]
-            }}
-
-            {arcane}
-            fn convert_f32_to_i32(self, a: [float32x4_t; 4]) -> [int32x4_t; 4] {{
-                [vcvtq_s32_f32(a[0]), vcvtq_s32_f32(a[1]), vcvtq_s32_f32(a[2]), vcvtq_s32_f32(a[3])]
-            }}
-
-            {arcane}
-            fn convert_f32_to_i32_round(self, a: [float32x4_t; 4]) -> [int32x4_t; 4] {{
-                [vcvtnq_s32_f32(a[0]), vcvtnq_s32_f32(a[1]), vcvtnq_s32_f32(a[2]), vcvtnq_s32_f32(a[3])]
-            }}
-
-            {arcane}
-            fn convert_i32_to_f32(self, a: [int32x4_t; 4]) -> [float32x4_t; 4] {{
-                [vcvtq_f32_s32(a[0]), vcvtq_f32_s32(a[1]), vcvtq_f32_s32(a[2]), vcvtq_f32_s32(a[3])]
-            }}
-        }}
-
         #[cfg(target_arch = "aarch64")]
         impl U32x4Bitcast for archmage::NeonToken {{
             {arcane}
@@ -6917,45 +6856,6 @@ fn generate_wasm_convert_impls() -> String {
             #[inline(always)]
             fn convert_i32_to_f32(self, a: [v128; 2]) -> [v128; 2] {{
                 [f32x4_convert_i32x4(a[0]), f32x4_convert_i32x4(a[1])]
-            }}
-        }}
-
-        #[cfg(all(target_arch = "wasm32", feature = "w512"))]
-        impl F32x16Convert for archmage::Wasm128Token {{
-            #[inline(always)]
-            fn bitcast_f32_to_i32(self, a: [v128; 4]) -> [v128; 4] {{ a }}
-
-            #[inline(always)]
-            fn bitcast_i32_to_f32(self, a: [v128; 4]) -> [v128; 4] {{ a }}
-
-            #[inline(always)]
-            fn convert_f32_to_i32(self, a: [v128; 4]) -> [v128; 4] {{
-                [i32x4_trunc_sat_f32x4(a[0]), i32x4_trunc_sat_f32x4(a[1]), i32x4_trunc_sat_f32x4(a[2]), i32x4_trunc_sat_f32x4(a[3])]
-            }}
-
-            #[inline(always)]
-            fn convert_f32_to_i32_fast(self, a: [v128; 4]) -> [v128; 4] {{
-                [
-                    crate::wasm_fma::trunc_f32x4_fast(self, a[0]),
-                    crate::wasm_fma::trunc_f32x4_fast(self, a[1]),
-                    crate::wasm_fma::trunc_f32x4_fast(self, a[2]),
-                    crate::wasm_fma::trunc_f32x4_fast(self, a[3]),
-                ]
-            }}
-
-            #[inline(always)]
-            fn convert_f32_to_i32_round(self, a: [v128; 4]) -> [v128; 4] {{
-                [
-                    i32x4_trunc_sat_f32x4(f32x4_nearest(a[0])),
-                    i32x4_trunc_sat_f32x4(f32x4_nearest(a[1])),
-                    i32x4_trunc_sat_f32x4(f32x4_nearest(a[2])),
-                    i32x4_trunc_sat_f32x4(f32x4_nearest(a[3])),
-                ]
-            }}
-
-            #[inline(always)]
-            fn convert_i32_to_f32(self, a: [v128; 4]) -> [v128; 4] {{
-                [f32x4_convert_i32x4(a[0]), f32x4_convert_i32x4(a[1]), f32x4_convert_i32x4(a[2]), f32x4_convert_i32x4(a[3])]
             }}
         }}
 
