@@ -435,8 +435,7 @@ fn x86_v3_repr(width_bits: usize) -> &'static str {
     match width_bits {
         128 => "__m128i",
         256 => "__m256i",
-        512 => "[__m256i; 2]",
-        _ => unreachable!("only 128/256/512-bit types are generated"),
+        _ => unreachable!("only native 128/256-bit V3 types are generated here"),
     }
 }
 
@@ -611,13 +610,7 @@ fn generate_x86_v3_widen_narrow_methods(src: &str) -> String {
                         Half::High => format!("{cvt}(_mm256_extracti128_si256::<1>(a))"),
                     }
                 }
-                _ => {
-                    let cvt = x86_cvt(&p, "_mm256");
-                    let k = if half == Half::Low { 0 } else { 1 };
-                    format!(
-                        "[{cvt}(_mm256_castsi256_si128(a[{k}])), {cvt}(_mm256_extracti128_si256::<1>(a[{k}]))]"
-                    )
-                }
+                _ => unreachable!("V3 W512 widen lives in impls/polyfill.rs"),
             };
             code.push_str(&formatdoc! {r#"
                     {arcane}
@@ -638,12 +631,7 @@ fn generate_x86_v3_widen_narrow_methods(src: &str) -> String {
                     "_mm256_permute4x64_epi64::<0xD8>({}(a, b))",
                     x86_pack(&p, "_mm256", dst_signed)
                 ),
-                _ => {
-                    let pk = x86_pack(&p, "_mm256", dst_signed);
-                    format!(
-                        "[_mm256_permute4x64_epi64::<0xD8>({pk}(a[0], a[1])), _mm256_permute4x64_epi64::<0xD8>({pk}(b[0], b[1]))]"
-                    )
-                }
+                _ => unreachable!("V3 W512 narrow lives in impls/polyfill.rs"),
             };
             code.push_str(&formatdoc! {r#"
                     {arcane}

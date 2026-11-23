@@ -41,4 +41,15 @@ mod arm_neon;
 #[cfg(target_arch = "wasm32")]
 mod wasm128;
 
+// Hand-written width polyfills (W512 for V3 / NEON / WASM128, zero `unsafe`).
+#[cfg(all(
+    feature = "w512",
+    any(
+        all(target_arch = "x86_64", target_feature = "sse2"),
+        target_arch = "aarch64",
+        target_arch = "wasm32"
+    )
+))]
+mod polyfill;
+
 mod scalar;
