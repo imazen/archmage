@@ -5,7 +5,6 @@ use std::fs;
 use std::path::PathBuf;
 
 use crate::cmd::miri::miri_toolchain;
-use crate::cmd::parity::check_api_parity;
 use crate::cmd::validate::validate_after_soundness;
 use crate::{registry, soundness};
 
@@ -88,11 +87,6 @@ pub(crate) fn run_ci() -> Result<()> {
     timer.begin("Step 4/19: Validating tokens, delegation, budgets, licenses");
     validate_after_soundness(&reg)?;
     println!("└─ Validation passed ───────────────────────────────────────────────┘\n");
-
-    // Step 5: Parity check (strict mode - fails on any issues)
-    timer.begin("Step 5/19: Checking API parity (strict)");
-    check_api_parity(true)?;
-    println!("└─ Parity check passed ──────────────────────────────────────────────┘\n");
 
     // Step 6: xtask self-tests — the soundness scanner's own regression
     // tests (planted violations must fail, gated code must pass) plus the

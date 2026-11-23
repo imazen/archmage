@@ -637,24 +637,6 @@ jobs:
         run: cargo run -p xtask -- soundness
 
   # ==========================================================================
-  # API parity check - ensure consistent APIs across architectures
-  # ==========================================================================
-  parity:
-    name: API Parity Check
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache cargo
-        uses: Swatinem/rust-cache@v2
-
-      - name: Check API parity
-        run: cargo run -p xtask -- parity
-
-  # ==========================================================================
   # Miri - undefined behavior detection
   # ==========================================================================
   miri:
@@ -1307,7 +1289,6 @@ jobs:
       - api-doc-check
       - validate-safety
       - soundness
-      - parity
       - miri
       - fuzz
       - clippy

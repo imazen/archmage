@@ -557,8 +557,9 @@ fn build_delegation_body(
     out.push('\n');
 
     let total_impls = tokens.len() * specs.len();
+    let token_word = if tokens.len() == 1 { "token" } else { "tokens" };
     out.push_str(&format!(
-        "// Concrete trait implementations ({} tokens × {} traits = {total_impls} impls).\n",
+        "// Concrete trait implementations ({} {token_word} × {} traits = {total_impls} impls).\n",
         tokens.len(),
         specs.len(),
     ));
@@ -847,7 +848,7 @@ fn delegating_impl_template<'a>(
                         // Destructured trait parameters (e.g. `[a, b, c]: [T; 3]` on
                         // `F32x16Internal::permute_rgb_wide`) forward verbatim under a
                         // synthetic binding.
-                        let ident = format_ident!("arg{idx}");
+                        let ident = format_ident!("__arg{idx}");
                         *other = syn::parse_quote!(#ident);
                         ident
                     }

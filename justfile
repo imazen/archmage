@@ -125,10 +125,6 @@ validate-registry:
 validate-tokens:
     cargo run -p xtask -- validate
 
-# Check API parity across x86/ARM/WASM architectures
-parity:
-    cargo run -p xtask -- parity
-
 # Test no_std compilation and tests for all crates
 test-nostd:
     cargo check -p archmage --no-default-features --features "avx512"

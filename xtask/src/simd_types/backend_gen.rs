@@ -83,22 +83,6 @@ impl FloatVecType {
         }
     }
 
-    /// x86 token for this width
-    #[allow(dead_code)]
-    fn _x86_token(&self) -> &'static str {
-        match self.width_bits {
-            128 | 256 => "X64V3Token",
-            512 => "X64V4Token",
-            _ => unreachable!(),
-        }
-    }
-
-    /// Whether this type is native on x86 V3 (AVX2+FMA)
-    #[allow(dead_code)]
-    fn _native_on_v3(&self) -> bool {
-        self.width_bits <= 256
-    }
-
     /// Whether this type is native on NEON (128-bit only)
     fn native_on_neon(&self) -> bool {
         self.width_bits == 128
@@ -136,12 +120,6 @@ impl FloatVecType {
             let count = self.width_bits / 128;
             format!("[v128; {count}]")
         }
-    }
-
-    /// Scalar repr type
-    #[allow(dead_code)]
-    fn _scalar_repr(&self) -> String {
-        self.array_type()
     }
 
     /// NEON element intrinsic suffix: "f32" or "f64"
@@ -1237,27 +1215,38 @@ fn generate_impls_mod() -> String {
 /// here too. `cargo xtask soundness` mechanically re-verifies the
 /// feature-subset claim on every run.
 fn impls_safety_contract(token_desc: &str) -> String {
-    if !token_desc.contains("Wasm") {
+    if token_desc.contains("Wasm") {
+        return formatdoc! {r#"
+            //! # Safety (audit contract — checked backend boundaries)
+            //!
+            //! Value intrinsics use WebAssembly's safe SIMD API with `{token_desc}`.
+            //! Whole-array storage copies use `crate::simd_storage`, whose POD bounds
+            //! and compile-time size checks cover both v128 and arrays of v128.
+            //! No raw-pointer load/store operations are generated here.
+        "#};
+    }
+    if token_desc.contains("Neon") {
         return indoc! {"
             //! # Safety (audit contract — checked backend boundaries)
             //!
             //! `#[arcane]` checks value intrinsics against the receiver token's features.
-            //! SSE2-only arithmetic runs in `#[arcane]` regions for `X64V1Token`, the
-            //! x86-64 baseline, so it inlines into callers without AVX.
             //! Whole-array loads/stores and bit casts use `crate::simd_storage` helpers,
             //! which require POD storage and enforce equal sizes at compile time.
             //! Token-bearing wrappers never implement the storage POD trait.
         "}
         .to_string();
     }
-    formatdoc! {r#"
+    indoc! {"
         //! # Safety (audit contract — checked backend boundaries)
         //!
-        //! Value intrinsics use WebAssembly's safe SIMD API with `{token_desc}`.
-        //! Whole-array storage copies use `crate::simd_storage`, whose POD bounds
-        //! and compile-time size checks cover both v128 and arrays of v128.
-        //! No raw-pointer load/store operations are generated here.
-    "#}
+        //! `#[arcane]` checks value intrinsics against the receiver token's features.
+        //! SSE2-only arithmetic runs in `#[arcane]` regions for `X64V1Token`, the
+        //! x86-64 baseline, so it inlines into callers without AVX.
+        //! Whole-array loads/stores and bit casts use `crate::simd_storage` helpers,
+        //! which require POD storage and enforce equal sizes at compile time.
+        //! Token-bearing wrappers never implement the storage POD trait.
+    "}
+    .to_string()
 }
 
 /// Contains native W512 backend impls for X64V4Token, plus Modern-specific

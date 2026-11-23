@@ -66,7 +66,7 @@ macro_rules! run_cfg {
                 }
                 Plan::Software => {
                     if backend {
-                        graph::$scalar::<{ graph::RELAXED }>(ScalarToken, bases, exponent, cfg)
+                        graph::$scalar::<{ graph::NATIVE }>(ScalarToken, bases, exponent, cfg)
                     } else {
                         graph::$scalar::<{ graph::SOFTWARE }>(ScalarToken, bases, exponent, cfg)
                     }
@@ -139,7 +139,7 @@ macro_rules! run_const {
                 }
                 Plan::Software => {
                     if BACKEND {
-                        graph::$scalar::<K, { graph::RELAXED }>(ScalarToken, bases, exponent)
+                        graph::$scalar::<K, { graph::NATIVE }>(ScalarToken, bases, exponent)
                     } else {
                         graph::$scalar::<K, { graph::SOFTWARE }>(ScalarToken, bases, exponent)
                     }
@@ -195,7 +195,7 @@ pub(super) fn run1_cfg(
 ) -> Result<f32, PowfError> {
     if matches!(plan, Plan::Software) {
         return if backend {
-            graph::kernel1_cfg::<{ graph::RELAXED }>(input, exponent, cfg)
+            graph::kernel1_cfg::<{ graph::NATIVE }>(input, exponent, cfg)
         } else {
             graph::kernel1_cfg::<{ graph::SOFTWARE }>(input, exponent, cfg)
         };
@@ -220,7 +220,7 @@ pub(super) fn run1_const<K: graph::Kernel, const BACKEND: bool>(
 ) -> Result<f32, PowfError> {
     if matches!(plan, Plan::Software) {
         return if BACKEND {
-            graph::kernel1_with::<K, { graph::RELAXED }>(input, exponent)
+            graph::kernel1_with::<K, { graph::NATIVE }>(input, exponent)
         } else {
             graph::kernel1_with::<K, { graph::SOFTWARE }>(input, exponent)
         };
@@ -266,7 +266,7 @@ pub(super) fn run_slice_cfg(
         }
         Plan::Software => {
             if backend {
-                graph::slice1_cfg_scalar::<{ graph::RELAXED }>(src, dst, exponent, cfg)
+                graph::slice1_cfg_scalar::<{ graph::NATIVE }>(src, dst, exponent, cfg)
             } else {
                 graph::slice1_cfg_scalar::<{ graph::SOFTWARE }>(src, dst, exponent, cfg)
             }
@@ -307,7 +307,7 @@ pub(super) fn run_slice<K: graph::Kernel, const BACKEND: bool>(
         }
         Plan::Software => {
             if BACKEND {
-                graph::slice1_with_scalar::<K, { graph::RELAXED }>(src, dst, exponent)
+                graph::slice1_with_scalar::<K, { graph::NATIVE }>(src, dst, exponent)
             } else {
                 graph::slice1_with_scalar::<K, { graph::SOFTWARE }>(src, dst, exponent)
             }

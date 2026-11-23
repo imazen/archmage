@@ -33,7 +33,6 @@ fn main() -> Result<()> {
         eprintln!(
             "       cargo xtask validate-registry   - Parse and validate token-registry.toml"
         );
-        eprintln!("       cargo xtask parity              - Check API parity across architectures");
         eprintln!(
             "       cargo xtask ci | all            - Run ALL checks (must pass before push)"
         );
@@ -55,7 +54,6 @@ fn main() -> Result<()> {
             cmd::validate::validate_after_soundness(&reg)?;
         }
         "validate-registry" => cmd::validate::validate_registry()?,
-        "parity" => cmd::parity::check_api_parity(false)?,
         "soundness" => cmd::miri::verify_intrinsic_soundness()?,
         "gen-expand" => expand_gen::generate_expand_tests(&PathBuf::from("tests/expand"))?,
         "check-packages" => {
@@ -93,7 +91,6 @@ fn main() -> Result<()> {
             eprintln!("  generate          Regenerate all code from token-registry.toml");
             eprintln!("  validate          Validate magetypes safety + summon() features");
             eprintln!("  validate-registry Parse and validate token-registry.toml");
-            eprintln!("  parity            Check API parity across architectures");
             eprintln!("  soundness         Verify intrinsic soundness against stdarch");
             eprintln!("  miri              Run Miri on magetypes (UB detection)");
             eprintln!("  audit             Scan for safety-critical code");

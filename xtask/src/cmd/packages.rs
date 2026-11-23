@@ -29,7 +29,7 @@ pub(crate) fn check_package_licenses() -> Result<()> {
             );
         }
     }
-    println!("  OK: archmage-macros and magetypes carry LICENSE-MIT and LICENSE-APACHE");
+    println!("  OK: archmage-macros, magetypes, and magemath carry LICENSE-MIT and LICENSE-APACHE");
     Ok(())
 }
 

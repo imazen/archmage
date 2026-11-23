@@ -5,7 +5,7 @@ use super::{PowfError, PowfErrorKind};
 pub(super) use crate::lanes::arith::STD;
 #[cfg(target_arch = "wasm32")]
 pub(super) use crate::lanes::arith::WASM_SOFTWARE;
-pub(super) use crate::lanes::arith::{NATIVE, RELAXED, SOFTWARE};
+pub(super) use crate::lanes::arith::{NATIVE, SOFTWARE};
 use crate::lanes::{F32Lanes, I32Lanes, madd};
 use archmage::IntoConcreteToken as _;
 

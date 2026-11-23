@@ -364,14 +364,14 @@ macro_rules! delegate_v4_w512_backend {
             #[inline(always)]
             fn permute_rgb_wide<const BLOCK: usize, const DEINTERLEAVE: bool>(
                 self,
-                arg0: [Self::InternalRepr; 3],
+                __arg0: [Self::InternalRepr; 3],
             ) -> Self::InternalRepr
             where
                 Self: F32x16Backend,
             {
                 <archmage::X64V4Token as F32x16Internal>::permute_rgb_wide::<BLOCK, DEINTERLEAVE>(
                     self.v4(),
-                    arg0,
+                    __arg0,
                 )
             }
         }
@@ -1992,7 +1992,7 @@ macro_rules! delegate_v4_w512_backend {
     };
 }
 
-// Concrete trait implementations (1 tokens × 12 traits = 12 impls).
+// Concrete trait implementations (1 token × 12 traits = 12 impls).
 
 // archmage::X64V4xToken
 delegate_v4_w512_backend!(F32x16Backend => X64V4xToken);
