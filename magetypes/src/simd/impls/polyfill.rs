@@ -6,7 +6,8 @@
 //! feature boundary).
 //!
 //! Layout compatibility:
-//! - 2-way (`X64V3Token` W512 over W256): `Repr = [HalfRepr; 2]`
+//! - 2-way (`X64V3Token` W512 over W256, `NeonToken`/`Wasm128Token` W256 over W128):
+//!   `Repr = [HalfRepr; 2]`
 //! - 4-way (`NeonToken` / `Wasm128Token` W512 over W128): `Repr = [QuarterRepr; 4]`
 //!
 //! Explicit array literals (`sub_array!`) are used instead of
@@ -90,6 +91,13 @@ macro_rules! sub_for {
 /// Reduce 2 or 4 sub-vectors into one using a vector `$combine` op, then run
 /// `$reduce` once on the combined sub-vector (1 horizontal reduction instead of
 /// 2 or 4, branchless for `all_true`/`any_true`).
+///
+/// For float reductions (`reduce_add`, `reduce_min`, `reduce_max`), lane-wise
+/// folding matches native wider hardware (e.g., AVX-512 folding upper half into
+/// lower half) and inherits the narrow backend's `min`/`max` NaN behavior
+/// consistently across widths (e.g., NEON `f32x8`/`f32x16` match NEON `f32x4`
+/// number-preferring `vminnmvq_f32`). Callers needing a specific NaN contract
+/// use `reduce_min_with::<PROPAGATE/DROP_NAN>()` / `reduce_max_with::<...>()`.
 macro_rules! sub_reduce_tree {
     (2, $sub:ident, $combine:ident, $reduce:ident, $self:expr, $a:expr) => {{
         let combined = <Self as $sub>::$combine($self, $a[0], $a[1]);
@@ -106,55 +114,49 @@ macro_rules! sub_reduce_tree {
 /// Sum scalar `u32` reductions across 2 or 4 sub-vectors.
 macro_rules! sub_sum_u32 {
     (2, |$i:ident| $body:expr) => {{
-        let s0 = {
+        ({
             let $i: usize = 0;
             $body
-        };
-        let s1 = {
+        }) + ({
             let $i: usize = 1;
             $body
-        };
-        s0 + s1
+        })
     }};
     (4, |$i:ident| $body:expr) => {{
-        let s0 = {
+        ({
             let $i: usize = 0;
             $body
-        };
-        let s1 = {
+        }) + ({
             let $i: usize = 1;
             $body
-        };
-        let s2 = {
+        }) + ({
             let $i: usize = 2;
             $body
-        };
-        let s3 = {
+        }) + ({
             let $i: usize = 3;
             $body
-        };
-        s0 + s1 + s2 + s3
+        })
     }};
 }
 
 /// Assemble a wide bitmask from 2 or 4 sub-vector bitmasks.
 macro_rules! sub_bitmask {
     (2, $sub:ident, $sub_lanes:literal, $mask:ty, $self:expr, $a:expr) => {{
-        let lo = <Self as $sub>::bitmask($self, $a[0]) as $mask;
-        let hi = <Self as $sub>::bitmask($self, $a[1]) as $mask;
+        let lo = <$mask>::from(<Self as $sub>::bitmask($self, $a[0]));
+        let hi = <$mask>::from(<Self as $sub>::bitmask($self, $a[1]));
         lo | (hi << $sub_lanes)
     }};
     (4, $sub:ident, $sub_lanes:literal, $mask:ty, $self:expr, $a:expr) => {{
-        let q0 = <Self as $sub>::bitmask($self, $a[0]) as $mask;
-        let q1 = <Self as $sub>::bitmask($self, $a[1]) as $mask;
-        let q2 = <Self as $sub>::bitmask($self, $a[2]) as $mask;
-        let q3 = <Self as $sub>::bitmask($self, $a[3]) as $mask;
+        let q0 = <$mask>::from(<Self as $sub>::bitmask($self, $a[0]));
+        let q1 = <$mask>::from(<Self as $sub>::bitmask($self, $a[1]));
+        let q2 = <$mask>::from(<Self as $sub>::bitmask($self, $a[2]));
+        let q3 = <$mask>::from(<Self as $sub>::bitmask($self, $a[3]));
         q0 | (q1 << $sub_lanes) | (q2 << ($sub_lanes * 2)) | (q3 << ($sub_lanes * 3))
     }};
 }
 
 // ============================================================================
-// Float backend polyfill (F32x16Backend, F64x8Backend)
+// Float backend polyfill (F32x8/F32x16, F64x4/F64x8)
 // ============================================================================
 
 macro_rules! impl_float_polyfill {
@@ -162,6 +164,7 @@ macro_rules! impl_float_polyfill {
         $token:ty, $wide:ident, $sub:ident,
         elem: $elem:ty, zero: $zero:expr,
         lanes: $lanes:literal, sub_lanes: $sub_lanes:literal, parts: $parts:tt
+        $(, { $($extra:item)* })?
     ) => {
         impl $wide for $token {
             type Repr = [<Self as $sub>::Repr; $parts];
@@ -434,6 +437,8 @@ macro_rules! impl_float_polyfill {
             fn bitxor(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
                 sub_array!($parts, |i| <Self as $sub>::bitxor(self, a[i], b[i]))
             }
+
+            $($($extra)*)?
         }
     };
 }
@@ -475,6 +480,7 @@ macro_rules! polyfill_int_signed {
 /// W512 unsigned traits declare `neg` and `shr_arithmetic_const`; the narrower
 /// unsigned backends omit both, so `neg` computes `sub(zero, a)` and
 /// `shr_arithmetic_const` delegates to `shr_logical_const`.
+#[cfg(feature = "w512")]
 macro_rules! polyfill_int_unsigned_w512 {
     ($sub:ident, $parts:tt) => {
         #[inline(always)]
@@ -509,6 +515,25 @@ macro_rules! polyfill_uniform_shifts {
         #[inline(always)]
         fn shr_arithmetic_uniform(self, a: Self::Repr, count: u32) -> Self::Repr {
             sub_array!($parts, |i| <Self as $sub>::$shr_arith_delegate(
+                self, a[i], count
+            ))
+        }
+    };
+}
+
+/// W256 unsigned backends (`U16x16Backend`, `U32x8Backend`) only declare
+/// `shl_uniform` and `shr_logical_uniform` (no `shr_arithmetic_uniform`).
+#[cfg(any(target_arch = "aarch64", target_arch = "wasm32"))]
+macro_rules! polyfill_uniform_shifts_unsigned_narrow {
+    ($sub:ident, $parts:tt) => {
+        #[inline(always)]
+        fn shl_uniform(self, a: Self::Repr, count: u32) -> Self::Repr {
+            sub_array!($parts, |i| <Self as $sub>::shl_uniform(self, a[i], count))
+        }
+
+        #[inline(always)]
+        fn shr_logical_uniform(self, a: Self::Repr, count: u32) -> Self::Repr {
+            sub_array!($parts, |i| <Self as $sub>::shr_logical_uniform(
                 self, a[i], count
             ))
         }
@@ -899,9 +924,158 @@ macro_rules! impl_f32_convert_polyfill {
 }
 
 // ============================================================================
+// Pair bitcast polyfill (W256 on NEON / WASM128)
+// ============================================================================
+
+#[cfg(any(target_arch = "aarch64", target_arch = "wasm32"))]
+macro_rules! impl_bitcast_pair_polyfill {
+    (
+        $token:ty, $wide:ident, $sub:ident,
+        $a_wide:ident, $b_wide:ident, $fn_ab:ident, $fn_ba:ident
+    ) => {
+        impl $wide for $token {
+            #[inline(always)]
+            fn $fn_ab(self, a: <Self as $a_wide>::Repr) -> <Self as $b_wide>::Repr {
+                [
+                    <Self as $sub>::$fn_ab(self, a[0]),
+                    <Self as $sub>::$fn_ab(self, a[1]),
+                ]
+            }
+
+            #[inline(always)]
+            fn $fn_ba(self, a: <Self as $b_wide>::Repr) -> <Self as $a_wide>::Repr {
+                [
+                    <Self as $sub>::$fn_ba(self, a[0]),
+                    <Self as $sub>::$fn_ba(self, a[1]),
+                ]
+            }
+        }
+    };
+}
+
+// ============================================================================
+// W256 bundle (all 10 W256 types + F32x8Convert + 5 W256 Bitcast traits)
+// ============================================================================
+
+#[cfg(any(target_arch = "aarch64", target_arch = "wasm32"))]
+macro_rules! impl_w256_bundle {
+    ($token:ty, to_u8_bytes: $to_u8_helper:path) => {
+        impl_float_polyfill!(
+            $token, F32x8Backend, F32x4Backend,
+            elem: f32, zero: 0.0f32, lanes: 8, sub_lanes: 4, parts: 2,
+            {
+                #[inline(always)]
+                fn to_u8_bytes(self, a: Self::Repr) -> [u8; 8] {
+                    $to_u8_helper(self, a)
+                }
+            }
+        );
+        impl_float_polyfill!(
+            $token, F64x4Backend, F64x2Backend,
+            elem: f64, zero: 0.0f64, lanes: 4, sub_lanes: 2, parts: 2
+        );
+        impl_int_polyfill!(
+            $token, I8x32Backend, I8x16Backend,
+            elem: i8, lanes: 32, sub_lanes: 16, parts: 2, mask: u32,
+            {
+                polyfill_int_signed!(I8x16Backend, 2);
+                polyfill_saturating!(I8x16Backend, 2);
+                polyfill_widen!(I8x16Backend, I16x16Backend, 2, widen_low_i8_to_i16, widen_high_i8_to_i16);
+            }
+        );
+        impl_int_polyfill!(
+            $token, U8x32Backend, U8x16Backend,
+            elem: u8, lanes: 32, sub_lanes: 16, parts: 2, mask: u32,
+            {
+                polyfill_saturating!(U8x16Backend, 2);
+                polyfill_widen!(U8x16Backend, U16x16Backend, 2, widen_low_u8_to_u16, widen_high_u8_to_u16);
+                polyfill_u8_ops!(U8x16Backend, U16x16Backend, 2);
+            }
+        );
+        impl_int_polyfill!(
+            $token, I16x16Backend, I16x8Backend,
+            elem: i16, lanes: 16, sub_lanes: 8, parts: 2, mask: u32,
+            {
+                polyfill_int_mul!(I16x8Backend, 2);
+                polyfill_int_signed!(I16x8Backend, 2);
+                polyfill_uniform_shifts!(I16x8Backend, 2, shr_arithmetic_uniform);
+                polyfill_saturating!(I16x8Backend, 2);
+                polyfill_widen!(I16x8Backend, I32x8Backend, 2, widen_low_i16_to_i32, widen_high_i16_to_i32);
+                polyfill_narrow!(I16x8Backend, I8x32Backend, U8x32Backend, 2, narrow_saturating_i16_to_i8, narrow_saturating_i16_to_u8);
+                polyfill_i16_ops!(I16x8Backend, U16x16Backend, I32x8Backend, 2);
+            }
+        );
+        impl_int_polyfill!(
+            $token, U16x16Backend, U16x8Backend,
+            elem: u16, lanes: 16, sub_lanes: 8, parts: 2, mask: u32,
+            {
+                polyfill_int_mul!(U16x8Backend, 2);
+                polyfill_uniform_shifts_unsigned_narrow!(U16x8Backend, 2);
+                polyfill_saturating!(U16x8Backend, 2);
+                polyfill_widen!(U16x8Backend, U32x8Backend, 2, widen_low_u16_to_u32, widen_high_u16_to_u32);
+                polyfill_pairwise_widen_add!(U16x8Backend, U32x8Backend, 2);
+            }
+        );
+        impl_int_polyfill!(
+            $token, I32x8Backend, I32x4Backend,
+            elem: i32, lanes: 8, sub_lanes: 4, parts: 2, mask: u32,
+            {
+                polyfill_int_mul!(I32x4Backend, 2);
+                polyfill_int_signed!(I32x4Backend, 2);
+                polyfill_uniform_shifts!(I32x4Backend, 2, shr_arithmetic_uniform);
+                polyfill_narrow!(I32x4Backend, I16x16Backend, U16x16Backend, 2, narrow_saturating_i32_to_i16, narrow_saturating_i32_to_u16);
+            }
+        );
+        impl_int_polyfill!(
+            $token, U32x8Backend, U32x4Backend,
+            elem: u32, lanes: 8, sub_lanes: 4, parts: 2, mask: u32,
+            {
+                polyfill_int_mul!(U32x4Backend, 2);
+                polyfill_uniform_shifts_unsigned_narrow!(U32x4Backend, 2);
+            }
+        );
+        impl_int_polyfill!(
+            $token, I64x4Backend, I64x2Backend,
+            elem: i64, lanes: 4, sub_lanes: 2, parts: 2, mask: u32,
+            {
+                polyfill_int_signed!(I64x2Backend, 2);
+            }
+        );
+        impl_int_polyfill!(
+            $token, U64x4Backend, U64x2Backend,
+            elem: u64, lanes: 4, sub_lanes: 2, parts: 2, mask: u32
+        );
+        impl_f32_convert_polyfill!(
+            $token, F32x8Convert, F32x4Convert, F32x8Backend, I32x8Backend, parts: 2
+        );
+        impl_bitcast_pair_polyfill!(
+            $token, U32x8Bitcast, U32x4Bitcast, U32x8Backend, I32x8Backend,
+            bitcast_u32_to_i32, bitcast_i32_to_u32
+        );
+        impl_bitcast_pair_polyfill!(
+            $token, I64x4Bitcast, I64x2Bitcast, I64x4Backend, F64x4Backend,
+            bitcast_i64_to_f64, bitcast_f64_to_i64
+        );
+        impl_bitcast_pair_polyfill!(
+            $token, I8x32Bitcast, I8x16Bitcast, I8x32Backend, U8x32Backend,
+            bitcast_i8_to_u8, bitcast_u8_to_i8
+        );
+        impl_bitcast_pair_polyfill!(
+            $token, I16x16Bitcast, I16x8Bitcast, I16x16Backend, U16x16Backend,
+            bitcast_i16_to_u16, bitcast_u16_to_i16
+        );
+        impl_bitcast_pair_polyfill!(
+            $token, U64x4Bitcast, U64x2Bitcast, U64x4Backend, I64x4Backend,
+            bitcast_u64_to_i64, bitcast_i64_to_u64
+        );
+    };
+}
+
+// ============================================================================
 // F32x16Internal layout/conversion polyfill
 // ============================================================================
 
+#[cfg(feature = "w512")]
 macro_rules! polyfill_rgba_wide_ops {
     (2) => {
         #[inline(always)]
@@ -971,6 +1145,7 @@ macro_rules! polyfill_rgba_wide_ops {
     };
 }
 
+#[cfg(feature = "w512")]
 macro_rules! impl_f32x16_internal_polyfill {
     (
         $token:ty, $sub_int:ident, $sub_vec:ident,
@@ -1080,6 +1255,7 @@ macro_rules! impl_f32x16_internal_polyfill {
 // W512 bundle (all 10 W512 types + F32x16Convert)
 // ============================================================================
 
+#[cfg(feature = "w512")]
 macro_rules! impl_w512_bundle {
     (
         $token:ty, parts: $parts:tt,
@@ -1190,7 +1366,23 @@ macro_rules! impl_w512_bundle {
 // Instantiations
 // ============================================================================
 
-#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
+#[cfg(target_arch = "aarch64")]
+mod neon_w256 {
+    use super::*;
+    use archmage::NeonToken;
+
+    impl_w256_bundle!(NeonToken, to_u8_bytes: super::super::arm_neon::f32x8_to_u8_bytes);
+}
+
+#[cfg(target_arch = "wasm32")]
+mod wasm128_w256 {
+    use super::*;
+    use archmage::Wasm128Token;
+
+    impl_w256_bundle!(Wasm128Token, to_u8_bytes: super::super::wasm128::f32x8_to_u8_bytes);
+}
+
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "w512"))]
 mod x86_v3_w512 {
     use super::*;
     use archmage::X64V3Token;
@@ -1216,7 +1408,7 @@ mod x86_v3_w512 {
     );
 }
 
-#[cfg(target_arch = "aarch64")]
+#[cfg(all(target_arch = "aarch64", feature = "w512"))]
 mod neon_w512 {
     use super::*;
     use archmage::NeonToken;
@@ -1244,7 +1436,7 @@ mod neon_w512 {
     );
 }
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", feature = "w512"))]
 mod wasm128_w512 {
     use super::*;
     use archmage::Wasm128Token;
