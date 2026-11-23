@@ -232,10 +232,9 @@ Run everything with `just ci`. Individually:
 
 | Command | What it proves |
 |---|---|
-| `just soundness` (= `cargo xtask soundness`, also inside `generate`/`validate`/`ci`) | The structure-aware scanner (`xtask/src/soundness.rs`): every intrinsic call in `src/`, `magetypes/src/`, and `tests/expand/*.expanded.rs` sits inside a gating context whose feature set (from `token-registry.toml`) covers the intrinsic's requirements (from `docs/intrinsics/complete_intrinsics.csv`: 16,371 intrinsics extracted from the Rust 1.98.0 stdarch sources). Also enforces the structural rules and SAFETY-comment discipline above. **Vacuous-pass guards:** global floor (4,000 verified calls; 4,478 measured at introduction) plus per-file floors — if the scanner stops seeing the backends, it fails rather than passing empty. |
-| `cargo test -p xtask` (CI step 6) | The verifiers themselves: unit tests plant every violation class (feature mismatch, ungated intrinsic, trait-default-body intrinsic, unknown intrinsic, structural-rule breaches, missing SAFETY comments) and assert the scanner fires; plus a full-repo scan meeting the floors. |
+| `just soundness` (= `cargo xtask soundness`, also inside `generate`/`validate`/`ci`) | Structural and unsafe-surface soundness verifier (`xtask/src/soundness.rs` + `raw_context.rs`): enforces that `#![deny(unsafe_code)]` stays on `magetypes`, every `unsafe` / bare `transmute` / gather-scatter / `unsafe impl Pod` stays confined to `simd_storage.rs`, every `unsafe` AVX-512 gather/scatter intrinsic in `simd_storage.rs` is AST-verified inside an `#[arcane]`/`#[attune(wrap)]` `X64V4Token` function, `from_context()` requires a safe matching `#[target_feature]`/`#[attune]`/`#[rite]` context, backend traits require a `self` receiver, no hidden CPU detection or token forging exists, and every `unsafe {` block carries a `// SAFETY:` comment. Value-intrinsic target-feature gating is enforced directly by `rustc 1.85+` via `#![deny(unsafe_code)]` + `#[arcane]`/`#[attune]` across all CI targets (`x86_64`, `aarch64`, `wasm32`). |
+| `cargo test -p xtask` (CI step 6) | The verifiers themselves: unit tests plant every violation class (structural-rule breaches, wrong-token or unannotated `simd_storage.rs` gather/scatter, invalid `from_context`, missing SAFETY comments, non-`self` backend methods) and assert the verifier fires, plus a full-repo verification pass. |
 | `just validate-tokens` | Every token's `summon()` checks exactly the features the registry declares (parses the generated detection code). |
-| `just parity` | API parity across x86/ARM/WASM backends (0 issues). |
 | `just miri` | UB detection over magetypes under Miri (layout casts, transmutes, pointer ops — the obligations the intrinsic scanner does *not* prove). It skips three expensive tests whose `unsafe` coverage it keeps elsewhere: `int_widen_narrow::scalar_backend`, whose exhaustive loops reach the bitcast path that the retained `scalar_w512_bitcast_values` test covers; the `fused_arithmetic` binary, which is safe code only; and `cbrt_range::cbrt_midp_precise_covers_the_whole_range`, about 33,000 cbrt calls per function that run only safe code on the scalar backend Miri uses. `MIRI_SKIPPED_TESTS` in `xtask/src/main.rs` lists the reasons; native, SDE and cross-arch runs still execute all three. |
 | `just audit` | A report, not a check: counts `CRITICAL`/`FRAGILE`/`SAFETY` markers, `unsafe` blocks without a nearby `// SAFETY:` comment, and every `forge_token_dangerously`/`from_context` call. It never fails; `just soundness` enforces. See `docs/SAFETY-CRITICAL.md`. |
 | `cargo test` (all platforms in CI) | Exercise tests: every token's claimed features drive real intrinsics on x86-64, ARM64 (cross/QEMU), WASM (wasmtime), Windows ARM64, macOS — see `tests/*_intrinsics*.rs`, `tests/feature_consistency.rs`. |
@@ -249,8 +248,10 @@ Run everything with `just ci`. Individually:
   the scanner) is generated from or checked against it. Auditing a token
   change = auditing the registry diff.
 - **`complete_intrinsics.csv`** is extracted from rust stdarch sources
-  (`just intrinsics-refresh`); intrinsic-shaped names missing from it are
-  hard errors, so staleness surfaces instead of hiding.
+  (`just intrinsics-refresh`) for reference docs and the Intrinsics Browser
+  (`cargo xtask intrinsics-browser`); routine soundness verification does not
+  depend on it because `rustc` checks safe value intrinsics directly against
+  stdarch's own `#[target_feature]` attributes.
 - **Platform detection truths**: x86-64 via std_detect (CPUID, plus the
   XCR0 check that the OS saves AVX and AVX-512 state); without the `std`
   feature, x86 counts only compile-time features. aarch64 via std_detect
@@ -259,11 +260,10 @@ Run everything with `just ci`. Individually:
   simulators — device iOS/tvOS/watchOS/visionOS use genuine runtime
   detection and otherwise fail closed). WASM is compile-time-only by
   design: a validated module implies the features.
-- **The scanner is textual, not an AST.** Comments are stripped; braces are
-  matched; generated code is formatting-stable. The floors plus the
-  scanner's own unit tests are the defense against it silently rotting —
-  which is exactly how the previous (registry-file-mapping) checker died:
-  it passed for weeks while verifying zero calls.
+- **AST + textual checks:** `from_context()` and `simd_storage.rs` gather/scatter
+  guards parse full Rust ASTs with `syn`; structural rules scan comment-stripped
+  source so even `#[cfg]`'d-out architectures are checked on every host. Unit
+  tests plant violations for every rule class and assert the verifier fires.
 
 ## Auditing a change by hand
 

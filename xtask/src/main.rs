@@ -16,11 +16,8 @@ mod simd_types;
 mod soundness;
 mod token_gen;
 
-// Re-export helpers used by sibling xtask modules (`intrinsics_browser`, `soundness`).
-pub(crate) use cmd::docs::{
-    IntrinsicEntry, extract_safe_simd_functions, find_safe_simd_path_simple,
-    load_intrinsic_database,
-};
+// Re-export helpers used by sibling xtask modules (`intrinsics_browser`, `cmd::generate`).
+pub(crate) use cmd::docs::{extract_safe_simd_functions, find_safe_simd_path_simple};
 
 fn main() -> Result<()> {
     let args: Vec<String> = std::env::args().collect();
@@ -37,7 +34,10 @@ fn main() -> Result<()> {
             "       cargo xtask ci | all            - Run ALL checks (must pass before push)"
         );
         eprintln!(
-            "       cargo xtask soundness           - Compile-time intrinsic safety verification"
+            "       cargo xtask soundness           - Structural & unsafe-surface soundness checks"
+        );
+        eprintln!(
+            "       cargo xtask intrinsics-browser  - Regenerate docs/intrinsics-browser/ from CSV"
         );
         eprintln!("       cargo xtask miri                - Run magetypes under Miri (detects UB)");
         eprintln!(
@@ -55,6 +55,10 @@ fn main() -> Result<()> {
         }
         "validate-registry" => cmd::validate::validate_registry()?,
         "soundness" => cmd::miri::verify_intrinsic_soundness()?,
+        "intrinsics-browser" => {
+            let reg = registry::Registry::load(&PathBuf::from("token-registry.toml"))?;
+            intrinsics_browser::generate_intrinsics_browser(&reg)?;
+        }
         "gen-expand" => expand_gen::generate_expand_tests(&PathBuf::from("tests/expand"))?,
         "check-packages" => {
             // `--target T` may repeat; everything else is an error.
@@ -91,7 +95,8 @@ fn main() -> Result<()> {
             eprintln!("  generate          Regenerate all code from token-registry.toml");
             eprintln!("  validate          Validate magetypes safety + summon() features");
             eprintln!("  validate-registry Parse and validate token-registry.toml");
-            eprintln!("  soundness         Verify intrinsic soundness against stdarch");
+            eprintln!("  soundness         Verify structural & unsafe-surface soundness");
+            eprintln!("  intrinsics-browser  Regenerate docs/intrinsics-browser/ from CSV");
             eprintln!("  miri              Run Miri on magetypes (UB detection)");
             eprintln!("  audit             Scan for safety-critical code");
             eprintln!("  intrinsics-refresh  Re-extract intrinsics from current Rust toolchain");

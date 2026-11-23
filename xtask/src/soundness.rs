@@ -1,129 +1,74 @@
-//! Structure-aware intrinsic soundness verification.
+//! Structural and unsafe-surface soundness verification.
 //!
-//! # What this verifies
+//! # Division of labor with `rustc`
 //!
-//! The archmage/magetypes safety model rests on one invariant:
+//! Value-intrinsic target-feature gating is enforced directly by `rustc` 1.85+
+//! (`target_feature_11`): `magetypes/src/lib.rs` sets `#![deny(unsafe_code)]`
+//! everywhere except `mod simd_storage;`, and every backend method executes
+//! inside `#[arcane]` or `#[attune]`, so calling any value intrinsic whose
+//! required feature is absent from the enclosing `#[target_feature]` is a hard
+//! compile error across all CI targets (`x86_64`, `aarch64`, `wasm32`).
 //!
-//! > **Every call to a feature-gated CPU intrinsic is enclosed by a proof
-//! > that the feature is available.**
+//! This verifier enforces the invariants `rustc` does **not** prove on its own:
 //!
-//! A proof is one of:
+//! - **STRUCTURAL RULES** (`structural_rules`): token fabrication routes
+//!   (`MaybeUninit`, `mem::zeroed`, `forge_token_dangerously`); outside
+//!   `simd_storage.rs`, the `unsafe` keyword in any form, bare `transmute`,
+//!   gather/scatter intrinsics, or `unsafe impl Pod`; any `allow(unsafe_code)`
+//!   other than `mod simd_storage;` in `magetypes/src/lib.rs`, or a missing
+//!   crate-wide `#![deny(unsafe_code)]`; hidden CPU detection outside the
+//!   audited whole-slice/scalar selectors; `impl_token_storage!` structs
+//!   without `#[repr(C)]`; tokenless wrapper constructors (`Default`/serde/
+//!   bytemuck); and backend-trait methods without a `self` receiver.
+//! - **STORAGE GATHER/SCATTER AST GUARD** (`verify_storage_gather_scatter`):
+//!   the 6 AVX-512 gather/scatter intrinsics in `magetypes/src/simd_storage.rs`
+//!   are `unsafe fn` pointer ops called inside `unsafe { ... }` (where `rustc`
+//!   does not reject a missing target feature). This AST check verifies every
+//!   gather/scatter call in `simd_storage.rs` is in the audited `avx512f` set
+//!   and sits inside an `#[arcane]`/`#[attune(wrap)]` fn taking `X64V4Token`.
+//! - **`from_context()` AST GUARD** (`raw_context::verify`): verifies every
+//!   `Token::from_context()` call in `magetypes/src/` sits inside a safe fn
+//!   with matching or superset `#[target_feature]`/`#[attune]`/`#[rite]`.
+//! - **SAFETY-COMMENT DISCIPLINE** (`safety_comment_rules`): every `unsafe {`
+//!   block outside generated backend impls must carry an adjacent `// SAFETY:`
+//!   comment within the 4 preceding lines.
+//! - **VACUOUS-PASS GUARDS**: asserts at least [`MIN_SCANNED_FILES`] `.rs`
+//!   files were scanned and all [`MIN_STORAGE_GATHER_SCATTER`] audited
+//!   gather/scatter calls in `simd_storage.rs` were seen.
+//! - **SNAPSHOT PORTABILITY** (`check_stderr_snapshot_portability`): ensures
+//!   trybuild `.stderr` snapshots contain no host- or toolchain-specific text.
 //!
-//! 1. An `impl <Trait> for <Token>` block — the token type (e.g.
-//!    `archmage::X64V3Token`) is a zero-sized runtime proof: it can only be
-//!    obtained from `summon()` (which performs CPU detection) or an
-//!    explicitly-dangerous forge. Backend trait methods take `self` (the
-//!    token), so executing the body implies the caller held the proof.
-//! 2. A `#[target_feature(enable = "...")]` attribute on the enclosing
-//!    function — reaching the body implies the caller discharged the
-//!    feature obligation (`unsafe` call or matching-feature safe call).
-//! 3. A token-typed parameter in the enclosing `fn` signature (e.g. the
-//!    `_fast` overloads that take `X64V4Token`) — same proof-by-existence
-//!    argument as (1).
-//!
-//! Contexts union: a `fn` taking `X64V4Token` inside an
-//! `impl ... for X64V3Token` block proves V3 ∪ V4 features (the caller held
-//! both proofs).
-//!
-//! For every intrinsic call found, the intrinsic's required features (from
-//! the stdarch-extracted database `docs/intrinsics/complete_intrinsics.csv`)
-//! must be a subset of the features proven by the union of enclosing
-//! contexts — plus, for x86 intrinsics only, the x86-64 ABI baseline
-//! (`sse`, `sse2`).
-//!
-//! # Failure conditions (all hard errors)
-//!
-//! - **FEATURE MISMATCH** — an intrinsic requires features its gating
-//!   context does not prove. This is the unsoundness this tool exists to
-//!   catch.
-//! - **UNGATED** — an intrinsic with non-baseline feature requirements
-//!   appears outside any gating context (e.g. in a backend trait *default
-//!   body*, where `Self` could be `ScalarToken`).
-//! - **UNKNOWN INTRINSIC** — an identifier shaped like an intrinsic
-//!   (`_mm*`, NEON `v*_f32`-style, WASM `f32x4_*`-style) is called but is
-//!   not in the database and not in the audited allowlist. Either the
-//!   database is stale (`just intrinsics-refresh`) or the name is a typo.
-//! - **STRUCTURAL RULE** — a magetypes source pattern that the soundness
-//!   model forbids (see [`structural_rules`]): token fabrication routes
-//!   (`MaybeUninit`, `mem::zeroed`, forging); outside `simd_storage.rs`, the
-//!   `unsafe` keyword in any form, a bare `transmute`, gather/scatter
-//!   intrinsics or `unsafe impl Pod`; an `allow(unsafe_code)` other than the
-//!   one on `mod simd_storage;`, or a crate root without
-//!   `#![deny(unsafe_code)]`; an `impl_token_storage!` struct without
-//!   `#[repr(C)]`; token-less wrapper constructors
-//!   (`Default`/serde/bytemuck); or backend-trait methods without a `self`
-//!   receiver (which would allow calling intrinsics via UFCS without
-//!   holding a token).
-//! - **SAFETY-COMMENT DISCIPLINE** — every `unsafe {` block outside the
-//!   generated backend impls must carry an adjacent `// SAFETY:` comment
-//!   (see [`safety_comment_rules`]); a generated impls file that contains
-//!   `unsafe` must carry the file-header audit contract instead.
-//! - **VACUOUS PASS** — the total number of verified calls fell below
-//!   [`MIN_VERIFIED_CALLS`], or a file listed in [`REQUIRED_FILE_FLOORS`]
-//!   produced fewer verified calls than its floor. This guards against the
-//!   scanner silently rotting after a refactor (which happened once: the
-//!   pre-2026-07 checker was driven by registry file mappings that no
-//!   longer existed and "passed" while verifying zero calls).
-//!
-//! # Testing the tester
-//!
-//! The unit tests at the bottom of this file feed synthetic sources with
-//! planted violations through the same [`Scanner`] used in production and
-//! assert each failure class actually fires. `cargo test -p xtask` runs in
-//! CI; if the scanner rots, the tests fail even when the repo scan passes.
-//!
-//! # Known limitations (documented for auditors)
-//!
-//! - The intrinsic scan is text-based: comments are stripped, but intrinsic names
-//!   inside string literals would be (harmlessly) scanned, and pathological
-//!   formatting could confuse the brace matcher. Generated code is
-//!   formatting-stable, making this reliable in practice; the floors ensure
-//!   the scanner can never silently stop seeing the bulk of the code.
-//! - It verifies *feature availability*, not memory safety: `unsafe` blocks
-//!   whose obligation is pointer validity/layout (loads, stores,
-//!   transmutes) are confined to `simd_storage.rs` by the structural rules
-//!   and exercised under Miri, not proven here.
+//! Token `summon()` ↔ `token-registry.toml` feature consistency is verified
+//! separately by `cmd::validate::validate_summon`.
 
 use anyhow::{Context, Result, bail};
 use regex::Regex;
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
+use syn::visit::{self, Visit};
 
-use crate::IntrinsicEntry;
 use crate::registry::Registry;
 
 mod raw_context;
 
-/// Directories scanned for intrinsic calls, relative to the repo root.
-///
-/// `src` is the archmage crate itself (detection code), `magetypes/src` is
-/// where all backend intrinsic calls live, and `tests/expand` holds the
-/// committed macro-expansion snapshots — scanning them means macro *output*
-/// is subject to the same verification as handwritten code.
+/// Directories scanned for structural and unsafe-surface soundness rules.
 const SCAN_ROOTS: &[&str] = &["src", "magetypes/src", "tests/expand"];
 
-/// Global floor on verified intrinsic calls (measured 4478 at
-/// introduction, 2026-07-14). If a legitimate refactor reduces coverage
-/// below this, update the constant in the same commit and explain why in
-/// the commit message. A scanning failure drops coverage to ~0 and always
-/// trips this.
-const MIN_VERIFIED_CALLS: usize = 4000;
+/// Minimum number of `.rs` files expected under [`SCAN_ROOTS`] (vacuous-pass guard).
+const MIN_SCANNED_FILES: usize = 100;
 
-/// Per-file verified-call floors (measured counts in comments). Every file
-/// carrying a substantial portion of the unsafe surface must individually
-/// stay visible to the scanner. Floors sit ~25% below measured so normal
-/// churn doesn't trip them.
-const REQUIRED_FILE_FLOORS: &[(&str, usize)] = &[
-    ("magetypes/src/simd/impls/x86_v3.rs", 750), // measured 993
-    // Measured 768 after delegating X64V4xToken's 12 base W512 backends to
-    // X64V4Token in `x86_v4_w512_delegated.rs` (previously 1528 with duplicates).
-    ("magetypes/src/simd/impls/x86_v4.rs", 580),
-    ("magetypes/src/simd/impls/arm_neon.rs", 1080), // measured 1445
-    ("magetypes/src/simd/impls/wasm128.rs", 700),   // measured 942
-    ("magetypes/src/simd/generic/cross_width.rs", 6), // measured 8
-    ("magetypes/src/simd/generic/convert_f16.rs", 18), // measured 26
-    ("magetypes/src/simd_storage.rs", 13),          // measured 18 (gather/scatter)
+/// Minimum audited AVX-512 gather/scatter calls in [`STORAGE_HOME`] (vacuous-pass guard).
+const MIN_STORAGE_GATHER_SCATTER: usize = 6;
+
+/// The audited `avx512f`-only gather/scatter intrinsics permitted in [`STORAGE_HOME`].
+const AUDITED_STORAGE_GATHER_SCATTER: &[&str] = &[
+    "_mm512_i32gather_epi32",
+    "_mm512_i32gather_ps",
+    "_mm512_mask_i32gather_epi32",
+    "_mm512_mask_i32gather_ps",
+    "_mm512_mask_i32scatter_epi32",
+    "_mm512_mask_i32scatter_ps",
 ];
 
 /// The one magetypes file allowed `unsafe` of any kind, `unsafe impl Pod`, and
@@ -135,309 +80,147 @@ const STORAGE_HOME: &str = "magetypes/src/simd_storage.rs";
 /// The magetypes crate root, which must deny `unsafe_code`.
 const LIB_HOME: &str = "magetypes/src/lib.rs";
 
-/// Identifiers that look like intrinsics but are deliberately not verified.
-/// Every entry must carry a justification. Keep this list short — it is
-/// printed in the report so auditors see exactly what was waived.
-const ALLOWLIST: &[(&str, &str)] = &[
-    (
-        "_MM_SHUFFLE",
-        "const fn shuffle-immediate helper; computes an i32, executes no instruction",
-    ),
-    (
-        "__cpuid",
-        "CPUID leaf query; available on all x86-64, used by feature detection itself",
-    ),
-    (
-        "__cpuid_count",
-        "CPUID subleaf query; available on all x86-64, used by feature detection itself",
-    ),
-];
-
-/// x86-64 ABI baseline — every x86-64 CPU has these, so any gated context
-/// implicitly proves them for x86 intrinsics.
+/// x86-64 ABI baseline — implicitly enabled on every x86-64 target, used when
+/// auditing compile-time `#[cfg]` gates in `scalar_selector_summons`.
 const X86_64_BASELINE: &[&str] = &["sse", "sse2"];
 
-/// A byte range of a scanned file proving a set of features.
-struct GatingSpan {
-    start: usize,
-    end: usize,
-    features: HashSet<String>,
-    origin: String,
-}
-
-/// Result of scanning one source file.
+/// Result of checking one source file.
 #[derive(Default)]
 pub struct FileScan {
     pub errors: Vec<String>,
-    pub verified: usize,
-    pub allowlisted: BTreeMap<String, usize>,
+    pub storage_gather_scatter: usize,
 }
 
-/// Compiled scanning machinery, reusable across files (and unit-testable).
-pub struct Scanner<'r> {
-    reg: &'r Registry,
-    db: HashMap<String, IntrinsicEntry>,
-    candidate_re: Regex,
-    impl_re: Regex,
-    tf_re: Regex,
-    quoted_re: Regex,
-    fn_re: Regex,
-    token_name_re: Regex,
-    shape_x86_re: Regex,
-    shape_wasm_re: Regex,
-    shape_arm_re: Regex,
-    allow: BTreeMap<&'static str, &'static str>,
+/// Run all structural, AST, and safety-comment checks on one source file.
+pub fn scan_source(reg: &Registry, rel: &str, raw: &str) -> FileScan {
+    let text = strip_comments(raw);
+    let mut out = FileScan::default();
+    structural_rules(reg, rel, &text, &mut out.errors);
+    if rel == STORAGE_HOME {
+        out.storage_gather_scatter = verify_storage_gather_scatter(rel, raw, &mut out.errors);
+    }
+    raw_context::verify(reg, rel, &text, &mut out.errors);
+    safety_comment_rules(rel, raw, &mut out.errors);
+    out
 }
 
-impl<'r> Scanner<'r> {
-    pub fn new(reg: &'r Registry) -> Result<Self> {
-        let db = crate::load_intrinsic_database()?;
-        let token_names = reg.all_token_names();
-        Ok(Scanner {
-            reg,
-            db,
-            // Any identifier used as a call or turbofish — DB membership
-            // then decides whether it is an intrinsic. This cannot miss an
-            // intrinsic the way a hand-maintained prefix whitelist can.
-            candidate_re: Regex::new(r"\b([A-Za-z_][A-Za-z0-9_]*)\s*(?:\(|::<)")
-                .expect("candidate regex"),
-            impl_re: Regex::new(
-                r"\bimpl(?:\s*<[^>{]*>)?\s+[A-Za-z_][\w:]*(?:\s*<[^>{]*>)?\s+for\s+((?:[A-Za-z_]\w*\s*::\s*)*)([A-Za-z_]\w*)",
-            )
-            .expect("impl regex"),
-            tf_re: Regex::new(r"#\[target_feature\(([^)]*)\)\]").expect("target_feature regex"),
-            quoted_re: Regex::new(r#""([^"]*)""#).expect("quoted regex"),
-            fn_re: Regex::new(r"\bfn\s+[A-Za-z_]\w*").expect("fn regex"),
-            token_name_re: Regex::new(&format!(r"\b({})\b", token_names.join("|")))
-                .expect("token name regex"),
-            shape_x86_re: Regex::new(r"^_(?:_)?mm\w*$").expect("x86 shape regex"),
-            shape_wasm_re: Regex::new(r"^(?:[iuf](?:8x16|16x8|32x4|64x2)|v128)_[a-z0-9_]+$")
-                .expect("wasm shape"),
-            shape_arm_re: Regex::new(
-                r"^v[a-z][a-z0-9]*_(?:[a-z0-9]+_)*(?:[sup](?:8|16|32|64)|f(?:16|32|64)|p(?:8|16|64|128)|bf16)$",
-            )
-            .expect("arm shape regex"),
-            allow: ALLOWLIST.iter().copied().collect(),
+/// AST-verify the `unsafe` AVX-512 gather/scatter intrinsic calls in `simd_storage.rs`.
+///
+/// Inside `unsafe { ... }`, `rustc` allows calling an `unsafe fn` intrinsic even
+/// if the enclosing `#[target_feature]` is missing its required feature. Because
+/// `structural_rules` forbids gather/scatter everywhere outside `simd_storage.rs`,
+/// checking every call here closes the only intrinsic-gating gap left by `rustc`.
+fn verify_storage_gather_scatter(rel: &str, raw: &str, errors: &mut Vec<String>) -> usize {
+    let file = match syn::parse_file(raw) {
+        Ok(file) => file,
+        Err(err) => {
+            errors.push(format!(
+                "{rel}: cannot parse for gather/scatter audit: {err}"
+            ));
+            return 0;
+        }
+    };
+    let mut visitor = GatherScatterVisitor {
+        rel,
+        errors,
+        fn_name: String::new(),
+        has_v4_boundary: false,
+        verified: 0,
+    };
+    visitor.visit_file(&file);
+    visitor.verified
+}
+
+struct GatherScatterVisitor<'a> {
+    rel: &'a str,
+    errors: &'a mut Vec<String>,
+    fn_name: String,
+    has_v4_boundary: bool,
+    verified: usize,
+}
+
+impl GatherScatterVisitor<'_> {
+    fn attr_is_boundary(attr: &syn::Attribute) -> bool {
+        let Some(last) = attr.path().segments.last() else {
+            return false;
+        };
+        if last.ident == "arcane" {
+            return true;
+        }
+        if last.ident == "attune" {
+            let mut is_wrap = false;
+            let _ = attr.parse_nested_meta(|meta| {
+                if meta.path.is_ident("wrap") {
+                    is_wrap = true;
+                }
+                Ok(())
+            });
+            return is_wrap;
+        }
+        false
+    }
+
+    fn sig_takes_v4_token(sig: &syn::Signature) -> bool {
+        sig.inputs.iter().any(|arg| {
+            let syn::FnArg::Typed(pat_ty) = arg else {
+                return false;
+            };
+            let syn::Type::Path(tp) = pat_ty.ty.as_ref() else {
+                return false;
+            };
+            tp.path
+                .segments
+                .last()
+                .is_some_and(|s| s.ident == "X64V4Token")
         })
     }
 
-    /// Scan one file's source text. `rel` is used in error messages only.
-    pub fn scan_source(&self, rel: &str, raw: &str) -> FileScan {
-        let text = strip_comments(raw);
-        let mut out = FileScan::default();
-        let spans = self.gating_spans(rel, &text, &mut out.errors);
+    fn check_fn(&mut self, attrs: &[syn::Attribute], sig: &syn::Signature, block: &syn::Block) {
+        let prev_name = std::mem::replace(&mut self.fn_name, sig.ident.to_string());
+        let prev_v4 = self.has_v4_boundary;
+        self.has_v4_boundary =
+            attrs.iter().any(Self::attr_is_boundary) && Self::sig_takes_v4_token(sig);
+        self.visit_block(block);
+        self.fn_name = prev_name;
+        self.has_v4_boundary = prev_v4;
+    }
+}
 
-        for cap in self.candidate_re.captures_iter(&text) {
-            let name_match = cap.get(1).unwrap();
-            let name = name_match.as_str();
-            let pos = name_match.start();
-
-            // Definitions (`fn f32x4_splat(...)`) and method calls
-            // (`self.f32x4_splat(...)`) are not intrinsic invocations, even
-            // when the name collides with an intrinsic (magetypes' width
-            // traits deliberately reuse WASM intrinsic naming). For
-            // path-qualified calls, only `<arch module>::name(...)` counts
-            // as an intrinsic; `Self::name(...)` / `f32x4::name(...)` are
-            // trait/assoc calls.
-            match preceding_context(&text, pos) {
-                Preceding::FnKeyword | Preceding::Dot | Preceding::NonArchPath => continue,
-                Preceding::ArchPath | Preceding::Bare => {}
-            }
-
-            let Some(entry) = self.db.get(name) else {
-                let looks_like_intrinsic = self.shape_x86_re.is_match(name)
-                    || self.shape_wasm_re.is_match(name)
-                    || self.shape_arm_re.is_match(name);
-                if looks_like_intrinsic {
-                    if self.allow.contains_key(name) {
-                        *out.allowlisted.entry(name.to_string()).or_default() += 1;
-                    } else {
-                        out.errors.push(format!(
-                            "{}:{}: UNKNOWN INTRINSIC `{}` — intrinsic-shaped but not in \
-                             complete_intrinsics.csv and not allowlisted. Stale database? \
-                             Run `just intrinsics-refresh`.",
-                            rel,
-                            line_of(&text, pos),
-                            name
-                        ));
-                    }
-                }
-                continue;
-            };
-
-            let required: HashSet<&str> = entry
-                .features
-                .split(',')
-                .map(|s| s.trim())
-                .filter(|s| !s.is_empty())
-                .collect();
-
-            let enclosing: Vec<&GatingSpan> = spans
-                .iter()
-                .filter(|s| pos > s.start && pos < s.end)
-                .collect();
-
-            let mut provided: HashSet<&str> = HashSet::new();
-            for s in &enclosing {
-                provided.extend(s.features.iter().map(|f| f.as_str()));
-            }
-            // The sse/sse2 ABI baseline applies only to x86 intrinsics —
-            // granting it inside e.g. a NeonToken impl would let a stray
-            // SSE2 intrinsic pass unnoticed.
-            let is_x86 = entry.arch.starts_with("x86");
-            if !enclosing.is_empty() && is_x86 {
-                provided.extend(X86_64_BASELINE.iter().copied());
-            }
-
-            let baseline_only = is_x86
-                && required
-                    .iter()
-                    .all(|f| X86_64_BASELINE.contains(f) || f.is_empty());
-
-            if enclosing.is_empty() {
-                if baseline_only {
-                    // e.g. sse2 helpers in detection code — sound on the
-                    // x86-64 ABI without any token.
-                    out.verified += 1;
-                } else {
-                    out.errors.push(format!(
-                        "{}:{}: UNGATED intrinsic `{}` (requires [{}]) — no enclosing \
-                         impl-for-token block, #[target_feature] fn, or token-typed \
-                         parameter proves these features. If this is a trait default \
-                         body, move the intrinsic into per-token impls.",
-                        rel,
-                        line_of(&text, pos),
-                        name,
-                        entry.features
-                    ));
-                }
-                continue;
-            }
-
-            let missing: Vec<&&str> = required
-                .iter()
-                .filter(|f| !provided.contains(**f))
-                .collect();
-
-            if missing.is_empty() {
-                out.verified += 1;
-            } else {
-                let origins: Vec<&str> = enclosing.iter().map(|s| s.origin.as_str()).collect();
-                out.errors.push(format!(
-                    "{}:{}: FEATURE MISMATCH `{}` requires [{}] but context ({}) proves \
-                     only [{}] — missing {:?}",
-                    rel,
-                    line_of(&text, pos),
-                    name,
-                    entry.features,
-                    origins.join(" + "),
-                    {
-                        let mut p: Vec<&str> = provided.iter().copied().collect();
-                        p.sort_unstable();
-                        p.join(", ")
-                    },
-                    missing
-                ));
-            }
-        }
-
-        structural_rules(self.reg, rel, &text, &mut out.errors);
-        raw_context::verify(self.reg, rel, &text, &mut out.errors);
-        safety_comment_rules(rel, raw, &mut out.errors);
-        out
+impl<'ast> Visit<'ast> for GatherScatterVisitor<'_> {
+    fn visit_item_fn(&mut self, item: &'ast syn::ItemFn) {
+        self.check_fn(&item.attrs, &item.sig, &item.block);
     }
 
-    /// Collect every byte range of `text` that proves a feature set.
-    fn gating_spans(&self, rel: &str, text: &str, errors: &mut Vec<String>) -> Vec<GatingSpan> {
-        let mut spans: Vec<GatingSpan> = Vec::new();
+    fn visit_impl_item_fn(&mut self, item: &'ast syn::ImplItemFn) {
+        self.check_fn(&item.attrs, &item.sig, &item.block);
+    }
 
-        // (1) impl-for-token blocks.
-        for cap in self.impl_re.captures_iter(text) {
-            let type_name = cap.get(2).unwrap().as_str();
-            let Some(token) = self.reg.find_token(type_name) else {
-                continue;
-            };
-            let header_end = cap.get(0).unwrap().end();
-            let Some(open) = find_char_from(text, header_end, b'{') else {
-                continue;
-            };
-            let Some(close) = find_matching_brace(text, open) else {
-                errors.push(format!(
-                    "{}:{}: unbalanced braces after `impl ... for {}`",
-                    rel,
-                    line_of(text, header_end),
-                    type_name
-                ));
-                continue;
-            };
-            spans.push(GatingSpan {
-                start: open,
-                end: close,
-                features: token.features.iter().cloned().collect(),
-                origin: format!("impl for {}", token.name),
-            });
-        }
-
-        // (2) #[target_feature(enable = "...")] function bodies.
-        for cap in self.tf_re.captures_iter(text) {
-            let attr_end = cap.get(0).unwrap().end();
-            let mut features: HashSet<String> = HashSet::new();
-            for q in self.quoted_re.captures_iter(cap.get(1).unwrap().as_str()) {
-                for f in q.get(1).unwrap().as_str().split(',') {
-                    features.insert(f.trim().to_string());
+    fn visit_expr_call(&mut self, call: &'ast syn::ExprCall) {
+        if let syn::Expr::Path(path) = call.func.as_ref()
+            && let Some(seg) = path.path.segments.last()
+        {
+            let name = seg.ident.to_string();
+            let is_gather_scatter =
+                name.starts_with("_mm") && (name.contains("gather_") || name.contains("scatter_"));
+            if is_gather_scatter {
+                if !AUDITED_STORAGE_GATHER_SCATTER.contains(&name.as_str()) {
+                    self.errors.push(format!(
+                        "{}: STORAGE GATHER/SCATTER: `{}` in `{}` is not in the audited \
+                         avx512f set ({:?})",
+                        self.rel, name, self.fn_name, AUDITED_STORAGE_GATHER_SCATTER
+                    ));
+                } else if !self.has_v4_boundary {
+                    self.errors.push(format!(
+                        "{}: STORAGE GATHER/SCATTER: `{}` in `{}` must sit inside an \
+                         `#[arcane]` or `#[attune(wrap)]` fn taking `X64V4Token`",
+                        self.rel, name, self.fn_name
+                    ));
+                } else {
+                    self.verified += 1;
                 }
             }
-            // The attribute is followed (possibly after more attributes and
-            // the signature) by the fn body's opening brace.
-            let Some(open) = find_char_from(text, attr_end, b'{') else {
-                continue;
-            };
-            let Some(close) = find_matching_brace(text, open) else {
-                continue;
-            };
-            spans.push(GatingSpan {
-                start: open,
-                end: close,
-                features,
-                origin: "#[target_feature]".to_string(),
-            });
         }
-
-        // (3) fn signatures mentioning token types (parameters or generics).
-        for m in self.fn_re.find_iter(text) {
-            let sig_start = m.end();
-            let Some((sig_end, has_body)) = find_signature_end(text, sig_start) else {
-                continue;
-            };
-            if !has_body {
-                continue;
-            }
-            let signature = &text[sig_start..sig_end];
-            let mut features: HashSet<String> = HashSet::new();
-            let mut names: Vec<&str> = Vec::new();
-            for cap in self.token_name_re.captures_iter(signature) {
-                let name = cap.get(1).unwrap().as_str();
-                if let Some(token) = self.reg.find_token(name) {
-                    features.extend(token.features.iter().cloned());
-                    names.push(&token.name);
-                }
-            }
-            if features.is_empty() {
-                continue;
-            }
-            let open = sig_end; // index of `{`
-            let Some(close) = find_matching_brace(text, open) else {
-                continue;
-            };
-            spans.push(GatingSpan {
-                start: open,
-                end: close,
-                features,
-                origin: format!("fn param tokens [{}]", names.join(", ")),
-            });
-        }
-
-        spans
+        visit::visit_expr_call(self, call);
     }
 }
 
@@ -874,7 +657,8 @@ fn structural_rules(reg: &Registry, rel: &str, text: &str, errors: &mut Vec<Stri
     // (The compile-fail tests in bypass_adversarial.rs prove a sample of
     // methods reject this; this rule covers all of them mechanically.)
     if rel.starts_with("magetypes/src/simd/backends/") {
-        let trait_re = Regex::new(r"\btrait\s+\w+Backend\b[^{]*").expect("trait regex");
+        let trait_re = Regex::new(r"\btrait\s+\w+(?:Backend|Internal|Convert|Bitcast)\b[^{]*")
+            .expect("trait regex");
         let fn_re = Regex::new(r"\bfn\s+(\w+)\s*\(([^)]*)").expect("trait fn regex");
         for m in trait_re.find_iter(text) {
             let Some(open) = find_char_from(text, m.end(), b'{') else {
@@ -906,15 +690,9 @@ fn structural_rules(reg: &Registry, rel: &str, text: &str, errors: &mut Vec<Stri
     }
 }
 
-/// Full-repo verification: walk the scan roots, aggregate, apply floors.
+/// Full-repo verification: walk the scan roots, run all structural/AST/safety checks.
 pub fn verify(reg: &Registry) -> Result<()> {
-    println!("=== Intrinsic Soundness Verification (structure-aware) ===\n");
-
-    let scanner = Scanner::new(reg)?;
-    println!(
-        "Loaded {} intrinsics from stdarch database",
-        scanner.db.len()
-    );
+    println!("=== Structural & Unsafe-Surface Soundness Verification ===\n");
 
     let mut files: Vec<PathBuf> = Vec::new();
     for root in SCAN_ROOTS {
@@ -929,67 +707,42 @@ pub fn verify(reg: &Registry) -> Result<()> {
     files.sort();
 
     let mut errors: Vec<String> = Vec::new();
-    let mut stats: BTreeMap<String, usize> = BTreeMap::new();
-    let mut allowlisted_used: BTreeMap<String, usize> = BTreeMap::new();
+    let mut storage_gather_scatter = 0usize;
 
     for file in &files {
         let raw = fs::read_to_string(file)
             .with_context(|| format!("Failed to read {}", file.display()))?;
         let rel = file.display().to_string();
-        let scan = scanner.scan_source(&rel, &raw);
+        let scan = scan_source(reg, &rel, &raw);
         errors.extend(scan.errors);
-        if scan.verified > 0 {
-            stats.insert(rel.clone(), scan.verified);
-        }
-        for (name, count) in scan.allowlisted {
-            *allowlisted_used.entry(name).or_default() += count;
-        }
+        storage_gather_scatter += scan.storage_gather_scatter;
     }
 
-    // ---- Report ----
-    let total_verified: usize = stats.values().sum();
-
-    println!("\nPer-file verified intrinsic calls:");
-    for (file, verified) in &stats {
-        println!("  {:>5}  {}", verified, file);
-    }
-    if !allowlisted_used.is_empty() {
-        println!("\nAllowlisted (audited, not feature-verified):");
-        let allow: BTreeMap<&str, &str> = ALLOWLIST.iter().copied().collect();
-        for (name, count) in &allowlisted_used {
-            let why = allow.get(name.as_str()).copied().unwrap_or("");
-            println!("  {} ×{} — {}", name, count, why);
-        }
-    }
     println!(
-        "\nTotals: {} verified across {} files scanned",
-        total_verified,
-        files.len()
+        "Scanned {} files ({} audited gather/scatter calls in {STORAGE_HOME})",
+        files.len(),
+        storage_gather_scatter
     );
 
-    // ---- Vacuous-pass guards ----
-    for (file, floor) in REQUIRED_FILE_FLOORS {
-        let seen = stats.get(*file).copied().unwrap_or(0);
-        if seen < *floor {
-            errors.push(format!(
-                "VACUOUS PASS GUARD: {} verified only {} intrinsic calls (floor {}). \
-                 If a refactor legitimately moved/removed this code, update \
-                 REQUIRED_FILE_FLOORS in xtask/src/soundness.rs in the same commit.",
-                file, seen, floor
-            ));
-        }
-    }
-    if total_verified < MIN_VERIFIED_CALLS {
+    if files.len() < MIN_SCANNED_FILES {
         errors.push(format!(
-            "VACUOUS PASS GUARD: only {} total verified intrinsic calls (floor {}). \
-             The scanner may no longer be seeing the generated backends.",
-            total_verified, MIN_VERIFIED_CALLS
+            "VACUOUS PASS GUARD: scanned only {} files (floor {MIN_SCANNED_FILES}). \
+             Check SCAN_ROOTS in xtask/src/soundness.rs.",
+            files.len()
+        ));
+    }
+    if storage_gather_scatter < MIN_STORAGE_GATHER_SCATTER {
+        errors.push(format!(
+            "VACUOUS PASS GUARD: verified only {} gather/scatter calls in {STORAGE_HOME} \
+             (floor {MIN_STORAGE_GATHER_SCATTER}). If gather/scatter helpers were intentionally \
+             removed, update MIN_STORAGE_GATHER_SCATTER in xtask/src/soundness.rs.",
+            storage_gather_scatter
         ));
     }
 
     if errors.is_empty() {
         println!("\n✓ Soundness verification PASSED");
-        println!("  Every intrinsic call is gated by a context proving its required features.");
+        println!("  All structural, from_context, gather/scatter, and SAFETY rules satisfied.");
         Ok(())
     } else {
         println!(
@@ -1099,72 +852,6 @@ fn find_matching_brace(text: &str, open: usize) -> Option<usize> {
         }
     }
     None
-}
-
-/// Scan forward from a fn name to the end of its signature. Returns
-/// `(index, has_body)` where index points at the body `{` or the trailing
-/// `;` of a bodyless declaration. Bracket depth is tracked so the `;` in
-/// array types like `&[f32; 8]` doesn't terminate the signature early.
-fn find_signature_end(text: &str, from: usize) -> Option<(usize, bool)> {
-    let bytes = text.as_bytes();
-    let mut i = from;
-    let mut bracket_depth = 0i32;
-    // Hard cap: no real signature in this codebase approaches this length;
-    // prevents quadratic blowup on malformed input.
-    let cap = (from + 4096).min(bytes.len());
-    while i < cap {
-        match bytes[i] {
-            b'[' | b'(' => bracket_depth += 1,
-            b']' | b')' => bracket_depth -= 1,
-            b'{' => return Some((i, true)),
-            b';' if bracket_depth == 0 => return Some((i, false)),
-            _ => {}
-        }
-        i += 1;
-    }
-    None
-}
-
-/// What immediately precedes an identifier, for call-site classification.
-enum Preceding {
-    /// `fn name(` — a definition, not a call.
-    FnKeyword,
-    /// `.name(` — a method call on a value, never a bare intrinsic.
-    Dot,
-    /// `seg::name(` where `seg` is a `core::arch` module — an intrinsic call.
-    ArchPath,
-    /// `seg::name(` where `seg` is anything else (`Self`, a type, a module
-    /// of ours) — an associated/module call, not an intrinsic.
-    NonArchPath,
-    /// Plain `name(` — resolved by import; treated as a potential intrinsic.
-    Bare,
-}
-
-fn preceding_context(text: &str, ident_start: usize) -> Preceding {
-    let bytes = text.as_bytes();
-    let mut i = ident_start;
-    while i > 0 && bytes[i - 1].is_ascii_whitespace() {
-        i -= 1;
-    }
-    if i >= 2 && &bytes[i - 2..i] == b"fn" && (i == 2 || !bytes[i - 3].is_ascii_alphanumeric()) {
-        return Preceding::FnKeyword;
-    }
-    if i >= 1 && bytes[i - 1] == b'.' {
-        return Preceding::Dot;
-    }
-    if i >= 2 && &bytes[i - 2..i] == b"::" {
-        // Walk back over the preceding path segment.
-        let mut j = i - 2;
-        while j > 0 && (bytes[j - 1].is_ascii_alphanumeric() || bytes[j - 1] == b'_') {
-            j -= 1;
-        }
-        let seg = &text[j..i - 2];
-        return match seg {
-            "x86_64" | "x86" | "aarch64" | "arm" | "wasm32" | "wasm" => Preceding::ArchPath,
-            _ => Preceding::NonArchPath,
-        };
-    }
-    Preceding::Bare
 }
 
 /// 1-based line number of a byte offset.
@@ -1302,21 +989,9 @@ mod tests {
         Registry::load(&path).expect("load token-registry.toml")
     }
 
-    fn scan(src: &str) -> FileScan {
-        // Fixtures default to a backend-impls path (per-block SAFETY
-        // comments not required there); satisfy the file-header rule.
-        let with_header = format!("//! # Safety (audit contract — test fixture)\n{src}");
-        scan_at("magetypes/src/simd/impls/test_input.rs", &with_header)
-    }
-
     fn scan_at(rel: &str, src: &str) -> FileScan {
-        // The CSV path in load_intrinsic_database is repo-root-relative;
-        // tests run with CWD=xtask, so chdir up if needed.
-        let root = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
-        std::env::set_current_dir(root).expect("chdir to repo root");
         let reg = test_registry();
-        let scanner = Scanner::new(&reg).expect("scanner");
-        scanner.scan_source(rel, src)
+        scan_source(&reg, rel, src)
     }
 
     #[test]
@@ -1473,135 +1148,65 @@ mod tests {
     }
 
     #[test]
-    fn catches_feature_mismatch_in_impl() {
-        let scan = scan(
-            "impl F32x4Backend for archmage::X64V3Token {\n\
-             fn f(self) { let _ = _mm512_setzero_ps(); }\n\
-             }\n",
-        );
-        assert_eq!(scan.errors.len(), 1, "{:?}", scan.errors);
+    fn storage_gather_scatter_requires_v4_boundary_and_audited_op() {
+        let ok_arcane = "#[archmage::arcane(import_intrinsics)]\n\
+            fn gather(_t: X64V4Token, p: &[i32], idx: __m512i) -> __m512i {\n\
+                // SAFETY: bounded.\n\
+                unsafe { _mm512_i32gather_epi32::<4>(idx, p.as_ptr()) }\n\
+            }\n";
+        let res = scan_at(STORAGE_HOME, ok_arcane);
+        assert!(res.errors.is_empty(), "{:?}", res.errors);
+        assert_eq!(res.storage_gather_scatter, 1);
+
+        let ok_attune = "#[archmage::attune(wrap, import_intrinsics)]\n\
+            fn scatter(_t: X64V4Token, dst: &mut [f32], k: u16, idx: __m512i, v: __m512) {\n\
+                // SAFETY: bounded.\n\
+                unsafe { _mm512_mask_i32scatter_ps::<4>(dst.as_mut_ptr(), k, idx, v) }\n\
+            }\n";
+        let res = scan_at(STORAGE_HOME, ok_attune);
+        assert!(res.errors.is_empty(), "{:?}", res.errors);
+        assert_eq!(res.storage_gather_scatter, 1);
+
+        let wrong_token = "#[archmage::arcane(import_intrinsics)]\n\
+            fn gather(_t: X64V3Token, p: &[i32], idx: __m512i) -> __m512i {\n\
+                // SAFETY: bounded.\n\
+                unsafe { _mm512_i32gather_epi32::<4>(idx, p.as_ptr()) }\n\
+            }\n";
+        let res = scan_at(STORAGE_HOME, wrong_token);
         assert!(
-            scan.errors[0].contains("FEATURE MISMATCH"),
+            res.errors
+                .iter()
+                .any(|e| e.contains("STORAGE GATHER/SCATTER") && e.contains("X64V4Token")),
             "{:?}",
-            scan.errors
+            res.errors
         );
-        assert!(scan.errors[0].contains("_mm512_setzero_ps"));
-    }
 
-    #[test]
-    fn catches_ungated_intrinsic() {
-        let scan = scan("fn helper() { let _ = vaddq_f32(a, b); }\n");
-        assert_eq!(scan.errors.len(), 1, "{:?}", scan.errors);
-        assert!(scan.errors[0].contains("UNGATED"), "{:?}", scan.errors);
-    }
-
-    #[test]
-    fn catches_ungated_in_trait_default_body() {
-        let scan = scan(
-            "pub trait F32x8Backend: SimdToken {\n\
-             fn rcp(self, a: Self::Repr) -> Self::Repr { _mm256_rcp_ps(a) }\n\
-             }\n",
-        );
-        // Trait blocks are not gating contexts — Self could be ScalarToken.
-        assert_eq!(scan.errors.len(), 1, "{:?}", scan.errors);
-        assert!(scan.errors[0].contains("UNGATED"), "{:?}", scan.errors);
-    }
-
-    #[test]
-    fn ungated_x86_baseline_intrinsics_are_sound() {
-        // sse/sse2 are the x86-64 ABI baseline — sound without any proof.
-        let scan = scan("fn helper(a: __m128) -> __m128 { _mm_rcp_ps(a) }\n");
-        assert!(scan.errors.is_empty(), "{:?}", scan.errors);
-        assert_eq!(scan.verified, 1);
-    }
-
-    #[test]
-    fn accepts_gated_by_impl_token() {
-        let scan = scan(
-            "impl F32x8Backend for archmage::X64V3Token {\n\
-             fn add(self, a: R, b: R) -> R { _mm256_add_ps(a, b) }\n\
-             }\n",
-        );
-        assert!(scan.errors.is_empty(), "{:?}", scan.errors);
-        assert_eq!(scan.verified, 1);
-    }
-
-    #[test]
-    fn accepts_gated_by_target_feature_attr() {
-        let scan = scan(
-            "#[target_feature(enable = \"avx2,fma\")]\n\
-             fn kernel(a: &[f32; 8]) -> f32 { let v = _mm256_fmadd_ps(x, y, z); 0.0 }\n",
-        );
-        assert!(scan.errors.is_empty(), "{:?}", scan.errors);
-        assert_eq!(scan.verified, 1);
-    }
-
-    #[test]
-    fn accepts_gated_by_token_param_with_array_types_in_signature() {
-        // Regression: the `;` inside `&[f32; 8]` must not truncate the
-        // signature scan (it did, in the first version of this scanner).
-        let scan = scan(
-            "fn process(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> [f32; 8] {\n\
-             let va = _mm256_loadu_ps(a);\n\
-             [0.0; 8]\n\
-             }\n",
-        );
-        assert!(scan.errors.is_empty(), "{:?}", scan.errors);
-        assert_eq!(scan.verified, 1);
-    }
-
-    #[test]
-    fn union_of_impl_and_param_token_contexts() {
-        // V3 impl + V4-token-taking fast-path method: V4 features available.
-        let scan = scan(
-            "impl I64x2Backend for archmage::X64V3Token {\n\
-             fn min_fast(self, a: R, b: R, _t: X64V4Token) -> R {\n\
-             _mm_min_epi64(a, b)\n\
-             }\n\
-             }\n",
-        );
-        assert!(scan.errors.is_empty(), "{:?}", scan.errors);
-        assert_eq!(scan.verified, 1);
-    }
-
-    #[test]
-    fn method_name_collisions_are_not_intrinsics() {
-        // magetypes width traits name methods after WASM intrinsics.
-        let scan = scan(
-            "impl WidthDispatch for archmage::NeonToken {\n\
-             fn f32x4_splat(self, v: f32) -> Self::F32x4 { f32x4::splat_t(self, v) }\n\
-             fn call_it(self) { let _ = self.f32x4_splat(1.0); }\n\
-             }\n",
-        );
-        assert!(scan.errors.is_empty(), "{:?}", scan.errors);
-        assert_eq!(scan.verified, 0);
-    }
-
-    #[test]
-    fn unknown_intrinsic_shape_is_reported() {
-        let scan = scan(
-            "impl F32x4Backend for archmage::NeonToken {\n\
-             fn f(self) { let _ = vfrobnicateq_f32(a); }\n\
-             }\n",
-        );
-        assert_eq!(scan.errors.len(), 1, "{:?}", scan.errors);
+        let missing_attr = "fn gather(_t: X64V4Token, p: &[i32], idx: __m512i) -> __m512i {\n\
+                // SAFETY: bounded.\n\
+                unsafe { _mm512_i32gather_epi32::<4>(idx, p.as_ptr()) }\n\
+            }\n";
+        let res = scan_at(STORAGE_HOME, missing_attr);
         assert!(
-            scan.errors[0].contains("UNKNOWN INTRINSIC"),
+            res.errors
+                .iter()
+                .any(|e| e.contains("STORAGE GATHER/SCATTER") && e.contains("X64V4Token")),
             "{:?}",
-            scan.errors
+            res.errors
         );
-    }
 
-    #[test]
-    fn comments_are_ignored() {
-        let scan = scan(
-            "// let _ = _mm512_setzero_ps();\n\
-             /* vaddq_f32(a, b) */\n\
-             /// doc: _mm256_add_ps(x, y)\n\
-             fn nothing() {}\n",
+        let unknown_op = "#[archmage::arcane(import_intrinsics)]\n\
+            fn gather(_t: X64V4Token, p: &[f64], idx: __m512i) -> __m512d {\n\
+                // SAFETY: bounded.\n\
+                unsafe { _mm512_i32gather_pd::<8>(idx, p.as_ptr()) }\n\
+            }\n";
+        let res = scan_at(STORAGE_HOME, unknown_op);
+        assert!(
+            res.errors
+                .iter()
+                .any(|e| e.contains("STORAGE GATHER/SCATTER") && e.contains("audited avx512f set")),
+            "{:?}",
+            res.errors
         );
-        assert!(scan.errors.is_empty(), "{:?}", scan.errors);
-        assert_eq!(scan.verified, 0);
     }
 
     #[test]
@@ -1878,6 +1483,21 @@ mod tests {
             scan.errors
         );
         assert!(scan.errors[0].contains("rogue"));
+
+        let internal = scan_at(
+            "magetypes/src/simd/backends/f32x8.rs",
+            "pub(crate) trait F32x8Internal: SimdToken + Sealed {\n\
+             fn rogue_internal(v: f32) -> Self::InternalRepr;\n\
+             }\n",
+        );
+        assert!(
+            internal
+                .errors
+                .iter()
+                .any(|e| e.contains("does not take `self`") && e.contains("rogue_internal")),
+            "{:?}",
+            internal.errors
+        );
     }
 
     #[test]

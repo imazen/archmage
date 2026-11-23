@@ -66,7 +66,7 @@ impl ContextVisitor<'_> {
                     .last()
                     .map(|s| s.ident.to_string())
                     .as_deref(),
-                Some("rite" | "token_target_features")
+                Some("attune" | "rite" | "token_target_features")
             ) {
                 // Explicit single-tier form only. Unknown/compound forms fail closed.
                 if let Ok(tier) = attr.parse_args::<syn::Ident>() {
@@ -218,6 +218,8 @@ mod tests {
     #[test]
     fn matching_and_superset_contexts() {
         for attribute in [
+            "archmage::attune(v3)",
+            "archmage::attune(v4)",
             "archmage::rite(v3)",
             "archmage::rite(v4)",
             "archmage::token_target_features(v3)",
