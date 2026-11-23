@@ -637,7 +637,7 @@ fn neon_f16_encode_select(token: archmage::NeonToken, input: &[f32], output: &mu
 // `incompatible_msrv` lint (which flags them as "stable since 1.94" against the
 // 1.89 MSRV) is a false positive here — the gate guarantees ≥ 1.94. Allow it.
 #[allow(clippy::incompatible_msrv)]
-#[archmage::arcane(import_intrinsics)]
+#[archmage::attune(wrap, import_intrinsics)]
 fn neon_f16_decode_hw(token: archmage::Arm64V2Token, input: &[u16], output: &mut [f32]) {
     let (in4, in_tail) = input.as_chunks::<4>();
     let (out4, out_tail) = output.as_chunks_mut::<4>();
@@ -669,7 +669,7 @@ fn neon_f16_decode_hw(token: archmage::Arm64V2Token, input: &[u16], output: &mut
 // See `neon_f16_decode_hw`: `#[rustversion::since(1.94)]` is the MSRV gate;
 // `incompatible_msrv` cannot see it, so we allow the (here false-positive) lint.
 #[allow(clippy::incompatible_msrv)]
-#[archmage::arcane(import_intrinsics)]
+#[archmage::attune(wrap, import_intrinsics)]
 fn neon_f16_encode_hw(token: archmage::Arm64V2Token, input: &[f32], output: &mut [u16]) {
     let (in4, in_tail) = input.as_chunks::<4>();
     let (out4, out_tail) = output.as_chunks_mut::<4>();
@@ -766,7 +766,7 @@ fn f16c_encode_select(token: archmage::X64V3Token, input: &[f32], output: &mut [
 /// f16; NaN inputs take the same hardware quieting `vcvtph2ps` already
 /// documents. Compiled only with the `avx512` cargo feature.
 #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
-#[archmage::arcane(import_intrinsics)]
+#[archmage::attune(wrap, import_intrinsics)]
 fn f16c_decode_v4(token: archmage::X64V4Token, input: &[u16], output: &mut [f32]) {
     let (in16, in_rest) = input.as_chunks::<16>();
     let (out16, out_rest) = output.as_chunks_mut::<16>();
@@ -786,7 +786,7 @@ fn f16c_decode_v4(token: archmage::X64V4Token, input: &[u16], output: &mut [f32]
 /// instruction). See [`f16c_decode_v4`] for the `#[arcane]` / gating rationale.
 /// The remainder drops to the V3 F16C path for bit-identity.
 #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
-#[archmage::arcane(import_intrinsics)]
+#[archmage::attune(wrap, import_intrinsics)]
 fn f16c_encode_v4(token: archmage::X64V4Token, input: &[f32], output: &mut [u16]) {
     let (in16, in_rest) = input.as_chunks::<16>();
     let (out16, out_rest) = output.as_chunks_mut::<16>();
@@ -810,7 +810,7 @@ fn f16c_encode_v4(token: archmage::X64V4Token, input: &[f32], output: &mut [u16]
 /// feature-enabled codegen region. Processes 8 lanes per `_mm256_cvtph_ps`,
 /// then 4 per `_mm_cvtph_ps`, then a scalar tail through the software kernel.
 #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
-#[archmage::arcane(import_intrinsics)]
+#[archmage::attune(wrap, import_intrinsics)]
 fn f16c_decode_v3(token: archmage::X64V3Token, input: &[u16], output: &mut [f32]) {
     // Memory ops use archmage's safe `safe_unaligned_simd` re-exports (loads
     // take `&[T; N]`, stores take `&mut [T; N]`) — no raw pointers, no
@@ -842,7 +842,7 @@ fn f16c_decode_v3(token: archmage::X64V3Token, input: &[u16], output: &mut [f32]
 /// F16C encode kernel: `&[f32]` → `&mut [u16]` using `vcvtps2ph` with
 /// round-to-nearest-even. See [`f16c_decode_v3`] for the `#[arcane]` rationale.
 #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
-#[archmage::arcane(import_intrinsics)]
+#[archmage::attune(wrap, import_intrinsics)]
 fn f16c_encode_v3(token: archmage::X64V3Token, input: &[f32], output: &mut [u16]) {
     let (in8, in_rest) = input.as_chunks::<8>();
     let (out8, out_rest) = output.as_chunks_mut::<8>();

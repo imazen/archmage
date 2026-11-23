@@ -4,7 +4,7 @@
 pub(super) fn arcane(token: &str) -> String {
     // Only registry-selected concrete tokens reach this generator. Suppression
     // removes a redundant name-mismatch guard, not intrinsic feature checking.
-    format!("#[arcane(suppress_const_test, _self = {token})]")
+    format!("#[attune(wrap, suppress_const_test, _self = {token})]")
 }
 
 /// SSE/SSE2 are baseline x86-64 features. Do not create an AVX boundary for
@@ -18,7 +18,7 @@ pub(super) fn sse2_or_arcane(token: &str, width_bits: usize) -> String {
     }
 }
 
-/// Baseline arithmetic in an `#[arcane]` region for `X64V1Token` (SSE, SSE2).
+/// Baseline arithmetic in an `#[attune(wrap)]` region for `X64V1Token` (SSE, SSE2).
 /// The body is checked against exactly those features, and the region inlines
 /// into any x86-64 caller, AVX or not. The boundary's `unsafe` is archmage's,
 /// so the generated file contains none. Used only for value parameters;
@@ -28,7 +28,7 @@ macro_rules! sse2_baseline {
     (fn $name:ident(self, $($arg:ident: $ty:ty),* $(,)?) -> $ret:ty $body:block) => {
         #[inline(always)]
         fn $name(self, $($arg: $ty),*) -> $ret {
-            #[archmage::arcane(suppress_const_test)]
+            #[archmage::attune(wrap, suppress_const_test)]
             fn inner(_token: archmage::X64V1Token, $($arg: $ty),*) -> $ret $body
             inner(self.v1(), $($arg),*)
         }
@@ -58,12 +58,12 @@ mod tests {
     }
 
     #[test]
-    fn pure_native_methods_use_arcane() {
+    fn pure_native_methods_use_attune_wrap() {
         let files = super::super::backend_gen::generate_backend_files();
         for file in ["impls/x86_v3.rs", "impls/x86_v4.rs", "impls/arm_neon.rs"] {
             let source = &files[file];
             assert!(
-                source.contains("#[arcane(suppress_const_test, _self = "),
+                source.contains("#[attune(wrap, suppress_const_test, _self = "),
                 "{file}"
             );
             // A representative pure intrinsic must no longer need an unsafe block.

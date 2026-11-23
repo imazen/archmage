@@ -174,7 +174,7 @@ mod hw {
     }
 
     #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
-    #[archmage::arcane]
+    #[archmage::attune(wrap)]
     pub(super) fn fma2(
         _token: archmage::X64V3Token,
         a0: f64,
@@ -194,7 +194,7 @@ mod hw {
     }
 
     #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
-    #[archmage::arcane]
+    #[archmage::attune(wrap)]
     pub(super) fn fma(_token: archmage::X64V3Token, a: f64, b: f64, c: f64) -> f64 {
         use core::arch::x86_64::*;
         _mm_cvtsd_f64(_mm_fmadd_sd(_mm_set_sd(a), _mm_set_sd(b), _mm_set_sd(c)))
@@ -208,14 +208,14 @@ mod hw {
             any(target_arch = "aarch64", target_feature = "fma")
         )
     ))]
-    #[archmage::arcane]
+    #[archmage::attune(wrap)]
     pub(super) fn fmaf(_token: archmage::X64V3Token, a: f32, b: f32, c: f32) -> f32 {
         use core::arch::x86_64::*;
         _mm_cvtss_f32(_mm_fmadd_ss(_mm_set_ss(a), _mm_set_ss(b), _mm_set_ss(c)))
     }
 
     #[cfg(target_arch = "aarch64")]
-    #[archmage::arcane]
+    #[archmage::attune(wrap)]
     pub(super) fn fma2(
         _token: archmage::NeonToken,
         a0: f64,
@@ -232,7 +232,7 @@ mod hw {
     }
 
     #[cfg(target_arch = "aarch64")]
-    #[archmage::arcane]
+    #[archmage::attune(wrap)]
     pub(super) fn fma(_token: archmage::NeonToken, a: f64, b: f64, c: f64) -> f64 {
         use core::arch::aarch64::*;
         // vfma_f64(acc, x, y) = acc + x * y, fused.
@@ -246,7 +246,7 @@ mod hw {
             any(target_arch = "aarch64", target_feature = "fma")
         )
     ))]
-    #[archmage::arcane]
+    #[archmage::attune(wrap)]
     pub(super) fn fmaf(_token: archmage::NeonToken, a: f32, b: f32, c: f32) -> f32 {
         use core::arch::aarch64::*;
         vget_lane_f32::<0>(vfma_f32(vdup_n_f32(c), vdup_n_f32(a), vdup_n_f32(b)))
