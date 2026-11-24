@@ -4,7 +4,6 @@
 use super::*;
 use proc_macro2::{Delimiter, Group, Spacing, TokenStream as Tokens, TokenTree};
 use quote::{ToTokens, quote};
-use syn::parse::Parser;
 
 pub(super) fn expand(name: &str, args: Tokens, item: Tokens) -> syn::Result<Tokens> {
     Ok(match name {
@@ -15,13 +14,19 @@ pub(super) fn expand(name: &str, args: Tokens, item: Tokens) -> syn::Result<Toke
         "attune" => crate::attune::expand(args, item)?,
         "autoversion" => autoversion_impl(syn::parse2(item)?, syn::parse2(args)?),
         "magetypes" => {
-            let (rite, in_impl, defines, names) = parse_magetypes_attr.parse2(args)?;
-            let tiers = if names.is_empty() {
+            let args: magetypes::MagetypesArgs = syn::parse2(args)?;
+            let tiers = if args.tiers.is_empty() {
                 default_tiers(true)
             } else {
-                resolve_tiers(&names, proc_macro2::Span::call_site(), true)?
+                resolve_tiers(&args.tiers, proc_macro2::Span::call_site(), true)?
             };
-            magetypes::magetypes_impl(syn::parse2(item)?, &tiers, rite, in_impl, &defines)
+            magetypes::magetypes_impl(
+                syn::parse2(item)?,
+                &tiers,
+                args.rite_flag,
+                args.in_impl,
+                &args.defines,
+            )
         }
         _ => panic!("unrecognized macro {name}"),
     })
@@ -571,12 +576,12 @@ fn profile_allocations() {
 
 #[test]
 fn default_tiers_are_sorted_unique_and_match_general_resolution() {
-    let names = DEFAULT_TIER_NAMES
+    let entries: Vec<ParsedTier> = DEFAULT_TIER_NAMES
         .iter()
-        .map(|n| n.to_string())
-        .collect::<Vec<_>>();
+        .map(|n| ParsedTier::parse_test_spec(n))
+        .collect();
     for gates in [false, true] {
-        let general = resolve_tiers(&names, proc_macro2::Span::call_site(), gates).unwrap();
+        let general = resolve_tiers(&entries, proc_macro2::Span::call_site(), gates).unwrap();
         let defaults = default_tiers(gates);
         assert_eq!(defaults.len(), general.len());
         assert!(defaults.windows(2).all(|t| t[0].priority >= t[1].priority));
@@ -590,8 +595,8 @@ fn default_tiers_are_sorted_unique_and_match_general_resolution() {
         assert_eq!(defaults.last().unwrap().name, "scalar");
     }
     // Explicit equal-priority entries retain caller order, including duplicates.
-    let names = ["wasm128", "neon", "v3", "neon", "scalar"].map(String::from);
-    let resolved = resolve_tiers(&names, proc_macro2::Span::call_site(), false).unwrap();
+    let entries = ["wasm128", "neon", "v3", "neon", "scalar"].map(ParsedTier::parse_test_spec);
+    let resolved = resolve_tiers(&entries, proc_macro2::Span::call_site(), false).unwrap();
     assert_eq!(
         resolved.iter().map(|t| t.name).collect::<Vec<_>>(),
         ["v3", "wasm128", "neon", "neon", "scalar"]
@@ -794,8 +799,8 @@ fn tier_modifiers_and_explicit_fallback_gates_keep_their_meaning() {
             vec!["v4", "arm_v2", "v3", "default"],
         ),
     ] {
-        let names = names.into_iter().map(String::from).collect::<Vec<_>>();
-        let tiers = resolve_tiers(&names, proc_macro2::Span::call_site(), true).unwrap();
+        let entries: Vec<ParsedTier> = names.into_iter().map(ParsedTier::parse_test_spec).collect();
+        let tiers = resolve_tiers(&entries, proc_macro2::Span::call_site(), true).unwrap();
         assert_eq!(tiers.iter().map(|t| t.name).collect::<Vec<_>>(), expected);
     }
     for name in ["magetypes", "autoversion"] {
