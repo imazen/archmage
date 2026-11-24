@@ -12,17 +12,16 @@
 //! - `structure` - Type definition and macro generation
 
 pub mod backend_gen;
-pub mod backend_gen_i64;
 pub mod backend_gen_integer_ops;
 pub mod backend_gen_pairwise;
-pub mod backend_gen_remaining_int;
-pub mod backend_gen_w512;
 pub mod backend_gen_widen_narrow;
 mod backend_neon;
 mod backend_scalar;
 mod backend_syntax;
 mod backend_traits;
 mod backend_wasm;
+mod backend_x86_v3;
+mod backend_x86_v4;
 mod float_layout;
 pub mod generic_gen;
 pub mod import_paths;
