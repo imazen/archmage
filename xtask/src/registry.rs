@@ -194,25 +194,6 @@ impl Registry {
         }
         None
     }
-
-    /// All token names including aliases.
-    #[allow(dead_code)]
-    pub fn all_token_names(&self) -> Vec<&str> {
-        let mut names = Vec::new();
-        for t in &self.token {
-            names.push(t.name.as_str());
-            for a in &t.aliases {
-                names.push(a.as_str());
-            }
-        }
-        names
-    }
-
-    /// All trait names.
-    #[allow(dead_code)]
-    pub fn all_trait_names(&self) -> Vec<&str> {
-        self.traits.iter().map(|t| t.name.as_str()).collect()
-    }
 }
 
 // ============================================================================

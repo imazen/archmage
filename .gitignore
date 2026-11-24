@@ -37,3 +37,5 @@ Cargo.toml.original.txt
 perf.data
 perf.data.old
 fuzz-*.log
+__pycache__/
+*.pyc

@@ -35,7 +35,6 @@ pub(super) struct W512Type {
     pub kind: W512Kind,
 }
 
-#[allow(dead_code)]
 impl W512Type {
     /// Type name: "f32x16", "i8x64", etc.
     pub fn name(&self) -> String {
@@ -83,11 +82,6 @@ impl W512Type {
             },
             _ => "__m512i",
         }
-    }
-
-    /// Scalar repr type
-    fn scalar_repr(&self) -> String {
-        self.array_type()
     }
 
     /// x86 AVX-512 intrinsic suffix for float ops: "ps" or "pd"
@@ -185,16 +179,6 @@ impl W512Type {
             64 => "u64",
             _ => unreachable!(),
         }
-    }
-
-    /// AVX-512 mask type for comparisons
-    fn avx512_mask_type(&self) -> String {
-        format!("__mmask{}", self.lanes)
-    }
-
-    /// Lanes per 128-bit sub-vector
-    fn lanes_per_128(&self) -> usize {
-        128 / self.elem_bits
     }
 
     /// Zero literal for the element type
@@ -841,8 +825,8 @@ fn w512_new_ops_scalar(ty: &W512Type) -> String {
 }
 
 /// Native AVX-512 bodies for the new families.
-fn w512_new_ops_v4(ty: &W512Type, token: &str) -> String {
-    let arcane = super::backend_syntax::arcane(token);
+fn w512_new_ops_v4(ty: &W512Type) -> String {
+    let arcane = super::backend_syntax::arcane("X64V4Token");
 
     let shifts = if ty.has_uniform_shift_ops() {
         // 16-bit: _mm512_{sll,srl,sra}_epi16 (avx512bw); 32-bit: the epi32
@@ -1368,8 +1352,8 @@ pub(super) fn generate_scalar_w512_impls(types: &[W512Type]) -> String {
 // ============================================================================
 
 /// Generate V4 native implementation for a W512 float type (f32x16, f64x8).
-fn generate_x86_v4_float_impl_for_token(ty: &W512Type, token: &str) -> String {
-    let arcane = super::backend_syntax::arcane(token);
+fn generate_x86_v4_float_impl(ty: &W512Type) -> String {
+    let arcane = super::backend_syntax::arcane("X64V4Token");
     let trait_name = ty.trait_name();
     let inner = ty.x86_v4_inner();
     let s = ty.x86_float_suffix();
@@ -1461,7 +1445,7 @@ fn generate_x86_v4_float_impl_for_token(ty: &W512Type, token: &str) -> String {
     };
     formatdoc! {r#"
         #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
-        impl {trait_name} for archmage::{token} {{
+        impl {trait_name} for archmage::X64V4Token {{
             type Repr = {inner};
 
             {arcane}
@@ -1709,7 +1693,7 @@ fn generate_x86_v4_float_impl_for_token(ty: &W512Type, token: &str) -> String {
             formatdoc! {r#"
 
                 #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
-                impl crate::simd::backends::F32x16Internal for archmage::{token} {{
+                impl crate::simd::backends::F32x16Internal for archmage::X64V4Token {{
                     type InternalRepr = {inner};
                 {float_layout}
                 }}"#}
@@ -1720,9 +1704,9 @@ fn generate_x86_v4_float_impl_for_token(ty: &W512Type, token: &str) -> String {
 }
 
 /// Generate V4 native implementation for a W512 integer type.
-fn generate_x86_v4_int_impl_for_token(ty: &W512Type, token: &str) -> String {
-    let integer_methods = super::backend_gen_widen_narrow::methods(&ty.name(), token);
-    let arcane = super::backend_syntax::arcane(token);
+fn generate_x86_v4_int_impl(ty: &W512Type) -> String {
+    let integer_methods = super::backend_gen_widen_narrow::methods(&ty.name(), "X64V4Token");
+    let arcane = super::backend_syntax::arcane("X64V4Token");
     let trait_name = ty.trait_name();
     let elem = ty.elem;
     let lanes = ty.lanes;
@@ -1807,11 +1791,11 @@ fn generate_x86_v4_int_impl_for_token(ty: &W512Type, token: &str) -> String {
             }}
     "#};
 
-    let new_ops = w512_new_ops_v4(ty, token);
+    let new_ops = w512_new_ops_v4(ty);
 
     // Shifts: 8-bit shifts need polyfill via 16-bit, others use native
     let shift_impls = if elem_bits == 8 {
-        generate_8bit_shift_polyfill(ty, token)
+        generate_8bit_shift_polyfill(ty)
     } else {
         let shr_arith = if ty.kind == W512Kind::UnsignedInt {
             // Unsigned: arithmetic right shift = logical right shift
@@ -1861,7 +1845,7 @@ fn generate_x86_v4_int_impl_for_token(ty: &W512Type, token: &str) -> String {
 
     formatdoc! {r#"
         #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
-        impl {trait_name} for archmage::{token} {{
+        impl {trait_name} for archmage::X64V4Token {{
             type Repr = __m512i;
 
             {arcane}
@@ -2015,8 +1999,8 @@ fn generate_x86_v4_int_impl_for_token(ty: &W512Type, token: &str) -> String {
 }
 
 /// Generate 8-bit shift polyfill via 16-bit operations for AVX-512.
-fn generate_8bit_shift_polyfill(ty: &W512Type, token: &str) -> String {
-    let arcane = super::backend_syntax::arcane(token);
+fn generate_8bit_shift_polyfill(ty: &W512Type) -> String {
+    let arcane = super::backend_syntax::arcane("X64V4Token");
     let is_unsigned = ty.kind == W512Kind::UnsignedInt;
 
     let shr_arith = if is_unsigned {
@@ -2074,23 +2058,18 @@ fn generate_8bit_shift_polyfill(ty: &W512Type, token: &str) -> String {
     "#}
 }
 
-/// Generate V4 native AVX-512 W512 implementations for a specific token.
-fn generate_x86_v4_w512_impls_for_token(types: &[W512Type], token: &str) -> String {
+/// Generate all V4 native AVX-512 W512 implementations (`X64V4Token`).
+pub(super) fn generate_x86_v4_w512_impls(types: &[W512Type]) -> String {
     let mut code = String::new();
     for ty in types {
         if ty.is_float() {
-            code.push_str(&generate_x86_v4_float_impl_for_token(ty, token));
+            code.push_str(&generate_x86_v4_float_impl(ty));
         } else {
-            code.push_str(&generate_x86_v4_int_impl_for_token(ty, token));
+            code.push_str(&generate_x86_v4_int_impl(ty));
         }
         code.push('\n');
     }
     code
-}
-
-/// Generate all V4 native AVX-512 W512 implementations (X64V4Token only).
-pub(super) fn generate_x86_v4_w512_impls(types: &[W512Type]) -> String {
-    generate_x86_v4_w512_impls_for_token(types, "X64V4Token")
 }
 
 // ============================================================================
@@ -2101,7 +2080,6 @@ pub(super) fn generate_x86_v4_w512_impls(types: &[W512Type]) -> String {
 fn generate_popcnt_backend_trait(ty: &W512Type) -> String {
     let trait_name = ty.trait_name();
     let name = ty.name();
-    let _elem = ty.elem;
 
     formatdoc! {r#"
         /// Population count (popcnt) extension for {name}.

@@ -53,11 +53,6 @@ pub(super) fn methods(arch: &str, token: &str, name: &str) -> String {
     };
     let w = p.width_bits;
     let bits = w / p.src_lanes;
-    let native = match arch {
-        "v4" => 512,
-        "x86" => w.min(256),
-        _ => 128,
-    };
     let sr = super::backend_gen_integer_ops::repr(arch, p.src_elem, w);
     let dr = super::backend_gen_integer_ops::repr(arch, p.dst_elem, w);
     let attr = match arch {
@@ -73,24 +68,7 @@ pub(super) fn methods(arch: &str, token: &str, name: &str) -> String {
         // an unnecessary overflow check in unoptimized scalar code.
         format!("core::array::from_fn(|k| {dst}::from(a[2*k]).wrapping_add({dst}::from(a[2*k+1])))")
     } else {
-        let parts = w / native;
-        let expressions: Vec<_> = (0..parts)
-            .map(|i| {
-                let a = if parts == 1 {
-                    "a".into()
-                } else {
-                    format!("a[{i}]")
-                };
-                native_expr(arch, native, bits, &a)
-            })
-            .collect();
-        if parts == 1 {
-            expressions[0].clone()
-        } else {
-            // Native segments have an even number of input lanes, so no
-            // adjacent pair crosses a segment boundary. Concatenation is exact.
-            format!("[{}]", expressions.join(", "))
-        }
+        native_expr(arch, w, bits, "a")
     };
     formatdoc! {r#"
         {attr}

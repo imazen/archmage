@@ -253,28 +253,21 @@ pub(super) fn generate_i64_backend_trait(ty: &I64VecType) -> String {
 // x86 I64 Implementation Generation
 // ============================================================================
 
-pub(super) fn generate_x86_i64_impls(
-    types: &[I64VecType],
-    token: &str,
-    max_width: usize,
-) -> String {
+pub(super) fn generate_x86_i64_impls(types: &[I64VecType]) -> String {
     let mut code = String::new();
 
     for ty in types {
-        if ty.width_bits > max_width {
-            continue;
-        }
         code.push_str("\n#[cfg(all(target_arch = \"x86_64\", target_feature = \"sse2\"))]\n");
-        code.push_str(&generate_x86_i64_impl(ty, token));
+        code.push_str(&generate_x86_i64_impl(ty));
         code.push('\n');
     }
 
     code
 }
 
-fn generate_x86_i64_impl(ty: &I64VecType, token: &str) -> String {
-    let arcane = super::backend_syntax::arcane(token);
-    let baseline = super::backend_syntax::sse2_or_arcane(token, ty.width_bits);
+fn generate_x86_i64_impl(ty: &I64VecType) -> String {
+    let arcane = super::backend_syntax::arcane("X64V3Token");
+    let baseline = super::backend_syntax::sse2_or_arcane("X64V3Token", ty.width_bits);
     let baseline_end = if ty.width_bits == 128 { "}" } else { "" };
     let trait_name = ty.trait_name();
     let inner = ty.x86_inner_type();
@@ -313,7 +306,7 @@ fn generate_x86_i64_impl(ty: &I64VecType, token: &str) -> String {
     };
 
     formatdoc! {r#"
-        impl {trait_name} for archmage::{token} {{
+        impl {trait_name} for archmage::X64V3Token {{
             type Repr = {inner};
 
             // ====== Construction ======

@@ -51,12 +51,11 @@ impl FloatVecType {
         format!("[{}; {}]", self.elem, self.lanes)
     }
 
-    /// x86 intrinsic prefix: "_mm", "_mm256", "_mm512"
+    /// x86 intrinsic prefix: "_mm", "_mm256"
     fn x86_prefix(&self) -> &'static str {
         match self.width_bits {
             128 => "_mm",
             256 => "_mm256",
-            512 => "_mm512",
             _ => unreachable!(),
         }
     }
@@ -70,15 +69,13 @@ impl FloatVecType {
         }
     }
 
-    /// x86 inner type: "__m128", "__m256", "__m512", "__m128d", etc.
+    /// x86 inner type: "__m128", "__m256", "__m128d", "__m256d"
     fn x86_inner_type(&self) -> &'static str {
         match (self.elem, self.width_bits) {
             ("f32", 128) => "__m128",
             ("f32", 256) => "__m256",
-            ("f32", 512) => "__m512",
             ("f64", 128) => "__m128d",
             ("f64", 256) => "__m256d",
-            ("f64", 512) => "__m512d",
             _ => unreachable!(),
         }
     }
@@ -93,22 +90,13 @@ impl FloatVecType {
         self.width_bits == 128
     }
 
-    /// NEON repr type
-    fn neon_repr(&self) -> String {
-        if self.native_on_neon() {
-            match self.elem {
-                "f32" => "float32x4_t".to_string(),
-                "f64" => "float64x2_t".to_string(),
-                _ => unreachable!(),
-            }
-        } else {
-            let native = match self.elem {
-                "f32" => "float32x4_t",
-                "f64" => "float64x2_t",
-                _ => unreachable!(),
-            };
-            let count = self.width_bits / 128;
-            format!("[{native}; {count}]")
+    /// NEON repr type (128-bit native only; wider types live in `impls/polyfill.rs`)
+    fn neon_repr(&self) -> &'static str {
+        assert!(self.native_on_neon());
+        match self.elem {
+            "f32" => "float32x4_t",
+            "f64" => "float64x2_t",
+            _ => unreachable!(),
         }
     }
 
@@ -124,12 +112,6 @@ impl FloatVecType {
             "f64" => "f64x2",
             _ => unreachable!(),
         }
-    }
-
-    /// Whether f32 (has rcp/rsqrt approximation intrinsics on x86)
-    #[allow(dead_code)]
-    fn _has_native_approx(&self) -> bool {
-        self.elem == "f32"
     }
 }
 
@@ -408,13 +390,13 @@ pub fn generate_backend_files() -> BTreeMap<String, String> {
     // 10. Implementation files (W512 polyfills live hand-written in `impls/polyfill.rs`)
     files.insert(
         "impls/x86_v3.rs".to_string(),
-        generate_x86_impls(&types, "X64V3Token", 256)
-            + &generate_x86_i32_impls(&i32_types, "X64V3Token", 256)
-            + &generate_x86_u32_impls(&u32_types, "X64V3Token", 256)
-            + &generate_x86_i64_impls(&i64_types, "X64V3Token", 256)
-            + &generate_x86_int_impls(&remaining_int_types, "X64V3Token", 256)
-            + &generate_x86_convert_impls("X64V3Token")
-            + &generate_x86_additional_convert_impls("X64V3Token")
+        generate_x86_impls(&types)
+            + &generate_x86_i32_impls(&i32_types)
+            + &generate_x86_u32_impls(&u32_types)
+            + &generate_x86_i64_impls(&i64_types)
+            + &generate_x86_int_impls(&remaining_int_types)
+            + &generate_x86_convert_impls()
+            + &generate_x86_additional_convert_impls()
             + &super::float_layout::x86_v3_f32x16_to_u16_helper(),
     );
     files.insert(
@@ -1202,16 +1184,16 @@ fn generate_x86_v4_impls_file(w512_types: &[super::backend_gen_w512::W512Type]) 
     code.push_str(
         "// ============================================================================\n\n",
     );
-    code.push_str(&generate_x86_v4_f32x16_convert("X64V4Token"));
+    code.push_str(&generate_x86_v4_f32x16_convert());
 
     code
 }
 
-fn generate_x86_v4_f32x16_convert(token: &str) -> String {
-    let arcane = super::backend_syntax::arcane(token);
+fn generate_x86_v4_f32x16_convert() -> String {
+    let arcane = super::backend_syntax::arcane("X64V4Token");
     formatdoc! {r#"
         #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "w512"))]
-        impl F32x16Convert for archmage::{token} {{
+        impl F32x16Convert for archmage::X64V4Token {{
             {arcane}
             fn bitcast_f32_to_i32(self, a: __m512) -> __m512i {{
                 _mm512_castps_si512(a)
@@ -1255,11 +1237,11 @@ fn generate_x86_v4_f32x16_convert(token: &str) -> String {
 // x86 Implementation Generation
 // ============================================================================
 
-fn generate_x86_impls(types: &[FloatVecType], token: &str, max_width: usize) -> String {
+fn generate_x86_impls(types: &[FloatVecType]) -> String {
     let sse2_boundary = super::backend_syntax::SSE2_BOUNDARY;
-    let safety = impls_safety_contract(token);
+    let safety = impls_safety_contract("X64V3Token");
     let mut code = formatdoc! {r#"
-        //! Backend implementations for {token} (x86-64).
+        //! Backend implementations for X64V3Token (x86-64).
         //!
         //! **Auto-generated** by `cargo xtask generate` - do not edit manually.
         //!
@@ -1268,7 +1250,7 @@ fn generate_x86_impls(types: &[FloatVecType], token: &str, max_width: usize) -> 
         use core::arch::x86_64::*;
 
         #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
-        use archmage::{{attune, {token}}};
+        use archmage::{{attune, X64V3Token}};
 
         use crate::simd::backends::*;
 
@@ -1277,20 +1259,17 @@ fn generate_x86_impls(types: &[FloatVecType], token: &str, max_width: usize) -> 
     "#};
 
     for ty in types {
-        if ty.width_bits > max_width {
-            continue;
-        }
         code.push_str("#[cfg(all(target_arch = \"x86_64\", target_feature = \"sse2\"))]\n");
-        code.push_str(&generate_x86_float_impl(ty, token));
+        code.push_str(&generate_x86_float_impl(ty));
         code.push('\n');
     }
 
     code
 }
 
-fn generate_x86_float_impl(ty: &FloatVecType, token: &str) -> String {
-    let arcane = super::backend_syntax::arcane(token);
-    let baseline = super::backend_syntax::sse2_or_arcane(token, ty.width_bits);
+fn generate_x86_float_impl(ty: &FloatVecType) -> String {
+    let arcane = super::backend_syntax::arcane("X64V3Token");
+    let baseline = super::backend_syntax::sse2_or_arcane("X64V3Token", ty.width_bits);
     let baseline_end = if ty.width_bits == 128 { "}" } else { "" };
     let trait_name = ty.trait_name();
     let inner = ty.x86_inner_type();
@@ -1308,33 +1287,17 @@ fn generate_x86_float_impl(ty: &FloatVecType, token: &str) -> String {
     let cast_int_to_float = format!("{p}_castsi{bits}_{s}");
     let cast_float_to_int = format!("{p}_cast{s}_si{bits}");
     // Integer set1 for abs mask
-    let set1_int = if elem == "f32" {
-        "epi32"
-    } else if bits == 512 {
-        "epi64"
-    } else {
-        "epi64x"
-    };
+    let set1_int = if elem == "f32" { "epi32" } else { "epi64x" };
     let abs_mask = if elem == "f32" {
         "0x7FFF_FFFFi32"
     } else {
         "0x7FFF_FFFF_FFFF_FFFFi64"
     };
 
-    // Round intrinsics differ by width
-    let (floor_intr, ceil_intr, round_intr) = if bits == 512 {
-        (
-            format!("{p}_roundscale_{s}::<0x01>"),
-            format!("{p}_roundscale_{s}::<0x02>"),
-            format!("{p}_roundscale_{s}::<0x00>"),
-        )
-    } else {
-        (
-            format!("{p}_floor_{s}"),
-            format!("{p}_ceil_{s}"),
-            format!("{p}_round_{s}::<{{ _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC }}>"),
-        )
-    };
+    let floor_intr = format!("{p}_floor_{s}");
+    let ceil_intr = format!("{p}_ceil_{s}");
+    let round_intr =
+        format!("{p}_round_{s}::<{{ _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC }}>");
 
     // Reduction helpers
     let reduce_add_body = generate_x86_reduce_add(ty);
@@ -1344,15 +1307,9 @@ fn generate_x86_float_impl(ty: &FloatVecType, token: &str) -> String {
     // Comparison predicates
     let cmp = format!("{p}_cmp_{s}");
 
-    // Approximation intrinsics (f32 only, or f64 on AVX-512)
+    // Approximation intrinsics (f32 only on AVX2)
     let (rcp_fn, rsqrt_fn) = if elem == "f32" {
-        if bits == 512 {
-            ("rcp14", "rsqrt14")
-        } else {
-            ("rcp", "rsqrt")
-        }
-    } else if bits == 512 {
-        ("rcp14", "rsqrt14")
+        ("rcp", "rsqrt")
     } else {
         ("", "")
     };
@@ -1440,20 +1397,6 @@ fn generate_x86_float_impl(ty: &FloatVecType, token: &str) -> String {
     } else {
         String::new()
     };
-
-    // Extract/cast for reduction helper types
-    let extract_hi = match (elem, bits) {
-        ("f32", 256) => format!(
-            "let hi = {p}_extractf128_ps::<1>(a);\n            let lo = {p}_castps256_ps128(a);"
-        ),
-        ("f64", 256) => format!(
-            "let hi = {p}_extractf128_pd::<1>(a);\n            let lo = {p}_castpd256_pd128(a);"
-        ),
-        ("f32", 128) | ("f64", 128) => String::new(), // No extraction needed
-        _ => String::new(),
-    };
-
-    let _ = extract_hi; // Used in reduce_* bodies
 
     // Native pixel-pack override (f32 only) — round + saturating cvt/pack.
     // LLVM cannot recover this from the scalar `roundevenf` default (issue #60).
@@ -1761,7 +1704,7 @@ fn generate_x86_float_impl(ty: &FloatVecType, token: &str) -> String {
     };
 
     formatdoc! {r#"
-        impl {trait_name} for archmage::{token} {{
+        impl {trait_name} for archmage::X64V3Token {{
             type Repr = {inner};
 
             // ====== Construction ======
@@ -2005,7 +1948,7 @@ fn generate_x86_float_impl(ty: &FloatVecType, token: &str) -> String {
             formatdoc! {r#"
 
                 #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
-                impl crate::simd::backends::F32x{lanes}Internal for archmage::{token} {{
+                impl crate::simd::backends::F32x{lanes}Internal for archmage::X64V3Token {{
                     type InternalRepr = {inner};
                 {store_rgba_x86}
                 {float_layout}
@@ -2067,8 +2010,6 @@ fn generate_x86_reduce_add(ty: &FloatVecType) -> String {
                     let h = {hadd}(sum, sum);
                     {cvt}(h)
                 }}"},
-        ("f32", 512) => "        { _mm512_reduce_add_ps(a) }".to_string(),
-        ("f64", 512) => "        { _mm512_reduce_add_pd(a) }".to_string(),
         _ => unreachable!(),
     }
 }
@@ -2117,8 +2058,6 @@ fn generate_x86_reduce_min(ty: &FloatVecType) -> String {
                     let m2 = _mm_min_pd(m, shuf);
                     {cvt}(m2)
                 }}"},
-        ("f32", 512) => "        { _mm512_reduce_min_ps(a) }".to_string(),
-        ("f64", 512) => "        { _mm512_reduce_min_pd(a) }".to_string(),
         _ => unreachable!(),
     }
 }
@@ -2167,8 +2106,6 @@ fn generate_x86_reduce_max(ty: &FloatVecType) -> String {
                     let m2 = _mm_max_pd(m, shuf);
                     {cvt}(m2)
                 }}"},
-        ("f32", 512) => "        { _mm512_reduce_max_ps(a) }".to_string(),
-        ("f64", 512) => "        { _mm512_reduce_max_pd(a) }".to_string(),
         _ => unreachable!(),
     }
 }
@@ -4169,25 +4106,22 @@ fn generate_convert_traits() -> String {
 // x86 I32 Implementation Generation
 // ============================================================================
 
-fn generate_x86_i32_impls(types: &[I32VecType], token: &str, max_width: usize) -> String {
+fn generate_x86_i32_impls(types: &[I32VecType]) -> String {
     let mut code = String::new();
 
     for ty in types {
-        if ty.width_bits > max_width {
-            continue;
-        }
         code.push_str("\n#[cfg(all(target_arch = \"x86_64\", target_feature = \"sse2\"))]\n");
-        code.push_str(&generate_x86_i32_impl(ty, token));
+        code.push_str(&generate_x86_i32_impl(ty));
         code.push('\n');
     }
 
     code
 }
 
-fn generate_x86_i32_impl(ty: &I32VecType, token: &str) -> String {
-    let integer_methods = super::backend_gen_widen_narrow::methods(&ty.name(), token);
-    let arcane = super::backend_syntax::arcane(token);
-    let baseline = super::backend_syntax::sse2_or_arcane(token, ty.width_bits);
+fn generate_x86_i32_impl(ty: &I32VecType) -> String {
+    let integer_methods = super::backend_gen_widen_narrow::methods(&ty.name(), "X64V3Token");
+    let arcane = super::backend_syntax::arcane("X64V3Token");
+    let baseline = super::backend_syntax::sse2_or_arcane("X64V3Token", ty.width_bits);
     let baseline_end = if ty.width_bits == 128 { "}" } else { "" };
     let trait_name = ty.trait_name();
     let inner = ty.x86_inner_type();
@@ -4199,7 +4133,7 @@ fn generate_x86_i32_impl(ty: &I32VecType, token: &str) -> String {
     let reduce_add_body = generate_x86_i32_reduce_add(ty);
 
     formatdoc! {r#"
-        impl {trait_name} for archmage::{token} {{
+        impl {trait_name} for archmage::X64V3Token {{
             type Repr = {inner};
 
             // ====== Construction ======
@@ -4438,12 +4372,12 @@ fn generate_x86_i32_reduce_add(ty: &I32VecType) -> String {
 // x86 Conversion Implementation Generation
 // ============================================================================
 
-fn generate_x86_convert_impls(token: &str) -> String {
-    let arcane = super::backend_syntax::arcane(token);
+fn generate_x86_convert_impls() -> String {
+    let arcane = super::backend_syntax::arcane("X64V3Token");
     formatdoc! {r#"
 
         #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
-        impl F32x4Convert for archmage::{token} {{
+        impl F32x4Convert for archmage::X64V3Token {{
             {arcane}
             fn bitcast_f32_to_i32(self, a: __m128) -> __m128i {{
                 _mm_castps_si128(a)
@@ -4482,7 +4416,7 @@ fn generate_x86_convert_impls(token: &str) -> String {
         }}
 
         #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
-        impl F32x8Convert for archmage::{token} {{
+        impl F32x8Convert for archmage::X64V3Token {{
             {arcane}
             fn bitcast_f32_to_i32(self, a: __m256) -> __m256i {{
                 _mm256_castps_si256(a)
@@ -4520,7 +4454,7 @@ fn generate_x86_convert_impls(token: &str) -> String {
         }}
 
         #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
-        impl U32x4Bitcast for archmage::{token} {{
+        impl U32x4Bitcast for archmage::X64V3Token {{
             #[inline(always)]
             fn bitcast_u32_to_i32(self, a: __m128i) -> __m128i {{
                 a
@@ -4533,7 +4467,7 @@ fn generate_x86_convert_impls(token: &str) -> String {
         }}
 
         #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
-        impl U32x8Bitcast for archmage::{token} {{
+        impl U32x8Bitcast for archmage::X64V3Token {{
             #[inline(always)]
             fn bitcast_u32_to_i32(self, a: __m256i) -> __m256i {{
                 a
@@ -4546,7 +4480,7 @@ fn generate_x86_convert_impls(token: &str) -> String {
         }}
 
         #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
-        impl I64x2Bitcast for archmage::{token} {{
+        impl I64x2Bitcast for archmage::X64V3Token {{
             {arcane}
             fn bitcast_i64_to_f64(self, a: __m128i) -> __m128d {{
                 _mm_castsi128_pd(a)
@@ -4559,7 +4493,7 @@ fn generate_x86_convert_impls(token: &str) -> String {
         }}
 
         #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
-        impl I64x4Bitcast for archmage::{token} {{
+        impl I64x4Bitcast for archmage::X64V3Token {{
             {arcane}
             fn bitcast_i64_to_f64(self, a: __m256i) -> __m256d {{
                 _mm256_castsi256_pd(a)
@@ -5570,24 +5504,21 @@ fn generate_u32_backend_trait(ty: &U32VecType) -> String {
 // x86 U32 Implementation Generation
 // ============================================================================
 
-fn generate_x86_u32_impls(types: &[U32VecType], token: &str, max_width: usize) -> String {
+fn generate_x86_u32_impls(types: &[U32VecType]) -> String {
     let mut code = String::new();
 
     for ty in types {
-        if ty.width_bits > max_width {
-            continue;
-        }
         code.push_str("\n#[cfg(all(target_arch = \"x86_64\", target_feature = \"sse2\"))]\n");
-        code.push_str(&generate_x86_u32_impl(ty, token));
+        code.push_str(&generate_x86_u32_impl(ty));
         code.push('\n');
     }
 
     code
 }
 
-fn generate_x86_u32_impl(ty: &U32VecType, token: &str) -> String {
-    let arcane = super::backend_syntax::arcane(token);
-    let baseline = super::backend_syntax::sse2_or_arcane(token, ty.width_bits);
+fn generate_x86_u32_impl(ty: &U32VecType) -> String {
+    let arcane = super::backend_syntax::arcane("X64V3Token");
+    let baseline = super::backend_syntax::sse2_or_arcane("X64V3Token", ty.width_bits);
     let baseline_end = if ty.width_bits == 128 { "}" } else { "" };
     let trait_name = ty.trait_name();
     let inner = ty.x86_inner_type();
@@ -5599,7 +5530,7 @@ fn generate_x86_u32_impl(ty: &U32VecType, token: &str) -> String {
     let reduce_add_body = generate_x86_u32_reduce_add(ty);
 
     formatdoc! {r#"
-        impl {trait_name} for archmage::{token} {{
+        impl {trait_name} for archmage::X64V3Token {{
             type Repr = {inner};
 
             // ====== Construction ======

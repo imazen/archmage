@@ -206,20 +206,6 @@ fn generate_width_namespaces(types: &[SimdType]) -> String {
     code.push_str("    #[allow(non_camel_case_types)]\n");
     code.push_str("    mod _w512_aliases {\n");
     for w512_name in &w512_types {
-        let trait_upper = match w512_name.as_str() {
-            "f32x16" => "F32x16Backend",
-            "f64x8" => "F64x8Backend",
-            "i8x64" => "I8x64Backend",
-            "u8x64" => "U8x64Backend",
-            "i16x32" => "I16x32Backend",
-            "u16x32" => "U16x32Backend",
-            "i32x16" => "I32x16Backend",
-            "u32x16" => "U32x16Backend",
-            "i64x8" => "I64x8Backend",
-            "u64x8" => "U64x8Backend",
-            _ => panic!("unknown W512 type: {}", w512_name),
-        };
-        let _ = trait_upper;
         code.push_str(&format!("        pub type {w512_name} = crate::simd::generic::{w512_name}<archmage::X64V3Token>;\n"));
     }
     code.push_str("    }\n");
