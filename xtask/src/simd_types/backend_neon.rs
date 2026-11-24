@@ -702,8 +702,8 @@ fn generate_neon_float_impl(ty: SimdType) -> String {
         }}{internal_impl}
     "#,
         reduce_add = reduce_pairwise(&format!("vpaddq_{ns}")),
-        reduce_min = if is_f32 { String::from("vminnmvq_f32(a)") } else { reduce_pairwise(&format!("vpminq_{ns}")) },
-        reduce_max = if is_f32 { String::from("vmaxnmvq_f32(a)") } else { reduce_pairwise(&format!("vpmaxq_{ns}")) },
+        reduce_min = if is_f32 { String::from("vminnmvq_f32(a)") } else { reduce_pairwise(&format!("vpminnmq_{ns}")) },
+        reduce_max = if is_f32 { String::from("vmaxnmvq_f32(a)") } else { reduce_pairwise(&format!("vpmaxnmq_{ns}")) },
     }
 }
 

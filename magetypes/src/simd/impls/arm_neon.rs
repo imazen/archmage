@@ -1033,7 +1033,7 @@ impl F64x2Backend for NeonToken {
     #[attune(wrap, suppress_const_test, _self = NeonToken)]
     fn reduce_min(self, a: float64x2_t) -> f64 {
         {
-            let pair = vpminq_f64(a, a);
+            let pair = vpminnmq_f64(a, a);
             vgetq_lane_f64::<0>(pair)
         }
     }
@@ -1041,7 +1041,7 @@ impl F64x2Backend for NeonToken {
     #[attune(wrap, suppress_const_test, _self = NeonToken)]
     fn reduce_max(self, a: float64x2_t) -> f64 {
         {
-            let pair = vpmaxq_f64(a, a);
+            let pair = vpmaxnmq_f64(a, a);
             vgetq_lane_f64::<0>(pair)
         }
     }
