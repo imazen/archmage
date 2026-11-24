@@ -33,6 +33,7 @@
 //! element-wise `simd_cast` of its 128-bit input (`core_arch/x86/avx2.rs:884`),
 //! not an `unpack`, so there is nothing to undo.
 
+use super::generic_gen::uppercase_first as upper;
 use indoc::formatdoc;
 
 // ============================================================================
@@ -81,16 +82,6 @@ pub(super) struct NarrowPair {
     pub src_lanes: usize,
 }
 
-/// `"u8x16"` -> `"U8x16"` (leading letter only; `to_uppercase` would give
-/// `U8X16`).
-fn upper(name: &str) -> String {
-    let mut cs = name.chars();
-    match cs.next() {
-        Some(c) => c.to_uppercase().collect::<String>() + cs.as_str(),
-        None => String::new(),
-    }
-}
-
 impl WidenPair {
     /// `"U8x16Backend"`.
     pub(super) fn src_backend(&self) -> String {
@@ -112,11 +103,6 @@ impl WidenPair {
     fn dst_lanes(&self) -> usize {
         self.src_lanes / 2
     }
-    /// How many native 128-bit sub-vectors the polyfilled repr holds
-    /// (1 = native single register).
-    fn subs(&self) -> usize {
-        self.width_bits / 128
-    }
 }
 
 impl NarrowPair {
@@ -137,9 +123,6 @@ impl NarrowPair {
             self.udst_elem
         };
         format!("narrow_saturating_{}_to_{}", self.src_elem, d)
-    }
-    fn subs(&self) -> usize {
-        self.width_bits / 128
     }
 }
 
@@ -388,7 +371,7 @@ pub(super) fn methods(src: &str, token: &str) -> String {
     match token {
         "ScalarToken" => generate_scalar_widen_narrow_methods(src),
         "X64V3Token" => generate_x86_v3_widen_narrow_methods(src),
-        "X64V4Token" | "X64V4xToken" => generate_x86_v4_widen_narrow_methods(src, token),
+        "X64V4Token" => generate_x86_v4_widen_narrow_methods(src),
         "NeonToken" => generate_neon_widen_narrow_methods(src),
         "Wasm128Token" => generate_wasm_widen_narrow_methods(src),
         _ => panic!("unsupported integer backend token: {token}"),
@@ -436,41 +419,6 @@ fn x86_v3_repr(width_bits: usize) -> &'static str {
         128 => "__m128i",
         256 => "__m256i",
         _ => unreachable!("only native 128/256-bit V3 types are generated here"),
-    }
-}
-
-/// Repr text for a NEON-backend type at a given register width.
-fn neon_repr(elem: &str, width_bits: usize) -> String {
-    let sub = neon_type(elem);
-    match width_bits {
-        128 => sub,
-        n => format!("[{sub}; {}]", n / 128),
-    }
-}
-
-/// Repr text for a wasm128-backend type at a given register width.
-fn wasm_repr(width_bits: usize) -> String {
-    match width_bits {
-        128 => "v128".to_string(),
-        n => format!("[v128; {}]", n / 128),
-    }
-}
-
-/// `a` when the repr is a single register, `a[k]` when it is an array.
-fn sub_expr(name: &str, subs: usize, k: usize) -> String {
-    if subs == 1 {
-        name.to_string()
-    } else {
-        format!("{name}[{k}]")
-    }
-}
-
-/// Wrap a list of per-sub expressions into a repr-shaped expression.
-fn pack_subs(items: &[String]) -> String {
-    if items.len() == 1 {
-        items[0].clone()
-    } else {
-        format!("[{}]", items.join(", "))
     }
 }
 
@@ -669,8 +617,8 @@ fn generate_x86_v3_widen_narrow_methods(src: &str) -> String {
 /// is first clamped at zero with `_mm512_max_epi16`. After that clamp every
 /// lane is in `0..=0x7FFF`, where the signed and unsigned readings coincide,
 /// and the instruction's saturation to `0..=255` is exactly `packus`'s.
-fn generate_x86_v4_widen_narrow_methods(src: &str, token: &str) -> String {
-    let arcane = super::backend_syntax::arcane(token);
+fn generate_x86_v4_widen_narrow_methods(src: &str) -> String {
+    let arcane = super::backend_syntax::arcane("X64V4Token");
     let mut code = String::new();
 
     for p in all_widen_pairs().into_iter().filter(|p| p.src == src) {
@@ -724,12 +672,16 @@ fn generate_x86_v4_widen_narrow_methods(src: &str, token: &str) -> String {
         "#, m = p.method(false)});
     }
 
-    code.push_str(&super::backend_gen_integer_ops::methods("v4", token, src));
+    code.push_str(&super::backend_gen_integer_ops::methods(
+        "v4",
+        "X64V4Token",
+        src,
+    ));
     code
 }
 
 // ============================================================================
-// NEON backend (128-bit native, wider types polyfilled as arrays)
+// NEON backend (128-bit native; wider polyfills live in impls/polyfill.rs)
 // ============================================================================
 
 /// NEON widen/narrow impls.
@@ -744,70 +696,51 @@ fn generate_neon_widen_narrow_methods(src: &str) -> String {
     let mut code = String::new();
 
     for p in all_widen_pairs().into_iter().filter(|p| p.src == src) {
-        let src_repr = neon_repr(p.src_elem, p.width_bits);
-        let dst_repr = neon_repr(p.dst_elem, p.width_bits);
+        assert_eq!(
+            p.width_bits, 128,
+            "NEON >128-bit widen lives in polyfill.rs"
+        );
+        let src_repr = neon_type(p.src_elem);
+        let dst_repr = neon_type(p.dst_elem);
         let ns = neon_suffix(p.src_elem);
-        let subs = p.subs();
         for half in [Half::Low, Half::High] {
-            // Dest sub `j` of this half is global half-register `g`; the source
-            // 128-bit sub it comes from is `g / 2` and the half within that sub
-            // is `g % 2`.
-            let items: Vec<String> = (0..subs)
-                .map(|j| {
-                    let g = j + if half == Half::Low { 0 } else { subs };
-                    let src = sub_expr("a", subs, g / 2);
-                    if g % 2 == 0 {
-                        format!("vmovl_{ns}(vget_low_{ns}({src}))")
-                    } else {
-                        format!("vmovl_high_{ns}({src})")
-                    }
-                })
-                .collect();
+            let body = match half {
+                Half::Low => format!("vmovl_{ns}(vget_low_{ns}(a))"),
+                Half::High => format!("vmovl_high_{ns}(a)"),
+            };
             code.push_str(&formatdoc! {r#"
                     {arcane}
                     fn {m}(self, a: {src_repr}) -> {dst_repr} {{
                         {body}
                     }}
 
-            "#, m = p.method(half), body = pack_subs(&items)});
+            "#, m = p.method(half)});
         }
     }
 
     for p in all_narrow_pairs().into_iter().filter(|p| p.src == src) {
-        let src_repr = neon_repr(p.src_elem, p.width_bits);
+        assert_eq!(
+            p.width_bits, 128,
+            "NEON >128-bit narrow lives in polyfill.rs"
+        );
+        let src_repr = neon_type(p.src_elem);
         let ns = neon_suffix(p.src_elem);
-        let subs = p.subs();
         for dst_signed in [true, false] {
             let dst_elem = if dst_signed { p.sdst_elem } else { p.udst_elem };
-            let dst_repr = neon_repr(dst_elem, p.width_bits);
+            let dst_repr = neon_type(dst_elem);
             let nds = neon_suffix(dst_elem);
             let narrow = if dst_signed {
                 format!("vqmovn_{ns}")
             } else {
                 format!("vqmovun_{ns}")
             };
-            // Logical source order is `a`'s subs followed by `b`'s; dest sub
-            // `j` combines logical subs `2j` and `2j + 1`.
-            let logical: Vec<String> = (0..subs)
-                .map(|k| sub_expr("a", subs, k))
-                .chain((0..subs).map(|k| sub_expr("b", subs, k)))
-                .collect();
-            let items: Vec<String> = (0..subs)
-                .map(|j| {
-                    format!(
-                        "vcombine_{nds}({narrow}({}), {narrow}({}))",
-                        logical[2 * j],
-                        logical[2 * j + 1]
-                    )
-                })
-                .collect();
             code.push_str(&formatdoc! {r#"
                     {arcane}
                     fn {m}(self, a: {src_repr}, b: {src_repr}) -> {dst_repr} {{
-                        {body}
+                        vcombine_{nds}({narrow}(a), {narrow}(b))
                     }}
 
-            "#, m = p.method(dst_signed), body = pack_subs(&items)});
+            "#, m = p.method(dst_signed)});
         }
     }
 
@@ -820,7 +753,7 @@ fn generate_neon_widen_narrow_methods(src: &str) -> String {
 }
 
 // ============================================================================
-// wasm128 backend (128-bit native, wider types polyfilled as arrays)
+// wasm128 backend (128-bit native; wider polyfills live in impls/polyfill.rs)
 // ============================================================================
 
 /// wasm128 widen/narrow impls.
@@ -834,56 +767,40 @@ fn generate_wasm_widen_narrow_methods(src: &str) -> String {
     let mut code = String::new();
 
     for p in all_widen_pairs().into_iter().filter(|p| p.src == src) {
-        let repr = wasm_repr(p.width_bits);
+        assert_eq!(
+            p.width_bits, 128,
+            "WASM >128-bit widen lives in polyfill.rs"
+        );
         let src128 = native128_name(p.src_elem);
         let dst128 = native128_name(p.dst_elem);
-        let subs = p.subs();
         for half in [Half::Low, Half::High] {
-            let items: Vec<String> = (0..subs)
-                .map(|j| {
-                    let g = j + if half == Half::Low { 0 } else { subs };
-                    let src = sub_expr("a", subs, g / 2);
-                    let which = if g % 2 == 0 { "low" } else { "high" };
-                    format!("{dst128}_extend_{which}_{src128}({src})")
-                })
-                .collect();
+            let which = half.name();
             code.push_str(&formatdoc! {r#"
                     #[inline(always)]
-                    fn {m}(self, a: {repr}) -> {repr} {{
-                        {body}
+                    fn {m}(self, a: v128) -> v128 {{
+                        {dst128}_extend_{which}_{src128}(a)
                     }}
 
-            "#, m = p.method(half), body = pack_subs(&items)});
+            "#, m = p.method(half)});
         }
     }
 
     for p in all_narrow_pairs().into_iter().filter(|p| p.src == src) {
-        let repr = wasm_repr(p.width_bits);
+        assert_eq!(
+            p.width_bits, 128,
+            "WASM >128-bit narrow lives in polyfill.rs"
+        );
         let src128 = native128_name(p.src_elem);
-        let subs = p.subs();
         for dst_signed in [true, false] {
             let dst_elem = if dst_signed { p.sdst_elem } else { p.udst_elem };
             let dst128 = native128_name(dst_elem);
-            let logical: Vec<String> = (0..subs)
-                .map(|k| sub_expr("a", subs, k))
-                .chain((0..subs).map(|k| sub_expr("b", subs, k)))
-                .collect();
-            let items: Vec<String> = (0..subs)
-                .map(|j| {
-                    format!(
-                        "{dst128}_narrow_{src128}({}, {})",
-                        logical[2 * j],
-                        logical[2 * j + 1]
-                    )
-                })
-                .collect();
             code.push_str(&formatdoc! {r#"
                     #[inline(always)]
-                    fn {m}(self, a: {repr}, b: {repr}) -> {repr} {{
-                        {body}
+                    fn {m}(self, a: v128, b: v128) -> v128 {{
+                        {dst128}_narrow_{src128}(a, b)
                     }}
 
-            "#, m = p.method(dst_signed), body = pack_subs(&items)});
+            "#, m = p.method(dst_signed)});
         }
     }
 

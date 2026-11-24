@@ -1,10 +1,7 @@
 //! Integer pairwise products and full-range absolute differences.
 //! Keep the scalar definitions and ISA formulations together for review.
+use super::generic_gen::uppercase_first as upper;
 use indoc::formatdoc;
-
-fn upper(s: &str) -> String {
-    s[..1].to_uppercase() + &s[1..]
-}
 
 pub(super) fn trait_methods(name: &str) -> String {
     let Some((elem, lanes)) = name.split_once('x') else {
@@ -117,11 +114,6 @@ pub(super) fn generic(name: &str) -> String {
 }
 
 pub(super) fn repr(arch: &str, elem: &str, width: usize) -> String {
-    let native = match arch {
-        "x86" => 256.min(width),
-        "v4" => width,
-        _ => 128.min(width),
-    };
     let bits = if elem == "u8" {
         8
     } else if matches!(elem, "i32" | "u32") {
@@ -132,35 +124,28 @@ pub(super) fn repr(arch: &str, elem: &str, width: usize) -> String {
     if arch == "scalar" {
         return format!("[{elem}; {}]", width / bits);
     }
-    let ty = match arch {
-        "x86" | "v4" => format!("__m{native}i"),
-        "wasm" => "v128".into(),
-        "neon" => format!(
-            "{}{}x{}_t",
-            if elem.starts_with('u') { "uint" } else { "int" },
-            bits,
-            128 / bits
-        ),
+    match arch {
+        "x86" | "v4" => format!("__m{width}i"),
+        "wasm" => {
+            assert_eq!(width, 128, "WASM >128-bit lives in polyfill.rs");
+            "v128".into()
+        }
+        "neon" => {
+            assert_eq!(width, 128, "NEON >128-bit lives in polyfill.rs");
+            format!(
+                "{}{}x{}_t",
+                if elem.starts_with('u') { "uint" } else { "int" },
+                bits,
+                128 / bits
+            )
+        }
         _ => unreachable!(),
-    };
-    if width == native {
-        ty
-    } else {
-        format!("[{ty}; {}]", width / native)
     }
 }
 
 pub(super) fn methods(arch: &str, token: &str, src: &str) -> String {
     let mut out = String::new();
     for w in [128, 256, 512] {
-        let native = if arch == "v4" {
-            512
-        } else if arch == "x86" {
-            256.min(w)
-        } else {
-            128
-        };
-        let parts = w / native;
         for op in ["madd_adjacent", "abs_i16", "abs_u8"] {
             let elem = if matches!(op, "madd_adjacent" | "abs_i16") {
                 "i16"
@@ -199,26 +184,7 @@ pub(super) fn methods(arch: &str, token: &str, src: &str) -> String {
                     "core::array::from_fn(|k| a[k].abs_diff(b[k]))".into()
                 }
             } else {
-                let expressions: Vec<_> = (0..parts)
-                    .map(|part| {
-                        let a = if parts == 1 {
-                            "a".into()
-                        } else {
-                            format!("a[{part}]")
-                        };
-                        let b = if parts == 1 {
-                            "b".into()
-                        } else {
-                            format!("b[{part}]")
-                        };
-                        native_expr(arch, native, op, &a, &b)
-                    })
-                    .collect();
-                if parts == 1 {
-                    expressions[0].clone()
-                } else {
-                    format!("[{}]", expressions.join(", "))
-                }
+                native_expr(arch, w, op, "a", "b")
             };
             out += &format!(
                 "{attr}\nfn {method}(self, a: {sr}, b: {sr}) -> {dr} {{ {body} }}\n{close}\n"
@@ -239,29 +205,7 @@ pub(super) fn methods(arch: &str, token: &str, src: &str) -> String {
                     let body = if arch == "scalar" {
                         scalar.to_owned()
                     } else {
-                        let sums: Vec<_> = (0..parts)
-                            .map(|i| {
-                                let a = if parts == 1 {
-                                    "a".into()
-                                } else {
-                                    format!("a[{i}]")
-                                };
-                                let b = if parts == 1 {
-                                    "b".into()
-                                } else {
-                                    format!("b[{i}]")
-                                };
-                                native_sum(arch, native, &a, rhs.then_some(b.as_str()))
-                            })
-                            .collect();
-                        if sums.len() == 1 {
-                            sums[0].clone()
-                        } else {
-                            sums.into_iter()
-                                .map(|sum| format!("({sum})"))
-                                .collect::<Vec<_>>()
-                                .join(" + ")
-                        }
+                        native_sum(arch, w, "a", rhs.then_some("b"))
                     };
                     let arg = if rhs {
                         format!(", b: {sr}")

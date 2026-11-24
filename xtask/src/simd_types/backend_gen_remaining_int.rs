@@ -577,27 +577,20 @@ pub(super) fn generate_int_backend_trait(ty: &IntVecType) -> String {
 // x86 Implementation Generation
 // ============================================================================
 
-pub(super) fn generate_x86_int_impls(
-    types: &[IntVecType],
-    token: &str,
-    max_width: usize,
-) -> String {
+pub(super) fn generate_x86_int_impls(types: &[IntVecType]) -> String {
     let mut code = String::new();
     for ty in types {
-        if ty.width_bits > max_width {
-            continue;
-        }
         code.push_str("\n#[cfg(all(target_arch = \"x86_64\", target_feature = \"sse2\"))]\n");
-        code.push_str(&generate_x86_int_impl(ty, token));
+        code.push_str(&generate_x86_int_impl(ty));
         code.push('\n');
     }
     code
 }
 
-fn generate_x86_int_impl(ty: &IntVecType, token: &str) -> String {
-    let integer_methods = super::backend_gen_widen_narrow::methods(&ty.name(), token);
-    let arcane = super::backend_syntax::arcane(token);
-    let baseline = super::backend_syntax::sse2_or_arcane(token, ty.width_bits);
+fn generate_x86_int_impl(ty: &IntVecType) -> String {
+    let integer_methods = super::backend_gen_widen_narrow::methods(&ty.name(), "X64V3Token");
+    let arcane = super::backend_syntax::arcane("X64V3Token");
+    let baseline = super::backend_syntax::sse2_or_arcane("X64V3Token", ty.width_bits);
     let baseline_end = if ty.width_bits == 128 { "}" } else { "" };
     let trait_name = ty.trait_name();
     let inner = ty.x86_inner_type();
@@ -890,7 +883,7 @@ fn generate_x86_int_impl(ty: &IntVecType, token: &str) -> String {
     body.push_str(&generate_x86_int_boolean(ty));
 
     formatdoc! {r#"
-        impl {trait_name} for archmage::{token} {{
+        impl {trait_name} for archmage::X64V3Token {{
         {body}
         {integer_methods}
         }}
@@ -2304,11 +2297,11 @@ pub(super) fn generate_additional_convert_traits() -> String {
 }
 
 /// Generate x86 conversion impls for the new types.
-pub(super) fn generate_x86_additional_convert_impls(token: &str) -> String {
+pub(super) fn generate_x86_additional_convert_impls() -> String {
     formatdoc! {r#"
 
         #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
-        impl I8x16Bitcast for archmage::{token} {{
+        impl I8x16Bitcast for archmage::X64V3Token {{
             #[inline(always)]
             fn bitcast_i8_to_u8(self, a: __m128i) -> __m128i {{ a }}
             #[inline(always)]
@@ -2316,7 +2309,7 @@ pub(super) fn generate_x86_additional_convert_impls(token: &str) -> String {
         }}
 
         #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
-        impl I8x32Bitcast for archmage::{token} {{
+        impl I8x32Bitcast for archmage::X64V3Token {{
             #[inline(always)]
             fn bitcast_i8_to_u8(self, a: __m256i) -> __m256i {{ a }}
             #[inline(always)]
@@ -2324,7 +2317,7 @@ pub(super) fn generate_x86_additional_convert_impls(token: &str) -> String {
         }}
 
         #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
-        impl I16x8Bitcast for archmage::{token} {{
+        impl I16x8Bitcast for archmage::X64V3Token {{
             #[inline(always)]
             fn bitcast_i16_to_u16(self, a: __m128i) -> __m128i {{ a }}
             #[inline(always)]
@@ -2332,7 +2325,7 @@ pub(super) fn generate_x86_additional_convert_impls(token: &str) -> String {
         }}
 
         #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
-        impl I16x16Bitcast for archmage::{token} {{
+        impl I16x16Bitcast for archmage::X64V3Token {{
             #[inline(always)]
             fn bitcast_i16_to_u16(self, a: __m256i) -> __m256i {{ a }}
             #[inline(always)]
@@ -2340,7 +2333,7 @@ pub(super) fn generate_x86_additional_convert_impls(token: &str) -> String {
         }}
 
         #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
-        impl U64x2Bitcast for archmage::{token} {{
+        impl U64x2Bitcast for archmage::X64V3Token {{
             #[inline(always)]
             fn bitcast_u64_to_i64(self, a: __m128i) -> __m128i {{ a }}
             #[inline(always)]
@@ -2348,7 +2341,7 @@ pub(super) fn generate_x86_additional_convert_impls(token: &str) -> String {
         }}
 
         #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
-        impl U64x4Bitcast for archmage::{token} {{
+        impl U64x4Bitcast for archmage::X64V3Token {{
             #[inline(always)]
             fn bitcast_u64_to_i64(self, a: __m256i) -> __m256i {{ a }}
             #[inline(always)]
