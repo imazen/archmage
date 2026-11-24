@@ -18,6 +18,7 @@ pub mod backend_gen_pairwise;
 pub mod backend_gen_remaining_int;
 pub mod backend_gen_w512;
 pub mod backend_gen_widen_narrow;
+mod backend_scalar;
 mod backend_syntax;
 mod backend_traits;
 mod float_layout;
