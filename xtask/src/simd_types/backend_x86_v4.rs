@@ -1,336 +1,148 @@
-//! Backend codegen for 512-bit SIMD types: f32x16, f64x8, i8x64, u8x64,
-//! i16x32, u16x32, i32x16, u32x16, i64x8, u64x8.
+//! Unified x86-64 V4 (native AVX-512) backend implementation generation (`impls/x86_v4.rs`).
 //!
-//! Uses a unified W512Type to generate all 10 types with backends for:
-//! - x86 V4 (native AVX-512 intrinsics)
-//! - Scalar (array ops)
-//!
-//! Width-polyfilled W512 backends (x86 V3 2×256-bit, NEON 4×128-bit,
-//! WASM 4×128-bit) live hand-written in `magetypes/src/simd/impls/polyfill.rs`.
+//! Generates native 512-bit backend impls for all 10 W512 SIMD types (`X64V4Token`),
+//! VPOPCNTDQ/BITALG popcnt extension impls (`X64V4xToken`), and `F32x16Convert`.
+//! (`X64V4xToken` base W512 backends delegate via `x86_v4_w512_delegated.rs`.)
 
 use indoc::formatdoc;
 
-// ============================================================================
-// Data Model
-// ============================================================================
+use super::types::{ElementType, SimdType};
 
-/// Categories of 512-bit types.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(super) enum W512Kind {
-    Float,
-    SignedInt,
-    UnsignedInt,
+/// Generate the entire `magetypes/src/simd/impls/x86_v4.rs` file.
+pub(super) fn generate_x86_v4_file(w512_types: &[SimdType]) -> String {
+    let safety = super::backend_gen::impls_safety_contract("X64V4Token / X64V4xToken");
+    let mut code = formatdoc! {r#"
+        //! Backend implementations for X64V4Token and X64V4xToken (native AVX-512).
+        //!
+        //! Implements the W512 backend traits using native 512-bit AVX-512 intrinsics
+        //! for X64V4Token (base AVX-512), plus extension trait impls (popcnt) for
+        //! X64V4xToken (+ VPOPCNTDQ, BITALG).
+        //!
+        //! X64V4xToken's base W512 backends forward to X64V4Token via `self.v4()` in
+        //! `x86_v4_w512_delegated.rs`. W128 and W256 types delegate to X64V3Token.
+        //!
+        //! **Auto-generated** by `cargo xtask generate` - do not edit manually.
+        //!
+        {safety}
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
+        use core::arch::x86_64::*;
+
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
+        use archmage::{{attune, X64V4Token, X64V4xToken}};
+
+        use crate::simd::backends::*;
+
+    "#};
+
+    // Base backend impls for X64V4Token
+    code.push_str(
+        "// ============================================================================\n",
+    );
+    code.push_str("// X64V4Token — base AVX-512 (F/BW/CD/DQ/VL)\n");
+    code.push_str(
+        "// ============================================================================\n\n",
+    );
+    for &ty in w512_types {
+        if ty.is_float() {
+            code.push_str(&generate_x86_v4_float_impl(ty));
+        } else {
+            code.push_str(&generate_x86_v4_int_impl(ty));
+        }
+        code.push('\n');
+    }
+
+    // Extension impls: popcnt (X64V4xToken only)
+    code.push_str(
+        "\n// ============================================================================\n",
+    );
+    code.push_str("// X64V4xToken — extension: popcnt (VPOPCNTDQ + BITALG)\n");
+    code.push_str(
+        "// ============================================================================\n\n",
+    );
+    for &ty in w512_types {
+        if !ty.is_float() {
+            code.push_str(&generate_popcnt_impl(ty));
+            code.push('\n');
+        }
+    }
+
+    // F32x16Convert impl for V4 (V4x delegates in `x86_v4_w512_delegated.rs`)
+    code.push_str(
+        "\n// ============================================================================\n",
+    );
+    code.push_str("// F32x16Convert — native AVX-512 conversions\n");
+    code.push_str(
+        "// ============================================================================\n\n",
+    );
+    code.push_str(&generate_x86_v4_f32x16_convert());
+
+    code
 }
 
-/// A 512-bit SIMD vector type for backend generation.
-#[derive(Clone, Debug)]
-pub(super) struct W512Type {
-    /// Element type: "f32", "f64", "i8", "u8", "i16", "u16", "i32", "u32", "i64", "u64"
-    pub elem: &'static str,
-    /// Number of lanes
-    pub lanes: usize,
-    /// Element size in bits
-    pub elem_bits: usize,
-    /// Kind (float, signed int, unsigned int)
-    pub kind: W512Kind,
-}
-
-impl W512Type {
-    /// Type name: "f32x16", "i8x64", etc.
-    pub fn name(&self) -> String {
-        format!("{}x{}", self.elem, self.lanes)
-    }
-
-    /// Trait name: "F32x16Backend", "I8x64Backend", etc.
-    pub fn trait_name(&self) -> String {
-        let upper = match self.elem {
-            "f32" => "F32",
-            "f64" => "F64",
-            "i8" => "I8",
-            "u8" => "U8",
-            "i16" => "I16",
-            "u16" => "U16",
-            "i32" => "I32",
-            "u32" => "U32",
-            "i64" => "I64",
-            "u64" => "U64",
-            _ => unreachable!(),
-        };
-        format!("{upper}x{}Backend", self.lanes)
-    }
-
-    /// Array type: "[f32; 16]", "[i8; 64]", etc.
-    fn array_type(&self) -> String {
-        format!("[{}; {}]", self.elem, self.lanes)
-    }
-
-    fn is_float(&self) -> bool {
-        self.kind == W512Kind::Float
-    }
-
-    fn is_signed(&self) -> bool {
-        matches!(self.kind, W512Kind::Float | W512Kind::SignedInt)
-    }
-
-    /// x86 AVX-512 inner type
-    fn x86_v4_inner(&self) -> &'static str {
-        match self.kind {
-            W512Kind::Float => match self.elem {
-                "f32" => "__m512",
-                "f64" => "__m512d",
-                _ => unreachable!(),
-            },
-            _ => "__m512i",
-        }
-    }
-
-    /// x86 AVX-512 intrinsic suffix for float ops: "ps" or "pd"
-    fn x86_float_suffix(&self) -> &'static str {
-        match self.elem {
-            "f32" => "ps",
-            "f64" => "pd",
-            _ => panic!("not a float type"),
-        }
-    }
-
-    /// x86 intrinsic suffix for integer set1
-    fn x86_set1_suffix(&self) -> &'static str {
-        match self.elem_bits {
-            8 => "epi8",
-            16 => "epi16",
-            32 => "epi32",
-            64 => "epi64",
-            _ => unreachable!(),
-        }
-    }
-
-    /// x86 intrinsic suffix for integer arithmetic
-    fn x86_arith_suffix(&self) -> &'static str {
-        match self.elem_bits {
-            8 => "epi8",
-            16 => "epi16",
-            32 => "epi32",
-            64 => "epi64",
-            _ => unreachable!(),
-        }
-    }
-
-    /// x86 AVX-512 suffix for signed min/max/comparison
-    fn x86_minmax_suffix(&self) -> &'static str {
-        match (self.is_signed(), self.elem_bits) {
-            (_, 8) if self.elem == "i8" => "epi8",
-            (_, 8) => "epu8",
-            (_, 16) if self.elem == "i16" => "epi16",
-            (_, 16) => "epu16",
-            (_, 32) if self.elem == "i32" => "epi32",
-            (_, 32) => "epu32",
-            (_, 64) if self.elem == "i64" => "epi64",
-            (_, 64) => "epu64",
-            _ => unreachable!(),
-        }
-    }
-
-    /// Whether this integer type has native AVX-512 multiply (16-bit, 32-bit)
-    fn has_native_avx512_mul(&self) -> bool {
-        matches!(self.elem_bits, 16 | 32)
-    }
-
-    /// Whether the uniform-variable-shift and saturating-arithmetic families
-    /// are emitted for this type.
-    ///
-    /// 8- and 16-bit integers only: saturating add/sub does not exist above
-    /// 16 bits on x86 or wasm at any tier, and the 128/256-bit halves these
-    /// 512-bit types delegate to only carry the uniform shifts at those
-    /// widths. See `docs/CROSS-ISA-INT-PRIMITIVES.md`.
-    fn has_new_int_ops(&self) -> bool {
-        !self.is_float() && (self.elem_bits == 8 || self.elem_bits == 16)
-    }
-
-    /// Whether this type carries the uniform-variable-shift family. Wider
-    /// than `has_new_int_ops`: 32-bit uniform shifts are universal
-    /// (`_mm512_sll_epi32` is AVX512F; the 128/256-bit sub-traits carry the
-    /// clamped NEON/WASM/scalar forms), but 32-bit saturating add/sub does
-    /// not exist on x86 or wasm at any tier, so the families gate separately.
-    /// 64-bit stays out: x86 has no `sra_epi64` below AVX-512, so the
-    /// arithmetic flavor is not universal at v3.
-    fn has_uniform_shift_ops(&self) -> bool {
-        !self.is_float() && matches!(self.elem_bits, 16 | 32)
+fn epi_suffix(elem_bits: usize) -> &'static str {
+    match elem_bits {
+        8 => "epi8",
+        16 => "epi16",
+        32 => "epi32",
+        64 => "epi64",
+        _ => unreachable!(),
     }
 }
 
-/// All 10 512-bit vector types.
-pub(super) fn all_w512_types() -> Vec<W512Type> {
-    vec![
-        W512Type {
-            elem: "f32",
-            lanes: 16,
-            elem_bits: 32,
-            kind: W512Kind::Float,
-        },
-        W512Type {
-            elem: "f64",
-            lanes: 8,
-            elem_bits: 64,
-            kind: W512Kind::Float,
-        },
-        W512Type {
-            elem: "i8",
-            lanes: 64,
-            elem_bits: 8,
-            kind: W512Kind::SignedInt,
-        },
-        W512Type {
-            elem: "u8",
-            lanes: 64,
-            elem_bits: 8,
-            kind: W512Kind::UnsignedInt,
-        },
-        W512Type {
-            elem: "i16",
-            lanes: 32,
-            elem_bits: 16,
-            kind: W512Kind::SignedInt,
-        },
-        W512Type {
-            elem: "u16",
-            lanes: 32,
-            elem_bits: 16,
-            kind: W512Kind::UnsignedInt,
-        },
-        W512Type {
-            elem: "i32",
-            lanes: 16,
-            elem_bits: 32,
-            kind: W512Kind::SignedInt,
-        },
-        W512Type {
-            elem: "u32",
-            lanes: 16,
-            elem_bits: 32,
-            kind: W512Kind::UnsignedInt,
-        },
-        W512Type {
-            elem: "i64",
-            lanes: 8,
-            elem_bits: 64,
-            kind: W512Kind::SignedInt,
-        },
-        W512Type {
-            elem: "u64",
-            lanes: 8,
-            elem_bits: 64,
-            kind: W512Kind::UnsignedInt,
-        },
-    ]
-}
-
-/// Native AVX-512 bodies for the new families.
-fn w512_new_ops_v4(ty: &W512Type) -> String {
-    let arcane = super::backend_syntax::arcane("X64V4Token");
-
-    let shifts = if ty.has_uniform_shift_ops() {
-        // 16-bit: _mm512_{sll,srl,sra}_epi16 (avx512bw); 32-bit: the epi32
-        // forms (avx512f). Hardware gives 0 / sign fill at count >= width,
-        // and _mm_cvtsi32_si128 zero-extends, so no clamp is needed.
-        let eb = ty.elem_bits;
-        let arith = if ty.is_signed() { "sra" } else { "srl" };
-        formatdoc! {r#"
-            {arcane}
-            fn shl_uniform(self, a: __m512i, count: u32) -> __m512i {{
-                _mm512_sll_epi{eb}(a, _mm_cvtsi32_si128(count as i32))
-            }}
-
-            {arcane}
-            fn shr_logical_uniform(self, a: __m512i, count: u32) -> __m512i {{
-                _mm512_srl_epi{eb}(a, _mm_cvtsi32_si128(count as i32))
-            }}
-
-            {arcane}
-            fn shr_arithmetic_uniform(self, a: __m512i, count: u32) -> __m512i {{
-                _mm512_{arith}_epi{eb}(a, _mm_cvtsi32_si128(count as i32))
-            }}
-        "#}
-    } else {
-        String::new()
-    };
-
-    if ty.has_new_int_ops() {
-        let sat_suffix = ty.x86_minmax_suffix(); // epi8/epu8/epi16/epu16
-        formatdoc! {r#"
-            {shifts}
-            {arcane}
-            fn saturating_add(self, a: __m512i, b: __m512i) -> __m512i {{
-                _mm512_adds_{sat_suffix}(a, b)
-            }}
-
-            {arcane}
-            fn saturating_sub(self, a: __m512i, b: __m512i) -> __m512i {{
-                _mm512_subs_{sat_suffix}(a, b)
-            }}
-    "#}
-    } else {
-        shifts
+fn minmax_suffix(ty: SimdType) -> &'static str {
+    match (ty.is_signed(), ty.elem_bits()) {
+        (true, 8) => "epi8",
+        (false, 8) => "epu8",
+        (true, 16) => "epi16",
+        (false, 16) => "epu16",
+        (true, 32) => "epi32",
+        (false, 32) => "epu32",
+        (true, 64) => "epi64",
+        (false, 64) => "epu64",
+        _ => unreachable!(),
     }
 }
 
 // ============================================================================
-// x86 V4 Native AVX-512 Implementation
-// Uses __m512/__m512d/__m512i directly with AVX-512 intrinsics.
+// Float Implementations (f32x16, f64x8)
 // ============================================================================
 
-/// Generate V4 native implementation for a W512 float type (f32x16, f64x8).
-fn generate_x86_v4_float_impl(ty: &W512Type) -> String {
+fn generate_x86_v4_float_impl(ty: SimdType) -> String {
     let arcane = super::backend_syntax::arcane("X64V4Token");
     let trait_name = ty.trait_name();
-    let inner = ty.x86_v4_inner();
-    let s = ty.x86_float_suffix();
-    let elem = ty.elem;
-    let float_layout = if elem == "f32" {
+    let inner = ty.width.x86_float_type(ty.elem);
+    let is_f32 = ty.elem == ElementType::F32;
+    let s = if is_f32 { "ps" } else { "pd" };
+    let elem = ty.elem.name();
+    let float_layout = if is_f32 {
         super::float_layout::x86(16, inner, &arcane)
     } else {
         String::new()
     };
     let array = ty.array_type();
-    let epi = if elem == "f32" { "epi32" } else { "epi64" };
-    let abs_mask = if elem == "f32" {
+    let epi = if is_f32 { "epi32" } else { "epi64" };
+    let abs_mask = if is_f32 {
         "0x7FFF_FFFFu32 as i32"
     } else {
         "0x7FFF_FFFF_FFFF_FFFFu64 as i64"
     };
-    // Working-tier recip/rsqrt, chosen per element type. f32: rcp14/rsqrt14
-    // (14-bit) + one Newton step ≈ 24 bits — inside the <= 4 ULP bare-name
-    // contract and the published 0.9.28 lowering (rails per-backend: the
-    // refine step computes a*r, so ±0/±inf lanes yield NaN — the 0 ULP +
-    // IEEE-rails tier is the generic `recip_portable`, issue #64). f64:
-    // exact division — one step from 14 bits is ~28 bits, far short of the
-    // contract, and the two-step form was never measured against
-    // _mm512_div_pd.
-    let numeric_min = if elem == "f32" {
+
+    let numeric_min = if is_f32 {
         "_mm512_range_ps::<0x04>(a, b)".to_string()
     } else {
         format!(
             "_mm512_mask_blend_{s}(_mm512_cmp_{s}_mask::<_CMP_UNORD_Q>(b, b), _mm512_min_{s}(a, b), a)"
         )
     };
-    let numeric_max = if elem == "f32" {
+    let numeric_max = if is_f32 {
         "_mm512_range_ps::<0x05>(a, b)".to_string()
     } else {
         format!(
             "_mm512_mask_blend_{s}(_mm512_cmp_{s}_mask::<_CMP_UNORD_Q>(b, b), _mm512_max_{s}(a, b), a)"
         )
     };
-    let working_recip_512 = if elem == "f32" {
-        // rcp14/rsqrt14 + one FMA-Newton step + VFIXUPIMM rail patch. The
-        // fixup tables classify the ORIGINAL input and overwrite exactly the
-        // rail lanes with the IEEE values (recip: ±0 -> signed inf,
-        // +inf -> +0, -inf -> -0; rsqrt: ±0 -> signed inf, +inf -> +0,
-        // -inf and negatives -> NaN; NaN propagates quietened) — this is the
-        // instruction's designed use, one op vs the 2-op cmp+blend rescue the
-        // 128/256-bit v3 impls need (VFIXUPIMM needs AVX-512). Tables
-        // probe-verified on Zen 5 silicon 2026-09-04; measured rails premium
-        // +11.7% over plain Newton vs +181% for exact division. Deep
-        // subnormals unspecified at this tier (rcp14/rsqrt14 DO handle most
-        // denormals, better than legacy rcpps).
+
+    let working_recip_512 = if is_f32 {
         formatdoc! {r#"
             {arcane}
             fn recip(self, a: {inner}) -> {inner} {{
@@ -370,6 +182,19 @@ fn generate_x86_v4_float_impl(ty: &W512Type) -> String {
             }}
         "#}
     };
+
+    let internal_impl = if is_f32 {
+        formatdoc! {r#"
+
+            #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
+            impl crate::simd::backends::F32x16Internal for archmage::X64V4Token {{
+                type InternalRepr = {inner};
+            {float_layout}
+            }}"#}
+    } else {
+        String::new()
+    };
+
     formatdoc! {r#"
         #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
         impl {trait_name} for archmage::X64V4Token {{
@@ -615,67 +440,78 @@ fn generate_x86_v4_float_impl(ty: &W512Type) -> String {
                 _mm512_xor_{s}(a, b)
             }}
         }}{internal_impl}
-    "#,
-        internal_impl = if elem == "f32" {
-            formatdoc! {r#"
+    "#}
+}
 
-                #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
-                impl crate::simd::backends::F32x16Internal for archmage::X64V4Token {{
-                    type InternalRepr = {inner};
-                {float_layout}
-                }}"#}
-        } else {
-            String::new()
-        },
+// ============================================================================
+// Integer Implementations (all 8 W512 integer types)
+// ============================================================================
+
+fn w512_new_ops_v4(ty: SimdType) -> String {
+    let arcane = super::backend_syntax::arcane("X64V4Token");
+    let eb = ty.elem_bits();
+
+    let shifts = if matches!(eb, 16 | 32) {
+        let arith = if ty.is_signed() { "sra" } else { "srl" };
+        formatdoc! {r#"
+            {arcane}
+            fn shl_uniform(self, a: __m512i, count: u32) -> __m512i {{
+                _mm512_sll_epi{eb}(a, _mm_cvtsi32_si128(count as i32))
+            }}
+
+            {arcane}
+            fn shr_logical_uniform(self, a: __m512i, count: u32) -> __m512i {{
+                _mm512_srl_epi{eb}(a, _mm_cvtsi32_si128(count as i32))
+            }}
+
+            {arcane}
+            fn shr_arithmetic_uniform(self, a: __m512i, count: u32) -> __m512i {{
+                _mm512_{arith}_epi{eb}(a, _mm_cvtsi32_si128(count as i32))
+            }}
+        "#}
+    } else {
+        String::new()
+    };
+
+    if eb <= 16 {
+        let sat_suffix = minmax_suffix(ty);
+        formatdoc! {r#"
+            {shifts}
+            {arcane}
+            fn saturating_add(self, a: __m512i, b: __m512i) -> __m512i {{
+                _mm512_adds_{sat_suffix}(a, b)
+            }}
+
+            {arcane}
+            fn saturating_sub(self, a: __m512i, b: __m512i) -> __m512i {{
+                _mm512_subs_{sat_suffix}(a, b)
+            }}
+        "#}
+    } else {
+        shifts
     }
 }
 
-/// Generate V4 native implementation for a W512 integer type.
-fn generate_x86_v4_int_impl(ty: &W512Type) -> String {
+fn generate_x86_v4_int_impl(ty: SimdType) -> String {
     let integer_methods = super::backend_gen_widen_narrow::methods(&ty.name(), "X64V4Token");
     let arcane = super::backend_syntax::arcane("X64V4Token");
     let trait_name = ty.trait_name();
-    let elem = ty.elem;
-    let lanes = ty.lanes;
-    let elem_bits = ty.elem_bits;
+    let elem = ty.elem.name();
+    let lanes = ty.lanes();
+    let elem_bits = ty.elem_bits();
+    let signed = ty.is_signed();
     let array = ty.array_type();
-    let epi = ty.x86_arith_suffix();
-    let mm = ty.x86_minmax_suffix();
-    let set1 = ty.x86_set1_suffix();
-    // `_mm512_set1_epi*` take the signed lane type; only unsigned lanes cast.
-    let splat_arg = if elem.starts_with('i') { "v" } else { "v as _" };
-
-    // set1 cast for unsigned types: we need to cast -1 to the unsigned element type
-    // then to the signed type that _mm512_set1_epiN expects
-    let set1_neg1 = match elem {
-        "i8" | "i16" | "i32" | "i64" => "-1".to_string(),
-        "u8" => "-1i8".to_string(),
-        "u16" => "-1i16".to_string(),
-        "u32" => "-1i32".to_string(),
-        "u64" => "-1i64".to_string(),
-        _ => unreachable!(),
+    let epi = epi_suffix(elem_bits);
+    let mm = minmax_suffix(ty);
+    let splat_arg = if signed { "v" } else { "v as _" };
+    let set1_neg1 = match ty.elem {
+        ElementType::U8 => "-1i8",
+        ElementType::U16 => "-1i16",
+        ElementType::U32 => "-1i32",
+        ElementType::U64 => "-1i64",
+        _ => "-1",
     };
 
-    // For maskz_set1, we always use the signed version
-    let set1_signed = match elem_bits {
-        8 => "epi8",
-        16 => "epi16",
-        32 => "epi32",
-        64 => "epi64",
-        _ => unreachable!(),
-    };
-
-    // Comparison intrinsic prefix: epi for signed, epu for unsigned
-    let cmp_suffix = if ty.is_signed() {
-        format!("epi{elem_bits}")
-    } else {
-        format!("epu{elem_bits}")
-    };
-
-    // blend suffix: epi8, epi16, epi32, epi64
-    let blend_suffix = format!("epi{elem_bits}");
-
-    // Mask type
     let full_mask = match lanes {
         64 => "0xFFFF_FFFF_FFFF_FFFFu64",
         32 => "0xFFFF_FFFFu64",
@@ -684,8 +520,7 @@ fn generate_x86_v4_int_impl(ty: &W512Type) -> String {
         _ => unreachable!(),
     };
 
-    // mul
-    let mul_impl = if ty.has_native_avx512_mul() {
+    let mul_impl = if matches!(elem_bits, 16 | 32) {
         formatdoc! {r#"
 
             {arcane}
@@ -697,8 +532,7 @@ fn generate_x86_v4_int_impl(ty: &W512Type) -> String {
         String::new()
     };
 
-    // abs (signed only)
-    let abs_impl = if ty.is_signed() {
+    let abs_impl = if signed {
         formatdoc! {r#"
 
             {arcane}
@@ -710,38 +544,11 @@ fn generate_x86_v4_int_impl(ty: &W512Type) -> String {
         String::new()
     };
 
-    // neg: sub(zero, a) works for both signed and unsigned
-    let neg_impl = formatdoc! {r#"
-            {arcane}
-            fn neg(self, a: __m512i) -> __m512i {{
-                _mm512_sub_{epi}(_mm512_setzero_si512(), a)
-            }}
-    "#};
-
     let new_ops = w512_new_ops_v4(ty);
-
-    // Shifts: 8-bit shifts need polyfill via 16-bit, others use native
     let shift_impls = if elem_bits == 8 {
-        generate_8bit_shift_polyfill(ty)
+        generate_8bit_shift_polyfill(signed)
     } else {
-        let shr_arith = if ty.kind == W512Kind::UnsignedInt {
-            // Unsigned: arithmetic right shift = logical right shift
-            // Inline the shift body to avoid Self:: ambiguity (multiple backend traits)
-            formatdoc! {r#"
-            {arcane}
-            fn shr_arithmetic_const<const N: i32>(self, a: __m512i) -> __m512i {{
-                _mm512_srl_{epi}(a, _mm_cvtsi32_si128(N))
-            }}
-            "#}
-        } else {
-            formatdoc! {r#"
-            {arcane}
-            fn shr_arithmetic_const<const N: i32>(self, a: __m512i) -> __m512i {{
-                _mm512_sra_{epi}(a, _mm_cvtsi32_si128(N))
-            }}
-            "#}
-        };
-
+        let shr_arith_op = if signed { "sra" } else { "srl" };
         let shl = if elem_bits == 32 {
             let cases = (0..32)
                 .map(|shift| format!("    {shift} => _mm512_slli_epi32::<{shift}>(a),"))
@@ -762,13 +569,19 @@ fn generate_x86_v4_int_impl(ty: &W512Type) -> String {
                 {shl}
             }}
 
-            {shr_arith}
+            {arcane}
+            fn shr_arithmetic_const<const N: i32>(self, a: __m512i) -> __m512i {{
+                _mm512_{shr_arith_op}_{epi}(a, _mm_cvtsi32_si128(N))
+            }}
+
             {arcane}
             fn shr_logical_const<const N: i32>(self, a: __m512i) -> __m512i {{
                 _mm512_srl_{epi}(a, _mm_cvtsi32_si128(N))
             }}
         "#}
     };
+
+    let mask_as_u64 = if elem_bits == 8 { "" } else { " as u64" };
 
     formatdoc! {r#"
         #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
@@ -777,7 +590,7 @@ fn generate_x86_v4_int_impl(ty: &W512Type) -> String {
 
             {arcane}
             fn splat(self, v: {elem}) -> __m512i {{
-                _mm512_set1_{set1}({splat_arg})
+                _mm512_set1_{epi}({splat_arg})
             }}
 
             {arcane}
@@ -815,7 +628,11 @@ fn generate_x86_v4_int_impl(ty: &W512Type) -> String {
                 _mm512_sub_{epi}(a, b)
             }}
             {mul_impl}
-            {neg_impl}
+            {arcane}
+            fn neg(self, a: __m512i) -> __m512i {{
+                _mm512_sub_{epi}(_mm512_setzero_si512(), a)
+            }}
+
             {arcane}
             fn min(self, a: __m512i, b: __m512i) -> __m512i {{
                 _mm512_min_{mm}(a, b)
@@ -828,46 +645,46 @@ fn generate_x86_v4_int_impl(ty: &W512Type) -> String {
             {abs_impl}
             {arcane}
             fn simd_eq(self, a: __m512i, b: __m512i) -> __m512i {{
-                let mask = _mm512_cmpeq_{cmp_suffix}_mask(a, b);
-                _mm512_maskz_set1_{set1_signed}(mask, {set1_neg1})
+                let mask = _mm512_cmpeq_{mm}_mask(a, b);
+                _mm512_maskz_set1_{epi}(mask, {set1_neg1})
             }}
 
             {arcane}
             fn simd_ne(self, a: __m512i, b: __m512i) -> __m512i {{
-                let mask = _mm512_cmpneq_{cmp_suffix}_mask(a, b);
-                _mm512_maskz_set1_{set1_signed}(mask, {set1_neg1})
+                let mask = _mm512_cmpneq_{mm}_mask(a, b);
+                _mm512_maskz_set1_{epi}(mask, {set1_neg1})
             }}
 
             {arcane}
             fn simd_lt(self, a: __m512i, b: __m512i) -> __m512i {{
-                let mask = _mm512_cmplt_{cmp_suffix}_mask(a, b);
-                _mm512_maskz_set1_{set1_signed}(mask, {set1_neg1})
+                let mask = _mm512_cmplt_{mm}_mask(a, b);
+                _mm512_maskz_set1_{epi}(mask, {set1_neg1})
             }}
 
             {arcane}
             fn simd_le(self, a: __m512i, b: __m512i) -> __m512i {{
-                let mask = _mm512_cmple_{cmp_suffix}_mask(a, b);
-                _mm512_maskz_set1_{set1_signed}(mask, {set1_neg1})
+                let mask = _mm512_cmple_{mm}_mask(a, b);
+                _mm512_maskz_set1_{epi}(mask, {set1_neg1})
             }}
 
             {arcane}
             fn simd_gt(self, a: __m512i, b: __m512i) -> __m512i {{
                 // GT = LT with swapped args
-                let mask = _mm512_cmplt_{cmp_suffix}_mask(b, a);
-                _mm512_maskz_set1_{set1_signed}(mask, {set1_neg1})
+                let mask = _mm512_cmplt_{mm}_mask(b, a);
+                _mm512_maskz_set1_{epi}(mask, {set1_neg1})
             }}
 
             {arcane}
             fn simd_ge(self, a: __m512i, b: __m512i) -> __m512i {{
                 // GE = LE with swapped args
-                let mask = _mm512_cmple_{cmp_suffix}_mask(b, a);
-                _mm512_maskz_set1_{set1_signed}(mask, {set1_neg1})
+                let mask = _mm512_cmple_{mm}_mask(b, a);
+                _mm512_maskz_set1_{epi}(mask, {set1_neg1})
             }}
 
             {arcane}
             fn blend(self, mask: __m512i, if_true: __m512i, if_false: __m512i) -> __m512i {{
-                let k = _mm512_cmpneq_{blend_suffix}_mask(mask, _mm512_setzero_si512());
-                _mm512_mask_blend_{blend_suffix}(k, if_false, if_true)
+                let k = _mm512_cmpneq_{epi}_mask(mask, _mm512_setzero_si512());
+                _mm512_mask_blend_{epi}(k, if_false, if_true)
             }}
 
             {arcane}
@@ -879,7 +696,7 @@ fn generate_x86_v4_int_impl(ty: &W512Type) -> String {
 
             {arcane}
             fn not(self, a: __m512i) -> __m512i {{
-                _mm512_xor_si512(a, _mm512_set1_{set1_signed}({set1_neg1}))
+                _mm512_xor_si512(a, _mm512_set1_{epi}({set1_neg1}))
             }}
 
             {arcane}
@@ -919,20 +736,13 @@ fn generate_x86_v4_int_impl(ty: &W512Type) -> String {
             }}
         {integer_methods}
         }}
-    "#,
-        // 8-bit lanes have a 64-bit mask already; narrower masks widen.
-        mask_as_u64 = if elem_bits == 8 { "" } else { " as u64" },
-    }
+    "#}
 }
 
 /// Generate 8-bit shift polyfill via 16-bit operations for AVX-512.
-fn generate_8bit_shift_polyfill(ty: &W512Type) -> String {
+fn generate_8bit_shift_polyfill(signed: bool) -> String {
     let arcane = super::backend_syntax::arcane("X64V4Token");
-    let is_unsigned = ty.kind == W512Kind::UnsignedInt;
-
-    let shr_arith = if is_unsigned {
-        // Unsigned: arithmetic right shift = logical right shift
-        // Inline the shift body to avoid Self:: ambiguity (multiple backend traits)
+    let shr_arith = if !signed {
         formatdoc! {r#"
             {arcane}
             fn shr_arithmetic_const<const N: i32>(self, a: __m512i) -> __m512i {{
@@ -985,29 +795,14 @@ fn generate_8bit_shift_polyfill(ty: &W512Type) -> String {
     "#}
 }
 
-/// Generate all V4 native AVX-512 W512 implementations (`X64V4Token`).
-pub(super) fn generate_x86_v4_w512_impls(types: &[W512Type]) -> String {
-    let mut code = String::new();
-    for ty in types {
-        if ty.is_float() {
-            code.push_str(&generate_x86_v4_float_impl(ty));
-        } else {
-            code.push_str(&generate_x86_v4_int_impl(ty));
-        }
-        code.push('\n');
-    }
-    code
-}
-
 // ============================================================================
-// Extension Impls for Modern Token
+// Extension & Conversion Impls
 // ============================================================================
 
-/// Generate popcnt extension impl for X64V4xToken.
-fn generate_popcnt_impl(ty: &W512Type) -> String {
+fn generate_popcnt_impl(ty: SimdType) -> String {
     let arcane = super::backend_syntax::arcane("X64V4xToken");
     let name = ty.name();
-    let epi = ty.x86_arith_suffix();
+    let epi = epi_suffix(ty.elem_bits());
 
     formatdoc! {r#"
         #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
@@ -1020,14 +815,46 @@ fn generate_popcnt_impl(ty: &W512Type) -> String {
     "#}
 }
 
-/// Generate all popcnt extension impls for Modern token.
-pub(super) fn generate_popcnt_impls(types: &[W512Type]) -> String {
-    let mut code = String::new();
-    for ty in types {
-        if !ty.is_float() {
-            code.push_str(&generate_popcnt_impl(ty));
-            code.push('\n');
-        }
-    }
-    code
+fn generate_x86_v4_f32x16_convert() -> String {
+    let arcane = super::backend_syntax::arcane("X64V4Token");
+    formatdoc! {r#"
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "w512"))]
+        impl F32x16Convert for archmage::X64V4Token {{
+            {arcane}
+            fn bitcast_f32_to_i32(self, a: __m512) -> __m512i {{
+                _mm512_castps_si512(a)
+            }}
+
+            {arcane}
+            fn bitcast_i32_to_f32(self, a: __m512i) -> __m512 {{
+                _mm512_castsi512_ps(a)
+            }}
+
+            {arcane}
+            fn convert_f32_to_i32(self, a: __m512) -> __m512i {{
+                _mm512_cvttps_epi32(a)
+            }}
+
+            // Issue #80 fixup, mask-register form.
+            {arcane}
+            fn convert_f32_to_i32_saturating(self, a: __m512) -> __m512i {{
+                let t = _mm512_cvttps_epi32(a);
+                let big = _mm512_cmp_ps_mask::<_CMP_GE_OQ>(a, _mm512_set1_ps(2_147_483_648.0));
+                let t = _mm512_mask_mov_epi32(t, big, _mm512_set1_epi32(i32::MAX));
+                let not_nan = _mm512_cmp_ps_mask::<_CMP_ORD_Q>(a, a);
+                _mm512_maskz_mov_epi32(not_nan, t)
+            }}
+
+            {arcane}
+            fn convert_f32_to_i32_round(self, a: __m512) -> __m512i {{
+                _mm512_cvtps_epi32(a)
+            }}
+
+            {arcane}
+            fn convert_i32_to_f32(self, a: __m512i) -> __m512 {{
+                _mm512_cvtepi32_ps(a)
+            }}
+        }}
+
+    "#}
 }
