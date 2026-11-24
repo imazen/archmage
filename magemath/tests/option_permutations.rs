@@ -68,6 +68,7 @@ fn expf_midp_127_5_upper_endpoint_stays_finite_and_bf16_neighbors_elide() {
     let pred = 127.0_f32;
     let pred_ref = <Expf>::exp2(pred).unwrap();
     assert!(pred_ref.is_finite());
+    assert_eq!(pred_ref.to_bits(), ((2.0_f64).powi(127) as f32).to_bits());
     assert_eq!(
         Expf::<{ BELOW_127_5.bits() }>::exp2(pred)
             .unwrap()
@@ -102,13 +103,13 @@ fn expf_midp_127_5_upper_endpoint_stays_finite_and_bf16_neighbors_elide() {
             .unwrap()
             == 1.0
     );
-    assert!(
-        ExpfOptions::new()
-            .domain(ExpfDomain::NonPositive)
-            .runtime()
-            .exp(0.1)
-            .is_err()
-    );
+    let error = ExpfOptions::new()
+        .domain(ExpfDomain::NonPositive)
+        .runtime()
+        .exp(0.1)
+        .unwrap_err();
+    assert_eq!(error.kind, ExpfErrorKind::InvalidInput);
+    assert_eq!(error.lane_mask, 1);
 }
 
 #[test]
@@ -222,13 +223,17 @@ fn logf_and_log1pf_granular_zero_vs_subnormals_vs_full_domain() {
         Log1pf::<L1P_NEG_ONE>::scalar(-1.0).unwrap(),
         f32::NEG_INFINITY
     );
-    assert!(Logf::<ZERO_ONLY>::log2(f32::from_bits(1)).is_err());
+    let error = Logf::<ZERO_ONLY>::log2(f32::from_bits(1)).unwrap_err();
+    assert_eq!(error.kind, LogfErrorKind::InvalidInput);
+    assert_eq!(error.lane_mask, 1);
     assert_eq!(
         Logf::<FLUSH_ZERO>::log2(f32::from_bits(1)).unwrap(),
         f32::NEG_INFINITY
     );
 
-    assert!(Logf::<SUB_ONLY>::log2(0.0).is_err());
+    let error = Logf::<SUB_ONLY>::log2(0.0).unwrap_err();
+    assert_eq!(error.kind, LogfErrorKind::InvalidInput);
+    assert_eq!(error.lane_mask, 1);
     assert_eq!(Logf::<SUB_ONLY>::log2(f32::from_bits(1)).unwrap(), -149.0);
     assert_eq!(Logf::<FULL_MIDP>::log2(f32::from_bits(1)).unwrap(), -149.0);
     assert!((Logf::<FULL_LOWP>::log2(f32::from_bits(1)).unwrap() - (-149.0)).abs() < 1e-4);
@@ -274,11 +279,17 @@ fn positive_gamma_clears_prior_zero_and_subnormal_flags() {
         expected
     );
     const PG: u128 = PowfOptions::new().gamma().positive_gamma().bits();
-    assert!(Powf::<PG>::scalar(0.0, 2.2).is_err());
-    assert_eq!(
-        Powf::<PG>::scalar(f32::from_bits(1), 0.5),
-        Powf::<PG>::scalar(1.0 / 65_536.0, 0.5)
-    );
+    let error = Powf::<PG>::scalar(0.0, 2.2).unwrap_err();
+    assert_eq!(error.kind, PowfErrorKind::InvalidBase);
+    assert_eq!(error.lane_mask, 1);
+    // Positive Gamma flushes subnormals to its lower bound, 2^-16.
+    // The square root of that bound is exactly 2^-8.
+    for base in [f32::from_bits(1), 1.0 / 65_536.0] {
+        assert_eq!(
+            Powf::<PG>::scalar(base, 0.5).unwrap().to_bits(),
+            (1.0_f32 / 256.0).to_bits()
+        );
+    }
 }
 
 #[test]
@@ -501,7 +512,9 @@ fn polynomial_single_octave_zero_reduction_matches_full_graph_bit_for_bit() {
     // Unit domains flush by default and retain explicit reject and normalize policies.
     assert!(!UNIT_CBRT_REJECT.elides_denorm_check());
     assert!(UNIT_CBRT_NORM.elides_denorm_check());
-    assert!(Cbrtf::<{ UNIT_CBRT_REJECT.bits() }>::scalar(f32::from_bits(1)).is_err());
+    let error = Cbrtf::<{ UNIT_CBRT_REJECT.bits() }>::scalar(f32::from_bits(1)).unwrap_err();
+    assert_eq!(error.kind, CbrtfErrorKind::InvalidInput);
+    assert_eq!(error.lane_mask, 1);
     assert_eq!(
         Cbrtf::<{ UNIT_CBRT.bits() }>::scalar(-f32::from_bits(1))
             .unwrap()

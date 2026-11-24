@@ -293,3 +293,23 @@ use archmage::SimdToken;
 
     code
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn load_strategies_cover_native_polyfilled_and_four_way_layouts() {
+        let generated = generate_width_dispatch();
+        syn::parse_file(&generated).expect("valid Rust width-dispatch implementations");
+
+        assert!(generated.contains("i16x16::load_t(self, data)"));
+        assert!(generated.contains("crate::simd::neon::i16x16::load_t(self, data)"));
+        assert!(generated.contains("crate::simd::wasm128::i16x16::load_t(self, data)"));
+        assert_eq!(generated.matches("type U8x64 = [u8x16; 4];").count(), 3);
+        for range in ["0..16", "16..32", "32..48", "48..64"] {
+            let load = format!("u8x16::load_t(self, data[{range}].try_into().unwrap())");
+            assert_eq!(generated.matches(&load).count(), 3, "u8x64 chunk {range}");
+        }
+    }
+}

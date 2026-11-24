@@ -5,6 +5,7 @@ use proc_macro2::{Span, TokenStream};
 use quote::{format_ident, quote};
 use syn::{FnArg, Ident, Pat, Signature, Type};
 
+use crate::common::with_ident_name;
 use crate::tiers::TierDescriptor;
 use crate::token_discovery::{self, TokenTypeInfo};
 
@@ -34,6 +35,11 @@ pub(super) enum Access {
 
 impl Candidate {
     fn discover(signature: Option<&Signature>) -> Self {
+        let has_concrete_bound = |bounds: &[&Ident]| {
+            bounds
+                .iter()
+                .any(|bound| with_ident_name(bound, |name| name == "IntoConcreteToken"))
+        };
         let mut candidate = Candidate::Missing;
         if let Some(signature) = signature {
             for arg in signature.inputs.pairs() {
@@ -55,7 +61,7 @@ impl Candidate {
                         Some(tier)
                     }
                     TokenTypeInfo::ImplTrait(bounds) => {
-                        if !bounds.iter().any(|b| **b == "IntoConcreteToken") {
+                        if !has_concrete_bound(&bounds) {
                             continue;
                         }
                         None
@@ -67,7 +73,7 @@ impl Candidate {
                             continue;
                         }
                         if !token_discovery::find_generic_bounds(signature, name)
-                            .is_some_and(|bounds| bounds.iter().any(|b| *b == "IntoConcreteToken"))
+                            .is_some_and(|bounds| has_concrete_bound(&bounds))
                         {
                             continue;
                         }
@@ -146,5 +152,27 @@ impl<'a> Parent<'a> {
         // Snapshot the parameter before user-local shadowing. Tokens are Copy;
         // borrowed proofs are copied without retaining the caller's borrow.
         Some(quote!(let #binding = #value;))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn raw_ident_parent_preserves_proof_inference() {
+        let tier = crate::tiers::find_tier("v3").unwrap();
+        for raw in [
+            "fn f(t: impl archmage::r#IntoConcreteToken)",
+            "fn f<T>(t: T) where T: archmage::r#IntoConcreteToken",
+        ] {
+            let signature = syn::parse_str(raw).unwrap();
+            let parent = Parent::new(Some(&signature));
+            assert!(
+                matches!(parent.access(tier), Ok(Some(Access::Conditional(_)))),
+                "{raw}"
+            );
+            assert!(parent.capture().is_some(), "{raw}");
+        }
     }
 }

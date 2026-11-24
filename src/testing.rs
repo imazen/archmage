@@ -106,12 +106,14 @@ pub fn lock_token_testing() -> TokenTestGuard {
     let current = std::thread::current().id();
 
     // Check for same-thread reentrance (programming error).
-    if let Ok(owner) = OWNER_THREAD.lock() {
-        assert!(
-            *owner != Some(current),
-            "lock_token_testing: already held by the current thread"
-        );
-    }
+    let already_held = OWNER_THREAD
+        .lock()
+        .ok()
+        .is_some_and(|owner| *owner == Some(current));
+    assert!(
+        !already_held,
+        "lock_token_testing: already held by the current thread"
+    );
 
     let guard = TOKEN_PERMUTATION_MUTEX
         .lock()
@@ -395,5 +397,73 @@ pub fn for_each_token_permutation(
     PermutationReport {
         warnings,
         permutations_run,
+    }
+}
+
+#[cfg(all(test, panic = "unwind"))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn caught_recursive_lock_panic_preserves_permutation_reentrancy() {
+        let lock = lock_token_testing();
+        let error = std::panic::catch_unwind(lock_token_testing).unwrap_err();
+        assert_eq!(
+            error.downcast_ref::<&str>().copied(),
+            Some("lock_token_testing: already held by the current thread")
+        );
+
+        // Check ownership before calling a function that would deadlock if
+        // it could no longer recognize this thread's already-held lock.
+        assert_eq!(
+            *OWNER_THREAD
+                .lock()
+                .expect("ownership survives a caught panic"),
+            Some(std::thread::current().id())
+        );
+        let mut calls = 0;
+        let report = for_each_token_permutation(CompileTimePolicy::Warn, |_| calls += 1);
+        assert!(calls > 0);
+        assert_eq!(report.permutations_run, calls);
+        drop(lock);
+        drop(lock_token_testing());
+    }
+
+    #[test]
+    fn permutation_callback_panic_restores_available_tokens() {
+        let _lock = lock_token_testing();
+        let slots = build_token_slots();
+        let availability = || {
+            slots
+                .iter()
+                .map(|slot| (slot.check_available)())
+                .collect::<Vec<_>>()
+        };
+        let before = availability();
+        let has_disableable_tokens = slots
+            .iter()
+            .zip(&before)
+            .any(|(slot, &available)| available && (slot.compiled_with)() != Some(true));
+        let result = std::panic::catch_unwind(|| {
+            for_each_token_permutation(CompileTimePolicy::Warn, |perm| {
+                if !perm.disabled.is_empty() || !has_disableable_tokens {
+                    for slot in &slots {
+                        if perm.disabled.contains(&slot.name) {
+                            assert!(
+                                !(slot.check_available)(),
+                                "{} was never disabled",
+                                slot.name
+                            );
+                        }
+                    }
+                    panic!("callback failed");
+                }
+            })
+        });
+        assert_eq!(
+            result.unwrap_err().downcast_ref::<&str>().copied(),
+            Some("callback failed")
+        );
+        assert_eq!(availability(), before);
     }
 }

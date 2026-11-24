@@ -100,6 +100,17 @@ macro_rules! check_lanes {
             );
             assert_eq!(v.to_u8_with::<SAT>(), x.map(scalar::to_u8_with::<SAT>));
             assert_eq!(v.to_u16_with::<SAT>(), x.map(scalar::to_u16_with::<SAT>));
+            let rounded = x.map(|value| f64::from(value).round_ties_even());
+            assert_eq!(
+                v.to_i32_with::<SAT>().to_array(),
+                rounded.map(|value| value as i32)
+            );
+            assert_eq!(
+                v.to_u32_with::<SAT>().to_array(),
+                rounded.map(|value| value as u32)
+            );
+            assert_eq!(v.to_u8_with::<SAT>(), rounded.map(|value| value as u8));
+            assert_eq!(v.to_u16_with::<SAT>(), rounded.map(|value| value as u16));
             let y = v.trunc().to_array();
             let reciprocal = v.recip_with::<EXACT>().to_array();
             let half = v.to_f16_bits_with::<FULL>();

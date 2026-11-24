@@ -2,7 +2,7 @@
 //!
 //! These tests try to break the contract: confirm lane order under every
 //! backend, prove polyfill paths agree with native intrinsics on the same
-//! inputs, exercise round-trip / idempotency invariants, and verify the
+//! inputs, exercise round-trip and exact extraction invariants, and verify the
 //! Scalar reference matches every other backend.
 
 use archmage::{ScalarToken, SimdToken};
@@ -17,6 +17,7 @@ const F32X4_B: [f32; 4] = [5.0625, -6.0, 7.5, 8.0];
 const F32X4_C: [f32; 4] = [9.0, 10.0, 11.0, 12.0];
 const F32X4_D: [f32; 4] = [13.0, 14.0, 15.0, 16.0];
 
+#[cfg(feature = "w512")]
 const F32X8_LO: [f32; 8] = [1.0, 2.5, -3.25, 4.125, 5.0625, -6.0, 7.5, 8.0];
 const F32X8_HI: [f32; 8] = [9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0];
 
@@ -299,12 +300,12 @@ fn wasm128_w256_w512_cascade_polyfill() {
 // ============================================================================
 
 const EDGE_LANES_4: [f32; 4] = [
-    f32::NAN,
+    f32::from_bits(0x7f80_0042), // signaling NaN with a payload
     f32::INFINITY,
     f32::NEG_INFINITY,
     f32::MIN_POSITIVE,
 ];
-const EDGE_LANES_4B: [f32; 4] = [-0.0, f32::EPSILON, f32::MAX, f32::MIN];
+const EDGE_LANES_4B: [f32; 4] = [-0.0, f32::from_bits(1), f32::MAX, f32::MIN];
 
 /// `from_halves` MUST be a pure bit-shuffle — it must not normalize NaN
 /// payloads, flush denormals, or otherwise transform lane bits. Verify
@@ -360,29 +361,57 @@ fn wasm128_bit_precise() {
 }
 
 // ============================================================================
-// Idempotency: re-extracting halves twice yields identical results
+// Extraction from independently loaded lanes preserves lane order and bits.
 // ============================================================================
 
-fn idempotent_extraction_f32x8<T: F32x8FromHalves>(token: T) {
-    let wide = f32x8::<T>::from_array_t(token, F32X8_LO);
-    assert_eq!(wide.low().to_array(), wide.low().to_array());
-    assert_eq!(wide.high().to_array(), wide.high().to_array());
-    let (a_lo, a_hi) = wide.split();
-    let (b_lo, b_hi) = wide.split();
-    assert_eq!(a_lo.to_array(), b_lo.to_array());
-    assert_eq!(a_hi.to_array(), b_hi.to_array());
+fn exact_extraction_f32x8<T: F32x8FromHalves>(token: T) {
+    let lanes = core::array::from_fn(|i| {
+        if i < 4 {
+            EDGE_LANES_4[i]
+        } else {
+            EDGE_LANES_4B[i - 4]
+        }
+    });
+    let wide = f32x8::<T>::from_array_t(token, lanes);
+    let want_lo = EDGE_LANES_4.map(f32::to_bits);
+    let want_hi = EDGE_LANES_4B.map(f32::to_bits);
+    assert_eq!(wide.low().to_array().map(f32::to_bits), want_lo);
+    assert_eq!(wide.high().to_array().map(f32::to_bits), want_hi);
+    let (lo, hi) = wide.split();
+    assert_eq!(lo.to_array().map(f32::to_bits), want_lo);
+    assert_eq!(hi.to_array().map(f32::to_bits), want_hi);
 }
 
 #[test]
-fn scalar_idempotent() {
-    idempotent_extraction_f32x8(ScalarToken::summon().unwrap());
+fn scalar_extracts_exact_halves() {
+    exact_extraction_f32x8(ScalarToken);
 }
 
 #[cfg(target_arch = "x86_64")]
 #[test]
-fn x64v3_idempotent() {
+fn x64v3_extracts_exact_halves() {
     if let Some(t) = archmage::X64V3Token::summon() {
-        idempotent_extraction_f32x8(t);
+        exact_extraction_f32x8(t);
+    }
+}
+
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
+#[test]
+fn x64v3_vnni_delegates_exact_halves() {
+    if let Some(t) = archmage::X64V3VnniToken::summon() {
+        bitwise_round_trip_f32x8(t);
+        exact_extraction_f32x8(t);
+    }
+}
+
+#[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
+#[test]
+fn x64v4x_delegates_exact_halves() {
+    if let Some(t) = archmage::X64V4xToken::summon() {
+        bitwise_round_trip_f32x8(t);
+        exact_extraction_f32x8(t);
+        lane_order_f32x16(t);
+        roundtrip_f32x16(t);
     }
 }
 

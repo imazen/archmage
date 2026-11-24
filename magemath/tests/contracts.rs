@@ -11,6 +11,76 @@ use magemath::{
 mod fixtures;
 
 #[test]
+fn shared_bf16_option_decoders_reject_malformed_ranges() {
+    use magemath::cbrtf::CbrtfOptions;
+
+    // Option words store the inclusive BF16 interval in bits 64..96.
+    let range_payload = |lo: u16, hi: u16| u128::from(lo) << 64 | u128::from(hi) << 80;
+    let payload_mask = range_payload(u16::MAX, u16::MAX);
+    const ONE: u16 = 0x3f80;
+    const TWO: u16 = 0x4000;
+    let good = range_payload(ONE, TWO);
+    macro_rules! check {
+        ($options:ident, $range:ident) => {{
+            let default = $options::new();
+            let present = default.$range(1.0, 2.0);
+            assert_eq!(present.bits() & payload_mask, good);
+            assert_eq!($options::from_bits(present.bits()), Some(present));
+            assert_eq!($options::from_bits(default.bits() | good), None);
+            for (lo, hi) in [(TWO, ONE), (0x8000, TWO), (ONE, 0x7f80), (0x7f81, TWO)] {
+                let malformed = (present.bits() & !payload_mask) | range_payload(lo, hi);
+                assert_eq!($options::from_bits(malformed), None, "{lo:04x}..{hi:04x}");
+            }
+        }};
+    }
+    check!(ExpfOptions, input_range);
+    check!(LogfOptions, input_range);
+    check!(Log1pfOptions, input_range);
+    check!(CbrtfOptions, input_range);
+    check!(PowfOptions, base_range);
+}
+
+#[test]
+fn default_slice_helpers_preserve_completed_chunks_and_report_first_invalid_input() {
+    // Sixteen valid lanes complete a whole chunk on every supported backend.
+    let mut dst = [42.0; 20];
+    let mut input: [f32; 20] = core::array::from_fn(|i| if i % 2 == 0 { 1.0 } else { 2.0 });
+    input[16] = f32::NAN;
+    input[19] = f32::NEG_INFINITY;
+    let error = e::try_exp2_slice(&input, &mut dst).unwrap_err();
+    assert_eq!(
+        (error.kind, error.index),
+        (e::ExpfErrorKind::InvalidInput, 16)
+    );
+    assert_eq!(dst[..16], [2.0, 4.0].repeat(8));
+    assert_eq!(dst[16..], [42.0; 4]);
+
+    dst.fill(42.0);
+    let error = p::try_powf_slice(&input, &mut dst, 2.0).unwrap_err();
+    assert_eq!(
+        (error.kind, error.index),
+        (p::PowfErrorKind::InvalidBase, 16)
+    );
+    assert_eq!(dst[..16], [1.0, 4.0].repeat(8));
+    assert_eq!(dst[16..], [42.0; 4]);
+
+    dst.fill(42.0);
+    let mut input: [f32; 20] = core::array::from_fn(|i| if i % 2 == 0 { -0.0 } else { 0.0 });
+    input[16] = -1.25;
+    input[19] = f32::NAN;
+    let error = magemath::log1pf::try_log1p_slice(&input, &mut dst).unwrap_err();
+    assert_eq!(
+        (error.kind, error.index),
+        (magemath::log1pf::Log1pfErrorKind::InvalidInput, 16)
+    );
+    assert_eq!(
+        dst.map(f32::to_bits)[..16],
+        [-0.0_f32, 0.0].map(f32::to_bits).repeat(8)
+    );
+    assert_eq!(dst[16..], [42.0; 4]);
+}
+
+#[test]
 fn canonical_power_matches_independent_fixtures() {
     const D0: u128 = PowfOptions::new().reject_subnormals().caller().bits();
     const D1: u128 = PowfOptions::new()

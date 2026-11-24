@@ -909,6 +909,73 @@ fn with_ident_str_inline_boundary_overflow_and_raw() {
 }
 
 #[test]
+fn raw_ident_spelling_preserves_token_discovery() {
+    use crate::token_discovery::{find_token_param, is_token_type_in_sig};
+
+    for (ordinary, raw) in [
+        (
+            "fn f(t: archmage::X64V3Token)",
+            "fn f(t: archmage::r#X64V3Token)",
+        ),
+        (
+            "fn f(t: impl archmage::HasX64V2)",
+            "fn f(t: impl archmage::r#HasX64V2)",
+        ),
+        (
+            "fn f<T>(t: T) where T: archmage::HasX64V2",
+            "fn f<r#T>(t: T) where r#T: archmage::r#HasX64V2",
+        ),
+    ] {
+        let ordinary: syn::Signature = syn::parse_str(ordinary).unwrap();
+        let sig: syn::Signature = syn::parse_str(raw).unwrap();
+        let expected = find_token_param(&ordinary).expect("ordinary proof");
+        let actual = find_token_param(&sig).unwrap_or_else(|| panic!("missing proof for {raw}"));
+        assert_eq!(actual.features, expected.features, "{raw}");
+        assert_eq!(actual.target_arch, Some("x86_64"), "{raw}");
+        assert_eq!(actual.tier_traits, expected.tier_traits, "{raw}");
+        let syn::FnArg::Typed(arg) = &sig.inputs[0] else {
+            panic!("expected a typed parameter");
+        };
+        assert!(is_token_type_in_sig(&sig, &arg.ty), "{raw}");
+    }
+}
+
+#[test]
+fn raw_ident_autoversion_token_preserves_parameter_kind() {
+    let signature = syn::parse_str("fn f(_token: archmage::r#ScalarToken)").unwrap();
+    let param = find_autoversion_token_param(&signature)
+        .unwrap()
+        .expect("scalar proof parameter");
+    assert_eq!(param.index, 0);
+    assert_eq!(param.kind, AutoversionTokenKind::ScalarToken);
+}
+
+#[test]
+fn autoversion_gate_captures_modifier_name_and_feature_independently() {
+    use crate::tiers::TierModifier;
+
+    let args: AutoversionArgs = syn::parse_str("+v4(cfg(avx512)), -neon, _v3").unwrap();
+    let entries = args.tiers.unwrap();
+    assert_eq!(entries.len(), 3);
+    assert_eq!(entries[0].modifier, TierModifier::Add);
+    assert_eq!(entries[0].name, "v4");
+    assert_eq!(entries[0].feature_gate.as_deref(), Some("avx512"));
+    assert_eq!(entries[1].modifier, TierModifier::Remove);
+    assert_eq!(entries[1].name, "neon");
+    assert_eq!(entries[1].feature_gate, None);
+    assert_eq!(entries[2].modifier, TierModifier::Plain);
+    assert_eq!(entries[2].name, "_v3");
+    assert_eq!(entries[2].feature_gate, None);
+    let error = syn::parse_str::<AutoversionArgs>("v4(feature(avx512))")
+        .err()
+        .unwrap();
+    assert_eq!(
+        error.to_string(),
+        "expected `cfg` in tier gate, got `feature`"
+    );
+}
+
+#[test]
 fn colon_path_tokens_matches_syn_path() {
     use crate::common::colon_path_tokens;
     assert_eq!(

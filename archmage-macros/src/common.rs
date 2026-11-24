@@ -46,6 +46,14 @@ pub(crate) fn with_ident_str<R>(ident: &Ident, f: impl FnOnce(&str) -> R) -> R {
     f(&owned)
 }
 
+/// Raw syntax escapes an identifier without changing the name Rust resolves.
+#[inline]
+pub(crate) fn with_ident_name<R>(ident: &Ident, f: impl FnOnce(&str) -> R) -> R {
+    with_ident_str(ident, |spelling| {
+        f(spelling.strip_prefix("r#").unwrap_or(spelling))
+    })
+}
+
 /// Emit a `::`-separated registry path of plain identifier segments (such as
 /// `"archmage::X64V3Token"`) directly into a `TokenStream` without formatting
 /// a `String` or running `syn`'s parser.

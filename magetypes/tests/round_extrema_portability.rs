@@ -36,12 +36,15 @@ macro_rules! checks {
                 }
             };
             let rounding = |x: $float| {
-                let expected = [
+                let expected = [x.floor(), x.ceil(), x.round_ties_even(), x.trunc()];
+                let software = [
                     nostd_math::$floor_soft(x),
                     nostd_math::$ceil_soft(x),
                     nostd_math::$round_soft(x),
-                    if x.is_nan() { x } else { x.trunc() },
                 ];
+                for (actual, expected) in software.into_iter().zip(expected) {
+                    assert_value(actual, expected);
+                }
                 let actual = [scalar::$floor(x), scalar::$ceil(x), scalar::$round(x), scalar::$trunc(x)];
                 for (actual, expected) in actual.into_iter().zip(expected) {
                     assert_value(actual, expected);
@@ -59,8 +62,19 @@ macro_rules! checks {
                     }
                 )+
                 for b in inputs.clone() {
-                    let min = scalar::$min(a, b);
-                    let max = scalar::$max(a, b);
+                    let (min, max) = if a.is_nan() || b.is_nan() {
+                        (<$float>::NAN, <$float>::NAN)
+                    } else if a == 0.0 && b == 0.0 {
+                        // Minimum prefers -0 and maximum prefers +0 on a mixed-sign tie.
+                        (<$float>::from_bits(a.to_bits() | b.to_bits()),
+                         <$float>::from_bits(a.to_bits() & b.to_bits()))
+                    } else if a < b {
+                        (a, b)
+                    } else {
+                        (b, a)
+                    };
+                    assert_value(scalar::$min(a, b), min);
+                    assert_value(scalar::$max(a, b), max);
                     let x = single::$single(a);
                     let y = single::$single(b);
                     assert_value(x.minimum(y).0, min);
