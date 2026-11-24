@@ -69,6 +69,26 @@ impl ElementType {
             Self::F32 | Self::F64 | Self::I8 | Self::I16 | Self::I32 | Self::I64
         )
     }
+
+    pub fn signed_int_name(&self) -> &'static str {
+        match self.bits() {
+            8 => "i8",
+            16 => "i16",
+            32 => "i32",
+            64 => "i64",
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn unsigned_int_name(&self) -> &'static str {
+        match self.bits() {
+            8 => "u8",
+            16 => "u16",
+            32 => "u32",
+            64 => "u64",
+            _ => unreachable!(),
+        }
+    }
 }
 
 /// SIMD register width
