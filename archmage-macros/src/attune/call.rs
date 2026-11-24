@@ -316,9 +316,9 @@ fn branch_guard(condition: &Option<TokenStream>, guarantees: &[TokenStream]) -> 
     }
 }
 
-/// Inspect only macro invocations. Nested items have their own feature context.
-/// Qualified invocation paths are consumed along with the macro name.
-pub(crate) fn rewrite(
+/// Rewrite unified dispatch calls (`attuned!`/`reattune!`) when the caller has
+/// already confirmed at least one unified dispatch identifier is present.
+pub(crate) fn rewrite_known(
     body: TokenStream,
     caller: &TierDescriptor,
     signature: Option<&syn::Signature>,
@@ -326,7 +326,7 @@ pub(crate) fn rewrite(
     let features = crate::generated::tier_to_canonical_token(caller.name)
         .and_then(crate::generated::token_to_features)
         .unwrap_or(&[]);
-    rewrite_context(
+    rewrite_context_known(
         body,
         Context {
             features,
@@ -344,6 +344,14 @@ pub(crate) fn rewrite_context(
     if !crate::common::tokens_contain_ident(&body, &["attuned", "reattune"]) {
         return body;
     }
+    rewrite_context_known(body, caller, signature)
+}
+
+fn rewrite_context_known(
+    body: TokenStream,
+    caller: Context<'_>,
+    signature: Option<&syn::Signature>,
+) -> TokenStream {
     let parent = Parent::new(signature);
     let body = rewrite_scoped(body, caller, Some(&parent), &mut 0);
     if let Some(capture) = parent.capture() {
@@ -359,9 +367,6 @@ fn rewrite_scoped(
     parent: Option<&Parent<'_>>,
     serial: &mut usize,
 ) -> TokenStream {
-    if !crate::common::tokens_contain_ident(&body, &["attuned", "reattune"]) {
-        return body;
-    }
     let tokens: Vec<_> = body.into_iter().collect();
     let mut out = TokenStream::new();
     let mut i = 0;
@@ -379,51 +384,44 @@ fn rewrite_scoped(
             }
             continue;
         }
-        let mut end = i;
-        if matches!(tokens.get(end), Some(TokenTree::Punct(p)) if p.as_char() == ':')
-            && matches!(tokens.get(end + 1), Some(TokenTree::Punct(p)) if p.as_char() == ':')
+        if let Some(matched) =
+            crate::common::match_macro_call(&tokens, i, &["attuned", "reattune"], true, false)
         {
-            end += 2;
-        }
-        while end + 3 < tokens.len()
-            && matches!(&tokens[end], TokenTree::Ident(_))
-            && matches!(&tokens[end + 1], TokenTree::Punct(p) if p.as_char() == ':')
-            && matches!(&tokens[end + 2], TokenTree::Punct(p) if p.as_char() == ':')
-        {
-            end += 3;
-        }
-        if let Some(TokenTree::Ident(name)) = tokens.get(end)
-            && (name == "attuned" || name == "reattune")
-            && matches!(tokens.get(end + 1), Some(TokenTree::Punct(p)) if p.as_char() == '!')
-            && let Some(TokenTree::Group(group)) = tokens.get(end + 2)
-        {
-            if crate::common::expanded_passthrough(&group.stream()).is_some() {
+            let inner = matched.group.stream();
+            if crate::common::expanded_passthrough(&inner).is_some() {
                 // Already rewritten by an enclosing pass.
-                out.extend(tokens[i..end + 3].iter().cloned());
-                i = end + 3;
+                out.extend(tokens[i..matched.next_idx].iter().cloned());
+                i = matched.next_idx;
                 continue;
             }
-            let expansion = syn::parse2::<Call>(group.stream())
-                .map(|call| call.expand_scoped(Some(caller), name == "reattune", parent, serial))
+            let expansion = syn::parse2::<Call>(inner)
+                .map(|call| {
+                    call.expand_scoped(Some(caller), matched.name == "reattune", parent, serial)
+                })
                 .unwrap_or_else(|error| error.to_compile_error());
             // Through the caller's own path: the import stays used, and a
             // statement-start `attuned!(f(x)) + 1` keeps parsing as one
             // expression.
             out.extend(crate::common::wrap_expanded(
-                tokens[i..end + 2].iter().cloned(),
-                group,
+                matched.path_and_bang.iter().cloned(),
+                matched.group,
                 expansion,
             ));
-            i = end + 3;
+            i = matched.next_idx;
             continue;
         }
         if let TokenTree::Group(group) = &tokens[i] {
-            let mut next = Group::new(
-                group.delimiter(),
-                rewrite_scoped(group.stream(), caller, parent, serial),
-            );
-            next.set_span(group.span());
-            out.extend([TokenTree::Group(next)]);
+            let stream = group.stream();
+            if crate::common::tokens_contain_ident(&stream, &["attuned", "reattune"]) {
+                let mut next = Group::new(
+                    group.delimiter(),
+                    rewrite_scoped(stream, caller, parent, serial),
+                );
+                next.set_span(group.span());
+                out.extend([TokenTree::Group(next)]);
+            } else {
+                out.extend([tokens[i].clone()]);
+            }
         } else {
             out.extend([tokens[i].clone()]);
         }
