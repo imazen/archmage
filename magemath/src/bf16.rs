@@ -58,6 +58,49 @@ pub(crate) const fn decode_bf16_finite(bits: u16) -> Option<f32> {
     Some(expand_bf16(bits))
 }
 
+/// Decode a bounded finite `[lo, hi]` bf16 pair with `min_lo <= lo <= hi <= max_hi`.
+#[inline(always)]
+pub(crate) const fn decode_bf16_range(
+    lo_u16: u16,
+    hi_u16: u16,
+    min_lo: f32,
+    max_hi: f32,
+) -> Option<(u16, u16)> {
+    let Some(lo) = decode_bf16_finite(lo_u16) else {
+        return None;
+    };
+    let Some(hi) = decode_bf16_finite(hi_u16) else {
+        return None;
+    };
+    if lo >= min_lo && lo <= hi && hi <= max_hi {
+        Some((lo_u16, hi_u16))
+    } else {
+        None
+    }
+}
+
+/// Decode an optional bounded bf16 range from a `u128` option word, rejecting
+/// nonzero payload bits when `present` is `false`.
+#[inline(always)]
+pub(crate) const fn decode_optional_bf16_range(
+    present: bool,
+    lo_u16: u16,
+    hi_u16: u16,
+    min_lo: f32,
+    max_hi: f32,
+) -> Option<Option<(u16, u16)>> {
+    if present {
+        match decode_bf16_range(lo_u16, hi_u16, min_lo, max_hi) {
+            Some(pair) => Some(Some(pair)),
+            None => None,
+        }
+    } else if lo_u16 == 0 && hi_u16 == 0 {
+        Some(None)
+    } else {
+        None
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
