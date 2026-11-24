@@ -31,6 +31,21 @@ impl ElementType {
         }
     }
 
+    pub fn upper_name(&self) -> &'static str {
+        match self {
+            Self::F32 => "F32",
+            Self::F64 => "F64",
+            Self::I8 => "I8",
+            Self::U8 => "U8",
+            Self::I16 => "I16",
+            Self::U16 => "U16",
+            Self::I32 => "I32",
+            Self::U32 => "U32",
+            Self::I64 => "I64",
+            Self::U64 => "U64",
+        }
+    }
+
     pub fn size_bytes(&self) -> usize {
         match self {
             Self::F32 | Self::I32 | Self::U32 => 4,
@@ -38,6 +53,10 @@ impl ElementType {
             Self::I16 | Self::U16 => 2,
             Self::I8 | Self::U8 => 1,
         }
+    }
+
+    pub fn bits(&self) -> usize {
+        self.size_bytes() * 8
     }
 
     pub fn is_float(&self) -> bool {
@@ -97,14 +116,14 @@ impl SimdWidth {
 }
 
 /// A SIMD vector type to generate
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct SimdType {
     pub elem: ElementType,
     pub width: SimdWidth,
 }
 
 impl SimdType {
-    pub fn new(elem: ElementType, width: SimdWidth) -> Self {
+    pub const fn new(elem: ElementType, width: SimdWidth) -> Self {
         Self { elem, width }
     }
 
@@ -116,6 +135,32 @@ impl SimdType {
     /// Type name (e.g., "f32x8")
     pub fn name(&self) -> String {
         format!("{}x{}", self.elem.name(), self.lanes())
+    }
+
+    /// Backend trait name (e.g., "F32x8Backend")
+    pub fn trait_name(&self) -> String {
+        format!("{}x{}Backend", self.elem.upper_name(), self.lanes())
+    }
+
+    /// Rust array type matching all lanes (e.g., "[f32; 8]")
+    pub fn array_type(&self) -> String {
+        format!("[{}; {}]", self.elem.name(), self.lanes())
+    }
+
+    pub fn is_float(&self) -> bool {
+        self.elem.is_float()
+    }
+
+    pub fn is_signed(&self) -> bool {
+        self.elem.is_signed()
+    }
+
+    pub fn is_w512(&self) -> bool {
+        self.width == SimdWidth::W512
+    }
+
+    pub fn elem_bits(&self) -> usize {
+        self.elem.bits()
     }
 }
 
