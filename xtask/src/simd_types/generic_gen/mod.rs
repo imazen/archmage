@@ -105,9 +105,7 @@ pub(crate) fn has_abs(elem: ElementType) -> bool {
 
 /// Backend trait name: e.g., "F32x4Backend".
 pub(crate) fn backend_trait(ty: &SimdType) -> String {
-    let name = ty.name();
-    let upper = uppercase_first(&name);
-    format!("{upper}Backend")
+    ty.trait_name()
 }
 
 /// Uppercase first char: "f32x4" -> "F32x4"
@@ -202,161 +200,91 @@ pub(crate) struct Conversion {
     pub(crate) src: &'static str,
     /// The trait bound (e.g., "F32x4Convert", "I8x16Bitcast").
     pub(crate) trait_bound: &'static str,
-    /// Whether the trait is in `crate::simd::backends::`.
-    pub(crate) _in_backends: bool,
     /// Code generator function.
     pub(crate) gen_fn: fn(&str, &str) -> String,
+}
+
+const fn conv(
+    src: &'static str,
+    trait_bound: &'static str,
+    gen_fn: fn(&str, &str) -> String,
+) -> Conversion {
+    Conversion {
+        src,
+        trait_bound,
+        gen_fn,
+    }
 }
 
 /// All cross-type conversions. Each entry generates a separate `impl` block.
 pub(crate) fn all_conversions() -> Vec<Conversion> {
     use conversions::*;
     vec![
-        // f32x4 <-> i32x4
-        Conversion {
-            src: "f32x4",
-            trait_bound: "F32x4Convert",
-            _in_backends: true,
-            gen_fn: gen_f32_i32_convert_on_float,
-        },
-        Conversion {
-            src: "i32x4",
-            trait_bound: "F32x4Convert",
-            _in_backends: true,
-            gen_fn: gen_f32_i32_convert_on_int,
-        },
-        // f32x8 <-> i32x8
-        Conversion {
-            src: "f32x8",
-            trait_bound: "F32x8Convert",
-            _in_backends: true,
-            gen_fn: gen_f32_i32_convert_on_float,
-        },
-        Conversion {
-            src: "i32x8",
-            trait_bound: "F32x8Convert",
-            _in_backends: true,
-            gen_fn: gen_f32_i32_convert_on_int,
-        },
-        // f32x16 <-> i32x16
-        Conversion {
-            src: "f32x16",
-            trait_bound: "F32x16Convert",
-            _in_backends: true,
-            gen_fn: gen_f32_i32_convert_on_float,
-        },
-        Conversion {
-            src: "i32x16",
-            trait_bound: "F32x16Convert",
-            _in_backends: true,
-            gen_fn: gen_f32_i32_convert_on_int,
-        },
+        // f32 <-> i32
+        conv("f32x4", "F32x4Convert", gen_f32_i32_convert_on_float),
+        conv("i32x4", "F32x4Convert", gen_f32_i32_convert_on_int),
+        conv("f32x8", "F32x8Convert", gen_f32_i32_convert_on_float),
+        conv("i32x8", "F32x8Convert", gen_f32_i32_convert_on_int),
+        conv("f32x16", "F32x16Convert", gen_f32_i32_convert_on_float),
+        conv("i32x16", "F32x16Convert", gen_f32_i32_convert_on_int),
         // i8 <-> u8 bitcasts
-        Conversion {
-            src: "i8x16",
-            trait_bound: "I8x16Bitcast",
-            _in_backends: true,
-            gen_fn: |src, _| gen_signed_unsigned_bitcast(src, "u8x16", "i8_to_u8", "u8_to_i8"),
-        },
-        Conversion {
-            src: "u8x16",
-            trait_bound: "I8x16Bitcast",
-            _in_backends: true,
-            gen_fn: |src, _| gen_unsigned_signed_bitcast(src, "i8x16", "u8_to_i8", "bitcast_i8x16"),
-        },
-        Conversion {
-            src: "i8x32",
-            trait_bound: "I8x32Bitcast",
-            _in_backends: true,
-            gen_fn: |src, _| gen_signed_unsigned_bitcast(src, "u8x32", "i8_to_u8", "u8_to_i8"),
-        },
-        Conversion {
-            src: "u8x32",
-            trait_bound: "I8x32Bitcast",
-            _in_backends: true,
-            gen_fn: |src, _| gen_unsigned_signed_bitcast(src, "i8x32", "u8_to_i8", "bitcast_i8x32"),
-        },
+        conv("i8x16", "I8x16Bitcast", |s, t| {
+            gen_bitcast(s, t, "u8x16", "i8_to_u8", None, false)
+        }),
+        conv("u8x16", "I8x16Bitcast", |s, t| {
+            gen_bitcast(s, t, "i8x16", "u8_to_i8", None, false)
+        }),
+        conv("i8x32", "I8x32Bitcast", |s, t| {
+            gen_bitcast(s, t, "u8x32", "i8_to_u8", None, false)
+        }),
+        conv("u8x32", "I8x32Bitcast", |s, t| {
+            gen_bitcast(s, t, "i8x32", "u8_to_i8", None, false)
+        }),
         // i16 <-> u16 bitcasts
-        Conversion {
-            src: "i16x8",
-            trait_bound: "I16x8Bitcast",
-            _in_backends: true,
-            gen_fn: |src, _| gen_signed_unsigned_bitcast(src, "u16x8", "i16_to_u16", "u16_to_i16"),
-        },
-        Conversion {
-            src: "u16x8",
-            trait_bound: "I16x8Bitcast",
-            _in_backends: true,
-            gen_fn: |src, _| {
-                gen_unsigned_signed_bitcast(src, "i16x8", "u16_to_i16", "bitcast_i16x8")
-            },
-        },
-        Conversion {
-            src: "i16x16",
-            trait_bound: "I16x16Bitcast",
-            _in_backends: true,
-            gen_fn: |src, _| gen_signed_unsigned_bitcast(src, "u16x16", "i16_to_u16", "u16_to_i16"),
-        },
-        Conversion {
-            src: "u16x16",
-            trait_bound: "I16x16Bitcast",
-            _in_backends: true,
-            gen_fn: |src, _| {
-                gen_unsigned_signed_bitcast(src, "i16x16", "u16_to_i16", "bitcast_i16x16")
-            },
-        },
+        conv("i16x8", "I16x8Bitcast", |s, t| {
+            gen_bitcast(s, t, "u16x8", "i16_to_u16", None, false)
+        }),
+        conv("u16x8", "I16x8Bitcast", |s, t| {
+            gen_bitcast(s, t, "i16x8", "u16_to_i16", None, false)
+        }),
+        conv("i16x16", "I16x16Bitcast", |s, t| {
+            gen_bitcast(s, t, "u16x16", "i16_to_u16", None, false)
+        }),
+        conv("u16x16", "I16x16Bitcast", |s, t| {
+            gen_bitcast(s, t, "i16x16", "u16_to_i16", None, false)
+        }),
         // W512 i16/u16 bitcasts use the shared checked storage primitives.
-        Conversion {
-            src: "i16x32",
-            trait_bound: "crate::simd::backends::I16x32Backend + crate::simd::backends::U16x32Backend",
-            _in_backends: true,
-            gen_fn: gen_w512_i16_bitcast,
-        },
-        Conversion {
-            src: "u16x32",
-            trait_bound: "crate::simd::backends::I16x32Backend + crate::simd::backends::U16x32Backend",
-            _in_backends: true,
-            gen_fn: gen_w512_i16_bitcast,
-        },
+        conv(
+            "i16x32",
+            "crate::simd::backends::I16x32Backend + crate::simd::backends::U16x32Backend",
+            gen_w512_i16_bitcast,
+        ),
+        conv(
+            "u16x32",
+            "crate::simd::backends::I16x32Backend + crate::simd::backends::U16x32Backend",
+            gen_w512_i16_bitcast,
+        ),
         // u32 -> i32 bitcasts
-        Conversion {
-            src: "u32x4",
-            trait_bound: "U32x4Bitcast",
-            _in_backends: true,
-            gen_fn: |src, _| gen_u32_i32_bitcast(src, "i32x4", "u32_to_i32"),
-        },
-        Conversion {
-            src: "u32x8",
-            trait_bound: "U32x8Bitcast",
-            _in_backends: true,
-            gen_fn: |src, _| gen_u32_i32_bitcast(src, "i32x8", "u32_to_i32"),
-        },
+        conv("u32x4", "U32x4Bitcast", |s, t| {
+            gen_bitcast(s, t, "i32x4", "u32_to_i32", Some("bitcast_to_i32"), true)
+        }),
+        conv("u32x8", "U32x8Bitcast", |s, t| {
+            gen_bitcast(s, t, "i32x8", "u32_to_i32", Some("bitcast_to_i32"), true)
+        }),
         // u64 -> i64 bitcasts
-        Conversion {
-            src: "u64x2",
-            trait_bound: "U64x2Bitcast",
-            _in_backends: true,
-            gen_fn: |src, _| gen_u64_i64_bitcast(src, "i64x2", "u64_to_i64"),
-        },
-        Conversion {
-            src: "u64x4",
-            trait_bound: "U64x4Bitcast",
-            _in_backends: true,
-            gen_fn: |src, _| gen_u64_i64_bitcast(src, "i64x4", "u64_to_i64"),
-        },
+        conv("u64x2", "U64x2Bitcast", |s, t| {
+            gen_bitcast(s, t, "i64x2", "u64_to_i64", None, false)
+        }),
+        conv("u64x4", "U64x4Bitcast", |s, t| {
+            gen_bitcast(s, t, "i64x4", "u64_to_i64", None, false)
+        }),
         // i64 -> f64 bitcasts
-        Conversion {
-            src: "i64x2",
-            trait_bound: "I64x2Bitcast",
-            _in_backends: true,
-            gen_fn: |src, _| gen_i64_f64_bitcast(src, "f64x2", "i64_to_f64", true),
-        },
-        Conversion {
-            src: "i64x4",
-            trait_bound: "I64x4Bitcast",
-            _in_backends: true,
-            gen_fn: |src, _| gen_i64_f64_bitcast(src, "f64x4", "i64_to_f64", false),
-        },
+        conv("i64x2", "I64x2Bitcast", |s, t| {
+            gen_bitcast(s, t, "f64x2", "i64_to_f64", Some("bitcast_to_f64"), false)
+        }),
+        conv("i64x4", "I64x4Bitcast", |s, t| {
+            gen_bitcast(s, t, "f64x4", "i64_to_f64", Some("bitcast_to_f64"), false)
+        }),
     ]
 }
 
@@ -387,37 +315,18 @@ pub fn generate_generic_files(registry: &crate::registry::Registry) -> BTreeMap<
         files.insert(path, content);
     }
 
-    // Generate 3 transcendentals files
-    files.insert(
-        "generic/generated/transcendentals_f32x4.rs".to_string(),
-        transcendentals::gen_transcendentals(
-            "f32x4",
-            "i32x4",
-            "F32x4Backend",
-            "F32x4Convert",
-            "I32x4Backend",
-        ),
-    );
-    files.insert(
-        "generic/generated/transcendentals_f32x8.rs".to_string(),
-        transcendentals::gen_transcendentals(
-            "f32x8",
-            "i32x8",
-            "F32x8Backend",
-            "F32x8Convert",
-            "I32x8Backend",
-        ),
-    );
-    files.insert(
-        "generic/generated/transcendentals_f32x16.rs".to_string(),
-        transcendentals::gen_transcendentals(
-            "f32x16",
-            "i32x16",
-            "F32x16Backend",
-            "F32x16Convert",
-            "I32x16Backend",
-        ),
-    );
+    // Generate 3 transcendentals files (f32x4, f32x8, f32x16)
+    for lanes in [4, 8, 16] {
+        let f = format!("f32x{lanes}");
+        let i = format!("i32x{lanes}");
+        let fb = format!("F32x{lanes}Backend");
+        let fc = format!("F32x{lanes}Convert");
+        let ib = format!("I32x{lanes}Backend");
+        files.insert(
+            format!("generic/generated/transcendentals_{f}.rs"),
+            transcendentals::gen_transcendentals(&f, &i, &fb, &fc, &ib),
+        );
+    }
 
     // Generate mod.rs
     files.insert(

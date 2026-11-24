@@ -2,7 +2,7 @@
 
 use indoc::formatdoc;
 
-use super::{elem_prefix, lane_count, uppercase_first};
+use super::{elem_prefix, lane_count};
 
 // ============================================================================
 // f32 <-> i32 conversions (full numeric + bitcast)
@@ -17,9 +17,7 @@ pub(crate) fn gen_f32_i32_convert_on_float(src: &str, trait_bound: &str) -> Stri
     let lanes = lane_count(src);
     let int_type = format!("i32x{lanes}");
 
-    // block_ops ref/mut aliases only exist for types with block_ops files
-    let has_block_ops = matches!(src, "f32x4" | "f32x8");
-    let ref_aliases = if has_block_ops {
+    let ref_aliases = if matches!(src, "f32x4" | "f32x8") {
         formatdoc! {r#"
 
             /// Alias for [`bitcast_ref_i32`](Self::bitcast_ref_i32) (from block_ops).
@@ -123,7 +121,7 @@ pub(crate) fn gen_f32_i32_convert_on_float(src: &str, trait_bound: &str) -> Stri
     "#}
 }
 
-/// Generate i32->f32 conversions on the int type (i32x4 or i32x8).
+/// Generate i32->f32 conversions on the int type (i32x4, i32x8, or i32x16).
 pub(crate) fn gen_f32_i32_convert_on_int(src: &str, trait_bound: &str) -> String {
     let lanes = lane_count(src);
     let float_type = format!("f32x{lanes}");
@@ -164,30 +162,56 @@ pub(crate) fn gen_f32_i32_convert_on_int(src: &str, trait_bound: &str) -> String
 }
 
 // ============================================================================
-// Signed <-> Unsigned integer bitcasts (i8/u8, i16/u16)
+// Unified Bitcast Generator (i8↔u8, i16↔u16, u32→i32, u64→i64, i64→f64)
 // ============================================================================
 
-/// Generate signed->unsigned bitcast on the signed type (e.g., i8x16->u8x16).
-pub(crate) fn gen_signed_unsigned_bitcast(
+/// Generate a cross-type bitcast impl block (`bitcast_*`, `bitcast_ref_*`, `bitcast_mut_*`).
+///
+/// When `primary_name` is `Some("bitcast_to_i32")` (or `"bitcast_to_f64"`), emits
+/// that as the primary method and `bitcast_{target}` as a backward-compatible alias.
+pub(crate) fn gen_bitcast(
     src: &str,
+    trait_bound: &str,
     target: &str,
-    to_method: &str,
-    _from_method: &str,
+    backend_method: &str,
+    primary_name: Option<&str>,
+    swap_header_order: bool,
 ) -> String {
-    let trait_bound = format!("{}Bitcast", uppercase_first(src));
     let src_elem = elem_prefix(src);
     let target_elem = elem_prefix(target);
+    let (h_a, h_b) = if swap_header_order {
+        (target_elem, src_elem)
+    } else {
+        (src_elem, target_elem)
+    };
+    let (main_fn, alias_block) = match primary_name {
+        Some(primary) => (
+            primary.to_string(),
+            formatdoc! {r#"
+
+
+                // ====== Backward-compatible aliases ======
+
+                /// Alias for [`{primary}`](Self::{primary}).
+                #[inline(always)]
+                pub fn bitcast_{target}(self) -> super::{target}<T> {{
+                    self.{primary}()
+                }}
+            "#},
+        ),
+        None => (format!("bitcast_{target}"), String::new()),
+    };
 
     formatdoc! {r#"
         // ============================================================================
-        // Cross-type conversions ({src_elem} ↔ {target_elem} bitcast)
+        // Cross-type conversions ({h_a} ↔ {h_b} bitcast)
         // ============================================================================
 
         impl<T: crate::simd::backends::{trait_bound}> {src}<T> {{
             /// Bitcast to {target} (reinterpret bits, no conversion).
             #[inline(always)]
-            pub fn bitcast_{target}(self) -> super::{target}<T> {{
-                super::{target}::from_repr_unchecked(self.1, T::bitcast_{to_method}(self.1, self.0))
+            pub fn {main_fn}(self) -> super::{target}<T> {{
+                super::{target}::from_repr_unchecked(self.1, T::bitcast_{backend_method}(self.1, self.0))
             }}
 
             /// Bitcast to {target} by reference (zero-cost).
@@ -200,45 +224,7 @@ pub(crate) fn gen_signed_unsigned_bitcast(
             #[inline(always)]
             pub fn bitcast_mut_{target}(&mut self) -> &mut super::{target}<T> {{
                 crate::simd_storage::vector_view_mut(self.1, &mut self.0)
-            }}
-        }}
-    "#}
-}
-
-/// Generate unsigned->signed bitcast on the unsigned type (e.g., u8x16->i8x16).
-pub(crate) fn gen_unsigned_signed_bitcast(
-    src: &str,
-    target: &str,
-    from_method: &str,
-    _alias_name: &str,
-) -> String {
-    let trait_bound = format!("{}Bitcast", uppercase_first(target));
-    let src_elem = elem_prefix(src);
-    let target_elem = elem_prefix(target);
-
-    formatdoc! {r#"
-        // ============================================================================
-        // Cross-type conversions ({src_elem} ↔ {target_elem} bitcast)
-        // ============================================================================
-
-        impl<T: crate::simd::backends::{trait_bound}> {src}<T> {{
-            /// Bitcast to {target} (reinterpret bits, no conversion).
-            #[inline(always)]
-            pub fn bitcast_{target}(self) -> super::{target}<T> {{
-                super::{target}::from_repr_unchecked(self.1, T::bitcast_{from_method}(self.1, self.0))
-            }}
-
-            /// Bitcast to {target} by reference (zero-cost).
-            #[inline(always)]
-            pub fn bitcast_ref_{target}(&self) -> &super::{target}<T> {{
-                crate::simd_storage::vector_view(self.1, &self.0)
-            }}
-
-            /// Bitcast to {target} by mutable reference (zero-cost).
-            #[inline(always)]
-            pub fn bitcast_mut_{target}(&mut self) -> &mut super::{target}<T> {{
-                crate::simd_storage::vector_view_mut(self.1, &mut self.0)
-            }}
+            }}{alias_block}
         }}
     "#}
 }
@@ -261,148 +247,11 @@ pub(crate) fn gen_w512_i16_bitcast(src: &str, trait_bound: &str) -> String {
 }
 
 // ============================================================================
-// u32 -> i32 bitcasts
-// ============================================================================
-
-/// Generate u32->i32 bitcast (e.g., u32x4->i32x4, u32x8->i32x8).
-pub(crate) fn gen_u32_i32_bitcast(src: &str, target: &str, method: &str) -> String {
-    let trait_bound = format!("{}Bitcast", uppercase_first(src));
-    let src_elem = elem_prefix(src);
-    let target_elem = elem_prefix(target);
-
-    formatdoc! {r#"
-        // ============================================================================
-        // Cross-type conversions ({target_elem} ↔ {src_elem} bitcast)
-        // ============================================================================
-
-        impl<T: crate::simd::backends::{trait_bound}> {src}<T> {{
-            /// Bitcast to {target} (reinterpret bits, no conversion).
-            #[inline(always)]
-            pub fn bitcast_to_i32(self) -> super::{target}<T> {{
-                super::{target}::from_repr_unchecked(self.1, T::bitcast_{method}(self.1, self.0))
-            }}
-
-            /// Bitcast to {target} by reference (zero-cost).
-            #[inline(always)]
-            pub fn bitcast_ref_{target}(&self) -> &super::{target}<T> {{
-                crate::simd_storage::vector_view(self.1, &self.0)
-            }}
-
-            /// Bitcast to {target} by mutable reference (zero-cost).
-            #[inline(always)]
-            pub fn bitcast_mut_{target}(&mut self) -> &mut super::{target}<T> {{
-                crate::simd_storage::vector_view_mut(self.1, &mut self.0)
-            }}
-
-            // ====== Backward-compatible aliases ======
-
-            /// Alias for [`bitcast_to_i32`](Self::bitcast_to_i32).
-            #[inline(always)]
-            pub fn bitcast_{target}(self) -> super::{target}<T> {{
-                self.bitcast_to_i32()
-            }}
-        }}
-    "#}
-}
-
-// ============================================================================
-// u64 -> i64 bitcasts
-// ============================================================================
-
-/// Generate u64->i64 bitcast (e.g., u64x2->i64x2, u64x4->i64x4).
-pub(crate) fn gen_u64_i64_bitcast(src: &str, target: &str, method: &str) -> String {
-    let trait_bound = format!("{}Bitcast", uppercase_first(src));
-    let src_elem = elem_prefix(src);
-    let target_elem = elem_prefix(target);
-
-    formatdoc! {r#"
-        // ============================================================================
-        // Cross-type conversions ({src_elem} ↔ {target_elem} bitcast)
-        // ============================================================================
-
-        impl<T: crate::simd::backends::{trait_bound}> {src}<T> {{
-            /// Bitcast to {target} (reinterpret bits, no conversion).
-            #[inline(always)]
-            pub fn bitcast_{target}(self) -> super::{target}<T> {{
-                super::{target}::from_repr_unchecked(self.1, T::bitcast_{method}(self.1, self.0))
-            }}
-
-            /// Bitcast to {target} by reference (zero-cost).
-            #[inline(always)]
-            pub fn bitcast_ref_{target}(&self) -> &super::{target}<T> {{
-                crate::simd_storage::vector_view(self.1, &self.0)
-            }}
-
-            /// Bitcast to {target} by mutable reference (zero-cost).
-            #[inline(always)]
-            pub fn bitcast_mut_{target}(&mut self) -> &mut super::{target}<T> {{
-                crate::simd_storage::vector_view_mut(self.1, &mut self.0)
-            }}
-        }}
-    "#}
-}
-
-// ============================================================================
-// i64 -> f64 bitcasts
-// ============================================================================
-
-/// Generate i64->f64 bitcast (e.g., i64x2->f64x2, i64x4->f64x4).
-pub(crate) fn gen_i64_f64_bitcast(
-    src: &str,
-    target: &str,
-    method: &str,
-    _has_alias: bool,
-) -> String {
-    let trait_bound = format!("{}Bitcast", uppercase_first(src));
-    let src_elem = elem_prefix(src);
-    let target_elem = elem_prefix(target);
-
-    formatdoc! {r#"
-        // ============================================================================
-        // Cross-type conversions ({src_elem} ↔ {target_elem} bitcast)
-        // ============================================================================
-
-        impl<T: crate::simd::backends::{trait_bound}> {src}<T> {{
-            /// Bitcast to {target} (reinterpret bits, no conversion).
-            #[inline(always)]
-            pub fn bitcast_to_f64(self) -> super::{target}<T> {{
-                super::{target}::from_repr_unchecked(self.1, T::bitcast_{method}(self.1, self.0))
-            }}
-
-            /// Bitcast to {target} by reference (zero-cost).
-            #[inline(always)]
-            pub fn bitcast_ref_{target}(&self) -> &super::{target}<T> {{
-                crate::simd_storage::vector_view(self.1, &self.0)
-            }}
-
-            /// Bitcast to {target} by mutable reference (zero-cost).
-            #[inline(always)]
-            pub fn bitcast_mut_{target}(&mut self) -> &mut super::{target}<T> {{
-                crate::simd_storage::vector_view_mut(self.1, &mut self.0)
-            }}
-
-            // ====== Backward-compatible aliases ======
-
-            /// Alias for [`bitcast_to_f64`](Self::bitcast_to_f64).
-            #[inline(always)]
-            pub fn bitcast_{target}(self) -> super::{target}<T> {{
-                self.bitcast_to_f64()
-            }}
-        }}
-    "#}
-}
-
-// ============================================================================
 // Widening / saturating narrowing
 // ============================================================================
 
 /// Generate the `widen_low`/`widen_high` and `narrow_saturating_*` impl blocks
 /// that apply to `type_name`, if any.
-///
-/// Both families are typed so that the ISA divergence documented in
-/// `docs/CROSS-ISA-INT-PRIMITIVES.md` §3 cannot be expressed: narrowing exists
-/// only on the signed source types, because x86 and wasm have no
-/// unsigned-source narrowing instruction at all.
 pub(crate) fn gen_widen_narrow(type_name: &str) -> String {
     use crate::simd_types::backend_gen_widen_narrow::{Half, all_narrow_pairs, all_widen_pairs};
 

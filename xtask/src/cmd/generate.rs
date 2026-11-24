@@ -459,7 +459,7 @@ pub(crate) use dispatch::*;
 
     // Generate width dispatch (WidthDispatch trait + impls)
     println!("\n=== Generating Width Dispatch ===");
-    let width_code = simd_types::width_dispatch::generate_width_dispatch(&reg);
+    let width_code = simd_types::width_dispatch::generate_width_dispatch();
     let width_path = PathBuf::from("magetypes/src/width.rs");
     fs::write(&width_path, &width_code)?;
     println!(
