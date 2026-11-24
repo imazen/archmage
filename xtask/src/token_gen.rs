@@ -236,11 +236,9 @@ fn gen_real_tokens(
     // Generate each token
     for token in tokens {
         gen_real_token_struct(&mut out, reg, token, arch, tokens);
-        // Cold-path detection function (outside the impl block)
-        match arch {
-            "x86" => out.push_str(&gen_summon_cold_x86(token)),
-            "aarch64" => out.push_str(&gen_summon_cold_aarch64(token)),
-            _ => {} // WASM is compile-time only, no cold path
+        // Cold-path detection function (outside the impl block; WASM is compile-time only).
+        if matches!(arch, "x86" | "aarch64") {
+            out.push_str(&gen_summon_cold_native(token, arch));
         }
         out.push('\n');
     }
@@ -400,6 +398,24 @@ fn gen_from_context(token: &TokenDef) -> String {
     "#}
 }
 
+/// Features that must be checked at compile/runtime for a native cached token.
+///
+/// On x86-64, SSE/SSE2 are ABI baseline and omitted from runtime probes (yielding
+/// an empty list for `X64V1Token`). On AArch64, every feature — including `neon`
+/// — is checked explicitly.
+fn native_check_features<'a>(token: &'a TokenDef, arch: &str) -> Vec<&'a str> {
+    match arch {
+        "x86" => token
+            .features
+            .iter()
+            .filter(|f| *f != "sse" && *f != "sse2")
+            .map(String::as_str)
+            .collect(),
+        "aarch64" => token.features.iter().map(String::as_str).collect(),
+        _ => unreachable!("unknown native arch: {arch}"),
+    }
+}
+
 /// Generate the `compiled_with()` method for a real token.
 ///
 /// When the `testable_dispatch` feature is active, compile-time
@@ -410,15 +426,8 @@ fn gen_compiled_with(token: &TokenDef, arch: &str) -> String {
     let dct_guard = ", not(feature = \"testable_dispatch\")";
 
     match arch {
-        "x86" => {
-            // Filter out sse/sse2 — they are x86_64 baseline
-            let check_features: Vec<&str> = token
-                .features
-                .iter()
-                .filter(|f| *f != "sse" && *f != "sse2")
-                .map(|s| s.as_str())
-                .collect();
-
+        "x86" | "aarch64" => {
+            let check_features = native_check_features(token, arch);
             if check_features.is_empty() {
                 // Baseline-only token (V1): always available on x86_64,
                 // but testable_dispatch must still allow runtime disabling.
@@ -444,21 +453,6 @@ fn gen_compiled_with(token: &TokenDef, arch: &str) -> String {
                 "}
             }
         }
-        "aarch64" => {
-            // Check ALL features including neon — neon is NOT assumed baseline
-            let check_features: Vec<&str> = token.features.iter().map(|s| s.as_str()).collect();
-            let all_conditions = cfg_all_features(&check_features);
-
-            formatdoc! {"
-                {INDENT}#[inline]
-                {INDENT}fn compiled_with() -> Option<bool> {{
-                {INDENT}    #[cfg(all({all_conditions}{dct_guard}))]
-                {INDENT}    {{ Some(true) }}
-                {INDENT}    #[cfg(not(all({all_conditions}{dct_guard})))]
-                {INDENT}    {{ None }}
-                {INDENT}}}
-            "}
-        }
         "wasm" => {
             // Testing may suppress a compile-time-proven WASM tier.
             let check_features: Vec<&str> = token.features.iter().map(|s| s.as_str()).collect();
@@ -482,23 +476,15 @@ fn gen_compiled_with(token: &TokenDef, arch: &str) -> String {
 
 fn gen_summon(token: &TokenDef, arch: &str) -> String {
     match arch {
-        "x86" => gen_summon_x86(token),
-        "aarch64" => gen_summon_aarch64(token),
+        "x86" | "aarch64" => gen_summon_native(token, arch),
         "wasm" => gen_summon_wasm(token),
         _ => unreachable!("unknown arch: {arch}"),
     }
 }
 
-fn gen_summon_x86(token: &TokenDef) -> String {
+fn gen_summon_native(token: &TokenDef, arch: &str) -> String {
     let dct_guard = ", not(feature = \"testable_dispatch\")";
-
-    // Filter out sse/sse2 (x86_64 baseline, always available)
-    let check_features: Vec<&str> = token
-        .features
-        .iter()
-        .filter(|f| *f != "sse" && *f != "sse2")
-        .map(|s| s.as_str())
-        .collect();
+    let check_features = native_check_features(token, arch);
 
     if check_features.is_empty() {
         // Baseline-only token (V1): always available on x86_64.
@@ -557,21 +543,13 @@ fn gen_summon_x86(token: &TokenDef) -> String {
     "}
 }
 
-/// Generate the cold-path detection function for an x86 token.
+/// Generate the cold-path detection function for a native cached token (x86-64 or AArch64).
 ///
-/// This is `#[cold] #[inline(never)]` so summon()'s inline body stays tiny:
-/// just an atomic u8 read + two-way branch. The full feature detection
-/// (which calls into std_detect and probes CPUID) is outlined into this
-/// function, which is called only on the first summon() for each token.
-fn gen_summon_cold_x86(token: &TokenDef) -> String {
-    // Filter out sse/sse2 (x86_64 baseline)
-    let check_features: Vec<&str> = token
-        .features
-        .iter()
-        .filter(|f| *f != "sse" && *f != "sse2")
-        .map(|s| s.as_str())
-        .collect();
-
+/// Marked `#[cold] #[inline(never)]` so `summon()`'s inline body stays tiny:
+/// an atomic `u8` read plus two-way branch. Hardware probing runs only on the
+/// first `summon()` for each token.
+fn gen_summon_cold_native(token: &TokenDef, arch: &str) -> String {
+    let check_features = native_check_features(token, arch);
     if check_features.is_empty() {
         return String::new();
     }
@@ -580,88 +558,11 @@ fn gen_summon_cold_x86(token: &TokenDef) -> String {
     let cache_name = cache_var_name(name);
     let disabled_name = disabled_var_name(name);
     let detect_fn_name = lower_snake(name, "detect");
-    let detect_expr = gen_x86_detect_expr(&check_features);
-    let dct_guard = ", not(feature = \"testable_dispatch\")";
-    let all_features = cfg_all_features(&check_features);
-
-    formatdoc! {"
-        #[cfg(not(all({all_features}{dct_guard})))]
-        #[cold]
-        #[inline(never)]
-        fn {detect_fn_name}() -> Option<{name}> {{
-            let available = {detect_expr};
-            // Publish only while the cache is still undetected (0): a
-            // concurrent disable/enable writes the cache itself, and an
-            // unconditional store here could overwrite it — resurrecting a
-            // token that was disabled mid-detect (lost update: summon()
-            // returning Some for a disabled token).
-            let _ = {cache_name}.compare_exchange(
-                0,
-                if available {{ 2 }} else {{ 1 }},
-                Ordering::Relaxed,
-                Ordering::Relaxed,
-            );
-            // disable() stores the flag before the cache, so loading the
-            // flag after the CAS observes every disable that could have
-            // raced this probe.
-            if available && !{disabled_name}.load(Ordering::Relaxed) {{
-                // SAFETY: `available` — runtime detection just confirmed every
-                // feature this token asserts is present on this CPU.
-                Some(unsafe {{ {name}::from_context() }})
-            }} else {{
-                None
-            }}
-        }}
-
-    "}
-}
-
-fn gen_summon_aarch64(token: &TokenDef) -> String {
-    let dct_guard = ", not(feature = \"testable_dispatch\")";
-
-    // Check ALL features including neon — neon is NOT assumed baseline
-    let check_features: Vec<&str> = token.features.iter().map(|s| s.as_str()).collect();
-
-    let cache_name = cache_var_name(&token.name);
-    let all_features = cfg_all_features(&check_features);
-    let detect_fn_name = lower_snake(&token.name, "detect");
-
-    formatdoc! {"
-        {INDENT}#[inline(always)]
-        {INDENT}fn summon() -> Option<Self> {{
-        {INDENT}    // Compile-time fast path (suppressed by testable_dispatch)
-        {INDENT}    #[cfg(all({all_features}{dct_guard}))]
-        {INDENT}    {{
-        {INDENT}        // SAFETY: every feature this token asserts is enabled at
-        {INDENT}        // compile time (cfg(target_feature)), so the binary only
-        {INDENT}        // runs on CPUs that have them.
-        {INDENT}        Some(unsafe {{ Self::from_context() }})
-        {INDENT}    }}
-
-        {INDENT}    // Runtime path with caching
-        {INDENT}    #[cfg(not(all({all_features}{dct_guard})))]
-        {INDENT}    {{
-        {INDENT}        match {cache_name}.load(Ordering::Relaxed) {{
-        {INDENT}            // SAFETY: 2 is only ever stored by {detect_fn_name}()
-        {INDENT}            // after a positive runtime check of every feature.
-        {INDENT}            2 => Some(unsafe {{ Self::from_context() }}),
-        {INDENT}            1 => None,
-        {INDENT}            _ => {detect_fn_name}(),
-        {INDENT}        }}
-        {INDENT}    }}
-        {INDENT}}}
-    "}
-}
-
-/// Generate the cold-path detection function for an aarch64 token.
-fn gen_summon_cold_aarch64(token: &TokenDef) -> String {
-    let check_features: Vec<&str> = token.features.iter().map(|s| s.as_str()).collect();
-
-    let name = &token.name;
-    let cache_name = cache_var_name(name);
-    let disabled_name = disabled_var_name(name);
-    let detect_fn_name = lower_snake(name, "detect");
-    let detect_expr = gen_aarch64_detect_expr(&check_features);
+    let detect_expr = match arch {
+        "x86" => gen_x86_detect_expr(&check_features),
+        "aarch64" => gen_aarch64_detect_expr(&check_features),
+        _ => unreachable!("unknown native arch: {arch}"),
+    };
     let dct_guard = ", not(feature = \"testable_dispatch\")";
     let all_features = cfg_all_features(&check_features);
 
