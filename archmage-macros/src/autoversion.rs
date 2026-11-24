@@ -19,8 +19,8 @@ use crate::tiers::*;
 pub(crate) struct AutoversionArgs {
     /// The concrete type to use for `self` receiver (inherent methods only).
     pub(crate) self_type: Option<Type>,
-    /// Explicit tier names (None = default tiers).
-    pub(crate) tiers: Option<Vec<String>>,
+    /// Explicit tier entries (None = default tiers).
+    pub(crate) tiers: Option<Vec<ParsedTier>>,
     /// When set, emit full autoversion under `#[cfg(feature = "...")]` and a
     /// plain scalar fallback under `#[cfg(not(feature = "..."))]`. Solves the
     /// hygiene issue with `macro_rules!` wrappers.

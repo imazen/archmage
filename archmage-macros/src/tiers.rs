@@ -28,15 +28,64 @@ pub(crate) use crate::generated::DISPATCH_TIERS as ALL_TIERS;
 /// Default tiers for all dispatch macros.
 pub(crate) const DEFAULT_TIER_NAMES: &[&str] = &["v4", "v3", "neon", "wasm128", "scalar"];
 
+/// Modifier prefix on a legacy tier entry (`+tier`, `-tier`, or plain `tier`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum TierModifier {
+    Plain,
+    Add,
+    Remove,
+}
+
+/// A parsed legacy tier entry with modifier, identifier name, and optional
+/// explicit `cfg(feature)` gate kept structured (no stringify/re-split).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct ParsedTier {
+    pub modifier: TierModifier,
+    pub name: String,
+    pub feature_gate: Option<String>,
+}
+
+impl ParsedTier {
+    pub(crate) fn base_name(&self) -> &str {
+        self.name.strip_prefix('_').unwrap_or(&self.name)
+    }
+
+    pub(crate) fn is_fallback(&self) -> bool {
+        matches!(self.base_name(), "default" | "scalar")
+    }
+
+    /// Parse a single tier spec string (e.g. `"+v4(avx512)"`, `"-neon"`) for unit tests.
+    #[cfg(test)]
+    pub(crate) fn parse_test_spec(raw: &str) -> Self {
+        let (modifier, rest) = if let Some(s) = raw.strip_prefix('+') {
+            (TierModifier::Add, s)
+        } else if let Some(s) = raw.strip_prefix('-') {
+            (TierModifier::Remove, s)
+        } else {
+            (TierModifier::Plain, raw)
+        };
+        let (name, feature_gate) = if let Some(paren_pos) = rest.find('(') {
+            let feat = rest[paren_pos + 1..].trim_end_matches(')');
+            (&rest[..paren_pos], Some(feat.to_string()))
+        } else {
+            (rest, None)
+        };
+        Self {
+            modifier,
+            name: name.to_string(),
+            feature_gate,
+        }
+    }
+}
+
 /// Parse an optional cfg-gate after a tier name.
 ///
 /// Accepts both `tier(cfg(feature))` (canonical) and `tier(feature)` (shorthand).
-/// Returns the combined `"tier(feature)"` string, or just `"tier"` if no gate.
 pub(crate) fn parse_tier_name_with_gate(
     ident: &Ident,
     input: ParseStream<'_>,
-) -> syn::Result<String> {
-    if input.peek(syn::token::Paren) {
+) -> syn::Result<ParsedTier> {
+    let feature_gate = if input.peek(syn::token::Paren) {
         let paren_content;
         syn::parenthesized!(paren_content in input);
         // Check for cfg(feature) syntax: v4(cfg(avx512))
@@ -57,31 +106,32 @@ pub(crate) fn parse_tier_name_with_gate(
             let feat: Ident = paren_content.parse()?;
             feat.to_string()
         };
-        Ok(format!("{}({})", ident, feat_name))
+        Some(feat_name)
     } else {
-        Ok(ident.to_string())
-    }
+        None
+    };
+    Ok(ParsedTier {
+        modifier: TierModifier::Plain,
+        name: ident.to_string(),
+        feature_gate,
+    })
 }
 
 /// Parse a single tier entry: optional `+`/`-` prefix, ident, optional `(cfg(feature))` gate.
-///
-/// Returns the tier string with prefix preserved:
-/// - `"+arm_v2"` — add/override this tier
-/// - `"-neon"` — remove this tier from defaults
-/// - `"v3"` — plain tier (override mode)
-pub(crate) fn parse_one_tier(input: ParseStream<'_>) -> syn::Result<String> {
-    let prefix = if input.peek(Token![+]) {
+pub(crate) fn parse_one_tier(input: ParseStream<'_>) -> syn::Result<ParsedTier> {
+    let modifier = if input.peek(Token![+]) {
         let _: Token![+] = input.parse()?;
-        "+"
+        TierModifier::Add
     } else if input.peek(Token![-]) {
         let _: Token![-] = input.parse()?;
-        "-"
+        TierModifier::Remove
     } else {
-        ""
+        TierModifier::Plain
     };
     let ident: Ident = input.parse()?;
-    let name = parse_tier_name_with_gate(&ident, input)?;
-    Ok(format!("{prefix}{name}"))
+    let mut entry = parse_tier_name_with_gate(&ident, input)?;
+    entry.modifier = modifier;
+    Ok(entry)
 }
 
 /// Look up a tier by name.
@@ -221,15 +271,13 @@ pub(crate) fn default_tiers(default_feature_gates: bool) -> Vec<ResolvedTier> {
 /// any `+` present they are treated as `+name`; `-` alone with plain names
 /// keeps override mode and removes from that set (issue #48).
 pub(crate) fn resolve_tiers(
-    tier_names: &[String],
+    entries: &[ParsedTier],
     error_span: proc_macro2::Span,
     default_feature_gates: bool,
 ) -> syn::Result<Vec<ResolvedTier>> {
-    let any_plus = tier_names.iter().any(|n| n.starts_with('+'));
-    let any_minus = tier_names.iter().any(|n| n.starts_with('-'));
-    let any_plain = tier_names
-        .iter()
-        .any(|n| !n.starts_with('+') && !n.starts_with('-'));
+    let any_plus = entries.iter().any(|e| e.modifier == TierModifier::Add);
+    let any_minus = entries.iter().any(|e| e.modifier == TierModifier::Remove);
+    let any_plain = entries.iter().any(|e| e.modifier == TierModifier::Plain);
 
     // Mode selection (issue #48 — plain and `+`/`-` may now be mixed):
     //
@@ -246,117 +294,110 @@ pub(crate) fn resolve_tiers(
     // No-modifier all-plain lists stay in override mode exactly as before.
     let additive_mode = any_plus || (any_minus && !any_plain);
 
-    // User-overridden tiers are tracked so that default_feature_gates doesn't
-    // re-apply the descriptor's cfg_feature on them. Writing +v4 means "I want
-    // v4 exactly as written, without the automatic avx512 gate."
-    let mut user_overrides: Vec<&str> = Vec::new();
     // Tracks whether the user explicitly removed the scalar/default fallback
     // via `-scalar` or `-default`. Used to suppress the auto-append below so
     // that `[-scalar]` (or `[v3, -scalar]`) actually drops the scalar variant.
     let mut fallback_explicitly_removed = false;
 
-    // `default` and `scalar` are interchangeable fallback slots.
-    let is_fallback_base = |base: &str| base == "default" || base == "scalar";
-    // Normalize a tier entry to its base name (strip prefix/gate/`_`).
-    fn base_of(raw: &str) -> &str {
-        let s = raw
-            .strip_prefix('+')
-            .or_else(|| raw.strip_prefix('-'))
-            .unwrap_or(raw);
-        let s = s.split('(').next().unwrap_or(s);
-        s.strip_prefix('_').unwrap_or(s)
+    // Effective tier entry after applying `+`/`-` adjustments.
+    // `user_override` is true for additive user additions/replacements: writing
+    // `+v4` means "I want v4 exactly as written, without the descriptor's
+    // automatic `avx512` gate."
+    struct EffectiveTier<'a> {
+        name: &'a str,
+        explicit_gate: Option<&'a str>,
+        user_override: bool,
     }
+    let matches_slot = |slot: &EffectiveTier<'_>, base: &str, is_fallback: bool| {
+        let slot_base = slot.name.strip_prefix('_').unwrap_or(slot.name);
+        if is_fallback {
+            slot_base == "default" || slot_base == "scalar"
+        } else {
+            slot_base == base
+        }
+    };
 
-    let effective_names: Vec<&str> = if additive_mode {
+    let effective: Vec<EffectiveTier<'_>> = if additive_mode {
         // In additive mode, start with defaults then merge user entries:
         // - Same base name → replace (e.g., +v4 overrides the default v4(avx512) gate)
         // - New base name → append (e.g., +arm_v2 adds a tier)
         //
         // This lets users write [+default] to swap scalar→default, [+v4] to make
         // v4 unconditional, or [+neon(cfg(neon))] to gate a default tier.
-        let mut names = DEFAULT_TIER_NAMES.to_vec();
-        for raw in tier_names {
-            let is_removal = raw.starts_with('-');
-            let stripped = raw
-                .strip_prefix('+')
-                .or_else(|| raw.strip_prefix('-'))
-                .unwrap_or(raw);
-            let base = base_of(raw);
-            let is_fallback = is_fallback_base(base);
+        let mut list: Vec<EffectiveTier<'_>> = DEFAULT_TIER_NAMES
+            .iter()
+            .map(|&name| EffectiveTier {
+                name,
+                explicit_gate: None,
+                user_override: false,
+            })
+            .collect();
+        for entry in entries {
+            let base = entry.base_name();
+            let is_fallback = entry.is_fallback();
+            let pos = list
+                .iter()
+                .position(|slot| matches_slot(slot, base, is_fallback));
 
-            let pos = names.iter().position(|n| {
-                let n_base = n.split('(').next().unwrap_or(n);
-                if is_fallback {
-                    n_base == "default" || n_base == "scalar"
-                } else {
-                    n_base == base
-                }
-            });
-
-            if is_removal {
+            if entry.modifier == TierModifier::Remove {
                 if let Some(pos) = pos {
-                    names.remove(pos);
+                    list.remove(pos);
                 }
                 if is_fallback {
                     fallback_explicitly_removed = true;
                 }
                 // Removing a tier that's not in defaults is a silent no-op
-            } else if let Some(pos) = pos {
-                // Replace existing default with user's version
-                names[pos] = stripped;
-                user_overrides.push(base);
             } else {
-                names.push(stripped);
-                user_overrides.push(base);
+                let replacement = EffectiveTier {
+                    name: &entry.name,
+                    explicit_gate: entry.feature_gate.as_deref(),
+                    user_override: true,
+                };
+                if let Some(pos) = pos {
+                    list[pos] = replacement;
+                } else {
+                    list.push(replacement);
+                }
             }
         }
-        names
+        list
     } else {
         // Override mode: plain tiers form the set (never sees `+` — that would
         // force additive mode). `-tier` removes from the set / drops the fallback.
-        let mut names: Vec<&str> = Vec::new();
-        for raw in tier_names {
-            if raw.starts_with('-') {
-                let base = base_of(raw);
-                let is_fallback = is_fallback_base(base);
-                if let Some(pos) = names.iter().position(|n| {
-                    let n_base = n.split('(').next().unwrap_or(n);
-                    let n_base = n_base.strip_prefix('_').unwrap_or(n_base);
-                    if is_fallback {
-                        n_base == "default" || n_base == "scalar"
-                    } else {
-                        n_base == base
-                    }
-                }) {
-                    names.remove(pos);
+        let mut list: Vec<EffectiveTier<'_>> = Vec::new();
+        for entry in entries {
+            if entry.modifier == TierModifier::Remove {
+                let base = entry.base_name();
+                let is_fallback = entry.is_fallback();
+                if let Some(pos) = list
+                    .iter()
+                    .position(|slot| matches_slot(slot, base, is_fallback))
+                {
+                    list.remove(pos);
                 }
                 if is_fallback {
                     fallback_explicitly_removed = true;
                 }
             } else {
-                names.push(raw.as_str());
+                list.push(EffectiveTier {
+                    name: &entry.name,
+                    explicit_gate: entry.feature_gate.as_deref(),
+                    user_override: false,
+                });
             }
         }
-        names
+        list
     };
 
-    let mut tiers = Vec::with_capacity(effective_names.len() + 1);
-    for raw_name in &effective_names {
-        let (name, explicit_gate) = if let Some(paren_pos) = raw_name.find('(') {
-            let tier_name = &raw_name[..paren_pos];
-            let feat = raw_name[paren_pos + 1..].trim_end_matches(')');
-            (tier_name, Some(feat.to_string()))
-        } else {
-            (*raw_name, None)
-        };
-        match find_tier(name) {
+    let mut tiers = Vec::with_capacity(effective.len() + 1);
+    for entry in &effective {
+        match find_tier(entry.name) {
             Some(tier) => {
-                let is_explicit = explicit_gate.is_some();
+                let is_explicit = entry.explicit_gate.is_some();
                 // User-overridden tiers (from + entries) get exactly what the user
                 // wrote — no auto-gating from the descriptor. +v4 means unconditional.
-                let is_user_override = user_overrides.contains(&tier.name);
-                let feature_gate = explicit_gate.or_else(|| {
-                    if default_feature_gates && !is_user_override {
+                let feature_gate = entry.explicit_gate.map(String::from).or_else(|| {
+                    if default_feature_gates && !entry.user_override {
                         tier.cfg_feature.map(String::from)
                     } else {
                         None
@@ -372,7 +413,11 @@ pub(crate) fn resolve_tiers(
                 let known: Vec<&str> = ALL_TIERS.iter().map(|t| t.name).collect();
                 return Err(syn::Error::new(
                     error_span,
-                    format!("unknown tier `{}`. Known tiers: {}", name, known.join(", ")),
+                    format!(
+                        "unknown tier `{}`. Known tiers: {}",
+                        entry.name,
+                        known.join(", ")
+                    ),
                 ));
             }
         }
@@ -405,10 +450,16 @@ pub(crate) fn resolve_tiers(
 mod tests {
     use super::*;
 
+    fn specs(names: &[&str]) -> Vec<ParsedTier> {
+        names
+            .iter()
+            .map(|s| ParsedTier::parse_test_spec(s))
+            .collect()
+    }
+
     /// Resolve and return the tier suffixes in dispatch (priority) order.
     fn resolved(names: &[&str], gates: bool) -> Vec<String> {
-        let owned: Vec<String> = names.iter().map(|s| (*s).to_string()).collect();
-        resolve_tiers(&owned, proc_macro2::Span::call_site(), gates)
+        resolve_tiers(&specs(names), proc_macro2::Span::call_site(), gates)
             .unwrap()
             .iter()
             .map(|t| t.tier.suffix.to_string())
@@ -449,10 +500,22 @@ mod tests {
     #[test]
     fn mixing_plain_and_modifier_no_longer_errors() {
         // The old hard error is gone for every combination.
-        let owned = ["v3".to_string(), "-scalar".to_string()];
-        assert!(resolve_tiers(&owned, proc_macro2::Span::call_site(), false).is_ok());
-        let owned = ["+v4".to_string(), "v3".to_string()];
-        assert!(resolve_tiers(&owned, proc_macro2::Span::call_site(), false).is_ok());
+        assert!(
+            resolve_tiers(
+                &specs(&["v3", "-scalar"]),
+                proc_macro2::Span::call_site(),
+                false
+            )
+            .is_ok()
+        );
+        assert!(
+            resolve_tiers(
+                &specs(&["+v4", "v3"]),
+                proc_macro2::Span::call_site(),
+                false
+            )
+            .is_ok()
+        );
     }
 
     // ---- preserved legacy behavior ----
@@ -488,8 +551,8 @@ mod tests {
 
     #[test]
     fn override_plain_v4_gets_auto_gate_when_enabled() {
-        let owned = ["v4".to_string(), "v3".to_string()];
-        let resolved = resolve_tiers(&owned, proc_macro2::Span::call_site(), true).unwrap();
+        let resolved =
+            resolve_tiers(&specs(&["v4", "v3"]), proc_macro2::Span::call_site(), true).unwrap();
         let v4 = resolved.iter().find(|t| t.tier.suffix == "v4").unwrap();
         assert_eq!(v4.feature_gate.as_deref(), Some("avx512"));
     }
@@ -497,8 +560,12 @@ mod tests {
     #[test]
     fn override_minus_scalar_keeps_gate_semantics() {
         // (v4, -scalar) with gates on: v4 still auto-gated, no scalar.
-        let owned = ["v4".to_string(), "-scalar".to_string()];
-        let resolved = resolve_tiers(&owned, proc_macro2::Span::call_site(), true).unwrap();
+        let resolved = resolve_tiers(
+            &specs(&["v4", "-scalar"]),
+            proc_macro2::Span::call_site(),
+            true,
+        )
+        .unwrap();
         assert!(resolved.iter().all(|t| t.tier.suffix != "scalar"));
         let v4 = resolved.iter().find(|t| t.tier.suffix == "v4").unwrap();
         assert_eq!(v4.feature_gate.as_deref(), Some("avx512"));
@@ -507,8 +574,8 @@ mod tests {
     #[test]
     fn additive_plus_v4_is_unconditional() {
         // +v4 means "v4 exactly as written" — no auto avx512 gate.
-        let owned = ["+v4".to_string()];
-        let resolved = resolve_tiers(&owned, proc_macro2::Span::call_site(), true).unwrap();
+        let resolved =
+            resolve_tiers(&specs(&["+v4"]), proc_macro2::Span::call_site(), true).unwrap();
         let v4 = resolved.iter().find(|t| t.tier.suffix == "v4").unwrap();
         assert_eq!(v4.feature_gate, None);
     }
@@ -517,17 +584,18 @@ mod tests {
 
     #[test]
     fn unknown_tier_errors() {
-        let owned = ["nope".to_string()];
-        assert!(resolve_tiers(&owned, proc_macro2::Span::call_site(), false).is_err());
+        assert!(resolve_tiers(&specs(&["nope"]), proc_macro2::Span::call_site(), false).is_err());
     }
 
     #[test]
     fn scalar_and_default_mutually_exclusive() {
-        let owned = [
-            "v3".to_string(),
-            "scalar".to_string(),
-            "default".to_string(),
-        ];
-        assert!(resolve_tiers(&owned, proc_macro2::Span::call_site(), false).is_err());
+        assert!(
+            resolve_tiers(
+                &specs(&["v3", "scalar", "default"]),
+                proc_macro2::Span::call_site(),
+                false,
+            )
+            .is_err()
+        );
     }
 }

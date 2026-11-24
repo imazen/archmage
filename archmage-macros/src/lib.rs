@@ -299,86 +299,25 @@ pub fn magetypes(attr: TokenStream, item: TokenStream) -> TokenStream {
     // Assumption: neither `rite` nor `define` is or will become a tier name.
     // `token-registry.toml` must not declare `short_name = "rite"` or
     // `short_name = "define"`.
-    let (rite_flag, in_impl, defines, tier_names) =
-        match syn::parse::Parser::parse(parse_magetypes_attr, attr) {
-            Ok(parsed) => parsed,
-            Err(e) => return e.to_compile_error().into(),
-        };
+    let args = parse_macro_input!(attr as magetypes::MagetypesArgs);
 
-    let tiers = if tier_names.is_empty() {
+    let tiers = if args.tiers.is_empty() {
         default_tiers(true)
     } else {
-        match resolve_tiers(&tier_names, input_fn.sig.ident.span(), true) {
+        match resolve_tiers(&args.tiers, input_fn.sig.ident.span(), true) {
             Ok(t) => t,
             Err(e) => return e.to_compile_error().into(),
         }
     };
 
-    magetypes_impl(input_fn, &tiers, rite_flag, in_impl, &defines).into()
-}
-
-/// Parse `#[magetypes]` attributes: `rite` and `in_impl` flags, `define(list)`,
-/// and tier names.
-///
-/// Returns `(rite_flag, in_impl, defines, tier_names)`. Tier names preserve the
-/// `+`/`-` modifier prefixes and `(cfg(feat))` gates for the tier resolver.
-fn parse_magetypes_attr(
-    input: syn::parse::ParseStream<'_>,
-) -> syn::Result<(bool, bool, Vec<String>, Vec<String>)> {
-    use syn::Token;
-    let mut rite_flag = false;
-    let mut in_impl = false;
-    let mut defines = Vec::new();
-    let mut tier_names = Vec::new();
-
-    while !input.is_empty() {
-        // Peek the leading ident without consuming — `rite` and `define` are
-        // special, anything else is a tier name (possibly prefixed with +/-).
-        let peek_rite = input.peek(syn::Ident) && {
-            let fork = input.fork();
-            fork.parse::<syn::Ident>()
-                .is_ok_and(|i| i == "rite" && !fork.peek(syn::token::Paren))
-        };
-        let peek_define = input.peek(syn::Ident) && {
-            let fork = input.fork();
-            fork.parse::<syn::Ident>()
-                .is_ok_and(|i| i == "define" && fork.peek(syn::token::Paren))
-        };
-        let peek_in_impl = input.peek(syn::Ident) && {
-            let fork = input.fork();
-            fork.parse::<syn::Ident>().is_ok_and(|i| i == "in_impl")
-        };
-
-        if peek_rite {
-            input.parse::<syn::Ident>()?;
-            rite_flag = true;
-        } else if peek_in_impl {
-            // A receiver-less associated function in an inherent impl: the
-            // generated #[arcane] variants must call their siblings as `Self::`.
-            input.parse::<syn::Ident>()?;
-            in_impl = true;
-        } else if peek_define {
-            input.parse::<syn::Ident>()?;
-            let content;
-            syn::parenthesized!(content in input);
-            while !content.is_empty() {
-                let ty: syn::Ident = content.parse()?;
-                defines.push(ty.to_string());
-                if content.peek(Token![,]) {
-                    let _: Token![,] = content.parse()?;
-                }
-            }
-        } else {
-            // Fall through to tier-name parsing (preserves +/- prefix and cfg gates).
-            tier_names.push(parse_one_tier(input)?);
-        }
-
-        if input.peek(Token![,]) {
-            let _: Token![,] = input.parse()?;
-        }
-    }
-
-    Ok((rite_flag, in_impl, defines, tier_names))
+    magetypes_impl(
+        input_fn,
+        &tiers,
+        args.rite_flag,
+        args.in_impl,
+        &args.defines,
+    )
+    .into()
 }
 
 // =============================================================================
@@ -492,8 +431,7 @@ fn parse_magetypes_attr(
 /// - `_neon_crc` for `NeonCrcToken`
 /// - `_wasm128` for `Wasm128Token`
 /// - `_scalar` for `ScalarToken`
-#[proc_macro]
-pub fn incant(input: TokenStream) -> TokenStream {
+fn expand_legacy_dispatch(input: TokenStream) -> TokenStream {
     if let Some(expanded) = expanded_passthrough(&input.clone().into()) {
         return expanded.into();
     }
@@ -501,14 +439,15 @@ pub fn incant(input: TokenStream) -> TokenStream {
     incant_impl(input).into()
 }
 
+#[proc_macro]
+pub fn incant(input: TokenStream) -> TokenStream {
+    expand_legacy_dispatch(input)
+}
+
 /// **Superseded (queued for deprecation):** Use [`attuned!`] instead (legacy alias for [`incant!`]).
 #[proc_macro]
 pub fn simd_route(input: TokenStream) -> TokenStream {
-    if let Some(expanded) = expanded_passthrough(&input.clone().into()) {
-        return expanded.into();
-    }
-    let input = parse_macro_input!(input as IncantInput);
-    incant_impl(input).into()
+    expand_legacy_dispatch(input)
 }
 
 /// **Superseded (queued for deprecation):** Use [`attuned!`] instead (descriptive alias for [`incant!`]).
@@ -520,11 +459,7 @@ pub fn simd_route(input: TokenStream) -> TokenStream {
 /// See [`incant!`] for full documentation and examples.
 #[proc_macro]
 pub fn dispatch_variant(input: TokenStream) -> TokenStream {
-    if let Some(expanded) = expanded_passthrough(&input.clone().into()) {
-        return expanded.into();
-    }
-    let input = parse_macro_input!(input as IncantInput);
-    incant_impl(input).into()
+    expand_legacy_dispatch(input)
 }
 
 // =============================================================================

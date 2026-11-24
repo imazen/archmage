@@ -23,7 +23,7 @@ pub(crate) struct IncantInput {
     /// valid in a tier-macro body; errors in plain/cold code.
     pub(crate) without_token: bool,
     /// Optional explicit tier list (None = default tiers)
-    pub(crate) tiers: Option<(Vec<String>, proc_macro2::Span)>,
+    pub(crate) tiers: Option<(Vec<ParsedTier>, proc_macro2::Span)>,
 }
 
 // suffix_path → moved to common.rs
@@ -205,20 +205,13 @@ pub(crate) fn incant_impl(input: IncantInput) -> TokenStream {
     // incant!, emit a deprecation warning. In v1.0 this will become a compile error.
     // A fallback tier is always auto-appended, but not listing it explicitly
     // hides the fact that a _scalar/_default function is required.
-    let scalar_warning = if let Some((names, _span)) = &input.tiers {
+    let scalar_warning = if let Some((entries, _span)) = &input.tiers {
         // Modifier mode (+tier/-tier) inherits scalar from defaults — no warning needed.
-        let is_additive = names
-            .iter()
-            .all(|n| n.starts_with('+') || n.starts_with('-'));
+        let is_additive = entries.iter().all(|e| e.modifier != TierModifier::Plain);
         if !is_additive
-            && !names.iter().any(|n| {
-                let base = n
-                    .strip_prefix('+')
-                    .unwrap_or(n)
-                    .split('(')
-                    .next()
-                    .unwrap_or(n);
-                base == "scalar" || base == "default"
+            && !entries.iter().any(|e| {
+                e.modifier != TierModifier::Remove
+                    && matches!(e.name.as_str(), "scalar" | "default")
             })
         {
             quote! {

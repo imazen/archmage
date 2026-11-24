@@ -260,9 +260,16 @@ fn arm64_v2_v3_traits_are_cumulative() {
 // resolve_tiers — additive / subtractive / override
 // =========================================================================
 
+fn parse_tier_specs(names: &[&str]) -> Vec<ParsedTier> {
+    names
+        .iter()
+        .map(|s| ParsedTier::parse_test_spec(s))
+        .collect()
+}
+
 fn resolve_tier_names(names: &[&str], default_gates: bool) -> Vec<String> {
-    let names: Vec<String> = names.iter().map(|s| s.to_string()).collect();
-    resolve_tiers(&names, proc_macro2::Span::call_site(), default_gates)
+    let entries = parse_tier_specs(names);
+    resolve_tiers(&entries, proc_macro2::Span::call_site(), default_gates)
         .unwrap()
         .iter()
         .map(|rt| {
@@ -359,8 +366,8 @@ fn resolve_mixing_plus_and_plain_is_additive() {
     // #48: mixing `+tier` with plain `tier` is now allowed. Any `+` ⇒
     // additive mode; the plain tier is treated as `+tier`. Both v1 and v3
     // end up present (atop the defaults).
-    let names: Vec<String> = vec!["+v1".into(), "v3".into()];
-    let tiers = resolve_tiers(&names, proc_macro2::Span::call_site(), true).unwrap();
+    let entries = parse_tier_specs(&["+v1", "v3"]);
+    let tiers = resolve_tiers(&entries, proc_macro2::Span::call_site(), true).unwrap();
     let suffixes: Vec<&str> = tiers.iter().map(|t| t.tier.suffix).collect();
     assert!(suffixes.contains(&"v1"));
     assert!(suffixes.contains(&"v3"));
@@ -389,7 +396,7 @@ fn autoversion_args_empty() {
 fn autoversion_args_single_tier() {
     let args: AutoversionArgs = syn::parse_str("v3").unwrap();
     assert!(args.self_type.is_none());
-    assert_eq!(args.tiers.as_ref().unwrap(), &["v3"]);
+    assert_eq!(args.tiers.as_ref().unwrap(), &parse_tier_specs(&["v3"]));
 }
 
 #[test]
@@ -397,7 +404,7 @@ fn autoversion_args_tiers_only() {
     let args: AutoversionArgs = syn::parse_str("v3, v4, neon").unwrap();
     assert!(args.self_type.is_none());
     let tiers = args.tiers.unwrap();
-    assert_eq!(tiers, vec!["v3", "v4", "neon"]);
+    assert_eq!(tiers, parse_tier_specs(&["v3", "v4", "neon"]));
 }
 
 #[test]
@@ -406,14 +413,17 @@ fn autoversion_args_many_tiers() {
         syn::parse_str("v1, v2, v3, v4, v4x, neon, arm_v2, wasm128").unwrap();
     assert_eq!(
         args.tiers.unwrap(),
-        vec!["v1", "v2", "v3", "v4", "v4x", "neon", "arm_v2", "wasm128"]
+        parse_tier_specs(&["v1", "v2", "v3", "v4", "v4x", "neon", "arm_v2", "wasm128"])
     );
 }
 
 #[test]
 fn autoversion_args_trailing_comma() {
     let args: AutoversionArgs = syn::parse_str("v3, v4,").unwrap();
-    assert_eq!(args.tiers.as_ref().unwrap(), &["v3", "v4"]);
+    assert_eq!(
+        args.tiers.as_ref().unwrap(),
+        &parse_tier_specs(&["v3", "v4"])
+    );
 }
 
 #[test]
@@ -428,7 +438,7 @@ fn autoversion_args_self_and_tiers() {
     let args: AutoversionArgs = syn::parse_str("_self = MyType, v3, neon").unwrap();
     assert!(args.self_type.is_some());
     let tiers = args.tiers.unwrap();
-    assert_eq!(tiers, vec!["v3", "neon"]);
+    assert_eq!(tiers, parse_tier_specs(&["v3", "neon"]));
 }
 
 #[test]
@@ -437,7 +447,7 @@ fn autoversion_args_tiers_then_self() {
     let args: AutoversionArgs = syn::parse_str("v3, neon, _self = MyType").unwrap();
     assert!(args.self_type.is_some());
     let tiers = args.tiers.unwrap();
-    assert_eq!(tiers, vec!["v3", "neon"]);
+    assert_eq!(tiers, parse_tier_specs(&["v3", "neon"]));
 }
 
 #[test]
@@ -592,8 +602,8 @@ fn find_autoversion_token_param_with_lifetime() {
 
 #[test]
 fn autoversion_default_tiers_all_resolve() {
-    let names: Vec<String> = DEFAULT_TIER_NAMES.iter().map(|s| s.to_string()).collect();
-    let tiers = resolve_tiers(&names, proc_macro2::Span::call_site(), false).unwrap();
+    let entries = parse_tier_specs(DEFAULT_TIER_NAMES);
+    let tiers = resolve_tiers(&entries, proc_macro2::Span::call_site(), false).unwrap();
     assert!(!tiers.is_empty());
     // scalar should be present
     assert!(tiers.iter().any(|t| t.name == "scalar"));
@@ -601,8 +611,8 @@ fn autoversion_default_tiers_all_resolve() {
 
 #[test]
 fn autoversion_scalar_always_appended() {
-    let names = vec!["v3".to_string(), "neon".to_string()];
-    let tiers = resolve_tiers(&names, proc_macro2::Span::call_site(), false).unwrap();
+    let entries = parse_tier_specs(&["v3", "neon"]);
+    let tiers = resolve_tiers(&entries, proc_macro2::Span::call_site(), false).unwrap();
     assert!(
         tiers.iter().any(|t| t.name == "scalar"),
         "scalar must be auto-appended"
@@ -611,16 +621,16 @@ fn autoversion_scalar_always_appended() {
 
 #[test]
 fn autoversion_scalar_not_duplicated() {
-    let names = vec!["v3".to_string(), "scalar".to_string()];
-    let tiers = resolve_tiers(&names, proc_macro2::Span::call_site(), false).unwrap();
+    let entries = parse_tier_specs(&["v3", "scalar"]);
+    let tiers = resolve_tiers(&entries, proc_macro2::Span::call_site(), false).unwrap();
     let scalar_count = tiers.iter().filter(|t| t.name == "scalar").count();
     assert_eq!(scalar_count, 1, "scalar must not be duplicated");
 }
 
 #[test]
 fn autoversion_tiers_sorted_by_priority() {
-    let names = vec!["neon".to_string(), "v4".to_string(), "v3".to_string()];
-    let tiers = resolve_tiers(&names, proc_macro2::Span::call_site(), false).unwrap();
+    let entries = parse_tier_specs(&["neon", "v4", "v3"]);
+    let tiers = resolve_tiers(&entries, proc_macro2::Span::call_site(), false).unwrap();
     // v4 (priority 40) > v3 (30) > neon (20) > scalar (0)
     let priorities: Vec<u32> = tiers.iter().map(|t| t.priority).collect();
     for window in priorities.windows(2) {
@@ -634,8 +644,8 @@ fn autoversion_tiers_sorted_by_priority() {
 
 #[test]
 fn autoversion_unknown_tier_errors() {
-    let names = vec!["v3".to_string(), "avx9000".to_string()];
-    let result = resolve_tiers(&names, proc_macro2::Span::call_site(), false);
+    let entries = parse_tier_specs(&["v3", "avx9000"]);
+    let result = resolve_tiers(&entries, proc_macro2::Span::call_site(), false);
     match result {
         Ok(_) => panic!("Expected error for unknown tier 'avx9000'"),
         Err(e) => {
@@ -664,8 +674,8 @@ fn autoversion_all_known_tiers_resolve() {
 #[test]
 fn autoversion_default_tier_list_is_sensible() {
     // Defaults should cover x86, ARM, WASM, and scalar
-    let names: Vec<String> = DEFAULT_TIER_NAMES.iter().map(|s| s.to_string()).collect();
-    let tiers = resolve_tiers(&names, proc_macro2::Span::call_site(), false).unwrap();
+    let entries = parse_tier_specs(DEFAULT_TIER_NAMES);
+    let tiers = resolve_tiers(&entries, proc_macro2::Span::call_site(), false).unwrap();
 
     let has_x86 = tiers.iter().any(|t| t.target_arch == Some("x86_64"));
     let has_arm = tiers.iter().any(|t| t.target_arch == Some("aarch64"));

@@ -2,9 +2,81 @@
 
 use proc_macro2::TokenStream;
 use quote::{ToTokens, quote};
+use syn::Token;
 
 use crate::common::*;
 use crate::tiers::*;
+
+/// Parsed arguments for `#[magetypes(...)]`: `rite` / `in_impl` flags,
+/// `define(list)` type aliases, and optional explicit tier entries.
+pub(crate) struct MagetypesArgs {
+    pub(crate) rite_flag: bool,
+    pub(crate) in_impl: bool,
+    pub(crate) defines: Vec<String>,
+    pub(crate) tiers: Vec<ParsedTier>,
+}
+
+impl syn::parse::Parse for MagetypesArgs {
+    fn parse(input: syn::parse::ParseStream<'_>) -> syn::Result<Self> {
+        let mut rite_flag = false;
+        let mut in_impl = false;
+        let mut defines = Vec::new();
+        let mut tiers = Vec::new();
+
+        while !input.is_empty() {
+            // Peek the leading ident without consuming — `rite`, `define`, and
+            // `in_impl` are special; anything else is a tier entry.
+            let peek_rite = input.peek(syn::Ident) && {
+                let fork = input.fork();
+                fork.parse::<syn::Ident>()
+                    .is_ok_and(|i| i == "rite" && !fork.peek(syn::token::Paren))
+            };
+            let peek_define = input.peek(syn::Ident) && {
+                let fork = input.fork();
+                fork.parse::<syn::Ident>()
+                    .is_ok_and(|i| i == "define" && fork.peek(syn::token::Paren))
+            };
+            let peek_in_impl = input.peek(syn::Ident) && {
+                let fork = input.fork();
+                fork.parse::<syn::Ident>().is_ok_and(|i| i == "in_impl")
+            };
+
+            if peek_rite {
+                input.parse::<syn::Ident>()?;
+                rite_flag = true;
+            } else if peek_in_impl {
+                // A receiver-less associated function in an inherent impl: the
+                // generated #[arcane] variants must call their siblings as `Self::`.
+                input.parse::<syn::Ident>()?;
+                in_impl = true;
+            } else if peek_define {
+                input.parse::<syn::Ident>()?;
+                let content;
+                syn::parenthesized!(content in input);
+                while !content.is_empty() {
+                    let ty: syn::Ident = content.parse()?;
+                    defines.push(ty.to_string());
+                    if content.peek(Token![,]) {
+                        let _: Token![,] = content.parse()?;
+                    }
+                }
+            } else {
+                tiers.push(parse_one_tier(input)?);
+            }
+
+            if input.peek(Token![,]) {
+                let _: Token![,] = input.parse()?;
+            }
+        }
+
+        Ok(Self {
+            rite_flag,
+            in_impl,
+            defines,
+            tiers,
+        })
+    }
+}
 
 /// Generate per-tier variants of the input function.
 ///
