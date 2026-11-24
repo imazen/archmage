@@ -538,11 +538,17 @@ pub(crate) fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> 
         #(#dispatch_arms)*
         #fallback_call
     };
+    let nested_variants = if args.in_trait {
+        quote! { #(#variants)* }
+    } else {
+        TokenStream::new()
+    };
     let dispatcher_fn = |cfg: TokenStream, body: &TokenStream| {
         quote_spanned! { user_span =>
             #cfg
             #(#fn_attrs)*
             #vis #unsafety fn #fn_name #generics (#dispatcher_inputs_punct) #output #where_clause {
+                #nested_variants
                 #body
             }
         }
@@ -562,33 +568,12 @@ pub(crate) fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> 
 
     if args.in_trait {
         // A trait impl cannot take extra items: the variants live inside the
-        // dispatcher's body, where block items are visible throughout.
-        return place_variants_inside(dispatcher, quote! { #(#variants)* });
+        // dispatcher's body (emitted via `nested_variants` above), where block
+        // items are visible throughout.
+        return dispatcher;
     }
     quote! {
         #dispatcher
         #(#variants)*
     }
-}
-
-/// Insert `items` at the start of every function body in `dispatcher` (one
-/// body normally, two under `cfg(feature)`). The bodies are the top-level
-/// brace groups; attribute arguments never use braces here.
-fn place_variants_inside(dispatcher: TokenStream, items: TokenStream) -> TokenStream {
-    let mut out = TokenStream::new();
-    for tt in dispatcher {
-        match tt {
-            proc_macro2::TokenTree::Group(group)
-                if group.delimiter() == proc_macro2::Delimiter::Brace =>
-            {
-                let body = group.stream();
-                let mut new_group =
-                    proc_macro2::Group::new(group.delimiter(), quote! { #items #body });
-                new_group.set_span(group.span());
-                out.extend([proc_macro2::TokenTree::Group(new_group)]);
-            }
-            other => out.extend([other]),
-        }
-    }
-    out
 }
