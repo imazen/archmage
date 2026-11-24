@@ -8,7 +8,7 @@ use std::borrow::Cow;
 use proc_macro2::Span;
 use syn::{FnArg, GenericParam, Ident, PatType, Signature, Token, Type, TypeParamBound};
 
-use crate::common::with_ident_str;
+use crate::common::with_ident_name;
 use crate::generated::{
     known_token_str, known_trait_str, token_to_arch, token_to_features,
     token_to_magetypes_namespace, trait_to_arch, trait_to_features, trait_to_magetypes_namespace,
@@ -27,7 +27,7 @@ pub(crate) enum TokenTypeInfo<'a> {
 pub(crate) fn extract_token_type_info(ty: &Type) -> Option<TokenTypeInfo<'_>> {
     match ty {
         Type::Path(type_path) => type_path.path.segments.last().map(|seg| {
-            if let Some(known) = with_ident_str(&seg.ident, known_token_str) {
+            if let Some(known) = with_ident_name(&seg.ident, known_token_str) {
                 TokenTypeInfo::Concrete(known)
             } else {
                 TokenTypeInfo::Generic(&seg.ident)
@@ -79,11 +79,11 @@ pub(crate) fn find_generic_bounds<'a>(
     sig: &'a Signature,
     type_ident: &Ident,
 ) -> Option<Vec<&'a Ident>> {
-    with_ident_str(type_ident, |target| {
+    with_ident_name(type_ident, |target| {
         let mut traits = Vec::new();
         for param in &sig.generics.params {
             if let GenericParam::Type(type_param) = param
-                && with_ident_str(&type_param.ident, |s| s == target)
+                && with_ident_name(&type_param.ident, |s| s == target)
             {
                 push_trait_idents_from_bounds(&mut traits, &type_param.bounds);
             }
@@ -94,7 +94,7 @@ pub(crate) fn find_generic_bounds<'a>(
                     && let Type::Path(type_path) = &pred_type.bounded_ty
                     && type_path.path.segments.len() == 1
                     && let Some(seg) = type_path.path.segments.last()
-                    && with_ident_str(&seg.ident, |s| s == target)
+                    && with_ident_name(&seg.ident, |s| s == target)
                 {
                     push_trait_idents_from_bounds(&mut traits, &pred_type.bounds);
                 }
@@ -117,7 +117,7 @@ fn bounds_have_any_trait_features(
         if let TypeParamBound::Trait(trait_bound) = bound
             && let Some(seg) = trait_bound.path.segments.last()
         {
-            with_ident_str(&seg.ident, |name| {
+            with_ident_name(&seg.ident, |name| {
                 trait_to_features(name).is_some_and(|feats| !feats.is_empty())
             })
         } else {
@@ -132,10 +132,10 @@ fn generic_has_any_trait_features(sig: &Signature, type_ident: &Ident) -> bool {
     if sig.generics.params.is_empty() && sig.generics.where_clause.is_none() {
         return false;
     }
-    with_ident_str(type_ident, |target| {
+    with_ident_name(type_ident, |target| {
         for param in &sig.generics.params {
             if let GenericParam::Type(type_param) = param
-                && with_ident_str(&type_param.ident, |s| s == target)
+                && with_ident_name(&type_param.ident, |s| s == target)
                 && bounds_have_any_trait_features(&type_param.bounds)
             {
                 return true;
@@ -147,7 +147,7 @@ fn generic_has_any_trait_features(sig: &Signature, type_ident: &Ident) -> bool {
                     && let Type::Path(type_path) = &pred_type.bounded_ty
                     && type_path.path.segments.len() == 1
                     && let Some(seg) = type_path.path.segments.last()
-                    && with_ident_str(&seg.ident, |s| s == target)
+                    && with_ident_name(&seg.ident, |s| s == target)
                     && bounds_have_any_trait_features(&pred_type.bounds)
                 {
                     return true;
@@ -165,7 +165,7 @@ pub(crate) fn traits_to_features(trait_names: &[&Ident]) -> Option<Cow<'static, 
     let mut all_features: Cow<'static, [&'static str]> = Cow::Borrowed(&[]);
 
     for trait_name in trait_names {
-        if let Some(features) = with_ident_str(trait_name, trait_to_features) {
+        if let Some(features) = with_ident_name(trait_name, trait_to_features) {
             if all_features.is_empty() {
                 all_features = Cow::Borrowed(features);
                 continue;
@@ -206,7 +206,7 @@ pub(crate) fn features_csv(token_name: Option<&str>, features: &[&str]) -> Cow<'
 pub(crate) fn traits_to_tier_traits(trait_names: &[&Ident]) -> Vec<&'static str> {
     let mut tiers = Vec::new();
     for trait_name in trait_names {
-        if let Some(known) = with_ident_str(trait_name, known_trait_str)
+        if let Some(known) = with_ident_name(trait_name, known_trait_str)
             && !tiers.contains(&known)
         {
             tiers.push(known);
@@ -221,7 +221,7 @@ pub(crate) const FEATURELESS_TRAIT_NAMES: &[&str] = &["SimdToken", "IntoConcrete
 /// Check if any trait names are featureless (no CPU feature mapping).
 pub(crate) fn find_featureless_trait(trait_names: &[&Ident]) -> Option<&'static str> {
     for name in trait_names {
-        let found = with_ident_str(name, |s| {
+        let found = with_ident_name(name, |s| {
             FEATURELESS_TRAIT_NAMES.iter().copied().find(|&fl| fl == s)
         });
         if found.is_some() {
@@ -290,7 +290,7 @@ pub(crate) struct TokenParamInfo {
 /// Returns the first matching namespace found.
 pub(crate) fn traits_to_magetypes_namespace(trait_names: &[&Ident]) -> Option<&'static str> {
     for name in trait_names {
-        if let Some(ns) = with_ident_str(name, trait_to_magetypes_namespace) {
+        if let Some(ns) = with_ident_name(name, trait_to_magetypes_namespace) {
             return Some(ns);
         }
     }
@@ -300,7 +300,7 @@ pub(crate) fn traits_to_magetypes_namespace(trait_names: &[&Ident]) -> Option<&'
 /// Given trait bound names, return the first matching target architecture.
 pub(crate) fn traits_to_arch(trait_names: &[&Ident]) -> Option<&'static str> {
     for name in trait_names {
-        if let Some(arch) = with_ident_str(name, trait_to_arch) {
+        if let Some(arch) = with_ident_name(name, trait_to_arch) {
             return Some(arch);
         }
     }
@@ -315,7 +315,7 @@ pub(crate) fn is_token_type_in_sig(sig: &Signature, ty: &Type) -> bool {
             let Some(seg) = type_path.path.segments.last() else {
                 return false;
             };
-            if let Some(known) = with_ident_str(&seg.ident, known_token_str) {
+            if let Some(known) = with_ident_name(&seg.ident, known_token_str) {
                 token_to_features(known).is_some()
             } else {
                 generic_has_any_trait_features(sig, &seg.ident)

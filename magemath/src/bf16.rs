@@ -150,6 +150,16 @@ mod tests {
 
     #[test]
     fn outward_rounding_brackets_inexact_inputs_and_carries_across_exponents() {
+        // A negative encoding walks toward smaller values as its magnitude
+        // grows. Counting from zero gives a single ordered run of finite codes.
+        let rank = |bits: u16| {
+            let magnitude = i32::from(bits & 0x7fff);
+            if bits & 0x8000 != 0 {
+                -magnitude
+            } else {
+                magnitude
+            }
+        };
         for x in [
             0.01_f32,
             -0.01,
@@ -164,10 +174,14 @@ mod tests {
             f32::from_bits(1),
             -f32::from_bits(1),
         ] {
-            let lo = expand_bf16(floor_bf16(x));
-            let hi = expand_bf16(ceil_bf16(x));
-            assert!(lo <= x, "floor_bf16({x}) = {lo} > {x}");
-            assert!(hi >= x, "ceil_bf16({x}) = {hi} < {x}");
+            let lo_bits = floor_bf16(x);
+            let hi_bits = ceil_bf16(x);
+            let lo = expand_bf16(lo_bits);
+            let hi = expand_bf16(hi_bits);
+            assert!(lo < x && x < hi, "{x} is outside ({lo}, {hi})");
+            assert_eq!(rank(hi_bits) - rank(lo_bits), 1, "bounds of {x}");
+            assert_ne!(lo_bits, 0x8000, "floor of {x} encodes negative zero");
+            assert_ne!(hi_bits, 0x8000, "ceil of {x} encodes negative zero");
         }
         assert_eq!(expand_bf16(floor_bf16(-0.999_999_94)), -1.0);
         assert_eq!(expand_bf16(ceil_bf16(127.49)), 127.5);

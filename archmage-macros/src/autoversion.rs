@@ -120,7 +120,7 @@ pub(crate) fn find_autoversion_token_param(
             && let Type::Path(type_path) = ty.as_ref()
             && let Some(seg) = type_path.path.segments.last()
         {
-            let kind_res = with_ident_str(&seg.ident, |name| {
+            let kind_res = with_ident_name(&seg.ident, |name| {
                 if name == "SimdToken" {
                     Ok(Some(AutoversionTokenKind::SimdToken))
                 } else if name == "ScalarToken" {

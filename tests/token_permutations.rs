@@ -31,24 +31,43 @@ fn permutations_include_all_enabled() {
     );
 }
 
-/// On x86_64, if V2 and V3 are runtime-detected (not compile-time), we should
-/// get at least 3 permutations: all enabled, V3 disabled, V2+V3 disabled.
+/// The x86 core tiers form a chain. Each projected permutation disables an
+/// exact suffix of the available, disableable V1, V2, and V3 tiers.
 #[cfg(target_arch = "x86_64")]
 #[test]
-fn x86_has_multiple_permutations() {
-    let report = for_each_token_permutation(CompileTimePolicy::Warn, |_perm| {
-        // Just count permutations
-    });
-    // Even if V2 is compile-time guaranteed, V3 should give us at least 2
-    // (unless both are compile-time guaranteed, in which case warnings tell us)
-    if report.warnings.is_empty() {
-        // No compile-time tokens — should have at least 3 permutations (all, V3 off, V2+V3 off)
-        assert!(
-            report.permutations_run >= 3,
-            "expected >=3 permutations without compile-time tokens, got {}",
-            report.permutations_run
-        );
+fn x86_permutations_cover_exactly_the_core_tier_suffixes() {
+    use archmage::{X64V1Token, X64V2Token, X64V3Token};
+    use std::collections::BTreeSet;
+
+    fn disableable<T: SimdToken>() -> bool {
+        T::summon().is_some() && T::compiled_with() != Some(true)
     }
+
+    let _lock = lock_token_testing();
+    let core_tiers = [
+        (X64V1Token::NAME, disableable::<X64V1Token>()),
+        (X64V2Token::NAME, disableable::<X64V2Token>()),
+        (X64V3Token::NAME, disableable::<X64V3Token>()),
+    ];
+    let eligible = core_tiers
+        .into_iter()
+        .filter_map(|(name, can_disable)| can_disable.then_some(name))
+        .collect::<Vec<_>>();
+    let expected = (0..=eligible.len())
+        .map(|start| eligible[start..].to_vec())
+        .collect::<BTreeSet<_>>();
+
+    let mut actual = BTreeSet::new();
+    let _ = for_each_token_permutation(CompileTimePolicy::Warn, |perm| {
+        actual.insert(
+            core_tiers
+                .into_iter()
+                .map(|(name, _)| name)
+                .filter(|name| perm.disabled.contains(name))
+                .collect::<Vec<_>>(),
+        );
+    });
+    assert_eq!(actual, expected);
 }
 
 /// Verify that disabling actually makes summon() return None.
