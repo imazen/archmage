@@ -14,7 +14,12 @@ mod x86_v3;
 #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 mod x86_v3_delegated;
 
-#[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
+#[cfg(all(
+    target_arch = "x86_64",
+    target_feature = "sse2",
+    feature = "avx512",
+    feature = "w512"
+))]
 mod x86_v4;
 
 // `X64V4xToken`'s base W512 backends, forwarded to `X64V4Token` via
@@ -51,3 +56,6 @@ mod wasm128;
 mod polyfill;
 
 mod scalar;
+
+#[cfg(feature = "w512")]
+mod scalar_w512;

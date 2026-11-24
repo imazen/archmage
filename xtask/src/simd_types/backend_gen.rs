@@ -299,38 +299,6 @@ fn all_u32_types() -> Vec<U32VecType> {
 // Public Entry Point
 // ============================================================================
 
-/// Prepend `#[cfg(feature = "w512")]` before every `impl …Backend/…Convert for`
-/// block in the input so the entire W512 impl section (scalar / V3 polyfill /
-/// NEON / WASM / V4 native) disappears from the build when `w512` is off.
-/// Applied at the call site in `generate_backend_files` rather than threaded
-/// through every per-impl generator.
-///
-/// The caller passes a string composed ONLY of W512 impls. For each impl block
-/// we insert the feature cfg above whatever attribute already precedes it
-/// (usually `#[cfg(target_arch = "…")]`) — rustc ANDs multiple `#[cfg]`s on
-/// the same item, so both conditions must hold for the impl to be included.
-fn gate_w512_impls(src: String) -> String {
-    let mut out = String::with_capacity(src.len() + src.len() / 10);
-    let mut prev_was_target_arch = false;
-    for line in src.split_inclusive('\n') {
-        let trimmed = line.trim_start();
-        if trimmed.starts_with("#[cfg(target_arch") {
-            // Gate above the existing target_arch attribute so both apply.
-            out.push_str("#[cfg(feature = \"w512\")]\n");
-            prev_was_target_arch = true;
-        } else if trimmed.starts_with("impl ") && !prev_was_target_arch {
-            // Bare `impl` with no preceding attribute (e.g. scalar impls).
-            out.push_str("#[cfg(feature = \"w512\")]\n");
-            prev_was_target_arch = false;
-        } else if !trimmed.is_empty() {
-            // Any non-blank, non-attribute line resets the look-behind.
-            prev_was_target_arch = false;
-        }
-        out.push_str(line);
-    }
-    out
-}
-
 /// Generate all backend trait definitions and implementations.
 ///
 /// Returns a map of relative paths (under `magetypes/src/simd/`) to file contents.
@@ -347,8 +315,7 @@ pub fn generate_backend_files() -> BTreeMap<String, String> {
         generate_x86_additional_convert_impls, generate_x86_int_impls,
     };
     use super::backend_gen_w512::{
-        all_w512_types, generate_popcnt_backend_traits, generate_scalar_w512_impls,
-        generate_w512_backend_trait,
+        all_w512_types, generate_popcnt_backend_traits, generate_w512_backend_trait,
     };
 
     let types = all_float_types();
@@ -458,8 +425,11 @@ pub fn generate_backend_files() -> BTreeMap<String, String> {
             + &generate_scalar_i64_impls(&i64_types)
             + &generate_scalar_int_impls(&remaining_int_types)
             + &generate_scalar_convert_impls()
-            + &generate_scalar_additional_convert_impls()
-            + &gate_w512_impls(generate_scalar_w512_impls(&w512_types)),
+            + &generate_scalar_additional_convert_impls(),
+    );
+    files.insert(
+        "impls/scalar_w512.rs".to_string(),
+        generate_scalar_w512_file(&w512_types),
     );
     files.insert(
         "impls/arm_neon.rs".to_string(),
@@ -482,13 +452,11 @@ pub fn generate_backend_files() -> BTreeMap<String, String> {
             + &generate_wasm_additional_convert_impls(),
     );
 
-    // 10b. x86 V4 native AVX-512 implementation (W512 types only). Already
-    // gated by `feature = "avx512"` at the `mod x86_v4` declaration, but we
-    // also need the individual impls to be `w512`-gated because `avx512`
-    // implies `w512` (and we want a single gate scheme).
+    // 10b. x86 V4 native AVX-512 implementation (W512 types only; gated on
+    // `avx512` + `w512` at the `mod x86_v4` declaration in `impls/mod.rs`).
     files.insert(
         "impls/x86_v4.rs".to_string(),
-        gate_w512_impls(generate_x86_v4_impls_file(&w512_types)),
+        generate_x86_v4_impls_file(&w512_types),
     );
 
     // 10b2. `X64V4xToken`'s 12 base W512 backends delegated to `X64V4Token`
@@ -1093,7 +1061,12 @@ fn generate_impls_mod() -> String {
         #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
         mod x86_v3_delegated;
 
-        #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
+        #[cfg(all(
+            target_arch = "x86_64",
+            target_feature = "sse2",
+            feature = "avx512",
+            feature = "w512"
+        ))]
         mod x86_v4;
 
         // `X64V4xToken`'s base W512 backends, forwarded to `X64V4Token` via
@@ -1130,6 +1103,9 @@ fn generate_impls_mod() -> String {
         mod polyfill;
 
         mod scalar;
+
+        #[cfg(feature = "w512")]
+        mod scalar_w512;
     "#}
 }
 
@@ -4859,50 +4835,71 @@ fn generate_scalar_i32_impl(ty: &I32VecType) -> String {
 // Scalar Conversion Implementation Generation
 // ============================================================================
 
+fn generate_scalar_f32_convert_impl(lanes: usize) -> String {
+    let f_array = format!("[f32; {lanes}]");
+    let i_array = format!("[i32; {lanes}]");
+    let trait_name = format!("F32x{lanes}Convert");
+
+    formatdoc! {r#"
+        impl {trait_name} for archmage::ScalarToken {{
+            #[inline(always)]
+            fn bitcast_f32_to_i32(self, a: {f_array}) -> {i_array} {{
+                a.map(|x| x.to_bits() as i32)
+            }}
+
+            #[inline(always)]
+            fn bitcast_i32_to_f32(self, a: {i_array}) -> {f_array} {{
+                a.map(|x| f32::from_bits(x as u32))
+            }}
+
+            #[inline(always)]
+            fn convert_f32_to_i32(self, a: {f_array}) -> {i_array} {{
+                a.map(|x| x as i32)
+            }}
+
+            #[inline(always)]
+            fn convert_f32_to_i32_round(self, a: {f_array}) -> {i_array} {{
+                a.map(|x| crate::scalar::round_f32(x) as i32)
+            }}
+
+            #[inline(always)]
+            fn convert_i32_to_f32(self, a: {i_array}) -> {f_array} {{
+                a.map(|x| x as f32)
+            }}
+        }}
+
+    "#}
+}
+
+fn generate_scalar_w512_file(w512_types: &[super::backend_gen_w512::W512Type]) -> String {
+    let header = formatdoc! {r#"
+        //! W512 backend implementations for ScalarToken (fallback).
+        //!
+        //! All operations are plain array math. Gated on `feature = "w512"` at
+        //! the module declaration in `impls/mod.rs`.
+        //!
+        //! **Auto-generated** by `cargo xtask generate` - do not edit manually.
+
+        #![allow(
+            clippy::needless_range_loop,
+            clippy::identity_op,
+            clippy::collapsible_else_if,
+            clippy::unnecessary_cast
+        )]
+
+        use crate::simd::backends::*;
+
+    "#};
+    header
+        + &generate_scalar_f32_convert_impl(16)
+        + &super::backend_gen_w512::generate_scalar_w512_impls(w512_types)
+}
+
 fn generate_scalar_convert_impls() -> String {
     let mut code = String::new();
 
-    for lanes in [4, 8, 16] {
-        let f_array = format!("[f32; {lanes}]");
-        let i_array = format!("[i32; {lanes}]");
-        let trait_name = format!("F32x{lanes}Convert");
-
-        // F32x16Convert (lanes=16) is W512 and needs a feature gate.
-        let w512_gate = if lanes == 16 {
-            "#[cfg(feature = \"w512\")]\n"
-        } else {
-            ""
-        };
-
-        code.push_str(&formatdoc! {r#"
-            {w512_gate}impl {trait_name} for archmage::ScalarToken {{
-                #[inline(always)]
-                fn bitcast_f32_to_i32(self, a: {f_array}) -> {i_array} {{
-                    a.map(|x| x.to_bits() as i32)
-                }}
-
-                #[inline(always)]
-                fn bitcast_i32_to_f32(self, a: {i_array}) -> {f_array} {{
-                    a.map(|x| f32::from_bits(x as u32))
-                }}
-
-                #[inline(always)]
-                fn convert_f32_to_i32(self, a: {f_array}) -> {i_array} {{
-                    a.map(|x| x as i32)
-                }}
-
-                #[inline(always)]
-                fn convert_f32_to_i32_round(self, a: {f_array}) -> {i_array} {{
-                    a.map(|x| f32_round(x) as i32)
-                }}
-
-                #[inline(always)]
-                fn convert_i32_to_f32(self, a: {i_array}) -> {f_array} {{
-                    a.map(|x| x as f32)
-                }}
-            }}
-
-        "#});
+    for lanes in [4, 8] {
+        code.push_str(&generate_scalar_f32_convert_impl(lanes));
     }
 
     // U32 <-> I32 bitcast impls
