@@ -32,7 +32,7 @@
 //!   `from_context`, `summon`, `macro_export`) and zero raw pointer types
 //!   (`*const` / `*mut`, regardless of whitespace).
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::io::Write;
 use std::process::{Command, Stdio};
 
@@ -159,22 +159,66 @@ const CHILD_PLACEHOLDER: &str = "__DELEGATE_CHILD__";
 const V4_PLACEHOLDER: &str = "__DELEGATE_V4__";
 const ARM_SPLIT_MARKER: &str = "// __DELEGATE_ARM_SPLIT__";
 
-/// Generate `impls/x86_v4_f32_delegated.rs` from the two f32 trait sources.
-pub(crate) fn generate(f32x4_trait_src: &str, f32x8_trait_src: &str) -> String {
-    let specs = [
-        ("F32x4Backend", f32x4_trait_src),
-        ("F32x4Internal", f32x4_trait_src),
-        ("F32x8Backend", f32x8_trait_src),
-        ("F32x8Internal", f32x8_trait_src),
+/// Parsed index of generated backend traits, parsed once per trait source file
+/// and shared across all delegation outputs.
+pub(crate) struct TraitIndex {
+    traits: BTreeMap<String, syn::ItemTrait>,
+}
+
+impl TraitIndex {
+    pub(crate) fn from_files<'a>(sources: impl IntoIterator<Item = &'a str>) -> Self {
+        let mut traits = BTreeMap::new();
+        for src in sources {
+            let file = syn::parse_file(src).expect("generated backend trait source must parse");
+            for item in file.items {
+                if let Item::Trait(t) = item {
+                    let name = t.ident.to_string();
+                    let prev = traits.insert(name.clone(), t);
+                    assert!(
+                        prev.is_none(),
+                        "duplicate trait definition `{name}` across generated backend sources"
+                    );
+                }
+            }
+        }
+        Self { traits }
+    }
+
+    fn get(&self, name: &str) -> &syn::ItemTrait {
+        self.traits
+            .get(name)
+            .unwrap_or_else(|| panic!("trait {name} not found in generated source"))
+    }
+}
+
+/// Specification for one delegation `macro_rules!` definition.
+struct DelegationSpec<'a> {
+    macro_name: &'a str,
+    parent: DelegationParent,
+    trait_names: &'a [&'a str],
+    overrides: &'a [(&'a str, &'a str, &'a str)],
+    default_exceptions: &'a [(&'a str, &'a str)],
+    with_v4_overrides: bool,
+}
+
+/// Generate `impls/x86_v4_f32_delegated.rs` from the pre-parsed trait index.
+pub(crate) fn generate(traits: &TraitIndex) -> String {
+    let trait_names = [
+        "F32x4Backend",
+        "F32x4Internal",
+        "F32x8Backend",
+        "F32x8Internal",
     ];
-    let macro_and_invocations = build_delegation_body(
-        "delegate_v3_f32_backend",
-        V3_PARENT,
-        &specs,
+    let macro_and_invocations = traits.build_delegation_body(
+        &DelegationSpec {
+            macro_name: "delegate_v3_f32_backend",
+            parent: V3_PARENT,
+            trait_names: &trait_names,
+            overrides: OVERRIDES,
+            default_exceptions: DEFAULT_BODY_EXCEPTIONS,
+            with_v4_overrides: true,
+        },
         AVX512_TOKENS,
-        OVERRIDES,
-        DEFAULT_BODY_EXCEPTIONS,
-        true,
     );
 
     let code_body = formatdoc! {r#"
@@ -264,25 +308,16 @@ pub(crate) fn generate(f32x4_trait_src: &str, f32x8_trait_src: &str) -> String {
 ///
 /// All macro arms are derived from the generated `backends/*.rs` sources, so a
 /// new method cannot fall back to its scalar default body (issue #60).
-pub(crate) fn generate_v3_delegated(
-    f32x4_trait_src: &str,
-    f32x8_trait_src: &str,
-    narrow_specs: &[(String, String)],
-) -> String {
-    let mut all_specs: Vec<(&str, &str)> = Vec::with_capacity(4 + narrow_specs.len());
-    all_specs.extend([
-        ("F32x4Backend", f32x4_trait_src),
-        ("F32x4Internal", f32x4_trait_src),
-        ("F32x8Backend", f32x8_trait_src),
-        ("F32x8Internal", f32x8_trait_src),
+pub(crate) fn generate_v3_delegated(traits: &TraitIndex, narrow_names: &[&str]) -> String {
+    let mut all_names: Vec<&str> = Vec::with_capacity(4 + narrow_names.len());
+    all_names.extend([
+        "F32x4Backend",
+        "F32x4Internal",
+        "F32x8Backend",
+        "F32x8Internal",
     ]);
-    all_specs.extend(
-        narrow_specs
-            .iter()
-            .map(|(name, src)| (name.as_str(), src.as_str())),
-    );
+    all_names.extend_from_slice(narrow_names);
 
-    let narrow_names: Vec<&str> = narrow_specs.iter().map(|(n, _)| n.as_str()).collect();
     let v3_only_tokens: Vec<DelegatedToken> = V3_ONLY_TOKENS
         .iter()
         .map(|&ident| DelegatedToken {
@@ -291,27 +326,27 @@ pub(crate) fn generate_v3_delegated(
         })
         .collect();
 
-    let macro_def = build_delegation_macro_arms(
-        "delegate_v3_backend",
-        V3_PARENT,
-        &all_specs,
-        &[],
-        DEFAULT_BODY_EXCEPTIONS,
-        false,
-    );
+    let macro_def = traits.build_delegation_macro_arms(&DelegationSpec {
+        macro_name: "delegate_v3_backend",
+        parent: V3_PARENT,
+        trait_names: &all_names,
+        overrides: &[],
+        default_exceptions: DEFAULT_BODY_EXCEPTIONS,
+        with_v4_overrides: false,
+    });
 
     let mut invocations = String::new();
-    let v3_only_total = v3_only_tokens.len() * all_specs.len();
+    let v3_only_total = v3_only_tokens.len() * all_names.len();
     invocations.push_str(&format!(
         "// Pure-V3 extension tokens ({} token(s) × {} traits = {v3_only_total} impls, no `avx512` feature required).\n",
         v3_only_tokens.len(),
-        all_specs.len(),
+        all_names.len(),
     ));
     validate_tokens(&v3_only_tokens);
     for token in &v3_only_tokens {
         let ident = token.ident;
         invocations.push_str(&format!("\n// archmage::{ident}\n"));
-        for &(trait_name, _) in &all_specs {
+        for &trait_name in &all_names {
             invocations.push_str(&format!("delegate_v3_backend!({trait_name} => {ident});\n"));
         }
     }
@@ -327,7 +362,7 @@ pub(crate) fn generate_v3_delegated(
     for token in AVX512_TOKENS {
         let ident = token.ident;
         invocations.push_str(&format!("\n// archmage::{ident}\n"));
-        for &trait_name in &narrow_names {
+        for &trait_name in narrow_names {
             invocations.push_str(&format!(
                 "#[cfg(feature = \"avx512\")]\ndelegate_v3_backend!({trait_name} => {ident});\n"
             ));
@@ -396,20 +431,17 @@ pub(crate) fn generate_v3_delegated(
 ///
 /// Popcnt extension backends are NOT delegated: they exist natively on
 /// `X64V4xToken` (VPOPCNTDQ + BITALG) in `x86_v4.rs`.
-pub(crate) fn generate_v4_w512_delegated(w512_specs: &[(String, String)]) -> String {
-    let specs: Vec<(&str, &str)> = w512_specs
-        .iter()
-        .map(|(name, src)| (name.as_str(), src.as_str()))
-        .collect();
-
-    let macro_and_invocations = build_delegation_body(
-        "delegate_v4_w512_backend",
-        V4_PARENT,
-        &specs,
+pub(crate) fn generate_v4_w512_delegated(traits: &TraitIndex, w512_names: &[&str]) -> String {
+    let macro_and_invocations = traits.build_delegation_body(
+        &DelegationSpec {
+            macro_name: "delegate_v4_w512_backend",
+            parent: V4_PARENT,
+            trait_names: w512_names,
+            overrides: &[],
+            default_exceptions: &[],
+            with_v4_overrides: false,
+        },
         V4_W512_DELEGATED_TOKENS,
-        &[],
-        &[],
-        false,
     );
 
     let code_body = formatdoc! {r#"
@@ -463,126 +495,116 @@ pub(crate) fn generate_v4_w512_delegated(w512_specs: &[(String, String)]) -> Str
     "#}
 }
 
-fn build_delegation_macro_arms(
-    macro_name: &str,
-    parent: DelegationParent,
-    specs: &[(&str, &str)],
-    overrides: &[(&str, &str, &str)],
-    default_exceptions: &[(&str, &str)],
-    with_v4_overrides: bool,
-) -> String {
-    validate_specs_and_overrides(specs, overrides, default_exceptions, with_v4_overrides);
-
-    let mut used_overrides: BTreeSet<(&str, &str)> = BTreeSet::new();
-    let mut used_exceptions: BTreeSet<(&str, &str)> = BTreeSet::new();
-    let mut raw_impls: Vec<(&str, String)> = Vec::with_capacity(specs.len());
-
-    for (trait_name, src) in specs {
-        let trait_item = find_trait(src, trait_name);
-        let raw_impl = delegating_impl_template(
-            trait_name,
-            parent,
-            &trait_item,
-            overrides,
-            default_exceptions,
-            &mut used_overrides,
-            &mut used_exceptions,
+impl TraitIndex {
+    fn build_delegation_macro_arms(&self, spec: &DelegationSpec<'_>) -> String {
+        validate_specs_and_overrides(
+            spec.trait_names,
+            spec.overrides,
+            spec.default_exceptions,
+            spec.with_v4_overrides,
         );
-        raw_impls.push((trait_name, raw_impl));
-    }
 
-    // Completeness check: every configured override and default-body exception
-    // must match an actual trait method.
-    for &(ov_trait, ov_method, ov_helper) in overrides {
-        assert!(
-            used_overrides.contains(&(ov_trait, ov_method)),
-            "unmatched override ({ov_trait}::{ov_method} -> {ov_helper}): trait or method not found"
-        );
-    }
-    for &(ex_trait, ex_method) in default_exceptions {
-        assert!(
-            used_exceptions.contains(&(ex_trait, ex_method)),
-            "unmatched default-body exception ({ex_trait}::{ex_method}): trait or method not found"
-        );
-    }
+        let mut used_overrides: BTreeSet<(&str, &str)> = BTreeSet::new();
+        let mut used_exceptions: BTreeSet<(&str, &str)> = BTreeSet::new();
+        let mut raw_impls: Vec<(&str, String)> = Vec::with_capacity(spec.trait_names.len());
 
-    let formatted_impls = format_impl_templates(&raw_impls);
-
-    let mut out = String::new();
-    out.push_str(&format!("macro_rules! {macro_name} {{\n"));
-    for ((trait_name, _), formatted) in raw_impls.iter().zip(formatted_impls.iter()) {
-        let arm_body = formatted
-            .replace(CHILD_PLACEHOLDER, "$child")
-            .replace(V4_PLACEHOLDER, "$v4");
-        if with_v4_overrides {
-            out.push_str(&format!(
-                "    ({trait_name} => $child:ident, v4 = $v4:ident) => {{\n"
-            ));
-        } else {
-            out.push_str(&format!("    ({trait_name} => $child:ident) => {{\n"));
+        for &trait_name in spec.trait_names {
+            let trait_item = self.get(trait_name);
+            let raw_impl = delegating_impl_template(
+                trait_name,
+                spec.parent,
+                trait_item,
+                spec.overrides,
+                spec.default_exceptions,
+                &mut used_overrides,
+                &mut used_exceptions,
+            );
+            raw_impls.push((trait_name, raw_impl));
         }
-        for line in arm_body.lines() {
-            if line.is_empty() {
-                out.push('\n');
-            } else {
-                out.push_str("        ");
-                out.push_str(line);
-                out.push('\n');
-            }
+
+        // Completeness check: every configured override and default-body exception
+        // must match an actual trait method.
+        for &(ov_trait, ov_method, ov_helper) in spec.overrides {
+            assert!(
+                used_overrides.contains(&(ov_trait, ov_method)),
+                "unmatched override ({ov_trait}::{ov_method} -> {ov_helper}): trait or method not found"
+            );
         }
-        out.push_str("    };\n");
-    }
-    out.push_str("}\n");
-    out
-}
+        for &(ex_trait, ex_method) in spec.default_exceptions {
+            assert!(
+                used_exceptions.contains(&(ex_trait, ex_method)),
+                "unmatched default-body exception ({ex_trait}::{ex_method}): trait or method not found"
+            );
+        }
 
-fn build_delegation_body(
-    macro_name: &str,
-    parent: DelegationParent,
-    specs: &[(&str, &str)],
-    tokens: &[DelegatedToken],
-    overrides: &[(&str, &str, &str)],
-    default_exceptions: &[(&str, &str)],
-    with_v4_overrides: bool,
-) -> String {
-    validate_tokens(tokens);
-    let mut out = build_delegation_macro_arms(
-        macro_name,
-        parent,
-        specs,
-        overrides,
-        default_exceptions,
-        with_v4_overrides,
-    );
-    out.push('\n');
+        let formatted_impls = format_impl_templates(&raw_impls);
 
-    let total_impls = tokens.len() * specs.len();
-    let token_word = if tokens.len() == 1 { "token" } else { "tokens" };
-    out.push_str(&format!(
-        "// Concrete trait implementations ({} {token_word} × {} traits = {total_impls} impls).\n",
-        tokens.len(),
-        specs.len(),
-    ));
-    for token in tokens {
-        let ident = token.ident;
-        if with_v4_overrides {
-            let tag = token.v4_mode.as_macro_tag();
-            out.push_str(&format!("\n// archmage::{ident} (v4 = {tag})\n"));
-            for (trait_name, _) in specs {
+        let mut out = String::new();
+        out.push_str(&format!("macro_rules! {} {{\n", spec.macro_name));
+        for ((trait_name, _), formatted) in raw_impls.iter().zip(formatted_impls.iter()) {
+            let arm_body = formatted
+                .replace(CHILD_PLACEHOLDER, "$child")
+                .replace(V4_PLACEHOLDER, "$v4");
+            if spec.with_v4_overrides {
                 out.push_str(&format!(
-                    "{macro_name}!({trait_name} => {ident}, v4 = {tag});\n"
+                    "    ({trait_name} => $child:ident, v4 = $v4:ident) => {{\n"
                 ));
+            } else {
+                out.push_str(&format!("    ({trait_name} => $child:ident) => {{\n"));
             }
-        } else {
-            out.push_str(&format!("\n// archmage::{ident}\n"));
-            for (trait_name, _) in specs {
-                out.push_str(&format!("{macro_name}!({trait_name} => {ident});\n"));
+            for line in arm_body.lines() {
+                if line.is_empty() {
+                    out.push('\n');
+                } else {
+                    out.push_str("        ");
+                    out.push_str(line);
+                    out.push('\n');
+                }
             }
+            out.push_str("    };\n");
         }
+        out.push_str("}\n");
+        out
     }
 
-    assert_source_audit_invariants(&out);
-    out
+    fn build_delegation_body(
+        &self,
+        spec: &DelegationSpec<'_>,
+        tokens: &[DelegatedToken],
+    ) -> String {
+        validate_tokens(tokens);
+        let mut out = self.build_delegation_macro_arms(spec);
+        out.push('\n');
+
+        let macro_name = spec.macro_name;
+        let total_impls = tokens.len() * spec.trait_names.len();
+        let token_word = if tokens.len() == 1 { "token" } else { "tokens" };
+        out.push_str(&format!(
+            "// Concrete trait implementations ({} {token_word} × {} traits = {total_impls} impls).\n",
+            tokens.len(),
+            spec.trait_names.len(),
+        ));
+        for token in tokens {
+            let ident = token.ident;
+            if spec.with_v4_overrides {
+                let tag = token.v4_mode.as_macro_tag();
+                out.push_str(&format!("\n// archmage::{ident} (v4 = {tag})\n"));
+                for &trait_name in spec.trait_names {
+                    out.push_str(&format!(
+                        "{macro_name}!({trait_name} => {ident}, v4 = {tag});\n"
+                    ));
+                }
+            } else {
+                out.push_str(&format!("\n// archmage::{ident}\n"));
+                for &trait_name in spec.trait_names {
+                    out.push_str(&format!("{macro_name}!({trait_name} => {ident});\n"));
+                }
+            }
+        }
+
+        assert_source_audit_invariants(&out);
+        out
+    }
 }
 
 fn validate_tokens(tokens: &[DelegatedToken]) {
@@ -610,13 +632,13 @@ fn validate_tokens(tokens: &[DelegatedToken]) {
 }
 
 fn validate_specs_and_overrides(
-    specs: &[(&str, &str)],
+    trait_names: &[&str],
     overrides: &[(&str, &str, &str)],
     default_exceptions: &[(&str, &str)],
     with_v4_overrides: bool,
 ) {
     assert!(
-        !specs.is_empty(),
+        !trait_names.is_empty(),
         "delegation trait spec list must not be empty"
     );
     if !with_v4_overrides {
@@ -627,7 +649,7 @@ fn validate_specs_and_overrides(
     }
 
     let mut seen_traits = BTreeSet::new();
-    for &(trait_name, _) in specs {
+    for &trait_name in trait_names {
         assert!(
             !trait_name.is_empty(),
             "delegation trait name must not be empty"
@@ -768,17 +790,6 @@ fn assert_source_audit_invariants(source: &str) {
         prev_star = false;
         i += 1;
     }
-}
-
-fn find_trait(src: &str, name: &str) -> syn::ItemTrait {
-    let file = syn::parse_file(src).expect("generated backend trait source must parse");
-    file.items
-        .into_iter()
-        .find_map(|item| match item {
-            Item::Trait(t) if t.ident == name => Some(t),
-            _ => None,
-        })
-        .unwrap_or_else(|| panic!("trait {name} not found in generated source"))
 }
 
 fn delegating_impl_template<'a>(
@@ -996,16 +1007,23 @@ mod tests {
         },
     ];
 
+    fn sample_index() -> TraitIndex {
+        TraitIndex::from_files([SAMPLE_TRAIT])
+    }
+
     #[test]
     fn generated_macros_emit_exact_concrete_invocations_and_pass_audit() {
-        let with_ov = build_delegation_body(
-            "delegate_demo_f32",
-            V3_PARENT,
-            &[("DemoBackend", SAMPLE_TRAIT)],
+        let index = sample_index();
+        let with_ov = index.build_delegation_body(
+            &DelegationSpec {
+                macro_name: "delegate_demo_f32",
+                parent: V3_PARENT,
+                trait_names: &["DemoBackend"],
+                overrides: &[("DemoBackend", "min", "min_demo_v4")],
+                default_exceptions: &[("DemoBackend", "default_helper")],
+                with_v4_overrides: true,
+            },
             SAMPLE_TOKENS,
-            &[("DemoBackend", "min", "min_demo_v4")],
-            &[("DemoBackend", "default_helper")],
-            true,
         );
         assert!(with_ov.contains("macro_rules! delegate_demo_f32 {"));
         assert!(with_ov.contains("impl DemoBackend for archmage::$child {"));
@@ -1015,14 +1033,16 @@ mod tests {
         assert!(with_ov.contains("delegate_demo_f32!(DemoBackend => X64V4Token, v4 = identity);"));
         assert!(with_ov.contains("delegate_demo_f32!(DemoBackend => X64V4xToken, v4 = v4);"));
 
-        let without_ov = build_delegation_body(
-            "delegate_demo_narrow",
-            V3_PARENT,
-            &[("DemoBackend", SAMPLE_TRAIT)],
+        let without_ov = index.build_delegation_body(
+            &DelegationSpec {
+                macro_name: "delegate_demo_narrow",
+                parent: V3_PARENT,
+                trait_names: &["DemoBackend"],
+                overrides: &[],
+                default_exceptions: &[],
+                with_v4_overrides: false,
+            },
             SAMPLE_TOKENS,
-            &[],
-            &[],
-            false,
         );
         assert!(without_ov.contains("macro_rules! delegate_demo_narrow {"));
         assert!(without_ov.contains("(DemoBackend => $child:ident) => {"));
@@ -1030,14 +1050,16 @@ mod tests {
         assert!(without_ov.contains("delegate_demo_narrow!(DemoBackend => X64V4Token);"));
         assert!(without_ov.contains("delegate_demo_narrow!(DemoBackend => X64V4xToken);"));
 
-        let v4_parent = build_delegation_body(
-            "delegate_demo_v4",
-            V4_PARENT,
-            &[("DemoBackend", SAMPLE_TRAIT)],
+        let v4_parent = index.build_delegation_body(
+            &DelegationSpec {
+                macro_name: "delegate_demo_v4",
+                parent: V4_PARENT,
+                trait_names: &["DemoBackend"],
+                overrides: &[],
+                default_exceptions: &[],
+                with_v4_overrides: false,
+            },
             V4_W512_DELEGATED_TOKENS,
-            &[],
-            &[],
-            false,
         );
         assert!(v4_parent.contains("macro_rules! delegate_demo_v4 {"));
         assert!(v4_parent.contains("<archmage::X64V4Token as DemoBackend>::Repr"));
@@ -1048,79 +1070,95 @@ mod tests {
     #[test]
     #[should_panic(expected = "duplicate override")]
     fn duplicate_override_panics() {
-        let _ = build_delegation_body(
-            "delegate_demo",
-            V3_PARENT,
-            &[("DemoBackend", SAMPLE_TRAIT)],
+        let index = sample_index();
+        let _ = index.build_delegation_body(
+            &DelegationSpec {
+                macro_name: "delegate_demo",
+                parent: V3_PARENT,
+                trait_names: &["DemoBackend"],
+                overrides: &[
+                    ("DemoBackend", "min", "min_a"),
+                    ("DemoBackend", "min", "min_b"),
+                ],
+                default_exceptions: &[],
+                with_v4_overrides: true,
+            },
             SAMPLE_TOKENS,
-            &[
-                ("DemoBackend", "min", "min_a"),
-                ("DemoBackend", "min", "min_b"),
-            ],
-            &[],
-            true,
         );
     }
 
     #[test]
     #[should_panic(expected = "unmatched override")]
     fn unknown_override_panics() {
-        let _ = build_delegation_body(
-            "delegate_demo",
-            V3_PARENT,
-            &[("DemoBackend", SAMPLE_TRAIT)],
+        let index = sample_index();
+        let _ = index.build_delegation_body(
+            &DelegationSpec {
+                macro_name: "delegate_demo",
+                parent: V3_PARENT,
+                trait_names: &["DemoBackend"],
+                overrides: &[("DemoBackend", "nonexistent_method", "helper_v4")],
+                default_exceptions: &[],
+                with_v4_overrides: true,
+            },
             SAMPLE_TOKENS,
-            &[("DemoBackend", "nonexistent_method", "helper_v4")],
-            &[],
-            true,
         );
     }
 
     #[test]
     #[should_panic(expected = "has no default body")]
     fn default_exception_without_default_body_panics() {
-        let _ = build_delegation_body(
-            "delegate_demo",
-            V3_PARENT,
-            &[("DemoBackend", SAMPLE_TRAIT)],
+        let index = sample_index();
+        let _ = index.build_delegation_body(
+            &DelegationSpec {
+                macro_name: "delegate_demo",
+                parent: V3_PARENT,
+                trait_names: &["DemoBackend"],
+                overrides: &[],
+                default_exceptions: &[("DemoBackend", "splat")],
+                with_v4_overrides: false,
+            },
             SAMPLE_TOKENS,
-            &[],
-            &[("DemoBackend", "splat")],
-            false,
         );
     }
 
     #[test]
     #[should_panic(expected = "unmatched default-body exception")]
     fn unknown_default_exception_panics() {
-        let _ = build_delegation_body(
-            "delegate_demo",
-            V3_PARENT,
-            &[("DemoBackend", SAMPLE_TRAIT)],
+        let index = sample_index();
+        let _ = index.build_delegation_body(
+            &DelegationSpec {
+                macro_name: "delegate_demo",
+                parent: V3_PARENT,
+                trait_names: &["DemoBackend"],
+                overrides: &[],
+                default_exceptions: &[("DemoBackend", "no_such_default")],
+                with_v4_overrides: false,
+            },
             SAMPLE_TOKENS,
-            &[],
-            &[("DemoBackend", "no_such_default")],
-            false,
         );
     }
 
     #[test]
     #[should_panic(expected = "duplicate trait")]
     fn duplicate_trait_spec_panics() {
-        let _ = build_delegation_body(
-            "delegate_demo",
-            V3_PARENT,
-            &[("DemoBackend", SAMPLE_TRAIT), ("DemoBackend", SAMPLE_TRAIT)],
+        let index = sample_index();
+        let _ = index.build_delegation_body(
+            &DelegationSpec {
+                macro_name: "delegate_demo",
+                parent: V3_PARENT,
+                trait_names: &["DemoBackend", "DemoBackend"],
+                overrides: &[],
+                default_exceptions: &[],
+                with_v4_overrides: false,
+            },
             SAMPLE_TOKENS,
-            &[],
-            &[],
-            false,
         );
     }
 
     #[test]
     #[should_panic(expected = "duplicate token")]
     fn duplicate_token_panics() {
+        let index = sample_index();
         let dup = &[
             DelegatedToken {
                 ident: "X64V4Token",
@@ -1131,14 +1169,16 @@ mod tests {
                 v4_mode: V4ProofMode::ViaV4,
             },
         ];
-        let _ = build_delegation_body(
-            "delegate_demo",
-            V3_PARENT,
-            &[("DemoBackend", SAMPLE_TRAIT)],
+        let _ = index.build_delegation_body(
+            &DelegationSpec {
+                macro_name: "delegate_demo",
+                parent: V3_PARENT,
+                trait_names: &["DemoBackend"],
+                overrides: &[],
+                default_exceptions: &[],
+                with_v4_overrides: false,
+            },
             dup,
-            &[],
-            &[],
-            false,
         );
     }
 

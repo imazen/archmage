@@ -459,33 +459,33 @@ pub fn generate_backend_files() -> BTreeMap<String, String> {
         generate_x86_v4_impls_file(&w512_types),
     );
 
+    // Parse every generated `backends/*.rs` file once for all three x86
+    // delegation generators below.
+    let trait_index = super::v4_delegation_gen::TraitIndex::from_files(
+        files
+            .iter()
+            .filter(|(path, _)| path.starts_with("backends/"))
+            .map(|(_, src)| src.as_str()),
+    );
+    let backend_trait_name =
+        |name: &str| format!("{}Backend", super::generic_gen::uppercase_first(name));
+
     // 10b2. `X64V4xToken`'s 12 base W512 backends delegated to `X64V4Token`
     // via `self.v4()`. `X64V4xToken` retains only its native VPOPCNTDQ/BITALG
     // popcnt extension impls in `x86_v4.rs`.
     {
-        let mut w512_specs: Vec<(String, String)> = vec![
-            (
-                "F32x16Backend".to_string(),
-                files["backends/f32x16.rs"].clone(),
-            ),
-            (
-                "F32x16Internal".to_string(),
-                files["backends/f32x16.rs"].clone(),
-            ),
-        ];
+        let mut w512_names: Vec<String> =
+            vec!["F32x16Backend".to_string(), "F32x16Internal".to_string()];
         for name in [
             "f64x8", "i8x64", "u8x64", "i16x32", "u16x32", "i32x16", "u32x16", "i64x8", "u64x8",
         ] {
-            let trait_name = format!("{}Backend", name[..1].to_uppercase() + &name[1..]);
-            w512_specs.push((trait_name, files[&format!("backends/{name}.rs")].clone()));
+            w512_names.push(backend_trait_name(name));
         }
-        w512_specs.push((
-            "F32x16Convert".to_string(),
-            files["backends/convert.rs"].clone(),
-        ));
+        w512_names.push("F32x16Convert".to_string());
+        let w512_refs: Vec<&str> = w512_names.iter().map(String::as_str).collect();
         files.insert(
             "impls/x86_v4_w512_delegated.rs".to_string(),
-            super::v4_delegation_gen::generate_v4_w512_delegated(&w512_specs),
+            super::v4_delegation_gen::generate_v4_w512_delegated(&trait_index, &w512_refs),
         );
     }
 
@@ -494,10 +494,7 @@ pub fn generate_backend_files() -> BTreeMap<String, String> {
     // left to its scalar default body.
     files.insert(
         "impls/x86_v4_f32_delegated.rs".to_string(),
-        super::v4_delegation_gen::generate(
-            &files["backends/f32x4.rs"],
-            &files["backends/f32x8.rs"],
-        ),
+        super::v4_delegation_gen::generate(&trait_index),
     );
 
     // 10d. Every other W128/W256 backend — f64, i8/i16/i32/i64, u8/u16/u32/u64
@@ -507,42 +504,35 @@ pub fn generate_backend_files() -> BTreeMap<String, String> {
     // Popcnt extension backends are excluded: they exist only natively on
     // V4x (AVX-512 VPOPCNTDQ) and have no V3 impls to forward to.
     {
-        let mut specs: Vec<(String, String)> = Vec::new();
-        for name in [
+        let mut narrow_names: Vec<String> = [
             "f64x2", "f64x4", "i8x16", "i8x32", "i16x8", "i16x16", "i32x4", "i32x8", "i64x2",
             "i64x4", "u8x16", "u8x32", "u16x8", "u16x16", "u32x4", "u32x8", "u64x2", "u64x4",
-        ] {
-            // `f64x4` → `F64x4Backend`, `u8x16` → `U8x16Backend`, …
-            let trait_name = format!("{}Backend", name[..1].to_uppercase() + &name[1..]);
-            specs.push((trait_name, files[&format!("backends/{name}.rs")].clone()));
-        }
-        for name in [
-            "F32x4Convert",
-            "F32x8Convert",
-            "U32x4Bitcast",
-            "U32x8Bitcast",
-            "I64x2Bitcast",
-            "I64x4Bitcast",
-        ] {
-            specs.push((name.to_string(), files["backends/convert.rs"].clone()));
-        }
-        for name in [
-            "I8x16Bitcast",
-            "I8x32Bitcast",
-            "I16x8Bitcast",
-            "I16x16Bitcast",
-            "U64x2Bitcast",
-            "U64x4Bitcast",
-        ] {
-            specs.push((name.to_string(), files["backends/convert_int.rs"].clone()));
-        }
+        ]
+        .into_iter()
+        .map(backend_trait_name)
+        .collect();
+        narrow_names.extend(
+            [
+                "F32x4Convert",
+                "F32x8Convert",
+                "U32x4Bitcast",
+                "U32x8Bitcast",
+                "I64x2Bitcast",
+                "I64x4Bitcast",
+                "I8x16Bitcast",
+                "I8x32Bitcast",
+                "I16x8Bitcast",
+                "I16x16Bitcast",
+                "U64x2Bitcast",
+                "U64x4Bitcast",
+            ]
+            .into_iter()
+            .map(String::from),
+        );
+        let narrow_refs: Vec<&str> = narrow_names.iter().map(String::as_str).collect();
         files.insert(
             "impls/x86_v3_delegated.rs".to_string(),
-            super::v4_delegation_gen::generate_v3_delegated(
-                &files["backends/f32x4.rs"],
-                &files["backends/f32x8.rs"],
-                &specs,
-            ),
+            super::v4_delegation_gen::generate_v3_delegated(&trait_index, &narrow_refs),
         );
     }
 
