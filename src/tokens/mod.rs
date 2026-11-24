@@ -177,6 +177,8 @@ pub trait SimdToken: Sealed + Copy + Clone + Send + Sync + 'static {
 
 // All token types, traits, and aliases are generated from token-registry.toml.
 mod generated;
+#[cfg(feature = "std")]
+pub(crate) use generated::testing_slots::build_token_slots;
 pub use generated::*;
 
 /// Scalar fallback token — always available on all platforms.

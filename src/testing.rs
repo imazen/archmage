@@ -177,7 +177,7 @@ impl core::fmt::Display for PermutationReport {
 // Internal machinery
 // ---------------------------------------------------------------------------
 
-struct TokenSlot {
+pub(crate) struct TokenSlot {
     name: &'static str,
     /// RUSTFLAGS to disable these features (e.g., `"-Ctarget-feature=-avx2,-fma,..."`).
     disable_flags: &'static str,
@@ -188,72 +188,28 @@ struct TokenSlot {
     check_available: fn() -> bool,
 }
 
-/// Builds a `TokenSlot` from a token type. Generates a named `fn` for the
-/// availability check to avoid closure-to-fn-pointer coercion issues.
-#[allow(unused_macros)]
-macro_rules! token_slot {
-    ($token:ty, $desc:expr) => {{
-        fn check_avail() -> bool {
-            <$token as crate::SimdToken>::summon().is_some()
+impl TokenSlot {
+    #[allow(dead_code)] // Unused on targets without generated token slots (e.g., i686, armv7).
+    pub(crate) fn new<T: crate::SimdToken>(
+        descendants: &'static [usize],
+        disable: fn(bool) -> Result<(), CompileTimeGuaranteedError>,
+    ) -> Self {
+        fn check_avail<T: crate::SimdToken>() -> bool {
+            T::summon().is_some()
         }
-        TokenSlot {
-            name: <$token as crate::SimdToken>::NAME,
-            disable_flags: <$token as crate::SimdToken>::DISABLE_TARGET_FEATURES,
-            descendants: $desc,
-            disable: <$token>::dangerously_disable_token_process_wide,
-            compiled_with: <$token as crate::SimdToken>::compiled_with,
-            check_available: check_avail,
+        Self {
+            name: T::NAME,
+            disable_flags: T::DISABLE_TARGET_FEATURES,
+            descendants,
+            disable,
+            compiled_with: T::compiled_with,
+            check_available: check_avail::<T>,
         }
-    }};
+    }
 }
 
 fn build_token_slots() -> Vec<TokenSlot> {
-    #[allow(unused_mut)]
-    let mut slots = Vec::new();
-
-    // x86/x86_64 hierarchy:
-    //   V1(0) → V2(1) → Crypto(2) → V3Crypto(4) → V3GfniCrypto(5) → V4x(7)
-    //                  → V3(3)     → V3Crypto(4)
-    //                              → V4(6) → V4x(7)
-    //                                      → Fp16(8)
-    //           Crypto(2)          → V4(6)
-    #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
-    {
-        slots.push(token_slot!(crate::X64V1Token, &[1, 2, 3, 4, 5, 6, 7, 8, 9]));
-        slots.push(token_slot!(crate::X64V2Token, &[2, 3, 4, 5, 6, 7, 8, 9]));
-        slots.push(token_slot!(crate::X64CryptoToken, &[4, 5, 6, 7, 8, 9]));
-        slots.push(token_slot!(crate::X64V3Token, &[4, 5, 6, 7, 8, 9]));
-        slots.push(token_slot!(crate::X64V3CryptoToken, &[5, 7, 9]));
-        slots.push(token_slot!(crate::X64V3GfniCryptoToken, &[7, 9]));
-        slots.push(token_slot!(crate::X64V4Token, &[7, 8]));
-        slots.push(token_slot!(crate::X64V4xToken, &[]));
-        slots.push(token_slot!(crate::Avx512Fp16Token, &[]));
-        slots.push(token_slot!(crate::X64V3VnniToken, &[]));
-    }
-
-    // AArch64 hierarchy:
-    //   Neon(0) → NeonAes(1), NeonSha3(2), NeonCrc(3), Arm64V2(4) → Arm64V3(5)
-    #[cfg(target_arch = "aarch64")]
-    {
-        slots.push(token_slot!(crate::NeonToken, &[1, 2, 3, 4, 5]));
-        slots.push(token_slot!(crate::NeonAesToken, &[]));
-        slots.push(token_slot!(crate::NeonSha3Token, &[]));
-        slots.push(token_slot!(crate::NeonCrcToken, &[]));
-        slots.push(token_slot!(crate::Arm64V2Token, &[5]));
-        slots.push(token_slot!(crate::Arm64V3Token, &[]));
-    }
-
-    // WASM module features are fixed, but testable_dispatch can suppress
-    // selection. Disabling SIMD128 also disables its relaxed descendant.
-    #[cfg(target_arch = "wasm32")]
-    {
-        slots.push(token_slot!(crate::Wasm128Token, &[1]));
-        slots.push(token_slot!(crate::Wasm128RelaxedToken, &[]));
-    }
-
-    // ScalarToken is always available and does not contribute to permutations.
-
-    slots
+    crate::tokens::build_token_slots()
 }
 
 /// Generate all downward-closed subsets of `candidates` within the hierarchy.
