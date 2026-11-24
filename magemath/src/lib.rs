@@ -58,6 +58,25 @@ pub enum Execution {
     Caller,
 }
 
+impl Execution {
+    #[inline(always)]
+    pub(crate) const fn encode(self) -> u128 {
+        match self {
+            Self::Upgrade => 0,
+            Self::Caller => 1,
+        }
+    }
+
+    #[inline(always)]
+    pub(crate) const fn decode(raw: u128) -> Option<Self> {
+        match raw {
+            0 => Some(Self::Upgrade),
+            1 => Some(Self::Caller),
+            _ => None,
+        }
+    }
+}
+
 /// Whether accepted results must agree bit for bit across backends.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 #[non_exhaustive]
@@ -69,6 +88,25 @@ pub enum Portability {
     /// Native fused or separate graph; result bits and range rejection may vary.
     /// `Highp` also inherits `std` platform special-value classification differences.
     BackendDependent,
+}
+
+impl Portability {
+    #[inline(always)]
+    pub(crate) const fn encode(self) -> u128 {
+        match self {
+            Self::BitExact => 0,
+            Self::BackendDependent => 1,
+        }
+    }
+
+    #[inline(always)]
+    pub(crate) const fn decode(raw: u128) -> Option<Self> {
+        match raw {
+            0 => Some(Self::BitExact),
+            1 => Some(Self::BackendDependent),
+            _ => None,
+        }
+    }
 }
 
 /// How nonzero subnormal inputs (`0 < |x| < f32::MIN_POSITIVE`) are handled.
@@ -86,6 +124,27 @@ pub enum Subnormals {
     /// Accurately rescale nonzero subnormals (`* 2^23` / `* 2^24` with
     /// exponent adjustment) before evaluation (`.admit_subnormals()`).
     Normalize,
+}
+
+impl Subnormals {
+    #[inline(always)]
+    pub(crate) const fn encode(self) -> u128 {
+        match self {
+            Self::Reject => 0,
+            Self::FlushOrClamp => 1,
+            Self::Normalize => 2,
+        }
+    }
+
+    #[inline(always)]
+    pub(crate) const fn decode(raw: u128) -> Option<Self> {
+        match raw {
+            0 => Some(Self::Reject),
+            1 => Some(Self::FlushOrClamp),
+            2 => Some(Self::Normalize),
+            _ => None,
+        }
+    }
 }
 
 /// How out-of-bounds inputs and intermediate ranges are handled at runtime.
@@ -110,6 +169,29 @@ pub enum Validation {
     /// numerical results for NaN inputs. Finite workloads can avoid saving and
     /// restoring a NaN mask (`.clamp_finite()`).
     ClampFinite,
+}
+
+impl Validation {
+    #[inline(always)]
+    pub(crate) const fn encode(self) -> u128 {
+        match self {
+            Self::Checked => 0,
+            Self::ClampOutOfBounds => 1,
+            Self::AssumeValid => 2,
+            Self::ClampFinite => 3,
+        }
+    }
+
+    #[inline(always)]
+    pub(crate) const fn decode(raw: u128) -> Option<Self> {
+        match raw {
+            0 => Some(Self::Checked),
+            1 => Some(Self::ClampOutOfBounds),
+            2 => Some(Self::AssumeValid),
+            3 => Some(Self::ClampFinite),
+            _ => None,
+        }
+    }
 }
 
 /// Failure of a slice operation: the reason and the first input that caused it.

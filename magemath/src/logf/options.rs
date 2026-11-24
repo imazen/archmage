@@ -3,7 +3,7 @@
 
 use crate::{
     Execution, Portability, Subnormals, Validation,
-    bf16::{MAX_BF16, ceil_bf16, decode_bf16_finite, expand_bf16, floor_bf16},
+    bf16::{MAX_BF16, ceil_bf16, decode_optional_bf16_range, expand_bf16, floor_bf16},
 };
 
 // Uniform u128 layout:
@@ -464,36 +464,17 @@ impl LogfOptions {
             LogfDomain::SingleOctave => 6,
             LogfDomain::AllFloats => 7,
         };
-        let sub: u128 = match self.subnormals {
-            Subnormals::Reject => 0,
-            Subnormals::FlushOrClamp => 1,
-            Subnormals::Normalize => 2,
-        };
-        let val: u128 = match self.validation {
-            Validation::Checked => 0,
-            Validation::ClampOutOfBounds => 1,
-            Validation::AssumeValid => 2,
-            Validation::ClampFinite => 3,
-        };
         let prec: u128 = match self.precision {
             LogfPrecision::Midp => 0,
             LogfPrecision::Lowp => 1,
         };
-        let port: u128 = match self.portability {
-            Portability::BitExact => 0,
-            Portability::BackendDependent => 1,
-        };
-        let exec: u128 = match self.execution {
-            Execution::Upgrade => 0,
-            Execution::Caller => 1,
-        };
         let mut out = MAGIC
             | (dom << DOMAIN_SHIFT)
-            | (sub << SUBNORM_SHIFT)
-            | (val << VALIDATION_SHIFT)
+            | (self.subnormals.encode() << SUBNORM_SHIFT)
+            | (self.validation.encode() << VALIDATION_SHIFT)
             | (prec << PREC_SHIFT)
-            | (port << PORTABILITY_SHIFT)
-            | (exec << EXECUTION_SHIFT);
+            | (self.portability.encode() << PORTABILITY_SHIFT)
+            | (self.execution.encode() << EXECUTION_SHIFT);
         if self.extra_zero {
             out |= EXTRA_ZERO;
         }
@@ -519,52 +500,33 @@ impl LogfOptions {
             7 => LogfDomain::AllFloats,
             _ => return None,
         };
-        let subnormals = match (bits >> SUBNORM_SHIFT) & 0x7 {
-            0 => Subnormals::Reject,
-            1 => Subnormals::FlushOrClamp,
-            2 => Subnormals::Normalize,
-            _ => return None,
+        let Some(subnormals) = Subnormals::decode((bits >> SUBNORM_SHIFT) & 0x7) else {
+            return None;
         };
-        let validation = match (bits >> VALIDATION_SHIFT) & 0x7 {
-            0 => Validation::Checked,
-            1 => Validation::ClampOutOfBounds,
-            2 => Validation::AssumeValid,
-            3 => Validation::ClampFinite,
-            _ => return None,
+        let Some(validation) = Validation::decode((bits >> VALIDATION_SHIFT) & 0x7) else {
+            return None;
         };
         let precision = match (bits >> PREC_SHIFT) & 0x7 {
             0 => LogfPrecision::Midp,
             1 => LogfPrecision::Lowp,
             _ => return None,
         };
-        let portability = match (bits >> PORTABILITY_SHIFT) & 0x3 {
-            0 => Portability::BitExact,
-            1 => Portability::BackendDependent,
-            _ => return None,
+        let Some(portability) = Portability::decode((bits >> PORTABILITY_SHIFT) & 0x3) else {
+            return None;
         };
-        let execution = match (bits >> EXECUTION_SHIFT) & 0x3 {
-            0 => Execution::Upgrade,
-            1 => Execution::Caller,
-            _ => return None,
+        let Some(execution) = Execution::decode((bits >> EXECUTION_SHIFT) & 0x3) else {
+            return None;
         };
         let lo_u16 = ((bits >> IN_LO_SHIFT) & 0xffff) as u16;
         let hi_u16 = ((bits >> IN_HI_SHIFT) & 0xffff) as u16;
-        let custom_range = if (bits & HAS_CUSTOM_RANGE) != 0 {
-            let Some(lo) = decode_bf16_finite(lo_u16) else {
-                return None;
-            };
-            let Some(hi) = decode_bf16_finite(hi_u16) else {
-                return None;
-            };
-            if !(lo >= 0.0 && lo <= hi && hi <= MAX_BF16) {
-                return None;
-            }
-            Some((lo_u16, hi_u16))
-        } else {
-            if lo_u16 != 0 || hi_u16 != 0 {
-                return None;
-            }
-            None
+        let Some(custom_range) = decode_optional_bf16_range(
+            (bits & HAS_CUSTOM_RANGE) != 0,
+            lo_u16,
+            hi_u16,
+            0.0,
+            MAX_BF16,
+        ) else {
+            return None;
         };
         Some(Self {
             domain,
