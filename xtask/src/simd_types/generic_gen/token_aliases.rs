@@ -272,4 +272,29 @@ mod tests {
             "{ Self :: partition_slice_t :: < N > (token , values) }"
         );
     }
+
+    #[test]
+    fn generates_rgba_special_notes_and_constructor_inventory() {
+        let source = r#"
+            #[cfg(feature = "w512")]
+            impl<T: Backend> f32x4<T> {
+                #[deprecated(note = "old")]
+                pub fn load_4_rgba_u8_t(token: T, rgba: &[u8; 16]) -> [Self; 4] { todo!() }
+                pub fn splat_t(_: T, _: f32) -> Self { todo!() }
+                pub fn from_raw(raw: [f32; 4]) -> Self { todo!() }
+            }
+            impl Copy for f32x4<ScalarToken> {}
+        "#;
+        let aliases = generate(source);
+        assert!(aliases.contains("load_4_rgba_u8"));
+        assert!(aliases.contains("load_rgba_u8_t"));
+        assert!(aliases.contains("argument_1"));
+
+        let inv = inventory([source.to_owned(), aliases].into_iter());
+        let doc = inv.get("f32x4").expect("f32x4 inventory");
+        assert!(doc.contains("load_4_rgba_u8_t"));
+        assert!(doc.contains("splat_t"));
+        assert!(doc.contains("from_raw"));
+        assert!(doc.contains("pub fn splat"));
+    }
 }
