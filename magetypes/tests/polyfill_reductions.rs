@@ -2,7 +2,8 @@
 //!
 //! Polyfilled wide reductions fold sub-vectors lane-wise using the narrower
 //! backend's `add`/`min`/`max` before a single horizontal reduction. The
-//! witnesses exercise the evaluation order and the NEON f32 NaN policy.
+//! witnesses exercise the evaluation order and number-preferring NaN policy
+//! across NEON (`f32`/`f64`) and WASM (`f64`).
 
 /// V3 `f32x16::reduce_add` folds the two 256-bit halves lane-wise (`a[i] + a[i+8]`)
 /// before one horizontal sum, matching AVX-512 folding order.
@@ -38,6 +39,53 @@ fn neon_f32x8_reduce_extrema_number_preferring() {
     assert_eq!(zeros.reduce_max().to_bits(), 0.0_f32.to_bits());
 }
 
+/// NEON `f64x2`/`f64x4`/`f64x8` `reduce_min`/`reduce_max` use number-preferring
+/// `vminnmq_f64`/`vmaxnmq_f64` + `vpminnmq_f64`/`vpmaxnmq_f64` across every width,
+/// matching NEON `f32`, WASM `f64`, and `ScalarToken`.
+#[cfg(target_arch = "aarch64")]
+#[test]
+fn neon_f64_reduce_extrema_number_preferring_all_widths() {
+    use archmage::SimdToken;
+    use magetypes::simd::generic::{f64x2, f64x4};
+
+    let token = archmage::NeonToken::summon().expect("AArch64 NEON");
+
+    for pair in [[f64::NAN, 5.0], [5.0, f64::NAN]] {
+        let v = f64x2::from_array_t(token, pair);
+        assert_eq!(v.reduce_min().to_bits(), 5.0_f64.to_bits());
+        assert_eq!(v.reduce_max().to_bits(), 5.0_f64.to_bits());
+    }
+    let all_nan_2 = f64x2::from_array_t(token, [f64::NAN, f64::NAN]);
+    assert!(all_nan_2.reduce_min().is_nan());
+    assert!(all_nan_2.reduce_max().is_nan());
+    let z2 = f64x2::from_array_t(token, [0.0, -0.0]);
+    assert_eq!(z2.reduce_min().to_bits(), (-0.0_f64).to_bits());
+    assert_eq!(z2.reduce_max().to_bits(), 0.0_f64.to_bits());
+
+    // NaN opposite a finite lane AND NaN in lane 0 of both halves.
+    let v4_a = f64x4::from_array_t(token, [f64::NAN, 5.0, -7.0, 6.0]);
+    assert_eq!(v4_a.reduce_min().to_bits(), (-7.0_f64).to_bits());
+    let v4_b = f64x4::from_array_t(token, [f64::NAN, -5.0, 7.0, -6.0]);
+    assert_eq!(v4_b.reduce_max().to_bits(), 7.0_f64.to_bits());
+    let v4_both_halves_nan = f64x4::from_array_t(token, [f64::NAN, 5.0, f64::NAN, 6.0]);
+    assert_eq!(v4_both_halves_nan.reduce_min().to_bits(), 5.0_f64.to_bits());
+    assert_eq!(v4_both_halves_nan.reduce_max().to_bits(), 6.0_f64.to_bits());
+    let z4 = f64x4::from_array_t(token, [0.0, 0.0, -0.0, 0.0]);
+    assert_eq!(z4.reduce_min().to_bits(), (-0.0_f64).to_bits());
+    assert_eq!(z4.reduce_max().to_bits(), 0.0_f64.to_bits());
+
+    #[cfg(feature = "w512")]
+    {
+        use magetypes::simd::generic::f64x8;
+        let v8 = f64x8::from_array_t(
+            token,
+            [f64::NAN, 5.0, f64::NAN, -3.0, f64::NAN, 9.0, f64::NAN, 2.0],
+        );
+        assert_eq!(v8.reduce_min().to_bits(), (-3.0_f64).to_bits());
+        assert_eq!(v8.reduce_max().to_bits(), 9.0_f64.to_bits());
+    }
+}
+
 /// WASM `f64x4::reduce_add` folds the two 128-bit halves lane-wise (`f64x2_add`)
 /// before a single scalar addition.
 #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
@@ -47,6 +95,40 @@ fn wasm_f64x4_reduce_add_lane_fold() {
     let token = archmage::Wasm128Token::summon().expect("WASM SIMD128");
     let v = magetypes::simd::generic::f64x4::from_array_t(token, [1e100, 1.0, -1e100, 0.0]);
     assert_eq!(v.reduce_add().to_bits(), 1.0f64.to_bits());
+}
+
+/// WASM `f64x2`/`f64x4`/`f64x8` `reduce_min`/`reduce_max` prefer numbers over
+/// NaN across every width, matching NEON and `ScalarToken`.
+#[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
+#[test]
+fn wasm_f64_reduce_extrema_number_preferring_all_widths() {
+    use archmage::SimdToken;
+    use magetypes::simd::generic::{f64x2, f64x4};
+
+    let token = archmage::Wasm128Token::summon().expect("WASM SIMD128");
+    for pair in [[f64::NAN, 5.0], [5.0, f64::NAN]] {
+        let v = f64x2::from_array_t(token, pair);
+        assert_eq!(v.reduce_min().to_bits(), 5.0_f64.to_bits());
+        assert_eq!(v.reduce_max().to_bits(), 5.0_f64.to_bits());
+    }
+    let v4_a = f64x4::from_array_t(token, [f64::NAN, 5.0, -7.0, 6.0]);
+    assert_eq!(v4_a.reduce_min().to_bits(), (-7.0_f64).to_bits());
+    let v4_b = f64x4::from_array_t(token, [f64::NAN, -5.0, 7.0, -6.0]);
+    assert_eq!(v4_b.reduce_max().to_bits(), 7.0_f64.to_bits());
+    let v4_both_halves_nan = f64x4::from_array_t(token, [f64::NAN, 5.0, f64::NAN, 6.0]);
+    assert_eq!(v4_both_halves_nan.reduce_min().to_bits(), 5.0_f64.to_bits());
+    assert_eq!(v4_both_halves_nan.reduce_max().to_bits(), 6.0_f64.to_bits());
+
+    #[cfg(feature = "w512")]
+    {
+        use magetypes::simd::generic::f64x8;
+        let v8 = f64x8::from_array_t(
+            token,
+            [f64::NAN, 5.0, f64::NAN, -3.0, f64::NAN, 9.0, f64::NAN, 2.0],
+        );
+        assert_eq!(v8.reduce_min().to_bits(), (-3.0_f64).to_bits());
+        assert_eq!(v8.reduce_max().to_bits(), 9.0_f64.to_bits());
+    }
 }
 
 #[cfg(feature = "w512")]
