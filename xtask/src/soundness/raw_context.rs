@@ -255,6 +255,7 @@ mod tests {
             "#[archmage::rite(v3)] unsafe fn wrap() { archmage::X64V3Token::from_context(); }",
             "#[archmage::rite(v3)] fn wrap() { unsafe { archmage::X64V3Token::from_context(); } }",
             "#[archmage::rite(v3)] fn wrap() { archmage::X64V3Token::from_context(); unsafe { unrelated(); } }",
+            "#[archmage::rite(v3)] fn wrap() { archmage::X64V3Token::from_context(); hide!(unsafe { 1 }); }",
         ] {
             assert!(
                 check(source)
@@ -263,5 +264,30 @@ mod tests {
                 "accepted {source}"
             );
         }
+    }
+
+    #[test]
+    fn rejects_parse_errors_bad_target_feature_use_import_static_and_trait_defaults() {
+        assert!(
+            check("fn broken( { from_context")
+                .iter()
+                .any(|e| e.contains("cannot audit from_context"))
+        );
+        assert!(
+            !check("#[target_feature(invalid = \"avx2\")] fn wrap() { archmage::X64V3Token::from_context(); }")
+                .is_empty()
+        );
+        assert!(
+            check("use archmage::X64V3Token::from_context; fn wrap() {}")
+                .iter()
+                .any(|e| e.contains("import of from_context"))
+        );
+        assert!(
+            !check("trait T { fn def() { archmage::X64V3Token::from_context(); } }").is_empty()
+        );
+        assert!(
+            !check("#[archmage::rite(v3)] fn wrap() { static X: () = { archmage::X64V3Token::from_context(); }; }")
+                .is_empty()
+        );
     }
 }
