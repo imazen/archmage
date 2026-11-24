@@ -317,6 +317,96 @@ pub(crate) fn tokens_contain_ident(tokens: &proc_macro2::TokenStream, names: &[&
     })
 }
 
+/// Presence bits returned by [`dispatch_presence`].
+pub(crate) const DISPATCH_LEGACY: u8 = 1;
+pub(crate) const DISPATCH_UNIFIED: u8 = 2;
+
+/// Find both dispatch dialects (`incant!`/`dispatch_variant!` and
+/// `attuned!`/`reattune!`) in a single conservative token walk.
+pub(crate) fn dispatch_presence(tokens: &proc_macro2::TokenStream) -> u8 {
+    let mut found = 0;
+    for token in tokens.clone() {
+        match token {
+            proc_macro2::TokenTree::Ident(id) => {
+                if id == "incant" || id == "dispatch_variant" {
+                    found |= DISPATCH_LEGACY;
+                } else if id == "attuned" || id == "reattune" {
+                    found |= DISPATCH_UNIFIED;
+                }
+            }
+            proc_macro2::TokenTree::Group(group) => found |= dispatch_presence(&group.stream()),
+            _ => {}
+        }
+        if found == (DISPATCH_LEGACY | DISPATCH_UNIFIED) {
+            break;
+        }
+    }
+    found
+}
+
+/// A dispatch-macro invocation matched by [`match_macro_call`].
+pub(crate) struct MatchedMacroCall<'a> {
+    /// Leading path tokens (when matched), macro name, and `!`.
+    pub path_and_bang: &'a [proc_macro2::TokenTree],
+    /// Macro identifier (without path prefix).
+    pub name: &'a Ident,
+    /// Delimited argument group following `!`.
+    pub group: &'a proc_macro2::Group,
+    /// Index immediately past the matched invocation in `tokens`.
+    pub next_idx: usize,
+}
+
+/// Recognize `<optional path::> <name> ! <group>` at `tokens[start]`.
+///
+/// When `allow_qualified_path` is `true`, an optional leading `::` and
+/// `ident ::` segments are consumed into `path_and_bang`. When
+/// `require_parens` is `true`, only parenthesized groups match.
+pub(crate) fn match_macro_call<'a>(
+    tokens: &'a [proc_macro2::TokenTree],
+    start: usize,
+    names: &[&str],
+    allow_qualified_path: bool,
+    require_parens: bool,
+) -> Option<MatchedMacroCall<'a>> {
+    use proc_macro2::{Delimiter, TokenTree};
+    let mut end = start;
+    if allow_qualified_path {
+        if matches!(tokens.get(end), Some(TokenTree::Punct(p)) if p.as_char() == ':')
+            && matches!(tokens.get(end + 1), Some(TokenTree::Punct(p)) if p.as_char() == ':')
+        {
+            end += 2;
+        }
+        while end + 3 < tokens.len()
+            && matches!(&tokens[end], TokenTree::Ident(_))
+            && matches!(&tokens[end + 1], TokenTree::Punct(p) if p.as_char() == ':')
+            && matches!(&tokens[end + 2], TokenTree::Punct(p) if p.as_char() == ':')
+        {
+            end += 3;
+        }
+    }
+    let Some(TokenTree::Ident(name)) = tokens.get(end) else {
+        return None;
+    };
+    if !names.iter().any(|n| name == *n) {
+        return None;
+    }
+    if !matches!(tokens.get(end + 1), Some(TokenTree::Punct(p)) if p.as_char() == '!') {
+        return None;
+    }
+    let Some(TokenTree::Group(group)) = tokens.get(end + 2) else {
+        return None;
+    };
+    if require_parens && group.delimiter() != Delimiter::Parenthesis {
+        return None;
+    }
+    Some(MatchedMacroCall {
+        path_and_bang: &tokens[start..end + 2],
+        name,
+        group,
+        next_idx: end + 3,
+    })
+}
+
 /// Marker for a dispatch-macro invocation that a body rewriter already
 /// expanded. Rewriters emit `<the caller's macro path>!(@__archmage_expanded
 /// tokens)` instead of splicing `tokens` directly, so the caller's import of

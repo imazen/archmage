@@ -9,7 +9,7 @@
 //! - **Direct calls** (callee tier ≤ caller tier): `fn_tier(token.tier(), args)`
 //! - **Scalar fallback**: `fn_scalar(ScalarToken, args)`
 
-use proc_macro2::{Delimiter, Ident, Spacing, TokenStream, TokenTree};
+use proc_macro2::{Delimiter, Ident, TokenStream, TokenTree};
 use quote::{format_ident, quote};
 
 use crate::common::suffix_path;
@@ -33,29 +33,6 @@ pub(crate) struct CallerContext {
     pub derive_token: bool,
 }
 
-/// Find both dispatch dialects in one body scan. Ordinary legacy kernels pay
-/// for one presence pass, as before, regardless of how many frontends exist.
-fn dispatch_presence(body: &TokenStream) -> u8 {
-    let mut found = 0;
-    for token in body.clone() {
-        match token {
-            TokenTree::Ident(id) => {
-                if id == "incant" || id == "dispatch_variant" {
-                    found |= 1;
-                } else if id == "attuned" || id == "reattune" {
-                    found |= 2;
-                }
-            }
-            TokenTree::Group(group) => found |= dispatch_presence(&group.stream()),
-            _ => {}
-        }
-        if found == 3 {
-            break;
-        }
-    }
-    found
-}
-
 /// Rewrite `incant!()` calls in a function body for a specific tier context.
 ///
 /// Walks the token stream looking for `incant ! ( ... )` patterns.
@@ -74,22 +51,26 @@ pub(crate) fn rewrite_incant_in_function(
 ) -> TokenStream {
     // Most kernels have no dispatch inside them. Keep their original groups,
     // spans, and token storage instead of allocating two vectors at every depth.
-    let calls = dispatch_presence(&body);
+    let calls = crate::common::dispatch_presence(&body);
     if calls == 0 {
         return body;
     }
-    let body = if calls & 2 != 0 {
+    let body = if calls & crate::common::DISPATCH_UNIFIED != 0 {
         if let Some(tier) = tiers::find_tier(ctx.tier_suffix) {
-            crate::attune::call::rewrite(body, tier, signature)
+            crate::attune::call::rewrite_known(body, tier, signature)
         } else {
             body
         }
     } else {
         body
     };
-    if calls & 1 == 0 {
+    if calls & crate::common::DISPATCH_LEGACY == 0 {
         return body;
     }
+    rewrite_legacy_known(body, ctx)
+}
+
+fn rewrite_legacy_known(body: TokenStream, ctx: &CallerContext) -> TokenStream {
     let tokens: Vec<TokenTree> = body.into_iter().collect();
     let mut result = Vec::new();
     let mut i = 0;
@@ -113,19 +94,19 @@ pub(crate) fn rewrite_incant_in_function(
             continue;
         }
 
-        // Check for `incant ! ( ... )` pattern
-        if (is_ident(&tokens[i], "incant") || is_ident(&tokens[i], "dispatch_variant"))
-            && i + 2 < tokens.len()
-            && is_punct(&tokens[i + 1], '!')
-            && let Some(TokenTree::Group(group)) = tokens.get(i + 2)
-            && group.delimiter() == Delimiter::Parenthesis
-        {
-            // Try to parse the incant arguments
-            let inner = group.stream();
+        // Check for `incant ! ( ... )` / `dispatch_variant ! ( ... )` pattern
+        if let Some(matched) = crate::common::match_macro_call(
+            &tokens,
+            i,
+            &["incant", "dispatch_variant"],
+            false,
+            true,
+        ) {
+            let inner = matched.group.stream();
             if crate::common::expanded_passthrough(&inner).is_some() {
                 // Already rewritten by an enclosing pass.
-                result.extend(tokens[i..i + 3].iter().cloned());
-                i += 3;
+                result.extend(tokens[i..matched.next_idx].iter().cloned());
+                i = matched.next_idx;
                 continue;
             }
             if let Ok(input) = syn::parse2::<IncantInput>(inner) {
@@ -135,30 +116,32 @@ pub(crate) fn rewrite_incant_in_function(
                     // already copied): the import stays used and the call
                     // keeps bang-macro expression parsing.
                     Some(rewritten) => result.extend(crate::common::wrap_expanded(
-                        tokens[i..i + 2].iter().cloned(),
-                        group,
+                        matched.path_and_bang.iter().cloned(),
+                        matched.group,
                         rewritten,
                     )),
                     // Not rewritten (passthrough / tokenless body / parse issue):
                     // emit the original `incant ! ( ... )` tokens verbatim so the
                     // standalone `incant!` macro expands them unchanged (byte-identical).
-                    None => {
-                        result.push(tokens[i].clone());
-                        result.push(tokens[i + 1].clone());
-                        result.push(tokens[i + 2].clone());
-                    }
+                    None => result.extend(tokens[i..matched.next_idx].iter().cloned()),
                 }
-                i += 3; // skip `incant`, `!`, `(...)`
+                i = matched.next_idx;
                 continue;
             }
         }
 
-        // For groups (blocks, parens, brackets), recurse into them
+        // For groups (blocks, parens, brackets), recurse only when a legacy
+        // dispatch identifier appears inside.
         if let TokenTree::Group(group) = &tokens[i] {
-            let inner = rewrite_incant_in_body(group.stream(), ctx);
-            let mut new_group = proc_macro2::Group::new(group.delimiter(), inner);
-            new_group.set_span(group.span());
-            result.push(TokenTree::Group(new_group));
+            let stream = group.stream();
+            if crate::common::tokens_contain_ident(&stream, &["incant", "dispatch_variant"]) {
+                let inner = rewrite_legacy_known(stream, ctx);
+                let mut new_group = proc_macro2::Group::new(group.delimiter(), inner);
+                new_group.set_span(group.span());
+                result.push(TokenTree::Group(new_group));
+            } else {
+                result.push(tokens[i].clone());
+            }
             i += 1;
             continue;
         }
@@ -445,10 +428,6 @@ fn rewrite_tokenless_incant(input: &IncantInput, ctx: &CallerContext) -> Option<
 
 fn is_ident(tt: &TokenTree, name: &str) -> bool {
     matches!(tt, TokenTree::Ident(id) if *id == name)
-}
-
-fn is_punct(tt: &TokenTree, ch: char) -> bool {
-    matches!(tt, TokenTree::Punct(p) if p.as_char() == ch && p.spacing() == Spacing::Alone)
 }
 
 #[cfg(test)]
