@@ -1,8 +1,8 @@
-//! WASM multiply-add. `madd_*`/`msub_*` back `mul_add`/`mul_sub`: the engine's
-//! relaxed madd in relaxed-SIMD builds, a multiply then an add otherwise.
-//! `fused_*` back the `_portable` forms, which round once: through relaxed madd
-//! where a cached probe shows the engine fuses it, in software otherwise
-//! (strict builds, and engines that round twice).
+//! WASM relaxed-SIMD fusion probes and probe-free packed software `f32` FMA.
+//!
+//! Each operation's dispatcher probes once (`powf_f32_fuses` / `powf_f64_fuses`)
+//! to select either relaxed-SIMD fused multiply-add or the probe-free software
+//! path (`software_lanes`), keeping the Horner loop free of runtime probes.
 #![forbid(unsafe_code)]
 
 use archmage::Wasm128Token;
@@ -30,54 +30,6 @@ pub(crate) fn powf_f64_fuses() -> bool {
     {
         false
     }
-}
-
-#[cfg(not(target_feature = "relaxed-simd"))]
-#[archmage::attune(wasm128)]
-pub(crate) fn madd_f32x4(_token: Wasm128Token, a: v128, b: v128, c: v128) -> v128 {
-    w::f32x4_add(w::f32x4_mul(a, b), c)
-}
-
-#[cfg(not(target_feature = "relaxed-simd"))]
-#[archmage::attune(wasm128)]
-pub(crate) fn msub_f32x4(_token: Wasm128Token, a: v128, b: v128, c: v128) -> v128 {
-    w::f32x4_sub(w::f32x4_mul(a, b), c)
-}
-
-#[cfg(not(target_feature = "relaxed-simd"))]
-#[archmage::attune(wasm128)]
-pub(crate) fn madd_f64x2(_token: Wasm128Token, a: v128, b: v128, c: v128) -> v128 {
-    w::f64x2_add(w::f64x2_mul(a, b), c)
-}
-
-#[cfg(not(target_feature = "relaxed-simd"))]
-#[archmage::attune(wasm128)]
-pub(crate) fn msub_f64x2(_token: Wasm128Token, a: v128, b: v128, c: v128) -> v128 {
-    w::f64x2_sub(w::f64x2_mul(a, b), c)
-}
-
-#[cfg(target_feature = "relaxed-simd")]
-#[archmage::attune(wasm128)]
-pub(crate) fn madd_f32x4(_token: Wasm128Token, a: v128, b: v128, c: v128) -> v128 {
-    w::f32x4_relaxed_madd(a, b, c)
-}
-
-#[cfg(target_feature = "relaxed-simd")]
-#[archmage::attune(wasm128)]
-pub(crate) fn msub_f32x4(_token: Wasm128Token, a: v128, b: v128, c: v128) -> v128 {
-    w::f32x4_relaxed_madd(a, b, w::f32x4_neg(c))
-}
-
-#[cfg(target_feature = "relaxed-simd")]
-#[archmage::attune(wasm128)]
-pub(crate) fn madd_f64x2(_token: Wasm128Token, a: v128, b: v128, c: v128) -> v128 {
-    w::f64x2_relaxed_madd(a, b, c)
-}
-
-#[cfg(target_feature = "relaxed-simd")]
-#[archmage::attune(wasm128)]
-pub(crate) fn msub_f64x2(_token: Wasm128Token, a: v128, b: v128, c: v128) -> v128 {
-    w::f64x2_relaxed_madd(a, b, w::f64x2_neg(c))
 }
 
 /// Whether this engine's relaxed madd rounds once. The relaxed-SIMD proposal
@@ -140,22 +92,6 @@ mod relaxed_probe {
     }
 }
 
-#[archmage::attune(wasm128)]
-pub(crate) fn fused_f32x4(token: Wasm128Token, a: v128, b: v128, c: v128) -> v128 {
-    #[cfg(target_feature = "relaxed-simd")]
-    if relaxed_probe::fuses_f32() {
-        return w::f32x4_relaxed_madd(a, b, c);
-    }
-    let lo = wide_sum(token, a, b, c);
-    let hi = wide_sum(
-        token,
-        w::i32x4_shuffle::<2, 3, 2, 3>(a, a),
-        w::i32x4_shuffle::<2, 3, 2, 3>(b, b),
-        w::i32x4_shuffle::<2, 3, 2, 3>(c, c),
-    );
-    w::i32x4_shuffle::<0, 1, 4, 5>(lo, hi)
-}
-
 /// Vector form of nostd_math::fmaf: exact f64 product, TwoSum, round to odd.
 #[archmage::attune(wasm128)]
 fn wide_sum(_token: Wasm128Token, a: v128, b: v128, c: v128) -> v128 {
@@ -178,10 +114,10 @@ fn wide_sum(_token: Wasm128Token, a: v128, b: v128, c: v128) -> v128 {
     w::f32x4_demote_f64x2_zero(w::v128_bitselect(odd, sum, adjust))
 }
 
-// Same packed software algorithm as fused_f32x4, with no cached probe. Pow
-// has already selected software once for its complete expression graph.
+/// Probe-free packed software `f32x4` FMA (dispatcher selects software once
+/// for the complete expression graph).
 #[archmage::attune(wasm128)]
-pub(crate) fn powf_soft_f32x4(token: Wasm128Token, a: v128, b: v128, c: v128) -> v128 {
+fn powf_soft_f32x4(token: Wasm128Token, a: v128, b: v128, c: v128) -> v128 {
     let lo = wide_sum(token, a, b, c);
     let hi = wide_sum(
         token,
@@ -190,34 +126,6 @@ pub(crate) fn powf_soft_f32x4(token: Wasm128Token, a: v128, b: v128, c: v128) ->
         w::i32x4_shuffle::<2, 3, 2, 3>(c, c),
     );
     w::i32x4_shuffle::<0, 1, 4, 5>(lo, hi)
-}
-
-#[archmage::attune(wasm128)]
-pub(crate) fn fused_f64x2(_token: Wasm128Token, a: v128, b: v128, c: v128) -> v128 {
-    #[cfg(target_feature = "relaxed-simd")]
-    if relaxed_probe::fuses_f64() {
-        return w::f64x2_relaxed_madd(a, b, c);
-    }
-    #[cfg(target_feature = "relaxed-simd")]
-    return soft_f64x2(a, b, c);
-    #[cfg(not(target_feature = "relaxed-simd"))]
-    soft_f64x2_inline(a, b, c)
-}
-
-/// With relaxed SIMD the software path sits behind one call, so a fusing
-/// engine's loop holds one call site instead of the exact path's per-lane
-/// calls (`v128` arguments and results travel in registers).
-#[cfg(target_feature = "relaxed-simd")]
-#[inline(never)]
-fn soft_f64x2(a: v128, b: v128, c: v128) -> v128 {
-    soft_f64x2_inline(a, b, c)
-}
-
-#[inline(always)]
-fn soft_f64x2_inline(a: v128, b: v128, c: v128) -> v128 {
-    let lanes = |v: v128| [w::f64x2_extract_lane::<0>(v), w::f64x2_extract_lane::<1>(v)];
-    let [lo, hi] = crate::soft_fma::fma_lanes(lanes(a), lanes(b), lanes(c));
-    w::f64x2(lo, hi)
 }
 
 /// Packed probe-free software `f32` FMA for whole-operation `WASM_SOFTWARE`
