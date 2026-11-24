@@ -250,126 +250,68 @@ fn gen_struct(ty: &SimdType) -> String {
 // additional asserts gated by the matching `target_arch` (and `feature` for V4).
 // ============================================================================
 
+fn layout_assert_block(name: &str, backend: &str, prefix: &str, token: &str) -> String {
+    formatdoc! {"
+
+        {prefix}const _: () = {{
+            assert!(
+                size_of::<{name}<archmage::{token}>>()
+                    == size_of::<<archmage::{token} as crate::simd::backends::{backend}>::Repr>()
+            );
+            assert!(
+                align_of::<{name}<archmage::{token}>>()
+                    == align_of::<<archmage::{token} as crate::simd::backends::{backend}>::Repr>()
+            );
+        }};
+    "}
+}
+
 fn gen_layout_asserts(ty: &SimdType) -> String {
     let name = ty.name();
     let backend = backend_trait(ty);
 
-    // ScalarToken assert — always present, works on every target.
-    let scalar_block = formatdoc! {"
-
-        // Layout invariant: struct is `#[repr(C)]` with a trailing ZST `T`
-        // field, so `sizeof/alignof({name}<T>) == sizeof/alignof(T::Repr)`
-        // when `T` is a 1-ZST. Every archmage token currently satisfies this;
-        // if a future refactor adds a non-ZST field to a token, this const
-        // assert fires at compile time.
-        const _: () = {{
-            assert!(
-                size_of::<{name}<archmage::ScalarToken>>()
-                    == size_of::<<archmage::ScalarToken as crate::simd::backends::{backend}>::Repr>()
-            );
-            assert!(
-                align_of::<{name}<archmage::ScalarToken>>()
-                    == align_of::<<archmage::ScalarToken as crate::simd::backends::{backend}>::Repr>()
-            );
-        }};
-    "};
-
-    // Native-token asserts gated by target_arch (and the w512/avx512 features
-    // for the 512-bit native path on x86).
-    let mut native_blocks = String::new();
-
-    // x86_64: all widths use X64V3Token for its backend impl, except that
-    // the W512 avx512 backend lives on X64V4Token behind a feature gate.
-    // We pick X64V3Token for W128/W256 (its Repr is the native `__m128`/
-    // `__m256`); for W512 we add two variants: one using V3's polyfill
-    // (`[__m256; 2]`), one using V4's native `__m512` under `feature = "avx512"`.
-    match ty.width {
-        SimdWidth::W128 | SimdWidth::W256 => {
-            native_blocks.push_str(&formatdoc! {r#"
-
-                #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
-                const _: () = {{
-                    assert!(
-                        size_of::<{name}<archmage::X64V3Token>>()
-                            == size_of::<<archmage::X64V3Token as crate::simd::backends::{backend}>::Repr>()
-                    );
-                    assert!(
-                        align_of::<{name}<archmage::X64V3Token>>()
-                            == align_of::<<archmage::X64V3Token as crate::simd::backends::{backend}>::Repr>()
-                    );
-                }};
-            "#});
-        }
-        SimdWidth::W512 => {
-            // W512 on V3 is the polyfill path (`[__m256; 2]`). The full file is
-            // gated on `feature = "w512"` already (see generic/generated/mod.rs),
-            // so we don't need an extra feature gate here.
-            native_blocks.push_str(&formatdoc! {r#"
-
-                #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
-                const _: () = {{
-                    assert!(
-                        size_of::<{name}<archmage::X64V3Token>>()
-                            == size_of::<<archmage::X64V3Token as crate::simd::backends::{backend}>::Repr>()
-                    );
-                    assert!(
-                        align_of::<{name}<archmage::X64V3Token>>()
-                            == align_of::<<archmage::X64V3Token as crate::simd::backends::{backend}>::Repr>()
-                    );
-                }};
-
-                // Native AVX-512 (`__m512`/`__m512d`/`__m512i`) — gated on the
-                // `avx512` feature, which is how archmage exposes X64V4Token's
-                // 512-bit backend impls.
-                #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "avx512"))]
-                const _: () = {{
-                    assert!(
-                        size_of::<{name}<archmage::X64V4Token>>()
-                            == size_of::<<archmage::X64V4Token as crate::simd::backends::{backend}>::Repr>()
-                    );
-                    assert!(
-                        align_of::<{name}<archmage::X64V4Token>>()
-                            == align_of::<<archmage::X64V4Token as crate::simd::backends::{backend}>::Repr>()
-                    );
-                }};
-            "#});
-        }
+    let mut out = layout_assert_block(
+        &name,
+        &backend,
+        &format!(
+            "// Layout invariant: struct is `#[repr(C)]` with a trailing ZST `T`\n\
+             // field, so `sizeof/alignof({name}<T>) == sizeof/alignof(T::Repr)`\n\
+             // when `T` is a 1-ZST. Every archmage token currently satisfies this;\n\
+             // if a future refactor adds a non-ZST field to a token, this const\n\
+             // assert fires at compile time.\n"
+        ),
+        "ScalarToken",
+    );
+    out.push_str(&layout_assert_block(
+        &name,
+        &backend,
+        "#[cfg(all(target_arch = \"x86_64\", target_feature = \"sse2\"))]\n",
+        "X64V3Token",
+    ));
+    if ty.width == SimdWidth::W512 {
+        out.push_str(&layout_assert_block(
+            &name,
+            &backend,
+            "// Native AVX-512 (`__m512`/`__m512d`/`__m512i`) — gated on the\n\
+             // `avx512` feature, which is how archmage exposes X64V4Token's\n\
+             // 512-bit backend impls.\n\
+             #[cfg(all(target_arch = \"x86_64\", target_feature = \"sse2\", feature = \"avx512\"))]\n",
+            "X64V4Token",
+        ));
     }
-
-    // aarch64 NEON — same backend trait; polyfill for wider-than-128 widths.
-    native_blocks.push_str(&formatdoc! {r#"
-
-        #[cfg(target_arch = "aarch64")]
-        const _: () = {{
-            assert!(
-                size_of::<{name}<archmage::NeonToken>>()
-                    == size_of::<<archmage::NeonToken as crate::simd::backends::{backend}>::Repr>()
-            );
-            assert!(
-                align_of::<{name}<archmage::NeonToken>>()
-                    == align_of::<<archmage::NeonToken as crate::simd::backends::{backend}>::Repr>()
-            );
-        }};
-    "#});
-
-    // wasm32 SIMD128 — gated on `target_feature = "simd128"` because the
-    // Wasm128Token only implements the backends on the +simd128 target.
-    native_blocks.push_str(&formatdoc! {r#"
-
-        #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
-        const _: () = {{
-            assert!(
-                size_of::<{name}<archmage::Wasm128Token>>()
-                    == size_of::<<archmage::Wasm128Token as crate::simd::backends::{backend}>::Repr>()
-            );
-            assert!(
-                align_of::<{name}<archmage::Wasm128Token>>()
-                    == align_of::<<archmage::Wasm128Token as crate::simd::backends::{backend}>::Repr>()
-            );
-        }};
-    "#});
-
-    format!("{scalar_block}{native_blocks}")
+    out.push_str(&layout_assert_block(
+        &name,
+        &backend,
+        "#[cfg(target_arch = \"aarch64\")]\n",
+        "NeonToken",
+    ));
+    out.push_str(&layout_assert_block(
+        &name,
+        &backend,
+        "#[cfg(all(target_arch = \"wasm32\", target_feature = \"simd128\"))]\n",
+        "Wasm128Token",
+    ));
+    out
 }
 
 // ============================================================================
@@ -1676,13 +1618,22 @@ fn gen_cross_type(ty: &SimdType) -> String {
     code
 }
 
+fn platform_impl(cfg: &str, name: &str, token: &str, id: &str, extra: &str) -> String {
+    formatdoc! {"
+
+        #[cfg({cfg})]
+        impl {name}<archmage::{token}> {{
+            /// Implementation identifier for this backend.
+            pub const fn implementation_name() -> &'static str {{
+                \"{id}::{name}\"
+            }}{extra}
+        }}
+    "}
+}
+
 fn gen_platform(ty: &SimdType) -> String {
     let name = ty.name();
-
-    // ScalarToken is available on every architecture; its impl is always compiled.
-    // All other backends are cfg-gated on target_arch (and `feature = "avx512"` /
-    // `feature = "w512"` where applicable).
-    let scalar_block = formatdoc! {"
+    let mut code = formatdoc! {"
         // ============================================================================
         // Platform-specific concrete impls
         // ============================================================================
@@ -1695,153 +1646,77 @@ fn gen_platform(ty: &SimdType) -> String {
         }}
     "};
 
+    const X86_CFG: &str = "all(target_arch = \"x86_64\", target_feature = \"sse2\")";
+    const X86_AVX512_CFG: &str =
+        "all(target_arch = \"x86_64\", target_feature = \"sse2\", feature = \"avx512\")";
+
     match ty.width {
-        SimdWidth::W128 => {
-            // W128 is native on every platform.
+        SimdWidth::W128 | SimdWidth::W256 => {
             let raw_type = x86_raw_type(ty);
             let legacy_raw = deprecated_platform_ctor(
                 &from_raw_fn_name(ty),
                 "X64V3Token",
                 &format!("core::arch::x86_64::{raw_type}"),
             );
+            let x86_extra = formatdoc! {"
 
-            formatdoc! {"
-                {scalar_block}
-                #[cfg(all(target_arch = \"x86_64\", target_feature = \"sse2\"))]
-                impl {name}<archmage::X64V3Token> {{
-                    /// Implementation identifier for this backend.
-                    pub const fn implementation_name() -> &'static str {{
-                        \"x86::v3::{name}\"
-                    }}
 
-                    /// Get the raw `{raw_type}` value.
-                    #[inline(always)]
-                    pub fn raw(self) -> core::arch::x86_64::{raw_type} {{
-                        self.0
-                    }}
-
-                    {legacy_raw}
+                /// Get the raw `{raw_type}` value.
+                #[inline(always)]
+                pub fn raw(self) -> core::arch::x86_64::{raw_type} {{
+                    self.0
                 }}
 
-                #[cfg(target_arch = \"aarch64\")]
-                impl {name}<archmage::NeonToken> {{
-                    /// Implementation identifier for this backend.
-                    pub const fn implementation_name() -> &'static str {{
-                        \"arm::neon::{name}\"
-                    }}
-                }}
-
-                #[cfg(target_arch = \"wasm32\")]
-                impl {name}<archmage::Wasm128Token> {{
-                    /// Implementation identifier for this backend.
-                    pub const fn implementation_name() -> &'static str {{
-                        \"wasm::wasm128::{name}\"
-                    }}
-                }}
-            "}
-        }
-        SimdWidth::W256 => {
-            // W256 is native on x86 (AVX2); polyfilled on NEON and WASM via pairs of W128.
-            let raw_type = x86_raw_type(ty);
-            let legacy_raw = deprecated_platform_ctor(
-                &from_raw_fn_name(ty),
+                {legacy_raw}"};
+            let (neon_id, wasm_id) = if ty.width == SimdWidth::W128 {
+                ("arm::neon", "wasm::wasm128")
+            } else {
+                ("polyfill::neon", "polyfill::wasm128")
+            };
+            code.push_str(&platform_impl(
+                X86_CFG,
+                &name,
                 "X64V3Token",
-                &format!("core::arch::x86_64::{raw_type}"),
-            );
-
-            formatdoc! {"
-                {scalar_block}
-                #[cfg(all(target_arch = \"x86_64\", target_feature = \"sse2\"))]
-                impl {name}<archmage::X64V3Token> {{
-                    /// Implementation identifier for this backend.
-                    pub const fn implementation_name() -> &'static str {{
-                        \"x86::v3::{name}\"
-                    }}
-
-                    /// Get the raw `{raw_type}` value.
-                    #[inline(always)]
-                    pub fn raw(self) -> core::arch::x86_64::{raw_type} {{
-                        self.0
-                    }}
-
-                    {legacy_raw}
-                }}
-
-                #[cfg(target_arch = \"aarch64\")]
-                impl {name}<archmage::NeonToken> {{
-                    /// Implementation identifier for this backend.
-                    pub const fn implementation_name() -> &'static str {{
-                        \"polyfill::neon::{name}\"
-                    }}
-                }}
-
-                #[cfg(target_arch = \"wasm32\")]
-                impl {name}<archmage::Wasm128Token> {{
-                    /// Implementation identifier for this backend.
-                    pub const fn implementation_name() -> &'static str {{
-                        \"polyfill::wasm128::{name}\"
-                    }}
-                }}
-            "}
+                "x86::v3",
+                &x86_extra,
+            ));
+            code.push_str(&platform_impl(
+                "target_arch = \"aarch64\"",
+                &name,
+                "NeonToken",
+                neon_id,
+                "",
+            ));
+            code.push_str(&platform_impl(
+                "target_arch = \"wasm32\"",
+                &name,
+                "Wasm128Token",
+                wasm_id,
+                "",
+            ));
         }
         SimdWidth::W512 => {
-            // W512 is native on x86 with AVX-512 (V4/V4x); polyfilled elsewhere
-            // (on V3 via pairs of W256, on NEON/WASM via quads of W128).
-            // W512 types are gated on the `w512` cargo feature; scalar included.
-            formatdoc! {"
-                // ============================================================================
-                // Platform-specific concrete impls
-                // ============================================================================
-
-                impl {name}<archmage::ScalarToken> {{
-                    /// Implementation identifier for this backend.
-                    pub const fn implementation_name() -> &'static str {{
-                        \"scalar::{name}\"
-                    }}
-                }}
-
-                #[cfg(all(target_arch = \"x86_64\", target_feature = \"sse2\"))]
-                impl {name}<archmage::X64V3Token> {{
-                    /// Implementation identifier for this backend.
-                    pub const fn implementation_name() -> &'static str {{
-                        \"polyfill::v3_512::{name}\"
-                    }}
-                }}
-
-                #[cfg(all(target_arch = \"x86_64\", target_feature = \"sse2\", feature = \"avx512\"))]
-                impl {name}<archmage::X64V4Token> {{
-                    /// Implementation identifier for this backend.
-                    pub const fn implementation_name() -> &'static str {{
-                        \"x86::v4::{name}\"
-                    }}
-                }}
-
-                #[cfg(all(target_arch = \"x86_64\", target_feature = \"sse2\", feature = \"avx512\"))]
-                impl {name}<archmage::X64V4xToken> {{
-                    /// Implementation identifier for this backend.
-                    pub const fn implementation_name() -> &'static str {{
-                        \"x86::v4x::{name}\"
-                    }}
-                }}
-
-                #[cfg(target_arch = \"aarch64\")]
-                impl {name}<archmage::NeonToken> {{
-                    /// Implementation identifier for this backend.
-                    pub const fn implementation_name() -> &'static str {{
-                        \"polyfill::neon_512::{name}\"
-                    }}
-                }}
-
-                #[cfg(target_arch = \"wasm32\")]
-                impl {name}<archmage::Wasm128Token> {{
-                    /// Implementation identifier for this backend.
-                    pub const fn implementation_name() -> &'static str {{
-                        \"polyfill::wasm128_512::{name}\"
-                    }}
-                }}
-            "}
+            for (cfg, token, id) in [
+                (X86_CFG, "X64V3Token", "polyfill::v3_512"),
+                (X86_AVX512_CFG, "X64V4Token", "x86::v4"),
+                (X86_AVX512_CFG, "X64V4xToken", "x86::v4x"),
+                (
+                    "target_arch = \"aarch64\"",
+                    "NeonToken",
+                    "polyfill::neon_512",
+                ),
+                (
+                    "target_arch = \"wasm32\"",
+                    "Wasm128Token",
+                    "polyfill::wasm128_512",
+                ),
+            ] {
+                code.push_str(&platform_impl(cfg, &name, token, id, ""));
+            }
         }
     }
+
+    code
 }
 
 /// A platform-named raw constructor kept for callers that already use it,

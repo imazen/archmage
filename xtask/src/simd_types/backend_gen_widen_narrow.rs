@@ -142,183 +142,84 @@ impl Half {
     }
 }
 
+const fn widen(
+    src: &'static str,
+    dst: &'static str,
+    src_elem: &'static str,
+    dst_elem: &'static str,
+    signed: bool,
+    width_bits: usize,
+    src_lanes: usize,
+) -> WidenPair {
+    WidenPair {
+        src,
+        dst,
+        src_elem,
+        dst_elem,
+        signed,
+        width_bits,
+        src_lanes,
+    }
+}
+
+const fn narrow(
+    (src, src_elem): (&'static str, &'static str),
+    (sdst, sdst_elem): (&'static str, &'static str),
+    (udst, udst_elem): (&'static str, &'static str),
+    width_bits: usize,
+    src_lanes: usize,
+) -> NarrowPair {
+    NarrowPair {
+        src,
+        src_elem,
+        sdst,
+        sdst_elem,
+        udst,
+        udst_elem,
+        width_bits,
+        src_lanes,
+    }
+}
+
 /// Every widening family, in generation order.
-pub(super) fn all_widen_pairs() -> Vec<WidenPair> {
-    vec![
-        WidenPair {
-            src: "u8x16",
-            dst: "u16x8",
-            src_elem: "u8",
-            dst_elem: "u16",
-            signed: false,
-            width_bits: 128,
-            src_lanes: 16,
-        },
-        WidenPair {
-            src: "u16x8",
-            dst: "u32x4",
-            src_elem: "u16",
-            dst_elem: "u32",
-            signed: false,
-            width_bits: 128,
-            src_lanes: 8,
-        },
-        WidenPair {
-            src: "i8x16",
-            dst: "i16x8",
-            src_elem: "i8",
-            dst_elem: "i16",
-            signed: true,
-            width_bits: 128,
-            src_lanes: 16,
-        },
-        WidenPair {
-            src: "i16x8",
-            dst: "i32x4",
-            src_elem: "i16",
-            dst_elem: "i32",
-            signed: true,
-            width_bits: 128,
-            src_lanes: 8,
-        },
-        WidenPair {
-            src: "u8x32",
-            dst: "u16x16",
-            src_elem: "u8",
-            dst_elem: "u16",
-            signed: false,
-            width_bits: 256,
-            src_lanes: 32,
-        },
-        WidenPair {
-            src: "u16x16",
-            dst: "u32x8",
-            src_elem: "u16",
-            dst_elem: "u32",
-            signed: false,
-            width_bits: 256,
-            src_lanes: 16,
-        },
-        WidenPair {
-            src: "i8x32",
-            dst: "i16x16",
-            src_elem: "i8",
-            dst_elem: "i16",
-            signed: true,
-            width_bits: 256,
-            src_lanes: 32,
-        },
-        WidenPair {
-            src: "i16x16",
-            dst: "i32x8",
-            src_elem: "i16",
-            dst_elem: "i32",
-            signed: true,
-            width_bits: 256,
-            src_lanes: 16,
-        },
-        WidenPair {
-            src: "u8x64",
-            dst: "u16x32",
-            src_elem: "u8",
-            dst_elem: "u16",
-            signed: false,
-            width_bits: 512,
-            src_lanes: 64,
-        },
-        WidenPair {
-            src: "u16x32",
-            dst: "u32x16",
-            src_elem: "u16",
-            dst_elem: "u32",
-            signed: false,
-            width_bits: 512,
-            src_lanes: 32,
-        },
-        WidenPair {
-            src: "i8x64",
-            dst: "i16x32",
-            src_elem: "i8",
-            dst_elem: "i16",
-            signed: true,
-            width_bits: 512,
-            src_lanes: 64,
-        },
-        WidenPair {
-            src: "i16x32",
-            dst: "i32x16",
-            src_elem: "i16",
-            dst_elem: "i32",
-            signed: true,
-            width_bits: 512,
-            src_lanes: 32,
-        },
+pub(super) fn all_widen_pairs() -> [WidenPair; 12] {
+    [
+        widen("u8x16", "u16x8", "u8", "u16", false, 128, 16),
+        widen("u16x8", "u32x4", "u16", "u32", false, 128, 8),
+        widen("i8x16", "i16x8", "i8", "i16", true, 128, 16),
+        widen("i16x8", "i32x4", "i16", "i32", true, 128, 8),
+        widen("u8x32", "u16x16", "u8", "u16", false, 256, 32),
+        widen("u16x16", "u32x8", "u16", "u32", false, 256, 16),
+        widen("i8x32", "i16x16", "i8", "i16", true, 256, 32),
+        widen("i16x16", "i32x8", "i16", "i32", true, 256, 16),
+        widen("u8x64", "u16x32", "u8", "u16", false, 512, 64),
+        widen("u16x32", "u32x16", "u16", "u32", false, 512, 32),
+        widen("i8x64", "i16x32", "i8", "i16", true, 512, 64),
+        widen("i16x32", "i32x16", "i16", "i32", true, 512, 32),
     ]
 }
 
 /// Every saturating-narrowing family, in generation order.
-pub(super) fn all_narrow_pairs() -> Vec<NarrowPair> {
-    vec![
-        NarrowPair {
-            src: "i16x8",
-            src_elem: "i16",
-            sdst: "i8x16",
-            sdst_elem: "i8",
-            udst: "u8x16",
-            udst_elem: "u8",
-            width_bits: 128,
-            src_lanes: 8,
-        },
-        NarrowPair {
-            src: "i32x4",
-            src_elem: "i32",
-            sdst: "i16x8",
-            sdst_elem: "i16",
-            udst: "u16x8",
-            udst_elem: "u16",
-            width_bits: 128,
-            src_lanes: 4,
-        },
-        NarrowPair {
-            src: "i16x16",
-            src_elem: "i16",
-            sdst: "i8x32",
-            sdst_elem: "i8",
-            udst: "u8x32",
-            udst_elem: "u8",
-            width_bits: 256,
-            src_lanes: 16,
-        },
-        NarrowPair {
-            src: "i32x8",
-            src_elem: "i32",
-            sdst: "i16x16",
-            sdst_elem: "i16",
-            udst: "u16x16",
-            udst_elem: "u16",
-            width_bits: 256,
-            src_lanes: 8,
-        },
-        NarrowPair {
-            src: "i16x32",
-            src_elem: "i16",
-            sdst: "i8x64",
-            sdst_elem: "i8",
-            udst: "u8x64",
-            udst_elem: "u8",
-            width_bits: 512,
-            src_lanes: 32,
-        },
-        NarrowPair {
-            src: "i32x16",
-            src_elem: "i32",
-            sdst: "i16x32",
-            sdst_elem: "i16",
-            udst: "u16x32",
-            udst_elem: "u16",
-            width_bits: 512,
-            src_lanes: 16,
-        },
+pub(super) fn all_narrow_pairs() -> [NarrowPair; 6] {
+    [
+        narrow(("i16x8", "i16"), ("i8x16", "i8"), ("u8x16", "u8"), 128, 8),
+        narrow(("i32x4", "i32"), ("i16x8", "i16"), ("u16x8", "u16"), 128, 4),
+        narrow(("i16x16", "i16"), ("i8x32", "i8"), ("u8x32", "u8"), 256, 16),
+        narrow(
+            ("i32x8", "i32"),
+            ("i16x16", "i16"),
+            ("u16x16", "u16"),
+            256,
+            8,
+        ),
+        narrow(("i16x32", "i16"), ("i8x64", "i8"), ("u8x64", "u8"), 512, 32),
+        narrow(
+            ("i32x16", "i32"),
+            ("i16x32", "i16"),
+            ("u16x32", "u16"),
+            512,
+            16,
+        ),
     ]
 }
 
