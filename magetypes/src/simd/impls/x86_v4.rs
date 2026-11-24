@@ -31,7 +31,6 @@ use crate::simd::backends::*;
 // ============================================================================
 
 #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
-#[cfg(feature = "w512")]
 impl F32x16Backend for X64V4Token {
     type Repr = __m512;
 
@@ -307,7 +306,6 @@ impl F32x16Backend for X64V4Token {
     }
 }
 #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
-#[cfg(feature = "w512")]
 impl F32x16Internal for X64V4Token {
     type InternalRepr = __m512;
     #[attune(wrap, suppress_const_test, _self = X64V4Token)]
@@ -527,7 +525,6 @@ impl F32x16Internal for X64V4Token {
 }
 
 #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
-#[cfg(feature = "w512")]
 impl F64x8Backend for X64V4Token {
     type Repr = __m512d;
 
@@ -795,7 +792,6 @@ impl F64x8Backend for X64V4Token {
 }
 
 #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
-#[cfg(feature = "w512")]
 impl I8x64Backend for X64V4Token {
     type Repr = __m512i;
 
@@ -1000,7 +996,6 @@ impl I8x64Backend for X64V4Token {
 }
 
 #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
-#[cfg(feature = "w512")]
 impl U8x64Backend for X64V4Token {
     type Repr = __m512i;
 
@@ -1228,7 +1223,6 @@ impl U8x64Backend for X64V4Token {
 }
 
 #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
-#[cfg(feature = "w512")]
 impl I16x32Backend for X64V4Token {
     type Repr = __m512i;
 
@@ -1468,7 +1462,6 @@ impl I16x32Backend for X64V4Token {
 }
 
 #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
-#[cfg(feature = "w512")]
 impl U16x32Backend for X64V4Token {
     type Repr = __m512i;
 
@@ -1681,7 +1674,6 @@ impl U16x32Backend for X64V4Token {
 }
 
 #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
-#[cfg(feature = "w512")]
 impl I32x16Backend for X64V4Token {
     type Repr = __m512i;
 
@@ -1925,7 +1917,6 @@ impl I32x16Backend for X64V4Token {
 }
 
 #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
-#[cfg(feature = "w512")]
 impl U32x16Backend for X64V4Token {
     type Repr = __m512i;
 
@@ -2145,7 +2136,6 @@ impl U32x16Backend for X64V4Token {
 }
 
 #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
-#[cfg(feature = "w512")]
 impl I64x8Backend for X64V4Token {
     type Repr = __m512i;
 
@@ -2316,7 +2306,6 @@ impl I64x8Backend for X64V4Token {
 }
 
 #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
-#[cfg(feature = "w512")]
 impl U64x8Backend for X64V4Token {
     type Repr = __m512i;
 
@@ -2486,7 +2475,6 @@ impl U64x8Backend for X64V4Token {
 // ============================================================================
 
 #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
-#[cfg(feature = "w512")]
 impl i8x64PopcntBackend for X64V4xToken {
     #[attune(wrap, suppress_const_test, _self = X64V4xToken)]
     fn popcnt(self, a: __m512i) -> __m512i {
@@ -2495,7 +2483,6 @@ impl i8x64PopcntBackend for X64V4xToken {
 }
 
 #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
-#[cfg(feature = "w512")]
 impl u8x64PopcntBackend for X64V4xToken {
     #[attune(wrap, suppress_const_test, _self = X64V4xToken)]
     fn popcnt(self, a: __m512i) -> __m512i {
@@ -2504,7 +2491,6 @@ impl u8x64PopcntBackend for X64V4xToken {
 }
 
 #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
-#[cfg(feature = "w512")]
 impl i16x32PopcntBackend for X64V4xToken {
     #[attune(wrap, suppress_const_test, _self = X64V4xToken)]
     fn popcnt(self, a: __m512i) -> __m512i {
@@ -2513,7 +2499,6 @@ impl i16x32PopcntBackend for X64V4xToken {
 }
 
 #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
-#[cfg(feature = "w512")]
 impl u16x32PopcntBackend for X64V4xToken {
     #[attune(wrap, suppress_const_test, _self = X64V4xToken)]
     fn popcnt(self, a: __m512i) -> __m512i {
@@ -2522,7 +2507,6 @@ impl u16x32PopcntBackend for X64V4xToken {
 }
 
 #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
-#[cfg(feature = "w512")]
 impl i32x16PopcntBackend for X64V4xToken {
     #[attune(wrap, suppress_const_test, _self = X64V4xToken)]
     fn popcnt(self, a: __m512i) -> __m512i {
@@ -2531,7 +2515,6 @@ impl i32x16PopcntBackend for X64V4xToken {
 }
 
 #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
-#[cfg(feature = "w512")]
 impl u32x16PopcntBackend for X64V4xToken {
     #[attune(wrap, suppress_const_test, _self = X64V4xToken)]
     fn popcnt(self, a: __m512i) -> __m512i {
@@ -2540,7 +2523,6 @@ impl u32x16PopcntBackend for X64V4xToken {
 }
 
 #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
-#[cfg(feature = "w512")]
 impl i64x8PopcntBackend for X64V4xToken {
     #[attune(wrap, suppress_const_test, _self = X64V4xToken)]
     fn popcnt(self, a: __m512i) -> __m512i {
@@ -2549,7 +2531,6 @@ impl i64x8PopcntBackend for X64V4xToken {
 }
 
 #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
-#[cfg(feature = "w512")]
 impl u64x8PopcntBackend for X64V4xToken {
     #[attune(wrap, suppress_const_test, _self = X64V4xToken)]
     fn popcnt(self, a: __m512i) -> __m512i {
@@ -2562,7 +2543,6 @@ impl u64x8PopcntBackend for X64V4xToken {
 // ============================================================================
 
 #[cfg(all(target_arch = "x86_64", target_feature = "sse2", feature = "w512"))]
-#[cfg(feature = "w512")]
 impl F32x16Convert for X64V4Token {
     #[attune(wrap, suppress_const_test, _self = X64V4Token)]
     fn bitcast_f32_to_i32(self, a: __m512) -> __m512i {
