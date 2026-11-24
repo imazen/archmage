@@ -40,3 +40,6 @@ pub use wasm::*;
 mod wasm_stubs;
 #[cfg(not(target_arch = "wasm32"))]
 pub use wasm_stubs::*;
+
+#[cfg(feature = "std")]
+pub(super) mod testing_slots;

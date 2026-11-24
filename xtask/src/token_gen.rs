@@ -117,9 +117,13 @@ pub fn generate_token_files(reg: &Registry, major_version: u32) -> Vec<(String, 
         gen_stub_tokens(reg, &wasm_tokens, &deprecated_traits, major_version),
     ));
 
-    // Traits
+    // Traits and test slots
     files.push(("traits.rs".into(), gen_traits(reg)));
     files.push(("into_concrete.rs".into(), gen_into_concrete(reg)));
+    files.push((
+        "testing_slots.rs".into(),
+        gen_testing_slots(reg, &x86_tokens, &arm_tokens, &wasm_tokens),
+    ));
 
     // Module file
     files.push(("mod.rs".into(), gen_mod_rs()));
@@ -1359,7 +1363,72 @@ fn gen_mod_rs() -> String {
         mod wasm_stubs;
         #[cfg(not(target_arch = "wasm32"))]
         pub use wasm_stubs::*;
+
+        #[cfg(feature = "std")]
+        pub(super) mod testing_slots;
     "#}
+}
+
+/// Generate `src/tokens/generated/testing_slots.rs` deriving transitive cascade
+/// descendant indices directly from the token registry DAG.
+fn gen_testing_slots(
+    reg: &Registry,
+    x86_tokens: &[&TokenDef],
+    arm_tokens: &[&TokenDef],
+    wasm_tokens: &[&TokenDef],
+) -> String {
+    let format_arch_block = |cfg: &str, tokens: &[&TokenDef]| -> String {
+        let mut block = format!("    #[cfg({cfg})]\n    {{\n");
+        for token in tokens {
+            let desc_names: std::collections::HashSet<&str> = collect_descendants(reg, token)
+                .into_iter()
+                .map(|d| d.name.as_str())
+                .collect();
+            let indices: Vec<String> = tokens
+                .iter()
+                .enumerate()
+                .filter(|(_, other)| desc_names.contains(other.name.as_str()))
+                .map(|(idx, _)| idx.to_string())
+                .collect();
+            let name = &token.name;
+            let desc_slice = indices.join(", ");
+            block.push_str(&format!(
+                "        slots.push(TokenSlot::new::<crate::{name}>(\n\
+                 \x20           &[{desc_slice}],\n\
+                 \x20           crate::{name}::dangerously_disable_token_process_wide,\n\
+                 \x20       ));\n"
+            ));
+        }
+        block.push_str("    }\n");
+        block
+    };
+
+    let x86_block = format_arch_block(
+        "all(target_arch = \"x86_64\", target_feature = \"sse2\")",
+        x86_tokens,
+    );
+    let arm_block = format_arch_block("target_arch = \"aarch64\"", arm_tokens);
+    let wasm_block = format_arch_block("target_arch = \"wasm32\"", wasm_tokens);
+
+    formatdoc! {"
+        //! Generated from token-registry.toml — DO NOT EDIT.
+        //!
+        //! Test token slots and transitive cascade descendant indices derived from
+        //! the token registry DAG.
+
+        use crate::testing::TokenSlot;
+
+        pub(crate) fn build_token_slots() -> Vec<TokenSlot> {{
+            #[allow(unused_mut)]
+            let mut slots = Vec::new();
+
+        {x86_block}
+        {arm_block}
+        {wasm_block}
+            // ScalarToken is always available and does not contribute to permutations.
+            slots
+        }}
+    "}
 }
 
 // ============================================================================
@@ -1511,6 +1580,7 @@ mod tests {
             "wasm_stubs.rs",
             "traits.rs",
             "into_concrete.rs",
+            "testing_slots.rs",
             "mod.rs",
         ];
         for exp in &expected {
