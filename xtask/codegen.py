@@ -2102,7 +2102,9 @@ def compare(root, expected):
             kind = "stronger destination alignment"
             if target.startswith("aarch64") and n.removesuffix("_plain") in [
                 "neon_f32x8_fma",
+                "neon_f32x8_fma_portable",
                 "neon_f64x4_fma",
+                "neon_f64x4_fma_portable",
             ]:
                 assert list(map(opcode, old)) == list(map(opcode, new))
                 assert neon_fma_dataflow(old) is not None and neon_fma_dataflow(

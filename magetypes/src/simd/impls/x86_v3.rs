@@ -5305,12 +5305,12 @@ impl F32x8Convert for X64V3Token {
 
 #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl U32x4Bitcast for X64V3Token {
-    #[attune(wrap, suppress_const_test, _self = X64V3Token)]
+    #[inline(always)]
     fn bitcast_u32_to_i32(self, a: __m128i) -> __m128i {
         a
     }
 
-    #[attune(wrap, suppress_const_test, _self = X64V3Token)]
+    #[inline(always)]
     fn bitcast_i32_to_u32(self, a: __m128i) -> __m128i {
         a
     }
@@ -5318,12 +5318,12 @@ impl U32x4Bitcast for X64V3Token {
 
 #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl U32x8Bitcast for X64V3Token {
-    #[attune(wrap, suppress_const_test, _self = X64V3Token)]
+    #[inline(always)]
     fn bitcast_u32_to_i32(self, a: __m256i) -> __m256i {
         a
     }
 
-    #[attune(wrap, suppress_const_test, _self = X64V3Token)]
+    #[inline(always)]
     fn bitcast_i32_to_u32(self, a: __m256i) -> __m256i {
         a
     }
@@ -5357,11 +5357,11 @@ impl I64x4Bitcast for X64V3Token {
 
 #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl I8x16Bitcast for X64V3Token {
-    #[attune(wrap, suppress_const_test, _self = X64V3Token)]
+    #[inline(always)]
     fn bitcast_i8_to_u8(self, a: __m128i) -> __m128i {
         a
     }
-    #[attune(wrap, suppress_const_test, _self = X64V3Token)]
+    #[inline(always)]
     fn bitcast_u8_to_i8(self, a: __m128i) -> __m128i {
         a
     }
@@ -5369,11 +5369,11 @@ impl I8x16Bitcast for X64V3Token {
 
 #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl I8x32Bitcast for X64V3Token {
-    #[attune(wrap, suppress_const_test, _self = X64V3Token)]
+    #[inline(always)]
     fn bitcast_i8_to_u8(self, a: __m256i) -> __m256i {
         a
     }
-    #[attune(wrap, suppress_const_test, _self = X64V3Token)]
+    #[inline(always)]
     fn bitcast_u8_to_i8(self, a: __m256i) -> __m256i {
         a
     }
@@ -5381,11 +5381,11 @@ impl I8x32Bitcast for X64V3Token {
 
 #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl I16x8Bitcast for X64V3Token {
-    #[attune(wrap, suppress_const_test, _self = X64V3Token)]
+    #[inline(always)]
     fn bitcast_i16_to_u16(self, a: __m128i) -> __m128i {
         a
     }
-    #[attune(wrap, suppress_const_test, _self = X64V3Token)]
+    #[inline(always)]
     fn bitcast_u16_to_i16(self, a: __m128i) -> __m128i {
         a
     }
@@ -5393,11 +5393,11 @@ impl I16x8Bitcast for X64V3Token {
 
 #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl I16x16Bitcast for X64V3Token {
-    #[attune(wrap, suppress_const_test, _self = X64V3Token)]
+    #[inline(always)]
     fn bitcast_i16_to_u16(self, a: __m256i) -> __m256i {
         a
     }
-    #[attune(wrap, suppress_const_test, _self = X64V3Token)]
+    #[inline(always)]
     fn bitcast_u16_to_i16(self, a: __m256i) -> __m256i {
         a
     }
@@ -5405,11 +5405,11 @@ impl I16x16Bitcast for X64V3Token {
 
 #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl U64x2Bitcast for X64V3Token {
-    #[attune(wrap, suppress_const_test, _self = X64V3Token)]
+    #[inline(always)]
     fn bitcast_u64_to_i64(self, a: __m128i) -> __m128i {
         a
     }
-    #[attune(wrap, suppress_const_test, _self = X64V3Token)]
+    #[inline(always)]
     fn bitcast_i64_to_u64(self, a: __m128i) -> __m128i {
         a
     }
@@ -5417,11 +5417,11 @@ impl U64x2Bitcast for X64V3Token {
 
 #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl U64x4Bitcast for X64V3Token {
-    #[attune(wrap, suppress_const_test, _self = X64V3Token)]
+    #[inline(always)]
     fn bitcast_u64_to_i64(self, a: __m256i) -> __m256i {
         a
     }
-    #[attune(wrap, suppress_const_test, _self = X64V3Token)]
+    #[inline(always)]
     fn bitcast_i64_to_u64(self, a: __m256i) -> __m256i {
         a
     }

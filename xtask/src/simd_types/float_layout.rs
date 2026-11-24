@@ -919,66 +919,97 @@ pub(super) fn x86_v3_f32x16_to_u16_helper() -> String {
     "#}
 }
 
-pub(super) fn polyfill(lanes: usize, part: usize, repr: &str) -> String {
-    let backend = format!("F32x{part}Internal");
+pub(super) fn polyfill_f32x8(repr: &str) -> String {
     formatdoc! {r#"
         #[inline(always)]
-        fn from_u16_lanes(self, lanes: &[u16; {lanes}]) -> {repr} {{
-            let (chunks, _) = lanes.as_chunks::<{part}>();
-            core::array::from_fn(|i| <Self as {backend}>::from_u16_lanes(self, &chunks[i]))
+        fn from_u16_lanes(self, lanes: &[u16; 8]) -> {repr} {{
+            let (chunks, _) = lanes.as_chunks::<4>();
+            [
+                <Self as F32x4Internal>::from_u16_lanes(self, &chunks[0]),
+                <Self as F32x4Internal>::from_u16_lanes(self, &chunks[1]),
+            ]
         }}
 
         #[inline(always)]
-        fn to_u16_lanes<const CFG: u32>(self, value: {repr}) -> [u16; {lanes}] {{
-            crate::simd_storage::cast(value.map(|v| <Self as {backend}>::to_u16_lanes::<CFG>(self, v)))
+        fn to_u16_lanes<const CFG: u32>(self, value: {repr}) -> [u16; 8] {{
+            crate::simd_storage::cast([
+                <Self as F32x4Internal>::to_u16_lanes::<CFG>(self, value[0]),
+                <Self as F32x4Internal>::to_u16_lanes::<CFG>(self, value[1]),
+            ])
         }}
 
         #[inline(always)]
-        fn to_u8_lanes<const CFG: u32>(self, value: {repr}) -> [u8; {lanes}] {{
-            let parts = value.map(|v| <Self as {backend}>::to_u8_lanes::<CFG>(self, v));
-            crate::simd_storage::cast(parts)
+        fn to_u8_lanes<const CFG: u32>(self, value: {repr}) -> [u8; 8] {{
+            crate::simd_storage::cast([
+                <Self as F32x4Internal>::to_u8_lanes::<CFG>(self, value[0]),
+                <Self as F32x4Internal>::to_u8_lanes::<CFG>(self, value[1]),
+            ])
         }}
 
         #[inline(always)]
         fn to_u32_lanes<const CFG: u32>(self, value: {repr}) -> {repr} {{
-            value.map(|part| <Self as {backend}>::to_u32_lanes::<CFG>(self, part))
+            [
+                <Self as F32x4Internal>::to_u32_lanes::<CFG>(self, value[0]),
+                <Self as F32x4Internal>::to_u32_lanes::<CFG>(self, value[1]),
+            ]
         }}
 
         #[inline(always)]
         fn from_u32_lanes(self, value: {repr}) -> {repr} {{
-            value.map(|part| <Self as {backend}>::from_u32_lanes(self, part))
+            [
+                <Self as F32x4Internal>::from_u32_lanes(self, value[0]),
+                <Self as F32x4Internal>::from_u32_lanes(self, value[1]),
+            ]
         }}
 
         #[inline(always)]
-        fn from_f16_lanes<const CFG: u32>(self, lanes: &[u16; {lanes}]) -> {repr} {{
-            let (chunks, _) = lanes.as_chunks::<{part}>();
-            core::array::from_fn(|i| <Self as {backend}>::from_f16_lanes::<CFG>(self, &chunks[i]))
+        fn from_f16_lanes<const CFG: u32>(self, lanes: &[u16; 8]) -> {repr} {{
+            let (chunks, _) = lanes.as_chunks::<4>();
+            [
+                <Self as F32x4Internal>::from_f16_lanes::<CFG>(self, &chunks[0]),
+                <Self as F32x4Internal>::from_f16_lanes::<CFG>(self, &chunks[1]),
+            ]
         }}
 
         #[inline(always)]
-        fn to_f16_lanes<const CFG: u32>(self, value: {repr}) -> [u16; {lanes}] {{
-            crate::simd_storage::cast(value.map(|part| <Self as {backend}>::to_f16_lanes::<CFG>(self, part)))
+        fn to_f16_lanes<const CFG: u32>(self, value: {repr}) -> [u16; 8] {{
+            crate::simd_storage::cast([
+                <Self as F32x4Internal>::to_f16_lanes::<CFG>(self, value[0]),
+                <Self as F32x4Internal>::to_f16_lanes::<CFG>(self, value[1]),
+            ])
         }}
 
         #[inline(always)]
-        fn from_bf16_lanes(self, lanes: &[u16; {lanes}]) -> {repr} {{
-            let (chunks, _) = lanes.as_chunks::<{part}>();
-            core::array::from_fn(|i| <Self as {backend}>::from_bf16_lanes(self, &chunks[i]))
+        fn from_bf16_lanes(self, lanes: &[u16; 8]) -> {repr} {{
+            let (chunks, _) = lanes.as_chunks::<4>();
+            [
+                <Self as F32x4Internal>::from_bf16_lanes(self, &chunks[0]),
+                <Self as F32x4Internal>::from_bf16_lanes(self, &chunks[1]),
+            ]
         }}
 
         #[inline(always)]
-        fn to_bf16_lanes<const CFG: u32>(self, value: {repr}) -> [u16; {lanes}] {{
-            crate::simd_storage::cast(value.map(|part| <Self as {backend}>::to_bf16_lanes::<CFG>(self, part)))
+        fn to_bf16_lanes<const CFG: u32>(self, value: {repr}) -> [u16; 8] {{
+            crate::simd_storage::cast([
+                <Self as F32x4Internal>::to_bf16_lanes::<CFG>(self, value[0]),
+                <Self as F32x4Internal>::to_bf16_lanes::<CFG>(self, value[1]),
+            ])
         }}
 
         #[inline(always)]
         fn broadcast_rgba_alpha_repr(self, value: {repr}) -> {repr} {{
-            value.map(|v| <Self as {backend}>::broadcast_rgba_alpha_repr(self, v))
+            [
+                <Self as F32x4Internal>::broadcast_rgba_alpha_repr(self, value[0]),
+                <Self as F32x4Internal>::broadcast_rgba_alpha_repr(self, value[1]),
+            ]
         }}
 
         #[inline(always)]
         fn with_rgba_alpha_repr(self, value: {repr}, src: {repr}) -> {repr} {{
-            core::array::from_fn(|i| <Self as {backend}>::with_rgba_alpha_repr(self, value[i], src[i]))
+            [
+                <Self as F32x4Internal>::with_rgba_alpha_repr(self, value[0], src[0]),
+                <Self as F32x4Internal>::with_rgba_alpha_repr(self, value[1], src[1]),
+            ]
         }}
     "#}
 }

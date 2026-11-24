@@ -138,17 +138,6 @@ impl IntVecType {
         self.width_bits == 128
     }
 
-    /// NEON repr type
-    fn neon_repr(&self) -> String {
-        let native = self.neon_native_type();
-        if self.native_on_neon() {
-            native
-        } else {
-            let count = self.width_bits / 128;
-            format!("[{native}; {count}]")
-        }
-    }
-
     /// NEON native 128-bit type
     fn neon_native_type(&self) -> String {
         match (self.signed, self.elem_bits) {
@@ -183,48 +172,6 @@ impl IntVecType {
         }
     }
 
-    /// NEON reinterpret from unsigned to this type's repr
-    fn neon_reinterpret_from_u(&self) -> String {
-        let ns = self.neon_suffix();
-        let us = match self.elem_bits {
-            8 => "u8",
-            16 => "u16",
-            64 => "u64",
-            _ => unreachable!(),
-        };
-        if self.signed {
-            format!("vreinterpretq_{ns}_{us}")
-        } else {
-            String::new() // Already unsigned, no reinterpret needed
-        }
-    }
-
-    /// NEON reinterpret from this type to unsigned
-    fn neon_reinterpret_to_u(&self) -> String {
-        let ns = self.neon_suffix();
-        let us = match self.elem_bits {
-            8 => "u8",
-            16 => "u16",
-            64 => "u64",
-            _ => unreachable!(),
-        };
-        if self.signed {
-            format!("vreinterpretq_{us}_{ns}")
-        } else {
-            String::new() // Already unsigned
-        }
-    }
-
-    /// WASM repr type
-    fn wasm_repr(&self) -> String {
-        if self.native_on_wasm() {
-            "v128".to_string()
-        } else {
-            let count = self.width_bits / 128;
-            format!("[v128; {count}]")
-        }
-    }
-
     /// WASM intrinsic prefix for this element type: "i8x16", "u8x16", "i16x8", etc.
     fn wasm_prefix(&self) -> String {
         format!("{}x{}", self.elem, self.lanes_per_128())
@@ -233,11 +180,6 @@ impl IntVecType {
     /// Lanes in a 128-bit sub-vector
     fn lanes_per_128(&self) -> usize {
         128 / self.elem_bits
-    }
-
-    /// Number of 128-bit sub-vectors for polyfill
-    fn sub_count(&self) -> usize {
-        self.width_bits / 128
     }
 
     /// The signed counterpart of this element type (for bias trick)
@@ -1527,13 +1469,11 @@ fn generate_scalar_int_impl(ty: &IntVecType) -> String {
 pub(super) fn generate_neon_int_impls(types: &[IntVecType]) -> String {
     let mut code = String::new();
     for ty in types {
-        code.push_str("\n#[cfg(target_arch = \"aarch64\")]\n");
         if ty.native_on_neon() {
+            code.push_str("\n#[cfg(target_arch = \"aarch64\")]\n");
             code.push_str(&generate_neon_native_int_impl(ty));
-        } else {
-            code.push_str(&generate_neon_polyfill_int_impl(ty));
+            code.push('\n');
         }
-        code.push('\n');
     }
     code
 }
@@ -1959,423 +1899,6 @@ fn generate_neon_bitmask(ty: &IntVecType) -> String {
     }
 }
 
-fn generate_neon_polyfill_int_impl(ty: &IntVecType) -> String {
-    let integer_methods = super::backend_gen_widen_narrow::methods(&ty.name(), "NeonToken");
-    let arcane = super::backend_syntax::arcane("NeonToken");
-    let trait_name = ty.trait_name();
-    let repr = ty.neon_repr();
-    let array = ty.array_type();
-    let elem = ty.elem;
-    let ns = ty.neon_suffix();
-    let _nt = ty.neon_native_type();
-    let sub_count = ty.sub_count();
-    let lanes_per_128 = ty.lanes_per_128();
-
-    let binary_op = |intrinsic: &str| -> String {
-        let items: Vec<String> = (0..sub_count)
-            .map(|i| format!("{intrinsic}(a[{i}], b[{i}])"))
-            .collect();
-        format!("[{}]", items.join(", "))
-    };
-
-    let unary_op = |intrinsic: &str| -> String {
-        let items: Vec<String> = (0..sub_count)
-            .map(|i| format!("{intrinsic}(a[{i}])"))
-            .collect();
-        format!("[{}]", items.join(", "))
-    };
-
-    let from_u_fn = ty.neon_reinterpret_from_u();
-    let to_u_fn = ty.neon_reinterpret_to_u();
-
-    let cmp_op = |intrinsic: &str| -> String {
-        if ty.signed {
-            let items: Vec<String> = (0..sub_count)
-                .map(|i| format!("{from_u_fn}({intrinsic}(a[{i}], b[{i}]))"))
-                .collect();
-            format!("[{}]", items.join(", "))
-        } else {
-            let items: Vec<String> = (0..sub_count)
-                .map(|i| format!("{intrinsic}(a[{i}], b[{i}])"))
-                .collect();
-            format!("[{}]", items.join(", "))
-        }
-    };
-
-    let ne_op = || -> String {
-        let us = match ty.elem_bits {
-            8 => "u8",
-            16 => "u16",
-            64 => "u64",
-            _ => unreachable!(),
-        };
-        if ty.signed {
-            let items: Vec<String> = (0..sub_count)
-                .map(|i| format!("{from_u_fn}(vmvnq_{us}(vceqq_{ns}(a[{i}], b[{i}])))"))
-                .collect();
-            format!("[{}]", items.join(", "))
-        } else if ty.elem_bits == 64 {
-            // NEON lacks vmvnq_u64 — use XOR with all-ones
-            let items: Vec<String> = (0..sub_count)
-                .map(|i| format!("veorq_u64(vceqq_u64(a[{i}], b[{i}]), vdupq_n_u64(u64::MAX))"))
-                .collect();
-            format!("[{}]", items.join(", "))
-        } else {
-            let items: Vec<String> = (0..sub_count)
-                .map(|i| format!("vmvnq_{us}(vceqq_{ns}(a[{i}], b[{i}]))"))
-                .collect();
-            format!("[{}]", items.join(", "))
-        }
-    };
-
-    let v4_copies = (0..sub_count).map(|_| "v4").collect::<Vec<_>>().join(", ");
-    let z_copies = (0..sub_count).map(|_| "z").collect::<Vec<_>>().join(", ");
-
-    let blend_items: Vec<String> = (0..sub_count)
-        .map(|i| {
-            if ty.signed {
-                format!("vbslq_{ns}({to_u_fn}(mask[{i}]), if_true[{i}], if_false[{i}])")
-            } else {
-                format!("vbslq_{ns}(mask[{i}], if_true[{i}], if_false[{i}])")
-            }
-        })
-        .collect();
-    let blend_body = format!("[{}]", blend_items.join(", "));
-
-    let not_op = if ty.elem_bits == 64 {
-        let items: Vec<String> = (0..sub_count)
-            .map(|i| format!("veorq_{ns}(a[{i}], vdupq_n_{ns}(u64::MAX))"))
-            .collect();
-        format!("[{}]", items.join(", "))
-    } else {
-        unary_op(&format!("vmvnq_{ns}"))
-    };
-
-    let shl_items: Vec<String> = (0..sub_count)
-        .map(|i| format!("vshlq_n_{ns}::<N>(a[{i}])"))
-        .collect();
-    let shl_body = format!("[{}]", shl_items.join(", "));
-
-    let shr_logical_items: Vec<String> = (0..sub_count)
-        .map(|i| {
-            let us = &ns[1..];
-            if ty.signed {
-                format!(
-                    "vreinterpretq_{ns}_u{us}(vshlq_u{us}(vreinterpretq_u{us}_{ns}(a[{i}]), vdupq_n_s{us}((-N) as i{us})))"
-                )
-            } else {
-                format!("vshlq_{ns}(a[{i}], vdupq_n_s{us}((-N) as i{us}))")
-            }
-        })
-        .collect();
-    let shr_logical_body = format!(
-        "const {{ assert!(N >= 0 && N <= {}) }};\n                [{}]",
-        ty.elem_bits - 1,
-        shr_logical_items.join(", ")
-    );
-
-    let mut code = formatdoc! {r#"
-        impl {trait_name} for archmage::NeonToken {{
-            type Repr = {repr};
-
-            {arcane}
-            fn splat(self, v: {elem}) -> {repr} {{
-                let v4 = vdupq_n_{ns}(v);
-                [{v4_copies}]
-            }}
-
-            {arcane}
-            fn zero(self) -> {repr} {{
-                let z = vdupq_n_{ns}(0);
-                [{z_copies}]
-            }}
-
-            #[inline(always)]
-            fn load(self, data: &{array}) -> {repr} {{
-                let halves = data.as_chunks::<{lanes_per_128}>().0;
-                [crate::simd_storage::copy(&halves[0]), crate::simd_storage::copy(&halves[1])]
-            }}
-
-            #[inline(always)]
-            fn from_array(self, arr: {array}) -> {repr} {{
-                crate::simd_storage::cast(arr)
-            }}
-
-            #[inline(always)]
-            fn store(self, repr: {repr}, out: &mut {array}) {{
-                let halves = out.as_chunks_mut::<{lanes_per_128}>().0;
-                crate::simd_storage::store(repr[0], &mut halves[0]);
-                crate::simd_storage::store(repr[1], &mut halves[1]);
-            }}
-
-            #[inline(always)]
-            fn to_array(self, repr: {repr}) -> {array} {{
-                crate::simd_storage::cast(repr)
-            }}
-
-            {arcane}
-            fn add(self, a: {repr}, b: {repr}) -> {repr} {{ {add} }}
-            {arcane}
-            fn sub(self, a: {repr}, b: {repr}) -> {repr} {{ {sub} }}
-    "#,
-        add = binary_op(&format!("vaddq_{ns}")),
-        sub = binary_op(&format!("vsubq_{ns}")),
-    };
-
-    if ty.has_native_mul() {
-        code.push_str(&formatdoc! {r#"
-            {arcane}
-            fn mul(self, a: {repr}, b: {repr}) -> {repr} {{ {mul} }}
-        "#, mul = binary_op(&format!("vmulq_{ns}"))});
-    }
-
-    if ty.signed {
-        code.push_str(&formatdoc! {r#"
-            {arcane}
-            fn neg(self, a: {repr}) -> {repr} {{ {neg} }}
-        "#, neg = unary_op(&format!("vnegq_{ns}"))});
-    }
-
-    if ty.elem_bits == 64 {
-        // NEON lacks vminq_u64/vmaxq_u64 — polyfill with compare + blend
-        let min_items: Vec<String> = (0..sub_count)
-            .map(|i| format!("vbslq_u64(vcltq_u64(a[{i}], b[{i}]), a[{i}], b[{i}])"))
-            .collect();
-        let max_items: Vec<String> = (0..sub_count)
-            .map(|i| format!("vbslq_u64(vcgtq_u64(a[{i}], b[{i}]), a[{i}], b[{i}])"))
-            .collect();
-        code.push_str(&formatdoc! {r#"
-            {arcane}
-            fn min(self, a: {repr}, b: {repr}) -> {repr} {{ [{min}] }}
-            {arcane}
-            fn max(self, a: {repr}, b: {repr}) -> {repr} {{ [{max}] }}
-        "#,
-            min = min_items.join(", "),
-            max = max_items.join(", "),
-        });
-    } else {
-        code.push_str(&formatdoc! {r#"
-            {arcane}
-            fn min(self, a: {repr}, b: {repr}) -> {repr} {{ {min} }}
-            {arcane}
-            fn max(self, a: {repr}, b: {repr}) -> {repr} {{ {max} }}
-        "#,
-            min = binary_op(&format!("vminq_{ns}")),
-            max = binary_op(&format!("vmaxq_{ns}")),
-        });
-    }
-
-    if ty.signed && ty.elem_bits <= 16 {
-        code.push_str(&formatdoc! {r#"
-            {arcane}
-            fn abs(self, a: {repr}) -> {repr} {{ {abs} }}
-        "#, abs = unary_op(&format!("vabsq_{ns}"))});
-    }
-
-    code.push_str(&formatdoc! {r#"
-
-            {arcane}
-            fn simd_eq(self, a: {repr}, b: {repr}) -> {repr} {{ {eq} }}
-            {arcane}
-            fn simd_ne(self, a: {repr}, b: {repr}) -> {repr} {{ {ne} }}
-            {arcane}
-            fn simd_lt(self, a: {repr}, b: {repr}) -> {repr} {{ {lt} }}
-            {arcane}
-            fn simd_le(self, a: {repr}, b: {repr}) -> {repr} {{ {le} }}
-            {arcane}
-            fn simd_gt(self, a: {repr}, b: {repr}) -> {repr} {{ {gt} }}
-            {arcane}
-            fn simd_ge(self, a: {repr}, b: {repr}) -> {repr} {{ {ge} }}
-
-            {arcane}
-            fn blend(self, mask: {repr}, if_true: {repr}, if_false: {repr}) -> {repr} {{
-                {blend_body}
-            }}
-
-            {arcane}
-            fn reduce_add(self, a: {repr}) -> {elem} {{
-                let mut sum = 0{elem};
-                // Iterate the array rather than indexing by range
-                // (clippy::needless_range_loop).
-                for v in a {{
-                    sum = sum.wrapping_add(vaddvq_{ns}(v));
-                }}
-                sum
-            }}
-
-            {arcane}
-            fn not(self, a: {repr}) -> {repr} {{ {not_op} }}
-            {arcane}
-            fn bitand(self, a: {repr}, b: {repr}) -> {repr} {{ {bitand} }}
-            {arcane}
-            fn bitor(self, a: {repr}, b: {repr}) -> {repr} {{ {bitor} }}
-            {arcane}
-            fn bitxor(self, a: {repr}, b: {repr}) -> {repr} {{ {bitxor} }}
-
-            {arcane}
-            fn shl_const<const N: i32>(self, a: {repr}) -> {repr} {{ {shl_body} }}
-            {arcane}
-            fn shr_logical_const<const N: i32>(self, a: {repr}) -> {repr} {{ {shr_logical_body} }}
-    "#,
-        eq = cmp_op(&format!("vceqq_{ns}")),
-        ne = ne_op(),
-        lt = cmp_op(&format!("vcltq_{ns}")),
-        le = cmp_op(&format!("vcleq_{ns}")),
-        gt = cmp_op(&format!("vcgtq_{ns}")),
-        ge = cmp_op(&format!("vcgeq_{ns}")),
-        bitand = binary_op(&format!("vandq_{ns}")),
-        bitor = binary_op(&format!("vorrq_{ns}")),
-        bitxor = binary_op(&format!("veorq_{ns}")),
-    });
-
-    if ty.signed {
-        let us = &ns[1..];
-        let max_sh = ty.elem_bits - 1;
-        let shr_arith_items: Vec<String> = (0..sub_count)
-            .map(|i| format!("vshlq_{ns}(a[{i}], vdupq_n_s{us}((-N) as i{us}))"))
-            .collect();
-        code.push_str(&formatdoc! {r#"
-            {arcane}
-            fn shr_arithmetic_const<const N: i32>(self, a: {repr}) -> {repr} {{
-                const {{ assert!(N >= 0 && N <= {max_sh}) }};
-                [{shr_arith}]
-            }}
-        "#, shr_arith = shr_arith_items.join(", ")});
-    }
-
-    // Uniform variable shifts + saturating arithmetic, applied per 128-bit
-    // sub-vector. Same lowering (and same count clamp) as the native impl.
-    if ty.elem_bits == 16 {
-        let eb = ty.elem_bits;
-        let us = &ns[1..];
-        let max_sh = eb - 1;
-
-        let shl_u: Vec<String> = (0..sub_count)
-            .map(|i| format!("vshlq_{ns}(a[{i}], vdupq_n_s{us}(count.min({eb}) as i{us}))"))
-            .collect();
-        let shr_l_u: Vec<String> = (0..sub_count)
-            .map(|i| {
-                if ty.signed {
-                    format!(
-                        "vreinterpretq_{ns}_u{us}(vshlq_u{us}(vreinterpretq_u{us}_{ns}(a[{i}]), vdupq_n_s{us}(-(count.min({eb}) as i{us}))))"
-                    )
-                } else {
-                    format!("vshlq_{ns}(a[{i}], vdupq_n_s{us}(-(count.min({eb}) as i{us})))")
-                }
-            })
-            .collect();
-
-        code.push_str(&formatdoc! {r#"
-
-            {arcane}
-            fn shl_uniform(self, a: {repr}, count: u32) -> {repr} {{
-                [{shl_u}]
-            }}
-
-            {arcane}
-            fn shr_logical_uniform(self, a: {repr}, count: u32) -> {repr} {{
-                [{shr_l_u}]
-            }}
-        "#, shl_u = shl_u.join(", "), shr_l_u = shr_l_u.join(", ")});
-
-        if ty.signed {
-            let shr_a_u: Vec<String> = (0..sub_count)
-                .map(|i| {
-                    format!("vshlq_{ns}(a[{i}], vdupq_n_s{us}(-(count.min({max_sh}) as i{us})))")
-                })
-                .collect();
-            code.push_str(&formatdoc! {r#"
-            {arcane}
-            fn shr_arithmetic_uniform(self, a: {repr}, count: u32) -> {repr} {{
-                [{shr_a_u}]
-            }}
-            "#, shr_a_u = shr_a_u.join(", ")});
-        }
-    }
-
-    if ty.has_saturating() {
-        code.push_str(&formatdoc! {r#"
-
-            {arcane}
-            fn saturating_add(self, a: {repr}, b: {repr}) -> {repr} {{ {qadd} }}
-
-            {arcane}
-            fn saturating_sub(self, a: {repr}, b: {repr}) -> {repr} {{ {qsub} }}
-        "#,
-            qadd = binary_op(&format!("vqaddq_{ns}")),
-            qsub = binary_op(&format!("vqsubq_{ns}")),
-        });
-    }
-
-    // Boolean: sign bits survive AND/OR, so fold every sub-vector together
-    // and reduce once instead of reducing each half.
-    let fold = |op: &str| -> String {
-        (1..sub_count).fold("a[0]".to_string(), |acc, i| {
-            format!("v{op}q_{ns}({acc}, a[{i}])")
-        })
-    };
-    let ss = format!("s{}", ty.elem_bits);
-    let reduce = |folded: &str, red: &str, lane_op: &str| -> String {
-        if ty.elem_bits == 64 {
-            // No 64-bit horizontal reduction on NEON: combine the two lanes
-            // with the same operator used for the fold, then test one sign bit.
-            format!(
-                "((vgetq_lane_u64::<0>({f}) {lane_op} vgetq_lane_u64::<1>({f})) >> 63) != 0",
-                f = folded
-            )
-        } else if ty.signed {
-            format!("v{red}vq_{ns}({folded}) < 0")
-        } else {
-            format!("v{red}vq_{ss}(vreinterpretq_{ss}_{ns}({folded})) < 0")
-        }
-    };
-    let all_true_items = [reduce(&fold("and"), "max", "&")];
-    let any_true_items = [reduce(&fold("orr"), "min", "|")];
-
-    code.push_str(&formatdoc! {r#"
-
-            {arcane}
-            fn all_true(self, a: {repr}) -> bool {{
-                {all_true}
-            }}
-
-            {arcane}
-            fn any_true(self, a: {repr}) -> bool {{
-                {any_true}
-            }}
-
-            {arcane}
-            fn bitmask(self, a: {repr}) -> u32 {{
-                // Delegate to NeonToken native bitmask per sub-vector, combine.
-                // Enumerate the array rather than indexing by range
-                // (clippy::needless_range_loop).
-                let mut result = 0u32;
-                for (i, v) in a.into_iter().enumerate() {{
-                    result |= <archmage::NeonToken as {native_trait}>::bitmask(_self, v) << (i * {lanes_per_128});
-                }}
-                result
-            }}
-        {integer_methods}
-        }}
-    "#,
-        all_true = all_true_items.join(" && "),
-        any_true = any_true_items.join(" || "),
-        native_trait = {
-            let upper = match ty.elem {
-                "i8" => "I8",
-                "u8" => "U8",
-                "i16" => "I16",
-                "u16" => "U16",
-                "u64" => "U64",
-                _ => unreachable!(),
-            };
-            format!("{upper}x{}Backend", lanes_per_128)
-        },
-    });
-
-    code
-}
-
 // ============================================================================
 // WASM Implementation Generation
 // ============================================================================
@@ -2383,13 +1906,11 @@ fn generate_neon_polyfill_int_impl(ty: &IntVecType) -> String {
 pub(super) fn generate_wasm_int_impls(types: &[IntVecType]) -> String {
     let mut code = String::new();
     for ty in types {
-        code.push_str("\n#[cfg(target_arch = \"wasm32\")]\n");
         if ty.native_on_wasm() {
+            code.push_str("\n#[cfg(target_arch = \"wasm32\")]\n");
             code.push_str(&generate_wasm_native_int_impl(ty));
-        } else {
-            code.push_str(&generate_wasm_polyfill_int_impl(ty));
+            code.push('\n');
         }
-        code.push('\n');
     }
     code
 }
@@ -2718,417 +2239,6 @@ fn generate_wasm_native_int_impl(ty: &IntVecType) -> String {
     body
 }
 
-fn generate_wasm_polyfill_int_impl(ty: &IntVecType) -> String {
-    let integer_methods = super::backend_gen_widen_narrow::methods(&ty.name(), "Wasm128Token");
-    let trait_name = ty.trait_name();
-    let repr = ty.wasm_repr();
-    let array = ty.array_type();
-    let elem = ty.elem;
-    let lanes = ty.lanes;
-    let wp = ty.wasm_prefix();
-    let sub_count = ty.sub_count();
-    let lanes_per_128 = ty.lanes_per_128();
-
-    let signed_wp = format!("{}x{}", ty.signed_elem(), lanes_per_128);
-
-    let binary_op = |fn_name: &str| -> String {
-        let items: Vec<String> = (0..sub_count)
-            .map(|i| format!("{fn_name}(a[{i}], b[{i}])"))
-            .collect();
-        format!("[{}]", items.join(", "))
-    };
-
-    let unary_op = |fn_name: &str| -> String {
-        let items: Vec<String> = (0..sub_count)
-            .map(|i| format!("{fn_name}(a[{i}])"))
-            .collect();
-        format!("[{}]", items.join(", "))
-    };
-
-    let v4_copies = (0..sub_count).map(|_| "v4").collect::<Vec<_>>().join(", ");
-    let z_copies = (0..sub_count).map(|_| "z").collect::<Vec<_>>().join(", ");
-
-    // Keep vector-sized copies so LLVM retains each v128's alignment facts.
-    let load_body = format!(
-        "[{}]",
-        (0..sub_count)
-            .map(|i| format!(
-                "crate::simd_storage::copy(&data.as_chunks::<{lanes_per_128}>().0[{i}])"
-            ))
-            .collect::<Vec<_>>()
-            .join(", ")
-    );
-    let store_body = (0..sub_count)
-        .map(|i| format!("crate::simd_storage::store(repr[{i}], &mut out.as_chunks_mut::<{lanes_per_128}>().0[{i}]);"))
-        .collect::<Vec<_>>().join("\n");
-
-    let blend_items: Vec<String> = (0..sub_count)
-        .map(|i| format!("v128_bitselect(if_true[{i}], if_false[{i}], mask[{i}])"))
-        .collect();
-    let blend_body = format!("[{}]", blend_items.join(", "));
-
-    let shl_items: Vec<String> = (0..sub_count)
-        .map(|i| format!("{signed_wp}_shl(a[{i}], N as u32)"))
-        .collect();
-    let shl_body = format!("[{}]", shl_items.join(", "));
-
-    let shr_logical_fn = if ty.signed {
-        // Logical shift must use the u-prefixed intrinsic: the i-prefixed
-        // `_shr` is the arithmetic (sign-filling) form in WASM naming.
-        format!("u{}_shr", &signed_wp[1..])
-    } else {
-        format!("{wp}_shr")
-    };
-    let shr_logical_items: Vec<String> = (0..sub_count)
-        .map(|i| format!("{shr_logical_fn}(a[{i}], N as u32)"))
-        .collect();
-    let shr_logical_body = format!("[{}]", shr_logical_items.join(", "));
-
-    // For u64 polyfill, min/max/comparisons don't exist as WASM intrinsics.
-    // Delegate to the native W128 backend trait methods (which have bias-trick polyfills).
-    let native_trait = ty.trait_name().replace(
-        &format!("x{}", ty.lanes),
-        &format!("x{}", ty.lanes_per_128()),
-    );
-
-    let trait_binary_op = |method: &str| -> String {
-        let items: Vec<String> = (0..sub_count)
-            .map(|i| {
-                format!(
-                    "<archmage::Wasm128Token as {native_trait}>::{method}(self, a[{i}], b[{i}])"
-                )
-            })
-            .collect();
-        format!("[{}]", items.join(", "))
-    };
-
-    let min_fn = if ty.signed {
-        format!("{signed_wp}_min")
-    } else {
-        format!("{wp}_min")
-    };
-    let max_fn = if ty.signed {
-        format!("{signed_wp}_max")
-    } else {
-        format!("{wp}_max")
-    };
-    let eq_fn = format!("{signed_wp}_eq");
-    let ne_fn = format!("{signed_wp}_ne");
-    let lt_fn = if ty.signed {
-        format!("{signed_wp}_lt")
-    } else {
-        format!("{wp}_lt")
-    };
-    let le_fn = if ty.signed {
-        format!("{signed_wp}_le")
-    } else {
-        format!("{wp}_le")
-    };
-    let gt_fn = if ty.signed {
-        format!("{signed_wp}_gt")
-    } else {
-        format!("{wp}_gt")
-    };
-    let ge_fn = if ty.signed {
-        format!("{signed_wp}_ge")
-    } else {
-        format!("{wp}_ge")
-    };
-
-    let mut code = formatdoc! {r#"
-        impl {trait_name} for archmage::Wasm128Token {{
-            type Repr = {repr};
-
-            #[inline(always)]
-            fn splat(self, v: {elem}) -> {repr} {{
-                let v4 = {wp}_splat(v);
-                [{v4_copies}]
-            }}
-
-            #[inline(always)]
-            fn zero(self) -> {repr} {{
-                let z = {wp}_splat(0);
-                [{z_copies}]
-            }}
-
-            #[inline(always)]
-            fn load(self, data: &{array}) -> {repr} {{
-                {load_body}
-            }}
-
-            #[inline(always)]
-            fn from_array(self, arr: {array}) -> {repr} {{
-                <Self as {trait_name}>::load(self, &arr)
-            }}
-
-            #[inline(always)]
-            fn store(self, repr: {repr}, out: &mut {array}) {{
-                {store_body}
-            }}
-
-            #[inline(always)]
-            fn to_array(self, repr: {repr}) -> {array} {{
-                let mut out = [0{elem}; {lanes}];
-                <Self as {trait_name}>::store(self, repr, &mut out);
-                out
-            }}
-
-            #[inline(always)]
-            fn add(self, a: {repr}, b: {repr}) -> {repr} {{ {add} }}
-            #[inline(always)]
-            fn sub(self, a: {repr}, b: {repr}) -> {repr} {{ {sub} }}
-    "#,
-        add = binary_op(&format!("{signed_wp}_add")),
-        sub = binary_op(&format!("{signed_wp}_sub")),
-    };
-
-    if ty.has_native_mul() {
-        code.push_str(&formatdoc! {r#"
-            #[inline(always)]
-            fn mul(self, a: {repr}, b: {repr}) -> {repr} {{ {mul} }}
-        "#, mul = binary_op(&format!("{signed_wp}_mul"))});
-    }
-
-    if ty.signed {
-        code.push_str(&formatdoc! {r#"
-            #[inline(always)]
-            fn neg(self, a: {repr}) -> {repr} {{ {neg} }}
-        "#, neg = unary_op(&format!("{signed_wp}_neg"))});
-    }
-
-    // u64 min/max don't exist as WASM intrinsics — delegate to native backend
-    if ty.elem_bits == 64 {
-        code.push_str(&formatdoc! {r#"
-            #[inline(always)]
-            fn min(self, a: {repr}, b: {repr}) -> {repr} {{ {min} }}
-            #[inline(always)]
-            fn max(self, a: {repr}, b: {repr}) -> {repr} {{ {max} }}
-        "#,
-            min = trait_binary_op("min"),
-            max = trait_binary_op("max"),
-        });
-    } else {
-        code.push_str(&formatdoc! {r#"
-            #[inline(always)]
-            fn min(self, a: {repr}, b: {repr}) -> {repr} {{ {min} }}
-            #[inline(always)]
-            fn max(self, a: {repr}, b: {repr}) -> {repr} {{ {max} }}
-        "#,
-            min = binary_op(&min_fn),
-            max = binary_op(&max_fn),
-        });
-    }
-
-    if ty.signed && ty.elem_bits <= 16 {
-        code.push_str(&formatdoc! {r#"
-            #[inline(always)]
-            fn abs(self, a: {repr}) -> {repr} {{ {abs} }}
-        "#, abs = unary_op(&format!("{signed_wp}_abs"))});
-    }
-
-    // u64 unsigned comparisons don't exist as WASM intrinsics — delegate to native backend
-    if ty.elem_bits == 64 {
-        code.push_str(&formatdoc! {r#"
-
-            #[inline(always)]
-            fn simd_eq(self, a: {repr}, b: {repr}) -> {repr} {{ {eq} }}
-            #[inline(always)]
-            fn simd_ne(self, a: {repr}, b: {repr}) -> {repr} {{ {ne} }}
-            #[inline(always)]
-            fn simd_lt(self, a: {repr}, b: {repr}) -> {repr} {{ {lt} }}
-            #[inline(always)]
-            fn simd_le(self, a: {repr}, b: {repr}) -> {repr} {{ {le} }}
-            #[inline(always)]
-            fn simd_gt(self, a: {repr}, b: {repr}) -> {repr} {{ {gt} }}
-            #[inline(always)]
-            fn simd_ge(self, a: {repr}, b: {repr}) -> {repr} {{ {ge} }}
-        "#,
-            eq = binary_op(&eq_fn),
-            ne = binary_op(&ne_fn),
-            lt = trait_binary_op("simd_lt"),
-            le = trait_binary_op("simd_le"),
-            gt = trait_binary_op("simd_gt"),
-            ge = trait_binary_op("simd_ge"),
-        });
-    } else {
-        code.push_str(&formatdoc! {r#"
-
-            #[inline(always)]
-            fn simd_eq(self, a: {repr}, b: {repr}) -> {repr} {{ {eq} }}
-            #[inline(always)]
-            fn simd_ne(self, a: {repr}, b: {repr}) -> {repr} {{ {ne} }}
-            #[inline(always)]
-            fn simd_lt(self, a: {repr}, b: {repr}) -> {repr} {{ {lt} }}
-            #[inline(always)]
-            fn simd_le(self, a: {repr}, b: {repr}) -> {repr} {{ {le} }}
-            #[inline(always)]
-            fn simd_gt(self, a: {repr}, b: {repr}) -> {repr} {{ {gt} }}
-            #[inline(always)]
-            fn simd_ge(self, a: {repr}, b: {repr}) -> {repr} {{ {ge} }}
-        "#,
-            eq = binary_op(&eq_fn),
-            ne = binary_op(&ne_fn),
-            lt = binary_op(&lt_fn),
-            le = binary_op(&le_fn),
-            gt = binary_op(&gt_fn),
-            ge = binary_op(&ge_fn),
-        });
-    }
-
-    code.push_str(&formatdoc! {r#"
-
-            #[inline(always)]
-            fn blend(self, mask: {repr}, if_true: {repr}, if_false: {repr}) -> {repr} {{
-                {blend_body}
-            }}
-
-            #[inline(always)]
-            fn reduce_add(self, a: {repr}) -> {elem} {{
-                let arr = <Self as {trait_name}>::to_array(self, a);
-                arr.iter().copied().fold(0{elem}, {elem}::wrapping_add)
-            }}
-
-            #[inline(always)]
-            fn not(self, a: {repr}) -> {repr} {{ {not} }}
-            #[inline(always)]
-            fn bitand(self, a: {repr}, b: {repr}) -> {repr} {{ {bitand} }}
-            #[inline(always)]
-            fn bitor(self, a: {repr}, b: {repr}) -> {repr} {{ {bitor} }}
-            #[inline(always)]
-            fn bitxor(self, a: {repr}, b: {repr}) -> {repr} {{ {bitxor} }}
-
-            #[inline(always)]
-            fn shl_const<const N: i32>(self, a: {repr}) -> {repr} {{ {shl_body} }}
-            #[inline(always)]
-            fn shr_logical_const<const N: i32>(self, a: {repr}) -> {repr} {{ {shr_logical_body} }}
-    "#,
-        not = unary_op("v128_not"),
-        bitand = binary_op("v128_and"),
-        bitor = binary_op("v128_or"),
-        bitxor = binary_op("v128_xor"),
-    });
-
-    if ty.signed {
-        let shr_arith_fn = format!("{signed_wp}_shr");
-        let shr_arith_items: Vec<String> = (0..sub_count)
-            .map(|i| format!("{shr_arith_fn}(a[{i}], N as u32)"))
-            .collect();
-        code.push_str(&formatdoc! {r#"
-            #[inline(always)]
-            fn shr_arithmetic_const<const N: i32>(self, a: {repr}) -> {repr} {{
-                [{shr_arith}]
-            }}
-        "#, shr_arith = shr_arith_items.join(", ")});
-    }
-
-    // Uniform variable shifts + saturating arithmetic, per 128-bit sub-vector.
-    if ty.elem_bits == 16 {
-        let eb = ty.elem_bits;
-        let max_sh = eb - 1;
-        let selem = ty.signed_elem();
-        let shl_fn = format!("{signed_wp}_shl");
-        let arith_shr_fn = format!("{signed_wp}_shr");
-        // The `i`-prefixed `_shr` is WASM's ARITHMETIC shift; the logical one
-        // is always the `u`-prefixed form, for signed element types too.
-        let logical_shr_fn = format!("u{}_shr", &signed_wp[1..]);
-
-        let shl_items: Vec<String> = (0..sub_count)
-            .map(|i| format!("v128_and({shl_fn}(a[{i}], count), keep)"))
-            .collect();
-        let shr_l_items: Vec<String> = (0..sub_count)
-            .map(|i| format!("v128_and({logical_shr_fn}(a[{i}], count), keep)"))
-            .collect();
-
-        code.push_str(&formatdoc! {r#"
-
-            #[inline(always)]
-            fn shl_uniform(self, a: {repr}, count: u32) -> {repr} {{
-                let keep = {signed_wp}_splat(if count < {eb} {{ -1{selem} }} else {{ 0 }});
-                [{shl_items}]
-            }}
-
-            #[inline(always)]
-            fn shr_logical_uniform(self, a: {repr}, count: u32) -> {repr} {{
-                let keep = {signed_wp}_splat(if count < {eb} {{ -1{selem} }} else {{ 0 }});
-                [{shr_l_items}]
-            }}
-        "#, shl_items = shl_items.join(", "), shr_l_items = shr_l_items.join(", ")});
-
-        if ty.signed {
-            let shr_a_items: Vec<String> = (0..sub_count)
-                .map(|i| format!("{arith_shr_fn}(a[{i}], clamped)"))
-                .collect();
-            code.push_str(&formatdoc! {r#"
-            #[inline(always)]
-            fn shr_arithmetic_uniform(self, a: {repr}, count: u32) -> {repr} {{
-                let clamped = if count > {max_sh} {{ {max_sh} }} else {{ count }};
-                [{shr_a_items}]
-            }}
-            "#, shr_a_items = shr_a_items.join(", ")});
-        }
-    }
-
-    if ty.has_saturating() {
-        code.push_str(&formatdoc! {r#"
-
-            #[inline(always)]
-            fn saturating_add(self, a: {repr}, b: {repr}) -> {repr} {{ {qadd} }}
-
-            #[inline(always)]
-            fn saturating_sub(self, a: {repr}, b: {repr}) -> {repr} {{ {qsub} }}
-        "#,
-            qadd = binary_op(&format!("{wp}_add_sat")),
-            qsub = binary_op(&format!("{wp}_sub_sat")),
-        });
-    }
-
-    // Boolean: sign bits survive AND/OR, so fold the sub-vectors and take one
-    // bitmask instead of one boolean reduction per half.
-    let bitmask_fn = format!("{signed_wp}_bitmask");
-    let full_mask = (1u64 << lanes_per_128) - 1;
-    let fold = |op: &str| -> String {
-        (1..sub_count).fold("a[0]".to_string(), |acc, i| {
-            format!("v128_{op}({acc}, a[{i}])")
-        })
-    };
-    let all_true_items = [format!(
-        "{bitmask_fn}({}) as u64 == {full_mask}",
-        fold("and")
-    )];
-    let any_true_items = [format!("{bitmask_fn}({}) != 0", fold("or"))];
-
-    code.push_str(&formatdoc! {r#"
-
-            #[inline(always)]
-            fn all_true(self, a: {repr}) -> bool {{
-                {all_true}
-            }}
-
-            #[inline(always)]
-            fn any_true(self, a: {repr}) -> bool {{
-                {any_true}
-            }}
-
-            #[inline(always)]
-            fn bitmask(self, a: {repr}) -> u32 {{
-                let mut result = 0u32;
-                // Enumerate the array rather than indexing by range
-                // (clippy::needless_range_loop).
-                for (i, v) in a.into_iter().enumerate() {{
-                    result |= ({bitmask_fn}(v) as u32) << (i * {lanes_per_128});
-                }}
-                result
-            }}
-        {integer_methods}
-        }}
-    "#,
-        all_true = all_true_items.join(" && "),
-        any_true = any_true_items.join(" || "),
-    });
-
-    code
-}
-
 // ============================================================================
 // Conversion Traits
 // ============================================================================
@@ -3195,54 +2305,53 @@ pub(super) fn generate_additional_convert_traits() -> String {
 
 /// Generate x86 conversion impls for the new types.
 pub(super) fn generate_x86_additional_convert_impls(token: &str) -> String {
-    let arcane = super::backend_syntax::arcane(token);
     formatdoc! {r#"
 
         #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
         impl I8x16Bitcast for archmage::{token} {{
-            {arcane}
+            #[inline(always)]
             fn bitcast_i8_to_u8(self, a: __m128i) -> __m128i {{ a }}
-            {arcane}
+            #[inline(always)]
             fn bitcast_u8_to_i8(self, a: __m128i) -> __m128i {{ a }}
         }}
 
         #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
         impl I8x32Bitcast for archmage::{token} {{
-            {arcane}
+            #[inline(always)]
             fn bitcast_i8_to_u8(self, a: __m256i) -> __m256i {{ a }}
-            {arcane}
+            #[inline(always)]
             fn bitcast_u8_to_i8(self, a: __m256i) -> __m256i {{ a }}
         }}
 
         #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
         impl I16x8Bitcast for archmage::{token} {{
-            {arcane}
+            #[inline(always)]
             fn bitcast_i16_to_u16(self, a: __m128i) -> __m128i {{ a }}
-            {arcane}
+            #[inline(always)]
             fn bitcast_u16_to_i16(self, a: __m128i) -> __m128i {{ a }}
         }}
 
         #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
         impl I16x16Bitcast for archmage::{token} {{
-            {arcane}
+            #[inline(always)]
             fn bitcast_i16_to_u16(self, a: __m256i) -> __m256i {{ a }}
-            {arcane}
+            #[inline(always)]
             fn bitcast_u16_to_i16(self, a: __m256i) -> __m256i {{ a }}
         }}
 
         #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
         impl U64x2Bitcast for archmage::{token} {{
-            {arcane}
+            #[inline(always)]
             fn bitcast_u64_to_i64(self, a: __m128i) -> __m128i {{ a }}
-            {arcane}
+            #[inline(always)]
             fn bitcast_i64_to_u64(self, a: __m128i) -> __m128i {{ a }}
         }}
 
         #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
         impl U64x4Bitcast for archmage::{token} {{
-            {arcane}
+            #[inline(always)]
             fn bitcast_u64_to_i64(self, a: __m256i) -> __m256i {{ a }}
-            {arcane}
+            #[inline(always)]
             fn bitcast_i64_to_u64(self, a: __m256i) -> __m256i {{ a }}
         }}
     "#}
@@ -3344,7 +2453,7 @@ pub(super) fn generate_scalar_additional_convert_impls() -> String {
     "#}
 }
 
-/// Generate NEON conversion impls for the new types.
+/// Generate NEON conversion impls for the native 128-bit integer bitcast types.
 pub(super) fn generate_neon_additional_convert_impls() -> String {
     let arcane = super::backend_syntax::arcane("NeonToken");
     formatdoc! {r#"
@@ -3362,18 +2471,6 @@ pub(super) fn generate_neon_additional_convert_impls() -> String {
         }}
 
         #[cfg(target_arch = "aarch64")]
-        impl I8x32Bitcast for archmage::NeonToken {{
-            {arcane}
-            fn bitcast_i8_to_u8(self, a: [int8x16_t; 2]) -> [uint8x16_t; 2] {{
-                [vreinterpretq_u8_s8(a[0]), vreinterpretq_u8_s8(a[1])]
-            }}
-            {arcane}
-            fn bitcast_u8_to_i8(self, a: [uint8x16_t; 2]) -> [int8x16_t; 2] {{
-                [vreinterpretq_s8_u8(a[0]), vreinterpretq_s8_u8(a[1])]
-            }}
-        }}
-
-        #[cfg(target_arch = "aarch64")]
         impl I16x8Bitcast for archmage::NeonToken {{
             {arcane}
             fn bitcast_i16_to_u16(self, a: int16x8_t) -> uint16x8_t {{
@@ -3382,18 +2479,6 @@ pub(super) fn generate_neon_additional_convert_impls() -> String {
             {arcane}
             fn bitcast_u16_to_i16(self, a: uint16x8_t) -> int16x8_t {{
                 vreinterpretq_s16_u16(a)
-            }}
-        }}
-
-        #[cfg(target_arch = "aarch64")]
-        impl I16x16Bitcast for archmage::NeonToken {{
-            {arcane}
-            fn bitcast_i16_to_u16(self, a: [int16x8_t; 2]) -> [uint16x8_t; 2] {{
-                [vreinterpretq_u16_s16(a[0]), vreinterpretq_u16_s16(a[1])]
-            }}
-            {arcane}
-            fn bitcast_u16_to_i16(self, a: [uint16x8_t; 2]) -> [int16x8_t; 2] {{
-                [vreinterpretq_s16_u16(a[0]), vreinterpretq_s16_u16(a[1])]
             }}
         }}
 
@@ -3408,22 +2493,10 @@ pub(super) fn generate_neon_additional_convert_impls() -> String {
                 vreinterpretq_u64_s64(a)
             }}
         }}
-
-        #[cfg(target_arch = "aarch64")]
-        impl U64x4Bitcast for archmage::NeonToken {{
-            {arcane}
-            fn bitcast_u64_to_i64(self, a: [uint64x2_t; 2]) -> [int64x2_t; 2] {{
-                [vreinterpretq_s64_u64(a[0]), vreinterpretq_s64_u64(a[1])]
-            }}
-            {arcane}
-            fn bitcast_i64_to_u64(self, a: [int64x2_t; 2]) -> [uint64x2_t; 2] {{
-                [vreinterpretq_u64_s64(a[0]), vreinterpretq_u64_s64(a[1])]
-            }}
-        }}
     "#}
 }
 
-/// Generate WASM conversion impls for the new types.
+/// Generate WASM conversion impls for the native 128-bit integer bitcast types.
 pub(super) fn generate_wasm_additional_convert_impls() -> String {
     formatdoc! {r#"
 
@@ -3436,14 +2509,6 @@ pub(super) fn generate_wasm_additional_convert_impls() -> String {
         }}
 
         #[cfg(target_arch = "wasm32")]
-        impl I8x32Bitcast for archmage::Wasm128Token {{
-            #[inline(always)]
-            fn bitcast_i8_to_u8(self, a: [v128; 2]) -> [v128; 2] {{ a }}
-            #[inline(always)]
-            fn bitcast_u8_to_i8(self, a: [v128; 2]) -> [v128; 2] {{ a }}
-        }}
-
-        #[cfg(target_arch = "wasm32")]
         impl I16x8Bitcast for archmage::Wasm128Token {{
             #[inline(always)]
             fn bitcast_i16_to_u16(self, a: v128) -> v128 {{ a }}
@@ -3452,27 +2517,11 @@ pub(super) fn generate_wasm_additional_convert_impls() -> String {
         }}
 
         #[cfg(target_arch = "wasm32")]
-        impl I16x16Bitcast for archmage::Wasm128Token {{
-            #[inline(always)]
-            fn bitcast_i16_to_u16(self, a: [v128; 2]) -> [v128; 2] {{ a }}
-            #[inline(always)]
-            fn bitcast_u16_to_i16(self, a: [v128; 2]) -> [v128; 2] {{ a }}
-        }}
-
-        #[cfg(target_arch = "wasm32")]
         impl U64x2Bitcast for archmage::Wasm128Token {{
             #[inline(always)]
             fn bitcast_u64_to_i64(self, a: v128) -> v128 {{ a }}
             #[inline(always)]
             fn bitcast_i64_to_u64(self, a: v128) -> v128 {{ a }}
-        }}
-
-        #[cfg(target_arch = "wasm32")]
-        impl U64x4Bitcast for archmage::Wasm128Token {{
-            #[inline(always)]
-            fn bitcast_u64_to_i64(self, a: [v128; 2]) -> [v128; 2] {{ a }}
-            #[inline(always)]
-            fn bitcast_i64_to_u64(self, a: [v128; 2]) -> [v128; 2] {{ a }}
         }}
     "#}
 }
